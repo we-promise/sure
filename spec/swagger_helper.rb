@@ -812,6 +812,80 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          TransferTransactionSide: {
+            type: :object,
+            required: %w[id entry_id date amount amount_cents currency name kind account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              entry_id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              amount_cents: { type: :integer, description: 'Signed amount in currency minor units' },
+              currency: { type: :string },
+              name: { type: :string },
+              kind: { type: :string },
+              account: {
+                type: :object,
+                required: %w[id name account_type],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  account_type: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
+          TransferDecision: {
+            type: :object,
+            required: %w[id status date amount amount_cents currency transfer_type inflow_transaction outflow_transaction created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending confirmed] },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              amount_cents: { type: :integer, description: 'Absolute transfer amount in currency minor units' },
+              currency: { type: :string },
+              transfer_type: { type: :string, enum: %w[transfer liability_payment loan_payment] },
+              notes: { type: :string, nullable: true },
+              inflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              outflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TransferDecisionCollection: {
+            type: :object,
+            required: %w[transfers pagination],
+            properties: {
+              transfers: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/TransferDecision' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          RejectedTransfer: {
+            type: :object,
+            required: %w[id inflow_transaction outflow_transaction created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              inflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              outflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          RejectedTransferCollection: {
+            type: :object,
+            required: %w[rejected_transfers pagination],
+            properties: {
+              rejected_transfers: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/RejectedTransfer' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Valuation: {
             type: :object,
             required: %w[id date amount currency kind account created_at updated_at],
@@ -952,6 +1026,89 @@ RSpec.configure do |config|
             required: %w[data],
             properties: {
               data: { '$ref' => '#/components/schemas/ImportDetail' }
+            }
+          },
+          ProviderConnectionInstitution: {
+            type: :object,
+            required: %w[name],
+            properties: {
+              name: { type: :string, nullable: true },
+              domain: { type: :string, nullable: true },
+              url: { type: :string, nullable: true }
+            }
+          },
+          ProviderConnectionAccounts: {
+            type: :object,
+            required: %w[total_count linked_count unlinked_count],
+            properties: {
+              total_count: { type: :integer, minimum: 0 },
+              linked_count: { type: :integer, minimum: 0 },
+              unlinked_count: { type: :integer, minimum: 0 }
+            }
+          },
+          ProviderConnectionSyncLatest: {
+            type: :object,
+            required: %w[id status created_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string },
+              created_at: { type: :string, format: :'date-time' },
+              syncing_at: { type: :string, format: :'date-time', nullable: true },
+              completed_at: { type: :string, format: :'date-time', nullable: true },
+              failed_at: { type: :string, format: :'date-time', nullable: true },
+              error: {
+                type: :object,
+                nullable: true,
+                description: "Sanitized latest sync error summary. Null when the latest sync is not failed or stale.",
+                required: %w[present],
+                properties: {
+                  present: { type: :boolean, description: "Always true when this object is present." },
+                  message: { type: :string, nullable: true, description: "Stable sanitized error category message; raw provider error text is never exposed." }
+                }
+              }
+            }
+          },
+          ProviderConnectionSync: {
+            type: :object,
+            required: %w[syncing],
+            properties: {
+              syncing: { type: :boolean },
+              status_summary: { type: :string, nullable: true },
+              last_synced_at: { type: :string, format: :'date-time', nullable: true },
+              latest: {
+                allOf: [ { '$ref' => '#/components/schemas/ProviderConnectionSyncLatest' } ],
+                nullable: true
+              }
+            }
+          },
+          ProviderConnection: {
+            type: :object,
+            required: %w[id provider provider_type name status requires_update credentials_configured scheduled_for_deletion pending_account_setup institution accounts sync created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              provider: { type: :string },
+              provider_type: { type: :string },
+              name: { type: :string },
+              status: { type: :string, nullable: true },
+              requires_update: { type: :boolean, nullable: true, description: "False when the provider item does not expose this status." },
+              credentials_configured: { type: :boolean, nullable: true, description: "False when credential readiness is unknown." },
+              scheduled_for_deletion: { type: :boolean, nullable: true, description: "False when the provider item does not expose this status." },
+              pending_account_setup: { type: :boolean, nullable: true, description: "False when account setup state is unknown." },
+              institution: { '$ref' => '#/components/schemas/ProviderConnectionInstitution' },
+              accounts: { '$ref' => '#/components/schemas/ProviderConnectionAccounts' },
+              sync: { '$ref' => '#/components/schemas/ProviderConnectionSync' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ProviderConnectionCollection: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ProviderConnection' }
+              }
             }
           },
           ImportRowMapping: {

@@ -888,6 +888,199 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "reconciliation", valuation.kind
   end
 
+  test "imports transfer decisions and rejected transfers with remapped transactions" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "checking",
+          name: "Checking",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "savings",
+          name: "Savings",
+          balance: "2500",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "transfer-outflow",
+          account_id: "checking",
+          date: "2024-01-15",
+          amount: "100.00",
+          name: "Transfer to savings",
+          currency: "USD",
+          kind: "funds_movement"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "transfer-inflow",
+          account_id: "savings",
+          date: "2024-01-15",
+          amount: "-100.00",
+          name: "Transfer from checking",
+          currency: "USD",
+          kind: "funds_movement"
+        }
+      },
+      {
+        type: "Transfer",
+        data: {
+          id: "transfer-1",
+          inflow_transaction_id: "transfer-inflow",
+          outflow_transaction_id: "transfer-outflow",
+          status: "confirmed",
+          notes: "Confirmed by user"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "rejected-outflow",
+          account_id: "checking",
+          date: "2024-01-20",
+          amount: "25.00",
+          name: "Candidate outflow",
+          currency: "USD",
+          kind: "standard"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "rejected-inflow",
+          account_id: "savings",
+          date: "2024-01-20",
+          amount: "-25.00",
+          name: "Candidate inflow",
+          currency: "USD",
+          kind: "standard"
+        }
+      },
+      {
+        type: "RejectedTransfer",
+        data: {
+          id: "rejected-transfer-1",
+          inflow_transaction_id: "rejected-inflow",
+          outflow_transaction_id: "rejected-outflow"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.find_by!(notes: "Confirmed by user")
+    assert_not_nil transfer
+    assert_equal "confirmed", transfer.status
+    assert_equal "Confirmed by user", transfer.notes
+    assert_equal "Transfer from checking", transfer.inflow_transaction.entry.name
+    assert_equal "Transfer to savings", transfer.outflow_transaction.entry.name
+
+    rejected_transfer = RejectedTransfer
+      .joins(inflow_transaction: :entry)
+      .find_by!(entries: { name: "Candidate inflow" })
+    assert_not_nil rejected_transfer
+    assert_equal "Candidate inflow", rejected_transfer.inflow_transaction.entry.name
+    assert_equal "Candidate outflow", rejected_transfer.outflow_transaction.entry.name
+  end
+
+  test "imports duplicate transfer decisions idempotently with unknown status fallback" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "checking",
+          name: "Checking",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "savings",
+          name: "Savings",
+          balance: "2500",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "transfer-outflow",
+          account_id: "checking",
+          date: "2024-01-15",
+          amount: "100.00",
+          name: "Transfer to savings",
+          currency: "USD",
+          kind: "funds_movement"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "transfer-inflow",
+          account_id: "savings",
+          date: "2024-01-15",
+          amount: "-100.00",
+          name: "Transfer from checking",
+          currency: "USD",
+          kind: "funds_movement"
+        }
+      },
+      {
+        type: "Transfer",
+        data: {
+          id: "transfer-1",
+          inflow_transaction_id: "transfer-inflow",
+          outflow_transaction_id: "transfer-outflow",
+          status: "settled"
+        }
+      },
+      {
+        type: "Transfer",
+        data: {
+          id: "transfer-1-duplicate",
+          inflow_transaction_id: "transfer-inflow",
+          outflow_transaction_id: "transfer-outflow",
+          status: "settled"
+        }
+      }
+    ])
+
+    fallback_logs = []
+
+    Rails.logger.stubs(:debug).with do |*args|
+      message = args.first
+      fallback_logs << message if message.to_s.include?("Unknown transfer status")
+      true
+    end
+
+    assert_difference("Transfer.count", 1) do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    assert_equal [ 'Unknown transfer status "settled"; defaulting to pending' ], fallback_logs
+
+    imported_transfer = Transfer
+      .joins(inflow_transaction: :entry)
+      .find_by!(entries: { name: "Transfer from checking" })
+    assert_equal "pending", imported_transfer.status
+  end
+
   test "imports budgets" do
     ndjson = build_ndjson([
       {

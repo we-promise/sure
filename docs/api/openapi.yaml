@@ -1470,6 +1470,152 @@ components:
             "$ref": "#/components/schemas/Transaction"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    TransferTransactionSide:
+      type: object
+      required:
+      - id
+      - entry_id
+      - date
+      - amount
+      - amount_cents
+      - currency
+      - name
+      - kind
+      - account
+      properties:
+        id:
+          type: string
+          format: uuid
+        entry_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        amount_cents:
+          type: integer
+          description: Signed amount in currency minor units
+        currency:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        account:
+          type: object
+          required:
+          - id
+          - name
+          - account_type
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            account_type:
+              type: string
+              nullable: true
+    TransferDecision:
+      type: object
+      required:
+      - id
+      - status
+      - date
+      - amount
+      - amount_cents
+      - currency
+      - transfer_type
+      - inflow_transaction
+      - outflow_transaction
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - pending
+          - confirmed
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        amount_cents:
+          type: integer
+          description: Absolute transfer amount in currency minor units
+        currency:
+          type: string
+        transfer_type:
+          type: string
+          enum:
+          - transfer
+          - liability_payment
+          - loan_payment
+        notes:
+          type: string
+          nullable: true
+        inflow_transaction:
+          "$ref": "#/components/schemas/TransferTransactionSide"
+        outflow_transaction:
+          "$ref": "#/components/schemas/TransferTransactionSide"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TransferDecisionCollection:
+      type: object
+      required:
+      - transfers
+      - pagination
+      properties:
+        transfers:
+          type: array
+          items:
+            "$ref": "#/components/schemas/TransferDecision"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    RejectedTransfer:
+      type: object
+      required:
+      - id
+      - inflow_transaction
+      - outflow_transaction
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        inflow_transaction:
+          "$ref": "#/components/schemas/TransferTransactionSide"
+        outflow_transaction:
+          "$ref": "#/components/schemas/TransferTransactionSide"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RejectedTransferCollection:
+      type: object
+      required:
+      - rejected_transfers
+      - pagination
+      properties:
+        rejected_transfers:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RejectedTransfer"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Valuation:
       type: object
       required:
@@ -1755,6 +1901,164 @@ components:
       properties:
         data:
           "$ref": "#/components/schemas/ImportDetail"
+    ProviderConnectionInstitution:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          nullable: true
+        domain:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+    ProviderConnectionAccounts:
+      type: object
+      required:
+      - total_count
+      - linked_count
+      - unlinked_count
+      properties:
+        total_count:
+          type: integer
+          minimum: 0
+        linked_count:
+          type: integer
+          minimum: 0
+        unlinked_count:
+          type: integer
+          minimum: 0
+    ProviderConnectionSyncLatest:
+      type: object
+      required:
+      - id
+      - status
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        syncing_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          description: Sanitized latest sync error summary. Null when the latest sync
+            is not failed or stale.
+          required:
+          - present
+          properties:
+            present:
+              type: boolean
+              description: Always true when this object is present.
+            message:
+              type: string
+              nullable: true
+              description: Stable sanitized error category message; raw provider error
+                text is never exposed.
+    ProviderConnectionSync:
+      type: object
+      required:
+      - syncing
+      properties:
+        syncing:
+          type: boolean
+        status_summary:
+          type: string
+          nullable: true
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        latest:
+          allOf:
+          - "$ref": "#/components/schemas/ProviderConnectionSyncLatest"
+          nullable: true
+    ProviderConnection:
+      type: object
+      required:
+      - id
+      - provider
+      - provider_type
+      - name
+      - status
+      - requires_update
+      - credentials_configured
+      - scheduled_for_deletion
+      - pending_account_setup
+      - institution
+      - accounts
+      - sync
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        provider_type:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          nullable: true
+        requires_update:
+          type: boolean
+          nullable: true
+          description: False when the provider item does not expose this status.
+        credentials_configured:
+          type: boolean
+          nullable: true
+          description: False when credential readiness is unknown.
+        scheduled_for_deletion:
+          type: boolean
+          nullable: true
+          description: False when the provider item does not expose this status.
+        pending_account_setup:
+          type: boolean
+          nullable: true
+          description: False when account setup state is unknown.
+        institution:
+          "$ref": "#/components/schemas/ProviderConnectionInstitution"
+        accounts:
+          "$ref": "#/components/schemas/ProviderConnectionAccounts"
+        sync:
+          "$ref": "#/components/schemas/ProviderConnectionSync"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProviderConnectionCollection:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ProviderConnection"
     ImportRowMapping:
       type: object
       required:
@@ -4448,6 +4752,35 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/provider_connections":
+    get:
+      summary: Lists provider connection status summaries
+      description: List safe provider connection status metadata for the authenticated
+        user's family without exposing credentials, raw provider payloads, or raw
+        sync errors.
+      tags:
+      - Provider Connections
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: provider connection status summaries listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ProviderConnectionCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/recurring_transactions":
     get:
       summary: List recurring transactions
@@ -4728,6 +5061,111 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rejected_transfers":
+    get:
+      summary: List rejected transfers
+      tags:
+      - Rejected Transfers
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: account_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter rejected transfers involving this account
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Filter rejected transfers from this date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Filter rejected transfers until this date
+      responses:
+        '200':
+          description: rejected transfers listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RejectedTransferCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rejected_transfers/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Rejected transfer ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a rejected transfer
+      tags:
+      - Rejected Transfers
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: rejected transfer retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RejectedTransfer"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: rejected transfer not found
           content:
             application/json:
               schema:
@@ -5993,6 +6431,120 @@ paths:
                 "$ref": "#/components/schemas/DeleteResponse"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transfers":
+    get:
+      summary: List transfers
+      tags:
+      - Transfers
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - pending
+          - confirmed
+        description: Filter by transfer status
+      - name: account_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter transfers involving this account
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Filter transfers from this date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Filter transfers until this date
+      responses:
+        '200':
+          description: transfers listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransferDecisionCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transfers/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Transfer ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a transfer
+      tags:
+      - Transfers
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: transfer retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransferDecision"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: transfer not found
           content:
             application/json:
               schema:

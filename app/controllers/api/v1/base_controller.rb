@@ -210,6 +210,10 @@ class Api::V1::BaseController < ApplicationController
       true
     end
 
+    def ensure_read_scope
+      authorize_scope!(:read)
+    end
+
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status

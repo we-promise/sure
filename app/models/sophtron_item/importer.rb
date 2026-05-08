@@ -14,15 +14,19 @@ require "set"
 # explicitly connected to Maybe Accounts). This allows users to selectively
 # import accounts of their choosing.
 class SophtronItem::Importer
-  attr_reader :sophtron_item, :sophtron_provider
+  INCREMENTAL_SYNC_BUFFER_DAYS = 60
+
+  attr_reader :sophtron_item, :sophtron_provider, :sync
 
   # Initializes a new importer.
   #
   # @param sophtron_item [SophtronItem] The Sophtron item to import data for
   # @param sophtron_provider [Provider::Sophtron] Configured Sophtron API client
-  def initialize(sophtron_item, sophtron_provider:)
+  # @param sync [Sync, nil] Optional sync record whose window should guide import scope
+  def initialize(sophtron_item, sophtron_provider:, sync: nil)
     @sophtron_item = sophtron_item
     @sophtron_provider = sophtron_provider
+    @sync = sync
   end
 
   # Performs the complete import process for this Sophtron item.
@@ -48,6 +52,25 @@ class SophtronItem::Importer
   #   #      accounts_failed: 0, transactions_imported: 150, transactions_failed: 0 }
   def import
     Rails.logger.info "SophtronItem::Importer - Starting import for item #{sophtron_item.id}"
+    unless sophtron_item.user_institution_id.present?
+      error_message = "Sophtron institution connection is incomplete"
+      Rails.logger.warn "SophtronItem::Importer - Item #{sophtron_item.id} has no Sophtron UserInstitutionID"
+      sophtron_item.update!(
+        status: :requires_update,
+        last_connection_error: error_message
+      )
+
+      return {
+        success: false,
+        error: error_message,
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }
+    end
+
     # Step 1: Fetch all accounts from Sophtron
     accounts_data = fetch_accounts_data
     unless accounts_data
@@ -124,6 +147,7 @@ class SophtronItem::Importer
           transactions_imported += result[:transactions_count]
         else
           transactions_failed += 1
+          break if result[:requires_update]
         end
       rescue => e
         transactions_failed += 1
@@ -144,16 +168,16 @@ class SophtronItem::Importer
     }
   end
 
+  def import_transactions_after_refresh(sophtron_account)
+    fetch_and_store_transactions(sophtron_account, refresh: false)
+  end
+
   private
 
     def fetch_accounts_data
       begin
-        accounts_data = sophtron_provider.get_accounts
-        # Extract data from Provider::Response object if needed
-        if accounts_data.respond_to?(:data)
-          accounts_data = accounts_data.data
-        end
-      rescue Provider::Error => e
+        accounts_data = Provider::Sophtron.response_data!(sophtron_provider.get_accounts(sophtron_item.user_institution_id))
+      rescue Provider::Sophtron::Error => e
         # Handle authentication errors by marking item as requiring update
         if e.error_type == :unauthorized || e.error_type == :access_forbidden
           begin
@@ -245,22 +269,23 @@ class SophtronItem::Importer
     #   - :success [Boolean] Whether the fetch was successful
     #   - :transactions_count [Integer] Number of transactions fetched
     #   - :error [String, nil] Error message if failed
-    def fetch_and_store_transactions(sophtron_account)
+    def fetch_and_store_transactions(sophtron_account, refresh: true)
       start_date = determine_sync_start_date(sophtron_account)
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
 
       begin
-        # Fetch transactions
-        transactions_data = sophtron_provider.get_account_transactions(
-          sophtron_account.customer_id,
-          sophtron_account.account_id,
-          start_date: start_date
-        )
-
-        # Extract data from Provider::Response object if needed
-        if transactions_data.respond_to?(:data)
-          transactions_data = transactions_data.data
+        if refresh && !initial_transaction_fetch?(sophtron_account)
+          refresh_result = refresh_account_before_transaction_fetch(sophtron_account)
+          return refresh_result if refresh_result.present?
         end
+
+        # Fetch transactions
+        transactions_data = Provider::Sophtron.response_data!(
+          sophtron_provider.get_account_transactions(
+            sophtron_account.account_id,
+            start_date: start_date
+          )
+        )
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -268,11 +293,17 @@ class SophtronItem::Importer
           return { success: false, transactions_count: 0, error: "Invalid response format" }
         end
 
-        transactions_count = transactions_data[:transactions]&.count || 0
+        transactions = transactions_data[:transactions]
+        unless transactions.is_a?(Array)
+          Rails.logger.error "SophtronItem::Importer - Missing transactions array for account #{sophtron_account.account_id}"
+          return { success: false, transactions_count: 0, error: "Missing transactions array" }
+        end
+
+        transactions_count = transactions.count
         Rails.logger.info "SophtronItem::Importer - Fetched #{transactions_count} transactions for account #{sophtron_account.account_id}"
 
         # Store transactions in the account
-        if transactions_data[:transactions].present?
+        if transactions.any?
           begin
             existing_transactions = sophtron_account.raw_transactions_payload.to_a
 
@@ -283,7 +314,7 @@ class SophtronItem::Importer
 
             # Filter to ONLY truly new transactions (skip duplicates)
             # Transactions are immutable on the bank side, so we don't need to update them
-            new_transactions = transactions_data[:transactions].select do |tx|
+            new_transactions = transactions.select do |tx|
               next false unless tx.is_a?(Hash)
 
               tx_id = tx.with_indifferent_access[:id]
@@ -291,10 +322,11 @@ class SophtronItem::Importer
             end
 
             if new_transactions.any?
-              Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_data[:transactions].count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
+              Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions.count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
               sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
             else
-              Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions_data[:transactions].count} were duplicates) for account #{sophtron_account.account_id}"
+              Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
+              sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
             end
           rescue => e
             Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
@@ -302,20 +334,15 @@ class SophtronItem::Importer
           end
         else
           Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
-        end
-
-        # Fetch and update balance
-        begin
-          fetch_and_update_balance(sophtron_account)
-        rescue => e
-          # Log but don't fail transaction import if balance fetch fails
-          Rails.logger.warn "SophtronItem::Importer - Failed to update balance for account #{sophtron_account.account_id}: #{e.message}"
+          sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
         end
 
         { success: true, transactions_count: transactions_count }
-      rescue Provider::Error => e
+      rescue Provider::Sophtron::Error => e
+        requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
+        sophtron_item.update!(status: :requires_update) if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
-        { success: false, transactions_count: 0, error: e.message }
+        { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: "Failed to parse response" }
@@ -326,91 +353,78 @@ class SophtronItem::Importer
       end
     end
 
-    def fetch_and_update_balance(sophtron_account)
-      begin
-        balance_data = sophtron_provider.get_account_balance(sophtron_account.customer_id, sophtron_account.account_id)
-        # Extract data from Provider::Response object if needed
-        if balance_data.respond_to?(:data)
-          balance_data = balance_data.data
-        end
+    def refresh_account_before_transaction_fetch(sophtron_account)
+      refresh_response = Provider::Sophtron.response_data!(sophtron_provider.refresh_account(sophtron_account.account_id))
+      job_id = refresh_response.with_indifferent_access[:JobID] || refresh_response.with_indifferent_access[:job_id]
+      return nil if job_id.blank?
 
-        # Validate response structure
-        unless balance_data.is_a?(Hash)
-          Rails.logger.error "SophtronItem::Importer - Invalid balance_data format for account #{sophtron_account.account_id}"
-          return
-        end
+      job = Provider::Sophtron.response_data!(sophtron_provider.get_job_information(job_id))
+      sophtron_item.upsert_job_snapshot!(job)
 
-        if balance_data[:balance].present?
-          balance_info = balance_data[:balance]
-
-          # Validate balance info structure
-          unless balance_info.is_a?(Hash)
-            Rails.logger.error "SophtronItem::Importer - Invalid balance info format for account #{sophtron_account.account_id}"
-            return
-          end
-
-          # Only update if we have a valid amount
-          if balance_info[:amount].present?
-            sophtron_account.update!(
-              balance: balance_info[:amount],
-              currency: balance_info[:currency].presence || sophtron_account.currency
-            )
-          else
-            Rails.logger.warn "SophtronItem::Importer - No amount in balance data for account #{sophtron_account.account_id}"
-          end
-        else
-          Rails.logger.warn "SophtronItem::Importer - No balance data returned for account #{sophtron_account.account_id}"
-        end
-      rescue Provider::Error => e
-        Rails.logger.error "SophtronItem::Importer - Sophtron API error fetching balance for account #{sophtron_account.id}: #{e.message}"
-        # Don't fail if balance fetch fails
-      rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.error "SophtronItem::Importer - Failed to save balance for account #{sophtron_account.id}: #{e.message}"
-        # Don't fail if balance save fails
-      rescue => e
-        Rails.logger.error "SophtronItem::Importer - Unexpected error updating balance for account #{sophtron_account.id}: #{e.class} - #{e.message}"
-        # Don't fail if balance update fails
+      if Provider::Sophtron.job_requires_input?(job)
+        sophtron_item.update!(
+          status: :requires_update,
+          current_job_id: job_id,
+          last_connection_error: "Sophtron refresh requires MFA"
+        )
+        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA", requires_update: true }
       end
+
+      if Provider::Sophtron.job_failed?(job)
+        return { success: false, transactions_count: 0, error: "Sophtron refresh failed" }
+      end
+
+      unless Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
+        SophtronRefreshPollJob.set(wait: SophtronRefreshPollJob::POLL_INTERVAL).perform_later(
+          sophtron_account,
+          job_id: job_id,
+          sync: sync
+        )
+
+        return { success: true, transactions_count: 0, refresh_pending: true }
+      end
+
+      nil
+    rescue Provider::Sophtron::Error => e
+      requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
+      sophtron_item.update!(status: :requires_update) if requires_update
+      Rails.logger.error "SophtronItem::Importer - Sophtron API error refreshing account #{sophtron_account.id}: #{e.message}"
+      { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
     end
 
     # Determines the appropriate start date for fetching transactions.
     #
     # Logic:
-    # - For accounts with stored transactions: uses last sync date minus 60-day buffer
-    # - For new accounts: uses account creation date minus 60 days, capped at 120 days ago
+    # - For accounts with stored transactions: uses last sync date minus a buffer
+    # - For new accounts: uses the sync window or provider default initial lookback
     #
-    # This ensures we capture any late-arriving transactions while limiting
-    # the historical window for new accounts.
+    # This captures late-arriving transactions while keeping history bounded.
     #
     # @param sophtron_account [SophtronAccount] The account to determine start date for
     # @return [Date] The start date for transaction sync
     def determine_sync_start_date(sophtron_account)
-      configured_start = sophtron_item.sync_start_date&.to_time
-      max_history_start = 3.years.ago
-      floor_start = [ configured_start, max_history_start ].compact.max
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
-      has_stored_transactions = sophtron_account.raw_transactions_payload.to_a.any?
+      configured_start = sync&.window_start_date || sophtron_item.sync_start_date&.to_date
+      max_history_start = SophtronItem::MAX_TRANSACTION_HISTORY_YEARS.years.ago.to_date
+      floor_start = configured_start ? [ configured_start, max_history_start ].max : nil
 
-      if has_stored_transactions
+      if !initial_transaction_fetch?(sophtron_account)
         # Account has been synced before, use item-level logic with buffer
         # For subsequent syncs, fetch from last sync date with a buffer
         if sophtron_item.last_synced_at
-          [ sophtron_item.last_synced_at - 60.days, floor_start ].compact.max
+          [ sophtron_item.last_synced_at.to_date - INCREMENTAL_SYNC_BUFFER_DAYS, floor_start ].compact.max
         else
           # Fallback if item hasn't been synced but account has transactions
-          floor_start || 120.days.ago
+          floor_start || sophtron_item.initial_load_window_start_date
         end
       else
         # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
-        account_baseline = sophtron_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 60.days, floor_start || 120.days.ago ].max
-
-        # Use the more recent of: (account created - 60 days) or (120 days ago)
-        # This caps old accounts at 120 days while respecting recent account creation dates
-        first_sync_window
+        # Use the configured sync window if present, otherwise the provider's default initial lookback.
+        floor_start || sophtron_item.initial_load_window_start_date
       end
+    end
+
+    def initial_transaction_fetch?(sophtron_account)
+      sophtron_account.raw_transactions_payload.nil? && sophtron_item.last_synced_at.blank?
     end
 
     # Handles API errors and marks the item for re-authentication if needed.
@@ -420,7 +434,7 @@ class SophtronItem::Importer
     #
     # @param error_message [String] The error message from the API
     # @return [void]
-    # @raise [Provider::Error] Always raises an error with the message
+    # @raise [Provider::Sophtron::Error] Always raises an error with the message
     def handle_error(error_message)
       # Mark item as requiring update for authentication-related errors
       error_msg_lower = error_message.to_s.downcase
@@ -438,7 +452,7 @@ class SophtronItem::Importer
       end
 
       Rails.logger.error "SophtronItem::Importer - API error: #{error_message}"
-      raise Provider::Error.new(
+      raise Provider::Sophtron::Error.new(
         "Sophtron API error: #{error_message}",
         :api_error
       )
