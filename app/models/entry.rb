@@ -56,15 +56,12 @@ class Entry < ApplicationRecord
   scope :excluding_pending, -> {
     # For non-Transaction entries (Trade, Valuation), always include
     # For Transaction entries, exclude if any provider marks it pending
-    inner = Transaction::PENDING_PROVIDERS
-      .map { |p| "(t.extra -> '#{p}' ->> 'pending')::boolean = true" }
-      .join(" OR ")
     where(<<~SQL.squish)
       entries.entryable_type != 'Transaction'
       OR NOT EXISTS (
         SELECT 1 FROM transactions t
         WHERE t.id = entries.entryable_id
-        AND (#{inner})
+        AND (#{Transaction::PENDING_CHECK_SQL})
       )
     SQL
   }

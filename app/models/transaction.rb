@@ -95,6 +95,13 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking].freeze
 
+  # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
+  # Stored as a constant so static analysis can verify it contains no user input.
+  PENDING_CHECK_SQL = PENDING_PROVIDERS
+    .map { |p| "(t.extra -> '#{p}' ->> 'pending')::boolean = true" }
+    .join(" OR ")
+    .freeze
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
