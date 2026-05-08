@@ -230,7 +230,8 @@ class EnableBankingEntry::Processor
     end
 
     def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' in Enable Banking transaction #{external_id}, falling back to account currency")
+      safe_id = self.class.compute_external_id(data) || "unknown"
+      Rails.logger.warn("Invalid currency code '#{currency_value}' in Enable Banking transaction #{safe_id}, falling back to account currency")
     end
 
     def date
