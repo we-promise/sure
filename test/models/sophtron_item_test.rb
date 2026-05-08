@@ -162,4 +162,51 @@ class SophtronItemTest < ActiveSupport::TestCase
       end
     end
   end
+  test "manual Sophtron institution settings are account scoped" do
+    first_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      institution_metadata: { name: "Example Bank", user_institution_id: "ui-1" }
+    )
+    sibling_account = @item.sophtron_accounts.create!(
+      account_id: "acct-2",
+      name: "Sophtron Savings",
+      currency: "USD",
+      balance: 200,
+      institution_metadata: { name: "Example Bank", user_institution_id: "ui-1" }
+    )
+    other_account = @item.sophtron_accounts.create!(
+      account_id: "acct-3",
+      name: "Other Card",
+      currency: "USD",
+      balance: 300,
+      institution_metadata: { name: "Other Bank", user_institution_id: "ui-2" }
+    )
+
+    @item.set_manual_sync_for_institution!(first_account, true)
+
+    assert first_account.reload.manual_sync?
+    assert sibling_account.reload.manual_sync?
+    assert_not other_account.reload.manual_sync?
+    assert_includes SophtronItem.syncable, @item
+
+    all_manual_item = @family.sophtron_items.create!(
+      name: "All Manual Sophtron",
+      user_id: "manual-user",
+      access_key: Base64.strict_encode64("secret-key")
+    )
+    all_manual_account = all_manual_item.sophtron_accounts.create!(
+      account_id: "manual-acct-1",
+      name: "Manual Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true,
+      institution_metadata: { name: "Manual Bank", user_institution_id: "manual-ui-1" }
+    )
+    AccountProvider.create!(account: accounts(:credit_card), provider: all_manual_account)
+
+    assert_not_includes SophtronItem.syncable, all_manual_item
+  end
 end

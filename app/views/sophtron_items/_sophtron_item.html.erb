@@ -57,10 +57,11 @@
 
       <div class="flex items-center gap-2">
         <% if Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_sophtron_item_path(sophtron_item)
+          <%= render DS::Button.new(
+            variant: :icon,
+            icon: "refresh-cw",
+            href: sync_sophtron_item_path(sophtron_item),
+            title: t(".sync_now")
           ) %>
         <% end %>
 
@@ -80,7 +81,48 @@
     <% unless sophtron_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
         <% if sophtron_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: sophtron_item.accounts %>
+          <% linked_sophtron_accounts = sophtron_item.sophtron_accounts.joins(:account).merge(Account.visible).includes(:account).to_a %>
+          <% linked_sophtron_accounts.group_by { |account| account.institution_user_institution_id.presence || account.institution_name.presence || account.id }.each_value do |institution_accounts| %>
+            <% institution_anchor = institution_accounts.first %>
+            <% institution_manual_sync = sophtron_item.manual_sync_for_institution?(institution_anchor) %>
+            <div class="space-y-2 rounded-xl border border-primary p-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="truncate text-sm font-medium text-primary"><%= institution_anchor.institution_name || t(".unknown_institution") %></p>
+                    <% if institution_manual_sync %>
+                      <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"><%= t(".manual_sync") %></span>
+                    <% end %>
+                  </div>
+                  <p class="text-xs text-secondary"><%= t(".institution_accounts", count: institution_accounts.count) %></p>
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <% if institution_manual_sync || Rails.env.development? %>
+                    <%= render DS::Button.new(
+                      variant: :icon,
+                      icon: "refresh-cw",
+                      href: sync_sophtron_item_path(sophtron_item, manual_sync: institution_manual_sync, sophtron_account_id: institution_anchor.id),
+                      frame: (institution_manual_sync ? "modal" : nil),
+                      title: t(".sync_now")
+                    ) %>
+                  <% end %>
+
+                  <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+                    <% menu.with_item(
+                      variant: "button",
+                      text: t(institution_manual_sync ? ".automatic_sync" : ".manual_sync_action"),
+                      icon: institution_manual_sync ? "refresh-cw" : "pause-circle",
+                      href: toggle_manual_sync_sophtron_item_path(sophtron_item, sophtron_account_id: institution_anchor.id),
+                      method: :post
+                    ) %>
+                  <% end %>
+                </div>
+              </div>
+
+              <%= render "accounts/index/account_groups", accounts: institution_accounts.filter_map(&:current_account) %>
+            </div>
+          <% end %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>

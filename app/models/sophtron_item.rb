@@ -43,13 +43,18 @@ class SophtronItem < ApplicationRecord
   validates :access_key, presence: true, on: :create
 
   belongs_to :family
+  belongs_to :current_job_sophtron_account, class_name: "SophtronAccount", optional: true
   has_one_attached :logo
 
   has_many :sophtron_accounts, dependent: :destroy
   has_many :accounts, through: :sophtron_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
-  scope :syncable, -> { active }
+  scope :syncable, -> {
+    active.left_joins(sophtron_accounts: :account_provider)
+          .where("sophtron_accounts.id IS NULL OR sophtron_accounts.manual_sync = ? OR account_providers.id IS NULL", false)
+          .distinct
+  }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
@@ -83,12 +88,13 @@ class SophtronItem < ApplicationRecord
     raise
   end
 
-  def process_accounts
-    return [] if sophtron_accounts.empty?
+  def process_accounts(sophtron_accounts_scope: nil)
+    accounts_to_process = sophtron_accounts_scope || sophtron_accounts.automatic_sync.joins(:account).merge(Account.visible)
+    return [] if accounts_to_process.empty?
 
     results = []
     # Only process accounts that are linked and have active status
-    sophtron_accounts.joins(:account).merge(Account.visible).each do |sophtron_account|
+    accounts_to_process.each do |sophtron_account|
       begin
         result = SophtronAccount::Processor.new(sophtron_account).process
         results << { sophtron_account_id: sophtron_account.id, success: true, result: result }
@@ -102,12 +108,13 @@ class SophtronItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, accounts_scope: nil)
+    accounts_to_sync = accounts_scope || automatic_sync_accounts
+    return [] if accounts_to_sync.empty?
 
     results = []
     # Only schedule syncs for active accounts
-    accounts.visible.each do |account|
+    accounts_to_sync.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,
@@ -123,6 +130,29 @@ class SophtronItem < ApplicationRecord
     end
 
     results
+  end
+
+  def automatic_sync_accounts
+    manual_account_ids = sophtron_accounts.manual_sync.joins(:account_provider).select("account_providers.account_id")
+    accounts.visible.where.not(id: manual_account_ids)
+  end
+
+  def sophtron_accounts_for_institution(anchor_account)
+    user_institution_id = anchor_account.institution_user_institution_id
+    return sophtron_accounts.where("institution_metadata ->> 'user_institution_id' = ? OR institution_metadata ->> 'UserInstitutionID' = ?", user_institution_id, user_institution_id) if user_institution_id.present?
+
+    institution_name = anchor_account.institution_name
+    return sophtron_accounts.where("institution_metadata ->> 'name' = ? OR institution_metadata ->> 'institution_name' = ?", institution_name, institution_name) if institution_name.present?
+
+    sophtron_accounts.where(id: anchor_account.id)
+  end
+
+  def manual_sync_for_institution?(anchor_account)
+    sophtron_accounts_for_institution(anchor_account).where(manual_sync: true).exists?
+  end
+
+  def set_manual_sync_for_institution!(anchor_account, manual_sync)
+    sophtron_accounts_for_institution(anchor_account).update_all(manual_sync: manual_sync, updated_at: Time.current)
   end
 
   def start_initial_load_later

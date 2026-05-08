@@ -44,7 +44,7 @@ class SophtronItem::Syncer
     collect_setup_stats(sync, provider_accounts: sophtron_item.sophtron_accounts)
 
     # Check for unlinked accounts
-    linked_accounts = sophtron_item.sophtron_accounts.joins(:account_provider)
+    linked_accounts = sophtron_item.sophtron_accounts.automatic_sync.joins(:account_provider)
     unlinked_accounts = sophtron_item.sophtron_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
 
     # Set pending_account_setup if there are unlinked accounts
@@ -61,7 +61,7 @@ class SophtronItem::Syncer
       sync.update!(status_text: t("sophtron_items.syncer.processing_transactions")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
       Rails.logger.info "SophtronItem::Syncer - Processing #{linked_accounts.count} linked accounts"
-      sophtron_item.process_accounts
+      sophtron_item.process_accounts(sophtron_accounts_scope: linked_accounts.joins(:account).merge(Account.visible))
       Rails.logger.info "SophtronItem::Syncer - Finished processing accounts"
 
       # Phase 4: Schedule balance calculations for linked accounts
@@ -69,7 +69,8 @@ class SophtronItem::Syncer
       sophtron_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
-        window_end_date: sync.window_end_date
+        window_end_date: sync.window_end_date,
+        accounts_scope: sophtron_item.automatic_sync_accounts
       )
 
       # Phase 5: Collect transaction statistics

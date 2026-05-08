@@ -21,6 +21,9 @@ class SophtronAccount < ApplicationRecord
 
   belongs_to :sophtron_item
 
+  scope :manual_sync, -> { where(manual_sync: true) }
+  scope :automatic_sync, -> { where(manual_sync: false) }
+
   # Association to link this Sophtron account to a Maybe Account
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
@@ -33,6 +36,19 @@ class SophtronAccount < ApplicationRecord
   # @return [Account, nil] The linked Maybe Account, or nil if not linked
   def current_account
     account
+  end
+
+
+  def institution_name
+    institution_metadata.to_h["name"].presence || institution_metadata.to_h["institution_name"].presence || sophtron_item&.institution_name
+  end
+
+  def institution_user_institution_id
+    institution_metadata.to_h["user_institution_id"].presence || institution_metadata.to_h["UserInstitutionID"].presence || sophtron_item&.user_institution_id
+  end
+
+  def same_institution_accounts
+    sophtron_item.sophtron_accounts_for_institution(self)
   end
 
   # Updates this SophtronAccount with fresh data from the Sophtron API.
