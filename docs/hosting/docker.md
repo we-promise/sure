@@ -337,3 +337,12 @@ Sure honors the header only when the immediate peer (`REMOTE_ADDR`) is in this l
 REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
 ```
 Setting the variable replaces the default. A set-but-empty or unparseable value resolves to an empty allowlist — every request is treated as outside it and the header is ignored.
+
+### Shared-secret header (optional)
+
+Useful when the IP allowlist alone isn't sufficient — e.g. multi-tenant Docker bridge where many containers share an IP range, or a topology where the immediate peer isn't fully trusted. When `REMOTE_USER_SHARED_SECRET` is set, the proxy must echo the same value in a sibling header on every request; mismatches and missing headers are rejected with a constant-time compare:
+```txt
+REMOTE_USER_SHARED_SECRET="long-random-string-from-openssl-rand-hex-32"
+REMOTE_USER_SHARED_SECRET_HEADER="X-Remote-User-Secret"
+```
+`REMOTE_USER_SHARED_SECRET_HEADER` defaults to `X-Remote-User-Secret` and only needs setting if your proxy can't use that name. Leave `REMOTE_USER_SHARED_SECRET` unset to disable the check (the IP allowlist remains the only gate).
