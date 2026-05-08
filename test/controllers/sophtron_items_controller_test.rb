@@ -569,23 +569,59 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to connection_status_sophtron_item_path(@item, post_mfa: true)
   end
 
-  test "toggle_manual_sync takes Sophtron item off automatic sync path" do
-    assert_not @item.manual_sync?
-
-    post toggle_manual_sync_sophtron_item_url(@item)
-
-    assert_redirected_to accounts_path
-    assert @item.reload.manual_sync?
-    assert_equal "Sophtron institution now requires manual sync.", flash[:notice]
-  end
-
-  test "manual sync starts Sophtron refresh and renders MFA challenge" do
-    @item.update!(manual_sync: true, user_institution_id: "ui-1")
+  test "toggle_manual_sync marks linked Sophtron institution accounts manual" do
     sophtron_account = @item.sophtron_accounts.create!(
       account_id: "acct-1",
       name: "Sophtron Checking",
       currency: "USD",
       balance: 100
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+
+    assert_not @item.manual_sync?
+    assert_not sophtron_account.manual_sync?
+
+    post toggle_manual_sync_sophtron_item_url(@item)
+
+    assert_redirected_to accounts_path
+    assert_not @item.reload.manual_sync?
+    assert sophtron_account.reload.manual_sync?
+    assert_includes SophtronItem.syncable, @item
+    assert_equal "Sophtron institution now requires manual sync.", flash[:notice]
+  end
+
+  test "toggle_manual_sync can target one Sophtron institution on a mixed item" do
+    first_sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Apple Card",
+      currency: "USD",
+      balance: 100,
+      institution_metadata: { name: "Apple", user_institution_id: "ui-apple" }
+    )
+    second_sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-2",
+      name: "Amazon Card",
+      currency: "USD",
+      balance: 200,
+      institution_metadata: { name: "Amazon", user_institution_id: "ui-amazon" }
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: first_sophtron_account)
+    AccountProvider.create!(account: accounts(:credit_card), provider: second_sophtron_account)
+
+    post toggle_manual_sync_sophtron_item_url(@item), params: { user_institution_id: "ui-amazon" }
+
+    assert_not first_sophtron_account.reload.manual_sync?
+    assert second_sophtron_account.reload.manual_sync?
+  end
+
+  test "manual sync starts Sophtron refresh and renders MFA challenge" do
+    @item.update!(user_institution_id: "ui-1")
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
     )
     AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
 
@@ -611,14 +647,64 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert @item.syncs.ordered.first.syncing?
   end
 
+  test "manual sync refreshes every linked Sophtron account" do
+    @item.update!(user_institution_id: "ui-1")
+    first_sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    second_sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-2",
+      name: "Sophtron Card",
+      currency: "USD",
+      balance: 200,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: first_sophtron_account)
+    AccountProvider.create!(account: accounts(:credit_card), provider: second_sophtron_account)
+
+    provider = mock
+    sequence = sequence("sophtron manual refresh")
+    provider.expects(:refresh_account).with("acct-1").in_sequence(sequence).returns({ JobID: "job-1" })
+    provider.expects(:get_job_information).with("job-1").in_sequence(sequence).returns({ LastStatus: "Completed" })
+    provider.expects(:refresh_account).with("acct-2").in_sequence(sequence).returns({ JobID: "job-2" })
+    provider.expects(:get_job_information).with("job-2").in_sequence(sequence).returns({ LastStatus: "Completed" })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+    SophtronItem::Importer.any_instance.expects(:import_transactions_after_refresh)
+                           .with(first_sophtron_account)
+                           .returns({ success: true, transactions_count: 1 })
+    SophtronItem::Importer.any_instance.expects(:import_transactions_after_refresh)
+                           .with(second_sophtron_account)
+                           .returns({ success: true, transactions_count: 1 })
+    SophtronAccount::Processor.any_instance.expects(:process).twice.returns({ transactions_imported: 1 })
+
+    assert_enqueued_jobs 2, only: SyncJob do
+      post sync_sophtron_item_url(@item)
+    end
+
+    assert_response :success
+    assert_includes response.body, "Transactions were downloaded after Sophtron verification."
+    @item.reload
+    assert_nil @item.current_job_id
+    assert_nil @item.current_job_sophtron_account_id
+    assert_equal(
+      [ first_sophtron_account.id, second_sophtron_account.id ].map(&:to_s),
+      @item.syncs.ordered.first.sync_stats["manual_sync_processed_sophtron_account_ids"]
+    )
+  end
+
   test "submit_mfa preserves manual sync context" do
-    @item.update!(manual_sync: true, user_institution_id: "ui-1", current_job_id: "job-1")
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     sync = @item.syncs.create!
     sophtron_account = @item.sophtron_accounts.create!(
       account_id: "acct-1",
       name: "Sophtron Checking",
       currency: "USD",
-      balance: 100
+      balance: 100,
+      manual_sync: true
     )
     provider = mock
     provider.expects(:update_job_token_input).with("job-1", token_input: "123456").returns({})
