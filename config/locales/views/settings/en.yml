@@ -221,7 +221,7 @@ en:
       recently_synced: Synced recently — try again in a moment.
       taglines:
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
-        lunchflow: Track school lunch account balances for your kids.
+        lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         mercury: Sync your Mercury business banking accounts automatically.
@@ -229,7 +229,7 @@ en:
         binance: Sync your Binance spot balances using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
-        sophtron: Connect US bank accounts via the Sophtron aggregation network.
+        sophtron: Connect US & Canadian banks and utilities.
         plaid: Connect thousands of US financial institutions via Plaid.
       add_provider_cta:
         title: Add another provider
