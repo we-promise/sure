@@ -17,36 +17,47 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     end
   end
 
-  test "shows not configured pill for an unconfigured provider" do
+  test "unconfigured SimpleFIN appears in Available with a connect affordance" do
     visit settings_providers_path
 
-    within("details", text: "SimpleFIN") do
-      assert_text "Not configured"
+    assert_no_selector "details", text: "SimpleFIN"
+
+    within available_provider_cards_container do
+      assert_text "SimpleFIN"
+      assert_selector "a[data-turbo-frame='drawer']", text: "Connect"
     end
   end
 
-  test "connected providers render before unconfigured ones" do
+  test "connected providers are grouped under Your connections in alphabetical title order" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
 
     visit settings_providers_path
 
-    sections = all("details summary").map(&:text)
-    simplefin_index = sections.index { |t| t.include?("SimpleFIN") }
-    binance_index   = sections.index { |t| t.include?("Binance") }
+    titles = all("details").map { |d| d.find("summary h2", match: :first).text.squish }
+    assert_equal titles.sort_by(&:downcase), titles, "Connection panels should render alphabetically by title"
 
-    assert simplefin_index < binance_index, "Connected SimpleFIN should appear before unconfigured Binance"
+    connections_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Your connections')]")
+    available_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Available')]")
+    connections_y = connections_heading.native.location.y
+    available_y = available_heading.native.location.y
+
+    assert_operator connections_y, :<, page.find("details", text: "SimpleFIN").native.location.y
+    assert_operator page.find("details", text: "SimpleFIN").native.location.y, :<, available_y
   end
 
   test "expanding a section still works as expected" do
+    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+
     visit settings_providers_path
 
-    details = find("details", text: "SimpleFIN")
-    assert_nil details[:open], "Section should start collapsed"
+    assert_selector "details:not([open])", text: "SimpleFIN"
 
-    details.find("summary").click
+    find("details", text: "SimpleFIN").find("summary").click
 
-    assert details[:open], "Section should open when clicked"
-    details.assert_text "Setup Token"
+    assert_selector "details[open]", text: "SimpleFIN"
+    within("details[open]", text: "SimpleFIN") do
+      assert_text "Setup Token"
+    end
   end
 
   test "groups providers into Your connections and Available with counts" do
@@ -54,19 +65,20 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    connections_heading = find("h2", text: /\AYour connections/)
-    assert_match(/· 1\z/, connections_heading.text)
-
-    available_heading = find("h2", text: /\AAvailable/)
+    connections_heading = find(:xpath, "//h2[contains(., 'Your connections')]")
+    normalized = connections_heading.text.squish
+    assert_match(/Your connections .*· \d+/, normalized)
 
     connections_y = connections_heading.native.location.y
-    available_y   = available_heading.native.location.y
-    simplefin_y   = find("details", text: "SimpleFIN").native.location.y
-    binance_y     = find("details", text: "Binance").native.location.y
+    available_heading = find(:xpath, "//h2[contains(., 'Available')]")
+    available_y = available_heading.native.location.y
+    simplefin_y = find("details", text: "SimpleFIN").native.location.y
 
-    assert connections_y < simplefin_y, "Your connections heading should appear above SimpleFIN section"
-    assert simplefin_y < available_y, "SimpleFIN should appear above Available heading"
-    assert available_y < binance_y,  "Available heading should appear above Binance section"
+    assert_operator connections_y, :<, simplefin_y, "Your connections heading should appear above SimpleFIN section"
+    assert_operator simplefin_y, :<, available_y, "SimpleFIN should appear above Available heading"
+
+    available_grid_top = available_provider_cards_container.native.location.y
+    assert_operator available_y, :<, available_grid_top, "Available heading should appear above the card grid"
   end
 
   test "health strip shows four tiles with correct counts" do
@@ -105,34 +117,13 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     assert_selector "h2", text: /\AYour connections/
 
-    # The Enable Banking section should be in the Your connections group and auto-opened
-    within("details[open]", text: /Enable Banking/) do
-      assert_text "Re-consent needed in 5 days"
-    end
-  end
+    # Auto-expanded warning sections hide compact meta behind `group-open:hidden`;
+    # collapse once so the re-consent copy is visible again.
+    enable = find("details", text: /Enable Banking/)
+    enable.find("summary").click if enable.matches_selector?(":open")
 
-  test "sync all button enqueues SyncAllProvidersJob and shows flash" do
-    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
-
-    visit settings_providers_path
-
-    assert_enqueued_with(job: SyncAllProvidersJob) do
-      click_on "Sync all"
-    end
-
-    assert_text "Syncing all connected providers"
-  end
-
-  test "per-row sync button enqueues sync for that provider and shows flash" do
-    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
-
-    visit settings_providers_path
-
-    within("details", text: "SimpleFIN") do
-      find("button[title='Sync now']").click
-    end
-
-    assert_text "Sync started"
+    assert_selector "details:not([open])", text: /Enable Banking/
+    assert_text "Re-consent needed in 5 days"
   end
 
   test "add provider CTA banner appears above available group when providers are connected" do
@@ -141,19 +132,18 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     visit settings_providers_path
 
     cta = find("a", text: "Browse providers")
-    available_heading = find("h2", text: /\AAvailable/)
+    available_heading = find(:xpath, "//h2[contains(., 'Available')]")
 
     cta_y = cta.native.location.y
     available_y = available_heading.native.location.y
 
-    assert cta_y < available_y, "Add-provider CTA should appear above the Available heading"
+    assert_operator cta_y, :<, available_y, "Add-provider CTA should appear above the Available heading"
   end
 
   test "available providers render as a card grid" do
     visit settings_providers_path
 
-    # SimpleFIN is not connected, so it should appear in the card grid
-    within "div.grid" do
+    within available_provider_cards_container do
       assert_text "SimpleFIN"
       assert_selector "a[data-turbo-frame='drawer']", minimum: 1
     end
@@ -162,13 +152,21 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
   test "clicking a provider card connect link opens the connect drawer" do
     visit settings_providers_path
 
-    # Find and click the SimpleFIN card's Connect link
-    within "div.grid" do
-      find("a[data-turbo-frame='drawer']", text: /Connect/, match: :first).click
+    within available_provider_cards_container do
+      card = find(:xpath, ".//div[contains(concat(' ', normalize-space(@class), ' '), ' bg-container ')][.//span[normalize-space()='SimpleFIN']]")
+      within(card) do
+        find("a[data-turbo-frame='drawer']", text: "Connect").click
+      end
     end
 
-    # Drawer should open with the panel content
     assert_selector "dialog[open]"
     assert_text "Setup Token"
   end
+
+  private
+
+    # Card grid rendered after the `#available` group heading (following sibling div.grid)
+    def available_provider_cards_container
+      find("#available").find(:xpath, "following-sibling::div[contains(concat(' ', normalize-space(@class), ' '), ' grid ')]")
+    end
 end

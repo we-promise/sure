@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     sign_in users(:family_admin)
 
@@ -302,6 +304,44 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_redirected_to settings_providers_url
       assert_equal "No changes were made", flash[:notice]
     end
+  end
+
+  test "POST sync_all enqueues SyncAllProvidersJob" do
+    SimplefinItem.create!(
+      family: families(:dylan_family),
+      name: "Test SimpleFIN Sync All",
+      access_url: "https://bridge.simplefin.org/simplefin/access"
+    )
+    families(:dylan_family).update_column(:last_sync_all_attempted_at, nil)
+
+    assert_enqueued_with(job: SyncAllProvidersJob) do
+      post sync_all_settings_providers_path
+    end
+
+    assert_redirected_to settings_providers_path
+
+    follow_redirect!
+    assert_response :success
+    assert_match(/Syncing all connected providers/i, response.body)
+  end
+
+  test "POST sync for simplefin without an active Simplefin sync enqueues SyncJob" do
+    item = SimplefinItem.create!(
+      family: families(:dylan_family),
+      name: "Test SimpleFIN Per Row Sync",
+      access_url: "https://bridge.simplefin.org/simplefin/access"
+    )
+    Sync.where(syncable_type: "SimplefinItem", syncable_id: item.id).delete_all
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      post sync_provider_settings_providers_path(provider_key: "simplefin")
+    end
+
+    assert_redirected_to settings_providers_path
+
+    follow_redirect!
+    assert_response :success
+    assert_match(/Sync started/i, response.body)
   end
 
   test "non-admin users cannot update providers" do
