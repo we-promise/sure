@@ -34,6 +34,12 @@ class SophtronItem::Syncer
   # @return [void]
   # @raise [StandardError] if any phase of the sync fails
   def perform_sync(sync)
+    if sophtron_item.manual_sync?
+      sync.update!(status_text: t("sophtron_items.syncer.manual_sync_required")) if sync.respond_to?(:status_text)
+      collect_health_stats(sync, errors: nil)
+      return
+    end
+
     # Phase 1: Import data from Sophtron API
     sync.update!(status_text: t("sophtron_items.syncer.importing_accounts")) if sync.respond_to?(:status_text)
     import_result = sophtron_item.import_latest_sophtron_data(sync: sync)

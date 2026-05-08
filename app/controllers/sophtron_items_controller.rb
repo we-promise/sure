@@ -8,13 +8,13 @@ class SophtronItemsController < ApplicationController
 
   before_action :set_sophtron_item, only: [
     :show, :edit, :update, :destroy, :connect_institution, :sync,
-    :connection_status, :submit_mfa,
+    :connection_status, :submit_mfa, :toggle_manual_sync,
     :setup_accounts, :complete_account_setup
   ]
   before_action :require_admin!, only: [
     :new, :create, :preload_accounts, :select_accounts, :link_accounts,
     :select_existing_account, :link_existing_account, :connect_institution,
-    :edit, :update, :destroy, :sync, :connection_status, :submit_mfa,
+    :edit, :update, :destroy, :sync, :connection_status, :submit_mfa, :toggle_manual_sync,
     :setup_accounts, :complete_account_setup
   ]
 
@@ -146,6 +146,11 @@ class SophtronItemsController < ApplicationController
     @sophtron_item.upsert_job_snapshot!(job)
 
     if Provider::Sophtron.job_success?(job)
+      if manual_sync_flow?
+        complete_manual_sync_from_job(job)
+        return
+      end
+
       @sophtron_item.update!(
         current_job_id: nil,
         last_connection_error: nil,
@@ -157,18 +162,27 @@ class SophtronItemsController < ApplicationController
       @challenge = @sophtron_item.build_mfa_challenge(job)
       prepare_connection_status_context
       render :mfa, layout: false
-    elsif post_mfa_polling? && Provider::Sophtron.job_completed?(job)
-      return if render_account_selection_if_accounts_available(@sophtron_item)
+    elsif Provider::Sophtron.job_completed?(job)
+      if manual_sync_flow?
+        complete_manual_sync_from_job(job)
+        return
+      end
+
+      if post_mfa_polling?
+        return if render_account_selection_if_accounts_available(@sophtron_item)
+      end
 
       render_pending_connection_status
     elsif Provider::Sophtron.job_failed?(job)
       failure_message = sophtron_connection_failure_message(job)
       @sophtron_item.update!(
         current_job_id: nil,
-        user_institution_id: nil,
+        current_job_sophtron_account_id: nil,
+        user_institution_id: (manual_sync_flow? ? @sophtron_item.user_institution_id : nil),
         last_connection_error: failure_message,
         status: :requires_update
       )
+      fail_manual_sync!(manual_sync_record, failure_message) if manual_sync_flow?
       render_institution_connection_error(failure_message)
     else
       render_pending_connection_status
@@ -415,11 +429,35 @@ class SophtronItemsController < ApplicationController
   end
 
   def sync
+    if @sophtron_item.manual_sync?
+      start_manual_sync
+      return
+    end
+
     @sophtron_item.sync_later unless @sophtron_item.syncing?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
       format.json { head :ok }
+    end
+  end
+
+  def toggle_manual_sync
+    @sophtron_item.update!(manual_sync: !@sophtron_item.manual_sync?)
+
+    respond_to do |format|
+      format.html { redirect_back_or_to accounts_path, notice: t(".success_#{@sophtron_item.manual_sync? ? 'enabled' : 'disabled'}") }
+      format.turbo_stream do
+        flash.now[:notice] = t(".success_#{@sophtron_item.manual_sync? ? 'enabled' : 'disabled'}")
+        render turbo_stream: [
+          turbo_stream.replace(
+            ActionView::RecordIdentifier.dom_id(@sophtron_item),
+            partial: "sophtron_items/sophtron_item",
+            locals: { sophtron_item: @sophtron_item }
+          ),
+          *flash_notification_stream_items
+        ]
+      end
     end
   end
 
@@ -579,6 +617,125 @@ class SophtronItemsController < ApplicationController
   end
 
   private
+
+    def start_manual_sync
+      sophtron_account = @sophtron_item.sophtron_accounts.joins(:account_provider).first
+
+      unless sophtron_account
+        redirect_back_or_to accounts_path, alert: t(".no_linked_accounts")
+        return
+      end
+
+      sync = @sophtron_item.syncs.visible.first || @sophtron_item.syncs.create!
+      sync.start! if sync.may_start?
+
+      provider = @sophtron_item.sophtron_provider
+      raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+      refresh_response = sophtron_response_data!(provider.refresh_account(sophtron_account.account_id)).with_indifferent_access
+      job_id = refresh_response[:JobID] || refresh_response[:job_id]
+
+      if job_id.blank?
+        complete_manual_sync!(sophtron_account, provider, sync)
+        render :manual_sync_complete, layout: false
+        return
+      end
+
+      @sophtron_item.update!(
+        current_job_id: job_id,
+        current_job_sophtron_account_id: sophtron_account.id,
+        raw_job_payload: refresh_response,
+        job_status: nil,
+        last_connection_error: nil,
+        status: :good
+      )
+
+      job = sophtron_response_data!(provider.get_job_information(job_id))
+      @sophtron_item.upsert_job_snapshot!(job)
+
+      if Provider::Sophtron.job_requires_input?(job)
+        @challenge = @sophtron_item.build_mfa_challenge(job)
+        prepare_connection_status_context
+        render :mfa, layout: false
+      elsif Provider::Sophtron.job_failed?(job)
+        fail_manual_sync!(sync, t(".failed"))
+        redirect_back_or_to accounts_path, alert: t(".failed")
+      elsif Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
+        complete_manual_sync!(sophtron_account, provider, sync)
+        render :manual_sync_complete, layout: false
+      else
+        @poll_attempt = 1
+        render_pending_connection_status
+      end
+    rescue Provider::Sophtron::Error => e
+      fail_manual_sync!(sync, e.message) if defined?(sync) && sync.present?
+      Rails.logger.error("Sophtron manual sync error: #{e.message}")
+      redirect_back_or_to accounts_path, alert: t(".api_error", message: e.message)
+    end
+
+    def complete_manual_sync_from_job(job)
+      sophtron_account = @sophtron_item.current_job_sophtron_account || @sophtron_item.sophtron_accounts.joins(:account_provider).first
+      sync = manual_sync_record
+
+      unless sophtron_account && sync
+        @sophtron_item.update!(current_job_id: nil, current_job_sophtron_account_id: nil)
+        render_api_error(t("sophtron_items.sync.no_linked_accounts"), accounts_path)
+        return
+      end
+
+      complete_manual_sync!(sophtron_account, @sophtron_item.sophtron_provider, sync)
+      render :manual_sync_complete, layout: false
+    rescue Provider::Sophtron::Error => e
+      fail_manual_sync!(sync, e.message) if defined?(sync) && sync.present?
+      render_api_error(t("sophtron_items.sync.api_error", message: e.message), accounts_path)
+    end
+
+    def complete_manual_sync!(sophtron_account, provider, sync)
+      raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+      result = SophtronItem::Importer.new(@sophtron_item, sophtron_provider: provider, sync: sync)
+                                    .import_transactions_after_refresh(sophtron_account)
+
+      unless result[:success]
+        fail_manual_sync!(sync, result[:error])
+        @sophtron_item.update!(last_connection_error: result[:error], status: (result[:requires_update] ? :requires_update : @sophtron_item.status))
+        raise Provider::Sophtron::Error.new(result[:error] || t("sophtron_items.sync.failed"), :api_error)
+      end
+
+      SophtronAccount::Processor.new(sophtron_account.reload).process
+      @sophtron_item.update!(
+        current_job_id: nil,
+        current_job_sophtron_account_id: nil,
+        last_connection_error: nil,
+        status: :good
+      )
+
+      if (account = sophtron_account.current_account)
+        account.sync_later(
+          parent_sync: sync,
+          window_start_date: sync.window_start_date,
+          window_end_date: sync.window_end_date
+        )
+      else
+        sync.finalize_if_all_children_finalized
+      end
+
+      @manual_sync_account = sophtron_account
+      @manual_sync = sync
+    end
+
+    def fail_manual_sync!(sync, message)
+      return unless sync
+
+      sync.start! if sync.may_start?
+      sync.fail! if sync.may_fail?
+      sync.update!(error: message)
+    end
+
+    def manual_sync_record
+      sync = @sophtron_item.syncs.find_by(id: params[:sync_id]) if params[:sync_id].present?
+      sync || @sophtron_item.syncs.visible.first
+    end
 
     def configured_sophtron_item
       Current.family.configured_sophtron_item
@@ -746,6 +903,9 @@ class SophtronItemsController < ApplicationController
       @accountable_type = params[:accountable_type] || "Depository"
       @account_id = params[:account_id]
       @return_to = safe_return_to_path
+      @manual_sync_flow = manual_sync_flow?
+      @manual_sync_id = params[:sync_id] || @sophtron_item.syncs.visible.first&.id
+      @manual_sync_sophtron_account_id = params[:sophtron_account_id] || @sophtron_item.current_job_sophtron_account_id
       @poll_interval_ms = CONNECTION_STATUS_POLL_INTERVAL_MS
       @post_mfa_polling = post_mfa_polling?
       @max_poll_attempts = connection_status_max_polls
@@ -780,6 +940,10 @@ class SophtronItemsController < ApplicationController
 
     def post_mfa_polling?
       ActiveModel::Type::Boolean.new.cast(params[:post_mfa]) || post_mfa_job_payload?(@sophtron_item.raw_job_payload)
+    end
+
+    def manual_sync_flow?
+      ActiveModel::Type::Boolean.new.cast(params[:manual_sync]) || @sophtron_item.manual_sync? && @sophtron_item.current_job_sophtron_account_id.present?
     end
 
     def post_mfa_job_payload?(job_payload)
@@ -888,7 +1052,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def connection_context_params
-      params.permit(:accountable_type, :account_id, :return_to, :post_mfa, :connect_new_institution).to_h.compact
+      params.permit(:accountable_type, :account_id, :return_to, :post_mfa, :connect_new_institution, :manual_sync, :sync_id, :sophtron_account_id).to_h.compact
     end
 
     def connect_new_institution_flow?
