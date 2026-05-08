@@ -55,6 +55,8 @@ class SophtronAccount < ApplicationRecord
     account_type = first_present(snapshot, :account_type, :type, :AccountType)
     account_sub_type = first_present(snapshot, :sub_type, :account_sub_type, :AccountSubType, :SubType)
     last_updated = first_present(snapshot, :last_updated, :LastUpdated)
+    institution_name = first_present(snapshot, :institution_name, :InstitutionName).presence || sophtron_item&.institution_name
+    user_institution_id = first_present(snapshot, :user_institution_id, :UserInstitutionID).presence || sophtron_item&.user_institution_id
 
     # Map Sophtron field names to our field names
     assign_attributes(
@@ -69,8 +71,8 @@ class SophtronAccount < ApplicationRecord
       account_status: first_present(snapshot, :account_status, :status, :AccountStatus, :Status),
       account_number_mask: snapshot[:account_number_mask].presence || mask_account_number(account_number),
       institution_metadata: {
-        name: first_present(snapshot, :institution_name, :InstitutionName),
-        user_institution_id: first_present(snapshot, :user_institution_id, :UserInstitutionID)
+        name: institution_name,
+        user_institution_id: user_institution_id
       }.compact,
       raw_payload: account_snapshot,
       customer_id: first_present(snapshot, :customer_id, :CustomerID) || customer_id,

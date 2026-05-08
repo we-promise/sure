@@ -89,10 +89,16 @@ class Provider::SophtronAdapter < Provider::Base
   end
 
   def institution_name
-    metadata = provider_account.institution_metadata
+    metadata = provider_account.institution_metadata || {}
     return nil unless metadata.present?
 
-    metadata["name"] || item&.institution_name
+    metadata_name = metadata["name"].presence || metadata["institution_name"].presence
+    return metadata_name if metadata_name.present?
+
+    metadata_user_institution_id = metadata["user_institution_id"].presence || metadata["UserInstitutionID"].presence
+    return item&.institution_name if metadata_user_institution_id.present? && metadata_user_institution_id == item&.user_institution_id
+
+    nil
   end
 
   def institution_url

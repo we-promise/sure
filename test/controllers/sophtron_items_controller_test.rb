@@ -113,6 +113,59 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to connection_status_sophtron_item_path(@item)
   end
 
+  test "connect_institution creates separate item for additional institution" do
+    @item.update!(
+      institution_id: "apple-inst",
+      institution_name: "Apple / Goldman Sachs",
+      user_institution_id: "ui-apple",
+      status: :good
+    )
+    @item.sophtron_accounts.create!(
+      name: "Juan",
+      account_id: "card-1",
+      currency: "USD",
+      balance: 1_947.18,
+      institution_metadata: {
+        name: "Apple / Goldman Sachs",
+        user_institution_id: "ui-apple"
+      }
+    )
+
+    provider = mock
+    provider.expects(:create_user_institution).with(
+      institution_id: "amazon-inst",
+      username: "bank-user",
+      password: "bank-pass",
+      pin: ""
+    ).returns({
+      JobID: "job-amazon",
+      UserInstitutionID: "ui-amazon"
+    })
+
+    SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    assert_difference -> { @user.family.sophtron_items.count }, 1 do
+      post connect_institution_sophtron_item_url(@item), params: {
+        institution_id: "amazon-inst",
+        institution_name: "Amazon",
+        bank_username: "bank-user",
+        bank_password: "bank-pass",
+        connect_new_institution: true
+      }
+    end
+
+    @item.reload
+    new_item = @user.family.sophtron_items.find_by!(user_institution_id: "ui-amazon")
+
+    assert_equal "Apple / Goldman Sachs", @item.institution_name
+    assert_equal "ui-apple", @item.user_institution_id
+    assert_equal "Amazon", new_item.institution_name
+    assert_equal "ui-amazon", new_item.user_institution_id
+    assert_equal "job-amazon", new_item.current_job_id
+    assert_redirected_to connection_status_sophtron_item_path(new_item, connect_new_institution: "true")
+  end
+
   test "Sophtron bank credentials and mfa inputs are filtered from logs" do
     parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
     filtered_params = parameter_filter.filter(

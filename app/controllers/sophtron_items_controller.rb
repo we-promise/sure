@@ -84,13 +84,12 @@ class SophtronItemsController < ApplicationController
   end
 
   def connect_institution
-    item = @sophtron_item
-
     if params[:institution_id].blank? || params[:bank_username].blank? || params[:bank_password].blank?
       redirect_to select_accounts_sophtron_items_path(connection_context_params), alert: t(".missing_parameters")
       return
     end
 
+    item = item_for_institution_connection(@sophtron_item)
     item.ensure_customer!
     response = sophtron_response_data!(
       item.sophtron_provider.create_user_institution(
@@ -652,6 +651,29 @@ class SophtronItemsController < ApplicationController
       else
         redirect_to settings_providers_path, alert: t("sophtron_items.select_accounts.no_credentials_configured")
       end
+    end
+
+    def item_for_institution_connection(item)
+      return item unless connect_new_institution_flow? && should_create_sophtron_item_for_new_institution?(item)
+
+      Current.family.sophtron_items.create!(
+        name: item.name.presence || t("sophtron_items.defaults.name"),
+        user_id: item.user_id,
+        access_key: item.access_key,
+        base_url: item.base_url,
+        customer_id: item.customer_id,
+        customer_name: item.customer_name,
+        raw_customer_payload: item.raw_customer_payload,
+        sync_start_date: item.sync_start_date
+      )
+    end
+
+    def should_create_sophtron_item_for_new_institution?(item)
+      item.user_institution_id.present? ||
+        item.current_job_id.present? ||
+        item.institution_id.present? ||
+        item.institution_name.present? ||
+        item.sophtron_accounts.exists?
     end
 
     def prepare_connection_form(item, account: nil)
