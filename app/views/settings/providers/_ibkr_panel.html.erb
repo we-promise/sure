@@ -1,0 +1,120 @@
+<div id="ibkr-providers-panel" class="space-y-4">
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium">Setup instructions:</p>
+    <ol>
+      <li>In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".</li>
+      <li>Click the "+" icon in the "Activity Flex Query" section to create a new query.</li>
+      <li>Name your query (e.g., "Sure Sync") and enable the following sections:</li>
+      <ul class="list-disc list-inside mb-2">
+        <li>Account Information: Account ID, Currency</li>
+        <li>Cash Report:</li>
+        <ul class="list-disc list-inside mb-2">
+          <li>Options: None</li>
+          <li>Fields: Currency, Ending Cash</li>
+        </ul>
+        <li>Cash Transactions:</li>
+        <ul class="list-disc list-inside mb-2">
+          <li>Options: Dividends, Deposits & Withdrawals, Detail</li>
+          <li>Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type</li>
+        </ul>
+        <li>Change In Position Value Summary: Currency, End Of Period Value</li>
+        <li>Net Asset Value (NAV) in Base:</li>
+        <ul class="list-disc list-inside mb-2">
+          <li>Options: None</li>
+          <li>Fields: Currency, Report Date, Total</li>
+        </ul>
+        <li>Open Positions:</li>
+        <ul class="list-disc list-inside mb-2">
+          <li>Options: Summary</li>
+          <li>Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol</li>
+        </ul>
+        <li>Trades:</li>
+        <ul class="list-disc list-inside mb-2">
+          <li>Options: Execution</li>
+          <li>Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID</li>
+        </ul>
+      </ul>
+      <li>Set the following configuration options:</li>
+      <ul class="list-disc list-inside mb-2">
+        <li>Models: Optional</li>
+        <li>Format: XML</li>
+        <li>Period: Last 365 Calendar Days</li>
+        <li>Date Format: yyyy-MM-dd</li>
+        <li>Time Format: HH:mm:ss</li>
+        <li>Date/Time Separator: ; (semi-colon)</li>
+        <li>Profit and Loss: Default</li>
+      </ul>
+      <li>Set all other configuration options to "No", and finally click "Continue".</li>
+      <li>Note your "Query ID" and click on "Save Changes".</li>
+      <li>Back on the "Flex Queries" page, click the gear icon in the "Flex Web Service Configuration" section to generate an access Token.</li>
+      <li>Paste your Query ID and Token below, then save the configuration.</li>
+      <li>After saving, go to the Accounts tab to link discovered IBKR accounts.</li>
+    </ol>
+
+    <p class="text-xs text-secondary">
+      IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report.
+    </p>
+  </div>
+
+  <%
+    ibkr_item = Current.family.ibkr_items.first_or_initialize(name: "Interactive Brokers")
+    is_new_record = ibkr_item.new_record?
+  %>
+
+  <%= styled_form_with model: ibkr_item,
+                       url: is_new_record ? ibkr_items_path : ibkr_item_path(ibkr_item),
+                       scope: :ibkr_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :query_id,
+                        label: "Query ID",
+                        placeholder: is_new_record ? "Enter your IBKR Flex Query ID" : "Leave blank to keep the current Query ID",
+                        type: :password %>
+
+    <%= form.text_field :token,
+                        label: "Token",
+                        placeholder: is_new_record ? "Enter your IBKR Flex Web Service Token" : "Leave blank to keep the current Token",
+                        type: :password %>
+
+    <div class="flex flex-wrap justify-end gap-2">
+      <% if ibkr_item.persisted? %>
+        <%= button_to sync_ibkr_item_path(ibkr_item),
+                      method: :post,
+                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                      disabled: ibkr_item.syncing? do %>
+          <%= icon "refresh-cw", size: "sm" %>
+          Sync
+        <% end %>
+
+        <%= button_to ibkr_item_path(ibkr_item),
+                      method: :delete,
+                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                      data: { turbo_confirm: "Disconnect Interactive Brokers?" } do %>
+          <%= icon "trash-2", size: "sm" %>
+        <% end %>
+      <% end %>
+
+      <%= form.submit(is_new_record ? "Save Configuration" : "Update Configuration", class: "btn btn--primary") %>
+    </div>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if ibkr_item.persisted? && ibkr_item.credentials_configured? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">
+        <%= ibkr_item.sync_status_summary %>. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage discovered accounts.
+      </p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary">Not configured.</p>
+    <% end %>
+  </div>
+</div>

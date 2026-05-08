@@ -79,6 +79,12 @@
       </turbo-frame>
     <% end %>
 
+    <%= settings_section title: "Interactive Brokers Flex Query (beta)", collapsible: true, open: false do %>
+      <turbo-frame id="ibkr-providers-panel">
+        <%= render "settings/providers/ibkr_panel" %>
+      </turbo-frame>
+    <% end %>
+
     <%= settings_section title: "Indexa Capital (alpha)", collapsible: true, open: false do %>
       <turbo-frame id="indexa_capital-providers-panel">
         <%= render "settings/providers/indexa_capital_panel" %>

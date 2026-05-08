@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_09_153000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -658,6 +658,41 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.index ["security_id"], name: "index_holdings_on_security_id"
   end
 
+  create_table "ibkr_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "ibkr_item_id", null: false
+    t.string "name"
+    t.string "ibkr_account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_holdings_payload", default: []
+    t.jsonb "raw_activities_payload", default: {}
+    t.jsonb "raw_cash_report_payload", default: []
+    t.date "report_date"
+    t.datetime "last_holdings_sync"
+    t.datetime "last_activities_sync"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ibkr_item_id", "ibkr_account_id"], name: "index_ibkr_accounts_on_item_and_ibkr_account_id", unique: true, where: "(ibkr_account_id IS NOT NULL)"
+    t.index ["ibkr_item_id"], name: "index_ibkr_accounts_on_ibkr_item_id"
+  end
+
+  create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_payload"
+    t.string "query_id"
+    t.string "token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_ibkr_items_on_family_id"
+    t.index ["status"], name: "index_ibkr_items_on_status"
+  end
+
   create_table "impersonation_session_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "impersonation_session_id", null: false
     t.string "controller"
@@ -1248,7 +1283,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1406,8 +1441,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1659,9 +1694,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
@@ -1704,6 +1739,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
   add_foreign_key "holdings", "securities", column: "provider_security_id"
+  add_foreign_key "ibkr_accounts", "ibkr_items"
+  add_foreign_key "ibkr_items", "families"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"

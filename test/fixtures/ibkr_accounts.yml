@@ -1,0 +1,27 @@
+main_account:
+  ibkr_item: configured_item
+  name: Main IBKR
+  ibkr_account_id: U1234567
+  currency: CHF
+  current_balance: 3351.0
+  cash_balance: 1000.5
+  institution_metadata:
+    provider_name: Interactive Brokers
+  raw_holdings_payload: []
+  raw_activities_payload: {}
+  raw_cash_report_payload: []
+  report_date: 2026-05-08
+
+secondary_account:
+  ibkr_item: configured_item
+  name: Retirement IBKR
+  ibkr_account_id: U7654321
+  currency: USD
+  current_balance: 250
+  cash_balance: 250
+  institution_metadata:
+    provider_name: Interactive Brokers
+  raw_holdings_payload: []
+  raw_activities_payload: {}
+  raw_cash_report_payload: []
+  report_date: 2026-05-08
