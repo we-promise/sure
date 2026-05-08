@@ -2,7 +2,7 @@ module SettingsHelper
   SETTINGS_ORDER = [
     # General section
     { name: "Accounts", path: :accounts_path },
-    { name: "Bank Sync", path: :settings_bank_sync_path },
+    { name: "Bank Sync", path: :settings_providers_path },
     { name: "Preferences", path: :settings_preferences_path },
     { name: "Appearance", path: :settings_appearance_path },
     { name: "Profile Info", path: :settings_profile_path },
@@ -19,7 +19,6 @@ module SettingsHelper
     { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
     { name: "API Key", path: :settings_api_key_path, condition: :admin_user? },
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
-    { name: "Providers", path: :settings_providers_path, condition: :admin_user? },
     { name: "Imports", path: :imports_path, condition: :admin_user? },
     { name: "Exports", path: :family_exports_path, condition: :admin_user? },
     # More section
@@ -45,9 +44,9 @@ module SettingsHelper
     }
   end
 
-  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, &block)
+  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil, &block)
     content = capture(&block)
-    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta }
+    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta, actions: actions, badge: badge }
   end
 
   def provider_summary(provider_key)
@@ -64,7 +63,7 @@ module SettingsHelper
       return { status: :off } unless @lunchflow_items&.any?
       sync_based_summary(key)
     when "enable_banking"
-      return { status: :off } unless @enable_banking_items&.any?(&:session_valid?)
+      return { status: :off } unless @enable_banking_items&.any?
       enable_banking_summary
     when "coinstats"
       return { status: :off } unless @coinstats_items&.any?
@@ -119,39 +118,49 @@ module SettingsHelper
   private
     def sync_based_summary(provider_key)
       health = @provider_sync_health&.dig(provider_key) || {}
+      last_synced_at = health[:last_synced_at]
 
-      if health[:error]
+      base = if health[:error]
         { status: :err, meta: t("settings.providers.meta.sync_error") }
       elsif health[:stale]
         { status: :warn, meta: t("settings.providers.meta.no_recent_sync") }
-      elsif health[:last_synced_at].present?
-        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(health[:last_synced_at])) }
+      elsif last_synced_at.present?
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at)) }
       else
         { status: :ok }
       end
+
+      base.merge(last_synced_at: last_synced_at)
     end
 
     def enable_banking_summary
       health = @provider_sync_health&.dig("enable_banking") || {}
+      last_synced_at = health[:last_synced_at]
 
-      return { status: :err, meta: t("settings.providers.meta.sync_error") } if health[:error]
+      return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
 
       valid_items = @enable_banking_items&.select(&:session_valid?) || []
+
+      # All items have expired/missing sessions — need re-authorization
+      if valid_items.empty?
+        return { status: :warn, meta: t("settings.providers.meta.reconsent_required"), last_synced_at: last_synced_at }
+      end
+
       expiring = valid_items.find do |item|
         item.session_expires_at.present? && item.session_expires_at < 7.days.from_now
       end
 
       if expiring
         days = [ ((expiring.session_expires_at - Time.current) / 1.day).ceil, 1 ].max
-        return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days) }
+        return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days), last_synced_at: last_synced_at }
       end
 
-      return { status: :warn, meta: t("settings.providers.meta.no_recent_sync") } if health[:stale]
+      return { status: :warn, meta: t("settings.providers.meta.no_recent_sync"), last_synced_at: last_synced_at } if health[:stale]
 
-      if health[:last_synced_at].present?
-        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(health[:last_synced_at])) }
+      if last_synced_at.present?
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at)), last_synced_at: last_synced_at }
       else
-        { status: :ok }
+        { status: :ok, last_synced_at: nil }
       end
     end
 

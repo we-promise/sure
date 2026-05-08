@@ -1,0 +1,10 @@
+<%# locals: (provider_key:, last_synced_at: nil) %>
+<% recently_synced = last_synced_at.present? && last_synced_at > 60.seconds.ago %>
+<%= button_to sync_provider_settings_providers_path(provider_key: provider_key),
+              method: :post,
+              disabled: recently_synced,
+              title: recently_synced ? t("settings.providers.recently_synced") : t("settings.providers.sync_provider"),
+              class: "inline-flex items-center p-1 rounded text-secondary hover:text-primary hover:bg-alpha-black-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+              form: { onclick: "event.stopPropagation()", class: "inline-flex" } do %>
+  <%= icon "refresh-cw", class: "w-3.5 h-3.5" %>
+<% end %>

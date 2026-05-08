@@ -1,5 +1,5 @@
-<%# locals: (title:, count: nil, description: nil) %>
-<div class="flex items-baseline justify-between gap-3 mt-2 mb-1 px-1">
+<%# locals: (title:, count: nil, description: nil, anchor: nil) %>
+<div id="<%= anchor %>" class="flex items-baseline justify-between gap-3 mt-2 mb-1 px-1">
   <h2 class="text-sm font-medium text-primary flex items-baseline gap-2">
     <%= title %>
     <% if count %>

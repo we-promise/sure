@@ -191,11 +191,14 @@ en:
         warn: Action needed
         err: Error
         off: Not configured
+      connect: Connect
       groups:
+        your_connections: Your connections
         connected: Connected
         needs_attention: Action needed
         available: Available
         empty_connected: Nothing connected yet — pick a provider below to get started.
+        empty_available: All available providers are connected.
       health:
         connected: Connected
         needs_attention: Action needed
@@ -205,10 +208,33 @@ en:
         sync_error: Sync error
         no_recent_sync: Sync overdue
         registration_needed: Registration needed
+        reconsent_required: Re-consent required
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
         last_synced: Synced %{time} ago
+      sync_all: Sync all
+      sync_all_in_progress: Syncing all connected providers…
+      sync_all_recently: Sync already in progress — try again in a moment.
+      sync_provider: Sync now
+      sync_provider_in_progress: Sync started.
+      recently_synced: Synced recently — try again in a moment.
+      taglines:
+        simplefin: Connect US bank accounts via the open SimpleFIN protocol.
+        lunchflow: Track school lunch account balances for your kids.
+        enable_banking: Sync European bank accounts via PSD2 open banking.
+        coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        mercury: Sync your Mercury business banking accounts automatically.
+        coinbase: Import your Coinbase crypto holdings and track performance.
+        binance: Sync your Binance spot balances using a read-only API key.
+        snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        indexa_capital: Track your Indexa Capital automated investment portfolio.
+        sophtron: Connect US bank accounts via the Sophtron aggregation network.
+        plaid: Connect thousands of US financial institutions via Plaid.
+      add_provider_cta:
+        title: Add another provider
+        body: Connect a new bank or data source to start syncing accounts.
+        cta: Browse providers
       show:
         coinbase_title: Coinbase
       encryption_error:

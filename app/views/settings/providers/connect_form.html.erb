@@ -1,0 +1,14 @@
+<%= render DS::Dialog.new(frame: "drawer", responsive: true, auto_open: true) do |dialog| %>
+  <% dialog.with_header(title: @panel_title) %>
+  <% dialog.with_body do %>
+    <% if @panel_partial %>
+      <turbo-frame id="<%= @panel_key %>-connect-form" target="_top">
+        <%= render "settings/providers/#{@panel_partial}" %>
+      </turbo-frame>
+    <% else %>
+      <turbo-frame id="config-connect-form" target="_top">
+        <%= render "settings/providers/provider_form", configuration: @provider_configuration %>
+      </turbo-frame>
+    <% end %>
+  <% end %>
+<% end %>

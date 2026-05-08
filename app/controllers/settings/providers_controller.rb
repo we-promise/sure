@@ -1,12 +1,12 @@
 class Settings::ProvidersController < ApplicationController
-  layout "settings"
+  layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
-  before_action :ensure_admin, only: [ :show, :update ]
+  before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
 
   def show
     @breadcrumbs = [
       [ "Home", root_path ],
-      [ "Bank Sync Providers", nil ]
+      [ "Bank sync", nil ]
     ]
 
     prepare_show_context
@@ -77,6 +77,54 @@ class Settings::ProvidersController < ApplicationController
     render :show, status: :unprocessable_entity
   end
 
+  def sync_all
+    family = Current.family
+
+    if family.last_sync_all_attempted_at.present? && family.last_sync_all_attempted_at > 30.seconds.ago
+      return redirect_to settings_providers_path, notice: t("settings.providers.sync_all_recently")
+    end
+
+    family.update!(last_sync_all_attempted_at: Time.current)
+    SyncAllProvidersJob.perform_later(family.id)
+    redirect_to settings_providers_path, notice: t("settings.providers.sync_all_in_progress")
+  end
+
+  def sync
+    provider_key  = params[:provider_key]
+    syncable_type = PANEL_SYNCABLE_TYPES[provider_key]
+    return redirect_to settings_providers_path unless syncable_type
+
+    items = syncable_type.constantize.where(family: Current.family).syncable
+    items.each { |item| item.sync_later unless item.syncing? }
+
+    redirect_to settings_providers_path, notice: t("settings.providers.sync_provider_in_progress")
+  end
+
+  def connect_form
+    provider_key = params[:provider_key]
+
+    panel = FAMILY_PANELS.find { |p| p[:key] == provider_key }
+    if panel
+      @panel_key     = panel[:key]
+      @panel_partial = panel[:partial]
+      @panel_title   = panel[:title]
+      load_provider_items(provider_key)
+      return render :connect_form
+    end
+
+    Provider::Factory.ensure_adapters_loaded
+    config = Provider::ConfigurationRegistry.all.find { |c| c.provider_key.to_s == provider_key }
+    if config
+      @panel_title           = provider_key.titleize
+      @provider_configuration = config
+      return render :connect_form
+    end
+
+    redirect_to settings_providers_path
+  rescue ActiveRecord::Encryption::Errors::Configuration
+    redirect_to settings_providers_path, alert: t("settings.providers.encryption_error.title")
+  end
+
   private
     def provider_params
       # Dynamically permit all provider configuration fields
@@ -125,16 +173,16 @@ class Settings::ProvidersController < ApplicationController
     # status display, and sync actions. The configuration registry excludes
     # them (see prepare_show_context).
     FAMILY_PANELS = [
-      { key: "lunchflow",      title: "Lunch Flow",             turbo_id: "lunchflow",      partial: "lunchflow_panel" },
-      { key: "simplefin",      title: "SimpleFIN",              turbo_id: "simplefin",      partial: "simplefin_panel" },
-      { key: "enable_banking", title: "Enable Banking (beta)",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
-      { key: "coinstats",      title: "CoinStats (beta)",       turbo_id: "coinstats",      partial: "coinstats_panel" },
-      { key: "mercury",        title: "Mercury (beta)",         turbo_id: "mercury",        partial: "mercury_panel" },
-      { key: "coinbase",       title: "Coinbase (beta)",        turbo_id: "coinbase",       partial: "coinbase_panel" },
-      { key: "binance",        title: "Binance (beta)",         turbo_id: "binance",        partial: "binance_panel" },
-      { key: "snaptrade",      title: "SnapTrade (beta)",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
-      { key: "indexa_capital", title: "Indexa Capital (alpha)", turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
-      { key: "sophtron",       title: "Sophtron (alpha)",       turbo_id: "sophtron",       partial: "sophtron_panel" }
+      { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
+      { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
+      { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
+      { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
+      { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
+      { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
+      { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
+      { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
+      { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
+      { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -152,6 +200,31 @@ class Settings::ProvidersController < ApplicationController
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
     }.freeze
+
+    def load_provider_items(provider_key)
+      case provider_key
+      when "simplefin"
+        @simplefin_items = Current.family.simplefin_items.ordered
+      when "lunchflow"
+        @lunchflow_items = Current.family.lunchflow_items.ordered
+      when "enable_banking"
+        @enable_banking_items = Current.family.enable_banking_items.ordered
+      when "coinstats"
+        @coinstats_items = Current.family.coinstats_items.ordered
+      when "mercury"
+        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
+      when "coinbase"
+        @coinbase_items = Current.family.coinbase_items.ordered
+      when "binance"
+        @binance_items = Current.family.binance_items.active.ordered
+      when "snaptrade"
+        @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
+      when "indexa_capital"
+        @indexa_capital_items = Current.family.indexa_capital_items.ordered
+      when "sophtron"
+        @sophtron_items = Current.family.sophtron_items.ordered
+      end
+    end
 
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
@@ -232,6 +305,7 @@ class Settings::ProvidersController < ApplicationController
           provider_key: config.provider_key.to_s,
           title: config.provider_key.to_s.titleize,
           configuration: config,
+          maturity: Provider::Metadata.for(config.provider_key)[:maturity],
           summary: view_context.provider_summary(config.provider_key)
         }
       end
@@ -243,6 +317,7 @@ class Settings::ProvidersController < ApplicationController
           turbo_id: panel[:turbo_id],
           partial: panel[:partial],
           auto_open_param: panel[:auto_open],
+          maturity: Provider::Metadata.for(panel[:key])[:maturity],
           summary: view_context.provider_summary(panel[:key])
         }
       end

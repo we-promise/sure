@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_08_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -40,7 +40,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.index ["account_id"], name: "index_account_shares_on_account_id"
     t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
     t.index ["user_id"], name: "index_account_shares_on_user_id"
-    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying::text, 'read_write'::character varying::text, 'read_only'::character varying::text])", name: "chk_account_shares_permission"
+    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying, 'read_write'::character varying, 'read_only'::character varying]::text[])", name: "chk_account_shares_permission"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -595,7 +595,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
-    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
+    t.datetime "last_sync_all_attempted_at"
+    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
@@ -1400,13 +1401,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.jsonb "institution_metadata"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
-    t.string "customer_id", null: false
-    t.string "member_id", null: false
+    t.string "customer_id"
+    t.string "member_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "account_number_mask"
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1428,8 +1430,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.string "base_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "customer_id"
+    t.string "customer_name"
+    t.jsonb "raw_customer_payload"
+    t.string "user_institution_id"
+    t.string "current_job_id"
+    t.string "job_status"
+    t.jsonb "raw_job_payload"
+    t.string "last_connection_error"
+    t.boolean "manual_sync", default: false, null: false
+    t.uuid "current_job_sophtron_account_id"
+    t.index ["current_job_sophtron_account_id"], name: "index_sophtron_items_on_current_job_sophtron_account_id"
+    t.index ["customer_id"], name: "index_sophtron_items_on_customer_id"
     t.index ["family_id"], name: "index_sophtron_items_on_family_id"
     t.index ["status"], name: "index_sophtron_items_on_status"
+    t.index ["user_institution_id"], name: "index_sophtron_items_on_user_institution_id"
   end
 
   create_table "sso_audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1648,9 +1663,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade

@@ -49,22 +49,22 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     details.assert_text "Setup Token"
   end
 
-  test "groups providers into Connected and Available with counts" do
+  test "groups providers into Your connections and Available with counts" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
 
     visit settings_providers_path
 
-    connected_heading = find("h2", text: /\AConnected/)
-    assert_match(/· 1\z/, connected_heading.text)
+    connections_heading = find("h2", text: /\AYour connections/)
+    assert_match(/· 1\z/, connections_heading.text)
 
     available_heading = find("h2", text: /\AAvailable/)
 
-    connected_y = connected_heading.native.location.y
-    available_y = available_heading.native.location.y
-    simplefin_y = find("details", text: "SimpleFIN").native.location.y
-    binance_y   = find("details", text: "Binance").native.location.y
+    connections_y = connections_heading.native.location.y
+    available_y   = available_heading.native.location.y
+    simplefin_y   = find("details", text: "SimpleFIN").native.location.y
+    binance_y     = find("details", text: "Binance").native.location.y
 
-    assert connected_y < simplefin_y, "Connected heading should appear above SimpleFIN section"
+    assert connections_y < simplefin_y, "Your connections heading should appear above SimpleFIN section"
     assert simplefin_y < available_y, "SimpleFIN should appear above Available heading"
     assert available_y < binance_y,  "Available heading should appear above Binance section"
   end
@@ -85,10 +85,11 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
+    assert_selector "h2", text: /\AYour connections/
     assert_no_selector "h2", text: /\AAction needed/
   end
 
-  test "enable banking with expiring session lands in action needed and auto-opens" do
+  test "enable banking with expiring session appears in your connections and auto-opens" do
     item = EnableBankingItem.new(
       family: @family,
       name: "Test Bank",
@@ -102,11 +103,72 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    assert_selector "h2", text: /\AAction needed/
+    assert_selector "h2", text: /\AYour connections/
 
-    # The Enable Banking section should be in the action-needed group and auto-opened
+    # The Enable Banking section should be in the Your connections group and auto-opened
     within("details[open]", text: /Enable Banking/) do
       assert_text "Re-consent needed in 5 days"
     end
+  end
+
+  test "sync all button enqueues SyncAllProvidersJob and shows flash" do
+    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+
+    visit settings_providers_path
+
+    assert_enqueued_with(job: SyncAllProvidersJob) do
+      click_on "Sync all"
+    end
+
+    assert_text "Syncing all connected providers"
+  end
+
+  test "per-row sync button enqueues sync for that provider and shows flash" do
+    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+
+    visit settings_providers_path
+
+    within("details", text: "SimpleFIN") do
+      find("button[title='Sync now']").click
+    end
+
+    assert_text "Sync started"
+  end
+
+  test "add provider CTA banner appears above available group when providers are connected" do
+    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+
+    visit settings_providers_path
+
+    cta = find("a", text: "Browse providers")
+    available_heading = find("h2", text: /\AAvailable/)
+
+    cta_y = cta.native.location.y
+    available_y = available_heading.native.location.y
+
+    assert cta_y < available_y, "Add-provider CTA should appear above the Available heading"
+  end
+
+  test "available providers render as a card grid" do
+    visit settings_providers_path
+
+    # SimpleFIN is not connected, so it should appear in the card grid
+    within "div.grid" do
+      assert_text "SimpleFIN"
+      assert_selector "a[data-turbo-frame='drawer']", minimum: 1
+    end
+  end
+
+  test "clicking a provider card connect link opens the connect drawer" do
+    visit settings_providers_path
+
+    # Find and click the SimpleFIN card's Connect link
+    within "div.grid" do
+      find("a[data-turbo-frame='drawer']", text: /Connect/, match: :first).click
+    end
+
+    # Drawer should open with the panel content
+    assert_selector "dialog[open]"
+    assert_text "Setup Token"
   end
 end
