@@ -1,5 +1,22 @@
 class SophtronItemsController < ApplicationController
-  before_action :set_sophtron_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  CONNECTION_STATUS_MAX_POLLS = 6
+  LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS = 15
+  POST_MFA_CONNECTION_STATUS_MAX_POLLS = 15
+  CONNECTION_STATUS_POLL_INTERVAL_MS = 4_000
+  MAX_SECURITY_ANSWERS = 10
+  MAX_SECURITY_ANSWER_LENGTH = 256
+
+  before_action :set_sophtron_item, only: [
+    :show, :edit, :update, :destroy, :connect_institution, :sync,
+    :connection_status, :submit_mfa,
+    :setup_accounts, :complete_account_setup
+  ]
+  before_action :require_admin!, only: [
+    :new, :create, :preload_accounts, :select_accounts, :link_accounts,
+    :select_existing_account, :link_existing_account, :connect_institution,
+    :edit, :update, :destroy, :sync, :connection_status, :submit_mfa,
+    :setup_accounts, :complete_account_setup
+  ]
 
   def index
     @sophtron_items = Current.family.sophtron_items.active.ordered
@@ -9,122 +26,190 @@ class SophtronItemsController < ApplicationController
   def show
   end
 
-  # Preload Sophtron accounts in background (async, non-blocking)
   def preload_accounts
-    begin
-      # Check if family has credentials
-      unless Current.family.has_sophtron_credentials?
-        render json: { success: false, error: "no_credentials_configured", has_accounts: false }
-        return
-      end
-
-      cache_key = "sophtron_accounts_#{Current.family.id}"
-
-      # Check if already cached
-      cached_accounts = Rails.cache.read(cache_key)
-
-      if cached_accounts.present?
-        render json: { success: true, has_accounts: cached_accounts.any?, cached: true }
-        return
-      end
-
-      # Fetch from API
-      sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
-
-      unless sophtron_provider.present?
-        render json: { success: false, error: "no_access_key", has_accounts: false }
-        return
-      end
-
-      response = sophtron_provider.get_accounts
-      available_accounts = response.data[:accounts] || []
-
-      # Cache the accounts for 5 minutes
-      Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
-
-      render json: { success: true, has_accounts: available_accounts.any?, cached: false }
-    rescue Provider::Error => e
-      Rails.logger.error("Sophtron preload error: #{e.message}")
-      # API error (bad key, network issue, etc) - keep button visible, show error when clicked
-      render json: { success: false, error: "api_error", error_message: t(".api_error"), has_accounts: nil }
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error preloading Sophtron accounts: #{e.class}: #{e.message}")
-      # Unexpected error - keep button visible, show error when clicked
-      render json: { success: false, error: "unexpected_error", error_message: t(".unexpected_error"), has_accounts: nil }
+    item = configured_sophtron_item
+    unless item
+      render json: { success: false, error: "no_credentials_configured", has_accounts: false }
+      return
     end
+
+    item.ensure_customer!
+
+    unless item.connected_to_institution?
+      render json: { success: false, error: "no_institution_connected", has_accounts: nil }
+      return
+    end
+
+    accounts = item.fetch_remote_accounts
+    render json: { success: true, has_accounts: accounts.any?, cached: true }
+  rescue Provider::Sophtron::Error => e
+    Rails.logger.error("Sophtron preload error: #{e.message}")
+    render json: { success: false, error: "api_error", error_message: t(".api_error"), has_accounts: nil }
+  rescue StandardError => e
+    Rails.logger.error("Unexpected error preloading Sophtron accounts: #{e.class}: #{e.message}")
+    render json: { success: false, error: "unexpected_error", error_message: t(".unexpected_error"), has_accounts: nil }
   end
 
-  # Fetch available accounts from Sophtron API and show selection UI
   def select_accounts
-    begin
-      # Check if family has Sophtron credentials configured
-      unless Current.family.has_sophtron_credentials?
-        if turbo_frame_request?
-          # Render setup modal for turbo frame requests
-          render partial: "sophtron_items/setup_required", layout: false
-        else
-          # Redirect for regular requests
-          redirect_to settings_providers_path,
-                     alert: t(".no_credentials_configured")
-        end
-        return
-      end
-
-      cache_key = "sophtron_accounts_#{Current.family.id}"
-
-      # Try to get cached accounts first
-      @available_accounts = Rails.cache.read(cache_key)
-
-      # If not cached, fetch from API
-      if @available_accounts.nil?
-        sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
-
-        unless sophtron_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_access_key")
-          return
-        end
-
-        response = sophtron_provider.get_accounts
-        @available_accounts = response.data[:accounts] || []
-
-        # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
-      end
-
-      # Filter out already linked accounts
-      sophtron_item = Current.family.sophtron_items.first
-      if sophtron_item
-        linked_account_ids = sophtron_item.sophtron_accounts.joins(:account_provider).pluck(:account_id)
-        @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-      end
-
-      @accountable_type = params[:accountable_type] || "Depository"
-      @return_to = safe_return_to_path
-
-      if @available_accounts.empty?
-        redirect_to new_account_path, alert: t(".no_accounts_found")
-        return
-      end
-
-      render layout: false
-    rescue Provider::Error => e
-      Rails.logger.error("Sophtron API error in select_accounts: #{e.message}")
-      @error_message = t(".api_error")
-      @return_path = safe_return_to_path
-      render partial: "sophtron_items/api_error",
-             locals: { error_message: @error_message, return_path: @return_path },
-             layout: false
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = t(".unexpected_error")
-      @return_path = safe_return_to_path
-      render partial: "sophtron_items/api_error",
-             locals: { error_message: @error_message, return_path: @return_path },
-             layout: false
+    item = configured_sophtron_item
+    unless item
+      render_or_redirect_setup_required
+      return
     end
+
+    item.ensure_customer!
+
+    if connect_new_institution_flow? || !item.connected_to_institution?
+      prepare_connection_form(item)
+      render :connect, layout: false
+      return
+    end
+
+    @available_accounts = item.reject_already_linked(item.fetch_remote_accounts)
+    @accountable_type = params[:accountable_type] || "Depository"
+    @return_to = safe_return_to_path
+
+    if @available_accounts.empty?
+      redirect_to new_account_path, alert: t(".no_accounts_found")
+      return
+    end
+
+    render layout: false
+  rescue Provider::Sophtron::Error => e
+    Rails.logger.error("Sophtron API error in select_accounts: #{e.message}")
+    render_api_error(t(".api_error"), safe_return_to_path)
+  rescue StandardError => e
+    Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
+    render_api_error(t(".unexpected_error"), safe_return_to_path)
   end
 
-  # Create accounts from selected Sophtron accounts
+  def connect_institution
+    if params[:institution_id].blank? || params[:bank_username].blank? || params[:bank_password].blank?
+      redirect_to select_accounts_sophtron_items_path(connection_context_params), alert: t(".missing_parameters")
+      return
+    end
+
+    item = item_for_institution_connection(@sophtron_item)
+    item.ensure_customer!
+    response = sophtron_response_data!(
+      item.sophtron_provider.create_user_institution(
+        institution_id: params[:institution_id],
+        username: params[:bank_username],
+        password: params[:bank_password],
+        pin: ""
+      )
+    ).with_indifferent_access
+
+    job_id = response[:JobID] || response[:job_id]
+    user_institution_id = response[:UserInstitutionID] || response[:user_institution_id]
+
+    if job_id.blank? || user_institution_id.blank?
+      raise Provider::Sophtron::Error.new("Sophtron did not return JobID and UserInstitutionID", :invalid_response)
+    end
+
+    item.update!(
+      name: item.name.presence || t("sophtron_items.defaults.name"),
+      institution_id: params[:institution_id],
+      institution_name: params[:institution_name],
+      user_institution_id: user_institution_id,
+      current_job_id: job_id,
+      raw_job_payload: response,
+      job_status: nil,
+      last_connection_error: nil,
+      status: :good
+    )
+
+    redirect_to connection_status_sophtron_item_path(item, connection_context_params)
+  rescue Provider::Sophtron::Error => e
+    Rails.logger.error("Sophtron connect institution error: #{e.message}")
+    redirect_to select_accounts_sophtron_items_path(connection_context_params), alert: t(".api_error", message: e.message)
+  end
+
+  def connection_status
+    if prefetch_request?
+      head :no_content
+      return
+    end
+
+    if @sophtron_item.current_job_id.blank?
+      redirect_to select_accounts_sophtron_items_path(connection_context_params)
+      return
+    end
+
+    @poll_attempt = requested_poll_attempt
+    if @poll_attempt > connection_status_max_polls
+      render_connection_timeout
+      return
+    end
+
+    job = sophtron_response_data!(@sophtron_item.sophtron_provider.get_job_information(@sophtron_item.current_job_id))
+    @sophtron_item.upsert_job_snapshot!(job)
+
+    if Provider::Sophtron.job_success?(job)
+      @sophtron_item.update!(
+        current_job_id: nil,
+        last_connection_error: nil,
+        pending_account_setup: true,
+        status: :good
+      )
+      render_account_selection(@sophtron_item, force_refresh: true)
+    elsif Provider::Sophtron.job_requires_input?(job)
+      @challenge = @sophtron_item.build_mfa_challenge(job)
+      prepare_connection_status_context
+      render :mfa, layout: false
+    elsif post_mfa_polling? && Provider::Sophtron.job_completed?(job)
+      return if render_account_selection_if_accounts_available(@sophtron_item)
+
+      render_pending_connection_status
+    elsif Provider::Sophtron.job_failed?(job)
+      failure_message = sophtron_connection_failure_message(job)
+      @sophtron_item.update!(
+        current_job_id: nil,
+        user_institution_id: nil,
+        last_connection_error: failure_message,
+        status: :requires_update
+      )
+      render_institution_connection_error(failure_message)
+    else
+      render_pending_connection_status
+    end
+  rescue Provider::Sophtron::Error => e
+    Rails.logger.error("Sophtron job polling error: #{e.message}")
+    render_api_error(t(".api_error", message: e.message), accounts_path)
+  end
+
+  def submit_mfa
+    provider = @sophtron_item.sophtron_provider
+    job_id = @sophtron_item.current_job_id
+
+    case params[:mfa_type]
+    when "security_answer"
+      security_answers = normalized_security_answers
+      unless security_answers
+        redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".invalid_security_answers")
+        return
+      end
+
+      sophtron_response_data!(provider.update_job_security_answer(job_id, security_answers))
+    when "token_choice"
+      sophtron_response_data!(provider.update_job_token_input(job_id, token_choice: params[:token_choice]))
+    when "token_input"
+      sophtron_response_data!(provider.update_job_token_input(job_id, token_input: params[:token_input]))
+    when "verify_phone"
+      sophtron_response_data!(provider.update_job_token_input(job_id, verify_phone_flag: true))
+    when "captcha"
+      sophtron_response_data!(provider.update_job_captcha(job_id, params[:captcha_input]))
+    else
+      redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".unknown_challenge")
+      return
+    end
+
+    redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params.merge(post_mfa: true))
+  rescue Provider::Sophtron::Error => e
+    Rails.logger.error("Sophtron MFA submission error: #{e.message}")
+    redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".api_error", message: e.message)
+  end
+
   def link_accounts
     selected_account_ids = params[:account_ids] || []
     accountable_type = params[:accountable_type] || "Depository"
@@ -135,194 +220,103 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    # Create or find sophtron_item for this family
-    sophtron_item = Current.family.sophtron_items.first_or_create!(
-      name: t("sophtron_items.defaults.name")
-    )
-
-    # Fetch account details from API
-    sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
-    unless sophtron_provider.present?
-      redirect_to new_account_path, alert: t(".no_access_key")
+    item = configured_sophtron_item
+    unless item&.connected_to_institution?
+      redirect_to select_accounts_sophtron_items_path(accountable_type: accountable_type, return_to: return_to), alert: t(".no_institution_connected")
       return
     end
 
-    response = sophtron_provider.get_accounts
+    accounts_data = item.fetch_remote_accounts(force: true)
 
     created_accounts = []
     already_linked_accounts = []
     invalid_accounts = []
 
     selected_account_ids.each do |account_id|
-      # Find the account data from API response
-      account_data = response.data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
+      account_data = accounts_data.find { |account| SophtronItem.external_account_id(account).to_s == account_id.to_s }
       next unless account_data
 
-      # Validate account name is not blank (required by Account model)
       if account_data[:account_name].blank?
         invalid_accounts << account_id
         Rails.logger.warn "SophtronItemsController - Skipping account #{account_id} with blank name"
         next
       end
 
-      # Create or find sophtron_account
-      sophtron_account = sophtron_item.sophtron_accounts.find_or_initialize_by(
-        account_id: account_id.to_s
-      )
-      sophtron_account.upsert_sophtron_snapshot!(account_data)
-      sophtron_account.save!
-      # Check if this sophtron_account is already linked
+      sophtron_account = item.upsert_sophtron_account(account_data)
+
       if sophtron_account.account_provider.present?
         already_linked_accounts << account_data[:account_name]
         next
       end
 
-      # Create the internal Account with proper balance initialization
-      account = Account.create_and_sync(
-        {
-          family: Current.family,
-          name: account_data[:account_name],
-          balance: 0, # Initial balance will be set during sync
-          currency: account_data[:currency] || "USD",
-          accountable_type: accountable_type,
-          accountable_attributes: {}
-        },
-        skip_initial_sync: true
-      )
-      # Link account to sophtron_account via account_providers join table
-      AccountProvider.create!(
-        account: account,
-        provider: sophtron_account
-      )
+      ActiveRecord::Base.transaction do
+        account = Account.create_and_sync(
+          {
+            family: Current.family,
+            name: account_data[:account_name],
+            balance: 0,
+            currency: account_data[:currency] || "USD",
+            accountable_type: accountable_type,
+            accountable_attributes: {}
+          },
+          skip_initial_sync: true
+        )
 
-      created_accounts << account
+        AccountProvider.create!(account: account, provider: sophtron_account)
+        created_accounts << account
+      end
     end
 
-    # Trigger sync to fetch transactions if any accounts were created
-    sophtron_item.sync_later if created_accounts.any?
-
-    # Build appropriate flash message
-    if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
-      # All selected accounts were invalid (blank names)
-      redirect_to new_account_path, alert: t(".invalid_account_names", count: invalid_accounts.count)
-    elsif invalid_accounts.any? && (created_accounts.any? || already_linked_accounts.any?)
-      # Some accounts were created/already linked, but some had invalid names
-      redirect_to return_to || accounts_path,
-                  alert: t(".partial_invalid",
-                           created_count: created_accounts.count,
-                           already_linked_count: already_linked_accounts.count,
-                           invalid_count: invalid_accounts.count)
-    elsif created_accounts.any? && already_linked_accounts.any?
-      redirect_to return_to || accounts_path,
-                  notice: t(".partial_success",
-                           created_count: created_accounts.count,
-                           already_linked_count: already_linked_accounts.count,
-                           already_linked_names: already_linked_accounts.join(", "))
-    elsif created_accounts.any?
-      redirect_to return_to || accounts_path,
-                  notice: t(".success", count: created_accounts.count)
-    elsif already_linked_accounts.any?
-      redirect_to return_to || accounts_path,
-                  alert: t(".all_already_linked",
-                          count: already_linked_accounts.count,
-                          names: already_linked_accounts.join(", "))
-    else
-      redirect_to new_account_path, alert: t(".link_failed")
-    end
-  rescue Provider::Error => e
-    redirect_to new_account_path, alert: t(".api_error")
-    Rails.logger.error("Sophtron API error in link_accounts: #{e.message}")
+    item.start_initial_load_later if created_accounts.any?
+    redirect_after_account_link(return_to, created_accounts, already_linked_accounts, invalid_accounts)
+  rescue Provider::Sophtron::Error => e
+    redirect_to new_account_path, alert: t(".api_error", message: e.message)
   end
 
-  # Fetch available Sophtron accounts to link with an existing account
   def select_existing_account
-    account_id = params[:account_id]
-
-    unless account_id.present?
+    unless params[:account_id].present?
       redirect_to accounts_path, alert: t(".no_account_specified")
       return
     end
 
-    @account = Current.family.accounts.find(account_id)
+    @account = Current.family.accounts.find(params[:account_id])
 
-    # Check if account is already linked
     if @account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
       return
     end
 
-    # Check if family has Sophtron credentials configured
-    unless Current.family.has_sophtron_credentials?
-      if turbo_frame_request?
-        # Render setup modal for turbo frame requests
-        render partial: "sophtron_items/setup_required", layout: false
-      else
-        # Redirect for regular requests
-        redirect_to settings_providers_path,
-                   alert: t(".no_credentials_configured",
-                          default: "Please configure your Sophtron API key first in Provider Settings.")
-      end
+    item = configured_sophtron_item
+    unless item
+      render_or_redirect_setup_required
       return
     end
 
-    begin
-      cache_key = "sophtron_accounts_#{Current.family.id}"
+    item.ensure_customer!
 
-      # Try to get cached accounts first
-      @available_accounts = Rails.cache.read(cache_key)
-
-      # If not cached, fetch from API
-      if @available_accounts.nil?
-        sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
-
-        unless sophtron_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_access_key")
-          return
-        end
-
-        response = sophtron_provider.get_accounts
-        @available_accounts = response.data[:accounts] || []
-
-        # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
-      end
-
-      if @available_accounts.empty?
-        redirect_to accounts_path, alert: t(".no_accounts_found")
-        return
-      end
-
-      # Filter out already linked accounts
-      sophtron_item = Current.family.sophtron_items.first
-      if sophtron_item
-        linked_account_ids = sophtron_item.sophtron_accounts.joins(:account_provider).pluck(:account_id)
-        @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-      end
-
-      if @available_accounts.empty?
-        redirect_to accounts_path, alert: t(".all_accounts_already_linked")
-        return
-      end
-
-      @return_to = safe_return_to_path
-
-      render layout: false
-    rescue Provider::Error => e
-      Rails.logger.error("Sophtron API error in select_existing_account: #{e.message}")
-      @error_message = t(".api_error", message: e.message)
-      render partial: "sophtron_items/api_error",
-             locals: { error_message: @error_message, return_path: accounts_path },
-             layout: false
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
-      @error_message = t(".unexpected_error")
-      render partial: "sophtron_items/api_error",
-             locals: { error_message: @error_message, return_path: accounts_path },
-             layout: false
+    unless item.connected_to_institution?
+      prepare_connection_form(item, account: @account)
+      render :connect, layout: false
+      return
     end
+
+    @available_accounts = item.reject_already_linked(item.fetch_remote_accounts)
+    @return_to = safe_return_to_path
+
+    if @available_accounts.empty?
+      redirect_to accounts_path, alert: t(".all_accounts_already_linked")
+      return
+    end
+
+    render layout: false
+  rescue Provider::Sophtron::Error => e
+    Rails.logger.error("Sophtron API error in select_existing_account: #{e.message}")
+    render_api_error(t(".api_error", message: e.message), accounts_path)
+  rescue StandardError => e
+    Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
+    render_api_error(t(".unexpected_error"), accounts_path)
   end
 
-  # Link a selected Sophtron account to an existing account
   def link_existing_account
     account_id = params[:account_id]
     sophtron_account_id = params[:sophtron_account_id]
@@ -333,67 +327,44 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    @account = Current.family.accounts.find(account_id)
+    account = Current.family.accounts.find(account_id)
 
-    # Check if account is already linked
-    if @account.account_providers.exists?
+    if account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
       return
     end
 
-    # Create or find sophtron_item for this family
-    sophtron_item = Current.family.sophtron_items.first_or_create!(
-      name: "Sophtron Connection"
-    )
-
-    # Fetch account details from API
-    sophtron_provider = Provider::SophtronAdapter.build_provider(family: Current.family)
-    unless sophtron_provider.present?
-      redirect_to accounts_path, alert: t(".no_access_key")
+    item = configured_sophtron_item
+    unless item&.connected_to_institution?
+      redirect_to accounts_path, alert: t(".no_institution_connected")
       return
     end
 
-    response = sophtron_provider.get_accounts
-
-    # Find the selected Sophtron account data
-    account_data = response.data[:accounts].find { |acc| acc[:id].to_s == sophtron_account_id.to_s }
+    account_data = item.fetch_remote_accounts(force: true).find { |remote_account| SophtronItem.external_account_id(remote_account).to_s == sophtron_account_id.to_s }
     unless account_data
       redirect_to accounts_path, alert: t(".sophtron_account_not_found")
       return
     end
 
-    # Validate account name is not blank (required by Account model)
     if account_data[:account_name].blank?
       redirect_to accounts_path, alert: t(".invalid_account_name")
       return
     end
 
-    # Create or find sophtron_account
-    sophtron_account = sophtron_item.sophtron_accounts.find_or_initialize_by(
-      account_id: sophtron_account_id.to_s
-    )
-    sophtron_account.upsert_sophtron_snapshot!(account_data)
-    sophtron_account.save!
+    sophtron_account = item.upsert_sophtron_account(account_data)
 
-    # Check if this sophtron_account is already linked to another account
     if sophtron_account.account_provider.present?
       redirect_to accounts_path, alert: t(".sophtron_account_already_linked")
       return
     end
 
-    # Link account to sophtron_account via account_providers join table
-    AccountProvider.create!(
-      account: @account,
-      provider: sophtron_account
-    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+    item.start_initial_load_later
 
-    # Trigger sync to fetch transactions
-    sophtron_item.sync_later
-    redirect_to return_to || accounts_path,
-                notice: t(".success", account_name: @account.name)
-  rescue Provider::Error => e
+    redirect_to return_to || accounts_path, notice: t(".success", account_name: account.name)
+  rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron API error in link_existing_account: #{e.message}")
-    redirect_to accounts_path, alert: t(".api_error")
+    redirect_to accounts_path, alert: t(".api_error", message: e.message)
   end
 
   def new
@@ -403,84 +374,48 @@ class SophtronItemsController < ApplicationController
   def create
     @sophtron_item = Current.family.sophtron_items.build(sophtron_params)
     @sophtron_item.name ||= t("sophtron_items.defaults.name")
+
     if @sophtron_item.save
-      # Trigger initial sync to fetch accounts
-      @sophtron_item.sync_later
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @sophtron_items = Current.family.sophtron_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "sophtron-providers-panel",
-            partial: "settings/providers/sophtron_panel",
-            locals: { sophtron_items: @sophtron_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
+      unless verify_and_provision_customer(@sophtron_item)
+        render_sophtron_panel_error(:new, @sophtron_item.last_connection_error)
+        return
       end
+
+      render_sophtron_panel_success(:create)
     else
-      @error_message = @sophtron_item.errors.full_messages.join(", ")
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "sophtron-providers-panel",
-          partial: "settings/providers/sophtron_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        render :new, status: :unprocessable_entity
-      end
+      render_sophtron_panel_error(:new, @sophtron_item.errors.full_messages.join(", "))
     end
   end
+
   def edit
   end
 
   def update
     if @sophtron_item.update(sophtron_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @sophtron_items = Current.family.sophtron_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "sophtron-providers-panel",
-            partial: "settings/providers/sophtron_panel",
-            locals: { sophtron_items: @sophtron_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
+      unless verify_and_provision_customer(@sophtron_item)
+        render_sophtron_panel_error(:edit, @sophtron_item.last_connection_error)
+        return
       end
+
+      render_sophtron_panel_success(:update)
     else
-      @error_message = @sophtron_item.errors.full_messages.join(", ")
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "sophtron-providers-panel",
-          partial: "settings/providers/sophtron_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        render :edit, status: :unprocessable_entity
-      end
+      render_sophtron_panel_error(:edit, @sophtron_item.errors.full_messages.join(", "))
     end
   end
 
   def destroy
-    # Ensure we detach provider links before scheduling deletion
     begin
       @sophtron_item.unlink_all!(dry_run: false)
     rescue => e
       Rails.logger.warn("Sophtron unlink during destroy failed: #{e.class} - #{e.message}")
     end
+
     @sophtron_item.destroy_later
     redirect_to accounts_path, notice: t(".success")
   end
 
   def sync
-    unless @sophtron_item.syncing?
-      @sophtron_item.sync_later
-    end
+    @sophtron_item.sync_later unless @sophtron_item.syncing?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -488,20 +423,14 @@ class SophtronItemsController < ApplicationController
     end
   end
 
-  # Show unlinked Sophtron accounts for setup (similar to SimpleFIN setup_accounts)
   def setup_accounts
-    # First, ensure we have the latest accounts from the API
     @api_error = fetch_sophtron_accounts_from_api
 
-    # Get Sophtron accounts that are not linked (no AccountProvider)
     @sophtron_accounts = @sophtron_item.sophtron_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
 
-    # Get supported account types from the adapter
     supported_types = Provider::SophtronAdapter.supported_account_types
-
-    # Map of account type keys to their internal values
     account_type_keys = {
       "depository" => "Depository",
       "credit_card" => "CreditCard",
@@ -510,16 +439,12 @@ class SophtronItemsController < ApplicationController
       "other_asset" => "OtherAsset"
     }
 
-    # Build account type options using i18n, filtering to supported types
     all_account_type_options = account_type_keys.filter_map do |key, type|
       next unless supported_types.include?(type)
       [ t(".account_types.#{key}"), type ]
     end
 
-    # Add "Skip" option at the beginning
     @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] + all_account_type_options
-
-    # Subtype options for each account type
     @subtype_options = {
       "Depository" => {
         label: "Account Subtype:",
@@ -554,65 +479,50 @@ class SophtronItemsController < ApplicationController
   def complete_account_setup
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
-
-    # Valid account types for this provider
     valid_types = Provider::SophtronAdapter.supported_account_types
-
     created_accounts = []
     skipped_count = 0
 
     begin
       ActiveRecord::Base.transaction do
         account_types.each do |sophtron_account_id, selected_type|
-          # Skip accounts marked as "skip"
           if selected_type == "skip" || selected_type.blank?
             skipped_count += 1
             next
           end
 
-          # Validate account type is supported
           unless valid_types.include?(selected_type)
             Rails.logger.warn("Invalid account type '#{selected_type}' submitted for Sophtron account #{sophtron_account_id}")
             next
           end
 
-          # Find account - scoped to this item to prevent cross-item manipulation
           sophtron_account = @sophtron_item.sophtron_accounts.find_by(id: sophtron_account_id)
           unless sophtron_account
             Rails.logger.warn("Sophtron account #{sophtron_account_id} not found for item #{@sophtron_item.id}")
             next
           end
 
-          # Skip if already linked (race condition protection)
           if sophtron_account.account_provider.present?
             Rails.logger.info("Sophtron account #{sophtron_account_id} already linked, skipping")
             next
           end
 
           selected_subtype = account_subtypes[sophtron_account_id]
-
-          # Default subtype for CreditCard since it only has one option
           selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
 
-          # Create account with user-selected type and subtype (raises on failure)
           account = Account.create_and_sync(
             {
-            family: Current.family,
-            name: sophtron_account.name,
-            balance: sophtron_account.balance || 0,
-            currency: sophtron_account.currency || "USD",
-            accountable_type: selected_type,
-            accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
+              family: Current.family,
+              name: sophtron_account.name,
+              balance: sophtron_account.balance || 0,
+              currency: sophtron_account.currency || "USD",
+              accountable_type: selected_type,
+              accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
             },
             skip_initial_sync: true
           )
 
-          # Link account to sophtron_account via account_providers join table (raises on failure)
-          AccountProvider.create!(
-            account: account,
-            provider: sophtron_account
-          )
-
+          AccountProvider.create!(account: account, provider: sophtron_account)
           created_accounts << account
         end
       end
@@ -630,25 +540,19 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    # Trigger a sync to process transactions
-    @sophtron_item.sync_later if created_accounts.any?
+    @sophtron_item.start_initial_load_later if created_accounts.any?
 
-    # Set appropriate flash message
-    if created_accounts.any?
-      flash[:notice] = t(".success", count: created_accounts.count)
+    flash[:notice] = if created_accounts.any?
+      t(".success", count: created_accounts.count)
     elsif skipped_count > 0
-      flash[:notice] = t(".all_skipped")
+      t(".all_skipped")
     else
-      flash[:notice] = t(".no_accounts")
+      t(".no_accounts")
     end
 
     if turbo_frame_request?
-      # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
-        Current.family.accounts
-          .visible_manual
-          .order(:name)
-          .to_a
+        Current.family.accounts.visible_manual.order(:name).to_a
       }
       @sophtron_items = Current.family.sophtron_items.ordered
       manual_accounts_stream = if @manual_accounts.any?
@@ -676,50 +580,303 @@ class SophtronItemsController < ApplicationController
 
   private
 
-    # Fetch Sophtron accounts from the API and store them locally
-    # Returns nil on success, or an error message string on failure
+    def configured_sophtron_item
+      Current.family.configured_sophtron_item
+    end
+
+    def normalized_security_answers
+      raw_answers = Array(params[:security_answers]).flatten
+      return if raw_answers.size > MAX_SECURITY_ANSWERS
+      return if raw_answers.any? { |answer| answer.to_s.length > MAX_SECURITY_ANSWER_LENGTH }
+
+      answers = raw_answers.filter_map do |answer|
+        answer.to_s.strip.presence
+      end
+
+      return if answers.empty?
+
+      answers
+    end
+
+    def sophtron_response_data!(response)
+      Provider::Sophtron.response_data!(response)
+    end
+
+    def verify_and_provision_customer(item)
+      provider = item.sophtron_provider
+      raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+      sophtron_response_data!(provider.health_check_auth)
+      item.ensure_customer!(provider: provider)
+      true
+    rescue Provider::Sophtron::Error => e
+      item.update(status: :requires_update, last_connection_error: e.message)
+      Rails.logger.error("Sophtron customer provisioning failed: #{e.message}")
+      false
+    end
+
+    def render_sophtron_panel_success(action_name)
+      if turbo_frame_request?
+        flash.now[:notice] = t("sophtron_items.#{action_name}.success")
+        @sophtron_items = Current.family.sophtron_items.ordered
+        render turbo_stream: [
+          turbo_stream.replace(
+            "sophtron-providers-panel",
+            partial: "settings/providers/sophtron_panel",
+            locals: { sophtron_items: @sophtron_items }
+          ),
+          *flash_notification_stream_items
+        ]
+      else
+        redirect_to accounts_path, notice: t("sophtron_items.#{action_name}.success"), status: :see_other
+      end
+    end
+
+    def render_sophtron_panel_error(view_name, message)
+      @error_message = message
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace(
+          "sophtron-providers-panel",
+          partial: "settings/providers/sophtron_panel",
+          locals: { error_message: @error_message }
+        ), status: :unprocessable_entity
+      else
+        render view_name, status: :unprocessable_entity
+      end
+    end
+
+    def render_or_redirect_setup_required
+      if turbo_frame_request?
+        render partial: "sophtron_items/setup_required", layout: false
+      else
+        redirect_to settings_providers_path, alert: t("sophtron_items.select_accounts.no_credentials_configured")
+      end
+    end
+
+    def item_for_institution_connection(item)
+      return item unless connect_new_institution_flow? && should_create_sophtron_item_for_new_institution?(item)
+
+      Current.family.sophtron_items.create!(
+        name: item.name.presence || t("sophtron_items.defaults.name"),
+        user_id: item.user_id,
+        access_key: item.access_key,
+        base_url: item.base_url,
+        customer_id: item.customer_id,
+        customer_name: item.customer_name,
+        raw_customer_payload: item.raw_customer_payload,
+        sync_start_date: item.sync_start_date
+      )
+    end
+
+    def should_create_sophtron_item_for_new_institution?(item)
+      item.user_institution_id.present? ||
+        item.current_job_id.present? ||
+        item.institution_id.present? ||
+        item.institution_name.present? ||
+        item.sophtron_accounts.exists?
+    end
+
+    def prepare_connection_form(item, account: nil)
+      @sophtron_item = item
+      @account = account
+      @accountable_type = params[:accountable_type] || "Depository"
+      @return_to = safe_return_to_path
+      @connect_new_institution = connect_new_institution_flow?
+      @institution_search = params[:institution_name].to_s.strip
+      @institutions = []
+
+      if @institution_search.length >= 2
+        @institutions = sophtron_response_data!(item.sophtron_provider.search_institutions(@institution_search))
+      end
+    end
+
+    def render_account_selection(item, force_refresh: false)
+      @available_accounts = item.reject_already_linked(item.fetch_remote_accounts(force: force_refresh))
+      @accountable_type = params[:accountable_type] || "Depository"
+      @return_to = safe_return_to_path
+
+      if params[:account_id].present?
+        @account = Current.family.accounts.find(params[:account_id])
+        render :select_existing_account, layout: false
+      else
+        render :select_accounts, layout: false
+      end
+    end
+
+    def render_account_selection_if_accounts_available(item)
+      accounts = item.fetch_remote_accounts(force: true)
+      return false if accounts.empty?
+
+      item.update!(
+        current_job_id: nil,
+        last_connection_error: nil,
+        pending_account_setup: true,
+        status: :good
+      )
+
+      @available_accounts = item.reject_already_linked(accounts)
+      @accountable_type = params[:accountable_type] || "Depository"
+      @return_to = safe_return_to_path
+
+      if params[:account_id].present?
+        @account = Current.family.accounts.find(params[:account_id])
+        render :select_existing_account, layout: false
+      else
+        render :select_accounts, layout: false
+      end
+
+      true
+    rescue Provider::Sophtron::Error => e
+      Rails.logger.info("Sophtron accounts are not available after completed job #{item.current_job_id}: #{e.message}")
+      false
+    end
+
+    def render_pending_connection_status
+      if @poll_attempt >= connection_status_max_polls
+        render_connection_timeout
+        return
+      end
+
+      prepare_connection_status_context
+      @next_poll_attempt = @poll_attempt + 1
+      render :connection_status, layout: false
+    end
+
+    def prepare_connection_status_context
+      @accountable_type = params[:accountable_type] || "Depository"
+      @account_id = params[:account_id]
+      @return_to = safe_return_to_path
+      @poll_interval_ms = CONNECTION_STATUS_POLL_INTERVAL_MS
+      @post_mfa_polling = post_mfa_polling?
+      @max_poll_attempts = connection_status_max_polls
+    end
+
+    def requested_poll_attempt
+      poll_attempt = params[:poll_attempt].to_i
+      poll_attempt.positive? ? poll_attempt : 1
+    end
+
+    def render_connection_timeout
+      @poll_attempt = connection_status_max_polls if @poll_attempt.to_i > connection_status_max_polls
+      @poll_attempt = 1 if @poll_attempt.to_i < 1
+      @sophtron_item.update!(
+        last_connection_error: t(".timeout"),
+        status: :requires_update
+      )
+      prepare_connection_status_context
+      @timed_out = true
+      render :connection_status, layout: false
+    end
+
+    def connection_status_max_polls
+      if post_mfa_polling?
+        POST_MFA_CONNECTION_STATUS_MAX_POLLS
+      elsif login_progress_polling?
+        LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS
+      else
+        CONNECTION_STATUS_MAX_POLLS
+      end
+    end
+
+    def post_mfa_polling?
+      ActiveModel::Type::Boolean.new.cast(params[:post_mfa]) || post_mfa_job_payload?(@sophtron_item.raw_job_payload)
+    end
+
+    def post_mfa_job_payload?(job_payload)
+      job = (job_payload || {}).with_indifferent_access
+      job[:TokenInput].present? || %w[TokenInput TransactionTable].include?(job[:LastStep].to_s)
+    end
+
+    def login_progress_polling?
+      login_progress_job_payload?(@sophtron_item.raw_job_payload)
+    end
+
+    def login_progress_job_payload?(job_payload)
+      job = (job_payload || {}).with_indifferent_access
+      last_status = job[:LastStatus] || job[:last_status]
+      return false if Provider::Sophtron.failure_job_status?(last_status)
+
+      job[:LastStep].present? || job[:last_step].present? || last_status.present?
+    end
+
+    def prefetch_request?
+      [
+        request.headers["X-Sec-Purpose"],
+        request.headers["Sec-Purpose"],
+        request.headers["Purpose"]
+      ].any? { |value| value.to_s.include?("prefetch") }
+    end
+
+    def render_institution_connection_error(message)
+      render_api_error(
+        message,
+        select_accounts_sophtron_items_path(connection_context_params.except(:post_mfa, "post_mfa")),
+        heading: t("sophtron_items.api_error.institution_unable_to_connect"),
+        issue_keys: %w[bank_credentials verification_code institution_timeout unsupported_mfa],
+        action_label: t("sophtron_items.api_error.try_again")
+      )
+    end
+
+    def sophtron_connection_failure_message(job)
+      last_status = job.with_indifferent_access[:LastStatus].to_s
+      return t("sophtron_items.connection_status.failed_timeout") if last_status.match?(/timeout/i)
+
+      t("sophtron_items.connection_status.failed")
+    end
+
+    def render_api_error(message, return_path, heading: nil, issue_keys: nil, action_label: nil)
+      render partial: "sophtron_items/api_error",
+             locals: {
+               error_message: message,
+               return_path: return_path,
+               heading: heading,
+               issue_keys: issue_keys,
+               action_label: action_label
+             },
+             layout: false
+    end
+
+    def redirect_after_account_link(return_to, created_accounts, already_linked_accounts, invalid_accounts)
+      if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
+        redirect_to new_account_path, alert: t(".invalid_account_names", count: invalid_accounts.count)
+      elsif invalid_accounts.any? && (created_accounts.any? || already_linked_accounts.any?)
+        redirect_to return_to || accounts_path,
+                    alert: t(".partial_invalid",
+                             created_count: created_accounts.count,
+                             already_linked_count: already_linked_accounts.count,
+                             invalid_count: invalid_accounts.count)
+      elsif created_accounts.any? && already_linked_accounts.any?
+        redirect_to return_to || accounts_path,
+                    notice: t(".partial_success",
+                             created_count: created_accounts.count,
+                             already_linked_count: already_linked_accounts.count,
+                             already_linked_names: already_linked_accounts.join(", "))
+      elsif created_accounts.any?
+        redirect_to return_to || accounts_path, notice: t(".success", count: created_accounts.count)
+      elsif already_linked_accounts.any?
+        redirect_to return_to || accounts_path,
+                    alert: t(".all_already_linked",
+                            count: already_linked_accounts.count,
+                            names: already_linked_accounts.join(", "))
+      else
+        redirect_to new_account_path, alert: t(".link_failed")
+      end
+    end
+
     def fetch_sophtron_accounts_from_api
-      # Skip if we already have accounts cached
       return nil unless @sophtron_item.sophtron_accounts.empty?
+      return t("sophtron_items.setup_accounts.no_access_key") unless @sophtron_item.credentials_configured?
+      return t("sophtron_items.setup_accounts.no_institution_connected") unless @sophtron_item.connected_to_institution?
 
-      # Validate Access key is configured
-      unless @sophtron_item.credentials_configured?
-        return t("sophtron_items.setup_accounts.no_access_key")
-      end
-
-      # Use the specific sophtron_item's provider (scoped to this family's item)
-      sophtron_provider = @sophtron_item.sophtron_provider
-      unless sophtron_provider.present?
-        return t("sophtron_items.setup_accounts.no_access_key")
-      end
-
-      begin
-        response = sophtron_provider.get_accounts
-        available_accounts = response.data[:accounts] || []
-
-        if available_accounts.empty?
-          return nil
-        end
-
-        available_accounts.each_with_index do |account_data, index|
-          next if account_data[:account_name].blank?
-
-          sophtron_account = @sophtron_item.sophtron_accounts.find_or_initialize_by(
-            account_id: account_data[:account_id].to_s
-          )
-          sophtron_account.upsert_sophtron_snapshot!(account_data)
-          sophtron_account.save!
-        end
-
-        nil # Success
-      rescue Provider::Error => e
-        Rails.logger.error("Sophtron API error: #{e.message}")
-        t("sophtron_items.setup_accounts.api_error")
-      rescue StandardError => e
-        Rails.logger.error("Unexpected error fetching Sophtron accounts: #{e.class}: #{e.message}")
-        Rails.logger.error(e.backtrace.first(10).join("\n"))
-        t("sophtron_items.setup_accounts.api_error")
-      end
+      @sophtron_item.fetch_remote_accounts(force: true)
+      nil
+    rescue Provider::Sophtron::Error => e
+      Rails.logger.error("Sophtron API error: #{e.message}")
+      t("sophtron_items.setup_accounts.api_error")
+    rescue StandardError => e
+      Rails.logger.error("Unexpected error fetching Sophtron accounts: #{e.class}: #{e.message}")
+      Rails.logger.error(e.backtrace.first(10).join("\n"))
+      t("sophtron_items.setup_accounts.api_error")
     end
 
     def set_sophtron_item
@@ -730,27 +887,27 @@ class SophtronItemsController < ApplicationController
       params.require(:sophtron_item).permit(:name, :user_id, :access_key, :base_url, :sync_start_date)
     end
 
-    # Sanitize return_to parameter to prevent XSS attacks
-    # Only allow internal paths, reject external URLs and javascript: URIs
+    def connection_context_params
+      params.permit(:accountable_type, :account_id, :return_to, :post_mfa, :connect_new_institution).to_h.compact
+    end
+
+    def connect_new_institution_flow?
+      ActiveModel::Type::Boolean.new.cast(params[:connect_new_institution])
+    end
+
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
       return_to = params[:return_to].to_s
 
-      # Parse the URL to check if it's external
       begin
         uri = URI.parse(return_to)
-
-        # Reject absolute URLs with schemes (http:, https:, javascript:, etc.)
-        # Only allow relative paths
         return nil if uri.scheme.present? || uri.host.present?
         return nil if return_to.start_with?("//")
-        # Ensure the path starts with / (is a relative path)
         return nil unless return_to.start_with?("/")
 
         return_to
       rescue URI::InvalidURIError
-        # If the URI is invalid, reject it
         nil
       end
     end
