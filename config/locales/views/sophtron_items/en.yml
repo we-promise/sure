@@ -97,17 +97,21 @@ en:
       unknown_challenge: Unknown Sophtron verification step.
     sophtron_item:
       accounts_need_setup: Accounts need setup
+      automatic_sync: Use automatic sync
       delete: Delete connection
       deletion_in_progress: deletion in progress...
       error: Error
       no_accounts_description: This connection has no linked accounts yet.
       no_accounts_title: No accounts
+      manual_sync: Manual sync
+      manual_sync_action: Require manual sync
       setup_action: Set Up New Accounts
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Sophtron accounts."
       setup_needed: New accounts ready to set up
       status: "Synced %{timestamp} ago"
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
+      sync_now: Sync now
       syncing: Syncing...
       total: Total
       unlinked: Unlinked
@@ -203,7 +207,18 @@ en:
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:
+      api_error: "Sophtron manual sync failed: %{message}"
+      failed: Sophtron manual sync failed
+      no_linked_accounts: This Sophtron institution does not have any linked accounts to sync.
       success: Sync started
+    toggle_manual_sync:
+      success_disabled: Sophtron institution will sync automatically.
+      success_enabled: Sophtron institution now requires manual sync.
+    manual_sync_complete:
+      close: Close
+      description: Account balances will finish updating in the background.
+      message: Transactions were downloaded after Sophtron verification.
+      title: Sophtron Sync Started
     sophtron_setup_required:
       title: Sophtron Setup Required
       message: >
@@ -264,6 +279,7 @@ en:
         configured_html: 'Configured and ready to use. Visit the <a href="%{accounts_path}" class="link">Accounts</a> tab to manage and set up accounts.'
         not_configured: "Not configured"
     syncer:
+      manual_sync_required: "Manual Sophtron sync is enabled; skipping automated sync."
       importing_accounts: "Importing accounts from Sophtron..."
       checking_account_configuration: "Checking account configuration..."
       accounts_need_setup: "%{count} account(s) need setup"

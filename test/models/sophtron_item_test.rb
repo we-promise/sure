@@ -162,4 +162,15 @@ class SophtronItemTest < ActiveSupport::TestCase
       end
     end
   end
+  test "manual Sophtron items are excluded from automatic sync scope" do
+    manual_item = @family.sophtron_items.create!(
+      name: "Manual Sophtron",
+      user_id: "manual-user",
+      access_key: Base64.strict_encode64("secret-key"),
+      manual_sync: true
+    )
+
+    assert_includes SophtronItem.active, manual_item
+    assert_not_includes SophtronItem.syncable, manual_item
+  end
 end

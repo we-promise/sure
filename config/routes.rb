@@ -548,6 +548,7 @@ Rails.application.routes.draw do
     member do
       post :connect_institution
       post :sync
+      post :toggle_manual_sync
       post :balances
       get :connection_status
       post :submit_mfa

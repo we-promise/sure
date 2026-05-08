@@ -43,13 +43,14 @@ class SophtronItem < ApplicationRecord
   validates :access_key, presence: true, on: :create
 
   belongs_to :family
+  belongs_to :current_job_sophtron_account, class_name: "SophtronAccount", optional: true
   has_one_attached :logo
 
   has_many :sophtron_accounts, dependent: :destroy
   has_many :accounts, through: :sophtron_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
-  scope :syncable, -> { active }
+  scope :syncable, -> { active.where(manual_sync: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
