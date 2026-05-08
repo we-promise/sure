@@ -25,11 +25,20 @@ class EnableBankingAccount::Transactions::Processor
 
     # Pre-fetch external_ids that were manually merged and must not be re-imported.
     # One query per sync; O(1) Set lookup per transaction — avoids N+1.
+    # manual_merge is stored as an Array (current) or Hash (legacy); both are handled.
     excluded_ids = if enable_banking_account.current_account
       Transaction.joins(:entry)
                  .where(entries: { account_id: enable_banking_account.current_account.id })
-                 .where("transactions.extra->'manual_merge'->>'merged_from_external_id' IS NOT NULL")
-                 .pluck(Arel.sql("transactions.extra->'manual_merge'->>'merged_from_external_id'"))
+                 .where("transactions.extra ? 'manual_merge'")
+                 .pluck(:extra)
+                 .flat_map { |extra|
+                   mm = extra["manual_merge"]
+                   case mm
+                   when Array then mm.filter_map { |r| r["merged_from_external_id"] }
+                   when Hash  then [ mm["merged_from_external_id"] ].compact
+                   else []
+                   end
+                 }
                  .to_set
     else
       Set.new

@@ -119,6 +119,44 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     end
   end
 
+  test "excludes all external_ids when multiple pending entries were merged into the same posted entry" do
+    pending_ext_id_1 = "enable_banking_PDNG_MULTI_1"
+    pending_ext_id_2 = "enable_banking_PDNG_MULTI_2"
+
+    posted_entry = create_transaction(
+      account:     @account,
+      name:        "Multi Merge",
+      date:        2.days.ago.to_date,
+      amount:      30,
+      currency:    "EUR",
+      external_id: "enable_banking_BOOK_MULTI",
+      source:      "enable_banking"
+    )
+    posted_entry.transaction.update!(
+      extra: {
+        "manual_merge" => [
+          { "merged_from_external_id" => pending_ext_id_1, "merged_at" => 2.days.ago.iso8601, "source" => "enable_banking" },
+          { "merged_from_external_id" => pending_ext_id_2, "merged_at" => 1.day.ago.iso8601,  "source" => "enable_banking" }
+        ]
+      }
+    )
+
+    @enable_banking_account.update!(
+      raw_transactions_payload: [
+        raw_pending_transaction(transaction_id: "PDNG_MULTI_1"),  # excluded
+        raw_pending_transaction(transaction_id: "PDNG_MULTI_2"),  # excluded
+        raw_pending_transaction(transaction_id: "PDNG_MULTI_NEW") # new — should import
+      ]
+    )
+
+    result = nil
+    assert_difference "@account.entries.count", 1 do
+      result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    assert_equal 2, result[:skipped]
+    assert_equal 1, result[:imported]
+  end
+
   test "handles empty raw_transactions_payload gracefully" do
     @enable_banking_account.update!(raw_transactions_payload: nil)
 

@@ -227,15 +227,23 @@ class Transaction < ApplicationRecord
         tx_attrs = {}
 
         # Merge metadata — always written so the sync engine can skip re-importing.
+        # Stored as an array so multiple pending entries merged into the same posted
+        # transaction each preserve their external_id for future sync exclusion.
+        # Legacy records written as a plain Hash are migrated to a single-element array
+        # on first append, maintaining backward compatibility.
         if external_id.present?
-          tx_attrs[:extra] = posted_tx.extra.merge(
-            "manual_merge" => {
-              "merged_from_entry_id"    => pending_entry_id,
-              "merged_from_external_id" => external_id,
-              "merged_at"               => Time.current.iso8601,
-              "source"                  => pending_entry.source
-            }
-          )
+          new_record = {
+            "merged_from_entry_id"    => pending_entry_id,
+            "merged_from_external_id" => external_id,
+            "merged_at"               => Time.current.iso8601,
+            "source"                  => pending_entry.source
+          }
+          prior = case posted_tx.extra["manual_merge"]
+          when Array then posted_tx.extra["manual_merge"]
+          when Hash  then [ posted_tx.extra["manual_merge"] ]
+          else []
+          end
+          tx_attrs[:extra] = posted_tx.extra.merge("manual_merge" => prior + [ new_record ])
         end
 
         # Attribute inheritance — only when the posted entry is not already user-protected.
