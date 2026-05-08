@@ -1438,14 +1438,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_08_120000) do
     t.text "last_connection_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "customer_id"
-    t.string "customer_name"
-    t.jsonb "raw_customer_payload"
-    t.string "user_institution_id"
-    t.string "current_job_id"
-    t.string "job_status"
-    t.jsonb "raw_job_payload"
-    t.string "last_connection_error"
     t.boolean "manual_sync", default: false, null: false
     t.uuid "current_job_sophtron_account_id"
     t.index ["current_job_sophtron_account_id"], name: "index_sophtron_items_on_current_job_sophtron_account_id"
