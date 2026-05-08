@@ -113,6 +113,41 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "shared secret: when configured, request without the secret header is ignored" do
+    Rails.application.config.stubs(:remote_user_shared_secret).returns("s3cr3t")
+    Rails.application.config.stubs(:remote_user_shared_secret_header).returns("X-Remote-User-Secret")
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: { HEADER_NAME => JIT_EMAIL }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "shared secret: when configured, mismatched secret is ignored" do
+    Rails.application.config.stubs(:remote_user_shared_secret).returns("s3cr3t")
+    Rails.application.config.stubs(:remote_user_shared_secret_header).returns("X-Remote-User-Secret")
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: {
+        HEADER_NAME => JIT_EMAIL,
+        "X-Remote-User-Secret" => "wrong"
+      }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "shared secret: matching secret allows the request through" do
+    Rails.application.config.stubs(:remote_user_shared_secret).returns("s3cr3t")
+    Rails.application.config.stubs(:remote_user_shared_secret_header).returns("X-Remote-User-Secret")
+
+    assert_difference -> { User.count }, 1 do
+      get root_url, headers: {
+        HEADER_NAME => JIT_EMAIL,
+        "X-Remote-User-Secret" => "s3cr3t"
+      }
+    end
+  end
+
   test "malformed email value fails closed without raising" do
     [ "not an email", "", "  ", "@", "foo@" ].each do |bad|
       assert_no_difference -> { User.count }, "header value #{bad.inspect} should not JIT" do
