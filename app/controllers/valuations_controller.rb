@@ -7,6 +7,12 @@ class ValuationsController < ApplicationController
 
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
 
+    if entry_params[:amount].blank?
+      @error_message = t("valuations.errors.amount_required")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
     @reconciliation_dry_run = @entry.account.create_reconciliation(
       balance: entry_params[:amount],
       date: entry_params[:date],
@@ -21,6 +27,13 @@ class ValuationsController < ApplicationController
     return unless require_account_permission!(@entry.account)
 
     @account = @entry.account
+
+    if entry_params[:amount].blank?
+      @error_message = t("valuations.errors.amount_required")
+      render :show, status: :unprocessable_entity
+      return
+    end
+
     @entry.assign_attributes(entry_params.merge(currency: @account.currency))
 
     @reconciliation_dry_run = @entry.account.update_reconciliation(

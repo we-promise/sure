@@ -474,6 +474,22 @@
   }
 }
 
+@utility button-bg-secondary-strong {
+  @apply bg-gray-200;
+
+  @variant theme-dark {
+    @apply bg-gray-700;
+  }
+}
+
+@utility button-bg-secondary-strong-hover {
+  @apply bg-gray-300;
+
+  @variant theme-dark {
+    @apply bg-gray-600;
+  }
+}
+
 @utility button-bg-disabled {
   @apply bg-gray-50;
 

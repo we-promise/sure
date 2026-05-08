@@ -1,6 +1,6 @@
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
-  "$version": "2.0.0",
+  "$version": "2.1.0",
   "$description": "Sure design tokens. Single source of truth. Hand-edit; run `npm run tokens:build` to regenerate CSS. Template syntax in $value strings: `{path.to.token}` resolves to `var(--path-to-token)`; `{path|N%}` becomes `--alpha(var(--path) / N%)`. Utility tokens whose value lacks `{}` are treated as raw Tailwind class lists for @apply.",
 
   "font": {
@@ -335,6 +335,8 @@
     "button-bg-primary-hover":     { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.50}" } },
     "button-bg-secondary":         { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
     "button-bg-secondary-hover":   { "$type": "utility", "$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.600}" } },
+    "button-bg-secondary-strong":       { "$type": "utility", "$value": "{color.gray.200}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
+    "button-bg-secondary-strong-hover": { "$type": "utility", "$value": "{color.gray.300}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.600}" } },
     "button-bg-disabled":          { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
     "button-bg-destructive":       { "$type": "utility", "$value": "{color.red.500}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.400}" } },
     "button-bg-destructive-hover": { "$type": "utility", "$value": "{color.red.600}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.500}" } },

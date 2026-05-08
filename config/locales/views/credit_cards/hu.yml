@@ -1,0 +1,25 @@
+---
+hu:
+  credit_cards:
+    edit:
+      edit: '%{account} szerkesztése'
+    form:
+      annual_fee: Éves díj
+      annual_fee_placeholder: '99'
+      apr: THM
+      apr_placeholder: '15.99'
+      available_credit: Rendelkezésre álló hitelkeret
+      available_credit_placeholder: '10000'
+      expiration_date: Lejárati dátum
+      minimum_payment: Minimális törlesztőrészlet
+      minimum_payment_placeholder: '100'
+    new:
+      title: Add meg a hitelkártya adatait
+    overview:
+      amount_owed: Tartozás összege
+      annual_fee: Éves díj
+      apr: THM
+      available_credit: Rendelkezésre álló hitelkeret
+      expiration_date: Lejárati dátum
+      minimum_payment: Minimális törlesztőrészlet
+      unknown: Ismeretlen

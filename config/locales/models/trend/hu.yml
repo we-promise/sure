@@ -1,0 +1,13 @@
+---
+hu:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: ugyanolyan típusú kell legyen, mint az előző
+              must_be_of_type_money_numeric_or_nil: Money, Numeric vagy nil típusú kell legyen
+            previous:
+              must_be_of_the_same_type_as_current: ugyanolyan típusú kell legyen, mint a jelenlegi
+              must_be_of_type_money_numeric_or_nil: Money, Numeric vagy nil típusú kell legyen

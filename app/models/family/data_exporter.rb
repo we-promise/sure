@@ -154,6 +154,39 @@ class Family::DataExporter
         }.to_json
       end
 
+      Balance.joins(:account)
+        .where(accounts: { family_id: @family.id })
+        .chronological
+        .each do |balance|
+        lines << {
+          type: "Balance",
+          data: {
+            id: balance.id,
+            account_id: balance.account_id,
+            date: balance.date,
+            balance: balance.balance,
+            currency: balance.currency,
+            cash_balance: balance.cash_balance,
+            start_cash_balance: balance.start_cash_balance,
+            start_non_cash_balance: balance.start_non_cash_balance,
+            cash_inflows: balance.cash_inflows,
+            cash_outflows: balance.cash_outflows,
+            non_cash_inflows: balance.non_cash_inflows,
+            non_cash_outflows: balance.non_cash_outflows,
+            net_market_flows: balance.net_market_flows,
+            cash_adjustments: balance.cash_adjustments,
+            non_cash_adjustments: balance.non_cash_adjustments,
+            flows_factor: balance.flows_factor,
+            start_balance: balance.start_balance,
+            end_cash_balance: balance.end_cash_balance,
+            end_non_cash_balance: balance.end_non_cash_balance,
+            end_balance: balance.end_balance,
+            created_at: balance.created_at,
+            updated_at: balance.updated_at
+          }
+        }.to_json
+      end
+
       # Export categories
       @family.categories.find_each do |category|
         lines << {
@@ -220,6 +253,8 @@ class Family::DataExporter
             account_id: trade.entry.account_id,
             security_id: trade.security_id,
             ticker: trade.security.ticker,
+            security_name: trade.security.name,
+            exchange_operating_mic: trade.security.exchange_operating_mic,
             date: trade.entry.date,
             qty: trade.qty,
             price: trade.price,
@@ -227,6 +262,35 @@ class Family::DataExporter
             currency: trade.currency,
             created_at: trade.created_at,
             updated_at: trade.updated_at
+          }
+        }.to_json
+      end
+
+      # Export holding snapshots for backup and portfolio verification.
+      @family.holdings.includes(:account, :security).find_each do |holding|
+        lines << {
+          type: "Holding",
+          data: {
+            id: holding.id,
+            account_id: holding.account_id,
+            security_id: holding.security_id,
+            ticker: holding.security.ticker,
+            security_name: holding.security.name,
+            exchange_operating_mic: holding.security.exchange_operating_mic,
+            exchange_mic: holding.security.exchange_mic,
+            exchange_acronym: holding.security.exchange_acronym,
+            country_code: holding.security.country_code,
+            kind: holding.security.kind,
+            website_url: holding.security.website_url,
+            date: holding.date,
+            qty: holding.qty,
+            price: holding.price,
+            amount: holding.amount,
+            currency: holding.currency,
+            cost_basis: holding.cost_basis,
+            cost_basis_source: holding.cost_basis_source,
+            cost_basis_locked: holding.cost_basis_locked,
+            security_locked: holding.security_locked
           }
         }.to_json
       end

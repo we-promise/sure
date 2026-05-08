@@ -1,0 +1,161 @@
+---
+hu:
+  accounts:
+    not_authorized: "Nincs jogosultságod ennek a számlának a kezeléséhez"
+    account:
+      edit: Szerkesztés
+      link_lunchflow: Összekapcsolás a Lunch Flow-val
+      link_provider: Összekapcsolás szolgáltatóval
+      unlink_provider: Leválasztás a szolgáltatóról
+      change_simplefin_account: SimpleFIN fiók módosítása
+      troubleshoot: Hibakeresés
+      enable: Számla engedélyezése
+      disable: Számla letiltása
+      set_default: Beállítás alapértelmezettként
+      remove_default: Alapértelmezett eltávolítása
+      default_label: Alapértelmezett
+      delete: Számla törlése
+      sharing: Megosztás
+    chart:
+      data_not_available: A kiválasztott időszakra nem állnak rendelkezésre adatok
+    create:
+      success: "%{type} számla létrehozva"
+    set_default:
+      depository_only: "Csak készpénz- és hitelkártya-számlák állíthatók be alapértelmezettként."
+    destroy:
+      success: "%{type} számla törlésre ütemezve"
+      cannot_delete_linked: "Összekapcsolt számla nem törölhető. Először válaszd le a szolgáltatóról."
+      failed: "Az erőforrás törlése sikertelen. Próbáld meg később."
+    empty:
+      empty_message: Állítson be számlát szinkronizálással, importálással vagy manuális rögzítéssel.
+      new_account: Új számla
+      no_accounts: Még nincsenek számlái
+    form:
+      balance: "Egyenleg a dátumon:"
+      opening_balance_date_label: Nyitóegyenleg dátuma
+      name_label: Számla neve
+      name_placeholder: Példa számlanév
+      additional_details: További részletek
+      institution_name_label: Pénzintézet neve
+      institution_name_placeholder: pl. OTP Bank
+      institution_domain_label: Pénzintézet domainje
+      institution_domain_placeholder: pl. otpbank.hu
+      notes_label: Megjegyzések
+      notes_placeholder: További információk tárolása, pl. számlaszám, IBAN, routing szám stb.
+    index:
+      accounts: Számlák
+      manual_accounts:
+        other_accounts: Egyéb számlák
+      new_account: Új számla
+      sync: Összes szinkronizálása
+    sync_all:
+      syncing: "Számlák szinkronizálása..."
+    new:
+      import_accounts: Számlák importálása
+      method_selector:
+        connected_entry: Számla összekapcsolása
+        connected_entry_eu: EU-s számla összekapcsolása
+        link_with_provider: "Összekapcsolás: %{provider}"
+        lunchflow_entry: Lunch Flow számla összekapcsolása
+        manual_entry: Egyenleg manuális megadása
+        title: Hogyan szeretnéd hozzáadni?
+      title: Mit szeretnél hozzáadni?
+    show:
+      limited_fx_history_warning: "Az árfolyam-előzmények csak %{date} dátumtól érhetők el. Az ezt megelőző tranzakciókhoz közelítő árfolyamok kerülnek alkalmazásra – ez akkor fordulhat elő, ha a devizaárfolyam-szolgáltató csak korlátozott előzményadatokat kínál."
+      activity:
+        amount: Összeg
+        balance: Egyenleg
+        confirmed: Megerősített
+        date: Dátum
+        entries: tétel
+        entry: tétel
+        filter: Szűrő
+        new: Új
+        new_activity: Új tevékenység
+        new_balance: Új egyenleg
+        new_trade: Új ügylet
+        new_transaction: Új tranzakció
+        new_transfer: Új átutalás
+        no_entries: Nem található tétel
+        pending: Függőben lévő
+        search:
+          placeholder: Tételek keresése név alapján
+        status: Állapot
+        title: Tevékenység
+      chart:
+        balance: Egyenleg
+        owed: Tartozás összege
+      menu:
+        confirm_accept: '"%{name}" törlése'
+        confirm_body_html: "<p>A számla törlésével törlöd az értéktörténetét is, ami hatással van az összesített fiókodra. Ez közvetlenül befolyásolja a nettó vagyonszámítást és a számlagrafikonokat.</p><br /> <p>A törlés után a számla adatait nem lehet visszaállítani – ha szükséges, új számlaként kell hozzáadni.</p>"
+        confirm_title: Törlöd a számlát?
+        edit: Szerkesztés
+        import: Tranzakciók importálása
+        import_trades: Ügyletek importálása
+        import_transactions: Tranzakciók importálása
+        manage: Számlák kezelése
+    update:
+      success: "%{type} számla frissítve"
+    sidebar:
+      missing_data: Hiányzó előzményadatok
+      missing_data_description: "%{product} harmadik feles szolgáltatóktól kéri le a historikus árfolyamokat, értékpapír-árakat és egyéb adatokat. Ezek szükségesek a pontos számlaegyenleg-előzmények kiszámításához."
+      configure_providers: Konfiguráld itt a szolgáltatóidat.
+      tabs:
+        all: Összes
+        assets: Eszközök
+        debts: Kötelezettségek
+      new_asset: Új eszköz
+      new_debt: Új kötelezettség
+      new_account: Új számla
+      new_account_group: "Új %{account_group}"
+    types:
+      depository: Készpénz
+      investment: Befektetés
+      crypto: Kripto
+      property: Ingatlan
+      vehicle: Jármű
+      other_asset: Egyéb eszköz
+      credit_card: Hitelkártya
+      loan: Hitel
+      other_liability: Egyéb kötelezettség
+    tax_treatments:
+      taxable: Adóköteles
+      tax_deferred: Halasztott adózású
+      tax_exempt: Adómentes
+      tax_advantaged: Adókedvezményes
+    tax_treatment_descriptions:
+      taxable: A nyereség realizáláskor adóköteles
+      tax_deferred: A befizetések levonhatók, kivétkor adóköteles
+      tax_exempt: Adózott befizetések, a nyereség nem adóköteles
+      tax_advantaged: Különleges adókedvezmények feltételekkel
+    subtype_regions:
+      us: Egyesült Államok
+      uk: Egyesült Királyság
+      ca: Kanada
+      au: Ausztrália
+      eu: Európa
+      generic: Általános
+    confirm_unlink:
+      title: Leválasztod a számlát a szolgáltatóról?
+      description_html: "Készülsz leválasztani a <strong>%{account_name}</strong> számlát a <strong>%{provider_name}</strong> szolgáltatóról. Ez manuális számlává alakítja át."
+      warning_title: Mit jelent ez
+      warning_no_sync: A számla többé nem szinkronizál automatikusan a szolgáltatóval
+      warning_manual_updates: A tranzakciókat manuálisan kell hozzáadnod, az egyenleget manuálisan kell frissítened
+      warning_transactions_kept: Minden meglévő tranzakció és egyenleg megmarad
+      warning_can_delete: A leválasztás után szükség esetén törölheted a számlát
+      confirm_button: Megerősítés és leválasztás
+    unlink:
+      success: "A számla sikeresen leválasztva. Mostantól manuális számla."
+      not_linked: "A számla nincs összekapcsolva szolgáltatóval"
+      error: "Nem sikerült leválasztani a számlát: %{error}"
+      generic_error: "Váratlan hiba történt. Kérjük, próbáld újra."
+    select_provider:
+      title: Válassz szolgáltatót a csatlakozáshoz
+      description: "Válaszd ki, melyik szolgáltatón keresztül szeretnéd összekapcsolni: %{account_name}"
+      already_linked: "A számla már össze van kapcsolva egy szolgáltatóval"
+      no_providers: "Jelenleg nincs konfigurált szolgáltató"
+
+  email_confirmations:
+    new:
+      invalid_token: Érvénytelen vagy lejárt megerősítő hivatkozás.
+      success_login: Az e-mail-cím megerősítve. Kérjük, jelentkezz be az új e-mail-címeddel.

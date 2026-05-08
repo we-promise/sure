@@ -84,6 +84,19 @@ Anywhere a `$value` is a string:
 
 The same syntax appears inside composite values like `shadow.xs.$value`: `"0px 1px 2px 0px {color.black|6%}"`.
 
+### Alpha modifiers in views (`/N` syntax)
+
+Tailwind v4's `class/N` modifier (`bg-warning/10`, `text-link/70`, etc.) only resolves on **theme colors** (anything declared under the top-level `color.*` group, which becomes `--color-*` in the generated CSS). It does **not** resolve on classes from this file's `utility.*` group, because those compile to static `@apply` blocks with no modifier-aware definition.
+
+The mismatch is silent — Tailwind drops the unrecognized class and the element renders with no CSS for that property. Recently caught examples on `text-inverse/70`, `border-secondary/30`, and `bg-surface-inset/40` (all of which produced no class output).
+
+Until the build script teaches custom utilities to be modifier-aware, the convention is:
+
+- For alpha on a custom utility: pair the base class with `opacity-N`, e.g. `text-inverse opacity-70` instead of `text-inverse/70`.
+- For alpha on a theme color: the `/N` modifier works as expected, e.g. `bg-warning/10`, `border-destructive/30`.
+
+The pre-resolved alpha tints (`color.gray.tint-5`, `color.gray.tint-10`, `color.red.tint-5`, etc.) are theme colors, so `bg-gray-tint-5` and similar work as straight utilities and accept further `/N` modifiers.
+
 ### Adding a new token
 
 1. Pick the right top-level group.

@@ -5,7 +5,7 @@
     <button type="button"
             data-profile-image-preview-target="clearBtn"
             data-action="click->profile-image-preview#clearFileInput"
-      class="<%= user.profile_image.attached? ? "" : "hidden" %> z-50 cursor-pointer absolute bottom-0 right-0 w-8 h-8 bg-gray-50 rounded-full flex justify-center items-center border border-white border-2">
+      class="<%= user.profile_image.attached? ? "" : "hidden" %> z-50 cursor-pointer absolute bottom-0 right-0 w-8 h-8 bg-surface-inset rounded-full flex justify-center items-center border border-white border-2">
       <%= icon "x", size: "sm" %>
     </button>
 
@@ -52,7 +52,7 @@
 
     <%= form.file_field :profile_image,
         accept: "image/png, image/jpeg",
-        class: "hidden px-3 py-2 bg-gray-50 text-primary rounded-md text-sm font-medium",
+        class: "hidden px-3 py-2 bg-surface-inset text-primary rounded-md text-sm font-medium",
         data: {
           profile_image_preview_target: "input",
           action: "change->profile-image-preview#showFileInputPreview"

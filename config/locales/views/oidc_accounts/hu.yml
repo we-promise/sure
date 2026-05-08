@@ -1,0 +1,34 @@
+---
+hu:
+  oidc_accounts:
+    link:
+      title_link: OIDC-fiók összekapcsolása
+      title_create: Fiók létrehozása
+      verify_heading: Igazold az azonosságodat
+      verify_description_html: "A(z) %{provider} fiókod%{email_suffix} összekapcsolásához kérjük, igazold az azonosságodat a jelszavad megadásával."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-mail
+      email_placeholder: Add meg az e-mail címedet
+      password_label: Jelszó
+      password_placeholder: Add meg a jelszavadat
+      verify_hint: Ez segít biztosítani, hogy csak te tudhass külső fiókokat összekapcsolni a profiloddal.
+      submit_link: Fiók összekapcsolása
+      create_heading: Új fiók létrehozása
+      create_description_html: "Nem található fiók a(z) <strong>%{email}</strong> e-mail címhez. Kattints az alábbira, hogy új fiókot hozz létre a(z) %{provider} azonosítóddal."
+      info_email: "E-mail:"
+      info_name: "Név:"
+      submit_create: Fiók létrehozása
+      submit_accept_invitation: Meghívó elfogadása
+      account_creation_disabled: Az egyszeri bejelentkezésen keresztüli új fiók létrehozása le van tiltva. Kérjük, lépj kapcsolatba egy rendszergazdával a fiókod létrehozásához.
+      cancel: Mégse
+    new_user:
+      title: Fiókod véglegesítése
+      heading: Hozd létre a fiókodat
+      description: Kérjük, erősítsd meg az adataidat a fiókod létrehozásának befejezéséhez a(z) %{provider} azonosítóddal.
+      email_label: E-mail (az SSO-szolgáltatótól)
+      first_name_label: Keresztnév
+      first_name_placeholder: Add meg a keresztnevedet
+      last_name_label: Vezetéknév
+      last_name_placeholder: Add meg a vezetéknevedet
+      submit: Fiók létrehozása
+      cancel: Mégse

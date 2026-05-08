@@ -1,5 +1,6 @@
 <%# locals: (family:, active_tab:, mobile: false) %>
 
+<% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours do %>
 <div id="account-sidebar-tabs">
   <% if family.missing_data_provider? %>
     <details class="group bg-yellow-tint-10 rounded-lg p-2 text-yellow-600 mb-3 text-xs">
@@ -88,3 +89,4 @@
     <% end %>
   <% end %>
 </div>
+<% end %>

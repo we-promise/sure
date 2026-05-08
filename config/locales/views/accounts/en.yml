@@ -138,6 +138,7 @@ en:
       ca: Canada
       au: Australia
       eu: Europe
+      in: India
       generic: General
     confirm_unlink:
       title: Unlink account from provider?

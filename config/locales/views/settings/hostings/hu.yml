@@ -1,0 +1,186 @@
+---
+hu:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Szabályozd, hogyan regisztrálnak az új felhasználók a(z) %{product} példányodra.
+        email_confirmation_description: Ha engedélyezve van, a felhasználóknak meg kell erősíteniük az e-mail
+          címüket, amikor megváltoztatják azt.
+        email_confirmation_title: E-mail-megerősítés megkövetelése
+        default_family_title: Alapértelmezett csoport az új felhasználóknak
+        default_family_description: "Az új felhasználókat csak akkor helyezd ebbe a csoportba, ha nincs meghívójuk."
+        default_family_none: Nincs (új csoport létrehozása)
+        generate_tokens: Új kód generálása
+        generated_tokens: Generált kódok
+        title: Regisztráció
+        states:
+          open: Nyitott
+          closed: Zárt
+          invite_only: Csak meghívóval
+      show:
+        general: Általános beállítások
+        ai_assistant: AI-asszisztens
+        financial_data_providers: Pénzügyi adatszolgáltatók
+        sync_settings: Szinkronizálási beállítások
+        invites: Meghívókódok
+        title: Lokális futtatás
+        danger_zone: Veszélyzóna
+        clear_cache: Adatcache törlése
+        clear_cache_warning: Az adatcache törlésével eltávolítod az összes árfolyamot, értékpapír-árat, fiókegyenleget és egyéb adatot. Ez nem törli a fiókokat, tranzakciókat, kategóriákat és egyéb felhasználói adatokat.
+        confirm_clear_cache:
+          title: Törli az adatcache-t?
+          body: Biztosan törölni szeretnéd az adatcache-t? Ez eltávolítja az összes árfolyamot, értékpapír-árat, fiókegyenleget és egyéb adatot. Ez a művelet nem vonható vissza.
+      provider_selection:
+        exchange_rate_title: Árfolyam-szolgáltató
+        exchange_rate_description: Válassz egyetlen szolgáltatót az árfolyamok lekéréséhez.
+        exchange_rate_provider_label: Árfolyam-szolgáltató
+        securities_title: Értékpapír-szolgáltatók
+        securities_description: Engedélyezz egy vagy több szolgáltatót részvény-, ETF- és befektetési alap-árak lekéréséhez. Kereséskor az összes engedélyezett szolgáltató le lesz kérdezve, és az eredmények össze lesznek vonva.
+        env_configured_message: A szolgáltatóválasztás le van tiltva, mert környezeti változók vannak beállítva. Az itt történő kiválasztás engedélyezéséhez távolítsd el ezeket a környezeti változókat a konfigurációdból.
+        twelve_data_hint: API-kulcs szükséges, 800 kredit/nap
+        yahoo_finance_hint: ingyenes, nem kell API-kulcs
+        requires_api_key: API-kulcs szükséges
+        requires_api_key_eodhd: API-kulcs szükséges, 20 hívás/nap limit
+        requires_api_key_alpha_vantage: API-kulcs szükséges, 25 hívás/nap limit
+        mfapi_hint: ingyenes, nem kell API-kulcs – csak indiai befektetési alapok
+        binance_public_hint: ingyenes, nem kell API-kulcs – csak kriptó (BTC, ETH stb.)
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+      assistant_settings:
+        title: AI-asszisztens
+        description: Válaszd ki, hogyan válaszoljon a csevegési asszisztens. A beépített mód közvetlenül a beállított LLM-szolgáltatót használja. A külső mód egy távoli AI-ügynökhöz továbbítja a kérést, amely MCP-n keresztül hozzáférhet a Sure pénzügyi eszközeihez.
+        type_label: Asszisztens típusa
+        type_builtin: Beépített (Built-in LLM)
+        type_external: Külső (távoli ügynök)
+        external_status: Külső asszisztens végpontja
+        external_configured: Konfigurálva
+        external_not_configured: Nincs konfigurálva. Add meg az URL-t és a tokent alább, vagy állítsd be az EXTERNAL_ASSISTANT_URL és EXTERNAL_ASSISTANT_TOKEN környezeti változókat.
+        env_notice: "Az asszisztens típusa '%{type}'-ra van rögzítve az ASSISTANT_TYPE környezeti változó által."
+        env_configured_external: Sikeresen konfigurálva környezeti változókon keresztül.
+        url_label: Végpont URL
+        url_placeholder: "https://a-te-agentszolgaltato-hosztod/v1/chat"
+        url_help: Az ügynök API-végpontjának teljes URL-je. Az ügynökszolgáltatód adja meg ezt.
+        token_label: API-token
+        token_placeholder: Add meg az ügynökszolgáltatódtól kapott tokent
+        token_help: A külső ügynök által biztosított hitelesítési token. Ez minden kéréssel együtt Bearer tokenként kerül elküldésre.
+        agent_id_label: Ügynökazonosító (nem kötelező)
+        agent_id_placeholder: "main (alapértelmezett)"
+        agent_id_help: Egy adott ügynökre irányít, ha a szolgáltató több ügynököt üzemeltet. Hagyd üresen az alapértelmezetthez.
+        disconnect_title: Külső kapcsolat
+        disconnect_description: Távolítsd el a külső asszisztens kapcsolatát, és térj vissza a beépített asszisztenshez.
+        disconnect_button: Kapcsolat bontása
+        confirm_disconnect:
+          title: Bontod a külső asszisztens kapcsolatát?
+          body: Ez eltávolítja a mentett URL-t, tokent és ügynökazonosítót, és visszavált a beépített asszisztensre. Később újra csatlakozhatsz új hitelesítő adatok megadásával.
+      brand_fetch_settings:
+        description: Add meg a Brand Fetch által biztosított kliens-azonosítót
+        label: Kliens-azonosító
+        placeholder: Add meg ide a kliens-azonosítódat
+        title: Brand Fetch beállítások
+        high_res_label: Nagy felbontású logók engedélyezése
+        high_res_description: Ha engedélyezve van, a logók 120x120 felbontásban kerülnek lekérésre 40x40 helyett. Ez élesebb képeket biztosít nagy felbontású kijelzőkön.
+      openai_settings:
+        description: Add meg a hozzáférési tokent, és opcionálisan konfigurálj egy egyéni OpenAI-kompatibilis szolgáltatót
+        env_configured_message: Sikeresen konfigurálva környezeti változókon keresztül.
+        access_token_label: Hozzáférési token
+        access_token_placeholder: Add meg ide a hozzáférési tokenedet
+        uri_base_label: API alap URL (nem kötelező)
+        uri_base_placeholder: "https://api.openai.com/v1 (alapértelmezett)"
+        model_label: Modell (nem kötelező)
+        model_placeholder: "gpt-4.1 (alapértelmezett)"
+        json_mode_label: JSON mód
+        json_mode_auto: Automatikus (ajánlott)
+        json_mode_strict: Szigorú (gondolkodó modellekhez a legjobb)
+        json_mode_none: Nincs (standard modellekhez a legjobb)
+        json_mode_json_object: JSON objektum
+        json_mode_help: "A szigorú mód a legjobb a gondolkodó modellekhez (qwen-thinking, deepseek-reasoner). A nincs mód a legjobb a standard modellekhez (llama, mistral, gpt-oss)."
+        budget_heading: Tokenköltségkeret
+        budget_description: Minden LLM-hívásra vonatkozik – csevegési előzmények, automatikus kategorizálás, kereskedő-felismerés és PDF-feldolgozás. Az alapértelmezések konzervatívak a kis kontextusablakú helyi modellekhez. Emeld meg a felhőalapú, nagyobb kontextusablakú modellekhez.
+        context_window_label: Kontextusablak (nem kötelező)
+        context_window_help: "Az összes token, amelyet a modell elfogad. Alapértelmezett: 2048 – emeld 8192+-ra felhőalapú OpenAI vagy nagy kontextusú helyi modelleknél."
+        max_response_tokens_label: Maximális válasz-tokenek (nem kötelező)
+        max_response_tokens_help: "A modell válaszához fenntartott tokenek. Alapértelmezett: 512. Csökkentsd, ha több helyet szeretnél a hosszabb előzményeknek."
+        max_items_per_call_label: Maximális elemek kötegenként (nem kötelező)
+        max_items_per_call_help: "Felső korlát az automatikus kategorizálási / kereskedő-felismerési kötegeknél. Alapértelmezett: 25. A nagyobb kötegek automatikusan felosztódnak a kontextusablakba féréshez."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: A Yahoo Finance ingyenes hozzáférést biztosít részvényárakhoz, árfolyamokhoz és pénzügyi adatokhoz API-kulcs nélkül.
+        status_active: A Yahoo Finance aktív és működik
+        status_inactive: A Yahoo Finance kapcsolat sikertelen
+        connection_failed: Nem sikerült csatlakozni a Yahoo Finance-hez
+        troubleshooting: Ellenőrizd az internetkapcsolatot és a tűzfal beállításait. A Yahoo Finance átmenetileg nem érhető el.
+      tiingo_settings:
+        title: Tiingo
+        description: Add meg a Tiingo által biztosított API-tokent. Az ingyenes csomag óránként 50 egyedi szimbólumot támogat, 30+ év historikus adattal.
+        env_configured_message: Sikeresen konfigurálva a TIINGO_API_KEY környezeti változón keresztül.
+        label: API-token
+        placeholder: Add meg ide a Tiingo API-tokenedet
+        show_details: "(részletek megjelenítése)"
+        step_1_html: 'Látogass el a <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> oldalra, és hozz létre egy ingyenes fiókot.'
+        step_2_html: 'Lépj az <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> oldalra.'
+        step_3: Másold ki az API-tokenedet, és illeszd be alább.
+      eodhd_settings:
+        title: EODHD
+        description: Add meg az EODHD által biztosított API-tokent. Támogatja az EU ETF-eket LSE-n, XETRA-n és más nemzetközi tőzsdéken.
+        env_configured_message: Sikeresen konfigurálva az EODHD_API_KEY környezeti változón keresztül.
+        label: API-token
+        placeholder: Add meg ide az EODHD API-tokenedet
+        show_details: "(részletek megjelenítése)"
+        step_1_html: 'Látogass el az <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> oldalra, és hozz létre egy ingyenes fiókot.'
+        step_2_html: 'Lépj az <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">irányítópultra</a> az API-token megkereséséhez.'
+        step_3: Másold ki az API-tokenedet, és illeszd be alább.
+        rate_limit_warning: "Az EODHD ingyenes csomag napi 20 API-hívásra korlátozott. Leginkább kiegészítő szolgáltatóként ajánlott az EU ETF-ekhez, amelyek más szolgáltatóknál nem elérhetők."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Add meg az Alpha Vantage API-kulcsát. Támogatja az EU ETF-eket a London Stock Exchange-en, XETRA-n és más tőzsdéken.
+        env_configured_message: Sikeresen konfigurálva az ALPHA_VANTAGE_API_KEY környezeti változón keresztül.
+        label: API-kulcs
+        placeholder: Add meg ide az Alpha Vantage API-kulcsodat
+        show_details: "(részletek megjelenítése)"
+        step_1_html: 'Látogass el az <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> oldalra, és igényeld az ingyenes API-kulcsodat.'
+        step_2: Másold ki az API-kulcsot, és illeszd be alább.
+        rate_limit_warning: "Az Alpha Vantage ingyenes csomag napi 25 API-hívásra korlátozott. Leginkább kiegészítő szolgáltatóként ajánlott az EU ETF-ekhez, amelyek más szolgáltatóknál nem elérhetők."
+        no_health_check_note: "A kapcsolat egészségügyi ellenőrzése nem érhető el ehhez a szolgáltatóhoz a szigorú sebességkorlát miatt."
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} napi API-hívás felhasználva (%{percentage})"
+        description: Add meg a Twelve Data által biztosított API-kulcsot
+        env_configured_message: Sikeresen konfigurálva a TWELVE_DATA_API_KEY környezeti változón keresztül.
+        label: API-kulcs
+        placeholder: Add meg ide az API-kulcsodat
+        show_details: "(részletek megjelenítése)"
+        step_1_html: 'Látogass el a <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> oldalra, és hozz létre egy ingyenes Twelve Data fejlesztői fiókot.'
+        step_2_html: 'Lépj az <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API-kulcsok</a> oldalra.'
+        step_3: Fedezd fel a titkos kulcsodat, és illeszd be alább.
+        plan: "%{plan} csomag"
+        plan_upgrade_warning_title: Egyes tickerek fizetős csomagot igényelnek
+        plan_upgrade_warning_description: A portfóliódban lévő következő tickerekhez nem szinkronizálhatók az árak a jelenlegi Twelve Data csomagoddal.
+        requires_plan: "%{plan} csomag szükséges"
+        view_pricing: Twelve Data árak megtekintése
+        title: Twelve Data
+      update:
+        failure: Érvénytelen beállítási érték
+        success: Beállítások mentve
+        invalid_onboarding_state: Érvénytelen regisztrációs állapot
+        invalid_sync_time: "Érvénytelen szinkronizálási időformátum. Kérjük, használd a ÓÓ:PP formátumot (pl.: 02:30)."
+        invalid_llm_budget: "%{field} értékének legalább %{minimum} egész számnak kell lennie."
+        scheduler_sync_failed: A beállítások mentve, de a szinkronizálási ütemezés frissítése nem sikerült. Kérjük, próbáld újra, vagy ellenőrizd a szerver naplóit.
+      disconnect_external_assistant:
+        external_assistant_disconnected: A külső asszisztens kapcsolata bontva
+      clear_cache:
+        cache_cleared: Az adatcache törölve. Ez néhány percet vehet igénybe.
+      not_authorized: Nincs jogosultságod ehhez a művelethez
+      sync_settings:
+        auto_sync_label: Automatikus szinkronizálás engedélyezése
+        auto_sync_description: Ha engedélyezve van, az összes fiók naponta automatikusan szinkronizálódik a megadott időpontban.
+        auto_sync_time_label: Szinkronizálási idő (ÓÓ:PP)
+        auto_sync_time_description: Add meg a nap azon időpontját, amikor az automatikus szinkronizálásnak meg kell történnie.
+        include_pending_label: Függőben lévő tranzakciók belefoglalása
+        include_pending_description: Ha engedélyezve van, a függőben lévő (nem teljesített) tranzakciók importálódnak, és automatikusan egyeztetődnek, amikor könyvelődnek. Tiltsd le, ha a bankod megbízhatatlan függőben lévő adatokat szolgáltat.
+        env_configured_message: Ez a beállítás le van tiltva, mert be van állítva egy szolgáltatói környezeti változó (SIMPLEFIN_INCLUDE_PENDING vagy PLAID_INCLUDE_PENDING). Távolítsd el ezt a beállítás engedélyezéséhez.
