@@ -1,0 +1,13 @@
+<%# locals: (status:) %>
+<%
+  dot_class, pill_class = case status.to_sym
+  when :ok   then [ "bg-success",     "bg-success/10 text-success" ]
+  when :warn then [ "bg-warning",     "bg-warning/10 text-warning" ]
+  when :err  then [ "bg-destructive", "bg-destructive/10 text-destructive" ]
+  else            [ "bg-gray-400",    "bg-gray-100 text-secondary" ]
+  end
+%>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium <%= pill_class %>">
+  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 <%= dot_class %>"></span>
+  <%= t("settings.providers.status.#{status}") %>
+</span>

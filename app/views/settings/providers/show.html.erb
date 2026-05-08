@@ -21,7 +21,8 @@
 
   <% unless @encryption_error %>
     <% @provider_configurations.each do |config| %>
-      <%= settings_section title: config.provider_key.titleize, collapsible: true, open: false do %>
+      <% summary = provider_summary(config.provider_key) %>
+      <%= settings_section title: config.provider_key.titleize, collapsible: true, open: false, status: summary[:status], meta: summary[:meta] do %>
         <%= render "settings/providers/provider_form", configuration: config %>
       <% end %>
     <% end %>
@@ -31,64 +32,36 @@
     <%# They require custom UI for connection management, status display, and sync actions.         %>
     <%# The controller excludes them from @provider_configurations (see prepare_show_context).      %>
 
-    <%= settings_section title: "Lunch Flow", collapsible: true, open: false do %>
-      <turbo-frame id="lunchflow-providers-panel">
-        <%= render "settings/providers/lunchflow_panel" %>
-      </turbo-frame>
-    <% end %>
+    <%
+      family_panels = [
+        { key: "lunchflow",      title: "Lunch Flow",             turbo_id: "lunchflow",      partial: "lunchflow_panel" },
+        { key: "simplefin",      title: "SimpleFIN",              turbo_id: "simplefin",      partial: "simplefin_panel" },
+        { key: "enable_banking", title: "Enable Banking (beta)",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
+        { key: "coinstats",      title: "CoinStats (beta)",       turbo_id: "coinstats",      partial: "coinstats_panel" },
+        { key: "mercury",        title: "Mercury (beta)",         turbo_id: "mercury",        partial: "mercury_panel" },
+        { key: "coinbase",       title: "Coinbase (beta)",        turbo_id: "coinbase",       partial: "coinbase_panel" },
+        { key: "binance",        title: "Binance (beta)",         turbo_id: "binance",        partial: "binance_panel" },
+        { key: "snaptrade",      title: "SnapTrade (beta)",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
+        { key: "indexa_capital", title: "Indexa Capital (alpha)", turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
+        { key: "sophtron",       title: "Sophtron (alpha)",       turbo_id: "sophtron",       partial: "sophtron_panel" },
+      ]
 
-    <%= settings_section title: "SimpleFIN", collapsible: true, open: false do %>
-      <turbo-frame id="simplefin-providers-panel">
-        <%= render "settings/providers/simplefin_panel" %>
-      </turbo-frame>
-    <% end %>
+      status_order = { ok: 0, warn: 1, err: 2, off: 3 }
+      sorted_panels = family_panels.sort_by { |p| status_order[provider_summary(p[:key])[:status]] || 3 }
+    %>
 
-    <%= settings_section title: "Enable Banking (beta)", collapsible: true, open: false do %>
-      <turbo-frame id="enable_banking-providers-panel">
-        <%= render "settings/providers/enable_banking_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "CoinStats (beta)", collapsible: true, open: false do %>
-      <turbo-frame id="coinstats-providers-panel">
-        <%= render "settings/providers/coinstats_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "Mercury (beta)", collapsible: true, open: false do %>
-      <turbo-frame id="mercury-providers-panel">
-        <%= render "settings/providers/mercury_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "Coinbase (beta)", collapsible: true, open: false do %>
-      <turbo-frame id="coinbase-providers-panel">
-        <%= render "settings/providers/coinbase_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "Binance (beta)", collapsible: true, open: false do %>
-      <turbo-frame id="binance-providers-panel">
-        <%= render "settings/providers/binance_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "SnapTrade (beta)", collapsible: true, open: false, auto_open_param: "manage" do %>
-      <turbo-frame id="snaptrade-providers-panel">
-        <%= render "settings/providers/snaptrade_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "Indexa Capital (alpha)", collapsible: true, open: false do %>
-      <turbo-frame id="indexa_capital-providers-panel">
-        <%= render "settings/providers/indexa_capital_panel" %>
-      </turbo-frame>
-    <% end %>
-
-    <%= settings_section title: "Sophtron (alpha)", collapsible: true, open: false do %>
-      <turbo-frame id="sophtron-providers-panel">
-        <%= render "settings/providers/sophtron_panel" %>
-      </turbo-frame>
+    <% sorted_panels.each do |panel| %>
+      <% summary = provider_summary(panel[:key]) %>
+      <%= settings_section title: panel[:title],
+                           collapsible: true,
+                           open: false,
+                           auto_open_param: panel[:auto_open],
+                           status: summary[:status],
+                           meta: summary[:meta] do %>
+        <turbo-frame id="<%= panel[:turbo_id] %>-providers-panel">
+          <%= render "settings/providers/#{panel[:partial]}" %>
+        </turbo-frame>
+      <% end %>
     <% end %>
   <% end %>
 </div>

@@ -186,6 +186,11 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
+      status:
+        ok: Connected
+        warn: Action needed
+        err: Error
+        off: Not configured
       show:
         coinbase_title: Coinbase
       encryption_error:

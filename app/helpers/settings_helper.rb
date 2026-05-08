@@ -45,9 +45,46 @@ module SettingsHelper
     }
   end
 
-  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, &block)
+  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, &block)
     content = capture(&block)
-    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param }
+    render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta }
+  end
+
+  def provider_summary(provider_key)
+    case provider_key.to_s.downcase
+    when "plaid"
+      plaid_configured = @provider_configurations&.find { |c| c.provider_key.to_s.casecmp("plaid").zero? }&.configured?
+      plaid_configured ? { status: :ok } : { status: :off }
+    when "simplefin"
+      @simplefin_items&.any? ? { status: :ok } : { status: :off }
+    when "lunchflow"
+      @lunchflow_items&.any? ? { status: :ok } : { status: :off }
+    when "enable_banking"
+      @enable_banking_items&.any?(&:session_valid?) ? { status: :ok } : { status: :off }
+    when "coinstats"
+      @coinstats_items&.any? ? { status: :ok } : { status: :off }
+    when "mercury"
+      @mercury_items&.any? ? { status: :ok } : { status: :off }
+    when "coinbase"
+      @coinbase_items&.any? ? { status: :ok } : { status: :off }
+    when "binance"
+      Current.family.binance_items.active.any? ? { status: :ok } : { status: :off }
+    when "snaptrade"
+      configured_item = @snaptrade_items&.find(&:credentials_configured?)
+      if configured_item&.user_registered?
+        { status: :ok }
+      elsif configured_item
+        { status: :warn }
+      else
+        { status: :off }
+      end
+    when "indexa_capital"
+      @indexa_capital_items&.any? ? { status: :ok } : { status: :off }
+    when "sophtron"
+      @sophtron_items&.any? ? { status: :ok } : { status: :off }
+    else
+      { status: :off }
+    end
   end
 
   def settings_nav_footer
