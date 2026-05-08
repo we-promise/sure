@@ -8,6 +8,12 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     Provider::Factory.ensure_adapters_loaded
   end
 
+  test "GET /settings/bank_sync redirects permanently to /settings/providers" do
+    get "/settings/bank_sync"
+    assert_redirected_to "/settings/providers"
+    assert_equal 301, response.status
+  end
+
   test "can access when self hosting is disabled (managed mode)" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     get settings_providers_url
