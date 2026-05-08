@@ -569,6 +569,79 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to connection_status_sophtron_item_path(@item, post_mfa: true)
   end
 
+  test "toggle_manual_sync takes Sophtron item off automatic sync path" do
+    assert_not @item.manual_sync?
+
+    post toggle_manual_sync_sophtron_item_url(@item)
+
+    assert_redirected_to accounts_path
+    assert @item.reload.manual_sync?
+    assert_equal "Sophtron institution now requires manual sync.", flash[:notice]
+  end
+
+  test "manual sync starts Sophtron refresh and renders MFA challenge" do
+    @item.update!(manual_sync: true, user_institution_id: "ui-1")
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "job-1" })
+    provider.expects(:get_job_information).with("job-1").returns({
+      SecurityQuestion: [ "What is your favorite color?" ].to_json,
+      SuccessFlag: nil,
+      LastStatus: "Waiting"
+    })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    assert_no_enqueued_jobs only: SyncJob do
+      assert_difference -> { @item.syncs.count }, 1 do
+        post sync_sophtron_item_url(@item)
+      end
+    end
+
+    assert_response :success
+    assert_includes response.body, "What is your favorite color?"
+    assert_equal "job-1", @item.reload.current_job_id
+    assert_equal sophtron_account.id, @item.current_job_sophtron_account_id
+    assert @item.syncs.ordered.first.syncing?
+  end
+
+  test "submit_mfa preserves manual sync context" do
+    @item.update!(manual_sync: true, user_institution_id: "ui-1", current_job_id: "job-1")
+    sync = @item.syncs.create!
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100
+    )
+    provider = mock
+    provider.expects(:update_job_token_input).with("job-1", token_input: "123456").returns({})
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    post submit_mfa_sophtron_item_url(@item), params: {
+      mfa_type: "token_input",
+      token_input: "123456",
+      manual_sync: true,
+      sync_id: sync.id,
+      sophtron_account_id: sophtron_account.id
+    }
+
+    assert_redirected_to connection_status_sophtron_item_path(
+      @item,
+      manual_sync: "true",
+      post_mfa: true,
+      sophtron_account_id: sophtron_account.id,
+      sync_id: sync.id
+    )
+  end
+
+
   test "link_existing_account links manual account to sophtron account" do
     @item.update!(user_institution_id: "ui-1")
     account = accounts(:depository)
