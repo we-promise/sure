@@ -38,6 +38,11 @@ module Sure
       .map(&:strip)
       .reject(&:empty?)
       .filter_map { |s| IPAddr.new(s) rescue nil }
+    # Optional shared-secret gate: when REMOTE_USER_SHARED_SECRET is set,
+    # the proxy must echo it in the configured sibling header. Unset means
+    # no shared-secret check (the IP allowlist remains the only gate).
+    config.remote_user_shared_secret = ENV["REMOTE_USER_SHARED_SECRET"].presence
+    config.remote_user_shared_secret_header = ENV.fetch("REMOTE_USER_SHARED_SECRET_HEADER", "X-Remote-User-Secret")
 
     # Self hosters can optionally set their own encryption keys if they want to use ActiveRecord encryption.
     if Rails.application.credentials.active_record_encryption.present?
