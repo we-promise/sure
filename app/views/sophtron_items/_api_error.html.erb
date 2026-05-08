@@ -1,34 +1,40 @@
-<%# locals: (error_message:, return_path: nil) %>
+<%# locals: (error_message:, return_path: nil, heading: nil, issue_keys: nil, action_label: nil) %>
+<% heading ||= t("sophtron_items.api_error.unable_to_connect") %>
+<% issue_keys ||= %w[incorrect_user_id invalid_access_key expired_credentials network_issue service_down] %>
+<% action_path = return_path.presence || settings_providers_path %>
+<% action_label ||= t("sophtron_items.api_error.check_provider_settings") %>
+
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
     <% dialog.with_header(title: t("sophtron_items.api_error.title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-start gap-3">
-          <%= icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
-          <div class="text-sm">
-            <p class="font-medium text-primary mb-2"><%= t("sophtron_items.api_error.unable_to_connect") %></p>
-            <p class="text-secondary"><%= h(error_message) %></p>
+        <div class="rounded-lg border border-primary bg-container-inset p-3">
+          <div class="flex items-start gap-3">
+            <%= icon("alert-circle", color: "destructive", size: "sm", class: "mt-0.5") %>
+            <div class="space-y-1 text-sm">
+              <p class="font-medium text-primary"><%= heading %></p>
+              <p class="text-secondary"><%= h(error_message) %></p>
+            </div>
           </div>
         </div>
 
-        <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+        <div class="rounded-lg border border-primary bg-container-inset p-3 text-sm">
           <p class="font-medium text-primary"><%= t("sophtron_items.api_error.common_issues_title") %></p>
-          <ul class="list-disc list-inside space-y-1 text-secondary">
-            <li><%= t("sophtron_items.api_error.incorrect_user_id") %></li>
-            <li><%= t("sophtron_items.api_error.invalid_access_key") %></li>
-            <li><%= t("sophtron_items.api_error.expired_credentials") %></li>
-            <li><%= t("sophtron_items.api_error.network_issue") %></li>
-            <li><%= t("sophtron_items.api_error.service_down") %></li>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-secondary">
+            <% issue_keys.each do |issue_key| %>
+              <li><%= t("sophtron_items.api_error.#{issue_key}") %></li>
+            <% end %>
           </ul>
         </div>
 
-        <div class="mt-4">
-          <%= link_to (return_path.presence || settings_providers_path),  
-                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors",
-                data: { turbo: false } do %>
-            <%= t("sophtron_items.api_error.check_provider_settings") %>
-          <% end %>
+        <div class="flex justify-end">
+          <%= render DS::Link.new(
+                text: action_label,
+                href: action_path,
+                variant: :primary,
+                data: { turbo: false }
+              ) %>
         </div>
       </div>
     <% end %>

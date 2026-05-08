@@ -544,8 +544,11 @@ Rails.application.routes.draw do
     end
 
     member do
+      post :connect_institution
       post :sync
       post :balances
+      get :connection_status
+      post :submit_mfa
       get :setup_accounts
       post :complete_account_setup
     end

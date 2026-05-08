@@ -3,17 +3,19 @@
     <% dialog.with_header(title: t("sophtron_items.sophtron_setup_required.title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-start gap-3">
-          <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
-          <div class="text-sm text-secondary">
-            <p class="font-medium text-primary mb-2"><%= t("sophtron_items.sophtron_setup_required.heading") %></p>
-            <p><%= t("sophtron_items.sophtron_setup_required.description") %></p>
+        <div class="rounded-lg border border-primary bg-container-inset p-3">
+          <div class="flex items-start gap-3">
+            <%= icon("alert-circle", color: "warning", size: "sm", class: "mt-0.5") %>
+            <div class="space-y-1 text-sm text-secondary">
+              <p class="font-medium text-primary"><%= t("sophtron_items.sophtron_setup_required.heading") %></p>
+              <p><%= t("sophtron_items.sophtron_setup_required.description") %></p>
+            </div>
           </div>
         </div>
 
-        <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+        <div class="rounded-lg border border-primary bg-container-inset p-3 text-sm">
           <p class="font-medium text-primary"><%= t("sophtron_items.sophtron_setup_required.setup_steps_title") %></p>
-          <ol class="list-decimal list-inside space-y-1 text-secondary">
+          <ol class="mt-2 list-decimal space-y-1 pl-5 text-secondary">
             <li><%= t("sophtron_items.sophtron_setup_required.step_1_html") %></li>
             <li><%= t("sophtron_items.sophtron_setup_required.step_2_html") %></li>
             <li><%= t("sophtron_items.sophtron_setup_required.step_3_html") %></li>
@@ -21,12 +23,13 @@
           </ol>
         </div>
 
-        <div class="mt-4">
-          <%= link_to settings_providers_path,
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-gray-900 theme-dark:focus:ring-white focus:ring-offset-2 transition-colors",
-                      data: { turbo: false } do %>
-            <%= t("sophtron_items.sophtron_setup_required.go_to_provider_settings") %>
-          <% end %>
+        <div class="flex justify-end">
+          <%= render DS::Link.new(
+                text: t("sophtron_items.sophtron_setup_required.go_to_provider_settings"),
+                href: settings_providers_path,
+                variant: :primary,
+                data: { turbo: false }
+              ) %>
         </div>
       </div>
     <% end %>
