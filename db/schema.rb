@@ -648,6 +648,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_04_230000) do
     t.boolean "cost_basis_locked", default: false, null: false
     t.uuid "provider_security_id"
     t.boolean "security_locked", default: false, null: false
+    t.string "source"
     t.index [ "account_id", "external_id" ], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index [ "account_id", "security_id", "date", "currency" ], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index [ "account_id" ], name: "index_holdings_on_account_id"

@@ -1,24 +1,46 @@
 namespace :data_migration do
-  desc "Migrate EU Plaid webhooks"
-  # 2025-02-07: EU Plaid items need to be moved over to a new webhook URL so that we can
-  # instantiate the correct Plaid client for verification based on which Plaid instance it comes from
-  task eu_plaid_webhooks: :environment do
-    Provider::PlaidEuAdapter.ensure_configuration_loaded
-    provider = Provider::Plaid.new(Rails.application.config.plaid_eu, region: :eu)
+  desc "Re-point migrated Plaid connections at the unified framework webhook URL"
+  # 2026-05-04: After the provider-framework cutover the legacy /webhooks/plaid and
+  # /webhooks/plaid_eu routes are gone. The cutover migration
+  # (20260504150000_migrate_legacy_plaid_to_framework) re-points each item's webhook
+  # URL inline; this task is the operator backstop for items that hit a transient
+  # Plaid API error during that step. Idempotent — calling item_webhook_update with
+  # the same URL is a no-op on Plaid's side.
+  task migrate_plaid_webhooks: :environment do
+    host = ENV["APP_DOMAIN"].presence
+    if host.blank?
+      puts "APP_DOMAIN is required (set it in your environment before running this task)"
+      exit 1
+    end
+    host = "https://#{host}" unless host.match?(%r{\Ahttps?://})
 
-    eu_items = PlaidItem.where(plaid_region: "eu")
+    webhook_url = "#{host.chomp('/')}/webhooks/providers/plaid"
+    connections = Provider::Connection.where(provider_key: "plaid")
 
-    eu_items.find_each do |item|
+    puts "Re-pointing #{connections.count} Plaid connection(s) at #{webhook_url}…"
+
+    connections.find_each do |connection|
+      region = connection.metadata&.dig("region").presence || "us"
+      access_token = connection.credentials&.dig("access_token")
+      if access_token.blank?
+        puts "  ! Skipping connection #{connection.id}: no access_token"
+        next
+      end
+
+      provider = Provider::Registry.plaid_provider_for_region(region)
+      if provider.nil?
+        puts "  ! Skipping connection #{connection.id}: Plaid provider not configured for region=#{region}"
+        next
+      end
+
       request = Plaid::ItemWebhookUpdateRequest.new(
-        access_token: item.access_token,
-        webhook: "https://app.sure.am/webhooks/plaid_eu"
+        access_token: access_token,
+        webhook: webhook_url
       )
-
       provider.client.item_webhook_update(request)
-
-      puts "Updated webhook for Plaid item #{item.plaid_id}"
+      puts "  + Updated webhook for connection #{connection.id} (region=#{region}, plaid_item=#{connection.metadata&.dig('plaid_item_id')})"
     rescue => error
-      puts "Error updating webhook for Plaid item #{item.plaid_id}: #{error.message}"
+      puts "  ! Error updating webhook for connection #{connection.id}: #{error.class}: #{error.message}"
     end
   end
 

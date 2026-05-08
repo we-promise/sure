@@ -49,7 +49,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
       def stable_provider_holding_start_dates(account_ids)
         rows = Holding.where(account_id: account_ids)
-          .where.not(account_provider_id: nil)
+          .from_provider
           .group(:account_id, :date)
           .order(account_id: :asc, date: :desc)
           .pluck(:account_id, :date, Arel.sql("array_agg(security_id ORDER BY security_id)"))
@@ -105,7 +105,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
     end
 
     def provider_holdings_scope
-      @provider_holdings_scope ||= account.holdings.where.not(account_provider_id: nil)
+      @provider_holdings_scope ||= account.holdings.from_provider
     end
 
     def stable_provider_holding_start_date

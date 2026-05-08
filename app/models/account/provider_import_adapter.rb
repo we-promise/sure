@@ -424,7 +424,8 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        source: source
       }
 
       # Only update security if not locked by user

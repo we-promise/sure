@@ -4,10 +4,10 @@
 module DevSyncStatsHelpers
   extend self
 
-  def generate_fake_stats_for_items(item_class, provider_name, include_issues: false)
-    items = item_class.all
+  def generate_fake_stats_for_items(item_scope, provider_name, include_issues: false)
+    items = item_scope.respond_to?(:all) ? item_scope.all : item_scope
     if items.empty?
-      puts "  No #{item_class.name} items found, skipping..."
+      puts "  No #{provider_name} items found, skipping..."
       return
     end
 
@@ -21,8 +21,8 @@ module DevSyncStatsHelpers
       stats = generate_fake_stats(provider_name, include_issues: include_issues)
       sync.update!(sync_stats: stats, status: :completed, completed_at: Time.current)
 
-      item_name = item.respond_to?(:name) ? item.name : item.try(:institution_name) || item.id
-      puts "  Generated stats for #{item_class.name} ##{item.id} (#{item_name})"
+      item_name = item.try(:name) || item.try(:institution_name) || item.id
+      puts "  Generated stats for #{item.class.name} ##{item.id} (#{item_name})"
     end
   end
 
@@ -119,7 +119,7 @@ namespace :dev do
 
       puts "Generating fake sync stats for testing..."
 
-      DevSyncStatsHelpers.generate_fake_stats_for_items(PlaidItem, "plaid")
+      DevSyncStatsHelpers.generate_fake_stats_for_items(Provider::Connection.where(provider_key: "plaid"), "plaid")
       DevSyncStatsHelpers.generate_fake_stats_for_items(SimplefinItem, "simplefin")
       DevSyncStatsHelpers.generate_fake_stats_for_items(LunchflowItem, "lunchflow")
       DevSyncStatsHelpers.generate_fake_stats_for_items(EnableBankingItem, "enable_banking")
@@ -150,7 +150,7 @@ namespace :dev do
 
       puts "Generating fake sync stats with errors and warnings..."
 
-      DevSyncStatsHelpers.generate_fake_stats_for_items(PlaidItem, "plaid", include_issues: true)
+      DevSyncStatsHelpers.generate_fake_stats_for_items(Provider::Connection.where(provider_key: "plaid"), "plaid", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(SimplefinItem, "simplefin", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(LunchflowItem, "lunchflow", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(EnableBankingItem, "enable_banking", include_issues: true)
@@ -193,26 +193,32 @@ namespace :dev do
       end
       puts "    Created 3 SimplefinAccounts"
 
-      # Create a fake Plaid item (requires access_token)
-      plaid_item = family.plaid_items.create!(
-        name: "Test Plaid Connection",
-        access_token: "test-access-token-#{SecureRandom.hex(16)}",
-        plaid_id: "test-plaid-id-#{SecureRandom.hex(8)}"
+      # Create a fake Plaid Provider::Connection (framework)
+      plaid_connection = family.provider_connections.create!(
+        provider_key: "plaid",
+        auth_type: "embedded_link",
+        status: "healthy",
+        credentials: { "access_token" => "test-access-token-#{SecureRandom.hex(16)}" },
+        metadata: {
+          "plaid_item_id" => "test-plaid-id-#{SecureRandom.hex(8)}",
+          "region" => "us",
+          "institution_name" => "Test Plaid Connection"
+        }
       )
-      puts "  Created PlaidItem: #{plaid_item.name}"
+      puts "  Created Provider::Connection (plaid): #{plaid_connection.institution_name}"
 
-      # Create fake Plaid accounts
+      # Create fake Provider::Account rows for the connection
       2.times do |i|
-        plaid_item.plaid_accounts.create!(
-          name: "Test Plaid Account #{i + 1}",
-          plaid_id: "test-plaid-account-#{SecureRandom.hex(8)}",
+        plaid_connection.provider_accounts.create!(
+          external_id: "test-plaid-account-#{SecureRandom.hex(8)}",
+          external_name: "Test Plaid Account #{i + 1}",
+          external_type: %w[depository credit investment].sample,
+          external_subtype: "checking",
           currency: "USD",
-          current_balance: rand(1000..50000),
-          plaid_type: %w[depository credit investment].sample,
-          plaid_subtype: "checking"
+          raw_payload: {}
         )
       end
-      puts "    Created 2 PlaidAccounts"
+      puts "    Created 2 Provider::Accounts"
 
       # Create a fake Lunchflow item
       lunchflow_item = family.lunchflow_items.create!(
@@ -306,7 +312,7 @@ namespace :dev do
 
       puts "\nNow generating sync stats for the test providers..."
       DevSyncStatsHelpers.generate_fake_stats_for_items(SimplefinItem, "simplefin", include_issues: true)
-      DevSyncStatsHelpers.generate_fake_stats_for_items(PlaidItem, "plaid", include_issues: false)
+      DevSyncStatsHelpers.generate_fake_stats_for_items(Provider::Connection.where(provider_key: "plaid"), "plaid", include_issues: false)
       DevSyncStatsHelpers.generate_fake_stats_for_items(LunchflowItem, "lunchflow", include_issues: false)
       DevSyncStatsHelpers.generate_fake_stats_for_items(CoinstatsItem, "coinstats", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(EnableBankingItem, "enable_banking", include_issues: false)
@@ -327,7 +333,7 @@ namespace :dev do
       # Remove items that start with "Test "
       count = 0
       count += SimplefinItem.where("name LIKE ?", "Test %").destroy_all.count
-      count += PlaidItem.where("name LIKE ?", "Test %").destroy_all.count
+      count += Provider::Connection.where(provider_key: "plaid").where("metadata->>'institution_name' LIKE ?", "Test %").destroy_all.count
       count += LunchflowItem.where("name LIKE ?", "Test %").destroy_all.count
       count += CoinstatsItem.where("name LIKE ?", "Test %").destroy_all.count
       count += EnableBankingItem.where("name LIKE ? OR institution_name LIKE ?", "Test %", "Test %").destroy_all.count

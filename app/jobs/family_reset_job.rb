@@ -11,6 +11,7 @@ class FamilyResetJob < ApplicationJob
       family.merchants.destroy_all
       family.imports.destroy_all
       family.budgets.destroy_all
+      family.provider_connections.destroy_all
     end
 
     if load_sample_data_for_email.present?

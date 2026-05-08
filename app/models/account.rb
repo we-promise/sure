@@ -345,7 +345,7 @@ class Account < ApplicationRecord
   end
 
   def latest_provider_holdings_snapshot_date
-    holdings.where.not(account_provider_id: nil).maximum(:date)
+    holdings.from_provider.maximum(:date)
   end
 
   def start_date

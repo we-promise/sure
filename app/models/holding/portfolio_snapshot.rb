@@ -30,9 +30,7 @@ class Holding::PortfolioSnapshot
 
     def latest_holdings_scope
       if (provider_snapshot_date = account.latest_provider_holdings_snapshot_date)
-        account.holdings
-          .where.not(account_provider_id: nil)
-          .where(date: provider_snapshot_date)
+        account.holdings.from_provider.where(date: provider_snapshot_date)
       else
         account.holdings
           .select("DISTINCT ON (security_id) holdings.*")

@@ -28,6 +28,19 @@ class Holding < ApplicationRecord
   scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
   scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
 
+  # "Provider-sourced" = this holding was written by a provider sync rather than
+  # calculated from local trades. Two storage paths exist:
+  #   1. Legacy: holdings.account_provider_id (polymorphic FK to account_providers).
+  #      Used by Coinbase, SimpleFIN, and any provider not yet on the framework.
+  #   2. Framework: holdings.source (string, e.g. "plaid"). Written by
+  #      Account::ProviderImportAdapter#import_holding for framework providers.
+  scope :from_provider, -> { where("account_provider_id IS NOT NULL OR source IS NOT NULL") }
+  scope :not_from_provider, -> { where(account_provider_id: nil, source: nil) }
+
+  def from_provider?
+    account_provider_id.present? || source.present?
+  end
+
   delegate :ticker, to: :security
 
   def name

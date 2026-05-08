@@ -50,20 +50,14 @@ class MigrateLegacyPlaidToFramework < ActiveRecord::Migration[7.2]
   def up
     return unless table_exists?(:plaid_items) && table_exists?(:plaid_accounts)
 
+    # holdings.source was added by AddSourceToHoldings (20260504140000); refresh
+    # column cache so the application Holding model in this process picks it up.
+    Holding.reset_column_information
+
     items = LegacyPlaidItem.find_each.to_a
     say_with_time "Migrating #{items.size} PlaidItem(s) to Provider::Connection" do
       items.each { |item| migrate_item(item) }
     end
-
-    # The legacy polymorphic AccountProvider rows of provider_type='PlaidAccount'
-    # are now stale: their provider_id targets are about to be dropped with
-    # plaid_accounts (next migration), and the new Provider::Account.account_id
-    # linkage replaces them. Delete here so views don't try to instantiate
-    # adapters against a dropped class.
-    deleted = ActiveRecord::Base.connection.delete(
-      "DELETE FROM account_providers WHERE provider_type = 'PlaidAccount'"
-    )
-    say "Removed #{deleted} stale PlaidAccount AccountProvider row(s)" if deleted.positive?
   end
 
   def down
@@ -121,11 +115,68 @@ class MigrateLegacyPlaidToFramework < ActiveRecord::Migration[7.2]
           )
         end
 
+        # Stale legacy AccountProvider rows of provider_type='PlaidAccount':
+        #   - their polymorphic provider_id targets a PlaidAccount that's about to be dropped,
+        #   - their account_id linkage is replaced by Provider::Account.account_id.
+        # Two steps in this order:
+        #   1. Backfill holdings.source = "plaid" so the new from_provider scope still
+        #      identifies these holdings as provider snapshots after we nullify their
+        #      account_provider_id. (Source identification is otherwise lost — the
+        #      framework's Plaid::Investments::HoldingsProcessor writes source, but
+        #      pre-cutover holdings only had account_provider_id.)
+        #   2. AccountProvider.destroy_all (rather than raw DELETE) so dependent: :nullify
+        #      on the holdings association fires — without this, the FK
+        #      `add_foreign_key "holdings", "account_providers"` (no ON DELETE) would
+        #      raise PG::ForeignKeyViolation on Plaid investment users.
+        # Both happen inside the per-item transaction so a partial failure rolls back
+        # cleanly and the whole task is idempotent on re-run.
+        legacy_account_ids = legacy_accounts.pluck(:id)
+        stale_ap_ids = AccountProvider.where(provider_type: "PlaidAccount", provider_id: legacy_account_ids).pluck(:id)
+        if stale_ap_ids.any?
+          backfilled = Holding.where(account_provider_id: stale_ap_ids, source: nil).update_all(source: "plaid")
+          AccountProvider.where(id: stale_ap_ids).destroy_all
+          say "  + Backfilled source on #{backfilled} holding(s); removed #{stale_ap_ids.size} stale AccountProvider row(s)", true
+        end
+
         say "  + Migrated PlaidItem #{item.id} → Provider::Connection #{connection.id} (#{legacy_accounts.size} account(s))", true
       end
+
+      # Re-point Plaid's webhook URL outside the DB transaction. Plaid stores the
+      # URL on its side; until we tell it otherwise it keeps POSTing to the legacy
+      # /webhooks/plaid[_eu] routes — which were dropped in the framework cutover.
+      # Best-effort: a Plaid API failure here only logs (the data move already
+      # committed). Operator can re-run data_migration:migrate_plaid_webhooks for
+      # any items that didn't get re-pointed cleanly.
+      repoint_webhook(item)
     rescue => e
       say "  ! Failed to migrate PlaidItem #{item.id}: #{e.class}: #{e.message}", true
       raise
+    end
+
+    def repoint_webhook(item)
+      host = ENV["APP_DOMAIN"].presence
+      unless host
+        say "  ~ APP_DOMAIN not set; skipping webhook re-point for item #{item.id} (run data_migration:migrate_plaid_webhooks once it is)", true
+        return
+      end
+      host = "https://#{host}" unless host.match?(%r{\Ahttps?://})
+
+      region = item.plaid_region.presence || "us"
+      provider = Provider::Registry.plaid_provider_for_region(region.to_sym)
+      unless provider
+        say "  ~ No Plaid provider configured for region=#{region}; skipping webhook re-point for item #{item.id}", true
+        return
+      end
+
+      provider.client.item_webhook_update(
+        Plaid::ItemWebhookUpdateRequest.new(
+          access_token: item.access_token,
+          webhook: "#{host.chomp('/')}/webhooks/providers/plaid"
+        )
+      )
+      say "  + Re-pointed Plaid webhook for item #{item.id} (region=#{region})", true
+    rescue => e
+      say "  ! Could not re-point Plaid webhook for item #{item.id}: #{e.class}: #{e.message}", true
     end
 
     # Plaid accounts may link to a Sure Account via two legacy paths.

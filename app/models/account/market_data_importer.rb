@@ -99,7 +99,7 @@ class Account::MarketDataImporter
 
       provider_holding_security_ids = account.holdings
                                              .where(security_id: security_ids)
-                                             .where.not(account_provider_id: nil)
+                                             .from_provider
                                              .pluck(:security_id)
                                              .to_set
 

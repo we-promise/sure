@@ -26,10 +26,11 @@ class Provider::Plaid::Investments::HoldingsProcessor
         currency:               plaid_holding["iso_currency_code"] || account.currency,
         date:                   holding_date,
         price:                  price_bd,
-        # NB: account_provider_id intentionally omitted. holdings.account_provider_id
-        # is an FK to the polymorphic account_providers table — provider_account.id
-        # would point into the wrong table. Cross-provider scoping is delegated to
-        # (account_id, source), which import_holding's claim/reject logic respects.
+        # NB: account_provider_id intentionally omitted — holdings.account_provider_id
+        # is an FK to the legacy polymorphic account_providers table; provider_account.id
+        # lives in the unrelated provider_accounts table. Provider-snapshot identification
+        # is via holdings.source instead (written from this `source:` arg in
+        # Account::ProviderImportAdapter#import_holding). See Holding#from_provider?.
         source:                 "plaid",
         delete_future_holdings: false
       )
