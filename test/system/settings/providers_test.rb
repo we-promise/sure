@@ -48,4 +48,24 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert details[:open], "Section should open when clicked"
     details.assert_text "Setup Token"
   end
+
+  test "groups providers into Connected and Available with counts" do
+    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+
+    visit settings_providers_path
+
+    connected_heading = find("h2", text: /\AConnected/)
+    assert_match(/· 1\z/, connected_heading.text)
+
+    available_heading = find("h2", text: /\AAvailable/)
+
+    connected_y = connected_heading.native.location.y
+    available_y = available_heading.native.location.y
+    simplefin_y = find("details", text: "SimpleFIN").native.location.y
+    binance_y   = find("details", text: "Binance").native.location.y
+
+    assert connected_y < simplefin_y, "Connected heading should appear above SimpleFIN section"
+    assert simplefin_y < available_y, "SimpleFIN should appear above Available heading"
+    assert available_y < binance_y,  "Available heading should appear above Binance section"
+  end
 end

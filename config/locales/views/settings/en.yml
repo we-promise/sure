@@ -191,6 +191,10 @@ en:
         warn: Action needed
         err: Error
         off: Not configured
+      groups:
+        connected: Connected
+        available: Available
+        empty_connected: Nothing connected yet — pick a provider below to get started.
       show:
         coinbase_title: Coinbase
       encryption_error:

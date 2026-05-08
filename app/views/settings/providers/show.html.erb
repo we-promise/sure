@@ -20,47 +20,51 @@
   <% end %>
 
   <% unless @encryption_error %>
-    <% @provider_configurations.each do |config| %>
-      <% summary = provider_summary(config.provider_key) %>
-      <%= settings_section title: config.provider_key.titleize, collapsible: true, open: false, status: summary[:status], meta: summary[:meta] do %>
-        <%= render "settings/providers/provider_form", configuration: config %>
+    <%= render "settings/providers/group_heading",
+               title: t("settings.providers.groups.connected"),
+               count: @connected_providers.size %>
+
+    <% if @connected_providers.empty? %>
+      <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_connected") %></p>
+    <% else %>
+      <%# Auto-open the only-one connected case so the relevant section is immediately visible. %>
+      <% auto_open_only = @connected_providers.size == 1 %>
+      <% @connected_providers.each do |entry| %>
+        <%= settings_section title: entry[:title],
+                             collapsible: true,
+                             open: auto_open_only,
+                             auto_open_param: entry[:auto_open_param],
+                             status: entry[:summary][:status],
+                             meta: entry[:summary][:meta] do %>
+          <% if entry[:configuration] %>
+            <%= render "settings/providers/provider_form", configuration: entry[:configuration] %>
+          <% else %>
+            <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
+              <%= render "settings/providers/#{entry[:partial]}" %>
+            </turbo-frame>
+          <% end %>
+        <% end %>
       <% end %>
     <% end %>
 
-    <%# Providers below are hardcoded because they manage Family-scoped connections                 %>
-    <%# (via their own models like SimplefinItem, LunchflowItem, etc.) rather than global settings. %>
-    <%# They require custom UI for connection management, status display, and sync actions.         %>
-    <%# The controller excludes them from @provider_configurations (see prepare_show_context).      %>
+    <%= render "settings/providers/group_heading",
+               title: t("settings.providers.groups.available"),
+               count: @available_providers.size %>
 
-    <%
-      family_panels = [
-        { key: "lunchflow",      title: "Lunch Flow",             turbo_id: "lunchflow",      partial: "lunchflow_panel" },
-        { key: "simplefin",      title: "SimpleFIN",              turbo_id: "simplefin",      partial: "simplefin_panel" },
-        { key: "enable_banking", title: "Enable Banking (beta)",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
-        { key: "coinstats",      title: "CoinStats (beta)",       turbo_id: "coinstats",      partial: "coinstats_panel" },
-        { key: "mercury",        title: "Mercury (beta)",         turbo_id: "mercury",        partial: "mercury_panel" },
-        { key: "coinbase",       title: "Coinbase (beta)",        turbo_id: "coinbase",       partial: "coinbase_panel" },
-        { key: "binance",        title: "Binance (beta)",         turbo_id: "binance",        partial: "binance_panel" },
-        { key: "snaptrade",      title: "SnapTrade (beta)",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
-        { key: "indexa_capital", title: "Indexa Capital (alpha)", turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
-        { key: "sophtron",       title: "Sophtron (alpha)",       turbo_id: "sophtron",       partial: "sophtron_panel" },
-      ]
-
-      status_order = { ok: 0, warn: 1, err: 2, off: 3 }
-      sorted_panels = family_panels.sort_by { |p| status_order[provider_summary(p[:key])[:status]] || 3 }
-    %>
-
-    <% sorted_panels.each do |panel| %>
-      <% summary = provider_summary(panel[:key]) %>
-      <%= settings_section title: panel[:title],
+    <% @available_providers.each do |entry| %>
+      <%= settings_section title: entry[:title],
                            collapsible: true,
                            open: false,
-                           auto_open_param: panel[:auto_open],
-                           status: summary[:status],
-                           meta: summary[:meta] do %>
-        <turbo-frame id="<%= panel[:turbo_id] %>-providers-panel">
-          <%= render "settings/providers/#{panel[:partial]}" %>
-        </turbo-frame>
+                           auto_open_param: entry[:auto_open_param],
+                           status: entry[:summary][:status],
+                           meta: entry[:summary][:meta] do %>
+        <% if entry[:configuration] %>
+          <%= render "settings/providers/provider_form", configuration: entry[:configuration] %>
+        <% else %>
+          <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
+            <%= render "settings/providers/#{entry[:partial]}" %>
+          </turbo-frame>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>

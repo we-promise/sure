@@ -119,19 +119,32 @@ class Settings::ProvidersController < ApplicationController
       end
     end
 
+    # Hardcoded family-scoped panels — provider connections are managed through
+    # their own models (SimplefinItem, LunchflowItem, etc.) rather than global
+    # settings, so they need custom UI per-provider for connection management,
+    # status display, and sync actions. The configuration registry excludes
+    # them (see prepare_show_context).
+    FAMILY_PANELS = [
+      { key: "lunchflow",      title: "Lunch Flow",             turbo_id: "lunchflow",      partial: "lunchflow_panel" },
+      { key: "simplefin",      title: "SimpleFIN",              turbo_id: "simplefin",      partial: "simplefin_panel" },
+      { key: "enable_banking", title: "Enable Banking (beta)",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
+      { key: "coinstats",      title: "CoinStats (beta)",       turbo_id: "coinstats",      partial: "coinstats_panel" },
+      { key: "mercury",        title: "Mercury (beta)",         turbo_id: "mercury",        partial: "mercury_panel" },
+      { key: "coinbase",       title: "Coinbase (beta)",        turbo_id: "coinbase",       partial: "coinbase_panel" },
+      { key: "binance",        title: "Binance (beta)",         turbo_id: "binance",        partial: "binance_panel" },
+      { key: "snaptrade",      title: "SnapTrade (beta)",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
+      { key: "indexa_capital", title: "Indexa Capital (alpha)", turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
+      { key: "sophtron",       title: "Sophtron (alpha)",       turbo_id: "sophtron",       partial: "sophtron_panel" }
+    ].freeze
+
+    FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
+
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
-      # Load all provider configurations (exclude SimpleFin and Lunchflow, which have their own family-specific panels below)
+      # Load all provider configurations (exclude family-scoped panels, which have their own UI below)
       Provider::Factory.ensure_adapters_loaded
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
-        config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
-        config.provider_key.to_s.casecmp("enable_banking").zero?  || \
-        config.provider_key.to_s.casecmp("sophtron").zero? || \
-        config.provider_key.to_s.casecmp("coinstats").zero? || \
-        config.provider_key.to_s.casecmp("mercury").zero? || \
-        config.provider_key.to_s.casecmp("coinbase").zero? || \
-        config.provider_key.to_s.casecmp("snaptrade").zero? || \
-        config.provider_key.to_s.casecmp("indexa_capital").zero?
+        FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? }
       end
 
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
@@ -145,5 +158,36 @@ class Settings::ProvidersController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
+
+      entries = build_provider_entries
+      @connected_providers, @available_providers = entries.partition { |entry| entry[:summary][:status] == :ok }
+    end
+
+    # Builds a unified list of provider entries (registry-driven configurations
+    # and hardcoded family panels) with pre-computed status, sorted
+    # alphabetically by display title. Each entry carries enough data for the
+    # view to render either a provider_form or a family panel partial.
+    def build_provider_entries
+      configuration_entries = @provider_configurations.map do |config|
+        {
+          provider_key: config.provider_key.to_s,
+          title: config.provider_key.to_s.titleize,
+          configuration: config,
+          summary: view_context.provider_summary(config.provider_key)
+        }
+      end
+
+      family_entries = FAMILY_PANELS.map do |panel|
+        {
+          provider_key: panel[:key],
+          title: panel[:title],
+          turbo_id: panel[:turbo_id],
+          partial: panel[:partial],
+          auto_open_param: panel[:auto_open],
+          summary: view_context.provider_summary(panel[:key])
+        }
+      end
+
+      (configuration_entries + family_entries).sort_by { |entry| entry[:title].downcase }
     end
 end
