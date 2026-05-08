@@ -1,7 +1,7 @@
 require "set"
 
 class Family::DataImporter
-  SUPPORTED_TYPES = %w[Account Category Tag Merchant RecurringTransaction Transaction Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPES = Accountable::TYPES.freeze
 
   def initialize(family, ndjson_content)
@@ -13,6 +13,7 @@ class Family::DataImporter
       tags: {},
       merchants: {},
       recurring_transactions: {},
+      transactions: {},
       budgets: {},
       securities: {}
     }
@@ -34,6 +35,8 @@ class Family::DataImporter
       import_merchants(records["Merchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
+      import_transfers(records["Transfer"] || [])
+      import_rejected_transfers(records["RejectedTransfer"] || [])
       import_trades(records["Trade"] || [])
       import_holdings(records["Holding"] || [])
       import_valuations(records["Valuation"] || [])
@@ -256,6 +259,7 @@ class Family::DataImporter
     def import_transactions(records)
       records.each do |record|
         data = record["data"]
+        old_id = data["id"]
 
         # Map account ID
         new_account_id = @id_mappings[:accounts][data["account_id"]]
@@ -306,7 +310,47 @@ class Family::DataImporter
         end
 
         @created_entries << entry
+        @id_mappings[:transactions][old_id] = transaction.id
       end
+    end
+
+    def import_transfers(records)
+      records.each do |record|
+        data = record["data"]
+        inflow_transaction_id = @id_mappings[:transactions][data["inflow_transaction_id"]]
+        outflow_transaction_id = @id_mappings[:transactions][data["outflow_transaction_id"]]
+        next unless inflow_transaction_id && outflow_transaction_id
+
+        Transfer.find_or_create_by!(
+          inflow_transaction_id: inflow_transaction_id,
+          outflow_transaction_id: outflow_transaction_id
+        ) do |transfer|
+          transfer.status = transfer_status_for(data["status"])
+          transfer.notes = data["notes"]
+        end
+      end
+    end
+
+    def import_rejected_transfers(records)
+      records.each do |record|
+        data = record["data"]
+        inflow_transaction_id = @id_mappings[:transactions][data["inflow_transaction_id"]]
+        outflow_transaction_id = @id_mappings[:transactions][data["outflow_transaction_id"]]
+        next unless inflow_transaction_id && outflow_transaction_id
+
+        RejectedTransfer.find_or_create_by!(
+          inflow_transaction_id: inflow_transaction_id,
+          outflow_transaction_id: outflow_transaction_id
+        )
+      end
+    end
+
+    def transfer_status_for(status)
+      status = status.to_s
+      return status if Transfer.statuses.key?(status)
+
+      Rails.logger.debug("Unknown transfer status #{status.inspect}; defaulting to pending") if status.present?
+      "pending"
     end
 
     def import_trades(records)

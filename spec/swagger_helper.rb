@@ -812,6 +812,80 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          TransferTransactionSide: {
+            type: :object,
+            required: %w[id entry_id date amount amount_cents currency name kind account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              entry_id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              amount_cents: { type: :integer, description: 'Signed amount in currency minor units' },
+              currency: { type: :string },
+              name: { type: :string },
+              kind: { type: :string },
+              account: {
+                type: :object,
+                required: %w[id name account_type],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  account_type: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
+          TransferDecision: {
+            type: :object,
+            required: %w[id status date amount amount_cents currency transfer_type inflow_transaction outflow_transaction created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending confirmed] },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              amount_cents: { type: :integer, description: 'Absolute transfer amount in currency minor units' },
+              currency: { type: :string },
+              transfer_type: { type: :string, enum: %w[transfer liability_payment loan_payment] },
+              notes: { type: :string, nullable: true },
+              inflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              outflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TransferDecisionCollection: {
+            type: :object,
+            required: %w[transfers pagination],
+            properties: {
+              transfers: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/TransferDecision' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          RejectedTransfer: {
+            type: :object,
+            required: %w[id inflow_transaction outflow_transaction created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              inflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              outflow_transaction: { '$ref' => '#/components/schemas/TransferTransactionSide' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          RejectedTransferCollection: {
+            type: :object,
+            required: %w[rejected_transfers pagination],
+            properties: {
+              rejected_transfers: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/RejectedTransfer' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Valuation: {
             type: :object,
             required: %w[id date amount currency kind account created_at updated_at],

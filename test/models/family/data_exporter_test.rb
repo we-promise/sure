@@ -376,6 +376,93 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports transfer decisions and rejected transfers in NDJSON" do
+    destination_account = @family.accounts.create!(
+      name: "Savings Account",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+
+    transfer_outflow = create_transaction_entry(@account, amount: 100, date: Date.parse("2024-01-15"), name: "Transfer to savings")
+    transfer_inflow = create_transaction_entry(destination_account, amount: -100, date: Date.parse("2024-01-15"), name: "Transfer from checking")
+    transfer = Transfer.create!(
+      outflow_transaction: transfer_outflow.entryable,
+      inflow_transaction: transfer_inflow.entryable,
+      status: "confirmed",
+      notes: "Confirmed by user"
+    )
+
+    rejected_outflow = create_transaction_entry(@account, amount: 25, date: Date.parse("2024-01-20"), name: "Candidate outflow")
+    rejected_inflow = create_transaction_entry(destination_account, amount: -25, date: Date.parse("2024-01-20"), name: "Candidate inflow")
+    rejected_transfer = RejectedTransfer.create!(
+      outflow_transaction: rejected_outflow.entryable,
+      inflow_transaction: rejected_inflow.entryable
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+
+      transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == transfer.id }
+      assert transfer_data
+      assert_equal transfer_inflow.entryable.id, transfer_data["data"]["inflow_transaction_id"]
+      assert_equal transfer_outflow.entryable.id, transfer_data["data"]["outflow_transaction_id"]
+      assert_equal "confirmed", transfer_data["data"]["status"]
+      assert_equal "Confirmed by user", transfer_data["data"]["notes"]
+
+      rejected_transfer_data = ndjson_records.find { |record| record["type"] == "RejectedTransfer" && record.dig("data", "id") == rejected_transfer.id }
+      assert rejected_transfer_data
+      assert_equal rejected_inflow.entryable.id, rejected_transfer_data["data"]["inflow_transaction_id"]
+      assert_equal rejected_outflow.entryable.id, rejected_transfer_data["data"]["outflow_transaction_id"]
+
+      # Transfer decisions must follow Transaction records so import can remap both sides.
+      transaction_indices = ndjson_records.each_index.select { |index| ndjson_records[index]["type"] == "Transaction" }
+      transfer_index = ndjson_records.index(transfer_data)
+      rejected_transfer_index = ndjson_records.index(rejected_transfer_data)
+
+      assert_operator transaction_indices.max, :<, transfer_index
+      assert_operator transaction_indices.max, :<, rejected_transfer_index
+    end
+  end
+
+  test "does not export transfer decisions for split parent transactions" do
+    destination_account = @family.accounts.create!(
+      name: "Split Transfer Savings",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+
+    split_parent_outflow = create_transaction_entry(@account, amount: 60, date: Date.parse("2024-01-25"), name: "Split transfer parent")
+    split_parent_outflow.split!([
+      { name: "Split transfer child", amount: 60, category_id: @category.id }
+    ])
+    transfer_inflow = create_transaction_entry(destination_account, amount: -60, date: Date.parse("2024-01-25"), name: "Split transfer inflow")
+    transfer = Transfer.create!(
+      outflow_transaction: split_parent_outflow.entryable,
+      inflow_transaction: transfer_inflow.entryable,
+      status: "confirmed"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+
+      transaction_ids = ndjson_records
+        .select { |record| record["type"] == "Transaction" }
+        .map { |record| record.dig("data", "id") }
+      transfer_ids = ndjson_records
+        .select { |record| record["type"] == "Transfer" }
+        .map { |record| record.dig("data", "id") }
+
+      assert_not_includes transaction_ids, split_parent_outflow.entryable.id
+      assert_not_includes transfer_ids, transfer.id
+    end
+  end
+
   test "exports balance history in NDJSON for backup verification" do
     balance = @account.balances.create!(
       date: Date.parse("2024-01-15"),
@@ -500,4 +587,16 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       refute ndjson_content.include?(other_rule.name)
     end
   end
+
+  private
+
+    def create_transaction_entry(account, amount:, date:, name:)
+      account.entries.create!(
+        date: date,
+        amount: amount,
+        name: name,
+        currency: account.currency,
+        entryable: Transaction.new(kind: "funds_movement")
+      )
+    end
 end
