@@ -222,7 +222,10 @@ class Transaction < ApplicationRecord
 
       # Batch all changes to the surviving posted Transaction into a single update!
       # to avoid firing after_save callbacks twice on the same row.
+      # Lock the Transaction row so concurrent merges into the same posted entry
+      # cannot race on reading/writing extra (e.g., the manual_merge array).
       posted_tx = posted_entry.entryable
+      posted_tx.lock! if posted_tx.is_a?(Transaction)
       if posted_tx.is_a?(Transaction)
         tx_attrs = {}
 

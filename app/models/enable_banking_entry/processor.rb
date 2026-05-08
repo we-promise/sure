@@ -23,8 +23,12 @@ class EnableBankingEntry::Processor
   end
 
   def process
+    # Cache a safe diagnostic id upfront — used in all logging paths so rescue
+    # blocks never call the potentially-raising private external_id method.
+    safe_id = self.class.compute_external_id(@enable_banking_transaction) || "unknown"
+
     unless account.present?
-      Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{external_id}"
+      Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{safe_id}"
       return nil
     end
 
@@ -41,13 +45,13 @@ class EnableBankingEntry::Processor
         extra: extra
       )
     rescue ArgumentError => e
-      Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
+      Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
       raise
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      Rails.logger.error "EnableBankingEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
+      Rails.logger.error "EnableBankingEntry::Processor - Failed to save transaction #{safe_id}: #{e.message}"
       raise StandardError.new("Failed to import transaction: #{e.message}")
     rescue => e
-      Rails.logger.error "EnableBankingEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
+      Rails.logger.error "EnableBankingEntry::Processor - Unexpected error processing transaction #{safe_id}: #{e.class} - #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end

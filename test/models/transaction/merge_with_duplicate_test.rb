@@ -228,10 +228,10 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
   # --- C-1: concurrent deletion of posted entry ---
 
   test "returns false when posted entry is deleted between check and lock" do
-    # merge_with_duplicate! fetches posted_entry via Entry.find_by, so we can't stub
-    # the @posted_entry instance directly. Stub potential_duplicate_entry to return
-    # a controlled object whose lock! raises, simulating the concurrency window.
-    ghost = @posted_entry.dup.tap { |e| e.stubs(:lock!).raises(ActiveRecord::RecordNotFound) }
+    # Simulate the race: posted_entry exists at find_by time but is gone at lock! time.
+    # Use a stub rather than dup so id and account_id are real values — dup gives id: nil.
+    ghost = stub(account_id: @posted_entry.account_id, id: @posted_entry.id)
+    ghost.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
     @pending_entry.transaction.stubs(:potential_duplicate_entry).returns(ghost)
 
     result = nil
