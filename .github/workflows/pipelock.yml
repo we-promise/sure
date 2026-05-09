@@ -29,8 +29,11 @@ jobs:
             compose.example.ai.yml
             config/locales/views/reports/
             docs/hosting/ai.md
+            docs/hosting/docker.md
             app/models/provider/binance.rb
             workers/preview/package-lock.json
             # Preview Dockerfile uses local dev credentials (rails/rails) that are
             # not real secrets; Dockerfile format does not support inline # pipelock:ignore
             Dockerfile.preview
+            # Header-auth integration test uses placeholder secrets ("s3cr3t")
+            test/integration/remote_user_header_authentication_test.rb
