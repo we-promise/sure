@@ -64,14 +64,4 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:indexa_capital_items] || @indexa_capital_items || Current.family.indexa_capital_items.where.not(username: [nil, ""], document: [nil, ""], password: [nil, ""]).or(Current.family.indexa_capital_items.where.not(api_token: [nil, ""])) %>
-  <div class="flex items-center gap-2">
-    <% if items&.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("indexa_capital_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("indexa_capital_items.panel.status_not_configured") %></p>
-    <% end %>
-  </div>
 </div>

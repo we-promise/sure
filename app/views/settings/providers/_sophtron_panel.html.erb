@@ -56,13 +56,4 @@
     </div>
   <% end %>
 
-  <div class="flex items-center gap-2">
-    <% if Current.family.sophtron_items.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("sophtron_items.sophtron_panel.status.configured_html", accounts_path: accounts_path) %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-muted rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("sophtron_items.sophtron_panel.status.not_configured") %></p>
-    <% end %>
-  </div>
 </div>

@@ -198,6 +198,7 @@ en:
       maturity:
         beta: Beta
         alpha: Alpha
+      drawer_trust_statement: "Read-only — Sure can never move money. Stored encrypted."
       connect: Connect
       groups:
         your_connections: Your connections

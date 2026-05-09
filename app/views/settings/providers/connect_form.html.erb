@@ -1,5 +1,8 @@
 <%= render DS::Dialog.new(frame: "drawer", responsive: true, auto_open: true) do |dialog| %>
-  <% dialog.with_header(title: @panel_title) %>
+  <% provider_key = @panel_key || @provider_configuration&.provider_key&.to_s %>
+  <% dialog.with_header(custom_header: true) do %>
+    <%= render "settings/providers/drawer_header", provider_key: provider_key, title: @panel_title %>
+  <% end %>
   <% dialog.with_body do %>
     <% if @panel_partial %>
       <turbo-frame id="<%= @panel_key %>-connect-form" target="_top">
@@ -10,5 +13,9 @@
         <%= render "settings/providers/provider_form", configuration: @provider_configuration %>
       </turbo-frame>
     <% end %>
+
+    <p class="text-xs text-secondary mt-6 pt-3 border-t border-secondary/10">
+      <%= t("settings.providers.drawer_trust_statement") %>
+    </p>
   <% end %>
 <% end %>

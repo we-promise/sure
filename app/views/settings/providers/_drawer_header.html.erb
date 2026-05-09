@@ -1,0 +1,25 @@
+<%# locals: (provider_key:, title:) %>
+<% meta = provider_key.present? ? Provider::Metadata.for(provider_key) : nil %>
+<% maturity_label_key = meta && Settings::ProviderCard::MATURITY_LABELS[meta[:maturity]] %>
+<% maturity_label = maturity_label_key ? t(maturity_label_key) : nil %>
+<div class="flex items-center justify-between gap-2">
+  <div class="flex items-center gap-2 min-w-0">
+    <% if meta && meta[:logo_bg].present? %>
+      <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 <%= meta[:logo_bg] %>">
+        <span class="text-[10px] font-bold text-inverse"><%= meta[:logo_text] %></span>
+      </span>
+    <% end %>
+    <h2 class="text-lg font-medium text-primary truncate"><%= title %></h2>
+    <% if maturity_label %>
+      <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-alpha-black-50 text-secondary shrink-0"><%= maturity_label %></span>
+    <% end %>
+  </div>
+  <%= render DS::Button.new(
+        variant: "icon",
+        class: "ml-auto hidden lg:flex",
+        icon: "x",
+        title: t("common.close"),
+        aria_label: t("common.close"),
+        data: { action: "DS--dialog#close" }
+      ) %>
+</div>

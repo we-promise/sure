@@ -130,13 +130,4 @@
     <% end %>
   </details>
 
-  <div class="flex items-center gap-2">
-    <% if credentialed_items.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("mercury_items.provider_panel.configured_html", accounts_link: link_to(t("mercury_items.provider_panel.accounts_link"), accounts_path, class: "link")) %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("mercury_items.provider_panel.not_configured") %></p>
-    <% end %>
-  </div>
 </div>

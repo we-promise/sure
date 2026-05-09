@@ -41,14 +41,4 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: [nil, ""]) %>
-  <div class="flex items-center gap-2">
-    <% if items&.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("coinstats_items.new.status_configured_html", accounts_url: accounts_path).html_safe %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("coinstats_items.new.status_not_configured") %></p>
-    <% end %>
-  </div>
 </div>
