@@ -499,8 +499,71 @@ end
     end
 
     def process_create_item(raw, idx)
-      # Implemented in Task 2
-      { index: idx, status: "error", error: "not_implemented", errors: [ "batch_create not implemented" ] }
+      result = { index: idx }
+      family = current_resource_owner.family
+      raw_params = raw.is_a?(ActionController::Parameters) ? raw : ActionController::Parameters.new(raw || {})
+      attrs = raw_params.permit(
+        :account_id, :date, :amount, :name, :description, :notes, :currency,
+        :category_id, :merchant_id, :nature, :client_ref, tag_ids: []
+      ).to_h.with_indifferent_access
+
+      result[:client_ref] = attrs[:client_ref] if attrs[:client_ref].present?
+
+      unless attrs[:account_id].present?
+        return result.merge(status: "error", error: "validation_failed", errors: [ "Account ID is required" ])
+      end
+
+      account = family.accounts.writable_by(current_resource_owner).find_by(id: attrs[:account_id])
+      unless account
+        return result.merge(status: "error", error: "not_found", errors: [ "Account not found or not writable" ])
+      end
+
+      entry = nil
+      Entry.transaction do
+        entry = account.entries.new(build_create_entry_params(attrs))
+        entry.save!
+      end
+
+      entry.sync_account_later
+      entry.lock_saved_attributes!
+      entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+
+      @transaction = entry.transaction
+      @entry = entry
+      txn_json = render_to_string(
+        template: "api/v1/transactions/show",
+        formats: [ :json ]
+      )
+      result.merge(status: "created", transaction: JSON.parse(txn_json))
+
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn "batch_create item #{idx} invalid: #{e.message}"
+      result.merge(status: "error", error: "validation_failed", errors: e.record.errors.full_messages)
+    rescue => e
+      Rails.logger.error "batch_create item #{idx} error: #{e.message}"
+      result.merge(status: "error", error: "internal_server_error", errors: [ e.message ])
+    end
+
+    def build_create_entry_params(attrs)
+      signed = if attrs[:nature].to_s == "income"
+        -attrs[:amount].to_d
+      else
+        attrs[:amount].to_d
+      end
+
+      {
+        name: attrs[:name] || attrs[:description],
+        date: attrs[:date],
+        amount: signed,
+        currency: attrs[:currency] || current_resource_owner.family.currency,
+        notes: attrs[:notes],
+        entryable_type: "Transaction",
+        entryable_attributes: {
+          category_id: attrs[:category_id],
+          merchant_id: attrs[:merchant_id],
+          tag_ids: attrs[:tag_ids] || []
+        }
+      }.compact
     end
 
     def process_update_item(raw, idx)

@@ -789,6 +789,66 @@ end
     assert_equal "batch_too_large", body["error"]
   end
 
+  test "batch_create persists all valid items and returns 207" do
+    payload = {
+      transactions: [
+        { account_id: @account.id, date: "2026-05-09", amount: 12.34, nature: "expense", name: "Coffee", client_ref: "a1" },
+        { account_id: @account.id, date: "2026-05-09", amount: 50.00, nature: "expense", name: "Lunch",  client_ref: "a2" }
+      ]
+    }
+    assert_difference -> { @family.transactions.count }, 2 do
+      post batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    end
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal 2, body["summary"]["total"]
+    assert_equal 2, body["summary"]["succeeded"]
+    assert_equal 0, body["summary"]["failed"]
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal "a1",       body["results"][0]["client_ref"]
+    assert_equal 0,          body["results"][0]["index"]
+    assert body["results"][0]["transaction"].present?
+  end
+
+  test "batch_create returns per-item errors and continues processing" do
+    payload = {
+      transactions: [
+        { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "Good" },
+        { date: "2026-05-09", amount: 1, nature: "expense", name: "BadNoAccount" },
+        { account_id: @account.id, date: "2026-05-09", amount: 2, nature: "expense", name: "Good2" }
+      ]
+    }
+    assert_difference -> { @family.transactions.count }, 2 do
+      post batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    end
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal "error",   body["results"][1]["status"]
+    assert_equal "validation_failed", body["results"][1]["error"]
+    assert_equal "created", body["results"][2]["status"]
+    assert_equal 2, body["summary"]["succeeded"]
+    assert_equal 1, body["summary"]["failed"]
+  end
+
+  test "batch_create returns error for account not writable by caller" do
+    other_family = families(:empty)
+    other_account = Account.create!(
+      family: other_family, name: "Other", balance: 0, currency: "USD",
+      accountable: Depository.new
+    )
+    payload = {
+      transactions: [
+        { account_id: other_account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" }
+      ]
+    }
+    post batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "not_found", body["results"][0]["error"]
+  end
+
   private
 
     def api_headers(api_key)
