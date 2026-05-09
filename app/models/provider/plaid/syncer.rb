@@ -100,10 +100,16 @@ class Provider::Plaid::Syncer
     end
 
     @connection.update!(status: :healthy, last_synced_at: Time.current, sync_error: nil)
-  rescue Plaid::ApiError => e
-    handle_plaid_error(e)
   rescue Provider::Auth::ReauthRequiredError
     @connection.update!(status: :requires_update, sync_error: "reauth_required")
+  rescue Provider::Auth::TransientError => e
+    Rails.logger.warn("[#{self.class.name}] transient sync failure for connection=#{@connection.id}: #{e.message}")
+    raise
+  rescue *TRANSIENT_NETWORK_ERRORS => e
+    Rails.logger.warn("[#{self.class.name}] transient network failure for connection=#{@connection.id}: #{e.class}: #{e.message}")
+    raise Provider::Auth::TransientError, "#{e.class}: #{e.message}"
+  rescue Plaid::ApiError => e
+    handle_plaid_error(e)
   rescue => e
     @connection.update!(sync_error: e.message)
     raise
@@ -114,6 +120,12 @@ class Provider::Plaid::Syncer
   def perform_post_sync; end
 
   private
+
+    TRANSIENT_NETWORK_ERRORS = [
+      Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED,
+      Errno::ECONNRESET, Errno::EHOSTUNREACH, SocketError
+    ].freeze
+    private_constant :TRANSIENT_NETWORK_ERRORS
 
     def client
       Provider::Registry.plaid_provider_for_region(region)
@@ -129,14 +141,25 @@ class Provider::Plaid::Syncer
 
     # Plaid surfaces login-required as an ITEM_LOGIN_REQUIRED error code in
     # the response body. Mark the connection requires_update and return
-    # without raising — Sidekiq retry would just fail again.
+    # without raising — Sidekiq retry would just fail again. 5xx upstream
+    # errors are reclassified as Provider::Auth::TransientError so the
+    # generic syncer contract holds (no UI surface, just Sidekiq retry).
     def handle_plaid_error(error)
       body = JSON.parse(error.response_body) rescue {}
       if body["error_code"] == "ITEM_LOGIN_REQUIRED"
         @connection.auth.mark_requires_update!(reason: "ITEM_LOGIN_REQUIRED")
+      elsif transient_plaid_error?(error)
+        Rails.logger.warn("[#{self.class.name}] transient Plaid 5xx for connection=#{@connection.id}: #{error.message}")
+        raise Provider::Auth::TransientError, error.message
       else
         @connection.update!(sync_error: error.message)
         raise error
       end
+    end
+
+    # Plaid SDK exposes the upstream HTTP status as `code` on Plaid::ApiError.
+    def transient_plaid_error?(error)
+      code = error.try(:code) || error.try(:status_code)
+      code.is_a?(Integer) && code >= 500
     end
 end
