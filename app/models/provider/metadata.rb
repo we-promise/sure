@@ -4,7 +4,6 @@ class Provider
       simplefin: {
         region: "US",
         kind: "Bank",
-        tier: "Free",
         maturity: :stable,
         logo_bg: "bg-blue-600",
         logo_text: "SF"
@@ -12,7 +11,6 @@ class Provider
       lunchflow: {
         region: "US",
         kind: "Lunch",
-        tier: "Free",
         maturity: :stable,
         logo_bg: "bg-orange-500",
         logo_text: "LF"
@@ -20,7 +18,6 @@ class Provider
       enable_banking: {
         region: "EU",
         kind: "Bank",
-        tier: "Free",
         maturity: :beta,
         logo_bg: "bg-purple-600",
         logo_text: "EB"
@@ -28,7 +25,6 @@ class Provider
       coinstats: {
         region: "Global",
         kind: "Crypto",
-        tier: "Free",
         maturity: :beta,
         logo_bg: "bg-yellow-500",
         logo_text: "CS"
@@ -36,7 +32,6 @@ class Provider
       mercury: {
         region: "US",
         kind: "Bank",
-        tier: "Free",
         maturity: :beta,
         logo_bg: "bg-cyan-600",
         logo_text: "ME"
@@ -44,7 +39,6 @@ class Provider
       coinbase: {
         region: "Global",
         kind: "Crypto",
-        tier: "Free",
         maturity: :beta,
         logo_bg: "bg-blue-500",
         logo_text: "CB"
@@ -52,7 +46,6 @@ class Provider
       binance: {
         region: "Global",
         kind: "Crypto",
-        tier: "Free",
         maturity: :beta,
         logo_bg: "bg-yellow-400",
         logo_text: "BI"
@@ -60,7 +53,6 @@ class Provider
       snaptrade: {
         region: "US / CA",
         kind: "Investment",
-        tier: "Free",
         maturity: :beta,
         logo_bg: "bg-green-600",
         logo_text: "ST"
@@ -68,7 +60,6 @@ class Provider
       indexa_capital: {
         region: "ES",
         kind: "Investment",
-        tier: "Free",
         maturity: :alpha,
         logo_bg: "bg-red-600",
         logo_text: "IC"
@@ -76,7 +67,6 @@ class Provider
       sophtron: {
         region: "US",
         kind: "Bank",
-        tier: "Free",
         maturity: :alpha,
         logo_bg: "bg-teal-600",
         logo_text: "SO"

@@ -7,7 +7,7 @@ class SettingsTest < ApplicationSystemTestCase
     # Base settings available to all users
     @settings_links = [
       [ "Accounts", accounts_path ],
-      [ "Bank Sync", settings_providers_path ],
+      [ "Bank sync", settings_providers_path ],
       [ "Preferences", settings_preferences_path ],
       [ "Profile Info", settings_profile_path ],
       [ "Security", settings_security_path ],

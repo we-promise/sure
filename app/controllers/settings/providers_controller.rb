@@ -254,13 +254,6 @@ class Settings::ProvidersController < ApplicationController
       @connected        = entries.select { |e| e[:summary][:status] == :ok }
       @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
       @available        = entries.select { |e| e[:summary][:status] == :off }
-
-      @health_counts = {
-        connected:       @connected.size + @needs_attention.size,
-        needs_attention: @needs_attention.size,
-        errors:          @needs_attention.count { |e| e[:summary][:status] == :err },
-        accounts_synced: Current.family.accounts.joins(:account_providers).distinct.count
-      }
     end
 
     # Returns a hash mapping provider key → { error:, last_synced_at:, stale: }

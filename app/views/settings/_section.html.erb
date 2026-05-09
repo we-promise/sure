@@ -1,4 +1,4 @@
-<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil) %>
+<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true, auto_open_param: nil, status_pill: nil, meta: nil, actions: nil, badge: nil) %>
 <% if collapsible %>
   <details <%= "open" if open %>
            class="group bg-container shadow-border-xs rounded-xl p-4"
@@ -16,12 +16,12 @@
           <% end %>
         </div>
       </div>
-      <% if status.present? %>
+      <% if status_pill.present? %>
         <div class="flex items-center gap-2 shrink-0 group-open:hidden">
           <% if meta.present? %>
             <span class="text-xs text-subdued"><%= meta %></span>
           <% end %>
-          <%= render "settings/providers/status_pill", status: status %>
+          <%= status_pill %>
           <%= actions if actions.present? %>
         </div>
       <% end %>

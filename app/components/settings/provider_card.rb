@@ -1,5 +1,12 @@
 class Settings::ProviderCard < ApplicationComponent
-  MATURITY_LABELS = { beta: "Beta", alpha: "Alpha" }.freeze
+  def self.maturity_label(maturity)
+    return nil if maturity.blank?
+
+    key = maturity.to_sym
+    return nil if key == :stable
+
+    I18n.t("settings.providers.maturity.#{key}", default: nil)
+  end
 
   def initialize(provider_key:, name:, tagline: nil, region: nil, kind: nil, tier: nil,
                  maturity: :stable, logo_bg: "bg-gray-500", logo_text: nil)
@@ -15,7 +22,7 @@ class Settings::ProviderCard < ApplicationComponent
   end
 
   def maturity_label
-    MATURITY_LABELS[@maturity]
+    self.class.maturity_label(@maturity)
   end
 
   def meta_line

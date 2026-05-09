@@ -1,4 +1,4 @@
-<%= content_for :page_title, "Bank Sync" %>
+<%= content_for :page_title, t("settings.providers.show.page_title") %>
 
 <div class="space-y-4">
   <% if @encryption_error %>
@@ -13,9 +13,7 @@
     </div>
   <% else %>
     <div class="flex items-start justify-between gap-4">
-      <p class="text-secondary">
-        Connect external accounts so transactions, balances and holdings flow into Sure automatically.
-      </p>
+      <p class="text-secondary"><%= t("settings.providers.show.lede") %></p>
       <% if @connected.any? || @needs_attention.any? %>
         <% sync_all_disabled = Current.family.last_sync_all_attempted_at.present? && Current.family.last_sync_all_attempted_at > 30.seconds.ago %>
         <%= button_to sync_all_settings_providers_path,
@@ -29,28 +27,25 @@
       <% end %>
     </div>
 
-    <%= render Settings::HealthSummary.new(counts: @health_counts) %>
-
     <% all_connections = @needs_attention + @connected %>
 
-    <%= render "settings/providers/group_heading",
-               title: t("settings.providers.groups.your_connections"),
-               count: all_connections.size %>
-
-    <% if all_connections.empty? %>
-      <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_connected") %></p>
+    <% if all_connections.any? %>
+      <%= render "settings/providers/group_heading",
+                 title: t("settings.providers.groups.your_connections"),
+                 count: all_connections.size %>
     <% end %>
 
     <% all_connections.each do |entry| %>
       <% auto_open = [ :warn, :err ].include?(entry[:summary][:status]) || all_connections.size == 1 %>
       <% sync_action = entry[:partial].present? ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: entry[:summary][:last_synced_at]) : nil %>
-      <% maturity_label = Settings::ProviderCard::MATURITY_LABELS[entry[:maturity]] %>
+      <% maturity_label = Settings::ProviderCard.maturity_label(entry[:maturity]) %>
       <% maturity_badge = maturity_label ? content_tag(:span, maturity_label, class: "text-xs font-medium px-1.5 py-0.5 rounded-full bg-alpha-black-50 text-secondary") : nil %>
+      <% status_pill = render("settings/providers/status_pill", status: entry[:summary][:status]) %>
       <%= settings_section title: entry[:title],
                            collapsible: true,
                            open: auto_open,
                            auto_open_param: entry[:auto_open_param],
-                           status: entry[:summary][:status],
+                           status_pill: status_pill,
                            meta: entry[:summary][:meta],
                            actions: sync_action,
                            badge: maturity_badge do %>

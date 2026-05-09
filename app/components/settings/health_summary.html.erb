@@ -1,8 +1,0 @@
-<div class="grid grid-cols-4 gap-2">
-  <% tiles.each do |tile| %>
-    <div class="bg-container shadow-border-xs rounded-xl p-3 text-center">
-      <div class="text-2xl font-bold tabular-nums <%= tile[:color_class] %>"><%= tile[:count] %></div>
-      <div class="text-xs text-secondary mt-0.5"><%= tile[:label] %></div>
-    </div>
-  <% end %>
-</div>
