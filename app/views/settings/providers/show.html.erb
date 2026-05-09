@@ -12,7 +12,7 @@
       </div>
     </div>
   <% else %>
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex items-center justify-between gap-4">
       <p class="text-secondary"><%= t("settings.providers.bank_sync.lede") %></p>
       <% if @connected.any? || @needs_attention.any? %>
         <% sync_all_disabled = Current.family.last_sync_all_attempted_at.present? && Current.family.last_sync_all_attempted_at > 30.seconds.ago %>
