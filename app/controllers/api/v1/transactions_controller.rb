@@ -3,10 +3,10 @@
 class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
-  # Ensure proper scope authorization for read vs write access
-  before_action :ensure_read_scope, only: [ :index, :show ]
   MAX_BATCH_SIZE = 100
 
+  # Ensure proper scope authorization for read vs write access
+  before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy, :batch_create, :batch_update ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
 
