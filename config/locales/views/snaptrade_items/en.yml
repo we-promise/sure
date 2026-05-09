@@ -133,8 +133,6 @@ en:
         one: "%{count} needs setup"
         other: "%{count} need setup"
       status_ready: "Ready to connect brokerages"
-      status_needs_registration: "Credentials saved. Go to Accounts page to connect brokerages."
-      status_not_configured: "Not configured"
       setup_accounts_button: "Setup Accounts"
       connect_button: "Connect Brokerage"
       connected_brokerages: "Connected:"
