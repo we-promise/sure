@@ -1,7 +1,13 @@
 <div class="space-y-4">
   <% items = local_assigns[:binance_items] || @binance_items || Current.family.binance_items.active.ordered %>
 
-  <%= render DS::Alert.new(message: t("settings.providers.binance_panel.no_withdraw_warning"), variant: :warning) %>
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: safe_join([
+          content_tag(:p, t("settings.providers.binance_panel.no_withdraw_title"), class: "font-medium"),
+          content_tag(:p, t("settings.providers.binance_panel.no_withdraw_body"), class: "mt-1")
+        ])
+      ) %>
 
   <div class="prose prose-sm text-secondary">
     <p class="text-primary font-medium"><%= t("settings.providers.binance_panel.setup_instructions") %></p>

@@ -82,7 +82,7 @@
             variant: :warning,
             message: safe_join([
               content_tag(:p, "Configuration locked", class: "font-medium"),
-              content_tag(:p, "Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.", class: "text-xs mt-1")
+              content_tag(:p, "Disconnect all linked banks before changing these credentials.", class: "mt-1")
             ])
           ) %>
     <% end %>
