@@ -778,6 +778,88 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          BatchTransactionCreateRequest: {
+            type: :object,
+            required: [ "transactions" ],
+            properties: {
+              transactions: {
+                type: :array, minItems: 1, maxItems: 100,
+                items: {
+                  type: :object,
+                  required: [ "account_id", "date", "amount" ],
+                  properties: {
+                    account_id:  { type: :string },
+                    date:        { type: :string, format: :date },
+                    amount:      { type: :number },
+                    nature:      { type: :string, enum: %w[income expense inflow outflow] },
+                    name:        { type: :string },
+                    description: { type: :string },
+                    notes:       { type: :string },
+                    currency:    { type: :string },
+                    category_id: { type: :string, nullable: true },
+                    merchant_id: { type: :string, nullable: true },
+                    tag_ids:     { type: :array, items: { type: :string } },
+                    client_ref:  { type: :string, description: "Optional opaque client correlation id (echoed in response)" }
+                  }
+                }
+              }
+            }
+          },
+          BatchTransactionUpdateRequest: {
+            type: :object,
+            required: [ "transactions" ],
+            properties: {
+              transactions: {
+                type: :array, minItems: 1, maxItems: 100,
+                items: {
+                  type: :object,
+                  required: [ "id" ],
+                  properties: {
+                    id:          { type: :string },
+                    date:        { type: :string, format: :date },
+                    amount:      { type: :number },
+                    nature:      { type: :string, enum: %w[income expense inflow outflow] },
+                    name:        { type: :string },
+                    description: { type: :string },
+                    notes:       { type: :string },
+                    currency:    { type: :string },
+                    category_id: { type: :string, nullable: true },
+                    merchant_id: { type: :string, nullable: true },
+                    tag_ids:     { type: :array, items: { type: :string },
+                                   description: "Omit to leave unchanged; [] clears all tags" },
+                    client_ref:  { type: :string }
+                  }
+                }
+              }
+            }
+          },
+          BatchTransactionResultItem: {
+            type: :object,
+            required: [ "index", "status" ],
+            properties: {
+              index:       { type: :integer },
+              client_ref:  { type: :string, nullable: true },
+              status:      { type: :string, enum: %w[created updated error not_found] },
+              transaction: { '$ref' => '#/components/schemas/Transaction' },
+              error:       { type: :string },
+              errors:      { type: :array, items: { type: :string } }
+            }
+          },
+          BatchTransactionResponse: {
+            type: :object,
+            required: [ "results", "summary" ],
+            properties: {
+              results: { type: :array, items: { '$ref' => '#/components/schemas/BatchTransactionResultItem' } },
+              summary: {
+                type: :object,
+                properties: {
+                  total:     { type: :integer },
+                  succeeded: { type: :integer },
+                  failed:    { type: :integer }
+                }
+              }
+            }
+          },
           Transaction: {
             type: :object,
             required: %w[id date amount currency name classification account tags created_at updated_at],
