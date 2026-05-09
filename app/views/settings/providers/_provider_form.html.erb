@@ -4,18 +4,13 @@
   provider_key = configuration.provider_key.to_s
 
   setup_steps_data =
-    case provider_key
-    when "plaid"
+    if %w[plaid plaid_eu].include?(provider_key)
+      plaid_link = link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+      step_1_key = "settings.providers.#{provider_key}_panel.step_1_html"
       [
-        (link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " — get your Client ID and Secret Key.").html_safe,
-        "Pick an environment — sandbox for testing, production for real accounts.",
-        "Paste your credentials below and connect."
-      ]
-    when "plaid_eu"
-      [
-        (link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " — get your EU Client ID and Secret Key.").html_safe,
-        "Pick an environment — sandbox for testing, production for real accounts.",
-        "Paste your credentials below and connect."
+        t(step_1_key, link: plaid_link),
+        t("settings.providers.plaid_panel.step_2"),
+        t("settings.providers.plaid_panel.step_3")
       ]
     end
 %>

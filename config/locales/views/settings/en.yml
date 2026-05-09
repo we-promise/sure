@@ -282,3 +282,9 @@ en:
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
+      plaid_panel:
+        step_1_html: "%{link} — get your Client ID and Secret Key."
+        step_2: "Pick an environment — sandbox for testing, production for real accounts."
+        step_3: "Paste your credentials below and connect."
+      plaid_eu_panel:
+        step_1_html: "%{link} — get your EU Client ID and Secret Key."
