@@ -659,7 +659,7 @@ class SophtronItemsController < ApplicationController
       reset_manual_sync_progress!(sync)
       start_next_manual_sync_account(sync, provider)
     rescue Provider::Sophtron::Error => e
-      fail_manual_sync!(sync, e.message) if defined?(sync) && sync.present?
+      fail_manual_sync_and_clear_job!(sync, e.message) if defined?(sync) && sync.present?
       Rails.logger.error("Sophtron manual sync error: #{e.message}")
       redirect_back_or_to accounts_path, alert: t(".api_error", message: e.message)
     end

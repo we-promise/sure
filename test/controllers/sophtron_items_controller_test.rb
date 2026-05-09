@@ -817,6 +817,35 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert @item.syncs.ordered.first.failed?
   end
 
+  test "manual sync clears job pointers when job polling raises provider error" do
+    @item.update!(user_institution_id: "ui-1")
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "job-1" })
+    provider.expects(:get_job_information)
+            .with("job-1")
+            .raises(Provider::Sophtron::Error.new("Sophtron unavailable", :api_error))
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    post sync_sophtron_item_url(@item)
+
+    assert_redirected_to accounts_path
+    @item.reload
+    assert_nil @item.current_job_id
+    assert_nil @item.current_job_sophtron_account_id
+    assert_equal "requires_update", @item.status
+    assert_equal "Sophtron unavailable", @item.last_connection_error
+    assert @item.syncs.ordered.first.failed?
+  end
+
   test "manual sync fails and clears job pointers when processing raises" do
     @item.update!(user_institution_id: "ui-1")
     sophtron_account = @item.sophtron_accounts.create!(
