@@ -1,14 +1,14 @@
 <%# locals: (count:) %>
 <div class="flex flex-wrap items-center gap-2.5 mt-5 mb-3">
   <div class="flex-1 min-w-[200px] flex items-center gap-2 bg-container shadow-border-xs rounded-[10px] px-[14px] py-[9px] focus-within:ring-2 focus-within:ring-alpha-black-100">
-    <%= icon "search", class: "w-3.5 h-3.5 text-secondary shrink-0" %>
+    <%= icon "search", size: "sm", class: "!w-3.5 !h-3.5 text-secondary" %>
     <input type="search"
            autocomplete="off"
            data-providers-filter-target="input"
            data-action="input->providers-filter#filter"
            aria-label="<%= t("settings.providers.search_filters.aria_label") %>"
            placeholder="<%= t("settings.providers.search_filters.placeholder", count: count) %>"
-           class="bg-transparent border-0 outline-none flex-1 text-sm text-primary placeholder:text-subdued">
+           class="bg-transparent border-0 outline-none flex-1 text-sm text-primary placeholder:text-subdued !p-0 focus:ring-0 focus:shadow-none">
   </div>
   <div class="inline-flex items-center gap-1 p-[3px] bg-surface-inset rounded-[10px]">
     <% %w[all bank crypto investment].each do |kind| %>

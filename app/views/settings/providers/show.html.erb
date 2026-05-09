@@ -21,7 +21,7 @@
                       disabled: sync_all_disabled,
                       title: sync_all_disabled ? t("settings.providers.sync_all_recently") : nil,
                       class: "inline-flex items-center gap-2 shrink-0 whitespace-nowrap px-3 py-[7px] text-[13px] font-medium text-primary border border-alpha-black-100 rounded-[10px] bg-transparent hover:bg-container-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed" do %>
-          <%= icon "refresh-cw", class: "w-3.5 h-3.5" %>
+          <%= icon "refresh-cw", size: "sm", class: "!w-3.5 !h-3.5" %>
           <%= t("settings.providers.sync_all") %>
         <% end %>
       <% end %>
