@@ -16,9 +16,9 @@ module Account::Linkable
     # `EXISTS`) so both definitions stay in sync. If `linked?` adds a new
     # provider source, update this scope too.
     scope :linked, -> {
-      left_outer_joins(:account_providers)
+      left_outer_joins(:account_providers, :provider_account)
         .where(
-          "account_providers.id IS NOT NULL OR accounts.plaid_account_id IS NOT NULL OR accounts.simplefin_account_id IS NOT NULL"
+          "account_providers.id IS NOT NULL OR provider_accounts.id IS NOT NULL OR accounts.simplefin_account_id IS NOT NULL"
         )
         .distinct
     }

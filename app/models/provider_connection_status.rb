@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 class ProviderConnectionStatus
+  # NOTE: Plaid was removed from this list when it was migrated to the
+  # Provider::Connection framework. Plaid health is surfaced via the framework
+  # (Provider::Connection#status) rather than this legacy iterator. SimpleFIN,
+  # Lunchflow, etc. remain on the legacy per-provider model until they're
+  # ported.
   PROVIDERS = [
-    { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
     { key: "enable_banking", type: "EnableBankingItem", association: :enable_banking_items, accounts: :enable_banking_accounts },
