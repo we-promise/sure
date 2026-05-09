@@ -849,6 +849,86 @@ end
     assert_equal "not_found", body["results"][0]["error"]
   end
 
+  # BATCH UPDATE action tests
+  test "batch_update requires write scope" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "batch_update applies per-item changes and returns 207" do
+    t1 = @family.transactions.first
+    t2 = @family.transactions.offset(1).first
+    category = @family.categories.first
+    tag = @family.tags.first
+
+    payload = {
+      transactions: [
+        { id: t1.id, category_id: category.id, tag_ids: [ tag.id ], client_ref: "u1" },
+        { id: t2.id, notes: "client lunch" }
+      ]
+    }
+    patch batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "updated", body["results"][0]["status"]
+    assert_equal "u1",      body["results"][0]["client_ref"]
+    assert_equal "updated", body["results"][1]["status"]
+
+    t1.reload
+    assert_equal category.id, t1.category_id
+    assert_includes t1.tag_ids, tag.id
+
+    t2.reload.entry.reload
+    assert_equal "client lunch", t2.entry.notes
+  end
+
+  test "batch_update tag_ids: [] clears tags; omitted tag_ids preserves them" do
+    t1 = @family.transactions.first
+    tag = @family.tags.first
+    t1.update!(tag_ids: [ tag.id ])
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: t1.id, tag_ids: [] } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    assert_empty t1.reload.tag_ids
+
+    t1.update!(tag_ids: [ tag.id ])
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: t1.id, notes: "n" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    assert_equal [ tag.id ], t1.reload.tag_ids
+  end
+
+  test "batch_update returns not_found for id outside family" do
+    other_family_txn_id = "00000000-0000-0000-0000-000000000000"
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: other_family_txn_id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "not_found", body["results"][0]["error"]
+  end
+
+  test "batch_update returns error for missing id" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
   private
 
     def api_headers(api_key)

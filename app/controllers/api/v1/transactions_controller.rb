@@ -143,7 +143,7 @@ end
     end
 
     Entry.transaction do
-      if @entry.update(entry_params_for_update)
+      if @entry.update(entry_params_for_update(transaction_params, @entry))
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
         if tags_provided?
@@ -372,23 +372,23 @@ end
       entry_params.compact
     end
 
-    def entry_params_for_update
+    def entry_params_for_update(attrs = transaction_params, entry = @entry)
       entry_params = {
-        name: transaction_params[:name] || transaction_params[:description],
-        date: transaction_params[:date],
-        notes: transaction_params[:notes],
+        name: attrs[:name] || attrs[:description],
+        date: attrs[:date],
+        notes: attrs[:notes],
         entryable_attributes: {
-          id: @entry.entryable_id,
-          category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id]
+          id: entry.entryable_id,
+          category_id: attrs[:category_id],
+          merchant_id: attrs[:merchant_id]
           # Note: tag_ids handled separately in update action to distinguish
           # "not provided" from "explicitly set to empty"
         }.compact_blank
       }
 
       # Only update amount if provided
-      if transaction_params[:amount].present?
-        entry_params[:amount] = calculate_signed_amount
+      if attrs[:amount].present?
+        entry_params[:amount] = signed_amount_for(attrs[:amount], attrs[:nature])
       end
 
       entry_params.compact
@@ -546,8 +546,70 @@ end
     end
 
     def process_update_item(raw, idx)
-      # Implemented in Task 3
-      { index: idx, status: "error", error: "not_implemented", errors: [ "batch_update not implemented" ] }
+      result = { index: idx }
+      family = current_resource_owner.family
+      raw_params = raw.is_a?(ActionController::Parameters) ? raw : ActionController::Parameters.new(raw || {})
+      attrs = raw_params.permit(
+        :id, :date, :amount, :name, :description, :notes, :currency,
+        :category_id, :merchant_id, :nature, :client_ref, tag_ids: []
+      ).to_h.with_indifferent_access
+
+      result[:client_ref] = attrs[:client_ref] if attrs[:client_ref].present?
+
+      unless attrs[:id].present?
+        return result.merge(status: "error", error: "validation_failed", errors: [ "Transaction id is required" ])
+      end
+
+      transaction = family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(current_resource_owner))
+        .find_by(id: attrs[:id])
+      unless transaction
+        return result.merge(status: "error", error: "not_found", errors: [ "Transaction not found" ])
+      end
+
+      entry = transaction.entry
+
+      if entry.split_child?
+        return result.merge(status: "error", error: "validation_failed",
+          errors: [ "Split child transactions cannot be edited directly. Use the split editor." ])
+      end
+
+      financial_changed = attrs[:amount].present? || attrs[:date].present? || attrs[:nature].present?
+      if entry.split_parent? && financial_changed
+        return result.merge(status: "error", error: "validation_failed",
+          errors: [ "Split parent amount, date, and type cannot be changed directly. Use the split editor." ])
+      end
+
+      tags_provided = raw_params.respond_to?(:key?) && (raw_params.key?(:tag_ids) || raw_params.key?("tag_ids"))
+
+      Entry.transaction do
+        entry.update!(entry_params_for_update(attrs, entry))
+
+        if tags_provided
+          entry.transaction.tag_ids = attrs[:tag_ids] || []
+          entry.transaction.save!
+          entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+        end
+
+        entry.lock_saved_attributes!
+      end
+
+      entry.sync_account_later
+
+      txn_json = render_to_string(
+        partial: "api/v1/transactions/transaction",
+        formats: [ :json ],
+        locals: { transaction: entry.transaction.reload }
+      )
+      result.merge(status: "updated", transaction: JSON.parse(txn_json))
+
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn "batch_update item #{idx} invalid: #{e.message}"
+      result.merge(status: "error", error: "validation_failed", errors: e.record.errors.full_messages)
+    rescue => e
+      Rails.logger.error "batch_update item #{idx} error: #{e.message}"
+      result.merge(status: "error", error: "internal_server_error", errors: [ e.message ])
     end
 
     def build_batch_response(results)
