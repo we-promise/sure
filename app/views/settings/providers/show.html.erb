@@ -20,8 +20,8 @@
                       method: :post,
                       disabled: sync_all_disabled,
                       title: sync_all_disabled ? t("settings.providers.sync_all_recently") : nil,
-                      class: "inline-flex items-center gap-2 shrink-0 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed" do %>
-          <%= icon "refresh-cw", class: "w-4 h-4" %>
+                      class: "inline-flex items-center gap-2 shrink-0 whitespace-nowrap px-3 py-[7px] text-[13px] font-medium text-primary border border-alpha-black-100 rounded-[10px] bg-transparent hover:bg-container-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed" do %>
+          <%= icon "refresh-cw", class: "w-3.5 h-3.5" %>
           <%= t("settings.providers.sync_all") %>
         <% end %>
       <% end %>
@@ -30,34 +30,22 @@
     <% all_connections = @needs_attention + @connected %>
 
     <% if all_connections.any? %>
+      <%= render "settings/providers/health_strip",
+                 connected:        @health[:connected],
+                 needs_attention:  @health[:needs_attention],
+                 accounts_syncing: @health[:accounts_syncing],
+                 last_synced_at:   @health[:last_synced_at] %>
+
       <%= render "settings/providers/group_heading",
                  title: t("settings.providers.groups.your_connections"),
                  count: all_connections.size %>
-    <% end %>
 
-    <% all_connections.each do |entry| %>
-      <% auto_open = [ :warn, :err ].include?(entry[:summary][:status]) || all_connections.size == 1 %>
-      <% sync_action = entry[:partial].present? ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: entry[:summary][:last_synced_at]) : nil %>
-      <% maturity_label_key = Settings::ProviderCard::MATURITY_LABELS[entry[:maturity]] %>
-      <% maturity_label = maturity_label_key ? t(maturity_label_key) : nil %>
-      <% maturity_badge = maturity_label ? content_tag(:span, maturity_label, class: "text-xs font-medium px-1.5 py-0.5 rounded-full bg-alpha-black-50 text-secondary") : nil %>
-      <% status_pill = render("settings/providers/status_pill", status: entry[:summary][:status]) %>
-      <%= settings_section title: entry[:title],
-                           collapsible: true,
-                           open: auto_open,
-                           auto_open_param: entry[:auto_open_param],
-                           status: status_pill,
-                           meta: entry[:summary][:meta],
-                           actions: sync_action,
-                           badge: maturity_badge do %>
-        <% if entry[:configuration] %>
-          <%= render "settings/providers/provider_form", configuration: entry[:configuration] %>
-        <% else %>
-          <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
-            <%= render "settings/providers/#{entry[:partial]}" %>
-          </turbo-frame>
+      <div class="space-y-2">
+        <% all_connections.each do |entry| %>
+          <% auto_open = [ :warn, :err ].include?(entry[:summary][:status]) || all_connections.size == 1 %>
+          <%= render "settings/providers/connection_row", entry: entry, open: auto_open %>
         <% end %>
-      <% end %>
+      </div>
     <% end %>
 
     <% if @available.any? %>

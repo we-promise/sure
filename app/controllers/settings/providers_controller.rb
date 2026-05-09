@@ -261,6 +261,24 @@ class Settings::ProvidersController < ApplicationController
       @connected        = entries.select { |e| e[:summary][:status] == :ok }
       @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
       @available        = entries.select { |e| e[:summary][:status] == :off }
+
+      @health = compute_health_strip(@connected, @needs_attention)
+    end
+
+    # Slim health strip data: total connections, needs-attention count, total
+    # accounts on connected/at-risk providers, and the most recent successful
+    # sync time across all of them.
+    def compute_health_strip(connected, needs_attention)
+      active_entries  = connected + needs_attention
+      last_synced_at  = active_entries.map { |e| e[:summary][:last_synced_at] }.compact.max
+      accounts_count  = Current.family.accounts.joins(:account_providers).distinct.count
+
+      {
+        connected:        active_entries.size,
+        needs_attention:  needs_attention.size,
+        accounts_syncing: accounts_count,
+        last_synced_at:   last_synced_at
+      }
     end
 
     # Returns a hash mapping provider key → { error:, last_synced_at:, stale: }
