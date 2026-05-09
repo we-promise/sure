@@ -17,6 +17,8 @@ class Settings::ProviderCard < ApplicationComponent
     @logo_text    = logo_text || name.first(2).upcase
   end
 
+  attr_reader :name, :tagline, :logo_bg, :logo_text
+
   def maturity_label
     label_key = MATURITY_LABELS[@maturity]
     t(label_key) if label_key
@@ -38,7 +40,4 @@ class Settings::ProviderCard < ApplicationComponent
       provider_kind: @kind.to_s.downcase
     }
   end
-
-  private
-    attr_reader :provider_key, :name, :tagline, :region, :kind, :tier, :maturity, :logo_bg, :logo_text
 end
