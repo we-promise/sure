@@ -350,18 +350,18 @@ end
       params.dig(:transaction, :account_id).presence
     end
 
-    def entry_params_for_create
+    def entry_params_for_create(attrs = transaction_params)
       entry_params = {
-        name: transaction_params[:name] || transaction_params[:description],
-        date: transaction_params[:date],
-        amount: calculate_signed_amount,
-        currency: transaction_params[:currency] || current_resource_owner.family.currency,
-        notes: transaction_params[:notes],
+        name: attrs[:name] || attrs[:description],
+        date: attrs[:date],
+        amount: signed_amount_for(attrs[:amount], attrs[:nature]),
+        currency: attrs[:currency] || current_resource_owner.family.currency,
+        notes: attrs[:notes],
         entryable_type: "Transaction",
         entryable_attributes: {
-          category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id],
-          tag_ids: transaction_params[:tag_ids] || []
+          category_id: attrs[:category_id],
+          merchant_id: attrs[:merchant_id],
+          tag_ids: attrs[:tag_ids] || []
         }
       }
       if idempotency_key_requested?
@@ -522,19 +522,18 @@ end
 
       entry = nil
       Entry.transaction do
-        entry = account.entries.new(build_create_entry_params(attrs))
+        entry = account.entries.new(entry_params_for_create(attrs))
         entry.save!
+        entry.lock_saved_attributes!
+        entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
       end
 
       entry.sync_account_later
-      entry.lock_saved_attributes!
-      entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
 
-      @transaction = entry.transaction
-      @entry = entry
       txn_json = render_to_string(
-        template: "api/v1/transactions/show",
-        formats: [ :json ]
+        partial: "api/v1/transactions/transaction",
+        formats: [ :json ],
+        locals: { transaction: entry.transaction }
       )
       result.merge(status: "created", transaction: JSON.parse(txn_json))
 
@@ -544,24 +543,6 @@ end
     rescue => e
       Rails.logger.error "batch_create item #{idx} error: #{e.message}"
       result.merge(status: "error", error: "internal_server_error", errors: [ e.message ])
-    end
-
-    def build_create_entry_params(attrs)
-      signed = signed_amount_for(attrs[:amount], attrs[:nature])
-
-      {
-        name: attrs[:name] || attrs[:description],
-        date: attrs[:date],
-        amount: signed,
-        currency: attrs[:currency] || current_resource_owner.family.currency,
-        notes: attrs[:notes],
-        entryable_type: "Transaction",
-        entryable_attributes: {
-          category_id: attrs[:category_id],
-          merchant_id: attrs[:merchant_id],
-          tag_ids: attrs[:tag_ids] || []
-        }
-      }.compact
     end
 
     def process_update_item(raw, idx)
