@@ -935,7 +935,7 @@ end
     Entry.any_instance.stubs(:split_child?).returns(true)
 
     patch batch_api_v1_transactions_url,
-      params: { transactions: [{ id: target_txn.id, notes: "x" }] },
+      params: { transactions: [ { id: target_txn.id, notes: "x" } ] },
       as: :json,
       headers: api_headers(@api_key)
 
