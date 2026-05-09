@@ -2,6 +2,8 @@
 
 <%= tag.div id: dom_id(sophtron_item) do %>
   <% provider_display_name = sophtron_item.provider_display_name %>
+  <% manual_sync_required = sophtron_item.manual_sync_required? %>
+  <% connected_institution_options = sophtron_item.connected_institution_options %>
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
     <summary class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
@@ -20,6 +22,9 @@
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
             <%= tag.p provider_display_name, class: "font-medium text-primary" %>
+            <% if manual_sync_required %>
+              <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"><%= t(".manual_sync") %></span>
+            <% end %>
             <% if sophtron_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -56,15 +61,37 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <% if Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_sophtron_item_path(sophtron_item)
+        <% if manual_sync_required || Rails.env.development? %>
+          <%= render DS::Button.new(
+            variant: :icon,
+            icon: "refresh-cw",
+            href: sync_sophtron_item_path(sophtron_item),
+            frame: (manual_sync_required ? "modal" : nil),
+            title: t(".sync_now")
           ) %>
         <% end %>
 
         <%= render DS::Menu.new do |menu| %>
+          <% if connected_institution_options.many? %>
+            <% connected_institution_options.each do |institution| %>
+              <% institution_manual_sync_required = sophtron_item.manual_sync_required_for_institution?(institution[:institution_key]) %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(institution_manual_sync_required ? ".automatic_sync_for" : ".manual_sync_action_for", institution: institution[:name]),
+                icon: institution_manual_sync_required ? "refresh-cw" : "pause-circle",
+                href: toggle_manual_sync_sophtron_item_path(sophtron_item, institution_key: institution[:institution_key]),
+                method: :post
+              ) %>
+            <% end %>
+          <% else %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(manual_sync_required ? ".automatic_sync" : ".manual_sync_action"),
+              icon: manual_sync_required ? "refresh-cw" : "pause-circle",
+              href: toggle_manual_sync_sophtron_item_path(sophtron_item),
+              method: :post
+            ) %>
+          <% end %>
           <% menu.with_item(
             variant: "button",
             text: t(".delete"),

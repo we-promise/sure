@@ -11,9 +11,7 @@
         <% if security_questions.any? %>
           <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
             <%= hidden_field_tag :mfa_type, "security_answer" %>
-            <%= hidden_field_tag :accountable_type, @accountable_type %>
-            <%= hidden_field_tag :account_id, @account_id %>
-            <%= hidden_field_tag :return_to, @return_to %>
+            <%= render "sophtron_items/mfa_context_fields" %>
 
             <% security_questions.each_with_index do |question, index| %>
               <% answer_field_id = "security_answer_#{index}" %>
@@ -35,9 +33,7 @@
               <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, data: { turbo_frame: "modal" } do %>
                 <%= hidden_field_tag :mfa_type, "token_choice" %>
                 <%= hidden_field_tag :token_choice, method %>
-                <%= hidden_field_tag :accountable_type, @accountable_type %>
-                <%= hidden_field_tag :account_id, @account_id %>
-                <%= hidden_field_tag :return_to, @return_to %>
+                <%= render "sophtron_items/mfa_context_fields" %>
                 <%= button_tag type: "submit", class: "w-full rounded-lg border border-primary bg-container-inset p-3 text-left text-sm text-primary transition-colors hover:bg-container-inset-hover" do %>
                   <span class="font-medium"><%= method %></span>
                 <% end %>
@@ -47,9 +43,7 @@
         <% elsif @challenge[:token_sent] %>
           <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
             <%= hidden_field_tag :mfa_type, "token_input" %>
-            <%= hidden_field_tag :accountable_type, @accountable_type %>
-            <%= hidden_field_tag :account_id, @account_id %>
-            <%= hidden_field_tag :return_to, @return_to %>
+            <%= render "sophtron_items/mfa_context_fields" %>
             <div class="form-field">
               <div class="form-field__body">
                 <%= label_tag :token_input, t(".token"), class: "form-field__label" %>
@@ -65,18 +59,14 @@
             <p class="rounded-lg border border-primary bg-container-inset p-3 text-sm text-primary"><%= @challenge[:token_read] %></p>
             <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, data: { turbo_frame: "modal" } do %>
               <%= hidden_field_tag :mfa_type, "verify_phone" %>
-              <%= hidden_field_tag :accountable_type, @accountable_type %>
-              <%= hidden_field_tag :account_id, @account_id %>
-              <%= hidden_field_tag :return_to, @return_to %>
+              <%= render "sophtron_items/mfa_context_fields" %>
               <%= render DS::Button.new(text: t(".phone_confirmed"), type: "submit") %>
             <% end %>
           </div>
         <% elsif safe_captcha_image.present? %>
           <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
             <%= hidden_field_tag :mfa_type, "captcha" %>
-            <%= hidden_field_tag :accountable_type, @accountable_type %>
-            <%= hidden_field_tag :account_id, @account_id %>
-            <%= hidden_field_tag :return_to, @return_to %>
+            <%= render "sophtron_items/mfa_context_fields" %>
             <div class="rounded-lg border border-primary bg-container-inset p-3">
               <%= image_tag "data:image/png;base64,#{safe_captcha_image}", alt: t(".captcha_alt"), class: "max-w-full rounded-md" %>
             </div>
