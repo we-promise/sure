@@ -1567,7 +1567,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_08_120000) do
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
-    t.index "(((extra -> 'manual_merge'::text) ->> 'merged_from_external_id'::text))", name: "idx_transactions_manual_merge_ext_id", where: "(extra ? 'manual_merge'::text)"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin

@@ -25,20 +25,26 @@ class EnableBankingAccount::Transactions::Processor
 
     # Pre-fetch external_ids that were manually merged and must not be re-imported.
     # One query per sync; O(1) Set lookup per transaction — avoids N+1.
-    # manual_merge is stored as an Array (current) or Hash (legacy); both are handled.
+    # Uses a lateral jsonb_array_elements join to extract only the ID strings in SQL,
+    # avoiding loading full extra blobs into Ruby. Handles both Array (current) and
+    # Hash (legacy) formats via jsonb_typeof.
     excluded_ids = if enable_banking_account.current_account
       Transaction.joins(:entry)
                  .where(entries: { account_id: enable_banking_account.current_account.id })
                  .where("transactions.extra ? 'manual_merge'")
-                 .pluck(:extra)
-                 .flat_map { |extra|
-                   mm = extra["manual_merge"]
-                   case mm
-                   when Array then mm.filter_map { |r| r["merged_from_external_id"] }
-                   when Hash  then [ mm["merged_from_external_id"] ].compact
-                   else []
-                   end
-                 }
+                 .joins(
+                   Arel.sql(<<~SQL.squish)
+                     CROSS JOIN LATERAL jsonb_array_elements(
+                       CASE jsonb_typeof(transactions.extra->'manual_merge')
+                       WHEN 'array'  THEN transactions.extra->'manual_merge'
+                       WHEN 'object' THEN jsonb_build_array(transactions.extra->'manual_merge')
+                       ELSE '[]'::jsonb
+                       END
+                     ) AS merge_elem
+                   SQL
+                 )
+                 .pluck(Arel.sql("merge_elem->>'merged_from_external_id'"))
+                 .compact
                  .to_set
     else
       Set.new
