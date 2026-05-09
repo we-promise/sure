@@ -78,10 +78,13 @@
                   { label: "Country", class: "form-field__input" } %>
 
     <% if has_authenticated_connections && !is_new_record %>
-      <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
-        <p class="font-medium">Configuration locked</p>
-        <p class="text-xs mt-1">Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.</p>
-      </div>
+      <%= render DS::Alert.new(
+            variant: :warning,
+            message: safe_join([
+              content_tag(:p, "Configuration locked", class: "font-medium"),
+              content_tag(:p, "Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.", class: "text-xs mt-1")
+            ])
+          ) %>
     <% end %>
 
     <%= form.text_field :application_id,

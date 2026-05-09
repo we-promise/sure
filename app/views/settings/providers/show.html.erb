@@ -2,15 +2,13 @@
 
 <div class="space-y-4">
   <% if @encryption_error %>
-    <div class="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-      <div class="flex items-start gap-3">
-        <%= icon("triangle-alert", class: "w-5 h-5 text-destructive shrink-0 mt-0.5") %>
-        <div>
-          <h2 class="font-medium text-primary"><%= t("settings.providers.encryption_error.title") %></h2>
-          <p class="text-secondary text-sm mt-1"><%= t("settings.providers.encryption_error.message") %></p>
-        </div>
-      </div>
-    </div>
+    <%= render DS::Alert.new(
+          variant: :error,
+          message: safe_join([
+            content_tag(:h2, t("settings.providers.encryption_error.title"), class: "font-medium"),
+            content_tag(:p, t("settings.providers.encryption_error.message"), class: "text-sm mt-1")
+          ])
+        ) %>
   <% else %>
     <div class="flex items-center justify-between gap-4">
       <p class="text-secondary"><%= t("settings.providers.bank_sync.lede") %></p>

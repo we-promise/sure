@@ -10,14 +10,13 @@
       <li><%= t("providers.snaptrade.step_4") %></li>
     </ol>
 
-    <p class="text-warning text-sm"><%= icon("alert-triangle", size: "sm", class: "inline-block mr-1") %><%= t("providers.snaptrade.free_tier_warning") %></p>
   </div>
+
+  <%= render DS::Alert.new(message: t("providers.snaptrade.free_tier_warning"), variant: :warning) %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
-    </div>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <%
