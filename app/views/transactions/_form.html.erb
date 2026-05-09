@@ -14,7 +14,37 @@
   </section>
 
   <section class="space-y-2">
-    <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
+    <div class="relative"
+         data-controller="transaction-name-suggestions"
+         data-transaction-name-suggestions-url-value="<%= name_suggestions_transactions_path %>">
+      <%= f.text_field :name,
+                       label: t(".description"),
+                       placeholder: t(".description_placeholder"),
+                       required: true,
+                       autocomplete: "off",
+                       role: "combobox",
+                       aria: {
+                         autocomplete: "list",
+                         controls: "transaction-name-suggestions-listbox",
+                         expanded: "false"
+                       },
+                       data: {
+                         action: "input->transaction-name-suggestions#fetchSuggestions focus->transaction-name-suggestions#handleFocus blur->transaction-name-suggestions#handleBlur keydown->transaction-name-suggestions#handleKeydown",
+                         transaction_name_suggestions_target: "input"
+                       } %>
+
+      <div class="absolute left-0 right-0 z-50 mt-1.5 hidden rounded-lg bg-container p-1.5 shadow-lg shadow-border-xs"
+           data-transaction-name-suggestions-target="menu">
+        <ul id="transaction-name-suggestions-listbox"
+            role="listbox"
+            class="max-h-64 overflow-auto"
+            data-transaction-name-suggestions-target="list"></ul>
+        <p class="hidden px-3 py-2 text-sm text-secondary"
+           data-transaction-name-suggestions-target="empty">
+          No matching descriptions
+        </p>
+      </div>
+    </div>
 
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>
