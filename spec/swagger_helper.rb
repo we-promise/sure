@@ -839,7 +839,7 @@ RSpec.configure do |config|
             properties: {
               index:       { type: :integer },
               client_ref:  { type: :string, nullable: true },
-              status:      { type: :string, enum: %w[created updated error not_found] },
+              status:      { type: :string, enum: %w[created updated error] },
               transaction: { '$ref' => '#/components/schemas/Transaction' },
               error:       { type: :string },
               errors:      { type: :array, items: { type: :string } }
