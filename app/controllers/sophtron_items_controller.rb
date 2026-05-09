@@ -762,16 +762,12 @@ class SophtronItemsController < ApplicationController
                                     .import_transactions_after_refresh(sophtron_account)
 
       unless result[:success]
-        fail_manual_sync!(sync, result[:error])
-        @sophtron_item.update!(last_connection_error: result[:error], status: (result[:requires_update] ? :requires_update : @sophtron_item.status))
-        raise Provider::Sophtron::Error.new(result[:error] || t("sophtron_items.sync.failed"), :api_error)
+        error_message = result[:error] || t("sophtron_items.sync.failed")
+        fail_manual_sync_and_clear_job!(sync, error_message)
+        raise Provider::Sophtron::Error.new(error_message, :api_error)
       end
 
-      processing_result = SophtronAccount::Processor.new(sophtron_account.reload).process
-    rescue StandardError => e
-      fail_manual_sync_and_clear_job!(sync, e.message)
-      raise Provider::Sophtron::Error.new(e.message, :api_error)
-    else
+      processing_result = process_manual_sync_account!(sync, sophtron_account)
       mark_manual_sync_account_processed!(sync, sophtron_account)
       collect_manual_sync_stats!(sync, processing_result)
       @sophtron_item.update!(
@@ -793,6 +789,13 @@ class SophtronItemsController < ApplicationController
 
       @manual_sync_account = sophtron_account
       @manual_sync = sync
+    end
+
+    def process_manual_sync_account!(sync, sophtron_account)
+      SophtronAccount::Processor.new(sophtron_account.reload).process
+    rescue StandardError => e
+      fail_manual_sync_and_clear_job!(sync, e.message)
+      raise Provider::Sophtron::Error.new(e.message, :api_error)
     end
 
     def fail_manual_sync_and_clear_job!(sync, message)
