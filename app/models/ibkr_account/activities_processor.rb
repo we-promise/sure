@@ -65,7 +65,7 @@ class IbkrAccount::ActivitiesProcessor
         exchange_rate: parse_decimal(row[:fx_rate_to_base])
       )
 
-      import_commission_transaction(row, security.ticker, date)
+      import_commission_transaction(row, security, date)
       true
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process trade #{row[:trade_id]}: #{e.message}")
@@ -81,17 +81,19 @@ class IbkrAccount::ActivitiesProcessor
       label, signed_amount = classify_cash_transaction(row, amount)
       return false unless label
       currency = extract_currency(row, fallback: @ibkr_account.currency)
+      security = resolve_security_for_cash_transaction(row)
 
       import_adapter.import_transaction(
         external_id: "ibkr_cash_#{row[:transaction_id]}",
         amount: signed_amount,
         currency: currency,
         date: parse_date(row[:report_date]),
-        name: build_cash_transaction_name(row, label),
+        name: build_cash_transaction_name(row, label, security),
         source: "ibkr",
         investment_activity_label: label,
         extra: {
           exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
+          security_id: security&.id,
           ibkr: {
             transaction_id: row[:transaction_id],
             type: row[:type],
@@ -110,10 +112,11 @@ class IbkrAccount::ActivitiesProcessor
       false
     end
 
-    def import_commission_transaction(row, ticker, date)
+    def import_commission_transaction(row, security, date)
       commission = parse_decimal(row[:ib_commission])
       return if commission.nil? || commission.zero?
       currency = row.with_indifferent_access[:ib_commission_currency].to_s.upcase.presence || @ibkr_account.currency
+      ticker = security&.ticker || row.with_indifferent_access[:symbol]
 
       result = import_adapter.import_transaction(
         external_id: "ibkr_trade_fee_#{row[:trade_id]}",
@@ -125,6 +128,7 @@ class IbkrAccount::ActivitiesProcessor
         investment_activity_label: "Fee",
         extra: {
           exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
+          security_id: security&.id,
           ibkr: {
             trade_id: row[:trade_id],
             transaction_id: row[:transaction_id],
@@ -181,11 +185,18 @@ class IbkrAccount::ActivitiesProcessor
       end
     end
 
-    def build_cash_transaction_name(row, label)
+    def build_cash_transaction_name(row, label, security = nil)
       return label unless label == "Dividend"
 
-      ticker = security_symbol_for_conid(row[:conid]) || row[:conid]
+      ticker = security&.ticker || security_symbol_for_conid(row[:conid]) || row[:conid]
       "Dividend from #{ticker}"
+    end
+
+    def resolve_security_for_cash_transaction(row)
+      symbol = security_symbol_for_conid(row[:conid])
+      return nil if symbol.blank?
+
+      resolve_security({ symbol: symbol })
     end
 
     def security_symbol_for_conid(conid)

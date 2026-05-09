@@ -126,6 +126,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_not_nil dividend
     assert_equal "Dividend", dividend.entryable.investment_activity_label
     assert_equal BigDecimal("-2.5"), dividend.amount
+    assert_equal securities(:aapl).id, dividend.entryable.extra["security_id"]
 
     commission_one = @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
     commission_two = @account.entries.find_by(external_id: "ibkr_trade_fee_1002")
@@ -135,6 +136,8 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.1"), commission_two.amount
     assert_equal "USD", commission_one.currency
     assert_equal "USD", commission_two.currency
+    assert_equal securities(:aapl).id, commission_one.entryable.extra["security_id"]
+    assert_equal securities(:aapl).id, commission_two.entryable.extra["security_id"]
 
     deposit = @account.entries.find_by(external_id: "ibkr_cash_4001")
 

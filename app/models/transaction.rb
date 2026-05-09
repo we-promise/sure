@@ -144,6 +144,17 @@ class Transaction < ApplicationRecord
     false
   end
 
+  def activity_security_id
+    extra&.dig("security_id").presence || extra&.dig("security", "id").presence
+  end
+
+  def activity_security
+    return @activity_security if defined?(@activity_security)
+    return @activity_security = nil if activity_security_id.blank?
+
+    @activity_security = Security.find_by(id: activity_security_id)
+  end
+
   # Potential duplicate matching methods
   # These help users review and resolve fuzzy-matched pending/posted pairs
 

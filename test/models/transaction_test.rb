@@ -139,4 +139,17 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert transaction.valid?
   end
+
+  test "activity_security returns the referenced security from extra metadata" do
+    security = securities(:aapl)
+    transaction = Transaction.new(extra: { "security_id" => security.id })
+
+    assert_equal security, transaction.activity_security
+  end
+
+  test "activity_security returns nil when no security metadata is present" do
+    transaction = Transaction.new(extra: {})
+
+    assert_nil transaction.activity_security
+  end
 end
