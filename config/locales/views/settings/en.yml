@@ -186,11 +186,18 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
+      not_authorized: Not authorized
+      bank_sync:
+        page_title: Bank Sync
+        lede: Connect external accounts so transactions, balances and holdings flow into Sure automatically.
       status:
         ok: Connected
         warn: Action needed
         err: Error
         off: Not configured
+      maturity:
+        beta: Beta
+        alpha: Alpha
       connect: Connect
       groups:
         your_connections: Your connections

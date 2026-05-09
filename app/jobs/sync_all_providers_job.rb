@@ -3,7 +3,7 @@ class SyncAllProvidersJob < ApplicationJob
   sidekiq_options lock: :until_executed, lock_args: ->(args) { [ args.first ] }, on_conflict: :log
 
   def perform(family_id)
-    family = Family.find(family_id)
-    family.sync_later
+    family = Family.find_by(id: family_id)
+    family&.sync_later
   end
 end

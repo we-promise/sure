@@ -21,7 +21,7 @@
           <% if meta.present? %>
             <span class="text-xs text-subdued"><%= meta %></span>
           <% end %>
-          <%= render "settings/providers/status_pill", status: status %>
+          <%= status %>
           <%= actions if actions.present? %>
         </div>
       <% end %>

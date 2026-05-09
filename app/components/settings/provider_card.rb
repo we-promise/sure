@@ -1,5 +1,8 @@
 class Settings::ProviderCard < ApplicationComponent
-  MATURITY_LABELS = { beta: "Beta", alpha: "Alpha" }.freeze
+  MATURITY_LABELS = {
+    beta: "settings.providers.maturity.beta",
+    alpha: "settings.providers.maturity.alpha"
+  }.freeze
 
   def initialize(provider_key:, name:, tagline: nil, region: nil, kind: nil, tier: nil,
                  maturity: :stable, logo_bg: "bg-gray-500", logo_text: nil)
@@ -15,7 +18,8 @@ class Settings::ProviderCard < ApplicationComponent
   end
 
   def maturity_label
-    MATURITY_LABELS[@maturity]
+    label_key = MATURITY_LABELS[@maturity]
+    t(label_key) if label_key
   end
 
   def meta_line

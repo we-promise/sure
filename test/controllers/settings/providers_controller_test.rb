@@ -325,6 +325,17 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Syncing all connected providers/i, response.body)
   end
 
+  test "POST sync_all respects recent sync throttle" do
+    families(:dylan_family).update_column(:last_sync_all_attempted_at, Time.current)
+
+    assert_no_enqueued_jobs only: SyncAllProvidersJob do
+      post sync_all_settings_providers_path
+    end
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("settings.providers.sync_all_recently"), flash[:notice]
+  end
+
   test "POST sync for simplefin without an active Simplefin sync enqueues SyncJob" do
     item = SimplefinItem.create!(
       family: families(:dylan_family),
@@ -352,7 +363,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
         setting: { plaid_client_id: "test" }
       }
 
-      assert_redirected_to settings_providers_path
+      assert_redirected_to root_path
       assert_equal "Not authorized", flash[:alert]
 
       # Value should not have changed

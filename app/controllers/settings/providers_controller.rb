@@ -79,12 +79,17 @@ class Settings::ProvidersController < ApplicationController
 
   def sync_all
     family = Current.family
+    now = Time.current
 
-    if family.last_sync_all_attempted_at.present? && family.last_sync_all_attempted_at > 30.seconds.ago
+    updated_count = Family
+      .where(id: family.id)
+      .where("last_sync_all_attempted_at IS NULL OR last_sync_all_attempted_at <= ?", 30.seconds.ago)
+      .update_all(last_sync_all_attempted_at: now, updated_at: now)
+
+    if updated_count.zero?
       return redirect_to settings_providers_path, notice: t("settings.providers.sync_all_recently")
     end
 
-    family.update!(last_sync_all_attempted_at: Time.current)
     SyncAllProvidersJob.perform_later(family.id)
     redirect_to settings_providers_path, notice: t("settings.providers.sync_all_in_progress")
   end
@@ -141,7 +146,9 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_providers_path, alert: "Not authorized" unless Current.user.admin?
+      return if Current.user.admin?
+
+      redirect_to root_path, alert: t("settings.providers.not_authorized")
     end
 
     # Reload provider configurations after settings update

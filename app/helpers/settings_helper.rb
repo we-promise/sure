@@ -2,7 +2,7 @@ module SettingsHelper
   SETTINGS_ORDER = [
     # General section
     { name: "Accounts", path: :accounts_path },
-    { name: "Bank Sync", path: :settings_providers_path },
+    { name: "Bank Sync", path: :settings_providers_path, condition: :admin_user? },
     { name: "Preferences", path: :settings_preferences_path },
     { name: "Appearance", path: :settings_appearance_path },
     { name: "Profile Info", path: :settings_profile_path },
@@ -47,6 +47,19 @@ module SettingsHelper
   def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil, &block)
     content = capture(&block)
     render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta, actions: actions, badge: badge }
+  end
+
+  def status_pill_classes(status)
+    case status.to_s.to_sym
+    when :ok
+      { dot: "bg-success", pill: "bg-success/10 text-success" }
+    when :warn
+      { dot: "bg-warning", pill: "bg-warning/10 text-warning" }
+    when :err
+      { dot: "bg-destructive", pill: "bg-destructive/10 text-destructive" }
+    else
+      { dot: "bg-gray-400", pill: "bg-gray-100 text-secondary" }
+    end
   end
 
   def provider_summary(provider_key)
