@@ -120,7 +120,7 @@ class Settings::ProvidersController < ApplicationController
     Provider::Factory.ensure_adapters_loaded
     config = Provider::ConfigurationRegistry.all.find { |c| c.provider_key.to_s == provider_key }
     if config
-      @panel_title           = provider_key.titleize
+      @panel_title           = Provider::Metadata.for(provider_key)[:name] || provider_key.titleize
       @provider_configuration = config
       return render :connect_form
     end
@@ -248,13 +248,13 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
-      @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
+      @mercury_items = Current.family.mercury_items.active.ordered
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
-      @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
+      @snaptrade_items = Current.family.snaptrade_items.ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
 
-      @provider_sync_health = compute_provider_sync_health
+      @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
       entries = build_provider_entries
 
@@ -263,12 +263,29 @@ class Settings::ProvidersController < ApplicationController
       @available        = entries.select { |e| e[:summary][:status] == :off }
     end
 
+    # Maps each family panel key to the loaded item collection. Used by
+    # compute_provider_sync_health and build_provider_entries to avoid relying
+    # on instance_variable_get for control flow.
+    def family_panel_items
+      {
+        "simplefin"      => @simplefin_items,
+        "lunchflow"      => @lunchflow_items,
+        "enable_banking" => @enable_banking_items,
+        "coinstats"      => @coinstats_items,
+        "mercury"        => @mercury_items,
+        "coinbase"       => @coinbase_items,
+        "binance"        => @binance_items,
+        "snaptrade"      => @snaptrade_items,
+        "indexa_capital" => @indexa_capital_items,
+        "sophtron"       => @sophtron_items
+      }
+    end
+
     # Returns a hash mapping provider key → { error:, last_synced_at:, stale: }
     # by querying the latest sync per item for each family panel provider.
-    def compute_provider_sync_health
+    def compute_provider_sync_health(items_map)
       PANEL_SYNCABLE_TYPES.each_with_object({}) do |(key, syncable_type), health|
-        items = instance_variable_get("@#{key}_items")
-        ids = items&.map(&:id)&.compact
+        ids = items_map[key]&.map(&:id)&.compact
         next if ids.blank?
 
         health[key] = sync_health_for(syncable_type, ids)
