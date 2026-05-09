@@ -1,17 +1,15 @@
 <div class="space-y-4">
   <%= render DS::Alert.new(message: t("providers.snaptrade.free_tier_warning"), variant: :warning) %>
 
-  <div class="prose prose-sm text-secondary">
-    <p><%= t("providers.snaptrade.description") %></p>
+  <p class="text-sm text-secondary"><%= t("providers.snaptrade.description") %></p>
 
-    <p class="text-primary font-medium"><%= t("providers.snaptrade.setup_title") %></p>
-    <ol>
-      <li><%= t("providers.snaptrade.step_1_html") %></li>
-      <li><%= t("providers.snaptrade.step_2") %></li>
-      <li><%= t("providers.snaptrade.step_3") %></li>
-      <li><%= t("providers.snaptrade.step_4") %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("providers.snaptrade.step_1_html").html_safe,
+               t("providers.snaptrade.step_2"),
+               t("providers.snaptrade.step_3"),
+               t("providers.snaptrade.step_4")
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>

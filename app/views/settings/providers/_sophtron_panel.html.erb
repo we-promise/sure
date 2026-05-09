@@ -1,19 +1,10 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("sophtron_items.sophtron_panel.setup_instructions_title") %></p>
-    <ol>
-      <li><%= t("sophtron_items.sophtron_panel.setup_instructions.step_1_html", url: "https://www.sophtron.com") %></li>
-      <li><%= t("sophtron_items.sophtron_panel.setup_instructions.step_2") %></li>
-      <li><%= t("sophtron_items.sophtron_panel.setup_instructions.step_3") %></li>
-    </ol>
-
-    <p class="text-primary font-medium"><%= t("sophtron_items.sophtron_panel.field_descriptions_title") %></p>
-    <ul>
-      <li><%= t("sophtron_items.sophtron_panel.field_descriptions.user_id_html") %></li>
-      <li><%= t("sophtron_items.sophtron_panel.field_descriptions.access_key_html") %></li>
-      <li><%= t("sophtron_items.sophtron_panel.field_descriptions.base_url_html") %></li>
-    </ul>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("sophtron_items.sophtron_panel.setup_instructions.step_1_html", url: "https://www.sophtron.com").html_safe,
+               t("sophtron_items.sophtron_panel.setup_instructions.step_2"),
+               t("sophtron_items.sophtron_panel.setup_instructions.step_3")
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>

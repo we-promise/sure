@@ -1,12 +1,10 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("indexa_capital_items.panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("indexa_capital_items.panel.step_1") %></li>
-      <li><%= t("indexa_capital_items.panel.step_2") %></li>
-      <li><%= t("indexa_capital_items.panel.step_3") %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("indexa_capital_items.panel.step_1"),
+               t("indexa_capital_items.panel.step_2"),
+               t("indexa_capital_items.panel.step_3")
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>

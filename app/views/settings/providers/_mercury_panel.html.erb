@@ -2,20 +2,18 @@
   <% active_items = local_assigns[:mercury_items] || @mercury_items || Current.family.mercury_items.active.ordered %>
   <% credentialed_items = active_items.select(&:credentials_configured?) %>
 
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("mercury_items.provider_panel.setup_title") %></p>
-    <ol>
-      <li><%= t("mercury_items.provider_panel.instructions.sign_in_html", link: link_to("Mercury", "https://mercury.com", target: "_blank", rel: "noopener noreferrer", class: "link")) %></li>
-      <li><%= t("mercury_items.provider_panel.instructions.open_tokens") %></li>
-      <li><%= t("mercury_items.provider_panel.instructions.create_token") %></li>
-      <li><%= t("mercury_items.provider_panel.instructions.whitelist_ip_html") %></li>
-      <li><%= t("mercury_items.provider_panel.instructions.copy_token_html") %></li>
-    </ol>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("mercury_items.provider_panel.instructions.sign_in_html", link: link_to("Mercury", "https://mercury.com", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")).html_safe,
+               t("mercury_items.provider_panel.instructions.open_tokens"),
+               t("mercury_items.provider_panel.instructions.create_token"),
+               t("mercury_items.provider_panel.instructions.whitelist_ip_html").html_safe,
+               t("mercury_items.provider_panel.instructions.copy_token_html").html_safe
+             ] %>
 
-    <p class="text-sm text-subdued mt-2">
-      <%= t("mercury_items.provider_panel.sandbox_note_html") %>
-    </p>
-  </div>
+  <p class="text-xs text-secondary -mt-1 px-1">
+    <%= t("mercury_items.provider_panel.sandbox_note_html").html_safe %>
+  </p>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>

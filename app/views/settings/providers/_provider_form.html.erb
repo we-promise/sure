@@ -4,31 +4,18 @@
 %>
 
 <div class="space-y-4">
-  <div>
-    <% if configuration.provider_description.present? %>
-      <div class="text-sm text-secondary mb-4 prose prose-sm">
-        <%= markdown(configuration.provider_description).html_safe %>
-      </div>
-    <% end %>
+  <% if configuration.provider_description.present? %>
+    <div class="text-sm text-secondary prose prose-sm">
+      <%= markdown(configuration.provider_description).html_safe %>
+    </div>
+  <% end %>
 
-    <% env_configured = configuration.fields.any? { |f| f.env_key && ENV[f.env_key].present? } %>
-    <% if env_configured %>
-      <p class="text-sm text-secondary">
-        Configuration can be set via environment variables or overridden below.
-      </p>
-    <% end %>
-
-    <% if configuration.fields.any? { |f| f.description.present? } %>
-      <p class="text-secondary text-sm mb-4">Field descriptions:</p>
-      <ul class="text-sm text-secondary mb-4 list-disc ml-6 space-y-2">
-        <% configuration.fields.each do |field| %>
-          <% if field.description.present? %>
-            <li><strong><%= field.label %>:</strong> <%= field.description %></li>
-          <% end %>
-        <% end %>
-      </ul>
-    <% end %>
-  </div>
+  <% env_configured = configuration.fields.any? { |f| f.env_key && ENV[f.env_key].present? } %>
+  <% if env_configured %>
+    <p class="text-sm text-secondary">
+      Configuration can be set via environment variables or overridden below.
+    </p>
+  <% end %>
 
   <%= styled_form_with model: Setting.new,
                        url: settings_providers_path,
@@ -37,33 +24,28 @@
       <% configuration.fields.each do |field| %>
         <%
           env_value = ENV[field.env_key] if field.env_key
-          # Use dynamic hash-style access - works without explicit field declaration
           setting_value = Setting[field.setting_key]
-
-          # Show the setting value if it exists, otherwise show ENV value
-          # This allows users to see what they've overridden
           current_value = setting_value.presence || env_value
 
-          # Mask secret values if they exist
           display_value = if field.secret && current_value.present?
             "********"
           else
             current_value
           end
 
-          # Determine input type
           input_type = field.secret ? "password" : "text"
-
-          # Don't disable fields - allow overriding ENV variables
-          disabled = false
         %>
 
-        <%= form.text_field field.setting_key,
-                            label: field.label,
-                            type: input_type,
-                            placeholder: field.default || (field.required ? "" : "Optional"),
-                            value: display_value,
-                            disabled: disabled %>
+        <div class="space-y-1">
+          <%= form.text_field field.setting_key,
+                              label: field.label,
+                              type: input_type,
+                              placeholder: field.default || (field.required ? "" : "Optional"),
+                              value: display_value %>
+          <% if field.description.present? %>
+            <p class="text-xs text-secondary px-1"><%= field.description %></p>
+          <% end %>
+        </div>
       <% end %>
 
       <div class="flex justify-end">
@@ -72,5 +54,4 @@
       </div>
     </div>
   <% end %>
-
 </div>

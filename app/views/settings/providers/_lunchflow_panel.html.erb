@@ -1,18 +1,10 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
-    <ol>
-      <li>Visit <a href="https://www.lunchflow.app/?atp=BiDIYS" target="_blank" rel="noopener noreferrer" class="link">Lunch Flow</a> to get your API key</li>
-      <li>Paste your API key below and click the Save button</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
-    </ol>
-
-    <p class="text-primary font-medium">Field descriptions:</p>
-    <ul>
-      <li><strong>API Key:</strong> Your Lunch Flow API key for authentication (required)</li>
-      <li><strong>Base URL:</strong> Base URL for Lunch Flow API (optional, defaults to https://lunchflow.app/api/v1)</li>
-    </ul>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               (link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " — get an API key.").html_safe,
+               "Paste your key below and connect.",
+               "Then head to Accounts to link your synced accounts."
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>

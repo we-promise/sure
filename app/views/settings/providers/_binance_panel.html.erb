@@ -9,14 +9,12 @@
         ])
       ) %>
 
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("settings.providers.binance_panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("settings.providers.binance_panel.step1_html").html_safe %></li>
-      <li><%= t("settings.providers.binance_panel.step2") %></li>
-      <li><%= t("settings.providers.binance_panel.step3") %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.binance_panel.step1_html").html_safe,
+               t("settings.providers.binance_panel.step2"),
+               t("settings.providers.binance_panel.step3")
+             ] %>
 
   <div class="bg-surface border border-primary p-3 rounded-lg text-sm">
     <p class="font-medium text-primary"><%= t("settings.providers.binance_panel.ip_hint_title") %></p>

@@ -1,27 +1,15 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
-    <ol>
-      <li>Visit your <a href="https://enablebanking.com" target="_blank" rel="noopener noreferrer" class="link">Enable Banking</a> developer account to get your credentials</li>
-      <li>Select your country code from the dropdown below</li>
-      <li>Enter your Application ID and paste your Client Certificate (including the private key)</li>
-      <li>Click Save Configuration, then use "Add Connection" to link your bank</li>
-      <li><%= t("settings.providers.enable_banking_panel.callback_url_instruction", callback_url: enable_banking_callback_url) %></li>
-    </ol>
-
-    <p class="text-primary font-medium">Field descriptions:</p>
-    <ul>
-      <li><strong>Country Code:</strong> ISO 3166-1 alpha-2 country code (e.g., GB, DE, FR) - determines available banks</li>
-      <li><strong>Application ID:</strong> The ID generated in your Enable Banking developer account</li>
-      <li><strong>Client Certificate:</strong> The certificate generated when you created your application (must include the private key)</li>
-    </ul>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               (link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " — get your developer credentials.").html_safe,
+               "Pick your country and paste the Application ID + Client Certificate below.",
+               "Save, then use Add Connection to link your bank.",
+               t("settings.providers.enable_banking_panel.callback_url_instruction", callback_url: enable_banking_callback_url)
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
-    </div>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <%

@@ -199,6 +199,9 @@ en:
         beta: Beta
         alpha: Alpha
       drawer_trust_statement: "Read-only — Sure can never move money. Stored encrypted."
+      setup_steps:
+        eyebrow: Setup
+        need_help: "Need help?"
       connect: Connect
       groups:
         your_connections: Your connections

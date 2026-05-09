@@ -1,14 +1,12 @@
 <div id="coinbase-providers-panel" class="space-y-4">
   <% items = local_assigns[:coinbase_items] || @coinbase_items || Current.family.coinbase_items.active.ordered %>
 
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("settings.providers.coinbase_panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("settings.providers.coinbase_panel.step1_html").html_safe %></li>
-      <li><%= t("settings.providers.coinbase_panel.step2") %></li>
-      <li><%= t("settings.providers.coinbase_panel.step3") %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.coinbase_panel.step1_html").html_safe,
+               t("settings.providers.coinbase_panel.step2"),
+               t("settings.providers.coinbase_panel.step3")
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
