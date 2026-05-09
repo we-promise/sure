@@ -26,6 +26,9 @@ class SophtronAccount < ApplicationRecord
   has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
+  scope :requires_manual_sync, -> { where(manual_sync: true) }
+  scope :automatic_sync, -> { where(manual_sync: false) }
+
   validates :name, :currency, presence: true
   validate :has_balance
   # Returns the linked Maybe Account for this Sophtron account.
@@ -33,6 +36,18 @@ class SophtronAccount < ApplicationRecord
   # @return [Account, nil] The linked Maybe Account, or nil if not linked
   def current_account
     account
+  end
+
+  def institution_name
+    institution_metadata.to_h["name"].presence || sophtron_item&.institution_name
+  end
+
+  def institution_user_institution_id
+    institution_metadata.to_h["user_institution_id"].presence || sophtron_item&.user_institution_id
+  end
+
+  def institution_key
+    institution_user_institution_id.presence || institution_name
   end
 
   # Updates this SophtronAccount with fresh data from the Sophtron API.
@@ -78,6 +93,7 @@ class SophtronAccount < ApplicationRecord
       customer_id: first_present(snapshot, :customer_id, :CustomerID) || customer_id,
       member_id: first_present(snapshot, :member_id, :MemberID) || member_id
     )
+    self.manual_sync = true if new_record? && sophtron_item&.manual_sync?
 
     save!
   end

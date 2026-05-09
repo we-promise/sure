@@ -43,6 +43,7 @@ class SophtronItem < ApplicationRecord
   validates :access_key, presence: true, on: :create
 
   belongs_to :family
+  belongs_to :current_job_sophtron_account, class_name: "SophtronAccount", optional: true
   has_one_attached :logo
 
   has_many :sophtron_accounts, dependent: :destroy
@@ -83,12 +84,57 @@ class SophtronItem < ApplicationRecord
     raise
   end
 
-  def process_accounts
-    return [] if sophtron_accounts.empty?
+  def linked_visible_sophtron_accounts
+    sophtron_accounts.joins(:account).merge(Account.visible)
+  end
+
+  def automatic_sync_sophtron_accounts
+    return linked_visible_sophtron_accounts.none if manual_sync?
+
+    linked_visible_sophtron_accounts.automatic_sync
+  end
+
+  def manual_sync_required?
+    manual_sync? || sophtron_accounts.requires_manual_sync.exists?
+  end
+
+  def manual_sync_sophtron_accounts
+    linked_accounts = sophtron_accounts.joins(:account_provider).order(:created_at, :id)
+    manual_accounts = linked_accounts.requires_manual_sync
+
+    return manual_accounts if manual_accounts.exists?
+
+    manual_sync? ? linked_accounts : linked_accounts.none
+  end
+
+  def connected_institution_options
+    sophtron_accounts.order(:created_at, :id).filter_map do |sophtron_account|
+      institution_key = sophtron_account.institution_key
+      next if institution_key.blank?
+
+      {
+        institution_key: institution_key,
+        name: sophtron_account.institution_name.presence || institution_display_name
+      }
+    end.uniq { |institution| institution[:institution_key].to_s }
+  end
+
+  def manual_sync_required_for_institution?(institution_key)
+    institution_accounts = sophtron_accounts.select do |sophtron_account|
+      sophtron_account.institution_key.to_s == institution_key.to_s
+    end
+
+    return manual_sync? if institution_accounts.empty?
+
+    institution_accounts.any?(&:manual_sync?) || (manual_sync? && !sophtron_accounts.requires_manual_sync.exists?)
+  end
+
+  def process_accounts(sophtron_accounts_scope: linked_visible_sophtron_accounts)
+    return [] if sophtron_accounts_scope.empty?
 
     results = []
     # Only process accounts that are linked and have active status
-    sophtron_accounts.joins(:account).merge(Account.visible).each do |sophtron_account|
+    sophtron_accounts_scope.each do |sophtron_account|
       begin
         result = SophtronAccount::Processor.new(sophtron_account).process
         results << { sophtron_account_id: sophtron_account.id, success: true, result: result }
@@ -102,12 +148,13 @@ class SophtronItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, sophtron_accounts_scope: linked_visible_sophtron_accounts)
+    linked_accounts = sophtron_accounts_scope.includes(:account_provider).filter_map(&:current_account)
+    return [] if linked_accounts.empty?
 
     results = []
     # Only schedule syncs for active accounts
-    accounts.visible.each do |account|
+    linked_accounts.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,

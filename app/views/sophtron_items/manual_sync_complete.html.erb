@@ -1,0 +1,23 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="rounded-lg border border-primary bg-container-inset p-3">
+          <div class="flex items-start gap-3">
+            <%= icon "check-circle", size: "sm", color: "success", class: "mt-0.5" %>
+            <div class="space-y-1 text-sm">
+              <p class="font-medium text-primary"><%= t(".message") %></p>
+              <p class="text-xs text-secondary"><%= t(".description") %></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <%= render DS::Link.new(text: t(".close"), href: accounts_path, variant: :primary, data: { turbo_frame: "_top" }) %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
