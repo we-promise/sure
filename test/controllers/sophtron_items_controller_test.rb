@@ -701,7 +701,10 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal automatic_sync.id, @item.syncs.ordered.second.id
-    assert_equal [], @item.syncs.ordered.first.sync_stats["manual_sync_processed_sophtron_account_ids"]
+    manual_sync = @item.syncs.ordered.first
+    assert_equal [], manual_sync.sync_stats["manual_sync_processed_sophtron_account_ids"]
+    assert_includes response.body, "value=\"#{manual_sync.id}\""
+    assert_not_includes response.body, "value=\"#{automatic_sync.id}\""
   end
 
   test "manual sync does not start another refresh while one is active" do

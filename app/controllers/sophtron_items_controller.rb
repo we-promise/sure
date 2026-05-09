@@ -1068,7 +1068,7 @@ class SophtronItemsController < ApplicationController
       @account_id = params[:account_id]
       @return_to = safe_return_to_path
       @manual_sync_flow = manual_sync_flow?
-      @manual_sync_id = params[:sync_id] || @sophtron_item.syncs.visible.first&.id
+      @manual_sync_id = manual_sync_record&.id if @manual_sync_flow
       @manual_sync_sophtron_account_id = params[:sophtron_account_id] || @sophtron_item.current_job_sophtron_account_id
       @poll_interval_ms = CONNECTION_STATUS_POLL_INTERVAL_MS
       @post_mfa_polling = post_mfa_polling?
