@@ -3,19 +3,20 @@
   status        = entry[:summary][:status]
   meta          = entry[:summary][:meta]
   last_synced   = entry[:summary][:last_synced_at]
-  warn_or_err   = [ :warn, :err ].include?(status)
-  border_class  = case status
-                  when :warn then "border border-warning/25"
-                  when :err  then "border border-destructive/25"
-                  else            "border border-transparent"
-                  end
+  border_class  =
+    case status
+    when :warn then "border border-warning/25"
+    when :err  then "border border-destructive/25"
+    else            "border border-transparent"
+    end
   sync_action   = entry[:partial].present? ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: last_synced) : nil
   status_pill   = render("settings/providers/status_pill", status: status)
   maturity_lbl  = Settings::ProviderCard.maturity_label(entry[:maturity])
+  details_data  = entry[:auto_open_param].present? ? { controller: "auto-open", auto_open_param_value: entry[:auto_open_param] } : {}
 %>
-<details <%= "open" if open %>
-         class="group bg-container shadow-border-xs rounded-xl <%= border_class %>"
-         <%= "data-controller=\"auto-open\" data-auto-open-param-value=\"#{h(entry[:auto_open_param])}\"".html_safe if entry[:auto_open_param].present? %>>
+<%= tag.details open: open,
+                class: "group bg-container shadow-border-xs rounded-xl #{border_class}",
+                data: details_data do %>
   <summary class="flex items-center gap-3 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
     <%= icon "chevron-right", size: "sm", class: "!w-3.5 !h-3.5 text-secondary group-open:rotate-90 transition-transform" %>
     <div class="flex items-center gap-2 flex-wrap min-w-0 flex-1">
@@ -39,4 +40,4 @@
       </turbo-frame>
     <% end %>
   </div>
-</details>
+<% end %>

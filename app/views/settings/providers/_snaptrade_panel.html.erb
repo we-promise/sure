@@ -51,6 +51,16 @@
 
   <% items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.where.not(client_id: [nil, ""]) %>
 
+  <% if items&.any? %>
+    <% item = items.first %>
+    <% unless item.user_registered? %>
+      <div class="flex items-center gap-2 border-t border-primary pt-4 mt-4">
+        <span class="w-2 h-2 bg-warning rounded-full"></span>
+        <p class="text-sm text-secondary"><%= t("providers.snaptrade.status_needs_registration") %></p>
+      </div>
+    <% end %>
+  <% end %>
+
   <% if items&.any? && items.first.user_registered? %>
     <% item = items.first %>
     <div class="border-t border-primary pt-4 mt-4">

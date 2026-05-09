@@ -16,14 +16,16 @@
       <p class="text-secondary"><%= t("settings.providers.bank_sync.lede") %></p>
       <% if @connected.any? || @needs_attention.any? %>
         <% sync_all_disabled = Current.family.last_sync_all_attempted_at.present? && Current.family.last_sync_all_attempted_at > 30.seconds.ago %>
-        <%= button_to sync_all_settings_providers_path,
-                      method: :post,
-                      disabled: sync_all_disabled,
-                      title: sync_all_disabled ? t("settings.providers.sync_all_recently") : nil,
-                      class: "inline-flex items-center gap-2 shrink-0 whitespace-nowrap px-3 py-[7px] text-[13px] font-medium text-primary border border-alpha-black-100 rounded-[10px] bg-transparent hover:bg-container-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed" do %>
-          <%= icon "refresh-cw", size: "sm", class: "!w-3.5 !h-3.5" %>
-          <%= t("settings.providers.sync_all") %>
-        <% end %>
+        <%= render DS::Link.new(
+              text: t("settings.providers.sync_all"),
+              icon: "refresh-cw",
+              variant: "outline",
+              href: sync_all_settings_providers_path,
+              method: :post,
+              title: sync_all_disabled ? t("settings.providers.sync_all_recently") : nil,
+              aria: { disabled: sync_all_disabled.to_s },
+              class: sync_all_disabled ? "opacity-50 pointer-events-none" : nil
+            ) %>
       <% end %>
     </div>
 

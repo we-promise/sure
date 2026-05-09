@@ -128,6 +128,29 @@ module SettingsHelper
     end
   end
 
+  # Slim health-strip data for the providers index. Pulls counts from the
+  # already-resolved entry summaries plus the family's distinct synced-account
+  # count for the trailing stat. Returns a hash consumed by the
+  # `settings/providers/_health_strip` partial.
+  def provider_health_strip(connected:, needs_attention:)
+    active_entries  = connected + needs_attention
+    last_synced_at  = active_entries.map { |e| e[:summary][:last_synced_at] }.compact.max
+    accounts_count  = Current.family.accounts.joins(:account_providers).distinct.count
+
+    {
+      connected:        active_entries.size,
+      needs_attention:  needs_attention.size,
+      accounts_syncing: accounts_count,
+      last_synced_at:   last_synced_at
+    }
+  end
+
+  # Strips the leading "about " from `time_ago_in_words` so copy reads as
+  # "Synced 6 hours ago" instead of "Synced about 6 hours ago".
+  def concise_time_ago(time)
+    time_ago_in_words(time).sub(/\Aabout /, "")
+  end
+
   private
     def sync_based_summary(provider_key)
       health = @provider_sync_health&.dig(provider_key) || {}
@@ -138,7 +161,7 @@ module SettingsHelper
       elsif health[:stale]
         { status: :warn, meta: t("settings.providers.meta.no_recent_sync") }
       elsif last_synced_at.present?
-        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at).sub(/^about /, "")) }
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: concise_time_ago(last_synced_at)) }
       else
         { status: :ok }
       end
@@ -171,7 +194,7 @@ module SettingsHelper
       return { status: :warn, meta: t("settings.providers.meta.no_recent_sync"), last_synced_at: last_synced_at } if health[:stale]
 
       if last_synced_at.present?
-        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at).sub(/^about /, "")), last_synced_at: last_synced_at }
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: concise_time_ago(last_synced_at)), last_synced_at: last_synced_at }
       else
         { status: :ok, last_synced_at: nil }
       end

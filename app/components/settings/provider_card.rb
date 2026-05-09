@@ -25,8 +25,7 @@ class Settings::ProviderCard < ApplicationComponent
   attr_reader :name, :tagline, :logo_bg, :logo_text
 
   def maturity_label
-    label_key = MATURITY_LABELS[@maturity]
-    t(label_key) if label_key
+    self.class.maturity_label(@maturity)
   end
 
   def meta_line

@@ -129,6 +129,7 @@ en:
       status_connected:
         one: "%{count} account from SnapTrade"
         other: "%{count} accounts from SnapTrade"
+      status_needs_registration: "Credentials saved — finish registration to connect a brokerage."
       needs_setup:
         one: "%{count} needs setup"
         other: "%{count} need setup"

@@ -133,6 +133,15 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert_no_selector "a[data-providers-filter-target='card']", text: /SimpleFIN/i
   end
 
+  test "search shows the empty filter message when no provider matches" do
+    visit settings_providers_path
+
+    find('[data-providers-filter-target="input"]').set("zzz_no_match_zzz")
+
+    assert_selector '[data-providers-filter-target="empty"]', text: I18n.t("settings.providers.empty_filter")
+    assert_no_selector "a[data-providers-filter-target='card']", visible: true
+  end
+
   test "available providers render as a card grid" do
     visit settings_providers_path
 
