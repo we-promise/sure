@@ -14,7 +14,17 @@ Rails.application.config.after_initialize do
   MigrationNotice.register(
     key:        :plaid_oauth_redirect_uri,
     scope:      :providers,
-    condition:  ->(family) { family.provider_connections.exists?(provider_key: "plaid") },
+    # Only families with connections created by MigrateLegacyPlaidToFramework
+    # see this notice — they're the ones whose Plaid Dashboard still has the
+    # pre-PR `accounts_url` redirect URI registered. Connections created via
+    # the new EmbeddedLink flow are on the framework URI from day one and
+    # don't need operator action.
+    condition: ->(family) {
+      family.provider_connections
+        .where(provider_key: "plaid")
+        .where("(metadata->>'migrated_from_legacy')::boolean = true")
+        .exists?
+    },
     copyable_value: ->(view) {
       view.provider_auth_url(provider_key: "plaid", host: view.configured_host)
     }

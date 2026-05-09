@@ -83,6 +83,11 @@ class MigrateLegacyPlaidToFramework < ActiveRecord::Migration[7.2]
           credentials:  { "access_token" => item.access_token },
           status:       STATUS_MAP.fetch(item.status) { raise "Unknown PlaidItem status: #{item.status.inspect}" },
           metadata: {
+            # Discriminator used by MigrationNotice (e.g. plaid_oauth_redirect_uri):
+            # only legacy-migrated connections need the operator to update their
+            # Plaid Dashboard. Connections created via the new EmbeddedLink flow
+            # already use the framework redirect URI from day one.
+            "migrated_from_legacy"    => true,
             "plaid_item_id"           => item.plaid_id,
             "region"                  => item.plaid_region,
             "next_cursor"             => item.next_cursor,
