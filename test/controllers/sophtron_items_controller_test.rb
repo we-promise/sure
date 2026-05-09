@@ -694,6 +694,14 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
       [ first_sophtron_account.id, second_sophtron_account.id ].map(&:to_s),
       @item.syncs.ordered.first.sync_stats["manual_sync_processed_sophtron_account_ids"]
     )
+    stats = @item.syncs.ordered.first.sync_stats
+    assert_equal 2, stats["total_accounts"]
+    assert_equal 2, stats["linked_accounts"]
+    assert_equal 0, stats["unlinked_accounts"]
+    assert_equal 0, stats["total_errors"]
+    assert stats.key?("tx_seen")
+    assert stats.key?("tx_imported")
+    assert stats.key?("tx_updated")
   end
 
   test "submit_mfa preserves manual sync context" do
