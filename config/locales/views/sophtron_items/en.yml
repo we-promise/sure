@@ -209,6 +209,7 @@ en:
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:
+      already_running: Sophtron manual sync is already in progress.
       api_error: "Sophtron manual sync failed: %{message}"
       failed: Sophtron manual sync failed
       no_linked_accounts: This Sophtron institution does not have any linked accounts to sync.

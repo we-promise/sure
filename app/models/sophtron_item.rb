@@ -89,6 +89,8 @@ class SophtronItem < ApplicationRecord
   end
 
   def automatic_sync_sophtron_accounts
+    return linked_visible_sophtron_accounts.none if manual_sync?
+
     linked_visible_sophtron_accounts.automatic_sync
   end
 

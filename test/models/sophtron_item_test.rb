@@ -189,4 +189,30 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_equal [ auto_account ], manual_item.automatic_sync_sophtron_accounts.to_a
     assert_equal [ manual_account ], manual_item.manual_sync_sophtron_accounts.to_a
   end
+
+  test "whole item manual mode removes linked accounts from automatic sync scope" do
+    manual_item = @family.sophtron_items.create!(
+      name: "Manual Sophtron",
+      user_id: "manual-user",
+      access_key: Base64.strict_encode64("secret-key"),
+      manual_sync: true
+    )
+    first_account = manual_item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Manual Sophtron Checking",
+      currency: "USD",
+      balance: 100
+    )
+    second_account = manual_item.sophtron_accounts.create!(
+      account_id: "acct-2",
+      name: "Manual Sophtron Card",
+      currency: "USD",
+      balance: 200
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: first_account)
+    AccountProvider.create!(account: accounts(:credit_card), provider: second_account)
+
+    assert_empty manual_item.automatic_sync_sophtron_accounts
+    assert_equal [ first_account, second_account ], manual_item.manual_sync_sophtron_accounts.to_a
+  end
 end

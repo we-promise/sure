@@ -614,6 +614,33 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert second_sophtron_account.reload.manual_sync?
   end
 
+  test "toggle_manual_sync makes targeted institution automatic when whole item is manual" do
+    first_sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Apple Card",
+      currency: "USD",
+      balance: 100,
+      institution_metadata: { name: "Apple", user_institution_id: "ui-apple" }
+    )
+    second_sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-2",
+      name: "Amazon Card",
+      currency: "USD",
+      balance: 200,
+      institution_metadata: { name: "Amazon", user_institution_id: "ui-amazon" }
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: first_sophtron_account)
+    AccountProvider.create!(account: accounts(:credit_card), provider: second_sophtron_account)
+    @item.update!(manual_sync: true)
+
+    post toggle_manual_sync_sophtron_item_url(@item), params: { user_institution_id: "ui-amazon" }
+
+    assert_not @item.reload.manual_sync?
+    assert first_sophtron_account.reload.manual_sync?
+    assert_not second_sophtron_account.reload.manual_sync?
+    assert_equal "Sophtron institution will sync automatically.", flash[:notice]
+  end
+
   test "manual sync starts Sophtron refresh and renders MFA challenge" do
     @item.update!(user_institution_id: "ui-1")
     sophtron_account = @item.sophtron_accounts.create!(
@@ -645,6 +672,62 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "job-1", @item.reload.current_job_id
     assert_equal sophtron_account.id, @item.current_job_sophtron_account_id
     assert @item.syncs.ordered.first.syncing?
+  end
+
+  test "manual sync creates its own sync when an automatic sync is visible" do
+    @item.update!(user_institution_id: "ui-1")
+    automatic_sync = @item.syncs.create!
+    automatic_sync.start!
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "job-1" })
+    provider.expects(:get_job_information).with("job-1").returns({
+      SecurityQuestion: [ "What is your favorite color?" ].to_json,
+      LastStatus: "Waiting"
+    })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    assert_difference -> { @item.syncs.count }, 1 do
+      post sync_sophtron_item_url(@item)
+    end
+
+    assert_response :success
+    assert_equal automatic_sync.id, @item.syncs.ordered.second.id
+    assert_equal [], @item.syncs.ordered.first.sync_stats["manual_sync_processed_sophtron_account_ids"]
+  end
+
+  test "manual sync does not start another refresh while one is active" do
+    @item.update!(user_institution_id: "ui-1")
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+    sync = @item.syncs.create!(sync_stats: { SophtronItemsController::MANUAL_SYNC_PROCESSED_ACCOUNT_IDS_KEY => [] })
+    sync.start!
+    @item.update!(current_job_id: "job-1", current_job_sophtron_account_id: sophtron_account.id)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+
+    post sync_sophtron_item_url(@item)
+
+    assert_redirected_to connection_status_sophtron_item_path(
+      @item,
+      manual_sync: true,
+      sync_id: sync.id,
+      sophtron_account_id: sophtron_account.id
+    )
+    assert_equal "Sophtron manual sync is already in progress.", flash[:alert]
   end
 
   test "manual sync refreshes every linked Sophtron account" do
@@ -702,6 +785,68 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert stats.key?("tx_seen")
     assert stats.key?("tx_imported")
     assert stats.key?("tx_updated")
+  end
+
+  test "manual sync clears job pointers when refresh job fails" do
+    @item.update!(user_institution_id: "ui-1")
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "job-1" })
+    provider.expects(:get_job_information).with("job-1").returns({
+      SuccessFlag: false,
+      LastStatus: "Timeout"
+    })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    post sync_sophtron_item_url(@item)
+
+    assert_redirected_to accounts_path
+    @item.reload
+    assert_nil @item.current_job_id
+    assert_nil @item.current_job_sophtron_account_id
+    assert_equal "requires_update", @item.status
+    assert_equal "Sophtron manual sync failed", @item.last_connection_error
+    assert @item.syncs.ordered.first.failed?
+  end
+
+  test "manual sync fails and clears job pointers when processing raises" do
+    @item.update!(user_institution_id: "ui-1")
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: accounts(:depository), provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "job-1" })
+    provider.expects(:get_job_information).with("job-1").returns({ LastStatus: "Completed" })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+    SophtronItem::Importer.any_instance.expects(:import_transactions_after_refresh)
+                           .with(sophtron_account)
+                           .returns({ success: true, transactions_count: 1 })
+    SophtronAccount::Processor.any_instance.expects(:process).raises(StandardError.new("processor failed"))
+
+    post sync_sophtron_item_url(@item)
+
+    assert_redirected_to accounts_path
+    @item.reload
+    assert_nil @item.current_job_id
+    assert_nil @item.current_job_sophtron_account_id
+    assert_equal "requires_update", @item.status
+    assert_equal "processor failed", @item.last_connection_error
+    assert @item.syncs.ordered.first.failed?
+    assert_includes flash[:alert], "processor failed"
   end
 
   test "submit_mfa preserves manual sync context" do

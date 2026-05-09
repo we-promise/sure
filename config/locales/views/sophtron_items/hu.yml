@@ -169,6 +169,7 @@ hu:
       no_accounts: "Nincs beállítandó számla."
       success: "%{count} számla sikeresen létrehozva."
     sync:
+      already_running: A Sophtron kézi szinkronizálása már folyamatban van.
       api_error: "A Sophtron kézi szinkronizálása sikertelen: %{message}"
       failed: A Sophtron kézi szinkronizálása sikertelen
       no_linked_accounts: Ehhez a Sophtron intézményhez nincs szinkronizálható összekapcsolt számla.

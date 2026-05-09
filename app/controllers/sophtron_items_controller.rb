@@ -449,9 +449,14 @@ class SophtronItemsController < ApplicationController
     toggle_accounts = manual_sync_toggle_sophtron_accounts
 
     if toggle_accounts.exists?
-      enabled = !toggle_accounts.requires_manual_sync.exists?
+      enabled = if @sophtron_item.manual_sync?
+        @sophtron_item.sophtron_accounts.where.not(id: toggle_accounts.select(:id)).update_all(manual_sync: true, updated_at: Time.current)
+        false
+      else
+        !toggle_accounts.requires_manual_sync.exists?
+      end
       toggle_accounts.update_all(manual_sync: enabled, updated_at: Time.current)
-      @sophtron_item.update!(manual_sync: false) if @sophtron_item.manual_sync?
+      @sophtron_item.update!(manual_sync: false) unless enabled
     elsif params[:institution_key].present? || params[:user_institution_id].present?
       redirect_back_or_to accounts_path, alert: t("sophtron_items.sync.no_linked_accounts")
       return
@@ -634,23 +639,42 @@ class SophtronItemsController < ApplicationController
   private
 
     def start_manual_sync
+      if @sophtron_item.current_job_sophtron_account_id.present?
+        redirect_to active_manual_sync_path, alert: t(".already_running")
+        return
+      end
+
       unless linked_manual_sync_sophtron_accounts.exists?
         redirect_back_or_to accounts_path, alert: t(".no_linked_accounts")
         return
       end
 
-      sync = @sophtron_item.syncs.visible.first || @sophtron_item.syncs.create!
+      sync = @sophtron_item.syncs.create!
       sync.start! if sync.may_start?
+      @manual_sync = sync
 
       provider = @sophtron_item.sophtron_provider
       raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
 
-      reset_manual_sync_progress!(sync) unless @sophtron_item.current_job_sophtron_account_id.present?
+      reset_manual_sync_progress!(sync)
       start_next_manual_sync_account(sync, provider)
     rescue Provider::Sophtron::Error => e
       fail_manual_sync!(sync, e.message) if defined?(sync) && sync.present?
       Rails.logger.error("Sophtron manual sync error: #{e.message}")
       redirect_back_or_to accounts_path, alert: t(".api_error", message: e.message)
+    end
+
+    def active_manual_sync_path
+      return accounts_path if @sophtron_item.current_job_id.blank?
+
+      connection_status_sophtron_item_path(
+        @sophtron_item,
+        connection_context_params.merge(
+          manual_sync: true,
+          sync_id: manual_sync_record&.id,
+          sophtron_account_id: @sophtron_item.current_job_sophtron_account_id
+        )
+      )
     end
 
     def start_next_manual_sync_account(sync, provider)
@@ -700,8 +724,9 @@ class SophtronItemsController < ApplicationController
         prepare_connection_status_context
         render :mfa, layout: false
       elsif Provider::Sophtron.job_failed?(job)
-        fail_manual_sync!(sync, t(".failed"))
-        redirect_back_or_to accounts_path, alert: t(".failed")
+        failure_message = t(".failed")
+        fail_manual_sync_and_clear_job!(sync, failure_message)
+        redirect_back_or_to accounts_path, alert: failure_message
       elsif Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
         complete_manual_sync!(sophtron_account, provider, sync)
         start_next_manual_sync_account(sync, provider)
@@ -726,7 +751,7 @@ class SophtronItemsController < ApplicationController
       complete_manual_sync!(sophtron_account, provider, sync)
       start_next_manual_sync_account(sync, provider)
     rescue Provider::Sophtron::Error => e
-      fail_manual_sync!(sync, e.message) if defined?(sync) && sync.present?
+      fail_manual_sync_and_clear_job!(sync, e.message) if defined?(sync) && sync.present?
       render_api_error(t("sophtron_items.sync.api_error", message: e.message), accounts_path)
     end
 
@@ -743,6 +768,10 @@ class SophtronItemsController < ApplicationController
       end
 
       processing_result = SophtronAccount::Processor.new(sophtron_account.reload).process
+    rescue StandardError => e
+      fail_manual_sync_and_clear_job!(sync, e.message)
+      raise Provider::Sophtron::Error.new(e.message, :api_error)
+    else
       mark_manual_sync_account_processed!(sync, sophtron_account)
       collect_manual_sync_stats!(sync, processing_result)
       @sophtron_item.update!(
@@ -766,6 +795,22 @@ class SophtronItemsController < ApplicationController
       @manual_sync = sync
     end
 
+    def fail_manual_sync_and_clear_job!(sync, message)
+      clear_manual_sync_job!(message, status: :requires_update)
+      fail_manual_sync!(sync, message)
+    end
+
+    def clear_manual_sync_job!(message = nil, status: nil)
+      attributes = {
+        current_job_id: nil,
+        current_job_sophtron_account_id: nil
+      }
+      attributes[:last_connection_error] = message if message.present?
+      attributes[:status] = status if status.present?
+
+      @sophtron_item.update!(attributes)
+    end
+
     def fail_manual_sync!(sync, message)
       return unless sync
 
@@ -775,8 +820,16 @@ class SophtronItemsController < ApplicationController
     end
 
     def manual_sync_record
+      return @manual_sync if defined?(@manual_sync) && @manual_sync.present?
+
       sync = @sophtron_item.syncs.find_by(id: params[:sync_id]) if params[:sync_id].present?
-      sync || @sophtron_item.syncs.visible.first
+      sync || visible_manual_sync_record
+    end
+
+    def visible_manual_sync_record
+      @sophtron_item.syncs.visible.ordered.detect do |sync|
+        sync.sync_stats.to_h.key?(MANUAL_SYNC_PROCESSED_ACCOUNT_IDS_KEY)
+      end
     end
 
     def linked_manual_sync_sophtron_accounts
