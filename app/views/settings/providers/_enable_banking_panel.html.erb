@@ -1,9 +1,12 @@
 <div class="space-y-4">
+  <%
+    eb_link = link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+  %>
   <%= render "settings/providers/setup_steps",
              steps: [
-               ("Go to " + link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " and grab your developer credentials.").html_safe,
-               "Pick your country and paste the Application ID + Client Certificate below.",
-               "Save, then use Add Connection to link your bank.",
+               t("settings.providers.enable_banking_panel.step_1_html", link: eb_link),
+               t("settings.providers.enable_banking_panel.step_2"),
+               t("settings.providers.enable_banking_panel.step_3"),
                t("settings.providers.enable_banking_panel.callback_url_instruction", callback_url: enable_banking_callback_url)
              ] %>
 

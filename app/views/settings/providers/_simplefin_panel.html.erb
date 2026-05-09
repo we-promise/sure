@@ -1,9 +1,12 @@
 <div class="space-y-4">
+  <%
+    sf_link = link_to("SimpleFIN Bridge", "https://beta-bridge.simplefin.org", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+  %>
   <%= render "settings/providers/setup_steps",
              steps: [
-               ("Go to " + link_to("SimpleFIN Bridge", "https://beta-bridge.simplefin.org", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " for a one-time setup token.").html_safe,
-               "Paste the token below and connect.",
-               "Then head to Accounts to link your synced accounts."
+               t("settings.providers.simplefin_panel.step_1_html", link: sf_link),
+               t("settings.providers.simplefin_panel.step_2"),
+               t("settings.providers.simplefin_panel.step_3")
              ] %>
 
   <% if defined?(@error_message) && @error_message.present? %>

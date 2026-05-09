@@ -1,9 +1,12 @@
 <div class="space-y-4">
+  <%
+    lf_link = link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+  %>
   <%= render "settings/providers/setup_steps",
              steps: [
-               ("Go to " + link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " and create an API key.").html_safe,
-               "Paste your key below and connect.",
-               "Then head to Accounts to link your synced accounts."
+               t("settings.providers.lunchflow_panel.step_1_html", link: lf_link),
+               t("settings.providers.lunchflow_panel.step_2"),
+               t("settings.providers.lunchflow_panel.step_3")
              ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>

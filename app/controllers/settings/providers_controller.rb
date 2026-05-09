@@ -100,9 +100,11 @@ class Settings::ProvidersController < ApplicationController
     return redirect_to settings_providers_path unless syncable_type
 
     items = syncable_type.constantize.where(family: Current.family).syncable
-    items.each { |item| item.sync_later unless item.syncing? }
+    scheduled = items.reject(&:syncing?)
+    scheduled.each(&:sync_later)
 
-    redirect_to settings_providers_path, notice: t("settings.providers.sync_provider_in_progress")
+    notice_key = scheduled.any? ? "settings.providers.sync_provider_in_progress" : "settings.providers.sync_provider_no_items"
+    redirect_to settings_providers_path, notice: t(notice_key)
   end
 
   def connect_form
@@ -125,7 +127,7 @@ class Settings::ProvidersController < ApplicationController
       return render :connect_form
     end
 
-    redirect_to settings_providers_path
+    redirect_to settings_providers_path, alert: t("settings.providers.not_found")
   rescue ActiveRecord::Encryption::Errors::Configuration
     redirect_to settings_providers_path, alert: t("settings.providers.encryption_error.title")
   end

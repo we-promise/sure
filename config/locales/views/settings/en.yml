@@ -282,9 +282,22 @@ en:
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
+        step_1_html: "Go to %{link} and grab your developer credentials."
+        step_2: "Pick your country and paste the Application ID + Client Certificate below."
+        step_3: "Save, then use Add Connection to link your bank."
+      lunchflow_panel:
+        step_1_html: "Go to %{link} and create an API key."
+        step_2: "Paste your key below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+      simplefin_panel:
+        step_1_html: "Go to %{link} for a one-time setup token."
+        step_2: "Paste the token below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
       plaid_panel:
         step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
         step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
         step_3: "Paste your credentials below and connect."
       plaid_eu_panel:
         step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."
+      not_found: Provider not found.
+      sync_provider_no_items: No connections available to sync.

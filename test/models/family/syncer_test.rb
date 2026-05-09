@@ -9,7 +9,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
     family_sync = syncs(:family)
 
     manual_accounts_count = @family.accounts.manual.count
-    plaid_items_count = @family.plaid_items.count
+    plaid_items_count = @family.plaid_items.syncable.count
     binance_items_count = @family.binance_items.syncable.count
 
     syncer = Family::Syncer.new(@family)
