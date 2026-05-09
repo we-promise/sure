@@ -1,4 +1,6 @@
 class SophtronItemsController < ApplicationController
+  include SyncStats::Collector
+
   CONNECTION_STATUS_MAX_POLLS = 6
   LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS = 15
   POST_MFA_CONNECTION_STATUS_MAX_POLLS = 15
@@ -662,6 +664,7 @@ class SophtronItemsController < ApplicationController
           status: :good
         )
         sync.finalize_if_all_children_finalized
+        flash.discard(:alert)
         @manual_sync = sync
         render :manual_sync_complete, layout: false
         return
@@ -739,8 +742,9 @@ class SophtronItemsController < ApplicationController
         raise Provider::Sophtron::Error.new(result[:error] || t("sophtron_items.sync.failed"), :api_error)
       end
 
-      SophtronAccount::Processor.new(sophtron_account.reload).process
+      processing_result = SophtronAccount::Processor.new(sophtron_account.reload).process
       mark_manual_sync_account_processed!(sync, sophtron_account)
+      collect_manual_sync_stats!(sync, processing_result)
       @sophtron_item.update!(
         current_job_id: nil,
         current_job_sophtron_account_id: nil,
@@ -797,8 +801,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def reset_manual_sync_progress!(sync)
-      stats = sync.sync_stats.to_h
-      sync.update!(sync_stats: stats.merge(MANUAL_SYNC_PROCESSED_ACCOUNT_IDS_KEY => []))
+      sync.update!(sync_stats: { MANUAL_SYNC_PROCESSED_ACCOUNT_IDS_KEY => [] })
     end
 
     def mark_manual_sync_account_processed!(sync, sophtron_account)
@@ -806,6 +809,35 @@ class SophtronItemsController < ApplicationController
       processed_ids << sophtron_account.id.to_s
       stats = sync.sync_stats.to_h
       sync.update!(sync_stats: stats.merge(MANUAL_SYNC_PROCESSED_ACCOUNT_IDS_KEY => processed_ids.uniq))
+    end
+
+    def collect_manual_sync_stats!(sync, processing_result)
+      mark_import_started(sync)
+      collect_setup_stats(sync, provider_accounts: @sophtron_item.sophtron_accounts.includes(:account_provider, :account))
+
+      account_ids = @sophtron_item.sophtron_accounts
+                                  .where(id: manual_sync_processed_sophtron_account_ids(sync))
+                                  .includes(:account_provider)
+                                  .filter_map { |sophtron_account| sophtron_account.current_account&.id }
+
+      collect_transaction_stats(
+        sync,
+        account_ids: account_ids,
+        source: "sophtron",
+        window_start: sync.syncing_at || sync.created_at,
+        window_end: Time.current
+      )
+
+      collect_manual_sync_health_stats!(sync, processing_result)
+    end
+
+    def collect_manual_sync_health_stats!(sync, processing_result)
+      if processing_result.is_a?(Hash) && processing_result[:success] == false
+        errors = Array(processing_result[:errors]).presence || [ { message: t("sophtron_items.sync.failed"), category: "transaction_import" } ]
+        collect_health_stats(sync, errors: errors)
+      elsif sync.sync_stats.to_h["total_errors"].to_i.zero?
+        collect_health_stats(sync, errors: nil)
+      end
     end
 
     def manual_sync_processed_sophtron_account_ids(sync)
