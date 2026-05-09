@@ -249,6 +249,11 @@ en:
         title: "%{provider} setup needs your attention"
         copy: "Copy"
         copied: "Copied"
+      plaid_redirect_uri_migration:
+        title: "Action required: Plaid OAuth redirect URI changed"
+        body_html: "OAuth-bank Plaid connections (Chase, Wells Fargo, Capital One, etc.) will fail at next reauth until you add the URI below to your Plaid app's <em>API → Allowed redirect URIs</em>. Webhook URLs were auto-migrated; redirect URIs live in your Plaid Dashboard and must be added manually. Non-OAuth connections continue syncing without action."
+        copy: "Copy"
+        copied: "Copied"
       instructions:
         plaid:
           title: "Setup instructions"

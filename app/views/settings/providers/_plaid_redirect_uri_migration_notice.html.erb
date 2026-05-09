@@ -1,0 +1,34 @@
+<%# Migration callout for self-hosted operators upgrading from the legacy
+    Plaid integration. The framework changes the OAuth redirect URI from
+    accounts_url to provider_auth_url(provider_key: "plaid"); the operator
+    must add the new URI to their Plaid Dashboard before OAuth-bank flows
+    (initial connect AND reauth in update mode) will succeed. Webhook URLs
+    are auto-migrated; redirect URIs cannot be (they live in Plaid's
+    dashboard, not our DB). %>
+<% redirect_uri = provider_auth_url(provider_key: "plaid", host: configured_host) %>
+<div class="p-4 rounded-lg bg-destructive/5 border border-destructive/20"
+     role="alert">
+  <div class="flex items-start gap-3">
+    <%= icon("triangle-alert", class: "w-5 h-5 text-destructive shrink-0 mt-0.5") %>
+    <div class="flex-1 min-w-0">
+      <h3 class="text-sm font-semibold text-primary mb-1">
+        <%= t("settings.providers.plaid_redirect_uri_migration.title") %>
+      </h3>
+      <p class="text-sm text-secondary mb-2">
+        <%= t("settings.providers.plaid_redirect_uri_migration.body_html") %>
+      </p>
+      <div class="flex items-center gap-2 p-2 rounded bg-surface-inset border border-primary"
+           data-controller="clipboard"
+           data-clipboard-success-content-value="<%= t("settings.providers.plaid_redirect_uri_migration.copied") %>">
+        <code class="text-xs text-primary flex-1 break-all"
+              data-clipboard-target="source"><%= redirect_uri %></code>
+        <button type="button"
+                data-action="click->clipboard#copy"
+                data-clipboard-target="button"
+                class="shrink-0 text-xs text-secondary hover:text-primary">
+          <%= t("settings.providers.plaid_redirect_uri_migration.copy") %>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

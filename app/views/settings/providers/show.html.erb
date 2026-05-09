@@ -5,6 +5,10 @@
     <%= render "settings/providers/setup_error", error: setup_error %>
   <% end %>
 
+  <% if Current.family.provider_connections.exists?(provider_key: "plaid") %>
+    <%= render "settings/providers/plaid_redirect_uri_migration_notice" %>
+  <% end %>
+
   <% if @encryption_error %>
     <div class="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
       <div class="flex items-start gap-3">
