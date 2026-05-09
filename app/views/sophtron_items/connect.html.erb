@@ -1,0 +1,82 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <%= form_with url: select_accounts_sophtron_items_path, method: :get, class: "space-y-3" do %>
+          <%= hidden_field_tag :accountable_type, @accountable_type %>
+          <%= hidden_field_tag :account_id, @account&.id %>
+          <%= hidden_field_tag :return_to, @return_to %>
+          <%= hidden_field_tag :connect_new_institution, true if @connect_new_institution %>
+
+          <div class="form-field">
+            <div class="form-field__body">
+              <%= label_tag :institution_name, t(".institution_search_label"), class: "form-field__label" %>
+              <%= text_field_tag :institution_name, @institution_search, placeholder: t(".institution_search_placeholder"), autocomplete: "off", class: "form-field__input" %>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <%= render DS::Button.new(text: t(".search"), type: "submit") %>
+          </div>
+        <% end %>
+
+        <% if @institution_search.present? && @institution_search.length < 2 %>
+          <p class="rounded-lg border border-primary bg-container-inset p-3 text-sm text-secondary"><%= t(".search_too_short") %></p>
+        <% elsif @institution_search.present? && @institutions.empty? %>
+          <p class="rounded-lg border border-primary bg-container-inset p-3 text-sm text-secondary"><%= t(".no_institutions") %></p>
+        <% end %>
+
+        <div class="space-y-3">
+          <% @institutions.each_with_index do |institution, index| %>
+            <% institution = institution.with_indifferent_access %>
+            <% institution_id = institution[:InstitutionID] || institution[:institution_id] %>
+            <% field_suffix = (institution_id.presence || index).to_s.parameterize %>
+            <% bank_username_id = "bank_username_#{field_suffix}" %>
+            <% bank_password_id = "bank_password_#{field_suffix}" %>
+            <%= form_with url: connect_institution_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3 rounded-lg border border-primary bg-container-inset p-3", data: { turbo_frame: "modal" } do %>
+              <%= hidden_field_tag :institution_id, institution_id %>
+              <%= hidden_field_tag :institution_name, institution[:InstitutionName] || institution[:institution_name] %>
+              <%= hidden_field_tag :accountable_type, @accountable_type %>
+              <%= hidden_field_tag :account_id, @account&.id %>
+              <%= hidden_field_tag :return_to, @return_to %>
+              <%= hidden_field_tag :connect_new_institution, true if @connect_new_institution %>
+
+              <h3 class="text-sm font-medium text-primary"><%= institution[:InstitutionName] || institution[:institution_name] %></h3>
+
+              <div class="grid grid-cols-1 gap-3">
+                <div class="form-field">
+                  <div class="form-field__body">
+                    <%= label_tag bank_username_id, t(".username"), class: "form-field__label" %>
+                    <%= text_field_tag :bank_username, nil, id: bank_username_id, autocomplete: "username", class: "form-field__input" %>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <div class="form-field__body">
+                    <%= label_tag bank_password_id, t(".password"), class: "form-field__label" %>
+                    <%= password_field_tag :bank_password, nil, id: bank_password_id, autocomplete: "current-password", class: "form-field__input" %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex justify-end">
+                <%= render DS::Button.new(text: t(".connect"), type: "submit") %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <%= render DS::Link.new(
+                text: t(".cancel"),
+                href: @return_to || accounts_path,
+                variant: :secondary,
+                data: { turbo_frame: "_top", action: "click->DS--dialog#close" }
+              ) %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

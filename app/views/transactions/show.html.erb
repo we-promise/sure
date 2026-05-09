@@ -54,6 +54,7 @@
               url: transaction_path(@entry),
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
+          <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
           <%= f.text_field :name,
                 label: t(".name_label"),
                 disabled: @entry.split_child? || edit_locked,
@@ -95,6 +96,7 @@
             url: transaction_path(@entry),
             class: "space-y-2",
             data: { controller: "auto-submit-form" } do |f| %>
+        <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
         <% unless @entry.transaction.transfer? %>
           <%= f.select :account,
               options_for_select(
@@ -262,12 +264,13 @@
 
     <% if can_edit_entry? %>
       <% dialog.with_section(title: t(".settings")) do %>
-        <% unless @entry.split_parent? || @entry.split_child? %>
+        <% unless @entry.split_parent? %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,
                   url: transaction_path(@entry),
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <div class="flex cursor-pointer items-center gap-4 justify-between">
                 <div class="text-sm space-y-1">
                   <h4 class="text-primary"><%= t(".exclude") %></h4>
@@ -284,6 +287,7 @@
                   url: transaction_path(@entry),
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">
@@ -309,6 +313,7 @@
                   url: transaction_path(@entry),
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">

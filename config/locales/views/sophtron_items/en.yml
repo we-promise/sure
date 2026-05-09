@@ -59,6 +59,42 @@ en:
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
+      no_institution_connected: Please connect a bank institution with Sophtron first.
+    connect:
+      cancel: Cancel
+      captcha: Captcha
+      connect: Connect
+      institution_search_label: Institution
+      institution_search_placeholder: Search by bank name
+      no_institutions: No matching institutions found.
+      password: Password
+      search: Search
+      search_too_short: Enter at least two characters to search.
+      title: Connect Sophtron Institution
+      username: Username
+    connect_institution:
+      api_error: "Sophtron connection failed: %{message}"
+      missing_parameters: Select an institution and enter your bank login credentials.
+    connection_status:
+      api_error: "API connection error: %{message}"
+      attempt: "Attempt %{attempt} of %{max}"
+      check_again: Check again
+      failed: Sophtron could not complete this institution connection.
+      failed_timeout: Sophtron timed out while the institution was completing login.
+      timeout: Sophtron did not finish connecting within the expected time. You can check again, or try reconnecting later.
+      title: Connecting Sophtron
+      waiting: Sophtron is still connecting to your institution.
+    mfa:
+      captcha: Captcha text
+      captcha_alt: Sophtron captcha
+      phone_confirmed: I confirmed by phone
+      submit: Submit
+      title: Sophtron Verification
+      token: Verification code
+    submit_mfa:
+      api_error: "Verification failed: %{message}"
+      invalid_security_answers: Security answers are missing or too long.
+      unknown_challenge: Unknown Sophtron verification step.
     sophtron_item:
       accounts_need_setup: Accounts need setup
       delete: Delete connection
@@ -95,6 +131,7 @@ en:
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
       no_credentials_configured: "Please configure your Sophtron API User ID and Access Key first in Provider Settings."
+      no_institution_connected: Please connect a bank institution with Sophtron first.
       no_name_placeholder: "(No name)"
       title: Select Sophtron Accounts
     select_existing_account:
@@ -109,6 +146,7 @@ en:
       no_accounts_found: No Sophtron accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
+      no_institution_connected: Please connect a bank institution with Sophtron first.
       no_name_placeholder: "(No name)"
       title: "Link %{account_name} with Sophtron"
     link_existing_account:
@@ -119,6 +157,7 @@ en:
       sophtron_account_already_linked: This Sophtron account is already linked to another account
       sophtron_account_not_found: Sophtron account not found
       missing_parameters: Missing required parameters
+      no_institution_connected: Please connect a bank institution with Sophtron first.
       success: "Successfully linked %{account_name} with Sophtron"
     setup_accounts:
       account_type_label: "Account Type:"
@@ -129,6 +168,7 @@ en:
       no_accounts_to_setup: "No Accounts to Set Up"
       no_access_key: "Sophtron Access key is not configured. Please check your connection settings."
       no_user_id: "Sophtron User ID is not configured. Please check your connection settings."
+      no_institution_connected: "Sophtron institution is not connected yet."
       account_types:
         skip: Skip this account
         depository: Checking or Savings Account
@@ -179,13 +219,19 @@ en:
     api_error:  
       title: "Sophtron Connection Error"  
       unable_to_connect: "Unable to connect to Sophtron"  
+      institution_unable_to_connect: "Unable to connect to the institution"
       common_issues_title: "Common Issues:"  
       incorrect_user_id: "Incorrect User ID: Verify your User ID in Provider Settings"  
       invalid_access_key: "Invalid Access Key: Check your Access Key in Provider Settings"  
       expired_credentials: "Expired Credentials: Generate a new User ID and Access Key from Sophtron"  
       network_issue: "Network Issue: Check your internet connection"  
       service_down: "Service Down: Sophtron API may be temporarily unavailable"  
+      bank_credentials: "Bank credentials: Check the username and password for the selected institution"
+      verification_code: "Verification code: Make sure the latest code was entered before it expired"
+      institution_timeout: "Institution timeout: The bank login page did not finish in time"
+      unsupported_mfa: "MFA support: Sophtron may not support this institution's current verification flow"
       check_provider_settings: "Check Provider Settings"  
+      try_again: "Try connecting again"
     select_option: "Select %{type}"  
     subtype: "subtype"  
     type: "type"
@@ -194,12 +240,12 @@ en:
       setup_instructions:
         step_1_html: 'Visit <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> to obtain your API credentials'
         step_2: "Copy your User ID and Access Key from your Sophtron account settings"
-        step_3: "Paste the credentials below and click Save to enable Sophtron bank data sync"
+        step_3: "Paste the credentials below and click Save; Sure will create or reuse your Sophtron Customer ID automatically"
       field_descriptions_title: "Field descriptions:"
       field_descriptions:
         user_id_html: "<strong>User ID:</strong> Your Sophtron User ID credential"
         access_key_html: "<strong>Access Key:</strong> Your Sophtron Access Key credential"
-        base_url_html: "<strong>Base URL:</strong> The Sophtron API endpoint URL (usually provided by Sophtron)"
+        base_url_html: "<strong>Base URL:</strong> The Sophtron API endpoint URL, usually https://api.sophtron.com/api"
       fields:
         user_id:
           label: "User ID"
@@ -211,7 +257,7 @@ en:
           placeholder_edit: "••••••••"
         base_url:
           label: "Base URL"
-          placeholder: "https://api.sophtron.com/v2"
+          placeholder: "https://api.sophtron.com/api"
       save: "Save Configuration"
       update: "Update Configuration"
       status:

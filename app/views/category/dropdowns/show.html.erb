@@ -51,7 +51,7 @@
           <%= button_to transaction_path(@transaction.entry),
                       method: :patch,
                       data: { turbo_frame: dom_id(@transaction.entry) },
-                      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: nil } } },
+                      params: { grouped: params[:grouped], entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: nil } } },
                       class: "flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-2 hover:bg-container-inset-hover" do %>
             <%= icon("minus") %>
 
@@ -85,6 +85,7 @@
                         method: :patch,
                         data: { controller: "auto-submit-form" } do |f| %>
               <%= f.hidden_field "entry[excluded]", value: !@transaction.entry.excluded %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <%= f.check_box "entry[excluded]",
                           checked: @transaction.entry.excluded,
                           class: "checkbox checkbox--light",

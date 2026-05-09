@@ -22,7 +22,8 @@ class Provider::SophtronAdapter < Provider::Base
       new_account_path: ->(accountable_type, return_to) {
         Rails.application.routes.url_helpers.select_accounts_sophtron_items_path(
           accountable_type: accountable_type,
-          return_to: return_to
+          return_to: return_to,
+          connect_new_institution: true
         )
       },
       existing_account_path: ->(account_id) {
@@ -45,7 +46,7 @@ class Provider::SophtronAdapter < Provider::Base
     return nil unless family.present?
 
     # Get family-specific credentials
-    sophtron_item = family.sophtron_items.where.not(user_id: nil, access_key: nil).first
+    sophtron_item = family.configured_sophtron_item
     return nil unless sophtron_item&.credentials_configured?
 
     Provider::Sophtron.new(
@@ -88,10 +89,16 @@ class Provider::SophtronAdapter < Provider::Base
   end
 
   def institution_name
-    metadata = provider_account.institution_metadata
+    metadata = provider_account.institution_metadata || {}
     return nil unless metadata.present?
 
-    metadata["name"] || item&.institution_name
+    metadata_name = metadata["name"].presence || metadata["institution_name"].presence
+    return metadata_name if metadata_name.present?
+
+    metadata_user_institution_id = metadata["user_institution_id"].presence || metadata["UserInstitutionID"].presence
+    return item&.institution_name if metadata_user_institution_id.present? && metadata_user_institution_id == item&.user_institution_id
+
+    nil
   end
 
   def institution_url

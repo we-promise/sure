@@ -14,6 +14,9 @@
 class SophtronItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
+  INITIAL_LOAD_LOOKBACK_DAYS = 120
+  MAX_TRANSACTION_HISTORY_YEARS = 3
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Helper to detect if ActiveRecord Encryption is configured for this app.
@@ -66,15 +69,15 @@ class SophtronItem < ApplicationRecord
   #
   # @return [Hash] Import results with counts of accounts and transactions imported
   # @raise [StandardError] if the Sophtron provider is not configured
-  # @raise [Provider::Error] if the Sophtron API returns an error
-  def import_latest_sophtron_data
+  # @raise [Provider::Sophtron::Error] if the Sophtron API returns an error
+  def import_latest_sophtron_data(sync: nil)
     provider = sophtron_provider
     unless provider
       Rails.logger.error "SophtronItem #{id} - Cannot import: Sophtron provider is not configured (missing API key)"
       raise StandardError.new("Sophtron provider is not configured")
     end
 
-    SophtronItem::Importer.new(self, sophtron_provider: provider).import
+    SophtronItem::Importer.new(self, sophtron_provider: provider, sync: sync).import
   rescue => e
     Rails.logger.error "SophtronItem #{id} - Failed to import data: #{e.message}"
     raise
@@ -122,12 +125,142 @@ class SophtronItem < ApplicationRecord
     results
   end
 
+  def start_initial_load_later
+    active_sync = syncs.visible.ordered.first
+
+    sync_later(window_start_date: initial_load_window_start_date)
+
+    return unless active_sync&.reload&.syncing?
+
+    SophtronInitialLoadJob.set(wait: SophtronInitialLoadJob::RETRY_DELAY).perform_later(self)
+  end
+
+  def initial_load_window_start_date
+    configured_start = sync_start_date&.to_date
+    default_start = INITIAL_LOAD_LOOKBACK_DAYS.days.ago.to_date
+    max_history_start = MAX_TRANSACTION_HISTORY_YEARS.years.ago.to_date
+
+    [ configured_start || default_start, max_history_start ].max
+  end
+
   def upsert_sophtron_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
     )
 
     save!
+  end
+
+  def ensure_customer!(provider: sophtron_provider)
+    return customer_id if customer_id.present?
+    raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+    matching_customer = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
+    customer_payload = matching_customer || Provider::Sophtron.response_data!(
+      provider.create_customer(
+        unique_id: generated_customer_unique_id,
+        name: generated_customer_name,
+        source: "Sure"
+      )
+    )
+
+    # Some Sophtron endpoints may return an empty body on success; re-list to find
+    # the customer we just created if the create response does not include an id.
+    if extract_customer_id(customer_payload).blank?
+      customer_payload = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
+    end
+
+    extracted_customer_id = extract_customer_id(customer_payload)
+    raise Provider::Sophtron::Error.new("Sophtron customer response did not include CustomerID", :invalid_response) if extracted_customer_id.blank?
+
+    update!(
+      customer_id: extracted_customer_id,
+      customer_name: extract_customer_name(customer_payload).presence || generated_customer_name,
+      raw_customer_payload: customer_payload
+    )
+
+    customer_id
+  end
+
+  def connected_to_institution?
+    user_institution_id.present? && current_job_id.blank? && good? && !failed_connection_job?
+  end
+
+  def failed_connection_job?
+    payload = raw_job_payload || {}
+    payload = payload.with_indifferent_access if payload.respond_to?(:with_indifferent_access)
+
+    success_flag = if payload.respond_to?(:key?) && payload.key?(:SuccessFlag)
+      payload[:SuccessFlag]
+    elsif payload.respond_to?(:key?)
+      payload[:success_flag]
+    end
+
+    last_status = job_status.presence ||
+      (payload[:LastStatus] if payload.respond_to?(:[])) ||
+      (payload[:last_status] if payload.respond_to?(:[]))
+
+    success_flag == false && Provider::Sophtron.failure_job_status?(last_status)
+  end
+
+  def upsert_job_snapshot!(job_payload)
+    job_payload = job_payload.with_indifferent_access
+
+    update!(
+      job_status: job_payload[:LastStatus] || job_payload[:last_status],
+      raw_job_payload: job_payload
+    )
+  end
+
+  def fetch_remote_accounts(force: false)
+    cache_key = "sophtron_accounts_#{family.id}_#{id}_#{user_institution_id}"
+    cached = Rails.cache.read(cache_key)
+    return cached if cached.present? && !force
+
+    accounts_data = Provider::Sophtron.response_data!(sophtron_provider.get_accounts(user_institution_id))
+    accounts = accounts_data[:accounts] || []
+    Rails.cache.write(cache_key, accounts, expires_in: 5.minutes)
+    persist_remote_sophtron_accounts(accounts)
+    accounts
+  end
+
+  def persist_remote_sophtron_accounts(accounts)
+    Array(accounts).each do |account_data|
+      account_data = account_data.with_indifferent_access
+      next if account_data[:account_name].blank?
+
+      upsert_sophtron_account(account_data)
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn("Skipping Sophtron account #{self.class.external_account_id(account_data)}: #{e.message}")
+    end
+  end
+
+  def reject_already_linked(accounts)
+    linked_account_ids = sophtron_accounts.joins(:account_provider).pluck(:account_id).map(&:to_s)
+    Array(accounts).reject { |account| linked_account_ids.include?(self.class.external_account_id(account).to_s) }
+  end
+
+  def upsert_sophtron_account(account_data)
+    sophtron_accounts.find_or_initialize_by(
+      account_id: self.class.external_account_id(account_data).to_s
+    ).tap do |sophtron_account|
+      sophtron_account.upsert_sophtron_snapshot!(account_data)
+    end
+  end
+
+  def build_mfa_challenge(job)
+    job = job.with_indifferent_access
+    {
+      security_questions: Provider::Sophtron.parse_json_array(job[:SecurityQuestion] || job[:security_question]),
+      token_methods: Provider::Sophtron.parse_json_array(job[:TokenMethod] || job[:token_method]),
+      token_sent: Provider::Sophtron.job_token_input_required?(job),
+      token_read: job[:TokenRead] || job[:token_read],
+      captcha_image: job[:CaptchaImage] || job[:captcha_image]
+    }
+  end
+
+  def self.external_account_id(account_data)
+    account_data.with_indifferent_access[:account_id] || account_data.with_indifferent_access[:id]
   end
 
   def has_completed_initial_setup?
@@ -167,6 +300,10 @@ class SophtronItem < ApplicationRecord
     institution_name.presence || institution_domain.presence || name
   end
 
+  def provider_display_name
+    I18n.t("sophtron_items.defaults.name", default: "Sophtron Connection")
+  end
+
   def connected_institutions
     # Get unique institutions from all accounts
     sophtron_accounts.includes(:account)
@@ -193,6 +330,40 @@ class SophtronItem < ApplicationRecord
   end
 
   def effective_base_url
-    base_url.presence || "https://api.sophtron.com/api/v2"
+    base_url.presence || Provider::Sophtron::DEFAULT_BASE_URL
   end
+
+  def generated_customer_unique_id
+    "sure-family-#{family.id}"
+  end
+
+  def generated_customer_name
+    "Sure family #{family.id}"
+  end
+
+  private
+
+    def find_matching_customer(customers)
+      customers = Array(customers)
+
+      customers.find do |customer|
+        extract_customer_id(customer).to_s == generated_customer_unique_id
+      end || customers.find do |customer|
+        extract_customer_name(customer).to_s == generated_customer_name
+      end
+    end
+
+    def extract_customer_id(customer_payload)
+      return nil unless customer_payload.respond_to?(:with_indifferent_access)
+
+      customer_payload = customer_payload.with_indifferent_access
+      customer_payload[:CustomerID] || customer_payload[:customer_id] || customer_payload[:id]
+    end
+
+    def extract_customer_name(customer_payload)
+      return nil unless customer_payload.respond_to?(:with_indifferent_access)
+
+      customer_payload = customer_payload.with_indifferent_access
+      customer_payload[:CustomerName] || customer_payload[:customer_name] || customer_payload[:name]
+    end
 end
