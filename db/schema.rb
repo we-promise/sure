@@ -82,9 +82,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
     t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
     t.check_constraint "period_start_on IS NULL OR period_end_on IS NULL OR period_start_on <= period_end_on", name: "chk_account_statements_period_order"
-    t.check_constraint "review_status::text = ANY (ARRAY['unmatched'::character varying, 'linked'::character varying, 'rejected'::character varying]::text[])", name: "chk_account_statements_review_status"
+    t.check_constraint "review_status::text = ANY (ARRAY['unmatched'::character varying::text, 'linked'::character varying::text, 'rejected'::character varying::text])", name: "chk_account_statements_review_status"
     t.check_constraint "source::text = 'manual_upload'::text", name: "chk_account_statements_source"
-    t.check_constraint "upload_status::text = ANY (ARRAY['stored'::character varying, 'failed'::character varying]::text[])", name: "chk_account_statements_upload_status"
+    t.check_constraint "upload_status::text = ANY (ARRAY['stored'::character varying::text, 'failed'::character varying::text])", name: "chk_account_statements_upload_status"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1447,9 +1447,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.jsonb "raw_transactions_payload"
     t.string "customer_id"
     t.string "member_id"
-    t.string "account_number_mask"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "account_number_mask"
     t.boolean "manual_sync", default: false, null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
@@ -1473,6 +1473,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.string "user_id", null: false
     t.string "access_key", null: false
     t.string "base_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.string "customer_id"
     t.string "customer_name"
     t.jsonb "raw_customer_payload"
@@ -1481,8 +1483,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.string "job_status"
     t.jsonb "raw_job_payload"
     t.text "last_connection_error"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.boolean "manual_sync", default: false, null: false
     t.uuid "current_job_sophtron_account_id"
     t.index ["current_job_sophtron_account_id"], name: "index_sophtron_items_on_current_job_sophtron_account_id"
