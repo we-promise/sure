@@ -12,7 +12,7 @@
       <%= icon "search", class: "text-secondary" %>
     </div>
   </div>
-  <div class="inline-flex items-center gap-1 p-[3px] bg-surface-inset rounded-[10px]">
+  <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
     <% %w[all bank crypto investment].each do |kind| %>
       <% active = kind == "all" %>
       <button type="button"
@@ -20,7 +20,7 @@
               data-action="click->providers-filter#selectChip"
               data-kind="<%= kind %>"
               aria-pressed="<%= active %>"
-              class="px-2.5 py-[5px] text-xs font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100 <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
+              class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100 <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
         <%= t("settings.providers.search_filters.chips.#{kind}") %>
       </button>
     <% end %>
