@@ -128,23 +128,6 @@ module SettingsHelper
     end
   end
 
-  # Slim health-strip data for the providers index. Pulls counts from the
-  # already-resolved entry summaries plus the family's distinct synced-account
-  # count for the trailing stat. Returns a hash consumed by the
-  # `settings/providers/_health_strip` partial.
-  def provider_health_strip(connected:, needs_attention:)
-    active_entries  = connected + needs_attention
-    last_synced_at  = active_entries.map { |e| e[:summary][:last_synced_at] }.compact.max
-    accounts_count  = Current.family.accounts.joins(:account_providers).distinct.count
-
-    {
-      connected:        active_entries.size,
-      needs_attention:  needs_attention.size,
-      accounts_syncing: accounts_count,
-      last_synced_at:   last_synced_at
-    }
-  end
-
   # Strips the leading "about " from `time_ago_in_words` so copy reads as
   # "Synced 6 hours ago" instead of "Synced about 6 hours ago".
   def concise_time_ago(time)
