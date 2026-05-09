@@ -162,6 +162,48 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert_text "Setup Token"
   end
 
+  test "configured plaid_eu surfaces in Your connections instead of Available" do
+    Setting["plaid_eu_client_id"] = "test_eu_client"
+    Setting["plaid_eu_secret"] = "test_eu_secret"
+
+    visit settings_providers_path
+
+    assert_selector "details summary h3", text: "Plaid EU"
+    within available_provider_cards_container do
+      assert_no_text "Plaid EU"
+    end
+  end
+
+  test "clear filters button resets search input and chip state" do
+    visit settings_providers_path
+
+    find('[data-providers-filter-target="input"]').set("zzz_no_match_zzz")
+    assert_selector '[data-providers-filter-target="empty"]', visible: true
+
+    click_on I18n.t("settings.providers.clear_filter")
+
+    assert_no_selector '[data-providers-filter-target="empty"]', visible: true
+    assert_equal "", find('[data-providers-filter-target="input"]').value
+    assert_selector "a[data-providers-filter-target='card']", text: /SimpleFIN/i
+  end
+
+  test "warn-state connection row carries warning outline class" do
+    item = EnableBankingItem.new(
+      family: @family,
+      name: "Test Bank",
+      country_code: "DE",
+      application_id: "test-app-id",
+      session_id: "test-session",
+      session_expires_at: 5.days.from_now
+    )
+    item.save!(validate: false)
+
+    visit settings_providers_path
+
+    details = find("details", text: /Enable Banking/)
+    assert_includes details[:class], "border-warning/25"
+  end
+
   private
 
     # Card grid rendered after the `#available` group heading (following sibling div.grid)
