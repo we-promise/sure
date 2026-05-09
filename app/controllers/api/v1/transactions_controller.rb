@@ -450,16 +450,18 @@ end
     end
 
     def calculate_signed_amount
-      amount = transaction_params[:amount].to_f
-      nature = transaction_params[:nature]
+      signed_amount_for(transaction_params[:amount], transaction_params[:nature])
+    end
 
-      case nature&.downcase
+    def signed_amount_for(amount, nature)
+      amt = amount.to_f
+      case nature.to_s.downcase
       when "income", "inflow"
-        -amount.abs  # Income is negative
+        -amt.abs
       when "expense", "outflow"
-        amount.abs   # Expense is positive
+        amt.abs
       else
-        amount       # Use as provided
+        amt
       end
     end
 
@@ -545,11 +547,7 @@ end
     end
 
     def build_create_entry_params(attrs)
-      signed = if attrs[:nature].to_s == "income"
-        -attrs[:amount].to_d
-      else
-        attrs[:amount].to_d
-      end
+      signed = signed_amount_for(attrs[:amount], attrs[:nature])
 
       {
         name: attrs[:name] || attrs[:description],
