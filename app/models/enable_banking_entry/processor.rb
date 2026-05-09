@@ -10,6 +10,12 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
+  def self.compute_external_id(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    id = data[:transaction_id].presence || data[:entry_reference].presence
+    id ? "enable_banking_#{id}" : nil
+  end
+
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
@@ -17,8 +23,12 @@ class EnableBankingEntry::Processor
   end
 
   def process
+    # Cache a safe diagnostic id upfront — used in all logging paths so rescue
+    # blocks never call the potentially-raising private external_id method.
+    safe_id = self.class.compute_external_id(@enable_banking_transaction) || "unknown"
+
     unless account.present?
-      Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{external_id}"
+      Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{safe_id}"
       return nil
     end
 
@@ -35,13 +45,13 @@ class EnableBankingEntry::Processor
         extra: extra
       )
     rescue ArgumentError => e
-      Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
+      Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
       raise
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      Rails.logger.error "EnableBankingEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
+      Rails.logger.error "EnableBankingEntry::Processor - Failed to save transaction #{safe_id}: #{e.message}"
       raise StandardError.new("Failed to import transaction: #{e.message}")
     rescue => e
-      Rails.logger.error "EnableBankingEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
+      Rails.logger.error "EnableBankingEntry::Processor - Unexpected error processing transaction #{safe_id}: #{e.class} - #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
@@ -64,9 +74,9 @@ class EnableBankingEntry::Processor
     end
 
     def external_id
-      id = data[:transaction_id].presence || data[:entry_reference].presence
+      id = self.class.compute_external_id(data)
       raise ArgumentError, "Enable Banking transaction missing required field 'transaction_id'" unless id
-      "enable_banking_#{id}"
+      id
     end
 
     def name
@@ -220,7 +230,8 @@ class EnableBankingEntry::Processor
     end
 
     def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' in Enable Banking transaction #{external_id}, falling back to account currency")
+      safe_id = self.class.compute_external_id(data) || "unknown"
+      Rails.logger.warn("Invalid currency code '#{currency_value}' in Enable Banking transaction #{safe_id}, falling back to account currency")
     end
 
     def date
