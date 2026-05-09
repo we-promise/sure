@@ -10,7 +10,7 @@ class Provider
       },
       lunchflow: {
         region: "US",
-        kind: "Lunch",
+        kind: "Bank",
         maturity: :stable,
         logo_bg: "bg-orange-500",
         logo_text: "LF"

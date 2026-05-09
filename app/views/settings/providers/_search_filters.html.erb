@@ -1,0 +1,25 @@
+<%# locals: (count:) %>
+<div class="flex flex-wrap items-center gap-2 mt-2">
+  <div class="flex-1 min-w-[200px] flex items-center gap-2 bg-container shadow-border-xs rounded-lg px-3 py-2">
+    <%= icon "search", class: "w-4 h-4 text-secondary shrink-0" %>
+    <input type="search"
+           data-providers-filter-target="input"
+           data-action="input->providers-filter#filter"
+           aria-label="<%= t("settings.providers.search_filters.aria_label") %>"
+           placeholder="<%= t("settings.providers.search_filters.placeholder", count: count) %>"
+           class="bg-transparent border-0 outline-none flex-1 text-sm text-primary placeholder:text-subdued">
+  </div>
+  <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-lg">
+    <% %w[all bank crypto investment].each do |kind| %>
+      <% active = kind == "all" %>
+      <button type="button"
+              data-providers-filter-target="chip"
+              data-action="click->providers-filter#selectChip"
+              data-kind="<%= kind %>"
+              aria-pressed="<%= active %>"
+              class="px-2.5 py-1 text-xs font-medium rounded-md transition-colors <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
+        <%= t("settings.providers.search_filters.chips.#{kind}") %>
+      </button>
+    <% end %>
+  </div>
+</div>

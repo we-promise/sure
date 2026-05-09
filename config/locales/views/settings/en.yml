@@ -232,10 +232,17 @@ en:
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
         plaid: Connect thousands of US financial institutions via Plaid.
-      add_provider_cta:
-        title: Add another provider
-        body: Connect a new bank or data source to start syncing accounts.
-        cta: Browse providers
+      search_filters:
+        aria_label: Search providers
+        placeholder:
+          one: "Search %{count} provider"
+          other: "Search %{count} providers"
+        chips:
+          all: All
+          bank: Banks
+          crypto: Crypto
+          investment: Investment
+      empty_filter: No providers match your filter.
       show:
         coinbase_title: Coinbase
       encryption_error:

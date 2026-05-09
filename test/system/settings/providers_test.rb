@@ -115,18 +115,22 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert_text "Re-consent needed in 5 days"
   end
 
-  test "add provider CTA banner appears above available group when providers are connected" do
-    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
-
+  test "search input filters provider cards by name" do
     visit settings_providers_path
 
-    cta = find("a", text: "Browse providers")
-    available_heading = find(:xpath, "//h2[contains(., 'Available')]")
+    find('[data-providers-filter-target="input"]').set("Coinbase")
 
-    cta_y = cta.native.location.y
-    available_y = available_heading.native.location.y
+    assert_selector "a[data-providers-filter-target='card']", text: /Coinbase/i
+    assert_no_selector "a[data-providers-filter-target='card']", text: /Binance/i
+  end
 
-    assert_operator cta_y, :<, available_y, "Add-provider CTA should appear above the Available heading"
+  test "kind chip narrows the grid to providers of that kind" do
+    visit settings_providers_path
+
+    click_on "Crypto"
+
+    assert_selector "a[data-providers-filter-target='card']", text: /Coinbase/i
+    assert_no_selector "a[data-providers-filter-target='card']", text: /SimpleFIN/i
   end
 
   test "available providers render as a card grid" do

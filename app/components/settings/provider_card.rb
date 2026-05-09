@@ -30,6 +30,15 @@ class Settings::ProviderCard < ApplicationComponent
     helpers.connect_form_settings_providers_path(provider_key: @provider_key)
   end
 
+  def filter_data
+    {
+      providers_filter_target: "card",
+      provider_name: @name.to_s.downcase,
+      provider_region: @region.to_s.downcase,
+      provider_kind: @kind.to_s.downcase
+    }
+  end
+
   private
     attr_reader :provider_key, :name, :tagline, :region, :kind, :tier, :maturity, :logo_bg, :logo_text
 end

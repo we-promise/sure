@@ -60,34 +60,42 @@
       <% end %>
     <% end %>
 
-    <% unless @available.empty? %>
-      <%= render "settings/providers/add_provider_cta" %>
-    <% end %>
+    <% if @available.any? %>
+      <div data-controller="providers-filter">
+        <%= render "settings/providers/search_filters", count: @available.size %>
 
-    <%= render "settings/providers/group_heading",
-               title: t("settings.providers.groups.available"),
-               count: @available.size,
-               anchor: "available" %>
+        <%= render "settings/providers/group_heading",
+                   title: t("settings.providers.groups.available"),
+                   count: @available.size,
+                   anchor: "available" %>
 
-    <% if @available.empty? %>
-      <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_available") %></p>
-    <% else %>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <% @available.each do |entry| %>
-          <% meta = Provider::Metadata.for(entry[:provider_key]) %>
-          <%= render Settings::ProviderCard.new(
-                provider_key: entry[:provider_key],
-                name:         entry[:title],
-                tagline:      t("settings.providers.taglines.#{entry[:provider_key]}", default: nil),
-                region:       meta[:region],
-                kind:         meta[:kind],
-                tier:         meta[:tier],
-                maturity:     meta[:maturity] || :stable,
-                logo_bg:      meta[:logo_bg],
-                logo_text:    meta[:logo_text]
-              ) %>
-        <% end %>
+        <p data-providers-filter-target="empty" class="hidden text-sm text-secondary px-1 py-2">
+          <%= t("settings.providers.empty_filter") %>
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <% @available.each do |entry| %>
+            <% meta = Provider::Metadata.for(entry[:provider_key]) %>
+            <%= render Settings::ProviderCard.new(
+                  provider_key: entry[:provider_key],
+                  name:         entry[:title],
+                  tagline:      t("settings.providers.taglines.#{entry[:provider_key]}", default: nil),
+                  region:       meta[:region],
+                  kind:         meta[:kind],
+                  tier:         meta[:tier],
+                  maturity:     meta[:maturity] || :stable,
+                  logo_bg:      meta[:logo_bg],
+                  logo_text:    meta[:logo_text]
+                ) %>
+          <% end %>
+        </div>
       </div>
+    <% else %>
+      <%= render "settings/providers/group_heading",
+                 title: t("settings.providers.groups.available"),
+                 count: 0,
+                 anchor: "available" %>
+      <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_available") %></p>
     <% end %>
   <% end %>
 </div>
