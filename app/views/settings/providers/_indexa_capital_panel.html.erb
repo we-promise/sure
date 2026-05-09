@@ -23,14 +23,11 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
 
-    <div class="bg-surface border border-primary p-3 rounded-lg">
-      <p class="text-sm font-medium text-primary mb-2"><%= t("indexa_capital_items.panel.fields.api_token.label") %></p>
-      <p class="text-xs text-secondary mb-2"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
-      <%= form.text_field :api_token,
-                          label: t("indexa_capital_items.panel.fields.api_token.label"),
-                          placeholder: is_new_record ? t("indexa_capital_items.panel.fields.api_token.placeholder_new") : t("indexa_capital_items.panel.fields.api_token.placeholder_update"),
-                          type: :password %>
-    </div>
+    <%= form.text_field :api_token,
+                        label: t("indexa_capital_items.panel.fields.api_token.label"),
+                        placeholder: is_new_record ? t("indexa_capital_items.panel.fields.api_token.placeholder_new") : t("indexa_capital_items.panel.fields.api_token.placeholder_update"),
+                        type: :password %>
+    <p class="text-xs text-secondary px-1 -mt-1"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
 
     <details class="group">
       <summary class="text-sm text-secondary cursor-pointer hover:text-primary transition-colors">
