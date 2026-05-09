@@ -75,7 +75,9 @@ class Api::V1::UsersController < Api::V1::BaseController
         categories: family.categories.count,
         tags: family.tags.count,
         merchants: family.merchants.count,
-        plaid_items: family.plaid_items.count,
+        # Framework-managed bank/sync connections (Plaid, TrueLayer, ...).
+        # Legacy plaid_items / plaid_accounts were dropped in this branch.
+        provider_connections: family.provider_connections.count,
         imports: family.imports.count,
         budgets: family.budgets.count
       }

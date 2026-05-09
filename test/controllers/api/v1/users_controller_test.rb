@@ -127,7 +127,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert body["counts"].key?("categories")
     assert body["counts"].key?("tags")
     assert body["counts"].key?("merchants")
-    assert body["counts"].key?("plaid_items")
+    assert body["counts"].key?("provider_connections")
     assert body["counts"].key?("imports")
     assert body["counts"].key?("budgets")
   end
