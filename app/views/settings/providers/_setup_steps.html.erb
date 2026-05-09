@@ -2,7 +2,7 @@
 <%# steps: array of strings (or html_safe strings for inline links / code).
     help:  optional hash { url:, text: } rendered under the steps with a small divider + book icon.
     eyebrow: optional override for the "SETUP" eyebrow label. %>
-<div class="bg-surface-inset rounded-xl p-4 mb-2">
+<div class="bg-surface-inset rounded-xl p-4">
   <p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">
     <%= eyebrow.presence || t("settings.providers.setup_steps.eyebrow", default: "Setup") %>
   </p>

@@ -11,10 +11,6 @@
                t("mercury_items.provider_panel.instructions.copy_token_html").html_safe
              ] %>
 
-  <p class="text-xs text-secondary -mt-1 px-1">
-    <%= t("mercury_items.provider_panel.sandbox_note_html").html_safe %>
-  </p>
-
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
     <%= render DS::Alert.new(message: error_msg, variant: :error) %>
@@ -118,6 +114,7 @@
     <%= form.text_field :base_url,
                         label: t("mercury_items.provider_panel.base_url_label"),
                         placeholder: t("mercury_items.provider_panel.base_url_placeholder") %>
+    <p class="text-xs text-secondary px-1 -mt-1"><%= t("mercury_items.provider_panel.sandbox_note_html").html_safe %></p>
 
     <div class="flex justify-end">
       <%= form.submit t("mercury_items.provider_panel.add_connection"),

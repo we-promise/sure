@@ -9,22 +9,26 @@
         ])
       ) %>
 
-  <%= render "settings/providers/setup_steps",
-             steps: [
-               t("settings.providers.binance_panel.step1_html").html_safe,
-               t("settings.providers.binance_panel.step2"),
-               t("settings.providers.binance_panel.step3")
-             ] %>
+  <div class="space-y-2">
+    <%= render "settings/providers/setup_steps",
+               steps: [
+                 t("settings.providers.binance_panel.step1_html").html_safe,
+                 t("settings.providers.binance_panel.step2"),
+                 t("settings.providers.binance_panel.step3")
+               ] %>
 
-  <div class="bg-surface border border-primary p-3 rounded-lg text-sm">
-    <p class="font-medium text-primary"><%= t("settings.providers.binance_panel.ip_hint_title") %></p>
-    <p class="text-secondary mt-1"><%= t("settings.providers.binance_panel.ip_hint_body") %></p>
-    <% server_ip = ENV["BINANCE_EGRESS_IP"].presence %>
-    <% if server_ip %>
-      <code class="mt-1 block text-xs bg-container-inset px-2 py-1 rounded font-mono text-primary"><%= server_ip %></code>
-    <% else %>
-      <p class="mt-1 text-xs text-secondary italic"><%= t("settings.providers.binance_panel.ip_hint_contact_admin") %></p>
-    <% end %>
+    <div class="bg-surface-inset rounded-xl p-4 text-sm">
+      <p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">
+        <%= t("settings.providers.binance_panel.ip_hint_title") %>
+      </p>
+      <p class="text-secondary"><%= t("settings.providers.binance_panel.ip_hint_body") %></p>
+      <% server_ip = ENV["BINANCE_EGRESS_IP"].presence %>
+      <% if server_ip %>
+        <code class="mt-2 block text-xs bg-container px-2 py-1 rounded font-mono text-primary"><%= server_ip %></code>
+      <% else %>
+        <p class="mt-1 text-xs text-secondary italic"><%= t("settings.providers.binance_panel.ip_hint_contact_admin") %></p>
+      <% end %>
+    </div>
   </div>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>

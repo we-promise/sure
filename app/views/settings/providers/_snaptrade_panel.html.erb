@@ -1,8 +1,6 @@
 <div class="space-y-4">
   <%= render DS::Alert.new(message: t("providers.snaptrade.free_tier_warning"), variant: :warning) %>
 
-  <p class="text-sm text-secondary"><%= t("providers.snaptrade.description") %></p>
-
   <%= render "settings/providers/setup_steps",
              steps: [
                t("providers.snaptrade.step_1_html").html_safe,
