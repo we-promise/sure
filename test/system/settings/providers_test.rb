@@ -36,8 +36,8 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     titles = all("details").map { |d| d.find("summary h3", match: :first).text.squish }
     assert_equal titles.sort_by(&:downcase), titles, "Connection panels should render alphabetically by title"
 
-    connections_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Your connections')]")
-    available_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Available')]")
+    connections_heading = page.find(:xpath, "//h2[contains(translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'your connections')]")
+    available_heading = page.find(:xpath, "//h2[contains(translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'available')]")
     connections_y = connections_heading.native.location.y
     available_y = available_heading.native.location.y
 
@@ -65,12 +65,12 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    connections_heading = find(:xpath, "//h2[contains(., 'Your connections')]")
+    connections_heading = find(:xpath, "//h2[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'your connections')]")
     normalized = connections_heading.text.squish
-    assert_match(/Your connections .*· \d+/, normalized)
+    assert_match(/Your connections .*· \d+/i, normalized)
 
     connections_y = connections_heading.native.location.y
-    available_heading = find(:xpath, "//h2[contains(., 'Available')]")
+    available_heading = find(:xpath, "//h2[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'available')]")
     available_y = available_heading.native.location.y
     simplefin_y = find("details", text: "SimpleFIN").native.location.y
 
@@ -86,8 +86,8 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    assert_selector "h2", text: /\AYour connections/
-    assert_no_selector "h2", text: /\AAction needed/
+    assert_selector "h2", text: /\AYour connections/i
+    assert_no_selector "h2", text: /\AAction needed/i
   end
 
   test "enable banking with expiring session appears in your connections and auto-opens" do
@@ -104,7 +104,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    assert_selector "h2", text: /\AYour connections/
+    assert_selector "h2", text: /\AYour connections/i
 
     # Auto-expanded warning sections hide compact meta behind `group-open:hidden`;
     # collapse once so the re-consent copy is visible again.
