@@ -1,6 +1,9 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  TRUTHY_VALUES = [ true, "true", "1", 1 ].freeze
+  private_constant :TRUTHY_VALUES
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -361,7 +364,7 @@ class Entry < ApplicationRecord
 
   # Splits this entry into child entries. Marks parent as excluded.
   #
-  # @param splits [Array<Hash>] array of { name:, amount:, category_id: } hashes
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
   # @return [Array<Entry>] the created child entries
   def split!(splits)
     total = splits.sum { |s| s[:amount].to_d }
@@ -383,6 +386,7 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
+          excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
           entryable: child_transaction
         )
       end
