@@ -46,16 +46,23 @@
 
     <% if @available.any? %>
       <div data-controller="providers-filter">
-        <%= render "settings/providers/search_filters", count: @available.size %>
+        <%= render "settings/providers/search_filters" %>
 
-        <%= render "settings/providers/group_heading",
-                   title: t("settings.providers.groups.available"),
-                   count: @available.size,
-                   anchor: "available" %>
+        <div id="available" class="flex items-baseline justify-between gap-3 mt-6 mb-1.5 px-1">
+          <h2 class="text-xs font-medium text-secondary uppercase flex items-baseline gap-2">
+            <%= t("settings.providers.groups.available") %>
+            <span class="text-subdued font-normal normal-case tabular-nums">
+              · <span data-providers-filter-target="count"><%= @available.size %></span>
+            </span>
+          </h2>
+        </div>
 
-        <p data-providers-filter-target="empty" class="hidden text-sm text-secondary px-1 py-2">
-          <%= t("settings.providers.empty_filter") %>
-        </p>
+        <div data-providers-filter-target="empty" class="hidden text-sm text-secondary px-1 py-2 flex items-center gap-2">
+          <span><%= t("settings.providers.empty_filter") %></span>
+          <button type="button" data-action="click->providers-filter#clear" class="text-primary underline">
+            <%= t("settings.providers.clear_filter") %>
+          </button>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <% @available.each do |entry| %>
@@ -68,7 +75,6 @@
                   kind:         meta[:kind],
                   tier:         meta[:tier],
                   maturity:     meta[:maturity] || :stable,
-                  logo_bg:      meta[:logo_bg],
                   logo_text:    meta[:logo_text]
                 ) %>
           <% end %>

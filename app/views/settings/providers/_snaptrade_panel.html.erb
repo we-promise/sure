@@ -10,7 +10,7 @@
       <li><%= t("providers.snaptrade.step_4") %></li>
     </ol>
 
-    <p class="text-warning text-sm"><%= icon("alert-triangle", class: "inline-block w-4 h-4 mr-1") %><%= t("providers.snaptrade.free_tier_warning") %></p>
+    <p class="text-warning text-sm"><%= icon("alert-triangle", size: "sm", class: "inline-block mr-1") %><%= t("providers.snaptrade.free_tier_warning") %></p>
   </div>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>

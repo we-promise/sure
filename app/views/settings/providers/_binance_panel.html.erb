@@ -8,7 +8,11 @@
       <li><%= t("settings.providers.binance_panel.step2") %></li>
       <li><%= t("settings.providers.binance_panel.step3") %></li>
     </ol>
-    <p class="text-destructive text-xs font-medium"><%= t("settings.providers.binance_panel.no_withdraw_warning") %></p>
+  </div>
+
+  <div class="bg-warning-50 border border-warning-200 rounded-xl p-3 flex items-start gap-2">
+    <%= icon "alert-triangle", size: "sm", class: "!w-3.5 !h-3.5 text-warning-600 shrink-0 mt-0.5" %>
+    <p class="text-sm text-warning-700 font-medium"><%= t("settings.providers.binance_panel.no_withdraw_warning") %></p>
   </div>
 
   <div class="bg-surface border border-primary p-3 rounded-lg text-sm">

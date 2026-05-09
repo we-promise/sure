@@ -234,15 +234,14 @@ en:
         plaid_eu: Connect European financial institutions via Plaid (PSD2 / Open Banking).
       search_filters:
         aria_label: Search providers
-        placeholder:
-          one: "Search %{count} provider"
-          other: "Search %{count} providers"
+        placeholder: Search providers
         chips:
           all: All
           bank: Banks
           crypto: Crypto
-          investment: Investment
+          investment: Investments
       empty_filter: No providers match your filter.
+      clear_filter: Clear filters
       encryption_error:
         title: Encryption Configuration Required
         message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.
@@ -265,7 +264,7 @@ en:
         step2: "Create a new API key with Enable Reading permission only"
         step3: "Paste your API Key and Secret below"
         no_withdraw_warning: "Warning: do NOT enable withdrawal permissions"
-        ip_hint_title: "IP Whitelisting Required"
+        ip_hint_title: "IP whitelisting required"
         ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
         ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
         api_key_label: API Key

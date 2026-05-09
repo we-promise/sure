@@ -2,8 +2,10 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="providers-filter"
 // Filters provider cards by free-text query and a chip-selected kind.
+// Updates the visible-count target on the section heading and toggles
+// an empty-state target when no card matches.
 export default class extends Controller {
-  static targets = ["input", "chip", "card", "empty"];
+  static targets = ["input", "chip", "card", "empty", "count"];
   static values = { kind: { type: String, default: "all" } };
 
   connect() {
@@ -29,6 +31,10 @@ export default class extends Controller {
       if (visible) visibleCount++;
     });
 
+    if (this.hasCountTarget) {
+      this.countTarget.textContent = visibleCount;
+    }
+
     if (this.hasEmptyTarget) {
       this.emptyTarget.classList.toggle("hidden", visibleCount > 0);
     }
@@ -38,6 +44,14 @@ export default class extends Controller {
     this.kindValue = event.currentTarget.dataset.kind ?? "all";
     this.syncChipState();
     this.filter();
+  }
+
+  clear() {
+    if (this.hasInputTarget) this.inputTarget.value = "";
+    this.kindValue = "all";
+    this.syncChipState();
+    this.filter();
+    if (this.hasInputTarget) this.inputTarget.focus();
   }
 
   syncChipState() {
