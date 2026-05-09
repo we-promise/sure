@@ -859,8 +859,9 @@ end
   end
 
   test "batch_update applies per-item changes and returns 207" do
-    t1 = @family.transactions.first
-    t2 = @family.transactions.offset(1).first
+    ordered = @family.transactions.joins(:entry).order("entries.id").to_a
+    t1 = ordered[0]
+    t2 = ordered[1]
     category = @family.categories.first
     tag = @family.tags.first
 

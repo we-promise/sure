@@ -237,17 +237,20 @@ end
     def set_transaction
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
-      family = current_resource_owner.family
-      @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .find(params[:id])
+      @transaction = find_owner_transaction(params[:id]) or raise ActiveRecord::RecordNotFound
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
       render json: {
         error: "not_found",
         message: "Transaction not found"
       }, status: :not_found
+    end
+
+    def find_owner_transaction(id)
+      current_resource_owner.family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(current_resource_owner))
+        .find_by(id: id)
     end
 
     def ensure_read_scope
@@ -547,7 +550,6 @@ end
 
     def process_update_item(raw, idx)
       result = { index: idx }
-      family = current_resource_owner.family
       raw_params = raw.is_a?(ActionController::Parameters) ? raw : ActionController::Parameters.new(raw || {})
       attrs = raw_params.permit(
         :id, :date, :amount, :name, :description, :notes, :currency,
@@ -560,10 +562,7 @@ end
         return result.merge(status: "error", error: "validation_failed", errors: [ "Transaction id is required" ])
       end
 
-      transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .find_by(id: attrs[:id])
+      transaction = find_owner_transaction(attrs[:id])
       unless transaction
         return result.merge(status: "error", error: "not_found", errors: [ "Transaction not found" ])
       end
@@ -600,7 +599,7 @@ end
       txn_json = render_to_string(
         partial: "api/v1/transactions/transaction",
         formats: [ :json ],
-        locals: { transaction: entry.transaction.reload }
+        locals: { transaction: entry.transaction }
       )
       result.merge(status: "updated", transaction: JSON.parse(txn_json))
 
