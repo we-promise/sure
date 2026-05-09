@@ -119,6 +119,8 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-155.0"), sell_trade.amount
     assert_equal "USD", buy_trade.currency
     assert_equal "USD", sell_trade.currency
+    assert_equal 0.9, buy_trade.entryable.exchange_rate
+    assert_equal 0.92, sell_trade.entryable.exchange_rate
 
     dividend = @account.entries.find_by(external_id: "ibkr_cash_4002")
     assert_not_nil dividend

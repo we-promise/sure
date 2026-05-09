@@ -61,7 +61,8 @@ class IbkrAccount::ActivitiesProcessor
         date: date,
         name: build_trade_name(security.ticker, signed_quantity),
         source: "ibkr",
-        activity_label: buy_sell == "SELL" ? "Sell" : "Buy"
+        activity_label: buy_sell == "SELL" ? "Sell" : "Buy",
+        exchange_rate: parse_decimal(row[:fx_rate_to_base])
       )
 
       import_commission_transaction(row, security.ticker, date)

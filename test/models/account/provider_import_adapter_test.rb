@@ -280,6 +280,25 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "imports trade with provider exchange rate" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    entry = adapter.import_trade(
+      security: security,
+      quantity: 5,
+      price: 150.00,
+      amount: 750.00,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid",
+      exchange_rate: 0.91
+    )
+
+    assert_equal 0.91, entry.entryable.exchange_rate
+  end
+
   test "raises error when security is missing for trade import" do
     exception = assert_raises(ArgumentError) do
       @adapter.import_trade(
@@ -489,7 +508,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         amount: 2000.00,
         currency: "USD",
         date: Date.today,
-        source: "plaid"
+        source: "plaid",
+        exchange_rate: 0.95
       )
 
       assert_equal entry.id, updated_entry.id
@@ -498,6 +518,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal 10, updated_entry.entryable.qty
       assert_equal 200.00, updated_entry.entryable.price
       assert_equal "USD", updated_entry.entryable.currency
+      assert_equal 0.95, updated_entry.entryable.exchange_rate
       # Entry attributes should also be updated
       assert_equal 2000.00, updated_entry.amount
     end

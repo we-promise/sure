@@ -551,8 +551,9 @@ class Account::ProviderImportAdapter
   # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
+  # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -590,7 +591,8 @@ class Account::ProviderImportAdapter
         qty: quantity,
         price: price,
         currency: currency,
-        investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
+        investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell"),
+        exchange_rate: exchange_rate
       )
 
       entry.assign_attributes(
