@@ -78,12 +78,14 @@ class ProviderConnectionsController < ApplicationController
   end
 
   def reauth
-    # Plaid Link reauth opens the JS-driven Link widget in UPDATE mode rather
+    # EmbeddedLink reauth opens the JS-driven widget in UPDATE mode rather
     # than redirecting to an OAuth endpoint. Other auth backends write a
     # reauth flow record into the same session map the OAuth callback consumes,
     # so the callback knows to update an existing connection rather than create
-    # a new one.
-    if @connection.auth_type == "embedded_link"
+    # a new one. Dispatch off adapter.auth_class to mirror the unified callback
+    # controller (ProviderAuthCallbacksController#show).
+    adapter = Provider::ConnectionRegistry.adapter_for(@connection.provider_key)
+    if adapter.auth_class == Provider::Auth::EmbeddedLink
       redirect_to new_provider_link_path(provider_key: @connection.provider_key,
                                          connection_id: @connection.id)
     else

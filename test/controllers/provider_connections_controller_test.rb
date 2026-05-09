@@ -42,6 +42,24 @@ class ProviderConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "truelayer", flow["provider_key"]
   end
 
+  test "reauth on an EmbeddedLink connection redirects to the Link widget without writing an OAuth flow" do
+    plaid_connection = Provider::Connection.create!(
+      family:       @connection.family,
+      provider_key: "plaid",
+      auth_type:    "embedded_link",
+      credentials:  { "access_token" => "tok_test" },
+      status:       :requires_update,
+      metadata:     { "region" => "us" }
+    )
+
+    post reauth_provider_connection_path(plaid_connection)
+
+    assert_redirected_to new_provider_link_path(provider_key: "plaid", connection_id: plaid_connection.id)
+    flows = session[:provider_flows]
+    assert flows.blank? || flows.values.none? { |f| f["connection_id"] == plaid_connection.id },
+      "EmbeddedLink reauth must not write an OAuth flow record"
+  end
+
   test "save_setup creates a new account when mapping is 'new'" do
     pa = provider_accounts(:monzo_unlinked)
     Provider::Connection.any_instance.expects(:sync_later).once
