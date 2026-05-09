@@ -1,6 +1,39 @@
 require "test_helper"
 
 class ApplicationHelperTest < ActionView::TestCase
+  test "#icon normalizes icon names to lowercase" do
+    capture = []
+
+    singleton_class.send(:define_method, :lucide_icon) do |key, **opts|
+      capture << [ key, opts ]
+      "<svg></svg>".html_safe
+    end
+
+    icon("Key")
+
+    assert_equal "key", capture.first.first
+  ensure
+    singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
+  end
+
+  test "#icon falls back when lucide icon is unknown" do
+    calls = []
+
+    singleton_class.send(:define_method, :lucide_icon) do |key, **_opts|
+      calls << key
+      raise ArgumentError, "Unknown icon #{key}" if key == "not-a-real-icon"
+
+      "<svg></svg>".html_safe
+    end
+
+    result = icon("not-a-real-icon")
+
+    assert_equal [ "not-a-real-icon", "key" ], calls
+    assert_equal "<svg></svg>", result
+  ensure
+    singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
+  end
+
   test "#title(page_title)" do
     title("Test Title")
     assert_equal "Test Title", content_for(:title)

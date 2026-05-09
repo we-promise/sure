@@ -3,6 +3,11 @@
 class Api::V1::BaseController < ApplicationController
   include Doorkeeper::Rails::Helpers
 
+  UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+  private_constant :UUID_PATTERN
+
+  InvalidFilterError = Class.new(StandardError)
+
   # Skip regular session-based authentication for API
   skip_authentication
 
@@ -30,6 +35,7 @@ class Api::V1::BaseController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :handle_not_found
   rescue_from Doorkeeper::Errors::DoorkeeperError, with: :handle_unauthorized
   rescue_from ActionController::ParameterMissing, with: :handle_bad_request
+  rescue_from InvalidFilterError, with: :handle_invalid_filter
 
   private
 
@@ -56,7 +62,7 @@ class Api::V1::BaseController < ApplicationController
       # Check token validity and scope (read_write includes read access)
       has_sufficient_scope = access_token&.scopes&.include?("read") || access_token&.scopes&.include?("read_write")
 
-      unless access_token && !access_token.expired? && has_sufficient_scope
+      unless access_token&.accessible? && has_sufficient_scope
         render_json({ error: "unauthorized", message: "Access token is invalid, expired, or missing required scope" }, status: :unauthorized)
         return false
       end
@@ -204,9 +210,39 @@ class Api::V1::BaseController < ApplicationController
       true
     end
 
+    def ensure_read_scope
+      authorize_scope!(:read)
+    end
+
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status
+    end
+
+    def valid_uuid?(value)
+      value.to_s.match?(UUID_PATTERN)
+    end
+
+    def safe_page_param
+      page = params[:page].to_i
+      page > 0 ? page : 1
+    end
+
+    def safe_per_page_param
+      per_page = params[:per_page].to_i
+      case per_page
+      when 1..100   then per_page
+      when (101..)  then 100
+      else               25
+      end
+    end
+
+    def render_validation_error(message)
+      render_json({
+        error: "validation_failed",
+        message: message,
+        errors: [ message ]
+      }, status: :unprocessable_entity)
     end
 
     # Error handlers
@@ -223,6 +259,16 @@ class Api::V1::BaseController < ApplicationController
     def handle_bad_request(exception)
       Rails.logger.warn "API Bad Request: #{exception.message}"
       render_json({ error: "bad_request", message: "Required parameters are missing or invalid" }, status: :bad_request)
+    end
+
+    def handle_invalid_filter(exception)
+      render_validation_error(exception.message)
+    end
+
+    def parse_date_param(key)
+      Date.iso8601(params[key].to_s)
+    rescue ArgumentError
+      raise InvalidFilterError, "#{key} must be an ISO 8601 date"
     end
 
     # Log API access for monitoring and debugging

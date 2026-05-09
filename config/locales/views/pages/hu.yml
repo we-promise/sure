@@ -1,0 +1,58 @@
+---
+hu:
+  pages:
+    changelog:
+      title: Újdonságok
+    privacy:
+      title: Adatvédelmi irányelvek
+      heading: Adatvédelmi irányelvek
+      placeholder: Az adatvédelmi irányelvek tartalma itt jelenik meg.
+    terms:
+      title: Felhasználási feltételek
+      heading: Felhasználási feltételek
+      placeholder: A felhasználási feltételek tartalma itt jelenik meg.
+    dashboard:
+      welcome: "Üdvözöllek újra, %{name}"
+      subtitle: "Íme, mi történik a pénzügyeiddel"
+      new: "Új"
+      drag_to_reorder: "Húzd át a szakasz átrendezéséhez"
+      toggle_section: "Szakasz láthatóságának váltása"
+      net_worth_chart:
+        data_not_available: A kiválasztott időszakra nincs elérhető adat
+        title: Nettó vagyon
+      no_account_empty_state:
+        new_account: Új számla
+        no_account_subtitle: Mivel még nem adtál hozzá számlát, nincs megjeleníthető adat. Add hozzá az első számláidat, hogy elkezdhess irányítópult-adatokat megtekinteni.
+        no_account_title: Még nincs számla
+      balance_sheet:
+        title: "Mérleg"
+        no_items: "Még nincs %{name}"
+        add_accounts: "Add hozzá a(z) %{name} számláidat a teljes áttekintésért"
+      cashflow_sankey:
+        title: "Pénzforgalom"
+        no_data_title: "Nincs pénzforgalmi adat erre az időszakra"
+        no_data_description: "Adj hozzá tranzakciókat a pénzforgalmi adatok megjelenítéséhez, vagy bővítsd az időszakot"
+        add_transaction: "Tranzakció hozzáadása"
+      no_accounts:
+        title: "Még nincs számla"
+        description: "Adj hozzá számlákat a nettó vagyon adatok megjelenítéséhez"
+        add_account: "Számla hozzáadása"
+      outflows_donut:
+        title: "Kiadások"
+        total_outflows: "Összes kiadás"
+        categories: "Kategóriák"
+        value: "Érték"
+        weight: "Arány"
+      investment_summary:
+        title: "Befektetések"
+        total_return: "Teljes hozam"
+        holding: "Befektetés"
+        weight: "Arány"
+        value: "Érték"
+        return: "Hozam"
+        period_activity: "%{period} aktivitás"
+        contributions: "Befizetések"
+        withdrawals: "Kifizetések"
+        trades: "Ügyletek"
+        no_investments: "Nincs befektetési számla"
+        add_investment: "Adj hozzá befektetési számlát a portfóliód nyomon követéséhez"

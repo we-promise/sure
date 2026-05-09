@@ -338,6 +338,224 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports recurring transactions in NDJSON" do
+    merchant = @family.merchants.create!(name: "Internet Provider")
+    recurring_transaction = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: merchant,
+      amount: -89.99,
+      currency: "USD",
+      expected_day_of_month: 14,
+      last_occurrence_date: Date.parse("2024-01-14"),
+      next_expected_date: Date.parse("2024-02-14"),
+      status: "active",
+      occurrence_count: 6,
+      manual: true,
+      expected_amount_min: -95,
+      expected_amount_max: -85,
+      expected_amount_avg: -89.99
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      recurring_data = ndjson_content
+        .split("\n")
+        .map { |line| JSON.parse(line) }
+        .find { |line| line["type"] == "RecurringTransaction" && line.dig("data", "id") == recurring_transaction.id }
+
+      assert recurring_data
+      assert_equal recurring_transaction.id, recurring_data["data"]["id"]
+      assert_equal @account.id, recurring_data["data"]["account_id"]
+      assert_equal merchant.id, recurring_data["data"]["merchant_id"]
+      assert_equal "-89.99", BigDecimal(recurring_data["data"]["amount"].to_s).to_s("F")
+      assert_equal "active", recurring_data["data"]["status"]
+      assert_equal true, recurring_data["data"]["manual"]
+      assert_not recurring_data["data"].key?("family_id")
+    end
+  end
+
+  test "exports transfer decisions and rejected transfers in NDJSON" do
+    destination_account = @family.accounts.create!(
+      name: "Savings Account",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+
+    transfer_outflow = create_transaction_entry(@account, amount: 100, date: Date.parse("2024-01-15"), name: "Transfer to savings")
+    transfer_inflow = create_transaction_entry(destination_account, amount: -100, date: Date.parse("2024-01-15"), name: "Transfer from checking")
+    transfer = Transfer.create!(
+      outflow_transaction: transfer_outflow.entryable,
+      inflow_transaction: transfer_inflow.entryable,
+      status: "confirmed",
+      notes: "Confirmed by user"
+    )
+
+    rejected_outflow = create_transaction_entry(@account, amount: 25, date: Date.parse("2024-01-20"), name: "Candidate outflow")
+    rejected_inflow = create_transaction_entry(destination_account, amount: -25, date: Date.parse("2024-01-20"), name: "Candidate inflow")
+    rejected_transfer = RejectedTransfer.create!(
+      outflow_transaction: rejected_outflow.entryable,
+      inflow_transaction: rejected_inflow.entryable
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+
+      transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == transfer.id }
+      assert transfer_data
+      assert_equal transfer_inflow.entryable.id, transfer_data["data"]["inflow_transaction_id"]
+      assert_equal transfer_outflow.entryable.id, transfer_data["data"]["outflow_transaction_id"]
+      assert_equal "confirmed", transfer_data["data"]["status"]
+      assert_equal "Confirmed by user", transfer_data["data"]["notes"]
+
+      rejected_transfer_data = ndjson_records.find { |record| record["type"] == "RejectedTransfer" && record.dig("data", "id") == rejected_transfer.id }
+      assert rejected_transfer_data
+      assert_equal rejected_inflow.entryable.id, rejected_transfer_data["data"]["inflow_transaction_id"]
+      assert_equal rejected_outflow.entryable.id, rejected_transfer_data["data"]["outflow_transaction_id"]
+
+      # Transfer decisions must follow Transaction records so import can remap both sides.
+      transaction_indices = ndjson_records.each_index.select { |index| ndjson_records[index]["type"] == "Transaction" }
+      transfer_index = ndjson_records.index(transfer_data)
+      rejected_transfer_index = ndjson_records.index(rejected_transfer_data)
+
+      assert_operator transaction_indices.max, :<, transfer_index
+      assert_operator transaction_indices.max, :<, rejected_transfer_index
+    end
+  end
+
+  test "does not export transfer decisions for split parent transactions" do
+    destination_account = @family.accounts.create!(
+      name: "Split Transfer Savings",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+
+    split_parent_outflow = create_transaction_entry(@account, amount: 60, date: Date.parse("2024-01-25"), name: "Split transfer parent")
+    split_parent_outflow.split!([
+      { name: "Split transfer child", amount: 60, category_id: @category.id }
+    ])
+    transfer_inflow = create_transaction_entry(destination_account, amount: -60, date: Date.parse("2024-01-25"), name: "Split transfer inflow")
+    transfer = Transfer.create!(
+      outflow_transaction: split_parent_outflow.entryable,
+      inflow_transaction: transfer_inflow.entryable,
+      status: "confirmed"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+
+      transaction_ids = ndjson_records
+        .select { |record| record["type"] == "Transaction" }
+        .map { |record| record.dig("data", "id") }
+      transfer_ids = ndjson_records
+        .select { |record| record["type"] == "Transfer" }
+        .map { |record| record.dig("data", "id") }
+
+      assert_not_includes transaction_ids, split_parent_outflow.entryable.id
+      assert_not_includes transfer_ids, transfer.id
+    end
+  end
+
+  test "exports balance history in NDJSON for backup verification" do
+    balance = @account.balances.create!(
+      date: Date.parse("2024-01-15"),
+      balance: 1234.56,
+      cash_balance: 1234.56,
+      start_cash_balance: 1000,
+      start_non_cash_balance: 0,
+      cash_inflows: 234.56,
+      cash_outflows: 0,
+      flows_factor: 1,
+      currency: "USD"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      balance_data = ndjson_records.find { |record| record["type"] == "Balance" && record.dig("data", "id") == balance.id }
+
+      assert balance_data
+      assert_equal @account.id, balance_data["data"]["account_id"]
+      assert_equal "2024-01-15", balance_data["data"]["date"]
+      assert_equal "1234.56", BigDecimal(balance_data["data"]["balance"].to_s).to_s("F")
+      assert_equal "USD", balance_data["data"]["currency"]
+    end
+  end
+
+  test "exports balance history chronologically" do
+    @account.balances.create!(date: Date.parse("2024-03-01"), balance: 300, flows_factor: 1, currency: "USD")
+    @account.balances.create!(date: Date.parse("2024-01-01"), balance: 100, flows_factor: 1, currency: "USD")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      balance_dates = zip.read("all.ndjson")
+        .split("\n")
+        .map { |line| JSON.parse(line) }
+        .select { |record| record["type"] == "Balance" }
+        .map { |record| Date.iso8601(record.dig("data", "date")) }
+
+      assert_equal balance_dates.sort, balance_dates
+    end
+  end
+
+  test "exports holding snapshots in NDJSON" do
+    investment_account = @family.accounts.create!(
+      name: "Investment Account",
+      accountable: Investment.new,
+      balance: 25_000,
+      currency: "USD"
+    )
+    security = Security.create!(
+      ticker: "VTI#{SecureRandom.hex(4).upcase}",
+      name: "Vanguard Total Stock Market ETF",
+      country_code: "US",
+      exchange_operating_mic: "ARCX"
+    )
+    holding = investment_account.holdings.create!(
+      security: security,
+      date: Date.parse("2024-01-15"),
+      qty: 100,
+      price: 250.25,
+      amount: 25_025,
+      currency: "USD",
+      cost_basis: 200,
+      cost_basis_source: "manual",
+      cost_basis_locked: true,
+      security_locked: true
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      holding_data = ndjson_records.find { |record| record["type"] == "Holding" && record.dig("data", "id") == holding.id }
+
+      assert holding_data
+      assert_equal investment_account.id, holding_data["data"]["account_id"]
+      assert_equal security.id, holding_data["data"]["security_id"]
+      assert_equal security.ticker, holding_data["data"]["ticker"]
+      assert_equal "ARCX", holding_data["data"]["exchange_operating_mic"]
+      assert_equal "2024-01-15", holding_data["data"]["date"]
+      assert_equal "100.0", BigDecimal(holding_data["data"]["qty"].to_s).to_s("F")
+      assert_equal "250.25", BigDecimal(holding_data["data"]["price"].to_s).to_s("F")
+      assert_equal "25025.0", BigDecimal(holding_data["data"]["amount"].to_s).to_s("F")
+      assert_equal "200.0", BigDecimal(holding_data["data"]["cost_basis"].to_s).to_s("F")
+      assert_equal "manual", holding_data["data"]["cost_basis_source"]
+      assert_equal true, holding_data["data"]["cost_basis_locked"]
+      assert_not holding_data["data"].key?("created_at")
+      assert_not holding_data["data"].key?("updated_at")
+    end
+  end
+
   test "only exports rules from the specified family" do
     # Create a rule for another family that should NOT be exported
     other_rule = @other_family.rules.build(
@@ -369,4 +587,16 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       refute ndjson_content.include?(other_rule.name)
     end
   end
+
+  private
+
+    def create_transaction_entry(account, amount:, date:, name:)
+      account.entries.create!(
+        date: date,
+        amount: amount,
+        name: name,
+        currency: account.currency,
+        entryable: Transaction.new(kind: "funds_movement")
+      )
+    end
 end

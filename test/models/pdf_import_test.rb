@@ -131,6 +131,7 @@ class PdfImportTest < ActiveSupport::TestCase
 
   test "mapping_steps includes CategoryMapping when rows have categories" do
     @import_with_rows.rows.create!(
+      source_row_number: 1,
       date: "01/15/2024",
       amount: -50.00,
       currency: "USD",

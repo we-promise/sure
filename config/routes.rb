@@ -147,6 +147,8 @@ Rails.application.routes.draw do
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
     post :verify, to: "mfa#verify_code"
+    post :webauthn_options
+    post :verify_webauthn
     delete :disable
   end
 
@@ -224,6 +226,9 @@ Rails.application.routes.draw do
     end
     resource :payment, only: :show
     resource :security, only: :show
+    resources :webauthn_credentials, only: %i[create destroy] do
+      post :options, on: :collection
+    end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
@@ -449,20 +454,38 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
-      resources :categories, only: [ :index, :show ]
-      resources :merchants, only: %i[index show]
+      resources :balances, only: [ :index, :show ]
+      resources :budgets, only: [ :index, :show ]
+      resources :budget_categories, only: [ :index, :show ]
+      resources :categories, only: [ :index, :show, :create ]
+      resources :merchants, only: [ :index, :show ]
       resources :rules, only: [ :index, :show ]
-      resources :tags, only: %i[index show create update destroy]
+      resources :rule_runs, only: [ :index, :show ]
+      resources :securities, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show ]
+      resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
+      resources :transfers, only: [ :index, :show ]
+      resources :rejected_transfers, only: [ :index, :show ]
       resources :valuations, only: [ :index, :create, :update, :show ]
       resources :recurring_transactions, only: [ :index, :show, :create, :update, :destroy ]
-      resources :imports, only: [ :index, :show, :create ]
+      resources :family_exports, only: [ :index, :show, :create ] do
+        get :download, on: :member
+      end
+      resources :imports, only: [ :index, :show, :create ] do
+        get :rows, on: :member
+      end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
-      post :sync, to: "sync#create"
+      resource :family_settings, only: [ :show ], controller: :family_settings
+      post :sync, to: "sync#create", as: :sync_job
+      resources :syncs, only: [ :index, :show ] do
+        get :latest, on: :collection
+      end
+      resources :provider_connections, only: [ :index ]
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do
@@ -470,6 +493,7 @@ Rails.application.routes.draw do
         end
       end
 
+      get "users/reset/status", to: "users#reset_status"
       delete "users/reset", to: "users#reset"
       delete "users/me", to: "users#destroy"
 
@@ -541,8 +565,11 @@ Rails.application.routes.draw do
     end
 
     member do
+      post :connect_institution
       post :sync
       post :balances
+      get :connection_status
+      post :submit_mfa
       get :setup_accounts
       post :complete_account_setup
     end

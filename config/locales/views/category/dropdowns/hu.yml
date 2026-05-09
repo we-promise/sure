@@ -1,0 +1,11 @@
+---
+hu:
+  category:
+    dropdowns:
+      row:
+        delete: Kategória törlése
+        edit: Kategória szerkesztése
+      show:
+        clear: Kategória törlése
+        no_categories: Nem található kategória
+        search_placeholder: Keresés

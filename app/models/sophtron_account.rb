@@ -46,20 +46,37 @@ class SophtronAccount < ApplicationRecord
   def upsert_sophtron_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access
+    account_id = first_present(snapshot, :account_id, :id, :AccountID)
+    account_name = first_present(snapshot, :account_name, :name, :AccountName)
+    account_number = first_present(snapshot, :account_number, :AccountNumber)
+    currency = first_present(snapshot, :balance_currency, :currency, :BalanceCurrency, :Currency)
+    balance = first_present(snapshot, :balance, :account_balance, :AccountBalance, :Balance)
+    available_balance = first_present(snapshot, :"available-balance", :available_balance, :AvailableBalance)
+    account_type = first_present(snapshot, :account_type, :type, :AccountType)
+    account_sub_type = first_present(snapshot, :sub_type, :account_sub_type, :AccountSubType, :SubType)
+    last_updated = first_present(snapshot, :last_updated, :LastUpdated)
+    institution_name = first_present(snapshot, :institution_name, :InstitutionName).presence || sophtron_item&.institution_name
+    user_institution_id = first_present(snapshot, :user_institution_id, :UserInstitutionID).presence || sophtron_item&.user_institution_id
 
     # Map Sophtron field names to our field names
     assign_attributes(
-      name: snapshot[:account_name],
-      account_id: snapshot[:account_id],
-      currency: parse_currency(snapshot[:balance_currency]) || "USD",
-      balance: parse_balance(snapshot[:balance]),
-      available_balance: parse_balance(snapshot[:"available-balance"]),
-      account_type: snapshot["account_type"] || "unknown",
-      account_sub_type: snapshot["sub_type"] || "unknown",
-      last_updated: parse_balance_date(snapshot[:"last_updated"]),
+      name: account_name,
+      account_id: account_id,
+      currency: parse_currency(currency) || "USD",
+      balance: parse_balance(balance),
+      available_balance: parse_balance(available_balance),
+      account_type: account_type.presence || "unknown",
+      account_sub_type: account_sub_type.presence || "unknown",
+      last_updated: parse_balance_date(last_updated),
+      account_status: first_present(snapshot, :account_status, :status, :AccountStatus, :Status),
+      account_number_mask: snapshot[:account_number_mask].presence || mask_account_number(account_number),
+      institution_metadata: {
+        name: institution_name,
+        user_institution_id: user_institution_id
+      }.compact,
       raw_payload: account_snapshot,
-      customer_id: snapshot["customer_id"],
-      member_id: snapshot["member_id"]
+      customer_id: first_present(snapshot, :customer_id, :CustomerID) || customer_id,
+      member_id: first_present(snapshot, :member_id, :MemberID) || member_id
     )
 
     save!
@@ -126,5 +143,21 @@ class SophtronAccount < ApplicationRecord
     def has_balance
       return if balance.present? || available_balance.present?
       errors.add(:base, "Sophtron account must have either current or available balance")
+    end
+
+    def first_present(hash, *keys)
+      keys.each do |key|
+        value = hash[key]
+        return value if value.present?
+      end
+
+      nil
+    end
+
+    def mask_account_number(account_number)
+      return nil if account_number.blank?
+
+      last_four = account_number.to_s.gsub(/\s+/, "").last(4)
+      last_four.present? ? "****#{last_four}" : nil
     end
 end

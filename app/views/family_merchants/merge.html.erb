@@ -13,7 +13,7 @@
         <div class="max-h-64 overflow-y-auto space-y-1 border border-secondary rounded-lg p-2">
           <% @merchants.each do |merchant| %>
             <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
-              <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-gray-300" %>
+              <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-secondary" %>
               <span class="text-sm text-primary"><%= merchant.name %></span>
               <% if merchant.is_a?(ProviderMerchant) %>
                 <span class="text-xs text-subdued">(<%= merchant.source&.titleize %>)</span>

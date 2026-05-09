@@ -3,6 +3,7 @@
   <%= styled_form_with model: entry,
         url: transaction_path(entry),
         data: { controller: "auto-submit-form" } do |f| %>
+    <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
     <%= f.text_area :notes,
             label: t("transactions.show.note_label"),
             placeholder: t("transactions.show.note_placeholder"),

@@ -96,6 +96,10 @@ module ActiveSupport
       yield
     end
 
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.plain_key }
+    end
+
     def user_password_test
       "maybetestpassword817983172"
     end

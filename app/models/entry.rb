@@ -1,6 +1,9 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  TRUTHY_VALUES = [ true, "true", "1", 1 ].freeze
+  private_constant :TRUTHY_VALUES
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -48,27 +51,20 @@ class Entry < ApplicationRecord
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
+    conditions = Transaction::PENDING_PROVIDERS.map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean = true" }
     joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-      SQL
+      .where(conditions.join(" OR "))
   }
 
   scope :excluding_pending, -> {
     # For non-Transaction entries (Trade, Valuation), always include
-    # For Transaction entries, exclude if pending flag is true
+    # For Transaction entries, exclude if any provider marks it pending
     where(<<~SQL.squish)
       entries.entryable_type != 'Transaction'
       OR NOT EXISTS (
         SELECT 1 FROM transactions t
         WHERE t.id = entries.entryable_id
-        AND (
-          (t.extra -> 'simplefin' ->> 'pending')::boolean = true
-          OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
-          OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        )
+        AND (#{Transaction::PENDING_CHECK_SQL})
       )
     SQL
   }
@@ -148,6 +144,10 @@ class Entry < ApplicationRecord
   def self.reconcile_pending_duplicates(account: nil, dry_run: false, date_window: 8, amount_tolerance: 0.25)
     stats = { checked: 0, reconciled: 0, details: [] }
 
+    not_pending_sql = Transaction::PENDING_PROVIDERS
+      .map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean IS NOT TRUE" }
+      .join(" AND ")
+
     # Get pending entries to check
     scope = Entry.pending.where(excluded: false)
     scope = scope.where(account: account) if account
@@ -164,11 +164,7 @@ class Entry < ApplicationRecord
         .where(currency: pending_entry.currency)
         .where(amount: pending_entry.amount)
         .where(date: pending_entry.date..(pending_entry.date + date_window.days)) # Posted must be ON or AFTER pending date
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
-        SQL
+        .where(not_pending_sql)
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
         .to_a # Load limited records to avoid COUNT(*) on .size
 
@@ -211,11 +207,7 @@ class Entry < ApplicationRecord
         .where(currency: pending_entry.currency)
         .where(date: pending_entry.date..(pending_entry.date + fuzzy_date_window.days)) # Posted ON or AFTER pending
         .where("ABS(entries.amount) BETWEEN ? AND ?", min_amount, max_amount)
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
-        SQL
+        .where(not_pending_sql)
 
       # Match by name similarity (first 3 words)
       name_words = pending_entry.name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
@@ -253,10 +245,12 @@ class Entry < ApplicationRecord
                 pending_transaction.update!(
                   extra: existing_extra.merge(
                     "potential_posted_match" => {
-                      "entry_id" => fuzzy_match.id,
-                      "reason" => "fuzzy_amount_match",
+                      "entry_id"      => fuzzy_match.id,
+                      "reason"        => "fuzzy_amount_match",
                       "posted_amount" => fuzzy_match.amount.to_s,
-                      "detected_at" => Date.current.to_s
+                      "confidence"    => "medium",
+                      "dismissed"     => false,
+                      "detected_at"   => Date.current.to_s
                     }
                   )
                 )
@@ -370,7 +364,7 @@ class Entry < ApplicationRecord
 
   # Splits this entry into child entries. Marks parent as excluded.
   #
-  # @param splits [Array<Hash>] array of { name:, amount:, category_id: } hashes
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
   # @return [Array<Entry>] the created child entries
   def split!(splits)
     total = splits.sum { |s| s[:amount].to_d }
@@ -392,6 +386,7 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
+          excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
           entryable: child_transaction
         )
       end

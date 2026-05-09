@@ -1,0 +1,25 @@
+---
+hu:
+  vehicles:
+    edit:
+      edit: '%{account} szerkesztése'
+    form:
+      make: Márka
+      make_placeholder: BMW
+      mileage: Kilométeróra-állás
+      mileage_placeholder: '15000'
+      mileage_unit: Mértékegység
+      model: Modell
+      model_placeholder: M3
+      year: Évjárat
+      year_placeholder: '2023'
+    new:
+      title: Add meg a jármű adatait
+    overview:
+      current_price: Jelenlegi ár
+      make_model: Márka és modell
+      mileage: Kilométeróra-állás
+      purchase_price: Vételár
+      trend: Tendencia
+      unknown: Ismeretlen
+      year: Évjárat

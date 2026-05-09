@@ -135,10 +135,10 @@
                         <%= icon "alert-circle", class: "w-4 h-4 text-red-600 theme-dark:text-red-400" %>
                         <span class="text-red-600 theme-dark:text-red-400 font-medium">Failed</span>
                       </div>
-                      <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-gray-800 text-sm p-3 rounded w-72 text-left break-words whitespace-normal shadow-lg hidden">
-                        <div class="text-white">
+                      <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-inverse text-sm p-3 rounded w-72 text-left break-words whitespace-normal shadow-lg hidden">
+                        <div class="text-inverse">
                           <% if usage.http_status_code.present? %>
-                            <p class="text-xs mt-1 text-gray-300">HTTP Status: <%= usage.http_status_code %></p>
+                            <p class="text-xs mt-1 text-inverse opacity-70">HTTP Status: <%= usage.http_status_code %></p>
                           <% end %>
                           <p class="text-xs"><%= usage.error_message %></p>
                         </div>

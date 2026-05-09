@@ -111,10 +111,21 @@ export default class extends Controller {
       if (response.ok) {
         const data = await response.json()
         if (data.issuer) {
-          // Valid OIDC discovery endpoint
-          issuerInput.classList.remove('border-yellow-300', 'border-red-300')
-          issuerInput.classList.add('border-green-300')
-          this.showValidationMessage(issuerInput, 'Valid OIDC issuer', 'success')
+          if (data.issuer === issuer) {
+            issuerInput.classList.remove('border-yellow-300', 'border-red-300', 'border-amber-300')
+            issuerInput.classList.add('border-green-300')
+            this.showValidationMessage(issuerInput, 'Valid OIDC issuer', 'success')
+          } else {
+            issuerInput.classList.remove('border-yellow-300', 'border-green-300')
+            issuerInput.classList.add('border-amber-300')
+
+            const trailingSlashOnly = data.issuer.replace(/\/$/, '') === issuer.replace(/\/$/, '')
+            const message = trailingSlashOnly
+              ? `Issuer mismatch: discovery returned ${data.issuer}. This is usually a trailing slash mismatch, so copy the issuer exactly as returned.`
+              : `Issuer mismatch: discovery returned ${data.issuer}. Copy the issuer exactly as returned by the provider.`
+
+            this.showValidationMessage(issuerInput, message, 'warning')
+          }
         } else {
           throw new Error('Invalid discovery response')
         }

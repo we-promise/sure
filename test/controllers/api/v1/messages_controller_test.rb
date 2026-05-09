@@ -37,7 +37,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create message with write scope" do
-    assert_difference "Message.count" do
+    assert_difference "UserMessage.count" do
       post "/api/v1/chats/#{@chat.id}/messages",
         params: { content: "Test message", model: "gpt-4" },
         headers: bearer_auth_header(@write_token)

@@ -22,7 +22,7 @@ class MenuComponentPreview < ViewComponent::Preview
     def menu_contents(menu)
       menu.with_header do
         content_tag(:div, class: "p-3") do
-          content_tag(:h3, "Menu header", class: "font-medium text-gray-900")
+          content_tag(:h3, "Menu header", class: "font-medium text-primary")
         end
       end
 
@@ -35,8 +35,8 @@ class MenuComponentPreview < ViewComponent::Preview
       menu.with_custom_content do
         content_tag(:div, class: "p-4") do
           safe_join([
-            content_tag(:h3, "Custom content header", class: "font-medium text-gray-900"),
-            content_tag(:p, "Some custom content", class: "text-sm text-gray-500")
+            content_tag(:h3, "Custom content header", class: "font-medium text-primary"),
+            content_tag(:p, "Some custom content", class: "text-sm text-secondary")
           ])
         end
       end
