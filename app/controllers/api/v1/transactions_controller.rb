@@ -5,7 +5,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
-  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  MAX_BATCH_SIZE = 100
+
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy, :batch_create, :batch_update ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
 
   def index
@@ -196,6 +198,38 @@ end
       error: "internal_server_error",
       message: "An unexpected error occurred"
     }, status: :internal_server_error
+  end
+
+  def batch_create
+    items = batch_items_param
+    return if items.nil?
+    return render_batch_too_large if items.size > MAX_BATCH_SIZE
+    return render_empty_batch if items.empty?
+
+    results = items.each_with_index.map { |raw, idx| process_create_item(raw, idx) }
+    log_batch_summary(:batch_create, results)
+    render json: build_batch_response(results), status: :multi_status
+
+  rescue => e
+    Rails.logger.error "TransactionsController#batch_create error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: "internal_server_error", message: "An unexpected error occurred" }, status: :internal_server_error
+  end
+
+  def batch_update
+    items = batch_items_param
+    return if items.nil?
+    return render_batch_too_large if items.size > MAX_BATCH_SIZE
+    return render_empty_batch if items.empty?
+
+    results = items.each_with_index.map { |raw, idx| process_update_item(raw, idx) }
+    log_batch_summary(:batch_update, results)
+    render json: build_batch_response(results), status: :multi_status
+
+  rescue => e
+    Rails.logger.error "TransactionsController#batch_update error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: "internal_server_error", message: "An unexpected error occurred" }, status: :internal_server_error
   end
 
   private
@@ -442,5 +476,50 @@ end
       else
         25  # Default
       end
+    end
+
+    def batch_items_param
+      raw = params[:transactions]
+      unless raw.is_a?(Array) || (raw.respond_to?(:to_a) && raw.respond_to?(:each))
+        render json: { error: "validation_failed", message: "transactions is required and must be an array" },
+               status: :unprocessable_entity
+        return nil
+      end
+      raw.to_a
+    end
+
+    def render_batch_too_large
+      render json: { error: "batch_too_large", message: "max #{MAX_BATCH_SIZE} items per request" },
+             status: :bad_request
+    end
+
+    def render_empty_batch
+      render json: { error: "validation_failed", message: "batch must not be empty" },
+             status: :unprocessable_entity
+    end
+
+    def process_create_item(raw, idx)
+      # Implemented in Task 2
+      { index: idx, status: "error", error: "not_implemented", errors: [ "batch_create not implemented" ] }
+    end
+
+    def process_update_item(raw, idx)
+      # Implemented in Task 3
+      { index: idx, status: "error", error: "not_implemented", errors: [ "batch_update not implemented" ] }
+    end
+
+    def build_batch_response(results)
+      succeeded = results.count { |r| %w[created updated].include?(r[:status]) }
+      failed = results.size - succeeded
+      {
+        results: results,
+        summary: { total: results.size, succeeded: succeeded, failed: failed }
+      }
+    end
+
+    def log_batch_summary(action, results)
+      succeeded = results.count { |r| %w[created updated].include?(r[:status]) }
+      failed = results.size - succeeded
+      Rails.logger.info "#{action}: #{results.size} items, #{succeeded} succeeded, #{failed} failed"
     end
 end

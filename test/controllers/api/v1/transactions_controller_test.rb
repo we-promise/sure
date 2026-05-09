@@ -757,6 +757,38 @@ end
     assert transaction_data["transfer"].key?("other_account")
   end
 
+  # BATCH CREATE action tests
+  test "batch_create requires write scope" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [ { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" } ] },
+      as: :json,
+      headers: api_headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "batch_create rejects empty array" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "validation_failed", body["error"]
+  end
+
+  test "batch_create rejects more than MAX_BATCH_SIZE items" do
+    oversized = Array.new(101) {
+      { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" }
+    }
+    post batch_api_v1_transactions_url,
+      params: { transactions: oversized },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :bad_request
+    body = JSON.parse(response.body)
+    assert_equal "batch_too_large", body["error"]
+  end
+
   private
 
     def api_headers(api_key)
