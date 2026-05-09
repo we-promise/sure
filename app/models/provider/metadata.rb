@@ -78,6 +78,15 @@ class Provider
         maturity: :stable,
         logo_bg: "bg-indigo-600",
         logo_text: "PL"
+      },
+      plaid_eu: {
+        name: "Plaid EU",
+        region: "EU",
+        kind: "Bank",
+        tier: "Paid",
+        maturity: :stable,
+        logo_bg: "bg-indigo-600",
+        logo_text: "PL"
       }
     }.freeze
 

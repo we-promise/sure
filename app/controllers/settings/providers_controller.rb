@@ -301,11 +301,12 @@ class Settings::ProvidersController < ApplicationController
     # view to render either a provider_form or a family panel partial.
     def build_provider_entries
       configuration_entries = @provider_configurations.map do |config|
+        meta = Provider::Metadata.for(config.provider_key)
         {
           provider_key: config.provider_key.to_s,
-          title: config.provider_key.to_s.titleize,
+          title: meta[:name] || config.provider_key.to_s.titleize,
           configuration: config,
-          maturity: Provider::Metadata.for(config.provider_key)[:maturity],
+          maturity: meta[:maturity],
           summary: view_context.provider_summary(config.provider_key)
         }
       end
