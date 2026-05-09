@@ -56,7 +56,7 @@ class Provider::Plaid::Syncer
   end
 
   def perform_sync(sync)
-    token = @connection.auth.fresh_access_token
+    token = @connection.auth.fresh_access_token # pipelock:ignore
 
     # Phase 1: Import latest item-level data (institution metadata, item state)
     item     = client.get_item(token).item

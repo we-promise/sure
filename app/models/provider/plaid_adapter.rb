@@ -56,7 +56,7 @@ class Provider::PlaidAdapter
   # Reload Plaid US configuration when settings are updated.
   def self.reload_configuration
     client_id   = config_value(:client_id).presence || ENV["PLAID_CLIENT_ID"]
-    secret      = config_value(:secret).presence    || ENV["PLAID_SECRET"]
+    secret      = config_value(:secret).presence    || ENV["PLAID_SECRET"] # pipelock:ignore
     environment = config_value(:environment).presence || ENV["PLAID_ENV"] || "sandbox"
 
     if client_id.present? && secret.present?
