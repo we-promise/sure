@@ -1,0 +1,97 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="container mx-auto max-w-2xl py-8">
+  <h1 class="text-2xl font-semibold text-primary mb-2"><%= t(".title") %></h1>
+  <p class="text-secondary mb-6"><%= t(".description") %></p>
+
+  <% if @unlinked.empty? %>
+    <%# discover_accounts! is best-effort post-create; if it failed (network %>
+    <%# blip, transient upstream error) the connection exists but no provider %>
+    <%# accounts were ever fetched. Surface the error and offer Retry sync.  %>
+    <div class="p-4 rounded-lg border border-destructive/20 bg-destructive/5 mb-6">
+      <div class="flex items-start gap-3">
+        <%= icon("alert-circle", class: "w-5 h-5 text-destructive shrink-0 mt-0.5") %>
+        <div class="flex-1">
+          <h2 class="text-sm font-semibold text-primary mb-1"><%= t(".no_accounts_discovered") %></h2>
+          <p class="text-sm text-secondary"><%= t(".no_accounts_explain") %></p>
+          <% if @connection.read_attribute(:sync_error).present? %>
+            <p class="text-xs text-secondary mt-2 font-mono break-all"><%= @connection.read_attribute(:sync_error) %></p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2">
+      <%= link_to t(".cancel"), settings_providers_path,
+                  class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-primary border border-primary hover:bg-surface-hover transition-colors" %>
+      <%= button_to t(".retry_sync"),
+                    sync_provider_connection_path(@connection),
+                    method: :post,
+                    data: { turbo: false },
+                    class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+    </div>
+  <% else %>
+    <% if @stale.any? %>
+      <%# Accounts whose external_id no longer appears in upstream discovery   %>
+      <%# responses. Could be a closed bank account or removed from the user's %>
+      <%# online banking. We surface them so the user is aware; the syncer    %>
+      <%# does not auto-delete since the connection still works for siblings.  %>
+      <div class="p-4 rounded-lg border border-warning/20 bg-warning/5 mb-6">
+        <div class="flex items-start gap-3">
+          <%= icon("alert-circle", class: "w-5 h-5 text-warning shrink-0 mt-0.5") %>
+          <div class="flex-1">
+            <h2 class="text-sm font-semibold text-primary mb-1"><%= t(".stale_heading", count: @stale.size) %></h2>
+            <p class="text-sm text-secondary mb-2"><%= t(".stale_explain") %></p>
+            <ul class="list-disc list-inside text-sm text-secondary">
+              <% @stale.each do |pa| %>
+                <li><%= pa.external_name %> (<%= pa.currency %>)</li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%= form_with url: save_setup_provider_connection_path(@connection), data: { controller: "account-mapping" } do |f| %>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-primary mb-1" for="sync_start_date">
+          <%= t(".sync_start_date_label") %>
+        </label>
+        <input type="date"
+               id="sync_start_date"
+               name="sync_start_date"
+               value="<%= (@connection.sync_start_date || 90.days.ago.to_date).iso8601 %>"
+               class="rounded-md border border-primary text-sm p-2 text-primary bg-container">
+        <p class="text-xs text-secondary mt-1"><%= t(".sync_start_date_hint") %></p>
+      </div>
+
+      <div class="space-y-3">
+        <% @unlinked.each do |pa| %>
+          <div class="flex items-center gap-4 p-3 rounded-lg border border-primary">
+            <span class="flex-1 text-sm text-primary"><%= pa.external_name %> (<%= pa.currency %>)</span>
+            <%= f.select "mappings[#{pa.id}]",
+                [[ t(".create_new"), "new" ]] + @accounts.map { |a| [a.name, a.id] },
+                { include_blank: t(".skip") },
+                class: "rounded-md border border-primary text-sm p-1 text-primary bg-container",
+                data: { account_mapping_target: "mapping" } %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex justify-end items-center gap-3 mt-6">
+        <%# `<button type="reset">` resets every <select> back to the        %>
+        <%# include_blank "Skip" option (first in list, no `selected` attr). %>
+        <button type="reset"
+                class="text-sm text-secondary hover:text-primary underline-offset-2 hover:underline">
+          <%= t(".skip_all") %>
+        </button>
+        <button type="button"
+                data-action="click->account-mapping#createAll"
+                class="text-sm text-secondary hover:text-primary underline-offset-2 hover:underline">
+          <%= t(".create_all") %>
+        </button>
+        <%= f.submit t(".save_mapping"),
+                    class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

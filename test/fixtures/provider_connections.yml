@@ -1,0 +1,15 @@
+_fixture:
+  model_class: Provider::Connection
+
+monzo_connection:
+  family: dylan_family
+  provider_family_config: truelayer_family_one
+  provider_key: truelayer
+  auth_type: oauth2
+  credentials:
+    access_token: test_token
+    refresh_token: test_refresh
+    expires_at: 9999999999
+  status: healthy
+  metadata:
+    redirect_uri: https://example.com/connect/truelayer/callback

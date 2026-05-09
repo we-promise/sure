@@ -61,10 +61,25 @@ Sidekiq.configure_server do |config|
 
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
-    AutoSyncScheduler.sync!
-    Rails.logger.info("[AutoSyncScheduler] Initialized sync_all_accounts cron job")
-  rescue => e
-    Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
+    begin
+      AutoSyncScheduler.sync!
+      Rails.logger.info("[AutoSyncScheduler] Initialized sync_all_accounts cron job")
+    rescue => e
+      Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
+    end
+
+    begin
+      Sidekiq::Cron::Job.create(
+        name: "consent_expiry_check",
+        cron: "0 6 * * *",
+        class: "Provider::ConsentExpiryCheckJob",
+        queue: "scheduled",
+        description: "Marks provider connections with expiring consent as requires_update"
+      )
+      Rails.logger.info("[ConsentExpiryCheckJob] Registered consent_expiry_check cron job")
+    rescue => e
+      Rails.logger.error("[ConsentExpiryCheckJob] Failed to register cron job: #{e.message}")
+    end
   end
 end
 

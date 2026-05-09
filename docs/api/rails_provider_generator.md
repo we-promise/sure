@@ -4,12 +4,112 @@ This guide explains how to use the `Provider` generators, which make it easy to 
 integrations with either **global** or **per-family** scope credentials.
 
 ## Table of Contents
-1. [Quick Start](#quick-start)
-2. [Global vs Per-Family: Which to Use?](#global-vs-per-family-which-to-use)
-3. [Provider:Family Generator](#providerfamily-generator)
-4. [Provider:Global Generator](#providerglobal-generator)
-5. [Comparison Table](#comparison-table)
-6. [Examples](#examples)
+1. [Provider System Overview](#provider-system-overview)
+2. [Quick Start](#quick-start)
+3. [Global vs Per-Family: Which to Use?](#global-vs-per-family-which-to-use)
+4. [Provider:Family Generator](#providerfamily-generator)
+5. [Provider:Global Generator](#providerglobal-generator)
+6. [Comparison Table](#comparison-table)
+7. [Examples](#examples)
+
+---
+
+## Provider System Overview
+
+Sure has several provider subsystems that have evolved over time. New work should
+prefer the patterns called out as **preferred** below; the others are documented
+for context because existing adapters still use them.
+
+### 1. `Provider::Base` + `Provider::Factory` (per-account adapter pattern)
+
+The original pattern. Each upstream provider has its own AR model
+(`PlaidAccount`, `SimplefinAccount`, etc.) and an adapter class inheriting
+`Provider::Base`. `Provider::Factory.register("PlaidAccount", Provider::PlaidAdapter)`
+binds them together; `Provider::Factory.create_adapter(provider_account)` is the
+runtime lookup. Adapters use `with_provider_response { ... }` to wrap upstream
+calls in a consistent `Provider::Response` envelope.
+
+Used by: Plaid, SimpleFIN, Lunchflow, Sophtron, Mercury, Coinbase, Binance,
+IndexaCapital, SnapTrade.
+
+### 2. `Provider::Configurable` + `Provider::ConfigurationRegistry`
+
+DSL for declaring provider settings:
+
+```ruby
+configure do
+  field :client_id, secret: true, env_key: "PLAID_CLIENT_ID"
+  field :secret,    secret: true, env_key: "PLAID_SECRET"
+end
+```
+
+Auto-registers in `Provider::ConfigurationRegistry` so the Settings → Providers
+UI can render the form fields. Used alongside the per-account adapter pattern
+above.
+
+### 3. `Provider::Registry` (concept registry)
+
+Stateless registry for cross-cutting concepts: `:exchange_rates`, `:securities`,
+`:llm`. Configured via ENV / `Setting`. Returns SDK instances (e.g.
+`Provider::Registry.get_provider(:openai)`). Different shape from the per-account
+or connection-based patterns — this is "which third-party API serves this concept",
+not "which adapter does this account belong to".
+
+### 4. `Provider::Connection` + `Provider::ConnectionRegistry` (preferred — adopt this for new providers)
+
+The current pattern. One `provider_connections` row per family/institution
+grant; one `provider_accounts` row per upstream account on that connection.
+Adapter classes register via
+`Provider::ConnectionRegistry.register("provider_key", AdapterClass)` and
+extend `Provider::ConnectionAdapter` to inherit the contract.
+
+Currently used by: TrueLayer (OAuth2), Plaid (EmbeddedLink — Plaid Link).
+
+The contract — see `app/models/provider/connection_adapter.rb`:
+- `display_name`, `supported_account_types`, `syncer_class`, `auth_class`,
+  `connection_configs(family:)`, `build_sure_account(provider_account, family:)` (required)
+- `webhook_handler_class`, `verify_webhook!(headers:, raw_body:)` (required for adapters that accept webhooks)
+- `beta?`, `brand_color`, `description`, `reauth_url(...)` (optional, with defaults)
+
+#### Auth backends — `Provider::Auth::*`
+
+The framework supports any auth protocol that fits the
+`auth.fresh_access_token` / `auth.store_*` interface. Add a new class under
+`Provider::Auth` and reference it from your adapter's `auth_class`.
+
+Existing:
+- `Provider::Auth::OAuth2` — redirect-grant flow. Used by TrueLayer.
+- `Provider::Auth::EmbeddedLink` — vendor-hosted modal returning an opaque
+  public_token (Plaid Link, MX Connect Widget, Yodlee FastLink, Akoya Connect).
+
+Cross-request flow state (state nonce, redirect_uri, link_token, etc.) lives
+in `session[:provider_flows][flow_id]` — the controller stashes it at flow
+start and consumes it at completion. See `ProviderAuthFlowSession` concern.
+The connection itself is created at flow completion when valid credentials
+exist, never as a "pending" placeholder.
+
+#### Webhooks
+
+Generic entry point: `POST /webhooks/providers/:provider_key`. Routes to
+`Webhooks::ProviderController#receive`, which calls `adapter.verify_webhook!`
+followed by `adapter.webhook_handler_class.new(...).process`.
+
+#### Plaid-specific deployment notes
+
+- **Redirect URI whitelisting**: Plaid OAuth-bank flows (Chase, Wells Fargo,
+  BofA, etc.) require the redirect URL be registered in the Plaid Dashboard
+  under the relevant environment. The current redirect target is
+  `https://<your-host>/provider_connections/plaid/resume` (the query string
+  varies per flow but Plaid matches host+path). Register it once per env
+  (sandbox + production).
+- **Webhook URL**: register `https://<your-host>/webhooks/providers/plaid_us`
+  (and `/plaid_eu` for the EU region) in the Plaid Dashboard. The
+  webhooks_url passed at link_token creation must match.
+- **Region split**: Plaid US and Plaid EU are distinct Plaid accounts with
+  different credentials, country codes, and webhook URLs. They register
+  twice under `plaid_us` and `plaid_eu` keys, both pointing at the same
+  `Provider::Plaid::Adapter` class. Region is stored on
+  `connection.metadata["region"]`.
 
 ---
 

@@ -195,7 +195,28 @@
         22
       ],
       "note": ""
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
+      "fingerprint": "40aa9ec5eb5eba6e4ba427f0353167eef1f281f4671e9edc05a2fa137d104d59",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/provider_connections_controller.rb",
+      "line": 98,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(Current.family.provider_connections.find(params[:id]).auth.reauth_url(:state => SecureRandom.hex(16)), :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "ProviderConnectionsController",
+        "method": "reauth"
+      },
+      "user_input": "Current.family.provider_connections.find(params[:id]).auth.reauth_url(:state => SecureRandom.hex(16))",
+      "confidence": "Weak",
+      "cwe_id": [ 601 ],
+      "note": "Intentional redirect to provider OAuth re-authentication URL. Connection is family-scoped (Current.family.provider_connections.find) preventing cross-family access; reauth_url is constructed from registered adapter config (base_url from DB-stored metadata + fixed path), not from raw user input. Action is POST with CSRF protection."
     }
   ],
-  "brakeman_version": "7.1.0"
+  "brakeman_version": "7.1.2"
 }

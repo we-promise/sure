@@ -1,0 +1,9 @@
+_fixture:
+  model_class: Provider::FamilyConfig
+
+truelayer_family_one:
+  family: dylan_family
+  provider_key: truelayer
+  credentials:
+    client_id: test_client_id
+    client_secret: test_secret

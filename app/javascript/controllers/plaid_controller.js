@@ -6,7 +6,13 @@ export default class extends Controller {
     linkToken: String,
     region: { type: String, default: "us" },
     isUpdate: { type: Boolean, default: false },
-    itemId: String,
+    isResume: { type: Boolean, default: false },
+    connectionId: String,
+    // Server-supplied URLs — never hardcoded here. See
+    // Provider::Plaid::Adapter#js_data_for for what gets injected.
+    completeUrl: String,
+    syncUrl: String,
+    postSyncRedirect: { type: String, default: "/accounts" },
   };
 
   connect() {
@@ -78,21 +84,35 @@ export default class extends Controller {
     await this.waitForPlaid();
     if (connectionToken !== this._connectionToken) return;
 
-    this._handler = Plaid.create({
+    // Let the browser complete any pending top-layer transitions (e.g. a
+    // <dialog> that was removed from the DOM during the frame swap that
+    // triggered this connect()) before Plaid injects its overlay.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    if (connectionToken !== this._connectionToken) return;
+
+    const config = {
       token: this.linkTokenValue,
       onSuccess: this.handleSuccess,
       onLoad: this.handleLoad,
       onExit: this.handleExit,
       onEvent: this.handleEvent,
-    });
+    };
 
+    // OAuth-bank resume: Plaid landed the browser back at our resume URL
+    // with ?oauth_state_id=...; passing receivedRedirectUri tells Plaid Link
+    // to resume the in-progress session rather than starting a new one.
+    if (this.isResumeValue) {
+      config.receivedRedirectUri = window.location.href;
+    }
+
+    this._handler = Plaid.create(config);
     this._handler.open();
   }
 
   handleSuccess = (public_token, metadata) => {
     if (this.isUpdateValue) {
-      // Trigger a sync to verify the connection and update status
-      fetch(`/plaid_items/${this.itemIdValue}/sync`, {
+      // Reauth flow — trigger a sync on the existing Provider::Connection.
+      fetch(this.syncUrlValue, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -100,26 +120,18 @@ export default class extends Controller {
           "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
         },
       }).then(() => {
-        // Refresh the page to show the updated status
-        window.location.href = "/accounts";
+        window.location.href = this.postSyncRedirectValue;
       });
       return;
     }
 
-    // For new connections, create a new Plaid item
-    fetch("/plaid_items", {
+    fetch(this.completeUrlValue, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
       },
-      body: JSON.stringify({
-        plaid_item: {
-          public_token: public_token,
-          metadata: metadata,
-          region: this.regionValue,
-        },
-      }),
+      body: JSON.stringify({ public_token: public_token }),
     }).then((response) => {
       if (response.redirected) {
         window.location.href = response.url;
@@ -130,7 +142,7 @@ export default class extends Controller {
   handleExit = (err, metadata) => {
     // If there was an error during update mode, refresh the page to show latest status
     if (err && metadata.status === "requires_credentials") {
-      window.location.href = "/accounts";
+      window.location.href = this.postSyncRedirectValue;
     }
   };
 

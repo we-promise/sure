@@ -7,7 +7,7 @@
 # can report consistent sync summaries.
 #
 # @example Include in a syncer class
-#   class PlaidItem::Syncer
+#   class SimplefinItem::Syncer
 #     include SyncStats::Collector
 #
 #     def perform_sync(sync)
@@ -25,7 +25,7 @@ module SyncStats
     # Collects account setup statistics (total, linked, unlinked counts).
     #
     # @param sync [Sync] The sync record to update
-    # @param provider_accounts [ActiveRecord::Relation] The provider accounts (e.g., SimplefinAccount, PlaidAccount)
+    # @param provider_accounts [ActiveRecord::Relation] The provider accounts (e.g., SimplefinAccount, LunchflowAccount)
     # @param linked_check [Proc, nil] Optional proc to check if an account is linked. If nil, uses default logic.
     # @return [Hash] The setup stats that were collected
     def collect_setup_stats(sync, provider_accounts:, linked_check: nil)

@@ -4,12 +4,6 @@ account:
   status: completed
   completed_at: <%= Time.now %>
 
-plaid_item:
-  syncable_type: PlaidItem
-  syncable: one
-  status: completed
-  completed_at: <%= Time.now %>
-
 family:
   syncable_type: Family
   syncable: dylan_family

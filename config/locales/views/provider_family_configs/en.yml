@@ -1,0 +1,10 @@
+---
+en:
+  provider_family_configs:
+    form:
+      client_id_label: "Client ID"
+      client_secret_label: "Client Secret"
+      secret_hint: "Leave blank to keep your existing secret"
+      sandbox_label: "Use sandbox (test) environment"
+      save_button: "Save"
+      connect_button: "Save and Connect"

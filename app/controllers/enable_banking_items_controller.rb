@@ -487,7 +487,7 @@ class EnableBankingItemsController < ApplicationController
     enable_banking_account = EnableBankingAccount.find(params[:enable_banking_account_id])
 
     # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
-    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
+    if @account.account_providers.any? || @account.simplefin_account_id.present?
       flash[:alert] = t("enable_banking_items.link_existing_account.errors.only_manual")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)

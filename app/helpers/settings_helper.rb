@@ -45,6 +45,24 @@ module SettingsHelper
     }
   end
 
+  # Renders the generic setup-instructions partial driven by:
+  #   - I18n at settings.providers.instructions.<framework_key>
+  # Adding a provider = one locale block. No new view files.
+  #
+  # Accepts a framework key OR a legacy config_key (e.g. "plaid_eu") — both
+  # resolve to the same framework adapter, and one shared instructions block.
+  def provider_setup_instructions(provider_key)
+    framework_key = Provider::ConnectionRegistry.framework_key_for(provider_key)
+    return nil unless framework_key
+    scope = "settings.providers.instructions.#{framework_key}"
+    return nil unless I18n.exists?("#{scope}.title")
+
+    # URL the admin registers in the provider's dashboard — same for all auth types
+    # since all providers now redirect to the unified /auth endpoint.
+    redirect_uri = provider_auth_url(provider_key: framework_key, host: configured_host)
+    render "settings/providers/setup_instructions", scope: scope, redirect_uri: redirect_uri
+  end
+
   def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, &block)
     content = capture(&block)
     render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param }

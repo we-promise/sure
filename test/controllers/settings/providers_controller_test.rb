@@ -314,6 +314,32 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "TrueLayer renders inline cred form when unconfigured" do
+    Provider::FamilyConfig.where(family: families(:dylan_family), provider_key: "truelayer").destroy_all
+    get settings_providers_url
+    assert_response :success
+    assert_select "form[action='#{provider_family_configs_path}'][method='post']" do
+      assert_select "input[name='provider_family_config[provider_key]'][value='truelayer']"
+      assert_select "input[name='provider_family_config[client_id]']"
+    end
+  end
+
+  test "TrueLayer add connection submits via POST and bypasses turbo when configured" do
+    Provider::Connection.where(provider_family_config: provider_family_configs(:truelayer_family_one)).destroy_all
+    get settings_providers_url
+    assert_response :success
+    assert_select "form[action='#{start_provider_oauth_path(provider_key: "truelayer")}'][method='post']" do
+      assert_select "button[data-turbo='false']"
+    end
+  end
+
+  test "TrueLayer manage link breaks out of turbo frame when connected" do
+    conn = provider_connections(:monzo_connection)
+    get settings_providers_url
+    assert_response :success
+    assert_select "a[href='#{provider_connection_path(conn)}'][data-turbo-frame='_top']"
+  end
+
   test "uses singleton_class method_defined to detect declared fields" do
     with_self_hosting do
       # This test verifies the difference between respond_to? and singleton_class.method_defined?

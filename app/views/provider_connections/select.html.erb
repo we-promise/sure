@@ -1,0 +1,55 @@
+<% primary_btn = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% if @configured %>
+      <% dialog.with_header(title: t(".title_connect", provider: @adapter.display_name)) %>
+      <% dialog.with_body do %>
+        <% if @adapter.auth_class == Provider::Auth::OAuth2 %>
+          <p class="text-sm text-secondary mb-4"><%= t(".connect_description_oauth", provider: @adapter.display_name) %></p>
+          <%= button_to t(".connect_button", provider: @adapter.display_name),
+                        start_provider_oauth_path(provider_key: @provider_key),
+                        method: :post,
+                        data: { turbo: false },
+                        class: primary_btn %>
+        <% elsif @adapter.auth_class == Provider::Auth::EmbeddedLink %>
+          <p class="text-sm text-secondary mb-4"><%= t(".connect_description_link", provider: @adapter.display_name) %></p>
+          <div class="flex flex-wrap gap-2">
+            <% @connect_actions.each do |action| %>
+              <%= link_to action[:label], action[:path],
+                          class: primary_btn,
+                          data: { turbo_frame: "_top" } %>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% else %>
+      <% dialog.with_header(title: t(".title_setup_required", provider: @adapter.display_name)) %>
+      <% dialog.with_body do %>
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+            <div class="text-sm text-secondary">
+              <p class="font-medium text-primary mb-1"><%= t(".not_configured_heading") %></p>
+              <p><%= t(".not_configured_body", provider: @adapter.display_name) %></p>
+            </div>
+          </div>
+
+          <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+            <p class="font-medium text-primary"><%= t(".setup_steps_heading") %></p>
+            <ol class="list-decimal list-inside space-y-1 text-secondary">
+              <li><%= t(".setup_step_1") %></li>
+              <li><%= t(".setup_step_2", provider: @adapter.display_name) %></li>
+              <li><%= t(".setup_step_3") %></li>
+            </ol>
+          </div>
+
+          <%= link_to t(".go_to_settings"),
+                      settings_providers_path,
+                      class: primary_btn,
+                      data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

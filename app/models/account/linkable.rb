@@ -4,15 +4,19 @@ module Account::Linkable
   included do
     # New generic provider association
     has_many :account_providers, dependent: :destroy
+    # Provider::Connection-framework link (Plaid, TrueLayer, etc.)
+    has_one :provider_account, class_name: "Provider::Account", dependent: :nullify
 
-    # Legacy provider associations - kept for backward compatibility during migration
-    belongs_to :plaid_account, optional: true
+    # Legacy SimpleFIN association — kept for backward compatibility until the
+    # SimpleFIN migration. Plaid's legacy association was removed in the
+    # Plaid framework cutover.
     belongs_to :simplefin_account, optional: true
   end
 
-  # A "linked" account gets transaction and balance data from a third party like Plaid or SimpleFin
+  # A "linked" account gets transaction and balance data from a third party
+  # (Plaid, TrueLayer, SimpleFIN, etc.).
   def linked?
-    account_providers.any? || plaid_account.present? || simplefin_account.present?
+    account_providers.any? || provider_account.present? || simplefin_account.present?
   end
 
   # An "offline" or "unlinked" account is one where the user tracks values and
@@ -46,8 +50,7 @@ module Account::Linkable
     # Try new system first
     return provider&.provider_name if provider.present?
 
-    # Fall back to legacy system
-    return "plaid" if plaid_account.present?
+    # Fall back to legacy SimpleFIN system
     return "simplefin" if simplefin_account.present?
 
     nil

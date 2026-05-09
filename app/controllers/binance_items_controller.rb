@@ -142,7 +142,7 @@ class BinanceItemsController < ApplicationController
       return
     end
 
-    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
+    if @account.account_providers.any? || @account.simplefin_account_id.present?
       alert_msg = t(".errors.only_manual")
       if turbo_frame_request?
         flash.now[:alert] = alert_msg

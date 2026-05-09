@@ -462,8 +462,16 @@ class UserTest < ActiveSupport::TestCase
   test "default_account_for_transactions returns nil when account is linked" do
     account = accounts(:depository)
     @user.update!(default_account: account)
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: account, provider: plaid_account)
+    # Link via Provider::Account (the post-cutover provider linkage)
+    conn = Provider::Connection.create!(
+      family: account.family, provider_key: "truelayer", auth_type: "oauth2",
+      credentials: {}, status: :healthy
+    )
+    Provider::Account.create!(
+      provider_connection: conn, account: account,
+      external_id: "ext-1", external_name: "Linked", external_type: "depository",
+      currency: "USD", raw_payload: {}
+    )
     account.reload
     assert_nil @user.default_account_for_transactions
   end

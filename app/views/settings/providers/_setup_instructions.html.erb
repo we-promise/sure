@@ -1,0 +1,29 @@
+<%# Generic provider setup-instructions box. Driven entirely by:                  %>
+<%#   - I18n entries at settings.providers.instructions.<framework_key>.{title,steps[],redirect_uri_label,copy,copied} %>
+<%#   - the redirect_uri local (computed by the helper from the adapter's auth_class) %>
+<%# Adding a provider = adding one locale block. No HTML file edits.              %>
+<div class="mb-4 p-4 rounded-lg bg-surface border border-primary space-y-3">
+  <h2 class="text-sm font-semibold text-primary"><%= t("#{scope}.title") %></h2>
+  <ol class="list-decimal list-inside space-y-1 text-sm text-secondary">
+    <% Array(t("#{scope}.steps", default: [])).each do |step| %>
+      <li><%= step.html_safe %></li>
+    <% end %>
+  </ol>
+  <% if redirect_uri.present? %>
+    <div class="mt-3">
+      <p class="text-xs font-medium text-secondary mb-1"><%= t("#{scope}.redirect_uri_label") %></p>
+      <div class="flex items-center gap-2 p-2 rounded bg-surface-inset border border-primary"
+           data-controller="clipboard"
+           data-clipboard-success-content-value="<%= t("#{scope}.copied") %>">
+        <code class="text-xs text-primary flex-1 break-all"
+              data-clipboard-target="source"><%= redirect_uri %></code>
+        <button type="button"
+                data-action="click->clipboard#copy"
+                data-clipboard-target="button"
+                class="shrink-0 text-xs text-secondary hover:text-primary">
+          <%= t("#{scope}.copy") %>
+        </button>
+      </div>
+    </div>
+  <% end %>
+</div>

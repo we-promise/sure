@@ -1,0 +1,140 @@
+<% adapter = Provider::ConnectionRegistry.adapter_for(provider_key) %>
+<% connections = Current.family.provider_connections.where(provider_key: provider_key).includes(:provider_accounts) %>
+<% byok = adapter.requires_family_config? %>
+<% existing_config = byok ? Current.family.provider_family_configs.find_by(provider_key: provider_key) : nil %>
+<% form_config = local_assigns[:config] || existing_config || (byok ? Current.family.provider_family_configs.build(provider_key: provider_key) : nil) %>
+<% regions = adapter.region_setup %>
+<% primary_btn = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+
+<div class="space-y-4">
+  <% if connections.any? %>
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("settings.providers.connection_provider_panel.connected", count: connections.size) %></p>
+    </div>
+    <% connections.each do |conn| %>
+      <div class="flex items-center justify-between p-3 rounded-lg border border-primary">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-primary"><%= conn.institution_name %></span>
+          <% if conn.requires_update? %>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
+              <%= icon("alert-circle", class: "w-3 h-3 shrink-0") %>
+              <%= t("settings.providers.connection_provider_panel.requires_reauth") %>
+            </span>
+          <% elsif conn.disconnected? %>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
+              <%= icon("alert-circle", class: "w-3 h-3 shrink-0") %>
+              <%= t("settings.providers.connection_provider_panel.disconnected") %>
+            </span>
+          <% else %>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
+              <%= t("settings.providers.connection_provider_panel.status_healthy") %>
+            </span>
+          <% end %>
+        </div>
+        <div class="flex items-center gap-2">
+          <% if conn.requires_update? %>
+            <%= button_to t("settings.providers.connection_provider_panel.reconnect"),
+                          reauth_provider_connection_path(conn),
+                          method: :post,
+                          data: { turbo: false },
+                          class: "text-sm px-3 py-1.5 rounded-lg bg-destructive text-inverse hover:opacity-90 transition-opacity shrink-0" %>
+          <% end %>
+          <%= link_to t("settings.providers.connection_provider_panel.manage"), provider_connection_path(conn), class: "text-sm link", data: { turbo_frame: "_top" } %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if byok %>
+    <%# Per-family BYOK provider (e.g. TrueLayer): instructions on top, then  %>
+    <%# either a primary "Add connection" CTA + collapsed Edit credentials   %>
+    <%# (when configured), or the cred form open inline (when first-time     %>
+    <%# setup). On validation errors the form is forced open so the user    %>
+    <%# sees the field-level errors.                                         %>
+    <%= provider_setup_instructions(provider_key) %>
+    <% if existing_config %>
+      <% if connections.empty? %>
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 bg-secondary rounded-full"></div>
+          <p class="text-sm text-secondary"><%= t("settings.providers.connection_provider_panel.configured_not_connected") %></p>
+        </div>
+      <% end %>
+      <div class="flex flex-wrap gap-2">
+        <%= button_to t("settings.providers.connection_provider_panel.add_connection"),
+                      start_provider_oauth_path(provider_key: provider_key),
+                      method: :post,
+                      data: { turbo: false },
+                      class: primary_btn %>
+      </div>
+      <% form_has_errors = form_config&.errors&.any? %>
+      <details class="mt-3" <%= "open" if form_has_errors %>>
+        <summary class="text-xs text-secondary cursor-pointer"><%= t("settings.providers.connection_provider_panel.edit_credentials") %></summary>
+        <div class="mt-3 p-4 rounded-lg border border-primary">
+          <%= render "provider_family_configs/form", config: form_config %>
+        </div>
+      </details>
+    <% else %>
+      <div class="p-4 rounded-lg border border-primary">
+        <%= render "provider_family_configs/form", config: form_config %>
+      </div>
+    <% end %>
+  <% elsif regions.any? %>
+    <%# Multi-region adapter (e.g. Plaid). Setup instructions are global to %>
+    <%# the adapter (one redirect URI for all regions), shown once above   %>
+    <%# the per-region cred forms / connect buttons.                        %>
+    <%= provider_setup_instructions(provider_key) %>
+    <% actions_by_region = adapter.connect_actions(family: Current.family).index_by { |a| a[:region] } %>
+    <% regions.each do |r| %>
+      <% action = actions_by_region[r[:region]] %>
+      <% client_present = action.present? %>
+      <% region_config = Provider::ConfigurationRegistry.get(r[:config_key]) %>
+      <div class="p-4 rounded-lg border border-primary">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-sm font-medium text-primary"><%= r[:label] %></h4>
+          <% if client_present %>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
+              <%= t("settings.providers.connection_provider_panel.status_configured") %>
+            </span>
+          <% else %>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
+              <%= t("settings.providers.connection_provider_panel.not_configured") %>
+            </span>
+          <% end %>
+        </div>
+        <% if action %>
+          <%= link_to action[:label], action[:path],
+                      class: primary_btn,
+                      data: { turbo_frame: "modal" } %>
+          <% if region_config %>
+            <details class="mt-3">
+              <summary class="text-xs text-secondary cursor-pointer"><%= t("settings.providers.connection_provider_panel.edit_credentials") %></summary>
+              <div class="mt-2">
+                <%= render "settings/providers/provider_form", configuration: region_config %>
+              </div>
+            </details>
+          <% end %>
+        <% elsif region_config %>
+          <%= render "settings/providers/provider_form", configuration: region_config %>
+        <% else %>
+          <p class="text-sm text-secondary"><%= t("settings.providers.connection_provider_panel.region_unavailable") %></p>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <%# Simple non-BYOK adapter: connect_actions buttons. %>
+    <% if connections.empty? %>
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 bg-secondary rounded-full"></div>
+        <p class="text-sm text-secondary"><%= t("settings.providers.connection_provider_panel.not_connected") %></p>
+      </div>
+    <% end %>
+    <div class="flex flex-wrap gap-2">
+      <% adapter.connect_actions(family: Current.family).each do |action| %>
+        <%= link_to action[:label], action[:path],
+                    class: primary_btn,
+                    data: { turbo_frame: "modal" } %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -9,7 +9,6 @@ class Family::Syncer
   # To add a new provider: add its association name here.
   # The model handles its own "ready to sync" logic via the syncable scope.
   SYNCABLE_ITEM_ASSOCIATIONS = %i[
-    plaid_items
     simplefin_items
     lunchflow_items
     enable_banking_items
@@ -19,6 +18,7 @@ class Family::Syncer
     mercury_items
     snaptrade_items
     sophtron_items
+    provider_connections
   ].freeze
 
   def initialize(family)

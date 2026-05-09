@@ -288,4 +288,24 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "read_write", share.permission
     assert share.include_in_finances?
   end
+
+  test "logo_url falls back to provider_accounts raw_payload logo_uri" do
+    account = accounts(:truelayer_depository)
+    assert_equal "https://truelayer-client-logos.s3-eu-west-1.amazonaws.com/banks/banks-icons/ob-monzo-icon.svg",
+                 account.logo_url
+  end
+
+  test "manual scope excludes accounts linked via provider_accounts" do
+    linked = accounts(:truelayer_depository)
+    assert_not_includes Account.manual, linked
+  end
+
+  test "manual scope includes accounts with no provider link" do
+    unlinked = Account.create!(
+      family: @family, owner: @admin,
+      name: "Unlinked", balance: 0, currency: "USD",
+      accountable_type: "Depository", accountable: Depository.create!
+    )
+    assert_includes Account.manual, unlinked
+  end
 end

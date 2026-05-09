@@ -1,0 +1,12 @@
+<%# Generic mount for any EmbeddedLink provider. The adapter declares the
+    Stimulus controller name and data attributes via #js_data_for; the controller
+    instance hands them in as @js_data. Provider-specific JS controllers
+    (plaid_controller.js, future mx_connect_controller.js) read their own
+    data values and drive the vendor SDK. %>
+<%= turbo_frame_tag "modal" do %>
+  <%= tag.div data: @js_data,
+              class: "flex flex-col items-center justify-center py-12 gap-3" do %>
+    <%= icon("loader", class: "w-6 h-6 text-secondary animate-spin") %>
+    <p class="text-sm text-secondary"><%= t(".connecting") %></p>
+  <% end %>
+<% end %>

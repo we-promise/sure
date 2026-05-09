@@ -1,6 +1,10 @@
 <%= content_for :page_title, "Sync Providers" %>
 
 <div class="space-y-4">
+  <% if (setup_error = flash[:provider_setup_error]).is_a?(Hash) && setup_error["message"].present? %>
+    <%= render "settings/providers/setup_error", error: setup_error %>
+  <% end %>
+
   <% if @encryption_error %>
     <div class="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
       <div class="flex items-start gap-3">
@@ -20,6 +24,18 @@
   <% end %>
 
   <% unless @encryption_error %>
+    <%# New-framework providers (Provider::ConnectionRegistry) render first so their %>
+    <%# unified Configure flow is the default surface for users.                     %>
+    <% Provider::ConnectionRegistry.keys.each do |key| %>
+      <% adapter = Provider::ConnectionRegistry.adapter_for(key) %>
+      <% title = adapter.display_name + (adapter.beta? ? " (beta)" : "") %>
+      <%= settings_section title: title, collapsible: true, open: false do %>
+        <turbo-frame id="<%= key %>-providers-panel">
+          <%= render "settings/providers/connection_provider_panel", provider_key: key %>
+        </turbo-frame>
+      <% end %>
+    <% end %>
+
     <% @provider_configurations.each do |config| %>
       <%= settings_section title: config.provider_key.titleize, collapsible: true, open: false do %>
         <%= render "settings/providers/provider_form", configuration: config %>

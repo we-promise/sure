@@ -1,0 +1,24 @@
+_fixture:
+  model_class: Provider::Account
+
+monzo_current:
+  provider_connection: monzo_connection
+  account: truelayer_depository
+  external_id: acc_abc123
+  external_name: Monzo Current Account
+  external_type: depository
+  external_subtype: checking
+  currency: GBP
+  raw_payload:
+    provider:
+      display_name: Monzo
+      provider_id: ob-monzo
+      logo_uri: https://truelayer-client-logos.s3-eu-west-1.amazonaws.com/banks/banks-icons/ob-monzo-icon.svg
+
+monzo_unlinked:
+  provider_connection: monzo_connection
+  external_id: acc_xyz789
+  external_name: Monzo Savings
+  external_type: depository
+  currency: GBP
+  raw_payload: {}

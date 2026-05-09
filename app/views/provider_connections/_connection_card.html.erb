@@ -1,0 +1,82 @@
+<%# locals: (connection:) %>
+
+<% linked_accounts = connection.provider_accounts.filter_map(&:account) %>
+
+<%= tag.div id: dom_id(connection) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 rounded-full shrink-0 bg-success/10 overflow-hidden">
+          <% if connection.logo_uri.present? %>
+            <%= image_tag connection.logo_uri,
+                  class: "w-full h-full object-contain",
+                  loading: "lazy",
+                  alt: connection.institution_name %>
+          <% else %>
+            <%= tag.p connection.institution_name.first.upcase, class: "text-success text-xs font-medium" %>
+          <% end %>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <p class="font-medium text-primary"><%= connection.institution_name %></p>
+          <% if connection.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t("provider.connections.reauth_required") %>
+            </div>
+          <% elsif connection.last_synced_at %>
+            <p class="text-secondary text-xs"><%= t("provider.connections.last_synced", time: time_ago_in_words(connection.last_synced_at)) %></p>
+          <% else %>
+            <p class="text-secondary text-xs"><%= t("provider.connections.never_synced") %></p>
+          <% end %>
+        </div>
+      </div>
+
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if connection.requires_update? %>
+            <%= button_to t("provider.connections.reconnect"),
+                          reauth_provider_connection_path(connection),
+                          method: :post,
+                          data: { turbo: false },
+                          class: "text-sm px-3 py-1.5 rounded-lg bg-destructive text-inverse hover:opacity-90 transition-opacity shrink-0" %>
+          <% else %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_provider_connection_path(connection),
+              disabled: false
+            ) %>
+          <% end %>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% if connection.pending_setup? %>
+              <% menu.with_item(
+                variant: "link",
+                text: t("provider.connections.setup_accounts"),
+                icon: "settings",
+                href: setup_provider_connection_path(connection),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "link",
+              text: t("provider.connections.manage"),
+              icon: "external-link",
+              href: provider_connection_path(connection),
+              frame: :_top
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
+    </summary>
+
+    <% if linked_accounts.any? %>
+      <div class="mt-4">
+        <%= render "accounts/index/account_groups", accounts: linked_accounts %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

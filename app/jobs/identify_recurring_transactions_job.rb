@@ -47,7 +47,7 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
       return true if family.syncs.incomplete.exists?
 
       # Check all provider items' syncs
-      return true if family.plaid_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:plaid_items)
+      return true if family.provider_connections.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:provider_connections)
       return true if family.simplefin_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:simplefin_items)
       return true if family.lunchflow_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:lunchflow_items)
       return true if family.enable_banking_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:enable_banking_items)

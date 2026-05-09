@@ -10,7 +10,7 @@ module Provider::Syncable
   end
 
   # Returns the provider's item/connection object
-  # @return [Object] The item object (e.g., PlaidItem, SimplefinItem)
+  # @return [Object] The item object (e.g., SimplefinItem, LunchflowItem)
   def item
     raise NotImplementedError, "#{self.class} must implement #item"
   end

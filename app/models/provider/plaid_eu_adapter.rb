@@ -19,12 +19,9 @@ class Provider::PlaidEuAdapter
 
   # Configuration for Plaid EU
   configure do
-    description <<~DESC
-      Setup instructions:
-      1. Visit the [Plaid Dashboard](https://dashboard.plaid.com/team/keys) to get your API credentials
-      2. Your Client ID and Secret Key are required to enable Plaid bank sync for European banks
-      3. For production use, set environment to 'production', for testing use 'sandbox'
-    DESC
+    # Setup instructions render via SettingsHelper#provider_setup_instructions
+    # (driven by I18n at settings.providers.instructions.plaid). The framework
+    # panel inserts that block above this form — single source of truth.
 
     field :client_id,
           label: "Client ID",

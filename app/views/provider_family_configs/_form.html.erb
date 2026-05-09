@@ -1,0 +1,33 @@
+<% config = local_assigns[:config] || @config %>
+<% submit_label = local_assigns[:submit_label] || (config.persisted? ? t("provider_family_configs.form.save_button") : t("provider_family_configs.form.connect_button")) %>
+
+<%= styled_form_with model: config do |f| %>
+  <% unless config.persisted? %>
+    <%= f.hidden_field :provider_key %>
+  <% end %>
+
+  <div class="space-y-4">
+    <%= f.text_field :client_id, label: t("provider_family_configs.form.client_id_label") %>
+
+    <div>
+      <%= f.password_field :client_secret,
+                           label: t("provider_family_configs.form.client_secret_label"),
+                           placeholder: (config.persisted? && config.client_secret.present?) ? "••••••••" : nil %>
+      <% if config.persisted? && config.client_secret.present? %>
+        <p class="text-xs text-secondary mt-1"><%= t("provider_family_configs.form.secret_hint") %></p>
+      <% end %>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <%= f.check_box :sandbox, class: "rounded" %>
+      <label for="provider_family_config_sandbox" class="text-sm text-primary">
+        <%= t("provider_family_configs.form.sandbox_label") %>
+      </label>
+    </div>
+  </div>
+
+  <div class="flex justify-end mt-4">
+    <%= f.submit submit_label,
+                 class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+  </div>
+<% end %>

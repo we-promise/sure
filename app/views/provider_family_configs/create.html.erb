@@ -1,0 +1,5 @@
+<%= turbo_frame_tag "#{@config.provider_key}-providers-panel" do %>
+  <%= render "settings/providers/connection_provider_panel",
+             provider_key: @config.provider_key,
+             config: @config %>
+<% end %>

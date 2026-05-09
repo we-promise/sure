@@ -15,7 +15,18 @@ class ApplicationController < ActionController::Base
   before_action :set_default_chat
   before_action :set_active_storage_url_options
 
-  helper_method :demo_config, :demo_host_match?, :show_demo_warning?
+  helper_method :demo_config, :demo_host_match?, :show_demo_warning?, :configured_host
+
+  # Host used to construct upstream-registered redirect URIs (TrueLayer Console,
+  # Plaid Dashboard, etc.). Prefers Rails.application.routes.default_url_options[:host]
+  # — set explicitly per environment — over request.host, which is subject to
+  # Host-header injection on misconfigured deploys. Both controllers (when
+  # building the redirect_uri sent at OAuth exchange) AND views (when showing
+  # the URL the admin pastes into the upstream dashboard) use this so the
+  # values cannot diverge.
+  def configured_host
+    Rails.application.routes.default_url_options[:host] || request.host
+  end
 
   private
     def accept_pending_invitation_for(user)

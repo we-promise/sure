@@ -1,0 +1,5 @@
+---
+en:
+  embedded_link_callbacks:
+    new:
+      connecting: "Connecting…"

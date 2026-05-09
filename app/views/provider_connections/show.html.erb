@@ -1,0 +1,126 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="container mx-auto max-w-3xl py-8">
+  <h1 class="text-2xl font-semibold text-primary mb-4"><%= t(".title") %></h1>
+
+  <% if @connection.requires_update? %>
+    <div class="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <%= icon("alert-circle", class: "w-4 h-4 text-destructive shrink-0") %>
+        <p class="text-sm text-destructive font-medium"><%= t(".reauth_required_notice") %></p>
+      </div>
+      <%= button_to t(".reconnect"), reauth_provider_connection_path(@connection),
+                    method: :post,
+                    data: { turbo: false },
+                    class: "text-sm px-3 py-1.5 rounded-lg bg-destructive text-inverse hover:opacity-90 transition-opacity shrink-0" %>
+    </div>
+  <% end %>
+
+  <div class="rounded-lg border border-primary p-4 space-y-2">
+    <div class="flex items-center justify-between">
+      <span class="text-sm text-secondary"><%= t(".provider") %></span>
+      <span class="text-sm text-primary font-medium"><%= @connection.institution_name %></span>
+    </div>
+    <div class="flex items-center justify-between">
+      <span class="text-sm text-secondary"><%= t(".status") %></span>
+      <span class="text-sm text-primary font-medium"><%= @connection.status.humanize %></span>
+    </div>
+    <% if @connection.last_synced_at %>
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-secondary"><%= t(".last_synced") %></span>
+        <span class="text-sm text-primary font-medium"><%= t(".last_synced_ago", time: time_ago_in_words(@connection.last_synced_at)) %></span>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @has_unlinked %>
+    <div class="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-center justify-between">
+      <p class="text-sm text-secondary"><%= t(".unlinked_accounts_notice") %></p>
+      <%= link_to t(".map_accounts"), setup_provider_connection_path(@connection),
+                  class: "text-sm font-medium text-primary underline" %>
+    </div>
+  <% end %>
+
+  <% if @provider_accounts.any? %>
+    <div class="mt-6">
+      <h2 class="text-base font-semibold text-primary mb-3"><%= t(".accounts_heading") %></h2>
+      <div class="rounded-lg border border-primary overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-surface">
+            <tr>
+              <th class="text-left px-4 py-2 text-secondary font-medium"><%= t(".col_account") %></th>
+              <th class="text-left px-4 py-2 text-secondary font-medium"><%= t(".col_type") %></th>
+              <th class="text-left px-4 py-2 text-secondary font-medium"><%= t(".col_currency") %></th>
+              <th class="text-left px-4 py-2 text-secondary font-medium"><%= t(".col_linked_to") %></th>
+              <th class="text-left px-4 py-2 text-secondary font-medium"><%= t(".col_last_synced") %></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-primary">
+            <% @provider_accounts.each do |pa| %>
+              <tr class="<%= 'bg-warning/5' if pa.disappeared? %>">
+                <td class="px-4 py-3 text-primary font-medium">
+                  <%= pa.external_name %>
+                  <% if pa.disappeared? %>
+                    <span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20"
+                          title="<%= t(".disappeared_at", at: l(pa.disappeared_at, format: :long)) if pa.disappeared_at %>">
+                      <%= icon("alert-circle", class: "w-3 h-3 shrink-0") %>
+                      <%= t(".disappeared_label") %>
+                    </span>
+                  <% end %>
+                </td>
+                <td class="px-4 py-3 text-secondary"><%= pa.external_subtype&.humanize || pa.external_type&.humanize %></td>
+                <td class="px-4 py-3 text-secondary"><%= pa.currency %></td>
+                <td class="px-4 py-3">
+                  <% if pa.linked? %>
+                    <%= link_to pa.account.name, account_path(pa.account), class: "text-primary underline text-sm" %>
+                  <% elsif pa.disappeared? %>
+                    <span class="text-xs text-secondary"><%= t(".cannot_link_disappeared") %></span>
+                  <% else %>
+                    <div class="flex items-center gap-2">
+                      <%= form_with url: link_provider_connections_path, method: :post, class: "inline-flex items-center gap-1" do |f| %>
+                        <%= f.hidden_field :provider_account_id, value: pa.id %>
+                        <%= f.select :account_id,
+                                     [[ t(".create_new"), "new" ]] + @family_accounts.map { |a| [a.name, a.id] },
+                                     { include_blank: t(".select_account") },
+                                     class: "text-xs border border-primary rounded px-1 py-0.5 bg-container text-primary" %>
+                        <%= f.submit t(".link"), class: "text-xs px-2 py-0.5 rounded bg-inverse text-inverse hover:bg-inverse-hover cursor-pointer" %>
+                      <% end %>
+                      <% if pa.skipped? %>
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-surface text-secondary">
+                          <%= t(".skipped") %>
+                        </span>
+                      <% else %>
+                        <%= button_to t(".skip"), skip_provider_connections_path,
+                                      method: :post,
+                                      params: { provider_account_id: pa.id },
+                                      class: "text-xs text-secondary underline bg-transparent border-none cursor-pointer p-0" %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </td>
+                <td class="px-4 py-3 text-secondary">
+                  <%= pa.last_synced_at ? t(".last_synced_ago", time: time_ago_in_words(pa.last_synced_at)) : t(".never_synced") %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="flex gap-3 mt-6">
+    <%= button_to t(".sync_now"), sync_provider_connection_path(@connection),
+                  method: :post,
+                  class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+    <%= button_to t(".disconnect"), provider_connection_path(@connection),
+                  method: :delete,
+                  class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-destructive hover:opacity-90 transition-colors" %>
+    <% if @connection.requires_update? || @connection.disconnected? %>
+      <%= button_to t(".reconnect"), reauth_provider_connection_path(@connection),
+                    method: :post,
+                    data: { turbo: false },
+                    class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover transition-colors" %>
+    <% end %>
+  </div>
+</div>

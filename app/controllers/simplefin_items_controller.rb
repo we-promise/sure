@@ -394,7 +394,7 @@ class SimplefinItemsController < ApplicationController
     # swapping to a new card sfa) are now allowed below.
     has_foreign_provider = @account.account_providers
       .where.not(provider_type: "SimplefinAccount").exists? ||
-      @account.plaid_account_id.present?
+      @account.provider_account.present?
     if has_foreign_provider
       flash[:alert] = t("simplefin_items.link_existing_account.errors.different_provider")
       if turbo_frame_request?

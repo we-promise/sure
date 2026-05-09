@@ -228,3 +228,43 @@ en:
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
+      connection_provider_panel:
+        connected:
+          one: "Connected (1 connection)"
+          other: "Connected (%{count} connections)"
+        configured_not_connected: "Configured but no active connections"
+        not_connected: "Not connected"
+        not_configured: "Not configured"
+        status_configured: "Configured"
+        region_unavailable: "Not available"
+        configure: "Configure"
+        add_connection: "Add connection"
+        edit_credentials: "Edit credentials"
+        manage: "Manage"
+        requires_reauth: "Reconnect required"
+        disconnected: "Disconnected"
+        status_healthy: "Connected"
+        reconnect: "Reconnect"
+      setup_error:
+        title: "%{provider} setup needs your attention"
+        copy: "Copy"
+        copied: "Copied"
+      instructions:
+        plaid:
+          title: "Setup instructions"
+          steps:
+            - 'Visit the <a href="https://dashboard.plaid.com/team/keys" target="_blank" class="link">Plaid Dashboard</a> to get your API credentials.'
+            - "Add the redirect URI below to your Plaid app's <em>API → Allowed redirect URIs</em> settings."
+            - "Enter your Client ID and Secret below for each region you'll use. Set environment to <code>sandbox</code> for testing or <code>production</code> once your Plaid app is approved."
+          redirect_uri_label: "Redirect URI (paste into Plaid Dashboard — trailing slash matters)"
+          copy: "Copy"
+          copied: "Copied"
+        truelayer:
+          title: "Setup instructions"
+          steps:
+            - 'Visit the <a href="https://console.truelayer.com" target="_blank" class="link">TrueLayer Console</a> and open your application (or create one).'
+            - "Add the redirect URI below to your application's allowed redirect URIs."
+            - "Copy your Client ID and Client Secret into the fields below."
+          redirect_uri_label: "Redirect URI (paste into TrueLayer Console)"
+          copy: "Copy"
+          copied: "Copied"

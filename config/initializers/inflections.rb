@@ -14,3 +14,5 @@
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
 # end
+
+Rails.autoloaders.each { |loader| loader.inflector.inflect("oauth2" => "OAuth2") }

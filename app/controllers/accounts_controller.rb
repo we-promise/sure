@@ -11,7 +11,6 @@ class AccountsController < ApplicationController
           .listable_manual
           .where(id: @accessible_account_ids)
           .order(:name)
-    @plaid_items = visible_provider_items(family.plaid_items.ordered.includes(:syncs, :plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
@@ -21,6 +20,7 @@ class AccountsController < ApplicationController
     @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
+    @provider_connections = family.provider_connections.order(:created_at).includes(provider_accounts: :account)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -31,10 +31,11 @@ class AccountsController < ApplicationController
   end
 
   def new
-    # Get all registered providers with any credentials configured
     @provider_configs = Provider::Factory.registered_adapters.flat_map do |adapter_class|
       adapter_class.connection_configs(family: family)
     end
+
+    @provider_configs += Provider::ConnectionRegistry.all_connection_configs(family: family)
   end
 
   def sync_all
@@ -154,8 +155,15 @@ class AccountsController < ApplicationController
         # wasting a slot on reconnect.
         @account.account_providers.destroy_all
 
+        # Remove Provider::Connection-framework link (Plaid, TrueLayer, etc.)
+        # The Provider::Account row is preserved (account_id nullified) so the
+        # connection's setup page shows it as available to relink. Use
+        # update_all to bypass association caches.
+        Provider::Account.where(account_id: @account.id).update_all(account_id: nil)
+        @account.association(:provider_account).reset
+
         # Remove legacy system links (foreign keys)
-        @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
+        @account.update!(simplefin_account_id: nil)
 
         # Destroy the SimplefinAccount record so it doesn't cause stale account issues
         # This is safe because:
@@ -187,6 +195,13 @@ class AccountsController < ApplicationController
       account_type: account_type_name,
       family: family
     )
+
+    eligible_keys = Provider::ConnectionRegistry.keys.select { |key|
+      Provider::ConnectionRegistry.adapter_for(key).supported_account_types.include?(account_type_name)
+    }
+    provider_configs += eligible_keys
+      .flat_map { |key| Provider::ConnectionRegistry.adapter_for(key).connection_configs(family: family) }
+      .uniq { |c| c[:key] }
 
     # Build available providers list with paths resolved for this specific account
     # Filter out providers that don't support linking to existing accounts
@@ -268,13 +283,6 @@ class AccountsController < ApplicationController
         @simplefin_sync_stats_map[item.id] = {}
         @simplefin_show_relink_map[item.id] = false
         @simplefin_duplicate_only_map[item.id] = false
-      end
-
-      # Plaid sync stats
-      @plaid_sync_stats_map = {}
-      @plaid_items.each do |item|
-        latest_sync = item.syncs.ordered.first
-        @plaid_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Lunchflow sync stats

@@ -2,6 +2,34 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  scope "provider_connections/:provider_key/auth" do
+    # Single external-facing callback — registered in every provider's dashboard.
+    # Dispatches on adapter.auth_class (OAuth2 vs EmbeddedLink).
+    get  "",                to: "provider_auth_callbacks#show",   as: :provider_auth
+
+    # OAuth2 initiation (internal — never in any dashboard).
+    post "start",           to: "oauth_callbacks#new",            as: :start_provider_oauth
+
+    # EmbeddedLink flow (internal).
+    get  "new",             to: "embedded_link_callbacks#new",    as: :new_provider_link
+    post "finish/:flow_id", to: "embedded_link_callbacks#create", as: :finish_provider_link
+  end
+
+  resources :provider_family_configs, only: [ :create, :update, :destroy ]
+  resources :provider_connections, only: [ :show, :destroy ] do
+    collection do
+      get  :select
+      post :link
+      post :skip
+    end
+    member do
+      get  :setup
+      post :save_setup
+      post :reauth
+      post :sync
+    end
+  end
+
   resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -470,16 +498,6 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :plaid_items, only: %i[new edit create destroy] do
-    collection do
-      get :select_existing_account
-      post :link_existing_account
-    end
-
-    member do
-      post :sync
-    end
-  end
 
   resources :simplefin_items, only: %i[index new create show edit update destroy] do
     collection do
@@ -530,8 +548,10 @@ Rails.application.routes.draw do
   end
 
   namespace :webhooks do
-    post "plaid"
-    post "plaid_eu"
+    # Generic provider webhook entry point. Adapters declare verify_webhook!
+    # + webhook_handler_class on Provider::ConnectionAdapter.
+    post "providers/:provider_key", to: "provider#receive", as: :provider
+
     post "stripe"
   end
 

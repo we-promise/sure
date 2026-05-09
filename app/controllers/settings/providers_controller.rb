@@ -123,15 +123,28 @@ class Settings::ProvidersController < ApplicationController
     def prepare_show_context
       # Load all provider configurations (exclude SimpleFin and Lunchflow, which have their own family-specific panels below)
       Provider::Factory.ensure_adapters_loaded
+      # New-framework adapters render their own connection_provider_panel further down.
+      # Filter out:
+      #   - the framework's own provider_key (e.g. "truelayer")
+      #   - any legacy ConfigurationRegistry keys the adapter declares it owns
+      #     via .legacy_config_keys (e.g. Plaid renders "plaid" + "plaid_eu"
+      #     inline in its framework card)
+      framework_keys = Provider::ConnectionRegistry.keys.map(&:to_s)
+      framework_owned_legacy_keys = Provider::ConnectionRegistry.keys.flat_map do |key|
+        Provider::ConnectionRegistry.adapter_for(key).legacy_config_keys.map(&:to_s)
+      end
+      excluded_keys = (framework_keys + framework_owned_legacy_keys).uniq
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
-        config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
-        config.provider_key.to_s.casecmp("enable_banking").zero?  || \
-        config.provider_key.to_s.casecmp("sophtron").zero? || \
-        config.provider_key.to_s.casecmp("coinstats").zero? || \
-        config.provider_key.to_s.casecmp("mercury").zero? || \
-        config.provider_key.to_s.casecmp("coinbase").zero? || \
-        config.provider_key.to_s.casecmp("snaptrade").zero? || \
-        config.provider_key.to_s.casecmp("indexa_capital").zero?
+        key = config.provider_key.to_s
+        excluded_keys.include?(key) || \
+        key.casecmp("simplefin").zero? || key.casecmp("lunchflow").zero? || \
+        key.casecmp("enable_banking").zero?  || \
+        key.casecmp("sophtron").zero? || \
+        key.casecmp("coinstats").zero? || \
+        key.casecmp("mercury").zero? || \
+        key.casecmp("coinbase").zero? || \
+        key.casecmp("snaptrade").zero? || \
+        key.casecmp("indexa_capital").zero?
       end
 
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials

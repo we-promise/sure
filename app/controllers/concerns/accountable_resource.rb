@@ -80,11 +80,17 @@ module AccountableResource
     def set_link_options
       account_type_name = accountable_type.name
 
-      # Get all available provider configs dynamically for this account type
       @provider_configs = Provider::Factory.connection_configs_for_account_type(
         account_type: account_type_name,
         family: Current.family
       )
+
+      eligible_keys = Provider::ConnectionRegistry.keys.select { |key|
+        Provider::ConnectionRegistry.adapter_for(key).supported_account_types.include?(account_type_name)
+      }
+      @provider_configs += eligible_keys
+        .flat_map { |key| Provider::ConnectionRegistry.adapter_for(key).connection_configs(family: Current.family) }
+        .uniq { |c| c[:key] }
     end
 
     def accountable_type
