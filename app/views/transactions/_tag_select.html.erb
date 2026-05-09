@@ -1,0 +1,89 @@
+<%# locals: (form:, tags:, selected_ids:, disabled: false, auto_submit: false) %>
+
+<% field_name = "#{form.object_name}[tag_ids][]" %>
+<% selected_ids = selected_ids.map(&:to_s) %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
+<% auto_submit = local_assigns.fetch(:auto_submit, false) %>
+
+<div class="relative"
+     data-controller="tag-select"
+     data-tag-select-create-url-value="<%= tags_path(format: :json) %>"
+     data-tag-select-field-name-value="<%= field_name %>"
+     data-tag-select-default-color-value="<%= Tag::COLORS.first %>"
+     data-tag-select-disabled-value="<%= disabled %>"
+     data-tag-select-auto-submit-value="<%= auto_submit %>">
+  <div class="form-field">
+    <div class="form-field__body">
+      <%= form.label :tag_ids, t("transactions.form.tags_label"), class: "form-field__label" %>
+
+      <button type="button"
+              class="form-field__input min-h-7 !whitespace-normal !overflow-visible flex items-center gap-2 pr-8 <%= "cursor-not-allowed text-subdued" if disabled %>"
+              data-tag-select-target="button"
+              data-action="click->tag-select#toggle"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              <%= "disabled" if disabled %>>
+        <span class="flex flex-wrap gap-1" data-tag-select-target="selectedTags"></span>
+        <span class="text-secondary" data-tag-select-target="placeholder"><%= t("transactions.form.none") %></span>
+      </button>
+    </div>
+  </div>
+
+  <div data-tag-select-target="hiddenInputs">
+    <input type="hidden" name="<%= field_name %>" value="" <%= "disabled" if disabled %>>
+  </div>
+
+  <% unless disabled %>
+    <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden"
+         data-tag-select-target="menu">
+      <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
+        <input type="search"
+               placeholder="<%= t("transactions.form.tag_search_placeholder", default: "Search or create tag") %>"
+               autocomplete="off"
+               class="bg-container text-primary text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
+               data-tag-select-target="search"
+               data-action="input->tag-select#filter keydown->tag-select#handleSearchKeydown">
+        <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+      </div>
+
+      <div class="flex flex-col gap-0.5 max-h-64 overflow-auto"
+           role="listbox"
+           tabindex="-1"
+           data-tag-select-target="list">
+        <% tags.each do |tag| %>
+          <% selected = selected_ids.include?(tag.id.to_s) %>
+          <button type="button"
+                  class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected %>"
+                  role="option"
+                  aria-selected="<%= selected %>"
+                  data-action="click->tag-select#toggleTag"
+                  data-tag-select-target="option"
+                  data-tag-id="<%= tag.id %>"
+                  data-tag-name="<%= tag.name %>"
+                  data-tag-color="<%= tag.color %>"
+                  data-filter-name="<%= tag.name %>">
+            <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected %>">
+              <%= icon("check") %>
+            </span>
+            <span class="flex items-center gap-2 text-sm font-medium rounded-full px-2.5 py-0.5 border truncate"
+                  style="
+                    background-color: color-mix(in oklab, <%= tag.color %> 10%, transparent);
+                    border-color: color-mix(in oklab, <%= tag.color %> 20%, transparent);
+                    color: <%= tag.color %>;">
+              <span class="size-1.5 rounded-full" style="background-color: <%= tag.color %>;"></span>
+              <%= tag.name %>
+            </span>
+          </button>
+        <% end %>
+
+        <button type="button"
+                class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
+                data-tag-select-target="createButton"
+                data-action="click->tag-select#createTag">
+          <%= icon("plus") %>
+          <span><%= t("transactions.form.create_tag", default: "Create") %> "<span data-tag-select-target="createName"></span>"</span>
+        </button>
+      </div>
+    </div>
+  <% end %>
+</div>
