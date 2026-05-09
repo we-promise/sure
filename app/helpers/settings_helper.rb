@@ -138,7 +138,7 @@ module SettingsHelper
       elsif health[:stale]
         { status: :warn, meta: t("settings.providers.meta.no_recent_sync") }
       elsif last_synced_at.present?
-        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at)) }
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at).sub(/^about /, "")) }
       else
         { status: :ok }
       end
@@ -171,7 +171,7 @@ module SettingsHelper
       return { status: :warn, meta: t("settings.providers.meta.no_recent_sync"), last_synced_at: last_synced_at } if health[:stale]
 
       if last_synced_at.present?
-        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at)), last_synced_at: last_synced_at }
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(last_synced_at).sub(/^about /, "")), last_synced_at: last_synced_at }
       else
         { status: :ok, last_synced_at: nil }
       end

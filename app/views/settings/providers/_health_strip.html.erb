@@ -13,14 +13,16 @@
       <span class="text-secondary"><%= t("settings.providers.health_strip.needs_attention") %></span>
     </span>
   <% end %>
-  <span class="w-px h-3.5 bg-alpha-black-100"></span>
-  <span class="inline-flex items-center gap-2 text-secondary">
-    <span class="font-medium tabular-nums"><%= accounts_syncing %></span>
-    <span><%= t("settings.providers.health_strip.accounts_syncing") %></span>
-  </span>
+  <% if accounts_syncing.positive? %>
+    <span class="w-px h-3.5 bg-alpha-black-100"></span>
+    <span class="inline-flex items-center gap-2 text-secondary">
+      <span class="font-medium tabular-nums"><%= accounts_syncing %></span>
+      <span><%= t("settings.providers.health_strip.accounts_syncing") %></span>
+    </span>
+  <% end %>
   <% if last_synced_at %>
     <span class="ml-auto text-xs text-subdued">
-      <%= t("settings.providers.health_strip.last_synced", time: time_ago_in_words(last_synced_at)) %>
+      <%= t("settings.providers.health_strip.last_synced", time: time_ago_in_words(last_synced_at).sub(/^about /, "")) %>
     </span>
   <% end %>
 </div>

@@ -42,7 +42,7 @@
 
       <div class="space-y-2">
         <% all_connections.each do |entry| %>
-          <% auto_open = [ :warn, :err ].include?(entry[:summary][:status]) || all_connections.size == 1 %>
+          <% auto_open = all_connections.size == 1 %>
           <%= render "settings/providers/connection_row", entry: entry, open: auto_open %>
         <% end %>
       </div>

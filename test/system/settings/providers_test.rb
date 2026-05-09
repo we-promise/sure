@@ -28,7 +28,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     end
   end
 
-  test "connected providers are grouped under Linked institutions in alphabetical title order" do
+  test "connected providers are grouped under Your connections in alphabetical title order" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
 
     visit settings_providers_path
@@ -36,7 +36,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     titles = all("details").map { |d| d.find("summary h2", match: :first).text.squish }
     assert_equal titles.sort_by(&:downcase), titles, "Connection panels should render alphabetically by title"
 
-    connections_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Linked institutions')]")
+    connections_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Your connections')]")
     available_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Available')]")
     connections_y = connections_heading.native.location.y
     available_y = available_heading.native.location.y
@@ -60,21 +60,21 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     end
   end
 
-  test "groups providers into Linked institutions and Available with counts" do
+  test "groups providers into Your connections and Available with counts" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
 
     visit settings_providers_path
 
-    connections_heading = find(:xpath, "//h2[contains(., 'Linked institutions')]")
+    connections_heading = find(:xpath, "//h2[contains(., 'Your connections')]")
     normalized = connections_heading.text.squish
-    assert_match(/Linked institutions .*· \d+/, normalized)
+    assert_match(/Your connections .*· \d+/, normalized)
 
     connections_y = connections_heading.native.location.y
     available_heading = find(:xpath, "//h2[contains(., 'Available')]")
     available_y = available_heading.native.location.y
     simplefin_y = find("details", text: "SimpleFIN").native.location.y
 
-    assert_operator connections_y, :<, simplefin_y, "Linked institutions heading should appear above SimpleFIN section"
+    assert_operator connections_y, :<, simplefin_y, "Your connections heading should appear above SimpleFIN section"
     assert_operator simplefin_y, :<, available_y, "SimpleFIN should appear above Available heading"
 
     available_grid_top = available_provider_cards_container.native.location.y
@@ -86,7 +86,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    assert_selector "h2", text: /\ALinked institutions/
+    assert_selector "h2", text: /\AYour connections/
     assert_no_selector "h2", text: /\AAction needed/
   end
 
@@ -104,7 +104,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    assert_selector "h2", text: /\ALinked institutions/
+    assert_selector "h2", text: /\AYour connections/
 
     # Auto-expanded warning sections hide compact meta behind `group-open:hidden`;
     # collapse once so the re-consent copy is visible again.

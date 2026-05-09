@@ -201,7 +201,7 @@ en:
       drawer_trust_statement: "Read-only — Sure can never move money. Stored encrypted."
       connect: Connect
       groups:
-        your_connections: Linked institutions
+        your_connections: Your connections
         connected: Connected
         needs_attention: Action needed
         available: Available
