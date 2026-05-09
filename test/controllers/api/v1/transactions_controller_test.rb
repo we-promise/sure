@@ -930,6 +930,22 @@ end
     assert_equal "validation_failed", body["results"][0]["error"]
   end
 
+  test "batch_update rejects split-child edits with validation_failed" do
+    target_txn = @family.transactions.joins(:entry).order("entries.id").first
+    Entry.any_instance.stubs(:split_child?).returns(true)
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [{ id: target_txn.id, notes: "x" }] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+    assert_match(/Split child/i, body["results"][0]["errors"].first)
+  end
+
   private
 
     def api_headers(api_key)
