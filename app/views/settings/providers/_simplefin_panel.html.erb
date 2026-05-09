@@ -1,7 +1,7 @@
 <div class="space-y-4">
   <%= render "settings/providers/setup_steps",
              steps: [
-               (link_to("SimpleFIN Bridge", "https://beta-bridge.simplefin.org", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " — get a one-time setup token.").html_safe,
+               ("Go to " + link_to("SimpleFIN Bridge", "https://beta-bridge.simplefin.org", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " for a one-time setup token.").html_safe,
                "Paste the token below and connect.",
                "Then head to Accounts to link your synced accounts."
              ] %>

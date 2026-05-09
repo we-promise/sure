@@ -198,7 +198,7 @@ en:
       maturity:
         beta: Beta
         alpha: Alpha
-      drawer_trust_statement: "Read-only — Sure can never move money. Stored encrypted."
+      drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
       setup_steps:
         eyebrow: Setup
         need_help: "Need help?"
@@ -218,10 +218,10 @@ en:
         last_synced: Synced %{time} ago
       sync_all: Sync all
       sync_all_in_progress: Syncing all connected providers…
-      sync_all_recently: Sync already in progress — try again in a moment.
+      sync_all_recently: Sync already in progress. Try again in a moment.
       sync_provider: Sync now
       sync_provider_in_progress: Sync started.
-      recently_synced: Synced recently — try again in a moment.
+      recently_synced: Synced recently. Try again in a moment.
       taglines:
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
@@ -267,7 +267,7 @@ en:
         step2: "Create a new API key with Enable Reading permission only"
         step3: "Paste your API Key and Secret below"
         no_withdraw_title: "Read-only key only"
-        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key — Sure only needs read access."
+        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key. Sure only needs read access."
         ip_hint_title: "IP whitelisting required"
         ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
         ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
@@ -283,8 +283,8 @@ en:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
       plaid_panel:
-        step_1_html: "%{link} — get your Client ID and Secret Key."
-        step_2: "Pick an environment — sandbox for testing, production for real accounts."
+        step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
+        step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
         step_3: "Paste your credentials below and connect."
       plaid_eu_panel:
-        step_1_html: "%{link} — get your EU Client ID and Secret Key."
+        step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."

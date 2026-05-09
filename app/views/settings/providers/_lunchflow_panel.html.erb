@@ -1,7 +1,7 @@
 <div class="space-y-4">
   <%= render "settings/providers/setup_steps",
              steps: [
-               (link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " — get an API key.").html_safe,
+               ("Go to " + link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline") + " and create an API key.").html_safe,
                "Paste your key below and connect.",
                "Then head to Accounts to link your synced accounts."
              ] %>
