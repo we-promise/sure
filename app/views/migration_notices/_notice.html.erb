@@ -1,0 +1,45 @@
+<%# locals: (notice:)
+    Renders one MigrationNotice. `notice` is a hash with:
+      key: i18n scope under migration_notices.<key>.{title,body_html,
+            copyable_label,copy,copied,dismiss}
+      copyable_value: optional string for the clipboard block
+    Driven entirely by i18n; adding a new notice = adding one locale block. %>
+<% scope = "migration_notices.#{notice[:key]}" %>
+<div class="p-4 rounded-lg bg-destructive/5 border border-destructive/20"
+     role="alert">
+  <div class="flex items-start gap-3">
+    <%= icon("triangle-alert", class: "w-5 h-5 text-destructive shrink-0 mt-0.5") %>
+    <div class="flex-1 min-w-0">
+      <h3 class="text-sm font-semibold text-primary mb-1">
+        <%= t("#{scope}.title") %>
+      </h3>
+      <p class="text-sm text-secondary mb-2">
+        <%= t("#{scope}.body_html").html_safe %>
+      </p>
+      <% if notice[:copyable_value].present? %>
+        <% if (label = t("#{scope}.copyable_label", default: nil)).present? %>
+          <p class="text-xs font-medium text-secondary mb-1"><%= label %></p>
+        <% end %>
+        <div class="flex items-center gap-2 p-2 rounded bg-surface-inset border border-primary"
+             data-controller="clipboard"
+             data-clipboard-success-content-value="<%= t("#{scope}.copied") %>">
+          <code class="text-xs text-primary flex-1 break-all"
+                data-clipboard-target="source"><%= notice[:copyable_value] %></code>
+          <button type="button"
+                  data-action="click->clipboard#copy"
+                  data-clipboard-target="button"
+                  class="shrink-0 text-xs text-secondary hover:text-primary">
+            <%= t("#{scope}.copy") %>
+          </button>
+        </div>
+      <% end %>
+      <div class="mt-3">
+        <%= button_to t("#{scope}.dismiss"),
+                      migration_notice_path(key: notice[:key]),
+                      method: :delete,
+                      data: { turbo: false },
+                      class: "text-xs text-secondary hover:text-primary underline" %>
+      </div>
+    </div>
+  </div>
+</div>

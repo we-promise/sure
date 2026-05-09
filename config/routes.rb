@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   end
 
   resources :provider_family_configs, only: [ :create, :update, :destroy ]
+  delete "migration_notices/:key", to: "migration_notices#destroy", as: :migration_notice
   resources :provider_connections, only: [ :show, :destroy ] do
     collection do
       get  :select

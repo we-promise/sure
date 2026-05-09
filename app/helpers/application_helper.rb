@@ -111,6 +111,16 @@ module ApplicationHelper
     "#{currency.name} (#{currency.iso_code})"
   end
 
+  # Renders all MigrationNotice entries the current family hasn't dismissed.
+  # Pass scope: to filter (e.g. :providers, :billing). With no scope, renders
+  # everything currently active for this family across the platform.
+  def render_migration_notices(scope: nil)
+    return unless Current.family
+    notices = MigrationNotice.active_for(family: Current.family, view: self, scope: scope)
+    return if notices.empty?
+    safe_join(notices.map { |n| render("migration_notices/notice", notice: n) })
+  end
+
   def show_super_admin_bar?
     if params[:admin].present?
       cookies.permanent[:admin] = params[:admin]

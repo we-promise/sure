@@ -331,6 +331,18 @@ class Family < ApplicationRecord
     Rails.application.config.app_mode.self_hosted?
   end
 
+  # Action-required banner state. See MigrationNotice + ApplicationHelper#
+  # render_migration_notices for how these are surfaced.
+  def dismissed_migration_notice?(key)
+    Array(dismissed_migration_notices).include?(key.to_s)
+  end
+
+  def dismiss_migration_notice!(key)
+    key = key.to_s
+    return if dismissed_migration_notice?(key)
+    update!(dismissed_migration_notices: Array(dismissed_migration_notices) + [ key ])
+  end
+
   private
     def normalize_enabled_currencies!
       if enabled_currencies.blank?

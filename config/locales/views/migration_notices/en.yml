@@ -1,0 +1,10 @@
+en:
+  migration_notices:
+    dismissed: "Notice dismissed."
+    plaid_oauth_redirect_uri:
+      title: "Action required: Plaid OAuth redirect URI changed"
+      body_html: "OAuth-bank Plaid connections (Chase, Wells Fargo, Capital One, etc.) will fail at next reauth until you add the URI below to your Plaid app's <em>API → Allowed redirect URIs</em>. Webhook URLs were auto-migrated; redirect URIs live in your Plaid Dashboard and must be added manually. Non-OAuth connections continue syncing without action."
+      copyable_label: "Redirect URI"
+      copy: "Copy"
+      copied: "Copied"
+      dismiss: "I've added it to my Plaid Dashboard"
