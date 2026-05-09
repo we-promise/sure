@@ -81,17 +81,6 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert_operator available_y, :<, available_grid_top, "Available heading should appear above the card grid"
   end
 
-  test "health strip shows four tiles with correct counts" do
-    SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
-
-    visit settings_providers_path
-
-    assert_text "Connected"
-    assert_text "Action needed"
-    assert_text "Errors"
-    assert_text "Accounts synced"
-  end
-
   test "action needed group is absent when no providers have issues" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
 
@@ -149,14 +138,11 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     end
   end
 
-  test "clicking a provider card connect link opens the connect drawer" do
+  test "clicking a provider card opens the connect drawer" do
     visit settings_providers_path
 
     within available_provider_cards_container do
-      card = find(:xpath, ".//div[contains(concat(' ', normalize-space(@class), ' '), ' bg-container ')][.//span[normalize-space()='SimpleFIN']]")
-      within(card) do
-        find("a[data-turbo-frame='drawer']", text: "Connect").click
-      end
+      find("a[data-turbo-frame='drawer']", text: "SimpleFIN").click
     end
 
     assert_selector "dialog[open]"

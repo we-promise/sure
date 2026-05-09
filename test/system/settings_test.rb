@@ -9,7 +9,7 @@ class SettingsTest < ApplicationSystemTestCase
       [ "Accounts", accounts_path ]
     ]
 
-    @settings_links << [ "Bank Sync", settings_providers_path ] if @user.admin?
+    @settings_links << [ "Bank sync", settings_providers_path ] if @user.admin?
 
     @settings_links += [
       [ "Preferences", settings_preferences_path ],
@@ -91,7 +91,7 @@ class SettingsTest < ApplicationSystemTestCase
       # Assert that admin-only settings are not present in the navigation
       assert_no_selector "li", text: "AI Prompts"
       assert_no_selector "li", text: "API Key"
-      assert_no_selector "li", text: "Bank Sync"
+      assert_no_selector "li", text: "Bank sync"
     end
   end
 

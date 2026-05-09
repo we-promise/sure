@@ -20,23 +20,19 @@
                       method: :post,
                       disabled: sync_all_disabled,
                       title: sync_all_disabled ? t("settings.providers.sync_all_recently") : nil,
-                      class: "inline-flex items-center gap-2 shrink-0 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed" do %>
+                      class: "inline-flex items-center gap-2 shrink-0 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed" do %>
           <%= icon "refresh-cw", class: "w-4 h-4" %>
           <%= t("settings.providers.sync_all") %>
         <% end %>
       <% end %>
     </div>
 
-    <%= render Settings::HealthSummary.new(counts: @health_counts) %>
-
     <% all_connections = @needs_attention + @connected %>
 
-    <%= render "settings/providers/group_heading",
-               title: t("settings.providers.groups.your_connections"),
-               count: all_connections.size %>
-
-    <% if all_connections.empty? %>
-      <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_connected") %></p>
+    <% if all_connections.any? %>
+      <%= render "settings/providers/group_heading",
+                 title: t("settings.providers.groups.your_connections"),
+                 count: all_connections.size %>
     <% end %>
 
     <% all_connections.each do |entry| %>

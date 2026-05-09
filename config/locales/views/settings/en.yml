@@ -176,7 +176,7 @@ en:
       whats_new_label: What's new
       api_keys_label: API Key
       appearance_label: Appearance
-      bank_sync_label: Bank Sync
+      bank_sync_label: Bank sync
     settings_nav_link_large:
       next: Next
       previous: Back
@@ -188,7 +188,7 @@ en:
     providers:
       not_authorized: Not authorized
       bank_sync:
-        page_title: Bank Sync
+        page_title: Bank sync
         lede: Connect external accounts so transactions, balances and holdings flow into Sure automatically.
       status:
         ok: Connected
@@ -204,13 +204,7 @@ en:
         connected: Connected
         needs_attention: Action needed
         available: Available
-        empty_connected: Nothing connected yet — pick a provider below to get started.
         empty_available: All available providers are connected.
-      health:
-        connected: Connected
-        needs_attention: Action needed
-        errors: Errors
-        accounts_synced: Accounts synced
       meta:
         sync_error: Sync error
         no_recent_sync: Sync overdue
