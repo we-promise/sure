@@ -794,8 +794,9 @@ class SophtronItemsController < ApplicationController
     def process_manual_sync_account!(sync, sophtron_account)
       SophtronAccount::Processor.new(sophtron_account.reload).process
     rescue StandardError => e
+      Rails.logger.error("Sophtron manual sync processing error: #{e.class} - #{e.message}")
       fail_manual_sync_and_clear_job!(sync, e.message)
-      raise Provider::Sophtron::Error.new(e.message, :api_error)
+      raise Provider::Sophtron::Error.new(t("sophtron_items.sync.processing_failed"), :api_error)
     end
 
     def fail_manual_sync_and_clear_job!(sync, message)

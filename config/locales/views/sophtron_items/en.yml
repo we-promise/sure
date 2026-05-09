@@ -213,6 +213,7 @@ en:
       api_error: "Sophtron manual sync failed: %{message}"
       failed: Sophtron manual sync failed
       no_linked_accounts: This Sophtron institution does not have any linked accounts to sync.
+      processing_failed: Sophtron manual sync could not process the refreshed transactions.
       success: Sync started
     toggle_manual_sync:
       success_disabled: Sophtron institution will sync automatically.

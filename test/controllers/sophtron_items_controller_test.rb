@@ -846,7 +846,8 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "requires_update", @item.status
     assert_equal "processor failed", @item.last_connection_error
     assert @item.syncs.ordered.first.failed?
-    assert_includes flash[:alert], "processor failed"
+    assert_equal "Sophtron manual sync failed: Sophtron manual sync could not process the refreshed transactions.", flash[:alert]
+    assert_not_includes flash[:alert], "processor failed"
   end
 
   test "submit_mfa preserves manual sync context" do
