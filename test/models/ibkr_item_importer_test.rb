@@ -23,6 +23,7 @@ class IbkrItemImporterTest < ActiveSupport::TestCase
     primary_account = @ibkr_item.ibkr_accounts.find_by!(ibkr_account_id: "U1234567")
     assert_equal "CHF", primary_account.currency
     assert_equal BigDecimal("3351.0"), primary_account.current_balance
+    assert_equal 2, primary_account.raw_equity_summary_payload.size
     assert_equal 1, primary_account.raw_holdings_payload.size
     assert_equal 2, primary_account.raw_activities_payload["trades"].size
     assert_equal 2, primary_account.raw_activities_payload["cash_transactions"].size

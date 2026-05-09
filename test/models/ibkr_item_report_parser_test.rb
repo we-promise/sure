@@ -12,6 +12,7 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal "CHF", first_account[:currency]
     assert_equal BigDecimal("1000.50"), first_account[:cash_balance]
     assert_equal BigDecimal("3351.00"), first_account[:current_balance]
+    assert_equal 2, first_account[:equity_summary_in_base].size
     assert_equal 1, first_account[:open_positions].size
     assert_equal 2, first_account[:trades].size
     assert_equal 2, first_account[:cash_transactions].size
@@ -20,5 +21,6 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal "U7654321", second_account[:ibkr_account_id]
     assert_equal BigDecimal("250"), second_account[:cash_balance]
     assert_equal BigDecimal("250"), second_account[:current_balance]
+    assert_equal 1, second_account[:equity_summary_in_base].size
   end
 end

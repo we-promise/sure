@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_09_170000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_09_171000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -674,6 +674,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_09_170000) do
     t.datetime "last_activities_sync"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "raw_equity_summary_payload", default: [], null: false
     t.index ["ibkr_item_id", "ibkr_account_id"], name: "index_ibkr_accounts_on_item_and_ibkr_account_id", unique: true, where: "(ibkr_account_id IS NOT NULL)"
     t.index ["ibkr_item_id"], name: "index_ibkr_accounts_on_ibkr_item_id"
   end

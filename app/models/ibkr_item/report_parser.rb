@@ -5,6 +5,8 @@ class IbkrItem::ReportParser
   POSITION_VALUE_ROW_NAMES = %w[ChangeInPositionValue].freeze
   CASH_REPORT_CONTAINER_NAMES = %w[CashReport CashReports].freeze
   CASH_REPORT_ROW_NAMES = %w[CashReport CashReportCurrency CashReportRow].freeze
+  EQUITY_SUMMARY_CONTAINER_NAMES = %w[EquitySummaryInBase].freeze
+  EQUITY_SUMMARY_ROW_NAMES = %w[EquitySummaryByReportDateInBase].freeze
   OPEN_POSITION_CONTAINER_NAMES = %w[OpenPositions].freeze
   OPEN_POSITION_ROW_NAMES = %w[OpenPosition].freeze
   TRADES_CONTAINER_NAMES = %w[Trades].freeze
@@ -38,12 +40,14 @@ class IbkrItem::ReportParser
       account_information = node_attributes(statement.at_xpath("./AccountInformation"))
       position_values = section_rows(statement, POSITION_VALUE_CONTAINER_NAMES, POSITION_VALUE_ROW_NAMES)
       cash_report = section_rows(statement, CASH_REPORT_CONTAINER_NAMES, CASH_REPORT_ROW_NAMES)
+      equity_summary_in_base = section_rows(statement, EQUITY_SUMMARY_CONTAINER_NAMES, EQUITY_SUMMARY_ROW_NAMES)
       open_positions = section_rows(statement, OPEN_POSITION_CONTAINER_NAMES, OPEN_POSITION_ROW_NAMES)
       trades = section_rows(statement, TRADES_CONTAINER_NAMES, TRADE_ROW_NAMES)
       cash_transactions = section_rows(statement, CASH_TRANSACTION_CONTAINER_NAMES, CASH_TRANSACTION_ROW_NAMES)
 
       currency = account_information["currency"].presence&.upcase || "USD"
       report_date = open_positions.filter_map { |row| parse_date(row["report_date"]) }.max ||
+        equity_summary_in_base.filter_map { |row| parse_date(row["report_date"]) }.max ||
         parse_date(statement_data["to_date"]) ||
         Date.current
 
@@ -56,12 +60,14 @@ class IbkrItem::ReportParser
         report_date: report_date,
         statement: statement_data,
         cash_report: cash_report,
+        equity_summary_in_base: equity_summary_in_base,
         open_positions: open_positions,
         trades: trades,
         cash_transactions: cash_transactions,
         raw_payload: {
           statement: statement_data,
           cash_report: cash_report,
+          equity_summary_in_base: equity_summary_in_base,
           open_positions: open_positions,
           trades: trades,
           cash_transactions: cash_transactions

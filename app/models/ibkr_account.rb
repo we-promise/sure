@@ -6,6 +6,7 @@ class IbkrAccount < ApplicationRecord
     encrypts :raw_holdings_payload
     encrypts :raw_activities_payload
     encrypts :raw_cash_report_payload
+    encrypts :raw_equity_summary_payload
   end
 
   belongs_to :ibkr_item
@@ -65,6 +66,7 @@ class IbkrAccount < ApplicationRecord
         cash_transactions: data[:cash_transactions] || []
       },
       raw_cash_report_payload: data[:cash_report] || [],
+      raw_equity_summary_payload: data[:equity_summary_in_base] || [],
       last_holdings_sync: Time.current,
       last_activities_sync: Time.current
     )
