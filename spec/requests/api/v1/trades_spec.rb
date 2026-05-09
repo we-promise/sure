@@ -160,15 +160,17 @@ RSpec.describe 'API V1 Trades', type: :request do
             properties: {
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               date: { type: :string, format: :date, description: 'Trade date (required)' },
-              qty: { type: :number, description: 'Quantity (required)' },
-              price: { type: :number, description: 'Price (required)' },
-              type: { type: :string, enum: %w[buy sell], description: 'Trade type (required)' },
+              qty: { type: :number, description: 'Quantity (required for buy/sell)' },
+              price: { type: :number, description: 'Price (required for buy/sell)' },
+              amount: { type: :number, description: 'Amount (required for dividend, deposit, withdrawal, interest)' },
+              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest], description: 'Trade type (required)' },
               security_id: { type: :string, format: :uuid, description: 'Security ID (one of security_id, ticker, manual_ticker required)' },
               ticker: { type: :string, description: 'Ticker symbol' },
               manual_ticker: { type: :string, description: 'Manual ticker for offline securities' },
               currency: { type: :string, description: 'Currency (defaults to account currency)' },
               investment_activity_label: { type: :string, description: 'Activity label (e.g. Buy, Sell)' },
-              category_id: { type: :string, format: :uuid, description: 'Category ID' }
+              category_id: { type: :string, format: :uuid, description: 'Category ID' },
+              transfer_account_id: { type: :string, format: :uuid, description: 'Destination/source account ID for linked transfers' }
             },
             required: %w[account_id date qty price type]
           }
@@ -277,6 +279,161 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
+      
+      response '201', 'dividend created with security' do
+        schema '$ref' => '#/components/schemas/Trade'
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'dividend',
+              amount: 25.50,
+              currency: 'USD',
+              ticker: 'AAPL'
+            }
+          }
+        end
+
+        run_test!
+      end
+      
+      response '422', 'dividend without security returns error' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'dividend',
+              amount: 25.50
+            }
+          }
+        end
+
+        run_test!
+      end
+      
+      response '422', 'dividend without amount returns error' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'dividend',
+              ticker: 'AAPL'
+            }
+          }
+        end
+
+        run_test!
+      end
+      
+      response '422', 'invalid type returns error' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'invalid'
+            }
+          }
+        end
+
+        run_test!
+      end
+      
+      response '201', 'deposit created' do
+          schema type: :object,
+                 properties: {
+                   id: { type: :string },
+                   date: { type: :string, format: :date },
+                   amount: { type: :string },
+                   currency: { type: :string },
+                   name: { type: :string },
+                   entryable_type: { type: :string },
+                   account: {
+                     type: :object,
+                     properties: {
+                       id: { type: :string },
+                       name: { type: :string },
+                       account_type: { type: :string }
+                     }
+                   }
+                 }
+
+          let(:body) do
+            {
+              trade: {
+                account_id: account.id,
+                date: Date.current.to_s,
+                type: 'deposit',
+                amount: 175.25,
+                currency: 'USD'
+              }
+            }
+          end
+
+          run_test!
+        end
+
+        response '201', 'withdrawal created' do
+          schema '$ref' => '#/components/schemas/TransactionResponse'
+
+          let(:body) do
+            {
+              trade: {
+                account_id: account.id,
+                date: Date.current.to_s,
+                type: 'withdrawal',
+                amount: 100.00,
+                currency: 'USD'
+              }
+            }
+          end
+
+          run_test!
+        end
+
+        response '201', 'interest created' do
+          schema '$ref' => '#/components/schemas/Trade'
+
+          let(:body) do
+            {
+              trade: {
+                account_id: account.id,
+                date: Date.current.to_s,
+                type: 'interest',
+                amount: 25.00,
+                currency: 'USD'
+              }
+            }
+          end
+
+          run_test!
+        end
+
+        response '422', 'deposit without amount returns error' do
+          schema '$ref' => '#/components/schemas/ErrorResponse'
+
+          let(:body) do
+            {
+              trade: {
+                account_id: account.id,
+                date: Date.current.to_s,
+                type: 'deposit'
+              }
+            }
+          end
+          
+          run_test!
+        end
     end
   end
 
@@ -329,7 +486,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               date: { type: :string, format: :date },
               qty: { type: :number },
               price: { type: :number },
-              type: { type: :string, enum: %w[buy sell] },
+              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest] },
               nature: { type: :string, enum: %w[inflow outflow] },
               name: { type: :string },
               notes: { type: :string },

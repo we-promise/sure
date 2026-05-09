@@ -62,16 +62,52 @@ class Api::V1::TradesController < Api::V1::BaseController
       model.lock_saved_attributes!
       model.mark_user_modified!
       model.sync_account_later
-      @trade = model.trade
+
+      if model.entryable.is_a?(Transaction)
+        @entry = model
+        render json: {
+          id: @entry.id,
+          date: @entry.date,
+          amount: @entry.amount_money.format,
+          currency: @entry.currency,
+          name: @entry.name,
+          entryable_type: "Transaction",
+          account: {
+            id: @entry.account.id,
+            name: @entry.account.name,
+            account_type: @entry.account.accountable_type.underscore
+          }
+        }, status: :created
+      else
+        @trade = model.trade
+        apply_trade_create_options!
+        return if performed?
+        @entry = @trade.entry
+        render :show, status: :created
+      end
+    elsif model.is_a?(Transfer)
+      # Linked transfer - return the destination entry
+      @entry = model.inflow_transaction.entry
+      render json: {
+        id: @entry.id,
+        date: @entry.date,
+        amount: @entry.amount_money.format,
+        currency: @entry.currency,
+        name: @entry.name,
+        entryable_type: "Transaction",
+        account: {
+          id: @entry.account.id,
+          name: @entry.account.name,
+          account_type: @entry.account.accountable_type.underscore
+        }
+      }, status: :created
     else
       @trade = model
+      apply_trade_create_options!
+      return if performed?
+      @entry = @trade.entry
+      render :show, status: :created
     end
-
-    apply_trade_create_options!
-    return if performed?
-
-    @entry = @trade.entry
-    render :show, status: :created
   rescue ActiveRecord::RecordNotFound => e
     message = (e.model == "Account") ? "Account not found" : "Security not found"
     render json: { error: "not_found", message: message }, status: :not_found
@@ -146,7 +182,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id
+        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :fee, :type, :amount, :transfer_account_id
       )
     end
 
@@ -202,11 +239,62 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     def build_create_form_params(account)
       type = params.dig(:trade, :type).to_s.downcase
-      unless %w[buy sell].include?(type)
-        render_validation_error("Type must be buy or sell", [ "type must be 'buy' or 'sell'" ])
+      unless %w[buy sell dividend deposit withdrawal interest].include?(type)
+        render_validation_error("Invalid type", [ "type must be 'buy', 'sell', 'dividend', 'deposit', 'withdrawal', or 'interest'" ])
         return nil
       end
 
+      case type
+      when "deposit", "withdrawal"
+        unless trade_params[:amount].present?
+          render_validation_error("Amount is required", [ "amount must be present for deposit/withdrawal" ])
+          return nil
+        end
+
+        unless trade_params[:date].present?
+          render_validation_error("Date is required", [ "date must be present" ])
+          return nil
+        end
+
+        {
+          account: account,
+          date: trade_params[:date],
+          amount: trade_params[:amount].to_d,
+          currency: trade_params[:currency].presence || account.currency,
+          type: type,
+          transfer_account_id: trade_params[:transfer_account_id]
+        }.compact
+
+      when "interest"
+        unless trade_params[:date].present?
+          render_validation_error("Date is required", [ "date must be present" ])
+          return nil
+        end
+
+        ticker_value = nil
+        manual_ticker_value = nil
+        if trade_params[:ticker].present?
+          ticker_value = trade_params[:ticker]
+        elsif trade_params[:manual_ticker].present?
+          manual_ticker_value = trade_params[:manual_ticker]
+        end
+
+        {
+          account: account,
+          date: trade_params[:date],
+          amount: trade_params[:amount].to_d,
+          currency: trade_params[:currency].presence || account.currency,
+          type: type,
+          ticker: ticker_value,
+          manual_ticker: manual_ticker_value
+        }.compact
+
+      else
+        build_investment_trade_params(account)
+      end
+    end
+
+    def build_investment_trade_params(account)
       ticker_value = nil
       manual_ticker_value = nil
 
@@ -227,29 +315,47 @@ class Api::V1::TradesController < Api::V1::BaseController
         return nil
       end
 
-      qty_raw = trade_params[:qty].to_s.strip
-      price_raw = trade_params[:price].to_s.strip
-      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty_raw.blank? || price_raw.blank?
+      if params.dig(:trade, :type).to_s.downcase == "dividend"
+        unless trade_params[:amount].present?
+          render_validation_error("Amount is required", [ "amount must be present for dividend" ])
+          return nil
+        end
 
-      qty = qty_raw.to_d
-      price = price_raw.to_d
-      if qty <= 0 || price <= 0
-        # Non-numeric input (e.g. "abc") becomes 0 with to_d; give a clearer message than "must be present"
-        non_numeric = (qty.zero? && qty_raw !~ /\A0(\.0*)?\z/) || (price.zero? && price_raw !~ /\A0(\.0*)?\z/)
-        return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ]) if non_numeric
-        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
+        {
+          account: account,
+          date: trade_params[:date],
+          amount: trade_params[:amount].to_d,
+          currency: trade_params[:currency].presence || account.currency,
+          type: "dividend",
+          ticker: ticker_value,
+          manual_ticker: manual_ticker_value
+        }.compact
+      else
+        qty_raw = trade_params[:qty].to_s.strip
+        price_raw = trade_params[:price].to_s.strip
+        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty_raw.blank? || price_raw.blank?
+
+        qty = qty_raw.to_d
+        price = price_raw.to_d
+        if qty <= 0 || price <= 0
+          # Non-numeric input (e.g. "abc") becomes 0 with to_d; give a clearer message than "must be present"
+          non_numeric = (qty.zero? && qty_raw !~ /\A0(\.0*)?\z/) || (price.zero? && price_raw !~ /\A0(\.0*)?\z/)
+          return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ]) if non_numeric
+          return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
+        end
+
+        {
+          account: account,
+          date: trade_params[:date],
+          qty: qty,
+          price: price,
+          fee: trade_params[:fee].to_d,
+          currency: trade_params[:currency].presence || account.currency,
+          type: params.dig(:trade, :type),
+          ticker: ticker_value,
+          manual_ticker: manual_ticker_value
+        }.compact
       end
-
-      {
-        account: account,
-        date: trade_params[:date],
-        qty: qty,
-        price: price,
-        currency: trade_params[:currency].presence || account.currency,
-        type: type,
-        ticker: ticker_value,
-        manual_ticker: manual_ticker_value
-      }.compact
     end
 
     def apply_trade_create_options!
