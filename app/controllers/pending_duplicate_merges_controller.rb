@@ -52,6 +52,10 @@ class PendingDuplicateMergesController < ApplicationController
     else
       redirect_back_or_to transactions_path, alert: "Could not merge transactions"
     end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed,
+         ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout => e
+    Rails.logger.error("Failed to manually merge pending transaction: #{e.message}")
+    redirect_back_or_to transactions_path, alert: t("transactions.merge_duplicate.failure")
   end
 
   private

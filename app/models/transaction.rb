@@ -95,6 +95,13 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking].freeze
 
+  # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
+  # Stored as a constant so static analysis can verify it contains no user input.
+  PENDING_CHECK_SQL = PENDING_PROVIDERS
+    .map { |p| "(t.extra -> '#{p}' ->> 'pending')::boolean = true" }
+    .join(" OR ")
+    .freeze
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
@@ -140,7 +147,7 @@ class Transaction < ApplicationRecord
     PENDING_PROVIDERS.any? do |provider|
       ActiveModel::Type::Boolean.new.cast(extra_data.dig(provider, "pending"))
     end
-  rescue
+  rescue StandardError
     false
   end
 
@@ -176,22 +183,106 @@ class Transaction < ApplicationRecord
     potential_posted_match_data&.dig("dismissed") == true
   end
 
-  # Merge this pending transaction with its suggested posted match
-  # This DELETES the pending entry since the posted version is canonical
+  # Merge this pending transaction with its suggested posted match.
+  # The pending entry is destroyed; the posted entry survives with attributes inherited from both sides.
+  # Attribute inheritance: Date + Category from pending, Name + Merchant from posted (booked).
   def merge_with_duplicate!
+    return false unless pending?
     return false unless has_potential_duplicate?
 
     posted_entry = potential_duplicate_entry
     return false unless posted_entry
 
-    pending_entry_id = entry.id
-    pending_entry_name = entry.name
+    pending_entry = entry
 
-    # Delete this pending entry completely (no need to keep it around)
-    entry.destroy!
+    # Guard: cross-account merges are never valid
+    if posted_entry.account_id != pending_entry.account_id
+      Rails.logger.warn("merge_with_duplicate! rejected: posted_entry #{posted_entry.id} belongs to different account than pending entry #{pending_entry.id}")
+      return false
+    end
 
-    Rails.logger.info("User merged pending entry #{pending_entry_id} (#{pending_entry_name}) with posted entry #{posted_entry.id}")
-    true
+    pending_entry_id = pending_entry.id
+    merge_succeeded = false
+
+    ApplicationRecord.transaction(requires_new: true) do
+      # Row-level locks prevent concurrent merges on the same pair of entries.
+      # If a concurrent request already destroyed the pending entry, lock! raises
+      # RecordNotFound — treat that as an idempotent success.
+      begin
+        pending_entry.lock!
+      rescue ActiveRecord::RecordNotFound
+        Rails.logger.info("Pending entry #{pending_entry_id} already destroyed (concurrent merge), skipping")
+        return true
+      end
+
+      begin
+        posted_entry.lock!
+      rescue ActiveRecord::RecordNotFound
+        Rails.logger.info("Posted entry #{posted_entry.id} deleted concurrently; aborting merge")
+        raise ActiveRecord::Rollback
+      end
+
+      # Capture after lock! (which reloads) to guarantee DB-fresh values and avoid
+      # stale in-memory cached associations (e.g., loaded via touch: true).
+      external_id        = pending_entry.external_id
+      pending_entry_date = pending_entry.date
+
+      # Batch all changes to the surviving posted Transaction into a single update!
+      # to avoid firing after_save callbacks twice on the same row.
+      # Lock the Transaction row so concurrent merges into the same posted entry
+      # cannot race on reading/writing extra (e.g., the manual_merge array).
+      posted_tx = posted_entry.entryable
+      posted_tx.lock! if posted_tx.is_a?(Transaction)
+      if posted_tx.is_a?(Transaction)
+        tx_attrs = {}
+
+        # Merge metadata — always written so the sync engine can skip re-importing.
+        # Stored as an array so multiple pending entries merged into the same posted
+        # transaction each preserve their external_id for future sync exclusion.
+        # Legacy records written as a plain Hash are migrated to a single-element array
+        # on first append, maintaining backward compatibility.
+        if external_id.present?
+          new_record = {
+            "merged_from_entry_id"    => pending_entry_id,
+            "merged_from_external_id" => external_id,
+            "merged_at"               => Time.current.iso8601,
+            "source"                  => pending_entry.source
+          }
+          prior = case posted_tx.extra["manual_merge"]
+          when Array then posted_tx.extra["manual_merge"]
+          when Hash  then [ posted_tx.extra["manual_merge"] ]
+          else []
+          end
+          tx_attrs[:extra] = posted_tx.extra.merge("manual_merge" => prior + [ new_record ])
+        end
+
+        # Attribute inheritance — only when the posted entry is not already user-protected.
+        unless posted_entry.protected_from_sync?
+          pending_transaction = pending_entry.entryable
+          if pending_transaction.is_a?(Transaction) && pending_transaction.category_id.present?
+            tx_attrs[:category_id] = pending_transaction.category_id
+          end
+        end
+
+        posted_tx.update!(tx_attrs) if tx_attrs.any?
+      end
+
+      # Date inheritance on the Entry row — separate from the Transaction update above.
+      unless posted_entry.protected_from_sync?
+        # Date: pending dates reflect actual transaction initiation time
+        posted_entry.update!(date: pending_entry_date) if posted_entry.date != pending_entry_date
+        # Name + Merchant intentionally NOT inherited — booked values are canonical
+      end
+
+      # Lock the posted entry so future syncs cannot overwrite the merged state
+      posted_entry.mark_user_modified!
+
+      Rails.logger.info("User merged pending entry #{pending_entry_id} (ext: #{external_id}) into posted entry #{posted_entry.id}")
+      pending_entry.destroy!
+      merge_succeeded = true
+    end
+
+    merge_succeeded
   end
 
   # Dismiss the duplicate suggestion - user says these are NOT the same transaction
