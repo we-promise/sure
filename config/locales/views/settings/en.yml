@@ -202,13 +202,11 @@ en:
       connect: Connect
       groups:
         your_connections: Your connections
-        connected: Connected
-        needs_attention: Action needed
         available: Available
         empty_available: All available providers are connected.
       health_strip:
         connected: connected
-        needs_attention: needs reconsent
+        needs_attention: needs attention
         accounts_syncing: accounts syncing
         last_synced: Last synced %{time} ago
       meta:
@@ -249,8 +247,6 @@ en:
           crypto: Crypto
           investment: Investment
       empty_filter: No providers match your filter.
-      show:
-        coinbase_title: Coinbase
       encryption_error:
         title: Encryption Configuration Required
         message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.

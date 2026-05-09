@@ -1,16 +1,14 @@
 <%= link_to connect_path,
-            class: "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-3 text-primary hover:bg-container-hover transition-colors",
+            class: "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-2.5 text-primary hover:bg-container-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100",
             data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data) do %>
-  <div class="flex items-start gap-3">
+  <div class="flex items-start gap-2.5">
     <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 <%= logo_bg %>">
       <span class="text-xs font-bold text-inverse"><%= logo_text %></span>
     </div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="font-medium text-primary"><%= name %></span>
-        <% if maturity_label %>
-          <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-alpha-black-50 text-secondary"><%= maturity_label %></span>
-        <% end %>
+        <span class="text-sm font-medium text-primary"><%= name %></span>
+        <%= render "settings/providers/maturity_badge", label: maturity_label %>
       </div>
       <% if meta_line.present? %>
         <p class="text-xs text-subdued mt-0.5"><%= meta_line %></p>
@@ -18,10 +16,10 @@
     </div>
   </div>
   <% if tagline.present? %>
-    <p class="text-sm text-secondary grow"><%= tagline %></p>
+    <p class="text-[13px] text-secondary grow leading-snug"><%= tagline %></p>
   <% end %>
-  <div class="flex items-center justify-end gap-1.5 text-sm font-medium text-primary">
+  <div class="flex items-center justify-end gap-1.5 text-[13px] font-medium text-primary">
     <%= t("settings.providers.connect") %>
-    <%= helpers.icon "arrow-right", class: "w-4 h-4" %>
+    <%= helpers.icon "arrow-right", class: "w-3.5 h-3.5" %>
   </div>
 <% end %>

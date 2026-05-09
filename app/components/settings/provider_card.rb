@@ -4,6 +4,11 @@ class Settings::ProviderCard < ApplicationComponent
     alpha: "settings.providers.maturity.alpha"
   }.freeze
 
+  def self.maturity_label(maturity)
+    key = MATURITY_LABELS[maturity&.to_sym]
+    I18n.t(key) if key
+  end
+
   def initialize(provider_key:, name:, tagline: nil, region: nil, kind: nil, tier: nil,
                  maturity: :stable, logo_bg: "bg-gray-500", logo_text: nil)
     @provider_key = provider_key

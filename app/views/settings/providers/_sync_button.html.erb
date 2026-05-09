@@ -6,7 +6,7 @@
               disabled: recently_synced,
               title: button_label,
               aria: { label: button_label },
-              class: "inline-flex items-center p-1 rounded text-secondary hover:text-primary hover:bg-alpha-black-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+              class: "inline-flex items-center justify-center w-7 h-7 rounded-md text-secondary hover:text-primary hover:bg-alpha-black-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
               form: { onclick: "event.stopPropagation()", class: "inline-flex" } do %>
   <%= icon "refresh-cw", class: "w-3.5 h-3.5" %>
 <% end %>

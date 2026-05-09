@@ -11,8 +11,7 @@
                   end
   sync_action   = entry[:partial].present? ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: last_synced) : nil
   status_pill   = render("settings/providers/status_pill", status: status)
-  maturity_key  = Settings::ProviderCard::MATURITY_LABELS[entry[:maturity]]
-  maturity_lbl  = maturity_key ? t(maturity_key) : nil
+  maturity_lbl  = Settings::ProviderCard.maturity_label(entry[:maturity])
 %>
 <details <%= "open" if open %>
          class="group bg-container shadow-border-xs rounded-xl <%= border_class %>"
@@ -20,10 +19,8 @@
   <summary class="flex items-center gap-3 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
     <%= icon "chevron-right", class: "w-3.5 h-3.5 text-secondary group-open:rotate-90 transition-transform shrink-0" %>
     <div class="flex items-center gap-2 flex-wrap min-w-0 flex-1">
-      <h2 class="text-sm font-medium text-primary"><%= entry[:title] %></h2>
-      <% if maturity_lbl %>
-        <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-alpha-black-50 text-secondary"><%= maturity_lbl %></span>
-      <% end %>
+      <h3 class="text-sm font-medium text-primary"><%= entry[:title] %></h3>
+      <%= render "settings/providers/maturity_badge", label: maturity_lbl %>
     </div>
     <div class="flex items-center gap-2 shrink-0 group-open:hidden">
       <% if meta.present? %>

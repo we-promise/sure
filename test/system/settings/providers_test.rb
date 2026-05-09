@@ -33,7 +33,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
 
-    titles = all("details").map { |d| d.find("summary h2", match: :first).text.squish }
+    titles = all("details").map { |d| d.find("summary h3", match: :first).text.squish }
     assert_equal titles.sort_by(&:downcase), titles, "Connection panels should render alphabetically by title"
 
     connections_heading = page.find(:xpath, "//h2[contains(normalize-space(), 'Your connections')]")
