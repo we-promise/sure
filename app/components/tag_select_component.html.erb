@@ -46,8 +46,7 @@
 
       <div class="flex flex-col gap-0.5 max-h-64 overflow-auto"
            role="listbox"
-           tabindex="-1"
-           data-tag-select-target="list">
+           tabindex="-1">
         <% tags.each do |tag| %>
           <% selected = selected_ids.include?(tag.id.to_s) %>
           <%= render partial: "tag_select_component/option", locals: { tag: tag, selected: selected, view_helpers: helpers } %>
