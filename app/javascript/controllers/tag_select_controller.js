@@ -9,6 +9,7 @@ export default class extends Controller {
     "option",
     "selectionContainer",
     "createForm",
+    "createError",
   ];
 
   static values = {
@@ -21,6 +22,7 @@ export default class extends Controller {
   };
 
   connect() {
+    this.creating = false;
     this.isOpen = false;
     this.selectedIds = new Set(
       this.optionTargets
@@ -91,6 +93,8 @@ export default class extends Controller {
   }
 
   filter() {
+    this.clearCreateError();
+
     const query = this.searchTarget.value.trim().toLowerCase();
     let hasExactMatch = false;
 
@@ -111,7 +115,8 @@ export default class extends Controller {
   handleSearchKeydown(event) {
     if (
       event.key === "Enter" &&
-      !this.createFormTarget.classList.contains("hidden")
+      !this.createFormTarget.classList.contains("hidden") &&
+      !this.creating
     ) {
       event.preventDefault();
       this.createTag();
@@ -119,10 +124,14 @@ export default class extends Controller {
   }
 
   async createTag() {
+    if (this.creating) return;
+
     const name = this.searchTarget.value.trim();
     if (!name) return;
 
+    this.creating = true;
     this.createFormTarget.disabled = true;
+    this.clearCreateError();
 
     try {
       const response = await fetch(this.createUrlValue, {
@@ -140,17 +149,21 @@ export default class extends Controller {
         }),
       });
 
-      if (!response.ok) return;
+      const tag = await this.parseJson(response);
 
-      const tag = await response.json();
-      const option = this.buildOption(tag);
-      this.listTarget.insertBefore(option, this.createFormTarget);
+      if (!response.ok) {
+        this.showCreateError(tag.errors?.join(", ") || tag.error);
+        return;
+      }
+
+      this.createFormTarget.insertAdjacentHTML("beforebegin", tag.html);
       this.selectedIds.add(String(tag.id));
       this.renderSelection();
       this.searchTarget.value = "";
       this.filter();
       this.submitForm();
     } finally {
+      this.creating = false;
       this.createFormTarget.disabled = false;
     }
   }
@@ -168,9 +181,10 @@ export default class extends Controller {
       this.hiddenInputsElement.appendChild(
         this.buildHiddenInput(option.dataset.tagId),
       );
-      this.selectionContainerTarget.appendChild(
-        this.buildBadge(option.dataset.tagName, option.dataset.tagColor),
-      );
+      const badge = option.querySelector("[data-tag-select-badge]");
+      if (badge) {
+        this.selectionContainerTarget.appendChild(badge.cloneNode(true));
+      }
       this.updateOption(option);
     });
 
@@ -188,28 +202,6 @@ export default class extends Controller {
     if (icon) icon.classList.toggle("hidden", !isSelected);
   }
 
-  buildOption(tag) {
-    const option = document.createElement("button");
-    option.type = "button";
-    option.className =
-      "filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover";
-    option.setAttribute("role", "option");
-    option.setAttribute("aria-selected", "true");
-    option.dataset.action = "click->tag-select#toggleTag";
-    option.dataset.tagSelectTarget = "option";
-    option.dataset.tagId = String(tag.id);
-    option.dataset.tagName = tag.name;
-    option.dataset.tagColor = tag.color;
-    option.dataset.filterName = tag.name;
-
-    const checkIcon = this.buildCheckIcon();
-
-    option.appendChild(checkIcon);
-    option.appendChild(this.buildBadge(tag.name, tag.color));
-
-    return option;
-  }
-
   buildHiddenInput(id) {
     const input = document.createElement("input");
     input.type = "hidden";
@@ -217,25 +209,6 @@ export default class extends Controller {
     input.value = id;
     input.disabled = this.disabledValue;
     return input;
-  }
-
-  buildBadge(name, color) {
-    const badge = document.createElement("span");
-    badge.className =
-      "flex items-center gap-2 text-sm font-medium rounded-full px-2.5 py-0.5 border truncate";
-    badge.style.backgroundColor = `color-mix(in oklab, ${color} 10%, transparent)`;
-    badge.style.borderColor = `color-mix(in oklab, ${color} 20%, transparent)`;
-    badge.style.color = color;
-
-    const dot = document.createElement("span");
-    dot.className = "size-1.5 rounded-full shrink-0";
-    dot.style.backgroundColor = color;
-
-    const label = document.createElement("span");
-    label.textContent = name;
-
-    badge.append(dot, label);
-    return badge;
   }
 
   handleOutsideClick(event) {
@@ -275,31 +248,6 @@ export default class extends Controller {
     }
   }
 
-  buildCheckIcon() {
-    const container = document.createElement("span");
-    container.className = "check-icon w-5 shrink-0";
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    svg.setAttribute("width", "20");
-    svg.setAttribute("height", "20");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("fill", "none");
-    svg.setAttribute("stroke", "currentColor");
-    svg.setAttribute("stroke-width", "2");
-    svg.setAttribute("stroke-linecap", "round");
-    svg.setAttribute("stroke-linejoin", "round");
-    svg.classList.add("lucide", "lucide-check");
-
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", "M20 6 9 17l-5-5");
-
-    svg.appendChild(path);
-    container.appendChild(svg);
-
-    return container;
-  }
-
   handleKeydown(event) {
     if (event.key === "Escape" && this.isOpen) {
       event.preventDefault();
@@ -318,6 +266,31 @@ export default class extends Controller {
 
   get createNameElement() {
     return this.createFormTarget.querySelector("[data-tag-select-create-name]");
+  }
+
+  showCreateError(message) {
+    if (!this.hasCreateErrorTarget) return;
+
+    this.createErrorTarget.textContent = message || "Could not create tag";
+    this.createErrorTarget.classList.remove("hidden");
+    this.searchTarget.setAttribute("aria-invalid", "true");
+    this.searchTarget.focus({ preventScroll: true });
+  }
+
+  async parseJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  clearCreateError() {
+    if (!this.hasCreateErrorTarget) return;
+
+    this.createErrorTarget.textContent = "";
+    this.createErrorTarget.classList.add("hidden");
+    this.searchTarget.removeAttribute("aria-invalid");
   }
 
   buildPlaceholder() {
