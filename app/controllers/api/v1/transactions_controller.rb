@@ -11,7 +11,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   def index
     family = current_resource_owner.family
     accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
-    transactions_query = family.transactions.visible
+    transactions_query = family.transactions
       .joins(:entry).where(entries: { account_id: accessible_account_ids })
 
     # Apply filters
@@ -178,6 +178,8 @@ end
   private
 
     def set_transaction
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
       family = current_resource_owner.family
       @transaction = family.transactions
         .joins(entry: :account)
