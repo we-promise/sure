@@ -79,6 +79,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     account = family.accounts.writable_by(current_resource_owner).find(transaction_params[:account_id])
+
+    if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
+      return render_existing_idempotent_entry(existing_entry)
+    end
+
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -96,6 +101,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       }, status: :unprocessable_entity
     end
 
+  rescue ActiveRecord::RecordNotUnique
+    if idempotency_key_requested? && account && (existing_entry = existing_idempotent_entry(account))
+      render_existing_idempotent_entry(existing_entry)
+    else
+      raise
+    end
   rescue => e
     Rails.logger.error "TransactionsController#create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -283,7 +294,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :account_id, :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :external_id, :source, tag_ids: []
       )
     end
 
@@ -301,6 +312,10 @@ end
           tag_ids: transaction_params[:tag_ids] || []
         }
       }
+      if idempotency_key_requested?
+        entry_params[:external_id] = idempotency_external_id
+        entry_params[:source] = idempotency_source
+      end
 
       entry_params.compact
     end
@@ -337,6 +352,40 @@ end
       params.dig(:transaction, :amount).present? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
+    end
+
+    def idempotency_key_requested?
+      idempotency_external_id.present?
+    end
+
+    def idempotency_external_id
+      transaction_params[:external_id].presence
+    end
+
+    def idempotency_source
+      transaction_params[:source].presence || "api"
+    end
+
+    def existing_idempotent_entry(account)
+      account.entries.find_by(
+        external_id: idempotency_external_id,
+        source: idempotency_source
+      )
+    end
+
+    def render_existing_idempotent_entry(entry)
+      unless entry.entryable.is_a?(Transaction)
+        render json: {
+          error: "validation_failed",
+          message: "External ID already exists for a non-transaction entry",
+          errors: [ "External ID already exists for a non-transaction entry" ]
+        }, status: :unprocessable_entity
+        return
+      end
+
+      @entry = entry
+      @transaction = entry.transaction
+      render :show, status: :ok
     end
 
     def calculate_signed_amount
