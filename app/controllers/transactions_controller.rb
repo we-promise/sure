@@ -538,33 +538,37 @@ class TransactionsController < ApplicationController
       @categories = Current.family.categories.alphabetically
     end
 
-    def transaction_name_suggestions(query:, limit: 8)
-      query_text = query.to_s.squish
-      return [] if query_text.length < 2
+def transaction_name_suggestions(query:, limit: 8)
+       query_text = query.to_s.squish
+       return [] if query_text.length < 2
 
-      normalized_query = normalize_transaction_name(query_text)
-      escaped_query = ActiveRecord::Base.sanitize_sql_like(normalized_query)
-      normalized_name_sql = "lower(regexp_replace(trim(entries.name), '\\s+', ' ', 'g'))"
-      match_rank_sql = <<~SQL.squish
-        CASE
-          WHEN #{normalized_name_sql} = #{ActiveRecord::Base.connection.quote(normalized_query)} THEN 0
-          WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("#{escaped_query}%")} THEN 1
-          WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("% #{escaped_query}%")} THEN 2
-          ELSE 3
-        END
-      SQL
+       normalized_query = normalize_transaction_name(query_text)
+       escaped_query = ActiveRecord::Base.sanitize_sql_like(normalized_query)
+       normalized_name_sql = "lower(regexp_replace(trim(entries.name), '\\s+', ' ', 'g'))"
+       
+       # Use trigram similarity for indexed search instead of leading wildcard LIKE
+       similarity_condition = "#{normalized_name_sql} % #{ActiveRecord::Base.connection.quote(normalized_query)}"
+       
+       match_rank_sql = <<~SQL.squish
+         CASE
+           WHEN #{normalized_name_sql} = #{ActiveRecord::Base.connection.quote(normalized_query)} THEN 0
+           WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("#{escaped_query}%")} THEN 1
+           WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("% #{escaped_query}%")} THEN 2
+           ELSE 3
+         END
+       SQL
 
-      rows = Current.accessible_entries
-        .where(entryable_type: "Transaction", parent_entry_id: nil)
-        .where.not(name: [ nil, "" ])
-        .where("#{normalized_name_sql} LIKE ?", "%#{escaped_query}%")
-        .select("entries.name, entries.created_at, #{match_rank_sql} AS transaction_name_match_rank")
-        .order(Arel.sql("#{match_rank_sql} ASC, entries.created_at DESC"))
-        .limit(500)
-        .map { |entry| [ entry.name, entry.created_at ] }
+       rows = Current.accessible_entries
+         .where(entryable_type: "Transaction", parent_entry_id: nil)
+         .where.not(name: [ nil, "" ])
+         .where(similarity_condition)
+         .select("entries.name, entries.created_at, #{match_rank_sql} AS transaction_name_match_rank")
+         .order(Arel.sql("#{match_rank_sql} ASC, entries.created_at DESC"))
+         .limit(500)
+         .map { |entry| [ entry.name, entry.created_at ] }
 
-      deduplicate_transaction_name_rows(rows, query: query_text, limit: limit)
-    end
+       deduplicate_transaction_name_rows(rows, query: query_text, limit: limit)
+     end
 
     def deduplicate_transaction_name_rows(rows, query:, limit:)
       normalized_query = normalize_transaction_name(query)
