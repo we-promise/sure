@@ -7,11 +7,8 @@ export default class extends Controller {
     "search",
     "list",
     "option",
-    "selectedTags",
-    "placeholder",
-    "hiddenInputs",
-    "createButton",
-    "createName",
+    "selectionContainer",
+    "createForm",
   ];
 
   static values = {
@@ -30,17 +27,10 @@ export default class extends Controller {
         .filter((option) => option.getAttribute("aria-selected") === "true")
         .map((option) => option.dataset.tagId),
     );
-    this.boundOutsideClick = this.handleOutsideClick.bind(this);
-    this.boundKeydown = this.handleKeydown.bind(this);
-
-    document.addEventListener("click", this.boundOutsideClick);
-    this.element.addEventListener("keydown", this.boundKeydown);
     this.renderSelection();
   }
 
   disconnect() {
-    document.removeEventListener("click", this.boundOutsideClick);
-    this.element.removeEventListener("keydown", this.boundKeydown);
     if (this.submitAbortController) this.submitAbortController.abort();
   }
 
@@ -113,15 +103,15 @@ export default class extends Controller {
     });
 
     const canCreate = query.length > 0 && !hasExactMatch;
-    this.createButtonTarget.classList.toggle("hidden", !canCreate);
-    this.createButtonTarget.classList.toggle("flex", canCreate);
-    this.createNameTarget.textContent = this.searchTarget.value.trim();
+    this.createFormTarget.classList.toggle("hidden", !canCreate);
+    this.createFormTarget.classList.toggle("flex", canCreate);
+    this.createNameElement.textContent = this.searchTarget.value.trim();
   }
 
   handleSearchKeydown(event) {
     if (
       event.key === "Enter" &&
-      !this.createButtonTarget.classList.contains("hidden")
+      !this.createFormTarget.classList.contains("hidden")
     ) {
       event.preventDefault();
       this.createTag();
@@ -132,7 +122,7 @@ export default class extends Controller {
     const name = this.searchTarget.value.trim();
     if (!name) return;
 
-    this.createButtonTarget.disabled = true;
+    this.createFormTarget.disabled = true;
 
     try {
       const response = await fetch(this.createUrlValue, {
@@ -154,40 +144,39 @@ export default class extends Controller {
 
       const tag = await response.json();
       const option = this.buildOption(tag);
-      this.listTarget.insertBefore(option, this.createButtonTarget);
+      this.listTarget.insertBefore(option, this.createFormTarget);
       this.selectedIds.add(String(tag.id));
       this.renderSelection();
       this.searchTarget.value = "";
       this.filter();
       this.submitForm();
     } finally {
-      this.createButtonTarget.disabled = false;
+      this.createFormTarget.disabled = false;
     }
   }
 
   renderSelection() {
-    this.hiddenInputsTarget.innerHTML = "";
-    this.hiddenInputsTarget.appendChild(this.buildHiddenInput(""));
-    this.selectedTagsTarget.innerHTML = "";
+    this.hiddenInputsElement.innerHTML = "";
+    this.hiddenInputsElement.appendChild(this.buildHiddenInput(""));
+    this.selectionContainerTarget.innerHTML = "";
 
     const selectedOptions = this.optionTargets.filter((option) =>
       this.selectedIds.has(option.dataset.tagId),
     );
 
     selectedOptions.forEach((option) => {
-      this.hiddenInputsTarget.appendChild(
+      this.hiddenInputsElement.appendChild(
         this.buildHiddenInput(option.dataset.tagId),
       );
-      this.selectedTagsTarget.appendChild(
+      this.selectionContainerTarget.appendChild(
         this.buildBadge(option.dataset.tagName, option.dataset.tagColor),
       );
       this.updateOption(option);
     });
 
-    this.placeholderTarget.classList.toggle(
-      "hidden",
-      selectedOptions.length > 0,
-    );
+    if (selectedOptions.length === 0) {
+      this.selectionContainerTarget.appendChild(this.buildPlaceholder());
+    }
   }
 
   updateOption(option) {
@@ -321,5 +310,20 @@ export default class extends Controller {
 
   get csrfToken() {
     return document.querySelector("meta[name='csrf-token']")?.content;
+  }
+
+  get hiddenInputsElement() {
+    return this.element.querySelector("[data-tag-select-hidden-inputs]");
+  }
+
+  get createNameElement() {
+    return this.createFormTarget.querySelector("[data-tag-select-create-name]");
+  }
+
+  buildPlaceholder() {
+    const placeholder = document.createElement("span");
+    placeholder.className = "text-secondary";
+    placeholder.textContent = this.selectionContainerTarget.dataset.placeholder;
+    return placeholder;
   }
 }
