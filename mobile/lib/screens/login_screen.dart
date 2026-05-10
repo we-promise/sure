@@ -5,11 +5,26 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
+import 'backend_config_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onGoToSettings;
 
   const LoginScreen({super.key, this.onGoToSettings});
+
+  void _openSettings(BuildContext context) {
+    if (onGoToSettings != null) {
+      onGoToSettings!();
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => BackendConfigScreen(
+          onConfigSaved: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
+  }
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -461,7 +476,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Backend URL info
                     InkWell(
-                      onTap: widget.onGoToSettings,
+                      onTap: () => widget._openSettings(context),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -513,7 +528,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: 'Backend Settings',
-                onPressed: widget.onGoToSettings,
+                onPressed: () => widget._openSettings(context),
               ),
             ),
           ],
