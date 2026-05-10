@@ -1,11 +1,19 @@
 require "test_helper"
 
 class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     sign_in users(:family_admin)
 
     # Ensure provider adapters are loaded for all tests
     Provider::Factory.ensure_adapters_loaded
+  end
+
+  test "GET /settings/bank_sync redirects permanently to /settings/providers" do
+    get "/settings/bank_sync"
+    assert_redirected_to "/settings/providers"
+    assert_equal 301, response.status
   end
 
   test "can access when self hosting is disabled (managed mode)" do
@@ -298,6 +306,55 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "POST sync_all enqueues SyncAllProvidersJob" do
+    SimplefinItem.create!(
+      family: families(:dylan_family),
+      name: "Test SimpleFIN Sync All",
+      access_url: "https://bridge.simplefin.org/simplefin/access"
+    )
+    families(:dylan_family).update_column(:last_sync_all_attempted_at, nil)
+
+    assert_enqueued_with(job: SyncAllProvidersJob) do
+      post sync_all_settings_providers_path
+    end
+
+    assert_redirected_to settings_providers_path
+
+    follow_redirect!
+    assert_response :success
+    assert_match(/Syncing all connected providers/i, response.body)
+  end
+
+  test "POST sync_all respects recent sync throttle" do
+    families(:dylan_family).update_column(:last_sync_all_attempted_at, Time.current)
+
+    assert_no_enqueued_jobs only: SyncAllProvidersJob do
+      post sync_all_settings_providers_path
+    end
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("settings.providers.sync_all_recently"), flash[:notice]
+  end
+
+  test "POST sync for simplefin without an active Simplefin sync enqueues SyncJob" do
+    item = SimplefinItem.create!(
+      family: families(:dylan_family),
+      name: "Test SimpleFIN Per Row Sync",
+      access_url: "https://bridge.simplefin.org/simplefin/access"
+    )
+    Sync.where(syncable_type: "SimplefinItem", syncable_id: item.id).delete_all
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      post sync_provider_settings_providers_path(provider_key: "simplefin")
+    end
+
+    assert_redirected_to settings_providers_path
+
+    follow_redirect!
+    assert_response :success
+    assert_match(/Sync started/i, response.body)
+  end
+
   test "non-admin users cannot update providers" do
     with_self_hosting do
       sign_in users(:family_member)
@@ -306,7 +363,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
         setting: { plaid_client_id: "test" }
       }
 
-      assert_redirected_to settings_providers_path
+      assert_redirected_to root_path
       assert_equal "Not authorized", flash[:alert]
 
       # Value should not have changed

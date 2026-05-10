@@ -39,8 +39,6 @@ pl:
       alternative_auth: Lub użyj uwierzytelniania loginem i hasłem...
       save_button: Zapisz konfigurację
       update_button: Zaktualizuj konfigurację
-      status_configured_html: Skonfigurowano i gotowe do użycia. Przejdź do zakładki <a href="%{accounts_path}" class="link">Konta</a>, aby zarządzać kontami i je konfigurować.
-      status_not_configured: Nie skonfigurowano
       fields:
         api_token:
           label: Token API

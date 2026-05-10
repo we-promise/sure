@@ -55,8 +55,6 @@ en:
       configure: Configure
       update_configuration: Reconfigure
       default_name: CoinStats Connection
-      status_configured_html: Ready to use
-      status_not_configured: Not configured
     coinstats_item:
       deletion_in_progress: Crypto wallet data is being deleted…
       provider_name: CoinStats
