@@ -5,7 +5,6 @@ export default class extends Controller {
     "button",
     "menu",
     "search",
-    "list",
     "option",
     "selectionContainer",
     "createForm",
