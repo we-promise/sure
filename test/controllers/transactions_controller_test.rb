@@ -123,6 +123,27 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], child.reload.entryable.tag_ids
   end
 
+  test "can update tags through tag-only endpoint" do
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, tags(:two).id ]
+    }
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert_equal @entry.entryable.tag_ids.sort, JSON.parse(response.body)["tag_ids"].sort
+  end
+
+  test "tag-only endpoint ignores tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, other_tag.id ]
+    }
+
+    assert_response :success
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
