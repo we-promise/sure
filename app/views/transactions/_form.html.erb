@@ -93,10 +93,11 @@
                   variant: :logo,
                   searchable: true,
                   menu_placement: :auto } %>
-      <%= render "transactions/tag_select",
-                 form: ef,
-                 tags: Current.family.tags.alphabetically,
-                 selected_ids: ef.object.tag_ids %>
+      <%= render TagSelectComponent.new(
+            form: ef,
+            tags: Current.family.tags.alphabetically,
+            selected_ids: ef.object.tag_ids
+          ) %>
     <% end %>
     <%= f.text_area :notes,
                     label: t(".note_label"),
