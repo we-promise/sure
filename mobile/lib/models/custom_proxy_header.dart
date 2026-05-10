@@ -1,5 +1,7 @@
 class CustomProxyHeader {
   static final RegExp _headerNamePattern = RegExp(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$");
+  // Reject ASCII control bytes in values to block CR/LF header injection.
+  static final RegExp _headerValueControlChars = RegExp(r'[\x00-\x1F\x7F]');
   static const Set<String> _reservedNames = {
     'accept',
     'authorization',
@@ -69,6 +71,9 @@ class CustomProxyHeader {
 
   static String? validateValue(String value) {
     if (value.trim().isEmpty) return 'Header value is required';
+    if (_headerValueControlChars.hasMatch(value)) {
+      return 'Header value contains control characters';
+    }
     return null;
   }
 

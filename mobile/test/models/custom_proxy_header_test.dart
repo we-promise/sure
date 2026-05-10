@@ -30,6 +30,13 @@ void main() {
       expect(CustomProxyHeader.validateName('X-Auth-Secret'), isNull);
     });
 
+    test('rejects values containing control characters (header injection)', () {
+      expect(CustomProxyHeader.validateValue('abc\r\nInjected: 1'), isNotNull);
+      expect(CustomProxyHeader.validateValue('abc\tdef'), isNotNull);
+      expect(CustomProxyHeader.validateValue('abc\x7Fdef'), isNotNull);
+      expect(CustomProxyHeader.validateValue('plain value with spaces'), isNull);
+    });
+
     test('redacts values for display', () {
       expect(
         CustomProxyHeader(name: 'X-Auth-Secret', value: '1234567890').redactedValue,

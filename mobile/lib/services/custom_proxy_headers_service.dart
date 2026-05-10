@@ -18,10 +18,10 @@ class CustomProxyHeadersService {
 
   Future<List<CustomProxyHeader>> loadHeaders() async {
     const storage = FlutterSecureStorage();
-    final raw = await storage.read(key: storageKey);
-    if (raw == null || raw.isEmpty) return [];
-
     try {
+      final raw = await storage.read(key: storageKey);
+      if (raw == null || raw.isEmpty) return [];
+
       final decoded = jsonDecode(raw);
       if (decoded is! List) return [];
 
