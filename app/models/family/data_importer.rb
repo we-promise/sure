@@ -627,7 +627,7 @@ class Family::DataImporter
 
     def resolve_rule_condition_value(condition_data)
       condition_type = condition_data["condition_type"]
-      value = condition_data["value"]
+      value = rule_operand_value(condition_data)
 
       return value unless value.present?
 
@@ -655,7 +655,7 @@ class Family::DataImporter
 
     def resolve_rule_action_value(action_data)
       action_type = action_data["action_type"]
-      value = action_data["value"]
+      value = rule_operand_value(action_data)
 
       return value unless value.present?
 
@@ -686,6 +686,10 @@ class Family::DataImporter
       end
 
       value
+    end
+
+    def rule_operand_value(data)
+      data["value"].presence || data.dig("value_ref", "name")
     end
 
     def importable_cost_basis_source(value)

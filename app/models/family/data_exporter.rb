@@ -431,6 +431,8 @@ class Family::DataExporter
         operator: condition.operator,
         value: resolve_condition_value(condition)
       }
+      value_ref = resolve_condition_value_ref(condition)
+      data[:value_ref] = value_ref if value_ref.present?
 
       if condition.compound? && condition.sub_conditions.any?
         data[:sub_conditions] = condition.sub_conditions.map { |sub| serialize_condition(sub) }
@@ -440,10 +442,14 @@ class Family::DataExporter
     end
 
     def serialize_action(action)
-      {
+      data = {
         action_type: action.action_type,
         value: resolve_action_value(action)
       }
+      value_ref = resolve_action_value_ref(action)
+      data[:value_ref] = value_ref if value_ref.present?
+
+      data
     end
 
     def resolve_condition_value(condition)
@@ -462,6 +468,20 @@ class Family::DataExporter
       end
 
       condition.value
+    end
+
+    def resolve_condition_value_ref(condition)
+      return unless condition.value.present?
+
+      if condition.condition_type == "transaction_category"
+        category = @family.categories.find_by(id: condition.value)
+        return rule_value_ref("Category", category) if category
+      end
+
+      if condition.condition_type == "transaction_merchant"
+        merchant = @family.merchants.find_by(id: condition.value)
+        rule_value_ref("Merchant", merchant) if merchant
+      end
     end
 
     def resolve_action_value(action)
@@ -486,6 +506,33 @@ class Family::DataExporter
       end
 
       action.value
+    end
+
+    def resolve_action_value_ref(action)
+      return unless action.value.present?
+
+      if action.action_type == "set_transaction_category"
+        category = @family.categories.find_by(id: action.value) || @family.categories.find_by(name: action.value)
+        return rule_value_ref("Category", category) if category
+      end
+
+      if action.action_type == "set_transaction_merchant"
+        merchant = @family.merchants.find_by(id: action.value) || @family.merchants.find_by(name: action.value)
+        return rule_value_ref("Merchant", merchant) if merchant
+      end
+
+      if action.action_type == "set_transaction_tags"
+        tag = @family.tags.find_by(id: action.value) || @family.tags.find_by(name: action.value)
+        rule_value_ref("Tag", tag) if tag
+      end
+    end
+
+    def rule_value_ref(type, record)
+      {
+        type: type,
+        id: record.id,
+        name: record.name
+      }
     end
 
     def serialize_conditions_for_csv(conditions)

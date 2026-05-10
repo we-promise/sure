@@ -215,6 +215,35 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "set_transaction_category", actions[0]["action_type"]
       # Should export category name instead of UUID
       assert_equal "Test Category", actions[0]["value"]
+      assert_equal({ "type" => "Category", "id" => @category.id, "name" => "Test Category" }, actions[0]["value_ref"])
+    end
+  end
+
+  test "exports rule condition value refs for mapped operands" do
+    category_rule = @family.rules.build(
+      name: "Category Condition Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    category_rule.conditions.build(
+      condition_type: "transaction_category",
+      operator: "=",
+      value: @category.id
+    )
+    category_rule.actions.build(action_type: "auto_categorize")
+    category_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").filter_map do |line|
+        parsed = JSON.parse(line)
+        parsed if parsed["type"] == "Rule" && parsed["data"]["name"] == "Category Condition Rule"
+      end.first
+
+      condition = rule_data["data"]["conditions"].first
+      assert_equal "Test Category", condition["value"]
+      assert_equal({ "type" => "Category", "id" => @category.id, "name" => "Test Category" }, condition["value_ref"])
     end
   end
 
@@ -256,6 +285,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "set_transaction_tags", actions[0]["action_type"]
       # Should export tag name instead of UUID
       assert_equal "Test Tag", actions[0]["value"]
+      assert_equal({ "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" }, actions[0]["value_ref"])
     end
   end
 
