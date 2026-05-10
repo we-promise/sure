@@ -537,17 +537,12 @@ end
         entry = account.entries.new(entry_params_for_create(attrs))
         entry.save!
         entry.lock_saved_attributes!
-        entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+        lock_transaction_tags!(entry.transaction, attrs[:tag_ids])
       end
 
       entry.sync_account_later
 
-      txn_json = render_to_string(
-        partial: "api/v1/transactions/transaction",
-        formats: [ :json ],
-        locals: { transaction: entry.transaction }
-      )
-      result.merge(status: "created", transaction: JSON.parse(txn_json))
+      result.merge(status: "created", transaction: transaction_response_hash(entry.transaction))
 
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn "batch_create item #{idx} invalid: #{e.message}"
@@ -589,7 +584,7 @@ end
           errors: [ "Split parent amount, date, and type cannot be changed directly. Use the split editor." ])
       end
 
-      tags_provided = raw_params.respond_to?(:key?) && (raw_params.key?(:tag_ids) || raw_params.key?("tag_ids"))
+      tags_provided = raw_params.key?(:tag_ids)
 
       Entry.transaction do
         entry.update!(entry_params_for_update(attrs, entry))
@@ -597,7 +592,7 @@ end
         if tags_provided
           entry.transaction.tag_ids = attrs[:tag_ids] || []
           entry.transaction.save!
-          entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+          lock_transaction_tags!(entry.transaction, attrs[:tag_ids])
         end
 
         entry.lock_saved_attributes!
@@ -605,12 +600,7 @@ end
 
       entry.sync_account_later
 
-      txn_json = render_to_string(
-        partial: "api/v1/transactions/transaction",
-        formats: [ :json ],
-        locals: { transaction: entry.transaction }
-      )
-      result.merge(status: "updated", transaction: JSON.parse(txn_json))
+      result.merge(status: "updated", transaction: transaction_response_hash(entry.transaction))
 
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn "batch_update item #{idx} invalid: #{e.message}"
@@ -633,5 +623,93 @@ end
       succeeded = results.count { |r| %w[created updated].include?(r[:status]) }
       failed = results.size - succeeded
       Rails.logger.info "#{action}: #{results.size} items, #{succeeded} succeeded, #{failed} failed"
+    end
+
+    def lock_transaction_tags!(transaction, tag_ids)
+      return if Array.wrap(tag_ids).reject(&:blank?).empty?
+
+      transaction.lock_attr!(:tag_ids)
+    end
+
+    def transaction_response_hash(transaction)
+      entry = transaction.entry
+      amount_money = entry.amount_money
+      conversion_factor = amount_money.currency.minor_unit_conversion
+      amount_cents = (amount_money.amount * conversion_factor).round(0).to_i.abs
+
+      {
+        id: transaction.id,
+        date: entry.date,
+        amount: amount_money.format,
+        amount_cents: amount_cents,
+        signed_amount_cents: entry.classification == "income" ? amount_cents : -amount_cents,
+        currency: entry.currency,
+        name: entry.name,
+        notes: entry.notes,
+        classification: entry.classification,
+        account: account_response_hash(entry.account),
+        category: category_response_hash(transaction.category),
+        merchant: merchant_response_hash(transaction.merchant),
+        tags: transaction.tags.map { |tag| tag_response_hash(tag) },
+        transfer: transfer_response_hash(transaction),
+        created_at: transaction.created_at.iso8601,
+        updated_at: transaction.updated_at.iso8601
+      }
+    end
+
+    def account_response_hash(account)
+      {
+        id: account.id,
+        name: account.name,
+        account_type: account.accountable_type.underscore
+      }
+    end
+
+    def category_response_hash(category)
+      return nil unless category
+
+      {
+        id: category.id,
+        name: category.name,
+        color: category.color,
+        icon: category.lucide_icon
+      }
+    end
+
+    def merchant_response_hash(merchant)
+      return nil unless merchant
+
+      {
+        id: merchant.id,
+        name: merchant.name
+      }
+    end
+
+    def tag_response_hash(tag)
+      {
+        id: tag.id,
+        name: tag.name,
+        color: tag.color
+      }
+    end
+
+    def transfer_response_hash(transaction)
+      transfer = transaction.transfer
+      return nil unless transfer
+
+      other_transaction = if transfer.inflow_transaction == transaction
+        transfer.outflow_transaction
+      else
+        transfer.inflow_transaction
+      end
+
+      response = {
+        id: transfer.id,
+        amount: transfer.amount_abs.format,
+        currency: transfer.inflow_transaction.entry.currency
+      }
+
+      response[:other_account] = account_response_hash(other_transaction.entry.account) if other_transaction
+      response
     end
 end

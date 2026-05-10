@@ -35,13 +35,13 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
   let(:read_only_api_key) do
     key = ApiKey.generate_secure_key
-    ApiKey.new(
+    ApiKey.create!(
       user: user,
       name: 'Read Only Docs Key',
       key: key,
       scopes: %w[read],
-      source: 'web'
-    ).tap { |api_key| api_key.save!(validate: false) }
+      source: 'mobile'
+    )
   end
 
   let(:account) do

@@ -810,6 +810,24 @@ end
     assert body["results"][0]["transaction"].present?
   end
 
+  test "batch_create serializes transactions without per-item controller rendering" do
+    Api::V1::TransactionsController.any_instance.stubs(:render_to_string).raises("unexpected render")
+
+    post batch_api_v1_transactions_url,
+      params: {
+        transactions: [
+          { account_id: @account.id, date: "2026-05-09", amount: 12.34, nature: "expense", name: "Coffee" }
+        ]
+      },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal "Coffee", body["results"][0]["transaction"]["name"]
+  end
+
   test "batch_create returns per-item errors and continues processing" do
     payload = {
       transactions: [
@@ -884,6 +902,21 @@ end
 
     t2.reload.entry.reload
     assert_equal "client lunch", t2.entry.notes
+  end
+
+  test "batch_update serializes transactions without per-item controller rendering" do
+    target = @family.transactions.joins(:entry).order("entries.id").first
+    Api::V1::TransactionsController.any_instance.stubs(:render_to_string).raises("unexpected render")
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: target.id, notes: "render-free" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "updated", body["results"][0]["status"]
+    assert_equal "render-free", body["results"][0]["transaction"]["notes"]
   end
 
   test "batch_update tag_ids: [] clears tags; omitted tag_ids preserves them" do
