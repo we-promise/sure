@@ -44,6 +44,9 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Quick Tag", response_body["name"]
     assert_equal "#e99537", response_body["color"]
     assert response_body["id"].present?
+    assert_includes response_body["html"], "data-tag-select-target=\"option\""
+    assert_includes response_body["html"], "data-tag-id=\"#{response_body["id"]}\""
+    assert_includes response_body["html"], "data-tag-select-badge"
   end
 
   test "should return json validation errors" do

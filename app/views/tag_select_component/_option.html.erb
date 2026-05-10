@@ -1,0 +1,23 @@
+<button type="button"
+        class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected %>"
+        role="option"
+        aria-selected="<%= selected %>"
+        data-action="click->tag-select#toggleTag"
+        data-tag-select-target="option"
+        data-tag-id="<%= tag.id %>"
+        data-tag-name="<%= tag.name %>"
+        data-tag-color="<%= tag.color %>"
+        data-filter-name="<%= tag.name %>">
+  <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected %>">
+    <%= view_helpers.icon("check") %>
+  </span>
+  <span class="flex items-center gap-2 text-sm font-medium rounded-full px-2.5 py-0.5 border truncate"
+        style="
+          background-color: color-mix(in oklab, <%= tag.color %> 10%, transparent);
+          border-color: color-mix(in oklab, <%= tag.color %> 20%, transparent);
+          color: <%= tag.color %>;"
+        data-tag-select-badge>
+    <span class="size-1.5 rounded-full shrink-0" style="background-color: <%= tag.color %>;"></span>
+    <span><%= tag.name %></span>
+  </span>
+</button>

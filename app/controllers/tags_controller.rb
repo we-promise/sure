@@ -56,6 +56,12 @@ class TagsController < ApplicationController
     end
 
     def tag_json(tag)
-      tag.as_json(only: %i[id name color])
+      tag.as_json(only: %i[id name color]).merge(
+        html: render_to_string(
+          partial: "tag_select_component/option",
+          formats: [ :html ],
+          locals: { tag: tag, selected: true, view_helpers: helpers }
+        )
+      )
     end
 end
