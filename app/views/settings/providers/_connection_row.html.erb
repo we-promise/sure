@@ -17,7 +17,7 @@
 <%= tag.details open: open,
                 class: "group bg-container shadow-border-xs rounded-xl #{border_class}",
                 data: details_data do %>
-  <summary class="flex items-center gap-3 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
+  <summary class="flex items-center gap-3 min-h-15 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
     <%= icon "chevron-right", size: "sm", class: "!w-3.5 !h-3.5 text-secondary group-open:rotate-90 transition-transform" %>
     <div class="flex items-center gap-2 flex-wrap min-w-0 flex-1">
       <h3 class="text-sm font-medium text-primary"><%= entry[:title] %></h3>
