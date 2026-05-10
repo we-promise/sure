@@ -5,7 +5,8 @@
      data-tag-select-default-color-value="<%= Tag::COLORS.first %>"
      data-tag-select-disabled-value="<%= disabled %>"
      data-tag-select-auto-submit-value="<%= auto_submit %>"
-     data-tag-select-update-url-value="<%= update_url %>">
+     data-tag-select-update-url-value="<%= update_url %>"
+     data-action="click@window->tag-select#handleOutsideClick keydown->tag-select#handleKeydown">
   <div class="form-field">
     <div class="form-field__body">
       <%= form.label :tag_ids, helpers.t("transactions.form.tags_label"), class: "form-field__label" %>
@@ -17,13 +18,16 @@
               aria-haspopup="listbox"
               aria-expanded="false"
               <%= "disabled" if disabled %>>
-        <span class="flex flex-wrap gap-1" data-tag-select-target="selectedTags"></span>
-        <span class="text-secondary" data-tag-select-target="placeholder"><%= helpers.t("transactions.form.none") %></span>
+        <span class="flex flex-wrap gap-1"
+              data-tag-select-target="selectionContainer"
+              data-placeholder="<%= helpers.t("transactions.form.none") %>">
+          <span class="text-secondary"><%= helpers.t("transactions.form.none") %></span>
+        </span>
       </button>
     </div>
   </div>
 
-  <div data-tag-select-target="hiddenInputs">
+  <div data-tag-select-hidden-inputs>
     <input type="hidden" name="<%= field_name %>" value="" <%= "disabled" if disabled %>>
   </div>
 
@@ -72,10 +76,10 @@
 
         <button type="button"
                 class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
-                data-tag-select-target="createButton"
+                data-tag-select-target="createForm"
                 data-action="click->tag-select#createTag">
           <%= helpers.icon("plus") %>
-          <span><%= helpers.t("transactions.form.create_tag") %> "<span data-tag-select-target="createName"></span>"</span>
+          <span><%= helpers.t("transactions.form.create_tag") %> "<span data-tag-select-create-name></span>"</span>
         </button>
       </div>
     </div>
