@@ -25,7 +25,7 @@ class CustomProxyHeadersService {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return [];
 
-      return _sanitize(
+      return CustomProxyHeader.sanitize(
         decoded
             .whereType<Map>()
             .map((item) => CustomProxyHeader.fromJson(Map<String, dynamic>.from(item)))
@@ -38,21 +38,10 @@ class CustomProxyHeadersService {
 
   Future<void> saveHeaders(List<CustomProxyHeader> headers) async {
     const storage = FlutterSecureStorage();
-    final sanitized = _sanitize(headers);
+    final sanitized = CustomProxyHeader.sanitize(headers);
     await storage.write(
       key: storageKey,
       value: jsonEncode(sanitized.map((header) => header.toJson()).toList()),
     );
-  }
-
-  List<CustomProxyHeader> _sanitize(List<CustomProxyHeader> headers) {
-    final byName = <String, CustomProxyHeader>{};
-    for (final header in headers) {
-      if (!header.isComplete) continue;
-      if (CustomProxyHeader.validateName(header.name) != null) continue;
-      if (CustomProxyHeader.validateValue(header.value) != null) continue;
-      byName[header.normalizedName] = header;
-    }
-    return byName.values.toList(growable: false);
   }
 }

@@ -38,19 +38,27 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   }
 
   Future<void> _loadSavedUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedUrl = prefs.getString('backend_url');
-    final headers = await CustomProxyHeadersService.instance.loadHeaders();
-    final urlToShow = (savedUrl != null && savedUrl.isNotEmpty)
-        ? savedUrl
-        : ApiConfig.baseUrl;
-
-    if (mounted) {
-      setState(() {
-        _urlController.text = urlToShow;
-        _customHeaders = headers;
-        _hasLoadedConfig = true;
-      });
+    String urlToShow = ApiConfig.baseUrl;
+    List<CustomProxyHeader> headers = const [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUrl = prefs.getString('backend_url');
+      headers = await CustomProxyHeadersService.instance.loadHeaders();
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        urlToShow = savedUrl;
+      }
+    } catch (e, stack) {
+      // Swallow storage failures so the screen still becomes interactive with
+      // sensible defaults; the user can re-enter and re-save.
+      debugPrint('BackendConfigScreen: failed to load saved config: $e\n$stack');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _urlController.text = urlToShow;
+          _customHeaders = headers;
+          _hasLoadedConfig = true;
+        });
+      }
     }
   }
 
@@ -63,6 +71,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       _successMessage = null;
     });
 
+    final previousHeaders = ApiConfig.customProxyHeaders;
     try {
       // Normalize base URL by removing trailing slashes
       final normalizedUrl = _urlController.text.trim().replaceAll(
@@ -70,6 +79,8 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         '',
       );
 
+      // Apply the unsaved edits only for the duration of this probe so the
+      // test reflects what the user is about to save. Restored in `finally`.
       ApiConfig.setCustomProxyHeaders(_customHeaders);
 
       // Check /sessions/new page to verify it's a Sure backend
@@ -108,6 +119,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         });
       }
     } finally {
+      ApiConfig.setCustomProxyHeaders(previousHeaders);
       if (mounted) {
         setState(() {
           _isTesting = false;

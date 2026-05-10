@@ -30,10 +30,27 @@ class CustomProxyHeader {
 
   String get normalizedName => name.toLowerCase();
 
+  // Length is intentionally obscured: short values get a fixed 4-bullet mask
+  // and longer values get a fixed 6-bullet prefix + last 4 chars. Keeping the
+  // last 4 lets users sanity-check what they entered without leaking length.
   String get redactedValue {
     if (value.isEmpty) return '';
     if (value.length <= 4) return '••••';
     return '••••••${value.substring(value.length - 4)}';
+  }
+
+  /// Drops headers with empty/invalid name or value, then dedupes by
+  /// case-insensitive name (last write wins). Single source of truth used by
+  /// both `ApiConfig.setCustomProxyHeaders` and the persistence service.
+  static List<CustomProxyHeader> sanitize(List<CustomProxyHeader> headers) {
+    final byName = <String, CustomProxyHeader>{};
+    for (final header in headers) {
+      if (!header.isComplete) continue;
+      if (validateName(header.name) != null) continue;
+      if (validateValue(header.value) != null) continue;
+      byName[header.normalizedName] = header;
+    }
+    return byName.values.toList(growable: false);
   }
 
   bool get isComplete => name.isNotEmpty && value.isNotEmpty;

@@ -42,14 +42,7 @@ class ApiConfig {
       List.unmodifiable(_customProxyHeaders);
 
   static void setCustomProxyHeaders(List<CustomProxyHeader> headers) {
-    final byName = <String, CustomProxyHeader>{};
-    for (final header in headers) {
-      if (!header.isComplete) continue;
-      if (CustomProxyHeader.validateName(header.name) != null) continue;
-      if (CustomProxyHeader.validateValue(header.value) != null) continue;
-      byName[header.normalizedName] = header;
-    }
-    _customProxyHeaders = byName.values.toList(growable: false);
+    _customProxyHeaders = CustomProxyHeader.sanitize(headers);
   }
 
   static Map<String, String> get customProxyHeaderMap {

@@ -100,9 +100,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadCustomHeaders() async {
-    final headers = await CustomProxyHeadersService.instance.loadHeaders();
-    if (mounted) {
-      setState(() => _customHeaders = headers);
+    try {
+      final headers = await CustomProxyHeadersService.instance.loadHeaders();
+      if (mounted) {
+        setState(() => _customHeaders = headers);
+      }
+    } catch (e, stack) {
+      debugPrint('SettingsScreen: failed to load custom headers: $e\n$stack');
+      // Keep the existing _customHeaders state so the screen remains usable.
     }
   }
 
