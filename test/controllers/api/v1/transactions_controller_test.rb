@@ -867,6 +867,36 @@ end
     assert_equal "not_found", body["results"][0]["error"]
   end
 
+  test "batch_create rejects scalar items with validation_failed" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [ "not-an-object" ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
+  test "batch_create renders error message on top-level failure" do
+    Api::V1::TransactionsController.any_instance.stubs(:process_create_item).raises(StandardError, "boom")
+
+    post batch_api_v1_transactions_url,
+      params: {
+        transactions: [
+          { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" }
+        ]
+      },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    body = JSON.parse(response.body)
+    assert_equal "internal_server_error", body["error"]
+    assert_equal "Error: boom", body["message"]
+  end
+
   # BATCH UPDATE action tests
   test "batch_update requires write scope" do
     patch batch_api_v1_transactions_url,
@@ -961,6 +991,32 @@ end
     body = JSON.parse(response.body)
     assert_equal "error", body["results"][0]["status"]
     assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
+  test "batch_update rejects scalar items with validation_failed" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ 123 ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
+  test "batch_update renders error message on top-level failure" do
+    Api::V1::TransactionsController.any_instance.stubs(:process_update_item).raises(StandardError, "boom")
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    body = JSON.parse(response.body)
+    assert_equal "internal_server_error", body["error"]
+    assert_equal "Error: boom", body["message"]
   end
 
   test "batch_update rejects split-child edits with validation_failed" do

@@ -213,7 +213,7 @@ end
   rescue => e
     Rails.logger.error "TransactionsController#batch_create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
-    render json: { error: "internal_server_error", message: "An unexpected error occurred" }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
   end
 
   def batch_update
@@ -229,7 +229,7 @@ end
   rescue => e
     Rails.logger.error "TransactionsController#batch_update error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
-    render json: { error: "internal_server_error", message: "An unexpected error occurred" }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
   end
 
   private
@@ -515,7 +515,9 @@ end
     def process_create_item(raw, idx)
       result = { index: idx }
       family = current_resource_owner.family
-      raw_params = raw.is_a?(ActionController::Parameters) ? raw : ActionController::Parameters.new(raw || {})
+      return invalid_batch_item_result(result) unless batch_item_params_object?(raw)
+
+      raw_params = batch_item_params(raw)
       attrs = raw_params.permit(
         :account_id, :date, :amount, :name, :description, :notes, :currency,
         :category_id, :merchant_id, :nature, :client_ref, tag_ids: []
@@ -554,7 +556,9 @@ end
 
     def process_update_item(raw, idx)
       result = { index: idx }
-      raw_params = raw.is_a?(ActionController::Parameters) ? raw : ActionController::Parameters.new(raw || {})
+      return invalid_batch_item_result(result) unless batch_item_params_object?(raw)
+
+      raw_params = batch_item_params(raw)
       attrs = raw_params.permit(
         :id, :date, :amount, :name, :description, :notes, :currency,
         :category_id, :merchant_id, :nature, :client_ref, tag_ids: []
@@ -608,6 +612,20 @@ end
     rescue => e
       Rails.logger.error "batch_update item #{idx} error: #{e.message}"
       result.merge(status: "error", error: "internal_server_error", errors: [ e.message ])
+    end
+
+    def batch_item_params_object?(raw)
+      raw.is_a?(Hash) || raw.is_a?(ActionController::Parameters) || raw.respond_to?(:to_hash)
+    end
+
+    def batch_item_params(raw)
+      return raw if raw.is_a?(ActionController::Parameters)
+
+      ActionController::Parameters.new(raw.respond_to?(:to_hash) ? raw.to_hash : raw || {})
+    end
+
+    def invalid_batch_item_result(result)
+      result.merge(status: "error", error: "validation_failed", errors: [ "Transaction item must be an object" ])
     end
 
     def build_batch_response(results)
