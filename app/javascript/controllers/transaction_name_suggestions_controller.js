@@ -12,7 +12,6 @@ export default class extends Controller {
     this.abortController = null;
     this.activeIndex = -1;
     this.suggestions = [];
-    this.boundSelectSuggestion = this.selectSuggestion.bind(this);
   }
 
   disconnect() {
@@ -133,7 +132,7 @@ export default class extends Controller {
       item.className =
         "cursor-pointer rounded-lg px-3 py-2 text-sm text-primary hover:bg-container-inset-hover";
       item.textContent = suggestion;
-      item.addEventListener("mousedown", this.boundSelectSuggestion);
+      item.setAttribute("data-action", "mousedown->transaction-name-suggestions#selectSuggestion");
 
       this.listTarget.appendChild(item);
     });
@@ -175,6 +174,7 @@ export default class extends Controller {
 
   #selectSuggestion(value) {
     this.inputTarget.value = value;
+    this.inputTarget.dispatchEvent(new Event('input', { bubbles: true }));
     this.#resetSuggestions();
   }
 

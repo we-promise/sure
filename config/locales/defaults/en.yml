@@ -221,3 +221,6 @@ en:
       long: "%B %d, %Y %H:%M"
       short: "%d %b %H:%M"
     pm: pm
+  transactions:
+    form:
+      no_matching_descriptions: "No matching descriptions"
