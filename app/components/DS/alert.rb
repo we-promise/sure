@@ -4,11 +4,16 @@ class DS::Alert < DesignSystemComponent
   def initialize(message: nil, title: nil, variant: :info)
     @message = message
     @title = title
-    @variant = variant
+    @variant = normalize_variant(variant)
   end
 
   private
     attr_reader :message, :title, :variant
+
+    def normalize_variant(raw)
+      sym = raw.respond_to?(:to_sym) ? raw.to_sym : nil
+      VARIANTS.include?(sym) ? sym : :info
+    end
 
     def container_classes
       base_classes = "flex items-start gap-3 p-4 rounded-lg border"
