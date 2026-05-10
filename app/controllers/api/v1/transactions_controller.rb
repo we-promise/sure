@@ -542,7 +542,7 @@ end
         lock_transaction_tags!(entry.transaction, attrs[:tag_ids])
       end
 
-      entry.sync_account_later
+      sync_account_later_after_batch(entry, :batch_create, idx)
 
       result.merge(status: "created", transaction: transaction_response_hash(entry.transaction))
 
@@ -602,7 +602,7 @@ end
         entry.lock_saved_attributes!
       end
 
-      entry.sync_account_later
+      sync_account_later_after_batch(entry, :batch_update, idx)
 
       result.merge(status: "updated", transaction: transaction_response_hash(entry.transaction))
 
@@ -626,6 +626,12 @@ end
 
     def invalid_batch_item_result(result)
       result.merge(status: "error", error: "validation_failed", errors: [ "Transaction item must be an object" ])
+    end
+
+    def sync_account_later_after_batch(entry, action, idx)
+      entry.sync_account_later
+    rescue => e
+      Rails.logger.error "#{action} item #{idx} sync enqueue failed: #{e.message}"
     end
 
     def build_batch_response(results)

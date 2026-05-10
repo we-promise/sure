@@ -828,6 +828,27 @@ end
     assert_equal "Coffee", body["results"][0]["transaction"]["name"]
   end
 
+  test "batch_create returns created when sync enqueue fails after persist" do
+    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "enqueue failed")
+
+    assert_difference -> { @family.transactions.count }, 1 do
+      post batch_api_v1_transactions_url,
+        params: {
+          transactions: [
+            { account_id: @account.id, date: "2026-05-09", amount: 12.34, nature: "expense", name: "Coffee" }
+          ]
+        },
+        as: :json,
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal 1, body["summary"]["succeeded"]
+    assert_equal 0, body["summary"]["failed"]
+  end
+
   test "batch_create returns per-item errors and continues processing" do
     payload = {
       transactions: [
@@ -947,6 +968,23 @@ end
     body = JSON.parse(response.body)
     assert_equal "updated", body["results"][0]["status"]
     assert_equal "render-free", body["results"][0]["transaction"]["notes"]
+  end
+
+  test "batch_update returns updated when sync enqueue fails after persist" do
+    target = @family.transactions.joins(:entry).order("entries.id").first
+    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "enqueue failed")
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: target.id, notes: "persisted despite enqueue failure" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "updated", body["results"][0]["status"]
+    assert_equal 1, body["summary"]["succeeded"]
+    assert_equal 0, body["summary"]["failed"]
+    assert_equal "persisted despite enqueue failure", target.reload.entry.notes
   end
 
   test "batch_update tag_ids: [] clears tags; omitted tag_ids preserves them" do
