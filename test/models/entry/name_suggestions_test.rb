@@ -41,6 +41,12 @@ class Entry::NameSuggestionsTest < ActiveSupport::TestCase
     assert_equal [], suggestions_for("c")
   end
 
+  test "entry facade returns suggestions for a family" do
+    create_transaction(account: @account, name: "Facade Vendor")
+
+    assert_equal [ "Facade Vendor" ], Entry.name_suggestions_for(family: @family, query: "facade")
+  end
+
   private
     def suggestions_for(query)
       Entry::NameSuggestions.new(scope: @family.entries, query: query).call

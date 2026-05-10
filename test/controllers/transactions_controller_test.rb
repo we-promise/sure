@@ -74,6 +74,18 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], response.parsed_body["suggestions"]
   end
 
+  test "name_suggestions rejects non-json requests" do
+    get name_suggestions_transactions_url(query: "sample")
+
+    assert_response :not_acceptable
+  end
+
+  test "name_suggestions rejects long queries" do
+    get name_suggestions_transactions_url(query: "a" * 101), as: :json
+
+    assert_response :bad_request
+  end
+
   test "create failure rerenders new form with custom suggestions UI" do
     post transactions_url, params: {
       entry: {

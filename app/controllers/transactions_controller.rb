@@ -3,6 +3,7 @@ class TransactionsController < ApplicationController
 
   before_action :set_entry_for_unlock, only: :unlock
   before_action :store_params!, only: :index
+  before_action :ensure_json_format, :validate_name_suggestions_query_length, only: :name_suggestions
 
   def new
     prefill_params_from_duplicate!
@@ -63,14 +64,13 @@ class TransactionsController < ApplicationController
   end
 
   def name_suggestions
-    suggestions = Entry::NameSuggestions.new(
-      scope: Current.accessible_entries,
-      query: params[:query]
-    ).call
-
-    respond_to do |format|
-      format.json { render json: { suggestions: suggestions } }
-    end
+    render json: {
+      suggestions: Entry.name_suggestions_for(
+        family: Current.family,
+        query: params[:query],
+        scope: Current.accessible_entries
+      )
+    }
   end
 
   def clear_filter
@@ -543,6 +543,14 @@ class TransactionsController < ApplicationController
 
     def load_new_form_options
       @categories = Current.family.categories.alphabetically
+    end
+
+    def ensure_json_format
+      head :not_acceptable unless request.format.json?
+    end
+
+    def validate_name_suggestions_query_length
+      head :bad_request if params[:query].to_s.length > Entry::NameSuggestions::MAX_QUERY_LENGTH
     end
 
     # Helper methods for convert_to_trade

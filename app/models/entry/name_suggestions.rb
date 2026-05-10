@@ -1,7 +1,8 @@
 class Entry::NameSuggestions
   DEFAULT_LIMIT = 8
   MIN_QUERY_LENGTH = 2
-  NORMALIZED_NAME_SQL = "lower(regexp_replace(trim(entries.name), '\\s+', ' ', 'g'))"
+  MAX_QUERY_LENGTH = 100
+  NORMALIZED_NAME_SQL = "lower(regexp_replace(trim(entries.name), ' +', ' ', 'g'))"
 
   attr_reader :scope, :query, :limit
 
