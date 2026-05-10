@@ -263,6 +263,8 @@ class Settings::ProvidersController < ApplicationController
       @connected        = entries.select { |e| e[:summary][:status] == :ok }
       @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
       @available        = entries.select { |e| e[:summary][:status] == :off }
+
+      @health = view_context.provider_health_strip(connected: @connected, needs_attention: @needs_attention)
     end
 
     # Maps each family panel key to the loaded item collection. Used by

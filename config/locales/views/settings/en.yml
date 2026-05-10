@@ -207,6 +207,11 @@ en:
         your_connections: Your connections
         available: Available
         empty_available: All available providers are connected.
+      health_strip:
+        connected: connected
+        needs_attention: needs attention
+        accounts_syncing: accounts syncing
+        last_synced: Last synced %{time} ago
       meta:
         sync_error: Sync error
         no_recent_sync: Sync overdue

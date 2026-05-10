@@ -50,15 +50,17 @@ module SettingsHelper
   end
 
   def status_pill_classes(status)
+    pill = "bg-surface-inset text-primary"
+
     case status.to_s.to_sym
     when :ok
-      { dot: "bg-success", pill: "bg-success/10 text-success" }
+      { dot: "bg-success", pill: pill }
     when :warn
-      { dot: "bg-warning", pill: "bg-warning/10 text-warning" }
+      { dot: "bg-warning", pill: pill }
     when :err
-      { dot: "bg-destructive", pill: "bg-destructive/10 text-destructive" }
+      { dot: "bg-destructive", pill: pill }
     else
-      { dot: "bg-gray-400", pill: "bg-gray-100 text-secondary" }
+      { dot: "bg-gray-400", pill: pill }
     end
   end
 
@@ -126,6 +128,30 @@ module SettingsHelper
       concat(previous_setting)
       concat(next_setting)
     end
+  end
+
+  # Below this many synced accounts, the per-row pills already give the user
+  # enough at-a-glance signal and the strip is redundant chrome.
+  HEALTH_STRIP_MIN_ACCOUNTS = 10
+
+  # Slim health-strip data for the providers index. Pulls counts from the
+  # already-resolved entry summaries plus the family's distinct synced-account
+  # count for the trailing stat. Returns a hash consumed by the
+  # `settings/providers/_health_strip` partial, or nil when the family has
+  # fewer than HEALTH_STRIP_MIN_ACCOUNTS connected accounts.
+  def provider_health_strip(connected:, needs_attention:)
+    accounts_count = Current.family.accounts.joins(:account_providers).distinct.count
+    return nil if accounts_count < HEALTH_STRIP_MIN_ACCOUNTS
+
+    active_entries = connected + needs_attention
+    last_synced_at = active_entries.map { |e| e[:summary][:last_synced_at] }.compact.max
+
+    {
+      connected:        active_entries.size,
+      needs_attention:  needs_attention.size,
+      accounts_syncing: accounts_count,
+      last_synced_at:   last_synced_at
+    }
   end
 
   # Strips the leading "about " from `time_ago_in_words` so copy reads as

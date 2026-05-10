@@ -1,9 +1,9 @@
 <%= link_to connect_path,
-            class: "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-2.5 text-primary hover:bg-container-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100",
+            class: "bg-container shadow-border-xs hover:bg-surface-inset rounded-xl p-4 flex flex-col gap-2.5 text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
             data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data) do %>
   <div class="flex items-start gap-2.5">
-    <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-surface-inset">
-      <span class="text-xs font-bold text-primary"><%= logo_text %></span>
+    <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 <%= logo_bg %>">
+      <span class="text-xs font-bold text-inverse"><%= logo_text %></span>
     </div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 flex-wrap">
@@ -11,7 +11,7 @@
         <%= render "settings/providers/maturity_badge", label: maturity_label %>
       </div>
       <% if meta_line.present? %>
-        <p class="text-xs text-subdued mt-0.5"><%= meta_line %></p>
+        <p class="text-xs text-secondary mt-0.5"><%= meta_line %></p>
       <% end %>
     </div>
   </div>

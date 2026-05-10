@@ -30,6 +30,14 @@
     <% all_connections = @needs_attention + @connected %>
 
     <% if all_connections.any? %>
+      <% if @health %>
+        <%= render "settings/providers/health_strip",
+                   connected:        @health[:connected],
+                   needs_attention:  @health[:needs_attention],
+                   accounts_syncing: @health[:accounts_syncing],
+                   last_synced_at:   @health[:last_synced_at] %>
+      <% end %>
+
       <%= render "settings/providers/group_heading",
                  title: t("settings.providers.groups.your_connections"),
                  count: all_connections.size %>
@@ -73,6 +81,7 @@
                   kind:         meta[:kind],
                   tier:         meta[:tier],
                   maturity:     meta[:maturity] || :stable,
+                  logo_bg:      meta[:logo_bg],
                   logo_text:    meta[:logo_text]
                 ) %>
           <% end %>
