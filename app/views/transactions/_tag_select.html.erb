@@ -1,9 +1,10 @@
-<%# locals: (form:, tags:, selected_ids:, disabled: false, auto_submit: false) %>
+<%# locals: (form:, tags:, selected_ids:, disabled: false, auto_submit: false, update_url: nil) %>
 
 <% field_name = "#{form.object_name}[tag_ids][]" %>
 <% selected_ids = selected_ids.map(&:to_s) %>
 <% disabled = local_assigns.fetch(:disabled, false) %>
 <% auto_submit = local_assigns.fetch(:auto_submit, false) %>
+<% update_url = local_assigns[:update_url] %>
 
 <div class="relative"
      data-controller="tag-select"
@@ -11,7 +12,8 @@
      data-tag-select-field-name-value="<%= field_name %>"
      data-tag-select-default-color-value="<%= Tag::COLORS.first %>"
      data-tag-select-disabled-value="<%= disabled %>"
-     data-tag-select-auto-submit-value="<%= auto_submit %>">
+     data-tag-select-auto-submit-value="<%= auto_submit %>"
+     data-tag-select-update-url-value="<%= update_url %>">
   <div class="form-field">
     <div class="form-field__body">
       <%= form.label :tag_ids, t("transactions.form.tags_label"), class: "form-field__label" %>
@@ -38,7 +40,7 @@
          data-tag-select-target="menu">
       <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
         <input type="search"
-               placeholder="<%= t("transactions.form.tag_search_placeholder", default: "Search or create tag") %>"
+               placeholder="<%= t("transactions.form.tag_search_placeholder") %>"
                autocomplete="off"
                class="bg-container text-primary text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
                data-tag-select-target="search"
@@ -81,7 +83,7 @@
                 data-tag-select-target="createButton"
                 data-action="click->tag-select#createTag">
           <%= icon("plus") %>
-          <span><%= t("transactions.form.create_tag", default: "Create") %> "<span data-tag-select-target="createName"></span>"</span>
+          <span><%= t("transactions.form.create_tag") %> "<span data-tag-select-target="createName"></span>"</span>
         </button>
       </div>
     </div>

@@ -20,6 +20,7 @@ export default class extends Controller {
     defaultColor: String,
     disabled: Boolean,
     autoSubmit: Boolean,
+    updateUrl: String,
   };
 
   connect() {
@@ -211,11 +212,7 @@ export default class extends Controller {
     option.dataset.tagColor = tag.color;
     option.dataset.filterName = tag.name;
 
-    const checkIcon =
-      this.optionTargets[0]?.querySelector(".check-icon")?.cloneNode(true) ||
-      document.createElement("span");
-    checkIcon.classList.remove("hidden");
-    checkIcon.classList.add("check-icon", "w-5", "shrink-0");
+    const checkIcon = this.buildCheckIcon();
 
     option.appendChild(checkIcon);
     option.appendChild(this.buildBadge(tag.name, tag.color));
@@ -257,20 +254,46 @@ export default class extends Controller {
 
   async submitForm() {
     if (!this.autoSubmitValue) return;
+    if (!this.hasUpdateUrlValue || !this.updateUrlValue) return;
 
-    const form = this.element.closest("form");
-    if (!form) return;
-
-    await fetch(form.action, {
-      method: form.method.toUpperCase(),
+    await fetch(this.updateUrlValue, {
+      method: "PATCH",
       headers: {
-        Accept: "text/vnd.turbo-stream.html",
+        Accept: "application/json",
+        "Content-Type": "application/json",
         "X-CSRF-Token": this.csrfToken,
         "X-Requested-With": "XMLHttpRequest",
       },
-      body: new FormData(form),
+      body: JSON.stringify({
+        tag_ids: Array.from(this.selectedIds),
+      }),
       credentials: "same-origin",
     });
+  }
+
+  buildCheckIcon() {
+    const container = document.createElement("span");
+    container.className = "check-icon w-5 shrink-0";
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    svg.setAttribute("width", "20");
+    svg.setAttribute("height", "20");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.classList.add("lucide", "lucide-check");
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M20 6 9 17l-5-5");
+
+    svg.appendChild(path);
+    container.appendChild(svg);
+
+    return container;
   }
 
   handleKeydown(event) {
