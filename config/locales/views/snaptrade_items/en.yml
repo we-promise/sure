@@ -117,7 +117,7 @@ en:
       step_2: "Copy your Client ID and Consumer Key from the dashboard"
       step_3: "Enter your credentials below and click Save"
       step_4: "Go to the Accounts page and use 'Connect another brokerage' to link your investment accounts"
-      free_tier_warning: "Free tier includes 5 brokerage connections. Additional connections require a paid SnapTrade plan."
+      free_tier_warning: "SnapTrade's free tier covers 5 brokerage connections. Upgrade on SnapTrade for more."
       client_id_label: "Client ID"
       client_id_placeholder: "Enter your SnapTrade Client ID"
       client_id_update_placeholder: "Enter new Client ID to update"
@@ -129,17 +129,15 @@ en:
       status_connected:
         one: "%{count} account from SnapTrade"
         other: "%{count} accounts from SnapTrade"
+      status_needs_registration: "Credentials saved. Finish setup to connect a brokerage."
       needs_setup:
         one: "%{count} needs setup"
         other: "%{count} need setup"
       status_ready: "Ready to connect brokerages"
-      status_needs_registration: "Credentials saved. Go to Accounts page to connect brokerages."
-      status_not_configured: "Not configured"
       setup_accounts_button: "Setup Accounts"
       connect_button: "Connect Brokerage"
       connected_brokerages: "Connected:"
       manage_connections: "Manage Connections"
-      connection_limit_info: "SnapTrade free tier allows 5 brokerage connections. Delete unused connections to free up slots."
       loading_connections: "Loading connections..."
       connections_error: "Failed to load connections: %{message}"
       accounts_count:
