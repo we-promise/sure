@@ -93,7 +93,10 @@ class Entry < ApplicationRecord
     limit: Entry::NameSuggestions::DEFAULT_LIMIT,
     scope: nil
   )
-    Entry::NameSuggestions.new(scope: scope || family.entries, query: query, limit: limit).call
+    base = family.entries
+    base = base.where(id: scope.select(:id)) if scope.present?
+
+    Entry::NameSuggestions.new(scope: base, query: query, limit: limit).call
   end
 
   # Uncategorized, non-transfer transaction entries on draft or active accounts.

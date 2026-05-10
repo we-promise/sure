@@ -14,6 +14,7 @@ class Entry::NameSuggestions
 
   def call
     return [] if query.length < MIN_QUERY_LENGTH
+    return [] if query.length > MAX_QUERY_LENGTH
 
     Entry.connection.select_values(suggestions_sql)
   end

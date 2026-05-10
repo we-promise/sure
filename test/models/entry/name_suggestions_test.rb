@@ -41,10 +41,27 @@ class Entry::NameSuggestionsTest < ActiveSupport::TestCase
     assert_equal [], suggestions_for("c")
   end
 
+  test "returns empty for queries above maximum length" do
+    assert_equal [], suggestions_for("a" * (Entry::NameSuggestions::MAX_QUERY_LENGTH + 1))
+  end
+
   test "entry facade returns suggestions for a family" do
     create_transaction(account: @account, name: "Facade Vendor")
 
     assert_equal [ "Facade Vendor" ], Entry.name_suggestions_for(family: @family, query: "facade")
+  end
+
+  test "entry facade keeps optional scope constrained to family" do
+    other_family = families(:dylan_family)
+    other_account = other_family.accounts.create! name: "Other", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: @account, name: "Shared Vendor")
+    create_transaction(account: other_account, name: "Outside Vendor")
+
+    suggestions = Entry.name_suggestions_for(family: @family, query: "vendor", scope: Entry.all)
+
+    assert_includes suggestions, "Shared Vendor"
+    assert_not_includes suggestions, "Outside Vendor"
   end
 
   private
