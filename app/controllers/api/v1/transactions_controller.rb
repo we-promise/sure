@@ -237,7 +237,8 @@ end
     def set_transaction
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
-      @transaction = find_owner_transaction(params[:id]) or raise ActiveRecord::RecordNotFound
+      writable = %w[update destroy].include?(action_name)
+      @transaction = find_owner_transaction(params[:id], writable: writable) or raise ActiveRecord::RecordNotFound
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
       render json: {
@@ -246,10 +247,13 @@ end
       }, status: :not_found
     end
 
-    def find_owner_transaction(id)
+    def find_owner_transaction(id, writable: false)
+      return nil unless valid_uuid?(id)
+
+      account_scope = writable ? Account.writable_by(current_resource_owner) : Account.accessible_by(current_resource_owner)
       current_resource_owner.family.transactions
         .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
+        .merge(account_scope)
         .find_by(id: id)
     end
 
@@ -394,6 +398,11 @@ end
         entry_params[:amount] = signed_amount_for(attrs[:amount], attrs[:nature])
       end
 
+      # Only update currency if provided
+      if attrs[:currency].present?
+        entry_params[:currency] = attrs[:currency]
+      end
+
       entry_params.compact
     end
 
@@ -485,12 +494,12 @@ end
 
     def batch_items_param
       raw = params[:transactions]
-      unless raw.is_a?(Array) || (raw.respond_to?(:to_a) && raw.respond_to?(:each))
+      unless raw.is_a?(Array)
         render json: { error: "validation_failed", message: "transactions is required and must be an array" },
                status: :unprocessable_entity
         return nil
       end
-      raw.to_a
+      raw
     end
 
     def render_batch_too_large
@@ -562,7 +571,7 @@ end
         return result.merge(status: "error", error: "validation_failed", errors: [ "Transaction id is required" ])
       end
 
-      transaction = find_owner_transaction(attrs[:id])
+      transaction = find_owner_transaction(attrs[:id], writable: true)
       unless transaction
         return result.merge(status: "error", error: "not_found", errors: [ "Transaction not found" ])
       end
