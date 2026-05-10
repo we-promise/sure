@@ -41,6 +41,7 @@ export default class extends Controller {
   disconnect() {
     document.removeEventListener("click", this.boundOutsideClick);
     this.element.removeEventListener("keydown", this.boundKeydown);
+    if (this.submitAbortController) this.submitAbortController.abort();
   }
 
   toggle(event) {
@@ -256,19 +257,33 @@ export default class extends Controller {
     if (!this.autoSubmitValue) return;
     if (!this.hasUpdateUrlValue || !this.updateUrlValue) return;
 
-    await fetch(this.updateUrlValue, {
-      method: "PATCH",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-CSRF-Token": this.csrfToken,
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({
-        tag_ids: Array.from(this.selectedIds),
-      }),
-      credentials: "same-origin",
-    });
+    if (this.submitAbortController) this.submitAbortController.abort();
+
+    const abortController = new AbortController();
+    this.submitAbortController = abortController;
+
+    try {
+      await fetch(this.updateUrlValue, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": this.csrfToken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+          tag_ids: Array.from(this.selectedIds),
+        }),
+        credentials: "same-origin",
+        signal: abortController.signal,
+      });
+    } catch (error) {
+      if (error.name !== "AbortError") throw error;
+    } finally {
+      if (this.submitAbortController === abortController) {
+        this.submitAbortController = null;
+      }
+    }
   }
 
   buildCheckIcon() {

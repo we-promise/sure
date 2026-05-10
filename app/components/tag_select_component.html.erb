@@ -1,14 +1,6 @@
-<%# locals: (form:, tags:, selected_ids:, disabled: false, auto_submit: false, update_url: nil) %>
-
-<% field_name = "#{form.object_name}[tag_ids][]" %>
-<% selected_ids = selected_ids.map(&:to_s) %>
-<% disabled = local_assigns.fetch(:disabled, false) %>
-<% auto_submit = local_assigns.fetch(:auto_submit, false) %>
-<% update_url = local_assigns[:update_url] %>
-
 <div class="relative"
      data-controller="tag-select"
-     data-tag-select-create-url-value="<%= tags_path(format: :json) %>"
+     data-tag-select-create-url-value="<%= helpers.tags_path(format: :json) %>"
      data-tag-select-field-name-value="<%= field_name %>"
      data-tag-select-default-color-value="<%= Tag::COLORS.first %>"
      data-tag-select-disabled-value="<%= disabled %>"
@@ -16,7 +8,7 @@
      data-tag-select-update-url-value="<%= update_url %>">
   <div class="form-field">
     <div class="form-field__body">
-      <%= form.label :tag_ids, t("transactions.form.tags_label"), class: "form-field__label" %>
+      <%= form.label :tag_ids, helpers.t("transactions.form.tags_label"), class: "form-field__label" %>
 
       <button type="button"
               class="form-field__input min-h-7 !whitespace-normal !overflow-visible flex items-center gap-2 pr-8 <%= "cursor-not-allowed text-subdued" if disabled %>"
@@ -26,7 +18,7 @@
               aria-expanded="false"
               <%= "disabled" if disabled %>>
         <span class="flex flex-wrap gap-1" data-tag-select-target="selectedTags"></span>
-        <span class="text-secondary" data-tag-select-target="placeholder"><%= t("transactions.form.none") %></span>
+        <span class="text-secondary" data-tag-select-target="placeholder"><%= helpers.t("transactions.form.none") %></span>
       </button>
     </div>
   </div>
@@ -40,12 +32,12 @@
          data-tag-select-target="menu">
       <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
         <input type="search"
-               placeholder="<%= t("transactions.form.tag_search_placeholder") %>"
+               placeholder="<%= helpers.t("transactions.form.tag_search_placeholder") %>"
                autocomplete="off"
                class="bg-container text-primary text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
                data-tag-select-target="search"
                data-action="input->tag-select#filter keydown->tag-select#handleSearchKeydown">
-        <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+        <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
       </div>
 
       <div class="flex flex-col gap-0.5 max-h-64 overflow-auto"
@@ -65,7 +57,7 @@
                   data-tag-color="<%= tag.color %>"
                   data-filter-name="<%= tag.name %>">
             <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected %>">
-              <%= icon("check") %>
+              <%= helpers.icon("check") %>
             </span>
             <span class="flex items-center gap-2 text-sm font-medium rounded-full px-2.5 py-0.5 border truncate"
                   style="
@@ -82,8 +74,8 @@
                 class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
                 data-tag-select-target="createButton"
                 data-action="click->tag-select#createTag">
-          <%= icon("plus") %>
-          <span><%= t("transactions.form.create_tag") %> "<span data-tag-select-target="createName"></span>"</span>
+          <%= helpers.icon("plus") %>
+          <span><%= helpers.t("transactions.form.create_tag") %> "<span data-tag-select-target="createName"></span>"</span>
         </button>
       </div>
     </div>
