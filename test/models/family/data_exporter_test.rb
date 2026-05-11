@@ -128,6 +128,36 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports split parent receipts in attachment manifest" do
+    split_parent = create_transaction_entry(
+      @account,
+      amount: 60,
+      date: Date.parse("2024-01-25"),
+      name: "Split parent receipt"
+    )
+    split_parent.entryable.attachments.attach(
+      io: StringIO.new("split parent receipt bytes"),
+      filename: "split-parent-receipt.pdf",
+      content_type: "application/pdf"
+    )
+    split_parent.split!([
+      { name: "Split child", amount: 60, category_id: @category.id }
+    ])
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      manifest = JSON.parse(zip.read("attachments.json"))
+      attachment = manifest["attachments"].find { |item| item["filename"] == "split-parent-receipt.pdf" }
+
+      assert attachment
+      assert_equal "Transaction", attachment["record_type"]
+      assert_equal split_parent.entryable.id, attachment["record_id"]
+      assert_equal split_parent.id, attachment["entry_id"]
+      assert_equal @account.id, attachment["account_id"]
+    end
+  end
+
   test "generates valid CSV files" do
     zip_data = @exporter.generate_export
 

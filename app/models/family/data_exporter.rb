@@ -156,7 +156,7 @@ class Family::DataExporter
     end
 
     def transaction_attachment_manifest_items
-      exportable_transactions
+      @family.transactions
         .with_attached_attachments
         .includes(:attachments_attachments, entry: :account)
         .flat_map do |transaction|
@@ -175,19 +175,17 @@ class Family::DataExporter
     end
 
     def family_document_attachment_manifest_items
-      @family.family_documents.with_attached_file.flat_map do |document|
-        next [] unless document.file.attached?
+      @family.family_documents.with_attached_file.filter_map do |document|
+        next unless document.file.attached?
 
-        [
-          attachment_manifest_item(
-            document.file.attachment,
-            record_type: "FamilyDocument",
-            record_id: document.id,
-            extra: {
-              status: document.status
-            }
-          )
-        ]
+        attachment_manifest_item(
+          document.file.attachment,
+          record_type: "FamilyDocument",
+          record_id: document.id,
+          extra: {
+            status: document.status
+          }
+        )
       end
     end
 
