@@ -15,7 +15,7 @@ export class RailsContainer extends Container {
   // ENTRYPOINT/CMD metadata to be carried through deployment.
   entrypoint = [
     "/rails/bin/preview-entrypoint",
-    "./bin/rails",
+    "/rails/bin/rails",
     "server",
     "-b",
     "0.0.0.0",
@@ -55,17 +55,31 @@ export class RailsContainer extends Container {
           console.warn("Container destroy during recovery failed", error);
         }
 
-        await this.startAndWaitForPorts({
-          startOptions: {
-            entrypoint: this.entrypoint,
-            envVars: this.envVars,
-          },
-          cancellationOptions: {
-            abort: request.signal,
-          },
-        });
+        try {
+          await this.startAndWaitForPorts({
+            startOptions: {
+              entrypoint: this.entrypoint,
+              envVars: this.envVars,
+            },
+            cancellationOptions: {
+              abort: request.signal,
+            },
+          });
 
-        return this.containerFetch(request, this.defaultPort);
+          return this.containerFetch(request, this.defaultPort);
+        } catch (error) {
+          await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+            event: "recovery-error",
+            at: new Date().toISOString(),
+            message: error instanceof Error ? error.message : String(error),
+            state: await this.getState(),
+          });
+
+          return new Response(
+            `Failed to recover preview container: ${error instanceof Error ? error.message : String(error)}`,
+            { status: 500 }
+          );
+        }
       }
 
       return new Response(body, {

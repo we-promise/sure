@@ -70,6 +70,8 @@ RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
 #!/bin/bash
 set -e
 
+cd /rails
+
 REDIS_READY=0
 POSTGRES_READY=0
 
@@ -137,7 +139,7 @@ export SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -hex 64)}"
 
 # Run database migrations
 echo "Running database migrations..."
-./bin/rails db:prepare
+/rails/bin/rails db:prepare
 
 # Execute the main command
 echo "Starting Rails server..."
