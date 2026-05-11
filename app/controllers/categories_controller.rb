@@ -20,7 +20,7 @@ class CategoriesController < ApplicationController
   def merge
     @categories = Current.family.categories.alphabetically
 
-    render layout: "settings"
+    render layout: turbo_frame_request? ? false : "settings"
   end
 
   def create
@@ -133,7 +133,8 @@ class CategoriesController < ApplicationController
     end
 
     def conflicting_merge_target?(permitted_params)
-      permitted_params[:target_id].present? && permitted_params[:new_target_name].present?
+      permitted_params[:target_id].present? &&
+        permitted_params.to_h.any? { |key, value| key.to_s.start_with?("new_target_") && value.present? }
     end
 
     def target_selected_as_source?(permitted_params)

@@ -106,7 +106,7 @@ class FamilyMerchantsController < ApplicationController
     @merchants = all_family_merchants
     @default_merchant_color = FamilyMerchant.default_color
 
-    render layout: "settings"
+    render layout: turbo_frame_request? ? false : "settings"
   end
 
   def bulk_websites
@@ -117,6 +117,10 @@ class FamilyMerchantsController < ApplicationController
     permitted_params = bulk_website_params
     merchants = all_family_merchants.where(id: permitted_params[:merchant_ids])
     website_url = Merchant.extract_domain(permitted_params[:website_url])
+
+    if permitted_params[:website_url].present? && website_url.blank?
+      return redirect_to bulk_websites_family_merchants_path, alert: t(".invalid_domain")
+    end
 
     unless merchants.any? && website_url.present?
       return redirect_to bulk_websites_family_merchants_path, alert: t(".invalid_selection")
@@ -188,7 +192,8 @@ class FamilyMerchantsController < ApplicationController
     end
 
     def conflicting_merge_target?(permitted_params)
-      permitted_params[:target_id].present? && permitted_params[:new_target_name].present?
+      permitted_params[:target_id].present? &&
+        permitted_params.to_h.any? { |key, value| key.to_s.start_with?("new_target_") && value.present? }
     end
 
     def all_family_merchants

@@ -62,6 +62,7 @@ en:
         one: Updated institution domain for %{count} account
         other: Updated institution domains for %{count} accounts
       invalid_selection: Select at least one account and enter a valid institution domain.
+      invalid_domain: Enter a valid institution domain.
       failure: "Could not update institution domains: %{error}"
     sync_all:
       syncing: "Syncing accounts..."

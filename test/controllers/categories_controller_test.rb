@@ -104,6 +104,15 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#mobile-settings-nav"
   end
 
+  test "merge renders without the settings layout for modal frame requests" do
+    get merge_categories_path, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match(/<html/i, response.body)
+    assert_no_match(/<turbo-frame id="modal"><\/turbo-frame>/, response.body)
+    assert_select "dialog"
+  end
+
   test "merge selected categories into a new category" do
     source = @family.categories.create!(
       name: "Coffee Shops",
@@ -197,6 +206,23 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to merge_categories_path
     assert Category.exists?(source.id)
     assert_nil @family.categories.find_by(name: "Conflicting Target")
+  end
+
+  test "merge rejects existing target with any new target field" do
+    source = @family.categories.create!(
+      name: "Conflicting Color Source",
+      color: "#000000",
+      lucide_icon: "circle"
+    )
+
+    post perform_merge_categories_path, params: {
+      target_id: categories(:food_and_drink).id,
+      new_target_color: "#123456",
+      source_ids: [ source.id ]
+    }
+
+    assert_redirected_to merge_categories_path
+    assert Category.exists?(source.id)
   end
 
   test "merge rejects selecting the target as a source" do

@@ -69,6 +69,7 @@ en:
         one: Updated website for %{count} merchant
         other: Updated websites for %{count} merchants
       invalid_selection: Select at least one merchant and enter a valid website domain.
+      invalid_domain: Enter a valid website domain.
       failure: "Could not update merchant websites: %{error}"
     new:
       title: New merchant

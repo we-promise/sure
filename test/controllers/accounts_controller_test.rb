@@ -50,6 +50,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to bulk_domains_accounts_path
   end
 
+  test "bulk domain update reports malformed institution domain separately from selection errors" do
+    @account.update!(institution_domain: nil)
+
+    post bulk_update_domains_accounts_path, params: {
+      institution_domain: "https://bad host",
+      account_ids: [ @account.id ]
+    }
+
+    assert_redirected_to bulk_domains_accounts_path
+    assert_equal I18n.t("accounts.bulk_update_domains.invalid_domain"), flash[:alert]
+    assert_nil @account.reload.institution_domain
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success

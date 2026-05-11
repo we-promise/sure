@@ -15,7 +15,7 @@ class Merchant < ApplicationRecord
 
       normalized_url = url.to_s.strip
       normalized_url = "https://#{normalized_url}" unless normalized_url.start_with?("http://", "https://")
-      domain = URI.parse(normalized_url).host&.sub(/\Awww\./, "")
+      domain = URI.parse(normalized_url).host&.sub(/\Awww\./i, "")
       return nil unless domain.present? && domain.match?(/\A[a-z0-9.-]+\.[a-z0-9-]+\z/i)
 
       domain.downcase

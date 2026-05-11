@@ -5,6 +5,10 @@ class MerchantTest < ActiveSupport::TestCase
     assert_equal "example.com", Merchant.extract_domain("https://www.Example.com/path")
   end
 
+  test "extract_domain strips uppercase www prefix" do
+    assert_equal "example.com", Merchant.extract_domain("https://WWW.example.com")
+  end
+
   test "extract_domain returns nil for malformed URLs" do
     assert_nil Merchant.extract_domain("https://bad host")
   end

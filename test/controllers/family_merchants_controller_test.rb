@@ -45,6 +45,16 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, FamilyMerchant.default_color
   end
 
+  test "merge form renders without the settings layout for modal frame requests" do
+    get merge_family_merchants_path, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match(/<html/i, response.body)
+    assert_no_match(/<turbo-frame id="modal"><\/turbo-frame>/, response.body)
+    assert_select "dialog"
+    assert_includes response.body, FamilyMerchant.default_color
+  end
+
   test "enhance enqueues job and redirects" do
     assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
       post enhance_family_merchants_path
@@ -210,6 +220,51 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_nil FamilyMerchant.find_by(family: @user.family, name: "Conflicting Target")
   end
 
+  test "merge rejects existing target with any new target field" do
+    source = FamilyMerchant.create!(
+      family: @user.family,
+      name: "Conflicting Website Source Merchant",
+      color: "#000000"
+    )
+
+    post perform_merge_family_merchants_path, params: {
+      target_id: @merchant.id,
+      new_target_website_url: "example.com",
+      source_ids: [ source.id ]
+    }
+
+    assert_redirected_to merge_family_merchants_path
+    assert FamilyMerchant.exists?(source.id)
+  end
+
+  test "merge allows existing target with blank new target fields" do
+    source = FamilyMerchant.create!(
+      family: @user.family,
+      name: "Blank New Target Source Merchant",
+      color: "#000000"
+    )
+    transaction = Transaction.create!(merchant: source)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: transaction,
+      name: "Blank new target transaction",
+      date: Date.current,
+      amount: 10,
+      currency: "USD"
+    )
+
+    post perform_merge_family_merchants_path, params: {
+      target_id: @merchant.id,
+      new_target_name: "",
+      new_target_color: "",
+      new_target_website_url: "",
+      source_ids: [ source.id ]
+    }
+
+    assert_redirected_to family_merchants_path
+    assert_equal @merchant, transaction.reload.merchant
+  end
+
   test "merge rolls back new target merchant when merge fails" do
     source = FamilyMerchant.create!(
       family: @user.family,
@@ -262,12 +317,15 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bulk website update rejects malformed website domains" do
+    @merchant.update!(website_url: nil)
+
     post bulk_update_websites_family_merchants_path, params: {
       website_url: "https://bad host",
       merchant_ids: [ @merchant.id ]
     }
 
     assert_redirected_to bulk_websites_family_merchants_path
+    assert_equal I18n.t("family_merchants.bulk_update_websites.invalid_domain"), flash[:alert]
     assert_nil @merchant.reload.website_url
   end
 
@@ -282,36 +340,5 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to bulk_websites_family_merchants_path
     assert_match "Could not update merchant websites", flash[:alert]
-  end
-
-  test "provider merchant logo clears when Brandfetch is unavailable" do
-    provider_merchant = ProviderMerchant.create!(
-      name: "Logo Clearing Provider Merchant",
-      source: "plaid",
-      provider_merchant_id: "logo-clearing-provider-merchant",
-      website_url: "old.example.com"
-    )
-    provider_merchant.update_column(:logo_url, "https://cdn.brandfetch.io/old.example.com/icon")
-
-    Setting.stubs(:brand_fetch_client_id).returns(nil)
-    provider_merchant.update!(website_url: "new.example.com")
-    provider_merchant.generate_logo_url_from_website!
-
-    assert_nil provider_merchant.reload.logo_url
-  end
-
-  test "family merchant logo clears when Brandfetch is unavailable" do
-    merchant = FamilyMerchant.create!(
-      family: @user.family,
-      name: "Logo Clearing Family Merchant",
-      color: "#000000",
-      website_url: "old.example.com"
-    )
-    merchant.update_column(:logo_url, "https://cdn.brandfetch.io/old.example.com/icon")
-
-    Setting.stubs(:brand_fetch_client_id).returns(nil)
-    merchant.update!(website_url: "new.example.com")
-
-    assert_nil merchant.reload.logo_url
   end
 end

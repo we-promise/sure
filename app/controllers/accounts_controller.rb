@@ -48,6 +48,10 @@ class AccountsController < ApplicationController
     domain = Account.normalize_institution_domain(permitted_params[:institution_domain])
     accounts = bulk_domain_accounts.where(id: permitted_params[:account_ids])
 
+    if permitted_params[:institution_domain].present? && domain.blank?
+      return redirect_to bulk_domains_accounts_path, alert: t(".invalid_domain")
+    end
+
     unless accounts.any? && domain.present?
       return redirect_to bulk_domains_accounts_path, alert: t(".invalid_selection")
     end
