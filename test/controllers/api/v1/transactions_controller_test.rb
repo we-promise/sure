@@ -66,6 +66,44 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should include disabled account transactions in index history" do
+    disabled_transaction = create_disabled_account_transaction(name: "Closed Account Grocery")
+
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transaction_ids = response_data["transactions"].map { |transaction| transaction["id"] }
+    assert_includes transaction_ids, disabled_transaction.id
+  end
+
+  test "should exclude pending deletion account transactions from index history" do
+    pending_deletion_transaction = create_account_transaction(
+      status: "pending_deletion",
+      name: "Pending Delete Account Grocery"
+    )
+
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transaction_ids = response_data["transactions"].map { |transaction| transaction["id"] }
+    assert_not_includes transaction_ids, pending_deletion_transaction.id
+  end
+
+  test "should filter disabled account transactions by account_id" do
+    disabled_transaction = create_disabled_account_transaction(name: "Closed Account Filter")
+    disabled_account = disabled_transaction.entry.account
+
+    get api_v1_transactions_url,
+        params: { account_id: disabled_account.id },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal [ disabled_transaction.id ], response_data["transactions"].map { |transaction| transaction["id"] }
+  end
+
   test "should filter transactions by date range" do
     start_date = 1.month.ago.to_date
     end_date = Date.current
@@ -81,6 +119,22 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert transaction_date >= start_date
       assert transaction_date <= end_date
     end
+  end
+
+  test "should filter disabled account transactions by date range" do
+    disabled_transaction = create_disabled_account_transaction(
+      name: "Closed Account Date Range",
+      date: Date.current - 3.days
+    )
+
+    get api_v1_transactions_url,
+        params: { start_date: Date.current - 4.days, end_date: Date.current - 2.days },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transaction_ids = response_data["transactions"].map { |transaction| transaction["id"] }
+    assert_includes transaction_ids, disabled_transaction.id
   end
 
   test "should search transactions" do
@@ -101,6 +155,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     found_transaction = response_data["transactions"].find { |t| t["id"] == entry.transaction.id }
     assert_not_nil found_transaction, "Should find the coffee transaction"
+  end
+
+  test "should search disabled account transactions" do
+    disabled_transaction = create_disabled_account_transaction(name: "Closed Account Coffee")
+
+    get api_v1_transactions_url,
+        params: { search: "Closed Account Coffee" },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    found_transaction = response_data["transactions"].find { |transaction| transaction["id"] == disabled_transaction.id }
+    assert_not_nil found_transaction, "Should find disabled account transactions in global history search"
   end
 
   test "should paginate transactions" do
@@ -144,9 +211,33 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should return 404 for non-existent transaction" do
+  test "should show disabled account transaction" do
+    disabled_transaction = create_disabled_account_transaction(name: "Closed Account Show")
+
+    get api_v1_transaction_url(disabled_transaction), headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal disabled_transaction.id, response_data["id"]
+    assert_equal disabled_transaction.entry.account_id, response_data["account"]["id"]
+  end
+
+  test "should return 404 for valid missing transaction id" do
+    get api_v1_transaction_url(SecureRandom.uuid), headers: api_headers(@api_key)
+    assert_response :not_found
+
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Transaction not found", response_data["message"]
+  end
+
+  test "should return 404 for malformed id" do
     get api_v1_transaction_url(999999), headers: api_headers(@api_key)
     assert_response :not_found
+
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Transaction not found", response_data["message"]
   end
 
   test "should reject show request without API key" do
@@ -688,5 +779,29 @@ end
         assert_operator txn_json["signed_amount_cents"], :<=, 0,
                         "non-income transactions should have non-positive signed_amount_cents"
       end
+    end
+
+    def create_disabled_account_transaction(name:, date: Date.current)
+      create_account_transaction(status: "disabled", name: name, date: date)
+    end
+
+    def create_account_transaction(status:, name:, date: Date.current)
+      account = @family.accounts.create!(
+        name: "#{status.titleize} Checking #{SecureRandom.hex(4)}",
+        balance: 0,
+        currency: "USD",
+        status: status,
+        accountable: Depository.new
+      )
+
+      entry = account.entries.create!(
+        name: name,
+        amount: 12.34,
+        currency: "USD",
+        date: date,
+        entryable: Transaction.new
+      )
+
+      entry.transaction
     end
 end
