@@ -45,6 +45,11 @@ class GoalsController < ApplicationController
       currency: Current.family.primary_currency_code
     )
     @linkable_accounts = linkable_accounts_for_new
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("goals.index.title"), goals_path ],
+      [ t("goals.new.heading"), nil ]
+    ]
   end
 
   def create
