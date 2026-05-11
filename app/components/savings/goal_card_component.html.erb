@@ -45,6 +45,9 @@
       <span class="text-lg font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format %></span>
       <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format %></span>
     </div>
+    <% if pace_line %>
+      <p class="text-[11px] text-subdued tabular-nums mt-1"><%= pace_line %></p>
+    <% end %>
   </div>
 
   <div class="mt-4 flex items-center justify-between">
@@ -52,8 +55,6 @@
       <%= render Savings::AccountStackComponent.new(accounts: linked_accounts) %>
       <span class="text-[11px] text-subdued"><%= linked_accounts_count_label %></span>
     </div>
-    <span class="text-[11px] text-subdued tabular-nums">
-      <% if goal.completed? %>—<% else %><%= goal.remaining_amount_money.format %> <%= t("savings_goals.goal_card.left") %><% end %>
-    </span>
+    <span class="text-[11px] text-subdued tabular-nums"><%= footer_line %></span>
   </div>
 <% end %>

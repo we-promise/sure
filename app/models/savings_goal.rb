@@ -171,12 +171,31 @@ class SavingsGoal < ApplicationRecord
   def average_monthly_contribution
     return 0 if savings_contributions.empty?
 
-    first_at = savings_contributions.minimum(:contributed_at)
+    first_at = if savings_contributions.loaded?
+      savings_contributions.map(&:contributed_at).compact.min
+    else
+      savings_contributions.minimum(:contributed_at)
+    end
     return current_balance if first_at.blank?
 
     months = ((Date.current.year - first_at.year) * 12 + (Date.current.month - first_at.month)) + 1
     months = 1 if months < 1
     (current_balance.to_d / months).round(2)
+  end
+
+  def last_contribution_at
+    @last_contribution_at ||= if savings_contributions.loaded?
+      savings_contributions.map(&:contributed_at).compact.max
+    else
+      savings_contributions.maximum(:contributed_at)
+    end
+  end
+
+  def last_contribution_days_ago
+    last = last_contribution_at
+    return nil if last.nil?
+
+    (Date.current - last).to_i
   end
 
   private

@@ -9,7 +9,7 @@ class SavingsGoalsController < ApplicationController
       h[state] = state == "all" ? Current.family.savings_goals.count : Current.family.savings_goals.where(state: state).count
     end
 
-    all_goals = Current.family.savings_goals.with_current_balance.alphabetically.to_a
+    all_goals = Current.family.savings_goals.with_current_balance.alphabetically.includes(:savings_contributions, :linked_accounts).to_a
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
     @completed_goals = all_goals.select { |g| g.state == "completed" }

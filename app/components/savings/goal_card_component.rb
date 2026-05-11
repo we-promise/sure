@@ -56,4 +56,38 @@ class Savings::GoalCardComponent < ApplicationComponent
     pct = [ [ progress_percent.to_i, 0 ].max, 100 ].min
     ring_circumference * (1 - pct / 100.0)
   end
+
+  def pace_line
+    return nil if goal.paused? || goal.completed? || goal.status == :reached
+
+    avg = Money.new(goal.average_monthly_contribution, goal.currency).format
+    target = goal.monthly_target_amount ? Money.new(goal.monthly_target_amount, goal.currency).format : nil
+    if target
+      I18n.t("savings_goals.goal_card.pace_with_target", avg: avg, target: target)
+    else
+      I18n.t("savings_goals.goal_card.pace_no_target", avg: avg)
+    end
+  end
+
+  def footer_line
+    if goal.paused?
+      I18n.t("savings_goals.goal_card.footer_paused")
+    elsif goal.completed? || goal.status == :reached
+      I18n.t("savings_goals.goal_card.footer_reached")
+    elsif goal.status == :behind && goal.monthly_target_amount
+      catch_up = Money.new(goal.monthly_target_amount, goal.currency).format
+      I18n.t("savings_goals.goal_card.footer_catch_up", amount: catch_up)
+    elsif goal.status == :no_target_date
+      I18n.t("savings_goals.goal_card.footer_no_deadline")
+    else
+      days = goal.last_contribution_days_ago
+      if days.nil?
+        I18n.t("savings_goals.goal_card.footer_no_contributions")
+      elsif days.zero?
+        I18n.t("savings_goals.goal_card.footer_last_today")
+      else
+        I18n.t("savings_goals.goal_card.footer_last_days", count: days)
+      end
+    end
+  end
 end
