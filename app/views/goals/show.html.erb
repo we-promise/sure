@@ -269,44 +269,15 @@
     <% end %>
   </section>
 
-  <%# Stat row — combo pace card + contributions count. Reached, paused,
-      or archived goals hide the pace combo since the comparison is moot
-      or misleading. %>
-  <% goal_reached = @goal.completed? || @goal.status == :reached %>
-  <% hide_pace = goal_reached || @goal.archived? || @goal.paused? %>
-  <section class="grid grid-cols-1 <%= hide_pace ? "" : "md:grid-cols-3" %> gap-3">
-    <% unless hide_pace %>
-      <%# Combo: Avg vs Target pace %>
-      <div class="md:col-span-2 bg-container rounded-xl shadow-border-xs px-5 py-4">
-        <p class="text-[11px] text-secondary mb-2"><%= t(".stats.monthly_pace") %></p>
-        <div class="flex items-baseline gap-2">
-          <p class="text-2xl font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @goal.currency).format %></p>
-          <p class="text-sm text-subdued tabular-nums">/mo</p>
-        </div>
-        <% if @goal.monthly_target_amount && @goal.monthly_target_amount.to_d.positive? %>
-          <% delta = @goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
-          <% if delta.positive? %>
-            <p class="text-xs text-subdued mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @goal.currency).format) %></p>
-          <% else %>
-            <p class="text-xs text-subdued mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
-          <% end %>
-        <% else %>
-          <p class="text-xs text-subdued mt-1"><%= t(".stats.no_required_pace") %></p>
-        <% end %>
-      </div>
-    <% end %>
+  <% unless @contributions.empty? %>
+    <%# Funding breakdown — balance-sheet-style widget (heading · total /
+        thin bar / dot legend / weight table). %>
+    <section class="bg-container rounded-xl shadow-border-xs p-5">
+      <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal, rows: @funding_breakdown) %>
+    </section>
 
-    <%# Total contributions %>
-    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.total_contributions") %></p>
-      <p class="text-lg font-medium text-primary tabular-nums"><%= @stats[:contributions_count] %></p>
-      <p class="text-[11px] text-subdued mt-1"><%= t(".stats.across_all_accounts") %></p>
-    </div>
-  </section>
-
-  <%# Bottom row: contributions + funding accounts %>
-  <section class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3">
-    <div class="bg-container rounded-xl shadow-border-xs p-5">
+    <%# Contributions — chronological list, full width. %>
+    <section class="bg-container rounded-xl shadow-border-xs p-5">
       <div class="flex items-center mb-4">
         <h2 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h2>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
@@ -314,13 +285,8 @@
       <div class="max-h-[420px] overflow-y-auto overflow-x-hidden scrollbar">
         <%= render "contributions_list", contributions: @contributions %>
       </div>
-    </div>
-
-    <div class="bg-container rounded-xl shadow-border-xs p-5">
-      <h2 class="text-sm font-medium text-primary mb-3"><%= t(".funding_accounts_heading") %></h2>
-      <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal, rows: @funding_breakdown) %>
-    </div>
-  </section>
+    </section>
+  <% end %>
 
   <% if @goal.notes.present? %>
     <section class="bg-container rounded-xl shadow-border-xs p-5">

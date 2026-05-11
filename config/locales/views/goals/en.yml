@@ -94,6 +94,10 @@ en:
       contributions_heading: Contributions
       add_contribution: Add contribution
       funding_accounts_heading: Funding accounts
+      funding_table:
+        name: Name
+        weight: Weight
+        value: Value
       no_contributions_yet: No contributions yet.
       delete_contribution: Delete contribution
       confirm_delete_contribution: Delete this contribution?

@@ -1,27 +1,61 @@
 <% if total.zero? %>
   <p class="text-sm text-secondary"><%= t("goals.show.no_contributions_yet") %></p>
 <% else %>
-  <div class="flex h-2 rounded-full overflow-hidden mb-4">
-    <% rows.each do |row| %>
-      <% next if row[:amount].to_d.zero? %>
-      <div style="width: <%= percent_for(row[:amount]) %>%; background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"
-           title="<%= row[:account].name %>"></div>
-    <% end %>
-  </div>
+  <div class="space-y-4">
+    <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
+      <%= t("goals.show.funding_accounts_heading") %>
+      <span class="text-secondary">·</span>
+      <span class="text-secondary font-medium text-lg privacy-sensitive tabular-nums"><%= Money.new(total, goal.currency).format(precision: 0) %></span>
+    </h2>
 
-  <ul class="space-y-3">
-    <% rows.each do |row| %>
-      <li class="flex items-center gap-3">
-        <%= render Goals::AvatarComponent.new(name: row[:account].name, color: Goals::AvatarComponent.color_for(row[:account].name), size: "sm") %>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-primary truncate"><%= row[:account].name %></p>
-          <p class="text-[11px] text-subdued"><%= row[:account].subtype&.titleize || row[:account].accountable_type %> · <%= t("goals.show.funding_balance", amount: Money.new(row[:account].balance, row[:account].currency).format) %></p>
+    <div class="flex gap-1">
+      <% rows.each do |row| %>
+        <% next if row[:amount].to_d.zero? %>
+        <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:amount]) %>%; background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"></div>
+      <% end %>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+      <% rows.each do |row| %>
+        <% next if row[:amount].to_d.zero? %>
+        <div class="flex items-center gap-2 text-sm">
+          <div class="h-2.5 w-2.5 rounded-full" style="background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"></div>
+          <p class="text-secondary"><%= row[:account].name %></p>
+          <p class="text-primary font-mono privacy-sensitive tabular-nums"><%= percent_for(row[:amount]) %>%</p>
         </div>
-        <div class="text-right">
-          <p class="text-sm font-medium text-primary tabular-nums"><%= row[:money].format %></p>
-          <p class="text-[10px] text-subdued tabular-nums"><%= percent_for(row[:amount]) %>% <%= t("goals.show.of_saved") %></p>
+      <% end %>
+    </div>
+
+    <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+      <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
+        <div class="flex-1 min-w-0"><%= t("goals.show.funding_table.name") %></div>
+        <div class="ml-auto text-right flex items-center gap-2">
+          <div class="w-20 shrink-0"><p><%= t("goals.show.funding_table.weight") %></p></div>
+          <div class="w-24 shrink-0"><p><%= t("goals.show.funding_table.value") %></p></div>
         </div>
-      </li>
-    <% end %>
-  </ul>
+      </div>
+
+      <div class="rounded-lg bg-container font-medium text-sm">
+        <% rows.each_with_index do |row, idx| %>
+          <div class="p-4 flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0 flex items-center gap-2">
+              <%= render Goals::AvatarComponent.new(name: row[:account].name, color: Goals::AvatarComponent.color_for(row[:account].name), size: "sm") %>
+              <p class="truncate"><%= row[:account].name %></p>
+            </div>
+            <div class="flex items-center justify-between text-right gap-2 shrink-0">
+              <div class="w-20 shrink-0 flex items-center justify-end gap-2">
+                <%= render "pages/dashboard/group_weight", weight: percent_for(row[:amount]), color: Goals::AvatarComponent.color_for(row[:account].name) %>
+              </div>
+              <div class="w-24 shrink-0">
+                <p class="privacy-sensitive tabular-nums"><%= row[:money].format(precision: 0) %></p>
+              </div>
+            </div>
+          </div>
+          <% if idx < rows.size - 1 %>
+            <%= render "shared/ruler", classes: "mx-4" %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
 <% end %>
