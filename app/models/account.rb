@@ -20,6 +20,14 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  # Inverse for recurring transfers where this account is the destination.
+  # Account#recurring_transactions only matches account_id; without this
+  # association, destroying the destination account would hit the FK
+  # cascade silently and the AR cache wouldn't reflect the deletion.
+  has_many :inbound_recurring_transfers,
+           class_name: "RecurringTransaction",
+           foreign_key: :destination_account_id,
+           dependent: :destroy
 
   monetize :balance, :cash_balance
 
@@ -266,6 +274,25 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_kraken_account(kraken_account)
+      family = kraken_account.kraken_item.family
+
+      attributes = {
+        family: family,
+        name: kraken_account.name,
+        balance: (kraken_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: kraken_account.currency.presence || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 
@@ -296,6 +323,14 @@ class Account < ApplicationRecord
 
   def institution_domain
     read_attribute(:institution_domain).presence || provider&.institution_domain
+  end
+
+  def manual_crypto_exchange?
+    accountable_type == "Crypto" &&
+      accountable&.subtype == "exchange" &&
+      account_providers.none? &&
+      plaid_account_id.blank? &&
+      simplefin_account_id.blank?
   end
 
   def logo_url

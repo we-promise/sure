@@ -64,6 +64,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :kraken_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -205,8 +220,14 @@ Rails.application.routes.draw do
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
-    resource :bank_sync, only: :show, controller: "bank_sync"
-    resource :providers, only: %i[show update]
+    get "bank_sync", to: redirect("/settings/providers", status: 301)
+    resource :providers, only: %i[show update] do
+      collection do
+        post :sync_all
+        post ":provider_key/sync", action: :sync, as: :sync_provider
+        get ":provider_key/connect_form", action: :connect_form, as: :connect_form
+      end
+    end
   end
 
   resource :subscription, only: %i[new show create] do
@@ -256,7 +277,11 @@ Rails.application.routes.draw do
 
   get :exchange_rate, to: "exchange_rates#show"
 
-  resources :transfers, only: %i[new create destroy show update]
+  resources :transfers, only: %i[new create destroy show update] do
+    member do
+      post :mark_as_recurring
+    end
+  end
 
   resources :imports, only: %i[index new show create update destroy] do
     member do
@@ -448,6 +473,7 @@ Rails.application.routes.draw do
         get :download, on: :member
       end
       resources :imports, only: [ :index, :show, :create ] do
+        post :preflight, on: :collection
         get :rows, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
