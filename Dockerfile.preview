@@ -159,10 +159,25 @@ emit_status db-prepare "running rails db:prepare"
 /rails/bin/rails db:prepare
 emit_status db-prepare-done "rails db:prepare finished"
 
-# Execute the main command
+# Execute the main command with an internal readiness probe
 echo "Starting Rails server..."
 emit_status rails-start "starting rails server"
-exec "$@"
+"$@" &
+RAILS_PID=$!
+
+for i in {1..30}; do
+  if curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
+    emit_status rails-up-ready "rails responded on localhost:3000/up"
+    break
+  fi
+  sleep 1
+done
+
+if ! curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
+  emit_status rails-up-timeout "rails did not answer localhost:3000/up in time"
+fi
+
+wait "$RAILS_PID"
 ENTRYPOINT_EOF
 RUN chmod 755 /rails/bin/preview-entrypoint && chown rails:rails /rails/bin/preview-entrypoint
 
