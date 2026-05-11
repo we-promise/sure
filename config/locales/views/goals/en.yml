@@ -153,6 +153,10 @@ en:
         heading: Add a target date
         body: Set a deadline to project a finish line and track required pace.
         cta: Set target date
+      empty:
+        heading: No contributions yet
+        body: Track your progress by adding your first contribution.
+        cta: Add a contribution
       source:
         initial: Initial
         manual: Manual
