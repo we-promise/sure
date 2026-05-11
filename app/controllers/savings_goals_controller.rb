@@ -23,6 +23,11 @@ class SavingsGoalsController < ApplicationController
     @contributions = @savings_goal.savings_contributions.includes(:account).chronological
     @funding_breakdown = funding_breakdown_for(@savings_goal)
     @stats = stats_for(@savings_goal)
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("savings_goals.index.title"), savings_goals_path ],
+      [ @savings_goal.name, nil ]
+    ]
   end
 
   def new

@@ -5,9 +5,9 @@
     <p class="text-sm text-secondary"><%= t("savings_goals.show.no_contributions_yet") %></p>
   </div>
 <% else %>
-  <ul class="divide-y divide-subdued">
+  <ul class="space-y-3">
     <% contributions.each do |contribution| %>
-      <li class="flex items-center gap-3 px-5 py-3">
+      <li class="flex items-center gap-3 group">
         <%= render Savings::GoalAvatarComponent.new(
           name: contribution.account.name,
           color: @savings_goal.color,
@@ -24,10 +24,12 @@
         <% if contribution.manual? %>
           <%= button_to savings_goal_contribution_path(@savings_goal, contribution),
                         method: :delete,
-                        class: "text-secondary hover:text-destructive p-1 rounded",
+                        class: "text-subdued hover:text-destructive p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity",
                         form: { data: { turbo_confirm: t("savings_goals.show.confirm_delete_contribution") } } do %>
-            <%= icon("x", size: "sm") %>
+            <%= icon("x", size: "sm", color: "current") %>
           <% end %>
+        <% else %>
+          <span class="w-7 h-7"></span>
         <% end %>
       </li>
     <% end %>

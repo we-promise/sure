@@ -32,6 +32,12 @@ export default class extends Controller {
     const height = root.clientHeight || 240;
     if (width <= 0 || height <= 0) return;
 
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const textPrimary = isDark ? "#ffffff" : "#171717";
+    const textSecondary = isDark ? "#cfcfcf" : "#737373";
+    const borderSubdued = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.10)";
+    const containerBg = isDark ? "#0a0a0a" : "#ffffff";
+
     const margin = { top: 28, right: 24, bottom: 28, left: 16 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
@@ -80,8 +86,8 @@ export default class extends Controller {
       .append("linearGradient")
       .attr("id", `saved-fill-${this._id()}`)
       .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
-    gradient.append("stop").attr("offset", "0%").attr("stop-color", "var(--text-primary)").attr("stop-opacity", 0.10);
-    gradient.append("stop").attr("offset", "100%").attr("stop-color", "var(--text-primary)").attr("stop-opacity", 0);
+    gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.10);
+    gradient.append("stop").attr("offset", "100%").attr("stop-color", textPrimary).attr("stop-opacity", 0);
 
     if (targetAmount > 0) {
       svg
@@ -90,7 +96,7 @@ export default class extends Controller {
         .attr("x2", margin.left + innerWidth)
         .attr("y1", y(targetAmount))
         .attr("y2", y(targetAmount))
-        .attr("stroke", "var(--border-strong)")
+        .attr("stroke", borderSubdued)
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "3 3");
 
@@ -100,7 +106,7 @@ export default class extends Controller {
         .attr("y", y(targetAmount) - 6)
         .attr("text-anchor", "end")
         .attr("font-size", 10)
-        .attr("fill", "var(--text-secondary)")
+        .attr("fill", textPrimary)
         .text(`Target · ${this._fmtMoney(targetAmount, data.currency)}`);
     }
 
@@ -127,7 +133,7 @@ export default class extends Controller {
       .append("path")
       .datum(savedSeries)
       .attr("fill", "none")
-      .attr("stroke", "var(--text-primary)")
+      .attr("stroke", textPrimary)
       .attr("stroke-width", 2)
       .attr("stroke-linejoin", "round")
       .attr("stroke-linecap", "round")
@@ -152,7 +158,7 @@ export default class extends Controller {
       .attr("x2", x(today))
       .attr("y1", margin.top)
       .attr("y2", margin.top + innerHeight)
-      .attr("stroke", "var(--border-subdued)")
+      .attr("stroke", borderSubdued)
       .attr("stroke-width", 1)
       .attr("stroke-dasharray", "2 4");
 
@@ -161,8 +167,8 @@ export default class extends Controller {
       .attr("cx", x(today))
       .attr("cy", y(currentAmount))
       .attr("r", 4)
-      .attr("fill", "var(--text-primary)")
-      .attr("stroke", "var(--bg-container)")
+      .attr("fill", textPrimary)
+      .attr("stroke", containerBg)
       .attr("stroke-width", 2);
 
     const tickFmt = d3.timeFormat("%b %y");
@@ -178,7 +184,7 @@ export default class extends Controller {
       .attr("y", height - 8)
       .attr("text-anchor", "middle")
       .attr("font-size", 10)
-      .attr("fill", "var(--text-subdued)")
+      .attr("fill", textSecondary)
       .text((d) => tickFmt(d));
   }
 

@@ -240,12 +240,12 @@
 
   <%# Bottom row: contributions + funding accounts %>
   <section class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3">
-    <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
-      <div class="flex items-center px-5 py-3.5 border-b border-subdued">
+    <div class="bg-container rounded-xl shadow-border-xs p-5">
+      <div class="flex items-center mb-4">
         <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
       </div>
-      <div class="max-h-[480px] overflow-y-auto">
+      <div class="max-h-[420px] overflow-y-auto -mx-1 px-1">
         <%= render "contributions_list", contributions: @contributions %>
       </div>
     </div>
