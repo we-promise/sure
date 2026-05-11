@@ -3,10 +3,8 @@
 
   <%= render DS::Alert.new(
         variant: :warning,
-        message: safe_join([
-          content_tag(:p, t("settings.providers.binance_panel.no_withdraw_title"), class: "font-medium"),
-          content_tag(:p, t("settings.providers.binance_panel.no_withdraw_body"), class: "mt-1")
-        ])
+        title: t("settings.providers.binance_panel.no_withdraw_title"),
+        message: t("settings.providers.binance_panel.no_withdraw_body")
       ) %>
 
   <div class="space-y-2">
