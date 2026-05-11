@@ -146,15 +146,19 @@
           <%= t("goals.show.catch_up.body", avg: catch_up_avg_money.format, delta: catch_up_delta_money.format) %>
         <% end %>
       </p>
-      <div class="mt-2">
+      <div class="mt-2 flex items-center gap-3 flex-wrap">
         <%= render DS::Link.new(
           text: t("goals.show.catch_up.cta", amount: catch_up_money.format),
           variant: "primary",
           size: "sm",
-          href: new_goal_contribution_path(@goal),
+          href: new_goal_contribution_path(@goal, amount: @goal.monthly_target_amount.to_f),
           icon: "plus",
           frame: :modal
         ) %>
+        <%= link_to t("goals.show.catch_up.adjust_target_cta"),
+                    edit_goal_path(@goal),
+                    data: { turbo_frame: :modal },
+                    class: "text-xs text-secondary hover:text-primary underline-offset-2 hover:underline" %>
       </div>
     <% end %>
   <% end %>

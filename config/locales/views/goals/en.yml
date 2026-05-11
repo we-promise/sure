@@ -127,6 +127,7 @@ en:
         body_with_date: "Your current pace is %{avg}/mo. You need an extra %{delta}/mo to finish by %{date}."
         body: "Your current pace is %{avg}/mo. You need an extra %{delta}/mo to hit the required rate."
         cta: "Add %{amount}"
+        adjust_target_cta: Or adjust your target
       confirm_complete_title: Mark this goal complete?
       confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
       confirm_complete_cta: Mark complete

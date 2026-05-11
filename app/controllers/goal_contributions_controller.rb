@@ -7,7 +7,8 @@ class GoalContributionsController < ApplicationController
     @contribution = @goal.goal_contributions.new(
       contributed_at: Date.current,
       currency: @goal.currency,
-      source: "manual"
+      source: "manual",
+      amount: params[:amount].presence
     )
   end
 
