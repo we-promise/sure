@@ -210,7 +210,7 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", tx_entry.entryable.investment_activity_label
   end
 
-  test "activities processor normalizes withdrawal as negative amount" do
+  test "activities processor normalizes withdrawal as positive outflow amount" do
     @snaptrade_account.update!(
       raw_activities_payload: [
         {
@@ -228,7 +228,7 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
     assert_equal 1, result[:transactions]
     tx_entry = @account.entries.find_by(external_id: "activity_withdraw_1")
-    assert tx_entry.amount.negative?
+    assert_equal 1000.00, tx_entry.amount.to_f
   end
 
   test "activities processor skips activities without external_id" do
