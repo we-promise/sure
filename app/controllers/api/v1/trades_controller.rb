@@ -65,19 +65,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       if model.entryable.is_a?(Transaction)
         @entry = model
-        render json: {
-          id: @entry.id,
-          date: @entry.date,
-          amount: @entry.amount_money.format,
-          currency: @entry.currency,
-          name: @entry.name,
-          entryable_type: "Transaction",
-          account: {
-            id: @entry.account.id,
-            name: @entry.account.name,
-            account_type: @entry.account.accountable_type.underscore
-          }
-        }, status: :created
+        render json: entry_response_payload(@entry), status: :created
       else
         @trade = model.trade
         apply_trade_create_options!
@@ -86,21 +74,8 @@ class Api::V1::TradesController < Api::V1::BaseController
         render :show, status: :created
       end
     elsif model.is_a?(Transfer)
-      # Linked transfer - return the destination entry
       @entry = model.inflow_transaction.entry
-      render json: {
-        id: @entry.id,
-        date: @entry.date,
-        amount: @entry.amount_money.format,
-        currency: @entry.currency,
-        name: @entry.name,
-        entryable_type: "Transaction",
-        account: {
-          id: @entry.account.id,
-          name: @entry.account.name,
-          account_type: @entry.account.accountable_type.underscore
-        }
-      }, status: :created
+      render json: entry_response_payload(@entry), status: :created
     else
       @trade = model
       apply_trade_create_options!
@@ -405,6 +380,22 @@ class Api::V1::TradesController < Api::V1::BaseController
         error: "internal_server_error",
         message: "An unexpected error occurred"
       }, status: :internal_server_error
+    end
+
+    def entry_response_payload(entry)
+      {
+        id: entry.id,
+        date: entry.date,
+        amount: entry.amount_money.format,
+        currency: entry.currency,
+        name: entry.name,
+        entryable_type: "Transaction",
+        account: {
+          id: entry.account.id,
+          name: entry.account.name,
+          account_type: entry.account.accountable_type.underscore
+        }
+      }
     end
 
     def safe_page_param
