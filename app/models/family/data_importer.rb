@@ -689,12 +689,14 @@ class Family::DataImporter
     end
 
     def rule_operand_value(data)
-      value = data["value"].presence
+      raw_value = data["value"]
+      value = raw_value.is_a?(String) ? raw_value.presence : raw_value
       value_ref_name = data.dig("value_ref", "name")
 
-      return value_ref_name if value.present? && uuid_like?(value) && value_ref_name.present?
+      return value_ref_name if value.is_a?(String) && uuid_like?(value) && value_ref_name.present?
+      return value unless value.nil?
 
-      value || value_ref_name
+      value_ref_name
     end
 
     def uuid_like?(value)

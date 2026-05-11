@@ -1376,6 +1376,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.categories.exists?(name: stale_category_id)
   end
 
+  test "preserves explicit false rule operand values" do
+    importer = Family::DataImporter.new(@family, "")
+
+    value = importer.send(
+      :rule_operand_value,
+      {
+        "value" => false,
+        "value_ref" => {
+          "type" => "Category",
+          "name" => "Fallback"
+        }
+      }
+    )
+
+    assert_equal false, value
+  end
+
   test "imports rules with compound conditions" do
     ndjson = build_ndjson([
       {
