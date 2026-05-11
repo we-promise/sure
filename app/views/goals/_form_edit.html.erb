@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <%= render "color_picker", form: f, colors: Goal::COLORS %>
+  <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
 
   <%= f.text_area :notes,
                   label: t("goals.form_stepper.step1.fields.notes"),

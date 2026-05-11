@@ -1,6 +1,10 @@
-<span class="inline-flex items-center justify-center text-inverse font-semibold <%= box_classes %> <%= text_classes %> <%= radius_classes %>"
-      style="background-color: <%= color %>;"
+<span class="inline-flex items-center justify-center font-semibold <%= box_classes %> <%= text_classes %> <%= radius_classes %>"
+      style="background-color: color-mix(in oklab, <%= color %> 10%, transparent); color: <%= color %>;"
       aria-hidden="true"
       data-testid="goal-avatar">
-  <%= initial %>
+  <% if icon.present? %>
+    <%= icon(icon, size: icon_size, color: "current") %>
+  <% else %>
+    <%= initial %>
+  <% end %>
 </span>

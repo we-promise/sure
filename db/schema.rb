@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_11_100003) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_11_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -658,7 +658,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_100003) do
     t.index ["goal_id", "contributed_at"], name: "index_goal_contributions_on_goal_id_and_contributed_at"
     t.index ["goal_id"], name: "index_goal_contributions_on_goal_id"
     t.check_constraint "amount > 0::numeric", name: "chk_savings_contributions_amount_positive"
-    t.check_constraint "source::text = ANY (ARRAY['manual'::character varying, 'initial'::character varying]::text[])", name: "chk_savings_contributions_source_enum"
+    t.check_constraint "source::text = ANY (ARRAY['manual'::character varying::text, 'initial'::character varying::text])", name: "chk_savings_contributions_source_enum"
   end
 
   create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -672,6 +672,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_100003) do
     t.string "state", default: "active", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "icon"
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"

@@ -2,10 +2,13 @@ class Goal < ApplicationRecord
   include AASM, Monetizable
 
   COLORS = Category::COLORS
+  ICONS = Category.icon_codes
 
   # Virtual attributes used by the create-modal stepper to capture an
   # optional initial contribution alongside the goal create payload.
   attr_accessor :initial_contribution_amount, :initial_contribution_account_id
+
+  validates :icon, inclusion: { in: ICONS, allow_nil: true }
 
   belongs_to :family
   has_many :goal_accounts, dependent: :destroy

@@ -33,10 +33,10 @@
       </div>
 
       <div>
-        <div class="flex items-center gap-2">
-          <span class="shrink-0" data-goal-stepper-target="avatarPreview">
-            <%= render Goals::AvatarComponent.new(name: goal.name, color: goal.color, size: "md") %>
-          </span>
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 pt-6">
+            <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
+          </div>
           <%= f.text_field :name,
                            placeholder: t("goals.form_stepper.step1.fields.name_placeholder"),
                            autofocus: true,
@@ -104,7 +104,6 @@
                         placeholder: t("goals.form_stepper.step1.fields.notes_placeholder") %>
       <% end %>
 
-      <%= render "color_picker", form: f, colors: Goal::COLORS %>
     </section>
 
     <section data-goal-stepper-target="step2Panel" class="space-y-5 hidden">

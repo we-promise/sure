@@ -16,18 +16,28 @@ class Goals::AvatarComponent < ApplicationComponent
     PALETTE[Digest::MD5.hexdigest(name).to_i(16) % PALETTE.size]
   end
 
-  def initialize(goal: nil, name: nil, color: nil, size: "md")
+  def initialize(goal: nil, name: nil, color: nil, icon: nil, size: "md")
     @goal = goal
     @name = name || goal&.name
     @color = color || goal&.color || Goal::COLORS.first
+    @icon = icon || goal&.icon
     @size = SIZES.key?(size) ? size : "md"
   end
 
-  attr_reader :color
+  attr_reader :color, :icon
 
   def initial
     return "?" if @name.blank?
     @name.strip.first&.upcase || "?"
+  end
+
+  def icon_size
+    case @size
+    when "sm" then "xs"
+    when "md" then "sm"
+    when "lg" then "md"
+    when "xl" then "xl"
+    end
   end
 
   def box_classes
