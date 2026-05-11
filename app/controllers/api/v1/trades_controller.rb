@@ -271,6 +271,11 @@ class Api::V1::TradesController < Api::V1::BaseController
           return nil
         end
 
+        unless trade_params[:amount].present?
+          render_validation_error("Amount is required", [ "amount must be present" ])
+          return nil
+        end
+
         ticker_value = nil
         manual_ticker_value = nil
         if trade_params[:ticker].present?

@@ -196,6 +196,18 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Interest", body["investment_activity_label"]
   end
 
+  test "create interest without amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "interest",
+        date: Date.current
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+  end
+
   test "create requires read_write scope" do
     post "/api/v1/trades",
       params: { trade: {
