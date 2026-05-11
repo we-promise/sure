@@ -7,6 +7,8 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @user.api_keys.active.destroy_all
     @investment_account = accounts(:investment)
+    @read_write_api_key = nil
+    @read_only_api_key = nil
   end
 
   test "create dividend with security returns 201" do
@@ -222,26 +224,402 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "should reject create without API key" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 10,
+        price: 100
+      } }
+
+    assert_response :unauthorized
+  end
+
+  test "should return 404 for unknown account_id" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: 999999,
+        type: "buy",
+        date: Date.current,
+        qty: 10,
+        price: 100,
+        security_id: Security.create!(ticker: "TEST", name: "Test", country_code: "US").id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :not_found
+  end
+
+  test "should return 422 for invalid date format" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: "invalid-date",
+        qty: 10,
+        price: 100
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+  end
+
+  # INDEX action tests
+  test "should get index with valid API key" do
+    get api_v1_trades_url, headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert response_data.key?("trades")
+    assert response_data.key?("pagination")
+    assert response_data["pagination"].key?("page")
+    assert response_data["pagination"].key?("per_page")
+    assert response_data["pagination"].key?("total_count")
+    assert response_data["pagination"].key?("total_pages")
+  end
+
+  test "should get index with read-only API key" do
+    get api_v1_trades_url, headers: api_headers(read_only_api_key)
+    assert_response :success
+  end
+
+  test "should filter trades by account_id" do
+    get api_v1_trades_url,
+      params: { account_id: @investment_account.id },
+      headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    response_data["trades"].each do |trade|
+      assert_equal @investment_account.id, trade["account"]["id"]
+    end
+  end
+
+  test "should filter trades by date range" do
+    start_date = 1.year.ago.to_date
+    end_date = Date.current
+
+    get api_v1_trades_url,
+      params: { start_date: start_date, end_date: end_date },
+      headers: api_headers(read_write_api_key)
+    assert_response :success
+  end
+
+  test "should reject index request without API key" do
+    get api_v1_trades_url
+    assert_response :unauthorized
+  end
+
+  test "should reject index request with invalid API key" do
+    get api_v1_trades_url, headers: { "X-Api-Key" => "invalid-key" }
+    assert_response :unauthorized
+  end
+
+  test "should reject index request with invalid date format" do
+    get api_v1_trades_url,
+      params: { start_date: "invalid" },
+      headers: api_headers(read_write_api_key)
+    assert_response :unprocessable_entity
+  end
+
+  # SHOW action tests
+  test "should show trade with valid API key" do
+    security = Security.create!(ticker: "SHOW", name: "Show Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    get api_v1_trade_url(trade_id), headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal trade_id, response_data["id"]
+    assert response_data.key?("date")
+    assert response_data.key?("account")
+  end
+
+  test "should show trade with read-only API key" do
+    security = Security.create!(ticker: "SHOR", name: "Show RO Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    get api_v1_trade_url(trade_id), headers: api_headers(read_only_api_key)
+    assert_response :success
+  end
+
+  test "should return 404 for non-existent trade" do
+    get api_v1_trade_url(999999), headers: api_headers(read_write_api_key)
+    assert_response :not_found
+  end
+
+  test "should reject show request without API key" do
+    security = Security.create!(ticker: "SHON", name: "Show No Auth", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    get api_v1_trade_url(trade_id)
+    assert_response :unauthorized
+  end
+
+  # UPDATE action tests
+  test "should update trade with valid parameters" do
+    security = Security.create!(ticker: "UPD", name: "Update Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    update_params = {
+      trade: {
+        notes: "Updated notes"
+      }
+    }
+
+    put api_v1_trade_url(trade_id),
+      params: update_params,
+      headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal "Updated notes", response_data["notes"]
+  end
+
+  test "should reject update with read-only API key" do
+    security = Security.create!(ticker: "UPDRO", name: "Update RO Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    put api_v1_trade_url(trade_id),
+      params: { trade: { notes: "Test" } },
+      headers: api_headers(read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "should reject update for non-existent trade" do
+    put api_v1_trade_url(999999),
+      params: { trade: { notes: "Test" } },
+      headers: api_headers(read_write_api_key)
+    assert_response :not_found
+  end
+
+  test "should reject update without API key" do
+    security = Security.create!(ticker: "UPDNO", name: "Update No Auth", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    put api_v1_trade_url(trade_id), params: { trade: { notes: "Test" } }
+    assert_response :unauthorized
+  end
+
+  test "should reject update with invalid date format" do
+    security = Security.create!(ticker: "UPDID", name: "Update Invalid Date", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    put api_v1_trade_url(trade_id),
+      params: { trade: { date: "invalid" } },
+      headers: api_headers(read_write_api_key)
+    assert_response :unprocessable_entity
+  end
+
+  # DESTROY action tests
+  test "should destroy trade" do
+    security = Security.create!(ticker: "DEL", name: "Delete Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    delete api_v1_trade_url(trade_id), headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert response_data.key?("message")
+  end
+
+  test "should reject destroy with read-only API key" do
+    security = Security.create!(ticker: "DELRO", name: "Delete RO Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    delete api_v1_trade_url(trade_id), headers: api_headers(read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "should reject destroy for non-existent trade" do
+    delete api_v1_trade_url(999999), headers: api_headers(read_write_api_key)
+    assert_response :not_found
+  end
+
+  test "should reject destroy without API key" do
+    security = Security.create!(ticker: "DELNO", name: "Delete No Auth", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    delete api_v1_trade_url(trade_id)
+    assert_response :unauthorized
+  end
+
+  test "trade JSON should have expected structure" do
+    security = Security.create!(ticker: "JSP", name: "JSON Structure Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body)["id"]
+
+    get api_v1_trade_url(trade_id), headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    trade_data = JSON.parse(response.body)
+    assert trade_data.key?("id")
+    assert trade_data.key?("date")
+    assert trade_data.key?("account")
+    assert trade_data["account"].key?("id")
+    assert trade_data["account"].key?("name")
+    assert trade_data["account"].key?("account_type")
+    assert trade_data.key?("notes")
+  end
+
   private
 
     def read_write_api_key
       @read_write_api_key ||= ApiKey.create!(
         user: @user,
         name: "Test RW Key",
-        key: ApiKey.generate_secure_key,
+        display_key: "test_rw_#{SecureRandom.hex(8)}",
         scopes: %w[read_write],
         source: "web"
-      )
+      ).tap do |key|
+        Redis.new.del("api_rate_limit:#{key.id}")
+      end
     end
 
     def read_only_api_key
       @read_only_api_key ||= ApiKey.create!(
         user: @user,
         name: "Test RO Key",
-        key: ApiKey.generate_secure_key,
+        display_key: "test_ro_#{SecureRandom.hex(8)}",
         scopes: %w[read],
         source: "mobile"
-      )
+      ).tap do |key|
+        Redis.new.del("api_rate_limit:#{key.id}")
+      end
     end
 
     def api_headers(api_key)
