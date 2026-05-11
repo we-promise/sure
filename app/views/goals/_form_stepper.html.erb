@@ -32,18 +32,16 @@
         <p class="text-sm text-secondary"><%= t("goals.form_stepper.step1.subheading") %></p>
       </div>
 
+      <div class="flex justify-center">
+        <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
+      </div>
+
       <div>
-        <div class="flex items-start gap-3">
-          <div class="shrink-0 pt-6">
-            <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
-          </div>
-          <%= f.text_field :name,
-                           placeholder: t("goals.form_stepper.step1.fields.name_placeholder"),
-                           autofocus: true,
-                           label: t("goals.form_stepper.step1.fields.name"),
-                           container_class: "flex-1",
-                           data: { goal_stepper_target: "nameInput", action: "input->goal-stepper#nameChanged" } %>
-        </div>
+        <%= f.text_field :name,
+                         placeholder: t("goals.form_stepper.step1.fields.name_placeholder"),
+                         autofocus: true,
+                         label: t("goals.form_stepper.step1.fields.name"),
+                         data: { goal_stepper_target: "nameInput", action: "input->goal-stepper#nameChanged" } %>
         <p class="hidden mt-1.5 text-xs text-destructive" data-goal-stepper-target="nameError"><%= t("goals.form_stepper.errors.name_required") %></p>
       </div>
 

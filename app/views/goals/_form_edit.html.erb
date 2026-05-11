@@ -8,6 +8,10 @@
                      url: goal_path(goal),
                      method: :patch,
                      class: "space-y-3" do |f| %>
+  <div class="flex justify-center">
+    <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
+  </div>
+
   <%= f.text_field :name,
                    label: t("goals.form_stepper.step1.fields.name"),
                    required: true,
@@ -49,8 +53,6 @@
       <% end %>
     </div>
   </div>
-
-  <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
 
   <%= f.text_area :notes,
                   label: t("goals.form_stepper.step1.fields.notes"),
