@@ -34,11 +34,17 @@ export class RailsContainer extends Container {
 
   // Sleep after 30 minutes of inactivity to save resources
   sleepAfter = "30m";
+  enableInternet = true;
+
+  get runtimeContainer() {
+    return this.ctx.container!;
+  }
 
   async waitForManualStart(signal?: AbortSignal): Promise<void> {
-    this.container.start({
+    this.runtimeContainer.start({
       entrypoint: this.entrypoint,
       env: this.envVars,
+      enableInternet: this.enableInternet,
     });
 
     for (let attempt = 1; attempt <= START_RETRIES; attempt++) {
@@ -46,9 +52,9 @@ export class RailsContainer extends Container {
         throw new Error("Container request aborted.");
       }
 
-      if (this.container.running) {
+      if (this.runtimeContainer.running) {
         try {
-          const tcpPort = this.container.getTcpPort(this.defaultPort);
+          const tcpPort = this.runtimeContainer.getTcpPort(this.defaultPort);
           await tcpPort.fetch("http://localhost/", { signal });
           await this.ctx.storage.put(DIAGNOSTICS_KEY, {
             event: "manual-start-ready",
@@ -75,7 +81,7 @@ export class RailsContainer extends Container {
   }
 
   async proxyDirect(request: Request): Promise<Response> {
-    const tcpPort = this.container.getTcpPort(this.defaultPort);
+    const tcpPort = this.runtimeContainer.getTcpPort(this.defaultPort);
     const containerUrl = request.url.replace("https:", "http:");
     return tcpPort.fetch(containerUrl, request);
   }
@@ -100,7 +106,7 @@ export class RailsContainer extends Container {
     if (url.pathname === "/_container_status") {
       return Response.json({
         state: await this.getState(),
-        containerRunning: this.container.running,
+        containerRunning: this.runtimeContainer.running,
         diagnostics: (await this.ctx.storage.get(DIAGNOSTICS_KEY)) ?? null,
       });
     }
@@ -132,7 +138,7 @@ export class RailsContainer extends Container {
       }
     }
 
-    if (!this.container.running && state.status === "running") {
+    if (!this.runtimeContainer.running && state.status === "running") {
       await this.ctx.storage.put(DIAGNOSTICS_KEY, {
         event: "stale-state-detected",
         at: new Date().toISOString(),
