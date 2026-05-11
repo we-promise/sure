@@ -36,12 +36,26 @@ export default class extends Controller {
         attributeFilter: ["data-theme"],
       });
     }
+    // After a Turbo render (eg. after saving the goal from the edit modal
+    // and redirecting back to show), the chart container can be left empty
+    // — its children are wiped by the morph but connect() was already
+    // called and ResizeObserver doesn't fire because the size didn't
+    // change. Listen for the render event so we redraw when needed.
+    this._onTurboRender = () => {
+      if (!this.element.querySelector("svg")) this._draw();
+    };
+    document.addEventListener("turbo:render", this._onTurboRender);
+    document.addEventListener("turbo:frame-load", this._onTurboRender);
   }
 
   disconnect() {
     window.removeEventListener("resize", this._resize);
     this._observer?.disconnect();
     this._themeObserver?.disconnect();
+    if (this._onTurboRender) {
+      document.removeEventListener("turbo:render", this._onTurboRender);
+      document.removeEventListener("turbo:frame-load", this._onTurboRender);
+    }
   }
 
   _draw() {
