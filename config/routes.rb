@@ -252,7 +252,7 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
-  resources :savings_goals do
+  resources :goals do
     member do
       patch :pause
       patch :resume
@@ -261,7 +261,7 @@ Rails.application.routes.draw do
       patch :unarchive
     end
 
-    resources :contributions, only: %i[new create destroy], controller: "savings_contributions"
+    resources :contributions, only: %i[new create destroy], controller: "goal_contributions"
   end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do

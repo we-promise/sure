@@ -1,0 +1,292 @@
+<div class="space-y-4 pb-6 lg:pb-12">
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+    <div class="flex items-start gap-3 min-w-0 flex-1">
+      <%= render Goals::AvatarComponent.new(goal: @goal, size: "xl") %>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 mb-1 flex-wrap">
+          <h1 class="text-2xl font-semibold text-primary min-w-0 break-words"><%= @goal.name %></h1>
+          <%= render Goals::StatusPillComponent.new(goal: @goal) %>
+        </div>
+      <p class="text-sm text-secondary">
+        <%
+          primary_parts = []
+          if @goal.target_date
+            primary_parts << t(".header.target_by", amount: @goal.target_amount_money.format, date: I18n.l(@goal.target_date, format: :long))
+            unless @goal.completed? || @goal.status == :reached
+              days = (@goal.target_date - Date.current).to_i
+              if days > 0
+                primary_parts << t("goals.goal_card.days_left", count: days, date: I18n.l(@goal.target_date, format: :long)).split(" · ").first
+              end
+            end
+          else
+            primary_parts << t(".header.target", amount: @goal.target_amount_money.format)
+          end
+        %>
+        <%= primary_parts.join(" · ") %>
+      </p>
+      <% last_days = @goal.last_contribution_days_ago %>
+      <% unless last_days.nil? %>
+        <p class="text-xs text-subdued mt-0.5">
+          <%= last_days.zero? ? t("goals.goal_card.footer_last_today") : t("goals.goal_card.footer_last_days", count: last_days) %>
+        </p>
+      <% end %>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap sm:shrink-0">
+      <%= render DS::Link.new(
+        text: t(".edit"),
+        variant: "outline",
+        href: edit_goal_path(@goal),
+        icon: "pencil",
+        frame: :modal
+      ) %>
+      <% unless @goal.completed? || @goal.status == :reached %>
+        <%= render DS::Link.new(
+          text: t(".add_contribution"),
+          variant: "primary",
+          href: new_goal_contribution_path(@goal),
+          icon: "plus",
+          frame: :modal
+        ) %>
+      <% end %>
+      <%= render DS::Menu.new do |menu| %>
+        <% if @goal.may_pause? %>
+          <% menu.with_item(variant: "button", text: t(".pause"), icon: "pause", href: pause_goal_path(@goal), method: :patch) %>
+        <% end %>
+        <% if @goal.may_resume? %>
+          <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
+        <% end %>
+        <% if @goal.may_complete? %>
+          <% menu.with_item(variant: "button", text: t(".complete"), icon: "circle-check-big", href: complete_goal_path(@goal), method: :patch) %>
+        <% end %>
+        <% if @goal.may_archive? %>
+          <% menu.with_item(variant: "button", text: t(".archive"), icon: "archive", href: archive_goal_path(@goal), method: :patch) %>
+        <% end %>
+        <% if @goal.may_unarchive? %>
+          <% menu.with_item(variant: "button", text: t(".unarchive"), icon: "archive-restore", href: unarchive_goal_path(@goal), method: :patch) %>
+        <% end %>
+        <% if @goal.archived? %>
+          <% menu.with_item(
+               variant: "button",
+               text: t(".delete"),
+               icon: "trash-2",
+               href: goal_path(@goal),
+               method: :delete,
+               destructive: true,
+               confirm: CustomConfirm.for_resource_deletion(@goal.name, high_severity: true)
+             ) %>
+        <% end %>
+      <% end %>
+    </div>
+  </header>
+
+  <% if @goal.paused? %>
+    <%# Paused banner %>
+    <%= render DS::Alert.new(variant: "info", title: t("goals.show.paused_banner.title")) do %>
+      <p class="text-secondary"><%= t("goals.show.paused_banner.body") %></p>
+      <div class="mt-2">
+        <%= render DS::Button.new(
+          text: t("goals.show.paused_banner.resume_cta"),
+          href: resume_goal_path(@goal),
+          variant: "primary",
+          size: "sm",
+          method: :patch
+        ) %>
+      </div>
+    <% end %>
+  <% elsif @goal.archived? %>
+    <%# Archived banner %>
+    <%= render DS::Alert.new(variant: "info", title: t("goals.show.archived_banner.title")) do %>
+      <p class="text-secondary"><%= t("goals.show.archived_banner.body") %></p>
+      <% if @goal.may_unarchive? %>
+        <div class="mt-2">
+          <%= render DS::Button.new(
+            text: t("goals.show.archived_banner.restore_cta"),
+            href: unarchive_goal_path(@goal),
+            variant: "primary",
+            size: "sm",
+            method: :patch
+          ) %>
+        </div>
+      <% end %>
+    <% end %>
+  <% elsif @goal.status == :behind && @goal.monthly_target_amount %>
+    <%# Catch-up callout %>
+    <% catch_up_money = Money.new(@goal.monthly_target_amount, @goal.currency) %>
+    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: catch_up_money.format)) do %>
+      <p class="text-secondary">
+        <% if @goal.target_date %>
+          <%= t("goals.show.catch_up.body_with_date", date: I18n.l(@goal.target_date, format: :long)) %>
+        <% else %>
+          <%= t("goals.show.catch_up.body") %>
+        <% end %>
+      </p>
+      <div class="mt-2">
+        <%= render DS::Link.new(
+          text: t("goals.show.catch_up.cta", amount: catch_up_money.format),
+          variant: "primary",
+          size: "sm",
+          href: new_goal_contribution_path(@goal),
+          icon: "plus",
+          frame: :modal
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Top row: ring card + projection chart card %>
+  <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
+    <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+      <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
+      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format %></p>
+      <p class="text-xs text-subdued tabular-nums mt-0.5">
+        <%= t(".ring.of", target: @goal.target_amount_money.format) %>
+        <% unless @goal.completed? %>
+          · <%= t(".ring.to_go", amount: @goal.remaining_amount_money.format) %>
+        <% end %>
+      </p>
+    </div>
+
+    <% if @goal.archived? || @goal.paused? %>
+      <%# Paused / archived: pace + projection are misleading. Show a static recap card. %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
+          <%= icon(@goal.archived? ? "archive" : "pause", size: "2xl") %>
+        </div>
+        <h2 class="text-lg font-semibold text-primary">
+          <%= t(@goal.archived? ? ".inactive.heading_archived" : ".inactive.heading_paused") %>
+        </h2>
+        <p class="text-sm text-secondary mt-1 max-w-md tabular-nums">
+          <%= t(".inactive.body", saved: @goal.current_balance_money.format, target: @goal.target_amount_money.format) %>
+        </p>
+      </div>
+    <% elsif @goal.completed? || @goal.status == :reached %>
+      <%# Reached celebration card %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-green-500/10 inline-flex items-center justify-center text-success mb-3">
+          <%= icon("party-popper", size: "2xl", color: "success") %>
+        </div>
+        <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
+        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @goal.target_amount_money.format) %></p>
+        <% if @goal.may_archive? %>
+          <div class="mt-4">
+            <%= render DS::Button.new(
+              text: t(".celebration.archive_cta"),
+              href: archive_goal_path(@goal),
+              variant: "outline",
+              size: "sm",
+              method: :patch
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% elsif @goal.target_date.nil? %>
+      <%# No-target-date prompt %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
+          <%= icon("calendar-plus", size: "2xl") %>
+        </div>
+        <h2 class="text-lg font-semibold text-primary"><%= t(".no_target_date.heading") %></h2>
+        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".no_target_date.body") %></p>
+        <div class="mt-4">
+          <%= render DS::Link.new(
+            text: t(".no_target_date.cta"),
+            variant: "outline",
+            size: "sm",
+            href: edit_goal_path(@goal),
+            icon: "calendar-plus",
+            frame: :modal
+          ) %>
+        </div>
+      </div>
+    <% else %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+        <div class="flex items-start justify-between mb-2 gap-3">
+          <div class="min-w-0">
+            <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
+            <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
+          </div>
+          <% projection_color = @goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
+          <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
+            <span class="inline-flex items-center gap-1.5">
+              <svg width="18" height="6" class="text-primary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" /></svg>
+              <%= t(".projection.legend_saved") %>
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="<%= projection_color %>" stroke-width="2" stroke-dasharray="3 3" /></svg>
+              <%= t(".projection.legend_projection") %>
+            </span>
+          </div>
+        </div>
+        <div class="flex-1 min-h-[200px]"
+             data-controller="goal-projection-chart"
+             data-goal-projection-chart-data-value="<%= @goal.projection_payload.to_json %>"
+             data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: @goal.name) %>"
+             data-goal-projection-chart-aria-description-value="<%= strip_tags(@stats[:projection_summary]) %>"></div>
+      </div>
+    <% end %>
+  </section>
+
+  <%# Stat row — combo pace card + contributions count. Reached, paused,
+      or archived goals hide the pace combo since the comparison is moot
+      or misleading. %>
+  <% goal_reached = @goal.completed? || @goal.status == :reached %>
+  <% hide_pace = goal_reached || @goal.archived? || @goal.paused? %>
+  <section class="grid grid-cols-1 <%= hide_pace ? "" : "md:grid-cols-3" %> gap-3">
+    <% unless hide_pace %>
+      <%# Combo: Avg vs Target pace %>
+      <div class="md:col-span-2 bg-container rounded-xl shadow-border-xs px-5 py-4">
+        <p class="text-[11px] text-secondary mb-2"><%= t(".stats.monthly_pace") %></p>
+        <div class="flex items-baseline gap-2">
+          <p class="text-2xl font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @goal.currency).format %></p>
+          <p class="text-sm text-subdued tabular-nums">/mo</p>
+          <% if @goal.monthly_target_amount && @goal.monthly_target_amount.to_d.positive? %>
+            <p class="text-sm text-subdued tabular-nums">· <%= t(".stats.target_of", amount: Money.new(@goal.monthly_target_amount, @goal.currency).format) %></p>
+          <% end %>
+        </div>
+        <% if @goal.monthly_target_amount && @goal.monthly_target_amount.to_d.positive? %>
+          <% delta = @goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
+          <% if delta.positive? %>
+            <p class="text-xs text-subdued mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @goal.currency).format) %></p>
+          <% else %>
+            <p class="text-xs text-subdued mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
+          <% end %>
+        <% else %>
+          <p class="text-xs text-subdued mt-1"><%= t(".stats.no_required_pace") %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Total contributions %>
+    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.total_contributions") %></p>
+      <p class="text-lg font-medium text-primary tabular-nums"><%= @stats[:contributions_count] %></p>
+      <p class="text-[11px] text-subdued mt-1"><%= t(".stats.across_all_accounts") %></p>
+    </div>
+  </section>
+
+  <%# Bottom row: contributions + funding accounts %>
+  <section class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3">
+    <div class="bg-container rounded-xl shadow-border-xs p-5">
+      <div class="flex items-center mb-4">
+        <h2 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h2>
+        <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
+      </div>
+      <div class="max-h-[420px] overflow-y-auto overflow-x-hidden">
+        <%= render "contributions_list", contributions: @contributions %>
+      </div>
+    </div>
+
+    <div class="bg-container rounded-xl shadow-border-xs p-5">
+      <h2 class="text-sm font-medium text-primary mb-3"><%= t(".funding_accounts_heading") %></h2>
+      <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal, rows: @funding_breakdown) %>
+    </div>
+  </section>
+
+  <% if @goal.notes.present? %>
+    <section class="bg-container rounded-xl shadow-border-xs p-5">
+      <h2 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h2>
+      <p class="text-sm text-secondary whitespace-pre-line"><%= @goal.notes %></p>
+    </section>
+  <% end %>
+</div>

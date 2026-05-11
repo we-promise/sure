@@ -8,7 +8,7 @@ en:
         budgets: Budgets
         home: Home
         reports: Reports
-        savings_goals: Savings
+        goals: Goals
         transactions: Transactions
     auth:
       existing_account: Already have an account?

@@ -1,0 +1,43 @@
+<%# locals: (goal:) %>
+
+<% if goal.errors.any? %>
+  <%= render "shared/form_errors", model: goal %>
+<% end %>
+
+<%= styled_form_with model: goal,
+                     url: goal_path(goal),
+                     method: :patch,
+                     class: "space-y-3" do |f| %>
+  <%= f.text_field :name,
+                   label: t("goals.form_stepper.step1.fields.name"),
+                   required: true,
+                   autofocus: true %>
+
+  <%= f.money_field :target_amount,
+                    label: t("goals.form_stepper.step1.fields.target_amount"),
+                    required: true %>
+
+  <%= f.date_field :target_date,
+                   label: t("goals.form_stepper.step1.fields.target_date") %>
+
+  <div>
+    <span class="block text-sm text-secondary mb-2"><%= t("goals.form_stepper.step1.fields.color") %></span>
+    <div class="flex flex-wrap gap-2">
+      <% Goal::COLORS.each do |c| %>
+        <label class="relative">
+          <%= f.radio_button :color, c, class: "sr-only peer" %>
+          <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-gray-500"
+               style="background-color: <%= c %>"></div>
+        </label>
+      <% end %>
+    </div>
+  </div>
+
+  <%= f.text_area :notes,
+                  label: t("goals.form_stepper.step1.fields.notes"),
+                  rows: 2 %>
+
+  <div class="flex justify-end pt-2">
+    <%= f.submit t("goals.edit.save") %>
+  </div>
+<% end %>

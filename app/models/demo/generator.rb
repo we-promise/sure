@@ -103,8 +103,8 @@ class Demo::Generator
       # Auto-fill current-month budget based on recent spending averages
       generate_budget_auto_fill!(family)
 
-      puts "🎯 Seeding savings goals..."
-      generate_savings_goals!(family)
+      puts "🎯 Seeding goals..."
+      generate_goals!(family)
 
       puts "✅ Realistic demo data loaded successfully!"
     end
@@ -1278,7 +1278,7 @@ class Demo::Generator
       puts "   ✅ Set property and vehicle valuations"
     end
 
-    def generate_savings_goals!(family)
+    def generate_goals!(family)
       depository_accounts = family.accounts.where(accountable_type: "Depository").visible.to_a
       return if depository_accounts.empty?
 
@@ -1385,19 +1385,19 @@ class Demo::Generator
       ]
 
       goals.each do |goal_spec|
-        goal = family.savings_goals.new(
+        goal = family.goals.new(
           name: goal_spec[:name],
           target_amount: goal_spec[:target],
           target_date: goal_spec[:target_date],
           currency: currency,
-          color: SavingsGoal::COLORS.sample,
+          color: Goal::COLORS.sample,
           state: goal_spec[:state] || "active"
         )
-        goal_spec[:accounts].uniq.each { |a| goal.savings_goal_accounts.build(account: a) }
+        goal_spec[:accounts].uniq.each { |a| goal.goal_accounts.build(account: a) }
         goal.save!
 
         goal_spec[:contributions].each do |c|
-          goal.savings_contributions.create!(
+          goal.goal_contributions.create!(
             account: c[:account],
             amount: c[:amount],
             currency: currency,
@@ -1407,6 +1407,6 @@ class Demo::Generator
         end
       end
 
-      puts "   ✅ Seeded #{goals.size} savings goals"
+      puts "   ✅ Seeded #{goals.size} goals"
     end
 end

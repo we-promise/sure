@@ -42,14 +42,14 @@ class Family < ApplicationRecord
   has_many :budgets, dependent: :destroy
   has_many :budget_categories, through: :budgets
 
-  has_many :savings_goals, dependent: :destroy
-  has_many :savings_contributions, through: :savings_goals
+  has_many :goals, dependent: :destroy
+  has_many :goal_contributions, through: :goals
 
   # Sum of contribution amounts within the given date range, returned as
   # a BigDecimal in the family's primary currency. Powers the savings
   # goals "Contributed · last 30d" KPI.
   def contribution_velocity(range:)
-    savings_contributions.where(contributed_at: range).sum(:amount).to_d
+    goal_contributions.where(contributed_at: range).sum(:amount).to_d
   end
 
   has_many :llm_usages, dependent: :destroy

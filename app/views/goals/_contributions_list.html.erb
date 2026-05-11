@@ -1,0 +1,47 @@
+<%# locals: (contributions:) %>
+
+<% if contributions.empty? %>
+  <div class="px-5 py-8 text-center">
+    <p class="text-sm text-secondary"><%= t("goals.show.no_contributions_yet") %></p>
+  </div>
+<% else %>
+  <ul>
+    <% contributions.each do |contribution| %>
+      <li class="flex items-center gap-3 px-2 py-2 rounded-lg">
+        <%= render Goals::AvatarComponent.new(
+          name: contribution.account.name,
+          color: Goals::AvatarComponent.color_for(contribution.account.name),
+          size: "sm"
+        ) %>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-primary truncate"><%= contribution.account.name %></p>
+          <p class="text-[11px] text-subdued">
+            <%= I18n.l(contribution.contributed_at, format: :long) %> ·
+            <%= t("goals.show.source.#{contribution.source}") %>
+          </p>
+        </div>
+        <span class="text-sm font-medium text-success tabular-nums">+<%= contribution.amount_money.format %></span>
+        <% if contribution.manual? %>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t("goals.show.delete_contribution"),
+              icon: "trash-2",
+              destructive: true,
+              href: goal_contribution_path(@goal, contribution),
+              method: :delete,
+              confirm: CustomConfirm.new(
+                destructive: true,
+                title: t("goals.show.confirm_delete_contribution_title"),
+                body: t("goals.show.confirm_delete_contribution_body", amount: contribution.amount_money.format),
+                btn_text: t("goals.show.confirm_delete_contribution_cta")
+              )
+            ) %>
+          <% end %>
+        <% else %>
+          <span class="w-9 h-9"></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
