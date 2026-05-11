@@ -5,6 +5,12 @@ class Api::V1::BaseController < ApplicationController
 
   InvalidFilterError = Class.new(StandardError)
 
+  class << self
+    def valid_uuid?(value)
+      UuidFormat.valid?(value)
+    end
+  end
+
   # Skip regular session-based authentication for API
   skip_authentication
 
@@ -217,7 +223,7 @@ class Api::V1::BaseController < ApplicationController
     end
 
     def valid_uuid?(value)
-      UuidFormat.valid?(value)
+      self.class.valid_uuid?(value)
     end
 
     def safe_page_param
