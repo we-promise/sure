@@ -1,0 +1,16 @@
+---
+en:
+  savings_contributions:
+    new:
+      heading: Add contribution
+      amount: Amount
+      source_account: From account
+      select_account: Select an account
+      contributed_at: Date
+      notes: Notes (optional)
+      submit: Save contribution
+    create:
+      success: Contribution saved.
+    destroy:
+      success: Contribution deleted.
+      initial_not_deletable: The initial contribution can't be deleted.

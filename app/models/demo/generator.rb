@@ -103,6 +103,9 @@ class Demo::Generator
       # Auto-fill current-month budget based on recent spending averages
       generate_budget_auto_fill!(family)
 
+      puts "🎯 Seeding savings goals..."
+      generate_savings_goals!(family)
+
       puts "✅ Realistic demo data loaded successfully!"
     end
   end
@@ -1273,5 +1276,85 @@ class Demo::Generator
       )
 
       puts "   ✅ Set property and vehicle valuations"
+    end
+
+    def generate_savings_goals!(family)
+      depository_accounts = family.accounts.depository.visible.to_a
+      return if depository_accounts.empty?
+
+      currency = depository_accounts.first.currency
+      eligible = depository_accounts.select { |a| a.currency == currency }
+      primary = eligible.first
+      secondary = eligible[1] || primary
+
+      goals = [
+        {
+          name: "Vacation in Italy",
+          target: 5_000,
+          target_date: 4.months.from_now.to_date,
+          accounts: eligible.first(2),
+          contributions: [
+            { amount: 500, source: "initial", days_ago: 90, account: primary },
+            { amount: 250, source: "manual", days_ago: 60, account: primary },
+            { amount: 250, source: "manual", days_ago: 30, account: secondary }
+          ]
+        },
+        {
+          name: "Emergency fund",
+          target: 10_000,
+          target_date: nil,
+          accounts: [ primary ],
+          contributions: [
+            { amount: 1_000, source: "initial", days_ago: 180, account: primary }
+          ]
+        },
+        {
+          name: "House downpayment",
+          target: 50_000,
+          target_date: 24.months.from_now.to_date,
+          accounts: eligible.first(2),
+          contributions: [
+            { amount: 5_000, source: "initial", days_ago: 365, account: primary }
+          ]
+        },
+        {
+          name: "Paid-off car",
+          target: 8_000,
+          target_date: 6.months.ago.to_date,
+          state: "completed",
+          accounts: [ primary ],
+          contributions: [
+            { amount: 2_000, source: "initial", days_ago: 730, account: primary },
+            { amount: 2_000, source: "manual", days_ago: 600, account: primary },
+            { amount: 2_000, source: "manual", days_ago: 450, account: primary },
+            { amount: 2_000, source: "manual", days_ago: 300, account: primary }
+          ]
+        }
+      ]
+
+      goals.each do |goal_spec|
+        goal = family.savings_goals.new(
+          name: goal_spec[:name],
+          target_amount: goal_spec[:target],
+          target_date: goal_spec[:target_date],
+          currency: currency,
+          color: SavingsGoal::COLORS.sample,
+          state: goal_spec[:state] || "active"
+        )
+        goal_spec[:accounts].uniq.each { |a| goal.savings_goal_accounts.build(account: a) }
+        goal.save!
+
+        goal_spec[:contributions].each do |c|
+          goal.savings_contributions.create!(
+            account: c[:account],
+            amount: c[:amount],
+            currency: currency,
+            source: c[:source],
+            contributed_at: c[:days_ago].days.ago.to_date
+          )
+        end
+      end
+
+      puts "   ✅ Seeded #{goals.size} savings goals"
     end
 end

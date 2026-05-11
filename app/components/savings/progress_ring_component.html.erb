@@ -1,0 +1,27 @@
+<div class="relative inline-flex items-center justify-center" style="width: <%= Savings::ProgressRingComponent::SIZE %>px; height: <%= Savings::ProgressRingComponent::SIZE %>px;">
+  <svg width="<%= Savings::ProgressRingComponent::SIZE %>"
+       height="<%= Savings::ProgressRingComponent::SIZE %>"
+       viewBox="0 0 <%= Savings::ProgressRingComponent::SIZE %> <%= Savings::ProgressRingComponent::SIZE %>">
+    <circle cx="<%= Savings::ProgressRingComponent::SIZE / 2.0 %>"
+            cy="<%= Savings::ProgressRingComponent::SIZE / 2.0 %>"
+            r="<%= Savings::ProgressRingComponent::RADIUS %>"
+            fill="none"
+            stroke="var(--color-gray-200)"
+            stroke-width="<%= Savings::ProgressRingComponent::STROKE %>" />
+    <circle cx="<%= Savings::ProgressRingComponent::SIZE / 2.0 %>"
+            cy="<%= Savings::ProgressRingComponent::SIZE / 2.0 %>"
+            r="<%= Savings::ProgressRingComponent::RADIUS %>"
+            fill="none"
+            stroke="<%= stroke_color %>"
+            stroke-width="<%= Savings::ProgressRingComponent::STROKE %>"
+            stroke-linecap="round"
+            stroke-dasharray="<%= Savings::ProgressRingComponent::CIRCUMFERENCE %>"
+            stroke-dashoffset="<%= offset %>"
+            transform="rotate(-90 <%= Savings::ProgressRingComponent::SIZE / 2.0 %> <%= Savings::ProgressRingComponent::SIZE / 2.0 %>)" />
+  </svg>
+  <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+    <span class="text-2xl font-semibold text-primary tabular-nums"><%= percent %>%</span>
+    <span class="text-xs text-secondary tabular-nums mt-1"><%= current_label %></span>
+    <span class="text-xs text-secondary tabular-nums">of <%= target_label %></span>
+  </div>
+</div>

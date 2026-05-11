@@ -1,0 +1,33 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".heading")) %>
+  <% dialog.with_body do %>
+    <% if @contribution.errors.any? %>
+      <%= render "shared/form_errors", model: @contribution %>
+    <% end %>
+
+    <%= styled_form_with model: @contribution,
+                         url: savings_goal_contributions_path(@savings_goal),
+                         class: "space-y-3" do |f| %>
+      <%= f.money_field :amount,
+                        label: t(".amount"),
+                        required: true,
+                        autofocus: true %>
+
+      <%= label_tag "savings_contribution[account_id]", t(".source_account"), class: "block text-sm text-secondary" %>
+      <%= select_tag "savings_contribution[account_id]",
+                     options_from_collection_for_select(@savings_goal.linked_accounts, :id, :name),
+                     class: "w-full",
+                     include_blank: t(".select_account") %>
+
+      <%= f.date_field :contributed_at,
+                       label: t(".contributed_at"),
+                       required: true %>
+
+      <%= f.text_area :notes, label: t(".notes"), rows: 2 %>
+
+      <div class="flex justify-end pt-2">
+        <%= f.submit t(".submit") %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

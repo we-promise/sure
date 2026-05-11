@@ -1,0 +1,139 @@
+<%= content_for :page_title, @savings_goal.name %>
+<%= content_for :page_actions do %>
+  <%= render DS::Menu.new do |menu| %>
+    <% menu.with_item(
+         variant: "link",
+         text: t(".edit"),
+         icon: "pencil",
+         href: edit_savings_goal_path(@savings_goal),
+         data: { turbo_frame: :modal }
+       ) %>
+    <% if @savings_goal.may_pause? %>
+      <% menu.with_item(
+           variant: "button",
+           text: t(".pause"),
+           icon: "pause",
+           href: pause_savings_goal_path(@savings_goal),
+           method: :patch
+         ) %>
+    <% end %>
+    <% if @savings_goal.may_resume? %>
+      <% menu.with_item(
+           variant: "button",
+           text: t(".resume"),
+           icon: "play",
+           href: resume_savings_goal_path(@savings_goal),
+           method: :patch
+         ) %>
+    <% end %>
+    <% if @savings_goal.may_complete? %>
+      <% menu.with_item(
+           variant: "button",
+           text: t(".complete"),
+           icon: "circle-check-big",
+           href: complete_savings_goal_path(@savings_goal),
+           method: :patch
+         ) %>
+    <% end %>
+    <% if @savings_goal.may_archive? %>
+      <% menu.with_item(
+           variant: "button",
+           text: t(".archive"),
+           icon: "archive",
+           href: archive_savings_goal_path(@savings_goal),
+           method: :patch
+         ) %>
+    <% end %>
+    <% if @savings_goal.may_unarchive? %>
+      <% menu.with_item(
+           variant: "button",
+           text: t(".unarchive"),
+           icon: "archive-restore",
+           href: unarchive_savings_goal_path(@savings_goal),
+           method: :patch
+         ) %>
+    <% end %>
+    <% if @savings_goal.archived? %>
+      <% menu.with_item(
+           variant: "button",
+           text: t(".delete"),
+           icon: "trash-2",
+           href: savings_goal_path(@savings_goal),
+           method: :delete,
+           destructive: true,
+           confirm: CustomConfirm.for_resource_deletion(@savings_goal.name, high_severity: true)
+         ) %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="space-y-4">
+  <section class="bg-container rounded-xl shadow-border-xs p-6">
+    <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+      <div>
+        <%= render Savings::ProgressRingComponent.new(goal: @savings_goal) %>
+      </div>
+
+      <div class="flex-1 space-y-3 min-w-0">
+        <div class="flex items-center gap-2">
+          <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "lg") %>
+          <div class="min-w-0">
+            <h1 class="text-lg font-semibold text-primary truncate"><%= @savings_goal.name %></h1>
+            <p class="text-xs text-secondary"><%= t("savings_goals.states.#{@savings_goal.state}") %></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+          <div>
+            <p class="text-xs text-secondary"><%= t(".stats.current") %></p>
+            <p class="text-primary tabular-nums"><%= @savings_goal.current_balance_money.format %></p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t(".stats.target") %></p>
+            <p class="text-primary tabular-nums"><%= @savings_goal.target_amount_money.format %></p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t(".stats.remaining") %></p>
+            <p class="text-primary tabular-nums"><%= @savings_goal.remaining_amount_money.format %></p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t(".stats.target_date") %></p>
+            <p class="text-primary"><%= @savings_goal.target_date ? I18n.l(@savings_goal.target_date, format: :long) : t(".stats.no_target_date") %></p>
+          </div>
+          <% if @savings_goal.monthly_target_amount %>
+            <div>
+              <p class="text-xs text-secondary"><%= t(".stats.monthly_target") %></p>
+              <p class="text-primary tabular-nums"><%= Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format %></p>
+            </div>
+          <% end %>
+          <div>
+            <p class="text-xs text-secondary"><%= t(".stats.status") %></p>
+            <%= render Savings::StatusPillComponent.new(goal: @savings_goal) %>
+          </div>
+        </div>
+
+        <% if @savings_goal.notes.present? %>
+          <p class="text-sm text-secondary"><%= simple_format(@savings_goal.notes) %></p>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <%= render Savings::FundingAccountsBreakdownComponent.new(goal: @savings_goal, rows: @funding_breakdown) %>
+
+  <section class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
+      <%= render DS::Link.new(
+        text: t(".add_contribution"),
+        variant: "primary",
+        size: "sm",
+        href: new_savings_goal_contribution_path(@savings_goal),
+        icon: "plus",
+        frame: :modal
+      ) %>
+    </div>
+
+    <%= render "contributions_list", contributions: @contributions %>
+  </section>
+</div>

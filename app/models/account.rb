@@ -20,6 +20,9 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :savings_goal_accounts, dependent: :destroy
+  has_many :savings_goals, through: :savings_goal_accounts
+  has_many :savings_contributions, dependent: :destroy
 
   monetize :balance, :cash_balance
 

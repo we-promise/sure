@@ -1,0 +1,25 @@
+<section class="bg-container rounded-xl shadow-border-xs p-4">
+  <h3 class="text-sm font-medium text-primary mb-3"><%= t("savings_goals.show.funding_accounts_heading") %></h3>
+
+  <% if total.zero? %>
+    <p class="text-sm text-secondary"><%= t("savings_goals.show.no_contributions_yet") %></p>
+  <% else %>
+    <div class="space-y-3">
+      <% rows.each do |row| %>
+        <div class="flex items-center gap-3">
+          <%= render Savings::GoalAvatarComponent.new(name: row[:account].name, color: goal.color, size: "sm") %>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <span class="text-primary truncate"><%= row[:account].name %></span>
+              <span class="text-secondary tabular-nums"><%= row[:money].format %></span>
+            </div>
+            <div class="mt-1 h-1.5 w-full rounded-full bg-container-inset overflow-hidden">
+              <div class="h-full bg-blue-500" style="width: <%= percent_for(row[:amount]) %>%"></div>
+            </div>
+          </div>
+          <span class="text-xs text-secondary tabular-nums w-10 text-right"><%= percent_for(row[:amount]) %>%</span>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</section>

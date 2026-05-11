@@ -1,0 +1,28 @@
+<%= link_to savings_goal_path(goal), class: "block bg-container rounded-xl shadow-border-xs hover:shadow-border-sm p-4 transition-shadow" do %>
+  <div class="flex items-start gap-3">
+    <%= render Savings::GoalAvatarComponent.new(goal: goal, size: "md") %>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-sm font-medium text-primary truncate"><%= goal.name %></p>
+        <%= render Savings::StatusPillComponent.new(goal: goal) %>
+      </div>
+      <p class="text-xs text-secondary truncate mt-0.5"><%= linked_accounts_label %></p>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <div class="flex items-center justify-between gap-2 text-xs tabular-nums">
+      <span class="text-secondary"><%= goal.current_balance_money.format %></span>
+      <span class="text-secondary">/ <%= goal.target_amount_money.format %></span>
+    </div>
+    <div class="mt-2 h-2 w-full rounded-full bg-container-inset overflow-hidden">
+      <div class="h-full <%= bar_color_class %>" style="width: <%= progress_percent %>%"></div>
+    </div>
+    <div class="mt-1 flex items-center justify-between text-xs text-secondary tabular-nums">
+      <span><%= progress_percent %>%</span>
+      <% if goal.target_date %>
+        <span><%= I18n.l(goal.target_date, format: :long) %></span>
+      <% end %>
+    </div>
+  </div>
+<% end %>

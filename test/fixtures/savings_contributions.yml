@@ -1,0 +1,23 @@
+vacation_italy_initial:
+  savings_goal: vacation_italy
+  account: depository
+  amount: 500
+  currency: USD
+  source: initial
+  contributed_at: <%= 90.days.ago.to_date %>
+
+vacation_italy_manual:
+  savings_goal: vacation_italy
+  account: connected
+  amount: 250
+  currency: USD
+  source: manual
+  contributed_at: <%= 30.days.ago.to_date %>
+
+emergency_fund_initial:
+  savings_goal: emergency_fund
+  account: depository
+  amount: 1000
+  currency: USD
+  source: initial
+  contributed_at: <%= 180.days.ago.to_date %>

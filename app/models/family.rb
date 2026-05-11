@@ -42,6 +42,9 @@ class Family < ApplicationRecord
   has_many :budgets, dependent: :destroy
   has_many :budget_categories, through: :budgets
 
+  has_many :savings_goals, dependent: :destroy
+  has_many :savings_contributions, through: :savings_goals
+
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
 

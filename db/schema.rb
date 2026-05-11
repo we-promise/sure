@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_11_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1224,6 +1224,51 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
+  create_table "savings_contributions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "savings_goal_id", null: false
+    t.uuid "account_id", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.string "source", default: "manual", null: false
+    t.date "contributed_at", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_savings_contributions_on_account_id"
+    t.index ["savings_goal_id", "contributed_at"], name: "idx_on_savings_goal_id_contributed_at_da0bf9e1fc"
+    t.index ["savings_goal_id"], name: "index_savings_contributions_on_savings_goal_id"
+    t.check_constraint "amount > 0::numeric", name: "chk_savings_contributions_amount_positive"
+    t.check_constraint "source::text = ANY (ARRAY['manual'::character varying, 'initial'::character varying]::text[])", name: "chk_savings_contributions_source_enum"
+  end
+
+  create_table "savings_goal_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "savings_goal_id", null: false
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_savings_goal_accounts_on_account_id"
+    t.index ["savings_goal_id", "account_id"], name: "index_savings_goal_accounts_on_goal_and_account", unique: true
+    t.index ["savings_goal_id"], name: "index_savings_goal_accounts_on_savings_goal_id"
+  end
+
+  create_table "savings_goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.decimal "target_amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.date "target_date"
+    t.string "color"
+    t.text "notes"
+    t.string "state", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "state"], name: "index_savings_goals_on_family_id_and_state"
+    t.index ["family_id"], name: "index_savings_goals_on_family_id"
+    t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
+    t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
+    t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+  end
+
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ticker", null: false
     t.string "name"
@@ -1249,7 +1294,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1408,8 +1453,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.datetime "updated_at", null: false
     t.boolean "manual_sync", default: false, null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1664,9 +1709,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
@@ -1741,6 +1786,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
+  add_foreign_key "savings_contributions", "accounts", on_delete: :cascade
+  add_foreign_key "savings_contributions", "savings_goals", on_delete: :cascade
+  add_foreign_key "savings_goal_accounts", "accounts", on_delete: :cascade
+  add_foreign_key "savings_goal_accounts", "savings_goals", on_delete: :cascade
+  add_foreign_key "savings_goals", "families", on_delete: :cascade
   add_foreign_key "security_prices", "securities"
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
   add_foreign_key "sessions", "users"

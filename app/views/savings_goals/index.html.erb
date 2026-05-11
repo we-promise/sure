@@ -1,0 +1,43 @@
+<%= content_for :page_title, t(".title") %>
+<%= content_for :page_actions do %>
+  <% if @linkable_account_count > 0 %>
+    <%= render DS::Link.new(
+      text: t(".new_goal"),
+      variant: "primary",
+      href: new_savings_goal_path,
+      icon: "plus",
+      frame: :modal
+    ) %>
+  <% end %>
+<% end %>
+
+<% if @savings_goals.empty? && @counts["all"].zero? %>
+  <%= render "empty_state", linkable_account_count: @linkable_account_count %>
+<% else %>
+  <div class="space-y-4">
+    <nav class="flex items-center gap-1 overflow-x-auto" role="tablist">
+      <% SavingsGoalsController::STATE_FILTERS.each do |state| %>
+        <% active = state == @state_filter %>
+        <%= link_to savings_goals_path(state: state),
+                    role: "tab",
+                    "aria-selected": active,
+                    class: "inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium #{active ? 'bg-container shadow-border-xs text-primary' : 'text-secondary hover:text-primary'}" do %>
+          <span><%= t(".tabs.#{state}") %></span>
+          <span class="text-xs text-subdued tabular-nums"><%= @counts[state] %></span>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <% if @savings_goals.any? %>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <% @savings_goals.each do |goal| %>
+          <%= render Savings::GoalCardComponent.new(goal: goal) %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-container rounded-xl shadow-border-xs py-12 text-center">
+        <p class="text-sm text-secondary"><%= t(".empty_filtered", state: t(".tabs.#{@state_filter}").downcase) %></p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

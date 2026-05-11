@@ -1,0 +1,107 @@
+---
+en:
+  savings_goals:
+    index:
+      title: Savings goals
+      new_goal: New goal
+      empty_filtered: No %{state} goals.
+      tabs:
+        all: All
+        active: Active
+        paused: Paused
+        completed: Completed
+        archived: Archived
+    new:
+      heading: New savings goal
+    edit:
+      heading: Edit savings goal
+      save: Save changes
+    create:
+      success: Savings goal created.
+    update:
+      success: Savings goal updated.
+    destroy:
+      success: Savings goal deleted.
+      archive_first: Archive the goal before deleting it.
+    pause:
+      success: Goal paused.
+      invalid_transition: Goal can't be paused from its current state.
+    resume:
+      success: Goal resumed.
+      invalid_transition: Goal can't be resumed from its current state.
+    complete:
+      success: Goal marked complete.
+      invalid_transition: Goal can't be completed from its current state.
+    archive:
+      success: Goal archived.
+      invalid_transition: Goal can't be archived from its current state.
+    unarchive:
+      success: Goal restored.
+      invalid_transition: Goal can't be restored from its current state.
+    show:
+      edit: Edit
+      pause: Pause
+      resume: Resume
+      complete: Mark complete
+      archive: Archive
+      unarchive: Restore
+      delete: Delete permanently
+      contributions_heading: Contributions
+      add_contribution: Add contribution
+      funding_accounts_heading: Funding accounts
+      no_contributions_yet: No contributions yet.
+      confirm_delete_contribution: Delete this contribution?
+      source:
+        initial: Initial
+        manual: Manual
+      stats:
+        current: Current
+        target: Target
+        remaining: Remaining
+        target_date: Target date
+        no_target_date: No target date
+        monthly_target: Per month
+        status: Status
+    states:
+      active: Active
+      paused: Paused
+      completed: Completed
+      archived: Archived
+    status:
+      on_track: On track
+      behind: Behind
+      reached: Reached
+      no_target_date: No date
+    empty_state:
+      heading: No savings goals yet
+      subtitle: Set a target and start saving toward it.
+      new_goal: Create your first goal
+      no_depository_accounts: You need at least one Depository account (checking, savings, HSA, CD, money-market) before creating a goal.
+      add_account: Add an account
+    goal_card:
+      no_accounts: No linked accounts
+      n_accounts: "%{first} +%{count}"
+    form_stepper:
+      continue: Continue
+      back: Back
+      submit: Create goal
+      step1:
+        heading: Identity
+        fields:
+          name: Name
+          target_amount: Target amount
+          target_date: Target date (optional)
+          color: Color
+          notes: Notes (optional)
+      step2:
+        heading: Review
+        linked_accounts_heading: Linked accounts
+        linked_accounts_hint: Pick at least one Depository account that funds this goal.
+        add_initial_contribution: Add an initial contribution (optional)
+        initial_amount: Amount
+        initial_account: From account
+        select_account: Select an account
+        review_heading: Review
+        review_target: Target
+        review_date: Date
+        review_accounts: Accounts

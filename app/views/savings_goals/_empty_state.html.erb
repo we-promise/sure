@@ -1,0 +1,29 @@
+<%# locals: (linkable_account_count:) %>
+
+<div class="bg-container rounded-xl shadow-border-xs py-16">
+  <div class="flex flex-col items-center text-center max-w-md mx-auto">
+    <div class="w-12 h-12 rounded-full bg-container-inset flex items-center justify-center mb-3">
+      <%= icon("piggy-bank", size: "lg") %>
+    </div>
+    <h2 class="text-base font-medium text-primary mb-1"><%= t("savings_goals.empty_state.heading") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t("savings_goals.empty_state.subtitle") %></p>
+
+    <% if linkable_account_count > 0 %>
+      <%= render DS::Link.new(
+        text: t("savings_goals.empty_state.new_goal"),
+        variant: "primary",
+        href: new_savings_goal_path,
+        icon: "plus",
+        frame: :modal
+      ) %>
+    <% else %>
+      <p class="text-sm text-secondary mb-3"><%= t("savings_goals.empty_state.no_depository_accounts") %></p>
+      <%= render DS::Link.new(
+        text: t("savings_goals.empty_state.add_account"),
+        variant: "primary",
+        href: new_account_path,
+        icon: "plus"
+      ) %>
+    <% end %>
+  </div>
+</div>
