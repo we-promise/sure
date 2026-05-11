@@ -51,12 +51,7 @@ export default class extends Controller {
 
   footerLeft(event) {
     event.preventDefault();
-    if (this.currentStep === 1) {
-      const dialog = this.element.closest("dialog");
-      if (dialog) dialog.close();
-    } else {
-      this.back();
-    }
+    this.back();
   }
 
   footerRight(event) {
@@ -194,11 +189,13 @@ export default class extends Controller {
     if (this.hasStep2CircleTarget) {
       this.step2CircleTarget.classList.toggle("bg-inverse", this.currentStep === 2);
       this.step2CircleTarget.classList.toggle("text-inverse", this.currentStep === 2);
-      this.step2CircleTarget.classList.toggle("bg-container-inset", this.currentStep < 2);
+      this.step2CircleTarget.classList.toggle("border", this.currentStep < 2);
+      this.step2CircleTarget.classList.toggle("border-secondary", this.currentStep < 2);
       this.step2CircleTarget.classList.toggle("text-secondary", this.currentStep < 2);
     }
     if (this.hasStepperLineTarget) {
       this.stepperLineTarget.classList.toggle("bg-inverse", this.currentStep > 1);
+      this.stepperLineTarget.classList.toggle("bg-secondary", this.currentStep === 1);
     }
     // Modal subtitle lives in the dialog header, outside this controller's
     // DOM scope. Locate it by attribute and update directly.
@@ -211,11 +208,7 @@ export default class extends Controller {
 
   updateFooter() {
     if (this.hasFooterLeftButtonTarget) {
-      const labelSpan = this.footerLeftButtonTarget.querySelector("span");
-      if (labelSpan) {
-        labelSpan.textContent =
-          this.currentStep === 1 ? this.cancelLabelValue : this.backLabelValue;
-      }
+      this.footerLeftButtonTarget.classList.toggle("hidden", this.currentStep === 1);
     }
     if (this.hasFooterRightButtonTarget) {
       const labelSpan = this.footerRightButtonTarget.querySelector("span");
