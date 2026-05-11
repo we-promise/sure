@@ -128,11 +128,13 @@ export default class extends Controller {
     gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.22);
     gradient.append("stop").attr("offset", "100%").attr("stop-color", textPrimary).attr("stop-opacity", 0);
 
+    const COLLISION_PX = 18;
+    const targetY = targetAmount > 0 ? y(targetAmount) : null;
+    const yTicks = yAxisVisible ? y.ticks(3) : [];
+    const targetCollidesWithTick =
+      targetY !== null && yTicks.some((tv) => Math.abs(y(tv) - targetY) < COLLISION_PX);
+
     if (yAxisVisible) {
-      const yTicks = y.ticks(3);
-      // Suppress the tick label that visually collides with the target
-      // line label (within ~5% of the y range). Keep the gridline.
-      const labelCollisionThreshold = yMax * 0.05;
       yTicks.forEach((tickValue) => {
         svg
           .append("line")
@@ -142,8 +144,9 @@ export default class extends Controller {
           .attr("y2", y(tickValue))
           .attr("stroke", borderSubdued)
           .attr("stroke-width", 1);
-        const collidesWithTarget = targetAmount > 0 && Math.abs(tickValue - targetAmount) < labelCollisionThreshold;
-        if (collidesWithTarget) return;
+        // Skip the y-axis label when its row is close to the target line.
+        // The target's own label will take over that y-slot below.
+        if (targetY !== null && Math.abs(y(tickValue) - targetY) < COLLISION_PX) return;
         svg
           .append("text")
           .attr("x", margin.left - 6)
@@ -166,14 +169,29 @@ export default class extends Controller {
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "3 3");
 
-      svg
-        .append("text")
-        .attr("x", margin.left + innerWidth - 4)
-        .attr("y", y(targetAmount) - 6)
-        .attr("text-anchor", "end")
-        .attr("font-size", 10)
-        .attr("fill", textPrimary)
-        .text(`Target · ${this._fmtMoney(targetAmount, data.currency)}`);
+      if (targetCollidesWithTick) {
+        // Merge target label into the y-axis column at the target's y-row.
+        // The collided y-axis tick was suppressed above so this label takes
+        // over that slot cleanly.
+        svg
+          .append("text")
+          .attr("x", margin.left - 6)
+          .attr("y", targetY + 3)
+          .attr("text-anchor", "end")
+          .attr("font-size", 10)
+          .attr("fill", textPrimary)
+          .text(`Target · ${this._fmtMoneyShort(targetAmount, data.currency)}`);
+      } else {
+        // Plenty of room — keep the right-side full-format label.
+        svg
+          .append("text")
+          .attr("x", margin.left + innerWidth - 4)
+          .attr("y", targetY - 6)
+          .attr("text-anchor", "end")
+          .attr("font-size", 10)
+          .attr("fill", textPrimary)
+          .text(`Target · ${this._fmtMoney(targetAmount, data.currency)}`);
+      }
     }
 
     const area = d3
@@ -227,7 +245,14 @@ export default class extends Controller {
         .attr("stroke", containerBg)
         .attr("stroke-width", 2);
 
-      if (innerWidth >= 320) {
+      // Suppress the projection-end label when it would visually collide
+      // with the target label above. In a barely-on-track case the dot
+      // already conveys "you'll hit the target" — duplicating "$2.4K"
+      // beside "Target · $2,400" adds noise.
+      const projDotY = y(projectionEnd);
+      const collidesWithTargetLabel = targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
+
+      if (innerWidth >= 320 && !(willHit && collidesWithTargetLabel)) {
         const labelText = willHit
           ? this._fmtMoneyShort(projectionEnd, data.currency)
           : `Short ${this._fmtMoneyShort(targetAmount - projectionEnd, data.currency)}`;
