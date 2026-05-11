@@ -45,8 +45,6 @@ pl:
       configure: Skonfiguruj
       update_configuration: Skonfiguruj ponownie
       default_name: Połączenie CoinStats
-      status_configured_html: Gotowe do użycia
-      status_not_configured: Nieskonfigurowane
     coinstats_item:
       deletion_in_progress: Trwa usuwanie danych portfela kryptowalutowego…
       provider_name: CoinStats

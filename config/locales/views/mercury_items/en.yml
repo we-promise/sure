@@ -44,11 +44,9 @@ en:
       total: Total
       unlinked: Unlinked
     provider_panel:
-      accounts_link: Accounts
       add_connection: Add Mercury connection
       base_url_label: Base URL (optional)
       base_url_placeholder: https://api.mercury.com/api/v1 (default)
-      configured_html: "Configured and ready to use. Visit the %{accounts_link} tab to manage and set up accounts."
       connection_name_label: Connection name
       connection_name_placeholder: Business checking
       default_connection_name: Mercury Connection
@@ -60,7 +58,6 @@ en:
         sign_in_html: "Visit %{link} and log in to the account you want to connect"
         whitelist_ip_html: "<strong>Important:</strong> Add your server's IP address to the token's whitelist"
       keep_token_placeholder: Leave blank to keep the current token
-      not_configured: Not configured
       sandbox_note_html: "Use a separate named connection for each Mercury login/API token you want to sync. For sandbox testing, use <code>https://api-sandbox.mercury.com/api/v1</code> as the Base URL. Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard."
       setup_accounts: Set up accounts
       setup_title: "Setup instructions:"

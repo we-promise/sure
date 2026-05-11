@@ -55,8 +55,6 @@ hu:
       configure: Konfigurálás
       update_configuration: Újrakonfigurálás
       default_name: CoinStats kapcsolat
-      status_configured_html: Használatra kész
-      status_not_configured: Nincs beállítva
     coinstats_item:
       deletion_in_progress: A kriptó pénztárca adatai törlés alatt…
       provider_name: CoinStats
