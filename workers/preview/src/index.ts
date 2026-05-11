@@ -5,8 +5,10 @@ interface Env {
 }
 
 const DIAGNOSTICS_KEY = "preview-diagnostics";
-const START_RETRIES = 30;
+const START_RETRIES = 90;
 const START_DELAY_MS = 1000;
+const PORT_READY_TIMEOUT_MS = 120000;
+const INSTANCE_GET_TIMEOUT_MS = 30000;
 
 export class RailsContainer extends Container {
   // Rails runs on port 3000
@@ -78,6 +80,20 @@ export class RailsContainer extends Container {
     return tcpPort.fetch(containerUrl, request);
   }
 
+  async startWithExtendedWait(signal?: AbortSignal): Promise<void> {
+    await this.startAndWaitForPorts({
+      startOptions: {
+        entrypoint: this.entrypoint,
+        envVars: this.envVars,
+      },
+      cancellationOptions: {
+        abort: signal,
+        portReadyTimeoutMS: PORT_READY_TIMEOUT_MS,
+        instanceGetTimeoutMS: INSTANCE_GET_TIMEOUT_MS,
+      },
+    });
+  }
+
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
@@ -101,6 +117,20 @@ export class RailsContainer extends Container {
     }
 
     const state = await this.getState();
+
+    if (state.status !== "healthy") {
+      try {
+        await this.startWithExtendedWait(request.signal);
+        return await this.proxyDirect(request);
+      } catch (error) {
+        await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+          event: "extended-start-error",
+          at: new Date().toISOString(),
+          message: error instanceof Error ? error.message : String(error),
+          state: await this.getState(),
+        });
+      }
+    }
 
     if (!this.container.running && state.status === "running") {
       await this.ctx.storage.put(DIAGNOSTICS_KEY, {
