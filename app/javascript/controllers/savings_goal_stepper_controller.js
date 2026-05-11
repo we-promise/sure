@@ -124,7 +124,7 @@ export default class extends Controller {
     }
 
     const amountInput = this.hasAmountInputTarget ? this.amountInputTarget : null;
-    const amountValue = amountInput ? parseFloat(amountInput.value) : NaN;
+    const amountValue = amountInput ? Number.parseFloat(amountInput.value) : Number.NaN;
     if (amountInput && (!Number.isFinite(amountValue) || amountValue <= 0)) {
       this.showFieldError(amountInput, this.hasAmountErrorTarget ? this.amountErrorTarget : null);
       firstInvalid ||= amountInput;
@@ -234,7 +234,7 @@ export default class extends Controller {
 
     const name = this.element.querySelector('input[name="savings_goal[name]"]')?.value || "—";
     const amountInput = this.element.querySelector('input[name="savings_goal[target_amount]"]');
-    const amount = amountInput?.value ? parseFloat(amountInput.value) : 0;
+    const amount = amountInput?.value ? Number.parseFloat(amountInput.value) : 0;
     const dateInput = this.element.querySelector('input[type="date"][name="savings_goal[target_date]"]');
     const dateValue = dateInput?.value;
 
@@ -251,7 +251,7 @@ export default class extends Controller {
     if (this.hasReviewAccountsTarget) {
       const checked = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked);
       const total = checked.reduce(
-        (sum, cb) => sum + parseFloat(cb.dataset.accountBalance || 0),
+        (sum, cb) => sum + Number.parseFloat(cb.dataset.accountBalance || 0),
         0,
       );
       this.reviewAccountsTarget.textContent = checked.length
