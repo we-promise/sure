@@ -48,6 +48,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to bulk_domains_accounts_path
+    assert_equal I18n.t("accounts.bulk_update_domains.failure", error: "cannot update domain"), flash[:alert]
   end
 
   test "bulk domain update reports malformed institution domain separately from selection errors" do
