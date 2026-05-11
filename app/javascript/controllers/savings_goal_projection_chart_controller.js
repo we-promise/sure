@@ -17,10 +17,18 @@ export default class extends Controller {
     this._draw();
     this._resize = this._draw.bind(this);
     window.addEventListener("resize", this._resize);
+    // Container may have 0 width on initial connect (Turbo restoration,
+    // hidden parent, etc). Re-draw whenever the box settles into a real
+    // size.
+    if (typeof ResizeObserver !== "undefined") {
+      this._observer = new ResizeObserver(() => this._draw());
+      this._observer.observe(this.element);
+    }
   }
 
   disconnect() {
     window.removeEventListener("resize", this._resize);
+    this._observer?.disconnect();
   }
 
   _draw() {
