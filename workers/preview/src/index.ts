@@ -41,49 +41,33 @@ export class RailsContainer extends Container {
   }
 
   async waitForManualStart(signal?: AbortSignal): Promise<void> {
-    this.runtimeContainer.start({
-      entrypoint: this.entrypoint,
-      env: this.envVars,
-      enableInternet: this.enableInternet,
+    await this.start(
+      {
+        entrypoint: this.entrypoint,
+        envVars: this.envVars,
+        enableInternet: this.enableInternet,
+      },
+      {
+        portToCheck: this.defaultPort,
+        signal,
+        retries: START_RETRIES,
+        waitInterval: START_DELAY_MS,
+      }
+    );
+
+    const attempt = await this.waitForPort({
+      portToCheck: this.defaultPort,
+      signal,
+      retries: START_RETRIES,
+      waitInterval: START_DELAY_MS,
     });
 
-    for (let attempt = 1; attempt <= START_RETRIES; attempt++) {
-      if (signal?.aborted) {
-        throw new Error("Container request aborted.");
-      }
-
-      if (this.runtimeContainer.running) {
-        try {
-          const tcpPort = this.runtimeContainer.getTcpPort(this.defaultPort);
-          await tcpPort.fetch("http://localhost/", { signal });
-          await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-            event: "manual-start-ready",
-            at: new Date().toISOString(),
-            attempt,
-            state: await this.getState(),
-          });
-          return;
-        } catch (error) {
-          await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-            event: "manual-start-wait",
-            at: new Date().toISOString(),
-            attempt,
-            message: error instanceof Error ? error.message : String(error),
-            state: await this.getState(),
-          });
-        }
-      }
-
-      await new Promise(resolve => setTimeout(resolve, START_DELAY_MS));
-    }
-
-    throw new Error("Manual start failed to make the preview container reachable.");
-  }
-
-  async proxyDirect(request: Request): Promise<Response> {
-    const tcpPort = this.runtimeContainer.getTcpPort(this.defaultPort);
-    const containerUrl = request.url.replace("https:", "http:");
-    return tcpPort.fetch(containerUrl, request);
+    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+      event: "manual-start-ready",
+      at: new Date().toISOString(),
+      attempt,
+      state: await this.getState(),
+    });
   }
 
   async startWithExtendedWait(signal?: AbortSignal): Promise<void> {
@@ -127,7 +111,7 @@ export class RailsContainer extends Container {
     if (state.status !== "healthy") {
       try {
         await this.startWithExtendedWait(request.signal);
-        return await this.proxyDirect(request);
+        return await this.containerFetch(request, this.defaultPort);
       } catch (error) {
         await this.ctx.storage.put(DIAGNOSTICS_KEY, {
           event: "extended-start-error",
@@ -153,7 +137,7 @@ export class RailsContainer extends Container {
 
       try {
         await this.waitForManualStart(request.signal);
-        return await this.proxyDirect(request);
+        return await this.containerFetch(request, this.defaultPort);
       } catch (error) {
         await this.ctx.storage.put(DIAGNOSTICS_KEY, {
           event: "manual-recovery-error",
