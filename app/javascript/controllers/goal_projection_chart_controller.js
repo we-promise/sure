@@ -399,8 +399,16 @@ export default class extends Controller {
   }
 
   _fmtMoney(amount, currency) {
-    const symbol = currency === "EUR" ? "€" : currency === "GBP" ? "£" : "$";
-    return `${symbol}${Math.round(amount).toLocaleString()}`;
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: currency || "USD",
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch {
+      const symbol = currency === "EUR" ? "€" : currency === "GBP" ? "£" : "$";
+      return `${symbol}${Math.round(amount).toLocaleString()}`;
+    }
   }
 
   _fmtMoneyShort(amount, currency) {

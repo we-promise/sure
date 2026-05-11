@@ -26,7 +26,6 @@ export default class extends Controller {
     "initialContributionAccountSelect",
     "reviewName",
     "reviewSummary",
-    "reviewAccounts",
     "reviewSuggested",
     "footerLeftButton",
     "footerRightButton",
@@ -42,6 +41,13 @@ export default class extends Controller {
     backLabel: { type: String, default: "Back" },
     continueLabel: { type: String, default: "Continue" },
     submitLabel: { type: String, default: "Create goal" },
+    currency: { type: String, default: "USD" },
+    summaryWithDate: { type: String, default: "{amount} by {date}" },
+    summaryNoDate: { type: String, default: "{amount}" },
+    accountCountOne: { type: String, default: "1 account" },
+    accountCountOther: { type: String, default: "{count} accounts" },
+    suggestedWithDate: { type: String, default: "Save {monthly}/mo across {accounts} to hit it on time." },
+    suggestedNoDate: { type: String, default: "Set a target date to project a finish line." },
   };
 
   connect() {
@@ -237,38 +243,46 @@ export default class extends Controller {
     const amount = amountInput?.value ? Number.parseFloat(amountInput.value) : 0;
     const dateInput = this.element.querySelector('input[type="date"][name="goal[target_date]"]');
     const dateValue = dateInput?.value;
+    const checked = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked);
 
     this.reviewNameTarget.textContent = name;
 
     if (this.hasReviewSummaryTarget) {
-      const currency = amountInput?.dataset?.currency || "$";
-      const formattedAmount = amountInput?.value ? `${currency}${amount.toLocaleString()}` : "—";
-      this.reviewSummaryTarget.textContent = dateValue
-        ? `${formattedAmount} by ${this.#formatDate(dateValue)}`
-        : formattedAmount;
-    }
-
-    if (this.hasReviewAccountsTarget) {
-      const checked = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked);
-      const total = checked.reduce(
-        (sum, cb) => sum + Number.parseFloat(cb.dataset.accountBalance || 0),
-        0,
-      );
-      this.reviewAccountsTarget.textContent = checked.length
-        ? `${checked.length} ${checked.length === 1 ? "account" : "accounts"} · $${total.toLocaleString()} balance`
-        : "—";
+      const formattedAmount = amount > 0 ? this.#money(amount) : "—";
+      const template = dateValue ? this.summaryWithDateValue : this.summaryNoDateValue;
+      this.reviewSummaryTarget.textContent = template
+        .replace("{amount}", formattedAmount)
+        .replace("{date}", dateValue ? this.#formatDate(dateValue) : "");
     }
 
     if (this.hasReviewSuggestedTarget) {
       const months = dateValue ? this.#monthsBetween(new Date(), new Date(dateValue)) : 0;
-      if (amount > 0 && months > 0) {
+      const accountLabel = checked.length === 1
+        ? this.accountCountOneValue
+        : this.accountCountOtherValue.replace("{count}", checked.length.toString());
+
+      if (amount > 0 && months > 0 && checked.length > 0) {
         const perMonth = Math.ceil(amount / months);
-        this.reviewSuggestedTarget.textContent = `$${perMonth.toLocaleString()}/mo over ${Math.max(1, Math.round(months))} months`;
-      } else if (amount > 0) {
-        this.reviewSuggestedTarget.textContent = `$${amount.toLocaleString()} (no target date)`;
+        this.reviewSuggestedTarget.textContent = this.suggestedWithDateValue
+          .replace("{monthly}", this.#money(perMonth))
+          .replace("{accounts}", accountLabel);
+      } else if (amount > 0 && checked.length > 0) {
+        this.reviewSuggestedTarget.textContent = this.suggestedNoDateValue;
       } else {
         this.reviewSuggestedTarget.textContent = "—";
       }
+    }
+  }
+
+  #money(value) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: this.currencyValue || "USD",
+        maximumFractionDigits: 0,
+      }).format(value);
+    } catch {
+      return `${this.currencyValue || "$"}${Math.round(value).toLocaleString()}`;
     }
   }
 

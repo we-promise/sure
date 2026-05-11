@@ -1,6 +1,13 @@
 <%# locals: (goal:, linkable_accounts:) %>
 
-<div data-controller="goal-stepper">
+<div data-controller="goal-stepper"
+     data-goal-stepper-currency-value="<%= Current.family.primary_currency_code %>"
+     data-goal-stepper-summary-with-date-value="<%= t("goals.form_stepper.step2.review.summary_with_date") %>"
+     data-goal-stepper-summary-no-date-value="<%= t("goals.form_stepper.step2.review.summary_no_date") %>"
+     data-goal-stepper-account-count-one-value="<%= t("goals.form_stepper.step2.review.account_count.one") %>"
+     data-goal-stepper-account-count-other-value="<%= t("goals.form_stepper.step2.review.account_count.other") %>"
+     data-goal-stepper-suggested-with-date-value="<%= t("goals.form_stepper.step2.review.suggested_with_date") %>"
+     data-goal-stepper-suggested-no-date-value="<%= t("goals.form_stepper.step2.review.suggested_no_date") %>">
   <% if goal.errors[:base].any? %>
     <%= render "shared/form_errors", model: goal %>
   <% end %>
@@ -106,7 +113,7 @@
         <p class="text-sm text-secondary"><%= t("goals.form_stepper.step2.subheading") %></p>
       </div>
 
-      <div class="border border-subdued rounded-lg p-5 space-y-4">
+      <div class="border border-subdued rounded-lg p-5 space-y-3">
         <div class="flex items-center gap-3">
           <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "lg", rounded: false) %>
           <div class="min-w-0 flex-1">
@@ -115,15 +122,7 @@
           </div>
         </div>
 
-        <div class="border-t border-subdued pt-3 flex items-center justify-between text-sm">
-          <span class="text-secondary"><%= t("goals.form_stepper.step2.funding_accounts") %></span>
-          <span class="text-primary tabular-nums" data-goal-stepper-target="reviewAccounts">—</span>
-        </div>
-
-        <div class="border-t border-subdued pt-3 flex items-center justify-between text-sm">
-          <span class="text-secondary"><%= t("goals.form_stepper.step2.suggested_monthly") %></span>
-          <span class="text-primary tabular-nums" data-goal-stepper-target="reviewSuggested">—</span>
-        </div>
+        <p class="text-sm text-primary tabular-nums border-t border-subdued pt-3" data-goal-stepper-target="reviewSuggested">—</p>
       </div>
 
       <details class="border border-subdued rounded-lg group" data-goal-stepper-target="initialContributionToggle">

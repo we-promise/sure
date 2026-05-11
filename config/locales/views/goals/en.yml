@@ -258,10 +258,16 @@ en:
         label: Review & start
         heading: Looks good?
         subheading: Review your goal and add an optional starting contribution.
-        funding_accounts: Funding accounts
-        suggested_monthly: Suggested monthly
         add_initial_contribution: Add an initial contribution
         add_initial_contribution_sub: Optional · jumpstart this goal with funds you've already set aside.
         initial_amount: Amount
         initial_account: From account
         select_account: Select an account
+        review:
+          summary_with_date: "{amount} by {date}"
+          summary_no_date: "{amount}"
+          account_count:
+            one: 1 account
+            other: "{count} accounts"
+          suggested_with_date: "Save {monthly}/mo across {accounts} to hit it on time."
+          suggested_no_date: Set a target date to project a finish line.
