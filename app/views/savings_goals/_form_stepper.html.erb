@@ -132,44 +132,47 @@
           <%= icon("chevron-down", size: "sm") %>
         </summary>
         <div class="px-4 pb-4 space-y-3">
-          <div>
-            <%= label_tag "savings_goal[initial_contribution_amount]",
-                         t("savings_goals.form_stepper.step2.initial_amount"),
-                         class: "block text-sm text-secondary mb-1" %>
-            <%= number_field_tag "savings_goal[initial_contribution_amount]",
-                                 nil,
-                                 step: "0.01", min: "0",
-                                 autocomplete: "off",
-                                 class: "w-full",
-                                 data: { savings_goal_stepper_target: "initialContributionAmount" } %>
+          <div class="form-field">
+            <div class="form-field__body">
+              <%= label_tag "savings_goal[initial_contribution_amount]",
+                           t("savings_goals.form_stepper.step2.initial_amount"),
+                           class: "form-field__label" %>
+              <%= number_field_tag "savings_goal[initial_contribution_amount]",
+                                   nil,
+                                   step: "0.01", min: "0",
+                                   autocomplete: "off",
+                                   class: "form-field__input",
+                                   data: { savings_goal_stepper_target: "initialContributionAmount" } %>
+            </div>
           </div>
-          <div>
-            <%= label_tag "savings_goal[initial_contribution_account_id]",
-                         t("savings_goals.form_stepper.step2.initial_account"),
-                         class: "block text-sm text-secondary mb-1" %>
-            <%= select_tag "savings_goal[initial_contribution_account_id]",
-                           options_for_select([]),
-                           include_blank: t("savings_goals.form_stepper.step2.select_account"),
-                           data: { savings_goal_stepper_target: "initialContributionAccountSelect" },
-                           class: "w-full" %>
+          <div class="form-field">
+            <div class="form-field__body">
+              <%= label_tag "savings_goal[initial_contribution_account_id]",
+                           t("savings_goals.form_stepper.step2.initial_account"),
+                           class: "form-field__label" %>
+              <%= select_tag "savings_goal[initial_contribution_account_id]",
+                             options_for_select([]),
+                             include_blank: t("savings_goals.form_stepper.step2.select_account"),
+                             data: { savings_goal_stepper_target: "initialContributionAccountSelect" },
+                             class: "form-field__input" %>
+            </div>
           </div>
         </div>
       </details>
     </section>
 
     <div class="flex items-center justify-between pt-2">
-      <%= render DS::Button.new(
-        variant: "ghost",
-        text: t("savings_goals.form_stepper.back"),
-        icon: "arrow-left",
-        icon_position: :left,
-        class: "hidden",
-        data: {
-          savings_goal_stepper_target: "footerLeftButton",
-          action: "click->savings-goal-stepper#footerLeft"
-        }
-      ) %>
-      <span data-savings-goal-stepper-target="footerLeftPlaceholder"></span>
+      <div class="hidden" data-savings-goal-stepper-target="footerLeftButton">
+        <%= render DS::Button.new(
+          variant: "ghost",
+          text: t("savings_goals.form_stepper.back"),
+          icon: "arrow-left",
+          icon_position: :left,
+          data: {
+            action: "click->savings-goal-stepper#footerLeft"
+          }
+        ) %>
+      </div>
       <%= render DS::Button.new(
         text: t("savings_goals.form_stepper.continue"),
         variant: "primary",
