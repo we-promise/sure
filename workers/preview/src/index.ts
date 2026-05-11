@@ -5,6 +5,7 @@ interface Env {
 }
 
 const DIAGNOSTICS_KEY = "preview-diagnostics";
+const DIAGNOSTICS_HISTORY_KEY = "preview-diagnostics-history";
 const START_RETRIES = 90;
 const START_DELAY_MS = 1000;
 const PORT_READY_TIMEOUT_MS = 120000;
@@ -40,6 +41,26 @@ export class RailsContainer extends Container {
     return this.ctx.container!;
   }
 
+  async recordDiagnostic(payload: Record<string, unknown>): Promise<void> {
+    const diagnostic = {
+      ...payload,
+      state: await this.getState(),
+    };
+
+    await this.ctx.storage.put(DIAGNOSTICS_KEY, diagnostic);
+
+    const history =
+      ((await this.ctx.storage.get(DIAGNOSTICS_HISTORY_KEY)) as Record<string, unknown>[] | undefined) ?? [];
+
+    history.push(diagnostic);
+
+    if (history.length > 20) {
+      history.splice(0, history.length - 20);
+    }
+
+    await this.ctx.storage.put(DIAGNOSTICS_HISTORY_KEY, history);
+  }
+
   async startWithExtendedWait(signal?: AbortSignal): Promise<void> {
     await this.startAndWaitForPorts({
       startOptions: {
@@ -63,16 +84,16 @@ export class RailsContainer extends Container {
         state: await this.getState(),
         containerRunning: this.runtimeContainer.running,
         diagnostics: (await this.ctx.storage.get(DIAGNOSTICS_KEY)) ?? null,
+        diagnosticsHistory: (await this.ctx.storage.get(DIAGNOSTICS_HISTORY_KEY)) ?? [],
       });
     }
 
     if (url.pathname === "/_container_event" && request.method === "POST") {
       const payload = await request.json();
-      await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+      await this.recordDiagnostic({
         event: "entrypoint",
         at: new Date().toISOString(),
         payload,
-        state: await this.getState(),
       });
       return new Response("ok");
     }
@@ -81,11 +102,10 @@ export class RailsContainer extends Container {
       await this.startWithExtendedWait(request.signal);
       return await this.containerFetch(request, this.defaultPort);
     } catch (error) {
-      await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+      await this.recordDiagnostic({
         event: "extended-start-error",
         at: new Date().toISOString(),
         message: error instanceof Error ? error.message : String(error),
-        state: await this.getState(),
       });
 
       return new Response(
@@ -97,31 +117,28 @@ export class RailsContainer extends Container {
 
   override async onStart(): Promise<void> {
     console.log("Rails container starting...");
-    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+    await this.recordDiagnostic({
       event: "start",
       at: new Date().toISOString(),
-      state: await this.getState(),
     });
   }
 
   override async onStop(params: { exitCode: number; reason: string }): Promise<void> {
     console.log("Rails container stopped", params);
-    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+    await this.recordDiagnostic({
       event: "stop",
       at: new Date().toISOString(),
       exitCode: params.exitCode,
       reason: params.reason,
-      state: await this.getState(),
     });
   }
 
   override async onError(error: unknown): Promise<void> {
     console.error("Rails container error:", error);
-    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+    await this.recordDiagnostic({
       event: "error",
       at: new Date().toISOString(),
       message: error instanceof Error ? error.message : String(error),
-      state: await this.getState(),
     });
   }
 }
