@@ -116,7 +116,7 @@ if [ -z "$PG_VERSION" ]; then
   echo "Could not determine installed PostgreSQL version"
   exit 1
 fi
-sudo pg_ctlcluster "$PG_VERSION" main start
+sudo pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" main start
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
