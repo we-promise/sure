@@ -80,6 +80,30 @@
     </div>
   </header>
 
+  <% if @savings_goal.status == :behind && @savings_goal.monthly_target_amount && !@savings_goal.paused? %>
+    <%# Catch-up callout %>
+    <% catch_up_money = Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %>
+    <%= render DS::Alert.new(variant: "warning", title: t("savings_goals.show.catch_up.title", amount: catch_up_money.format)) do %>
+      <p class="text-secondary">
+        <% if @savings_goal.target_date %>
+          <%= t("savings_goals.show.catch_up.body_with_date", date: I18n.l(@savings_goal.target_date, format: :long)) %>
+        <% else %>
+          <%= t("savings_goals.show.catch_up.body") %>
+        <% end %>
+      </p>
+      <div class="mt-2">
+        <%= render DS::Link.new(
+          text: t("savings_goals.show.catch_up.cta", amount: catch_up_money.format),
+          variant: "primary",
+          size: "sm",
+          href: new_savings_goal_contribution_path(@savings_goal),
+          icon: "plus",
+          frame: :modal
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+
   <%# Top row: ring card + projection chart card %>
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
     <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">

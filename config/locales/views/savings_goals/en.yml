@@ -114,6 +114,11 @@ en:
         no_pace: No contributions yet. Add some to start a projection.
         behind: At %{current}/mo you'll fall short. Bump to <strong class="text-primary">%{required}/mo</strong> to hit it on time.
         on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
+      catch_up:
+        title: "Save %{amount}/mo to catch up"
+        body_with_date: "Bump your monthly contribution to stay on track for %{date}."
+        body: Bump your monthly contribution to stay on track.
+        cta: "Add %{amount}"
       source:
         initial: Initial
         manual: Manual
