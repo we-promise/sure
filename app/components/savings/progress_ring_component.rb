@@ -22,11 +22,10 @@ class Savings::ProgressRingComponent < ApplicationComponent
     goal.remaining_amount_money.format
   end
 
-  def percent_text_color
+  def percent_text_class
     case goal.status
-    when :reached then "var(--color-green-600)"
-    when :behind then "var(--color-yellow-600)"
-    else "var(--text-primary)"
+    when :reached then "text-success"
+    else "text-primary"
     end
   end
 end

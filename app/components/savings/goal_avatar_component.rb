@@ -6,6 +6,16 @@ class Savings::GoalAvatarComponent < ApplicationComponent
     "xl" => { box: "w-16 h-16", text: "text-2xl", radius: "rounded-2xl" }
   }.freeze
 
+  PALETTE = SavingsGoal::COLORS
+
+  # Deterministic color pick from the palette so the same string maps to
+  # the same color across processes (Ruby's String#hash is randomized per
+  # boot for DoS protection — not stable enough for visual identity).
+  def self.color_for(name)
+    return PALETTE.first if name.blank?
+    PALETTE[Digest::MD5.hexdigest(name).to_i(16) % PALETTE.size]
+  end
+
   def initialize(goal: nil, name: nil, color: nil, size: "md")
     @goal = goal
     @name = name || goal&.name

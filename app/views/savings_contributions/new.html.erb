@@ -10,18 +10,15 @@
                          class: "space-y-3" do |f| %>
       <%= f.money_field :amount,
                         label: t(".amount"),
-                        required: true,
+                        hide_currency: true,
                         autofocus: true %>
 
-      <%= label_tag "savings_contribution[account_id]", t(".source_account"), class: "block text-sm text-secondary" %>
-      <%= select_tag "savings_contribution[account_id]",
-                     options_from_collection_for_select(@savings_goal.linked_accounts, :id, :name),
-                     class: "w-full",
-                     include_blank: t(".select_account") %>
+      <%= f.select :account_id,
+                   options_from_collection_for_select(@savings_goal.linked_accounts, :id, :name, @contribution.account_id),
+                   { label: t(".source_account"), include_blank: t(".select_account") } %>
 
       <%= f.date_field :contributed_at,
-                       label: t(".contributed_at"),
-                       required: true %>
+                       label: t(".contributed_at") %>
 
       <%= f.text_area :notes, label: t(".notes"), rows: 2 %>
 

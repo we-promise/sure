@@ -51,10 +51,17 @@ export default class extends Controller {
 
     const endDate = target || new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const savedSeries = [{ date: start, value: 0 }].concat(
-      (data.saved_series || []).map((p) => ({ date: new Date(p.date), value: p.value })),
-    );
-    if (savedSeries[savedSeries.length - 1].date < today) {
+    const rawSavedSeries = (data.saved_series || []).map((p) => ({ date: new Date(p.date), value: p.value }));
+    const firstContribDate = rawSavedSeries[0]?.date;
+    const savedSeries = [];
+    // Only seed a (start, 0) point when start_date predates the first
+    // contribution. Otherwise the line draws a vertical jump up at the
+    // chart's left edge.
+    if (!firstContribDate || firstContribDate.getTime() > start.getTime()) {
+      savedSeries.push({ date: start, value: 0 });
+    }
+    savedSeries.push(...rawSavedSeries);
+    if (savedSeries.length && savedSeries[savedSeries.length - 1].date < today) {
       savedSeries.push({ date: today, value: currentAmount });
     }
 
