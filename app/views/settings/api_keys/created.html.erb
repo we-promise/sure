@@ -62,18 +62,12 @@
       </div>
     </div>
 
-    <div class="bg-warning-50 border border-warning-200 rounded-xl p-4">
-      <div class="flex items-start gap-2">
-        <%= icon("alert-triangle", class: "w-5 h-5 text-warning-600 mt-0.5") %>
-        <div>
-          <h4 class="font-medium text-warning-800 text-sm">Important Security Note</h4>
-          <p class="text-warning-700 text-sm mt-1">
-            This is the only time your API key will be displayed. Make sure to copy it now and store it securely.
-            If you lose this key, you'll need to generate a new one.
-          </p>
-        </div>
-      </div>
-    </div>
+    <%= render DS::Alert.new(title: "Important Security Note", variant: :warning) do %>
+      <p>
+        This is the only time your API key will be displayed. Make sure to copy it now and store it securely.
+        If you lose this key, you'll need to generate a new one.
+      </p>
+    <% end %>
 
     <div class="bg-surface-inset rounded-xl p-4">
       <h4 class="font-medium text-primary mb-3">How to use your API key</h4>

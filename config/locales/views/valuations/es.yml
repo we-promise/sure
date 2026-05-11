@@ -1,6 +1,8 @@
 ---
 es:
   valuations:
+    errors:
+      amount_required: El importe es obligatorio
     form:
       amount: Importe
       submit: Añadir actualización de saldo

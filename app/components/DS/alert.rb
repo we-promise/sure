@@ -1,24 +1,32 @@
 class DS::Alert < DesignSystemComponent
-  def initialize(message:, variant: :info)
+  VARIANTS = %i[info success warning error destructive].freeze
+
+  def initialize(message: nil, title: nil, variant: :info)
     @message = message
-    @variant = variant
+    @title = title
+    @variant = normalize_variant(variant)
   end
 
   private
-    attr_reader :message, :variant
+    attr_reader :message, :title, :variant
+
+    def normalize_variant(raw)
+      sym = raw.respond_to?(:to_sym) ? raw.to_sym : nil
+      VARIANTS.include?(sym) ? sym : :info
+    end
 
     def container_classes
       base_classes = "flex items-start gap-3 p-4 rounded-lg border"
 
       variant_classes = case variant
       when :info
-        "bg-blue-50 text-blue-700 border-blue-200 theme-dark:bg-blue-900/20 theme-dark:text-blue-400 theme-dark:border-blue-800"
+        "bg-info/10 border-info/20"
       when :success
-        "bg-green-50 text-green-700 border-green-200 theme-dark:bg-green-900/20 theme-dark:text-green-400 theme-dark:border-green-800"
+        "bg-success/10 border-success/20"
       when :warning
-        "bg-yellow-50 text-yellow-700 border-yellow-200 theme-dark:bg-yellow-900/20 theme-dark:text-yellow-400 theme-dark:border-yellow-800"
+        "bg-warning/10 border-warning/20"
       when :error, :destructive
-        "bg-red-50 text-red-700 border-red-200 theme-dark:bg-red-900/20 theme-dark:text-red-400 theme-dark:border-red-800"
+        "bg-destructive/10 border-destructive/20"
       end
 
       "#{base_classes} #{variant_classes}"
@@ -46,7 +54,7 @@ class DS::Alert < DesignSystemComponent
       when :error, :destructive
         "destructive"
       else
-        "blue-600"
+        "info"
       end
     end
 end

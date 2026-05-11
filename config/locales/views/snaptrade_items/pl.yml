@@ -145,8 +145,6 @@ pl:
         many: "%{count} wymaga konfiguracji"
         other: "%{count} wymaga konfiguracji"
       status_ready: Gotowe do połączenia z biurami maklerskimi
-      status_needs_registration: Dane uwierzytelniające zapisane. Przejdź do strony Konta, aby połączyć biura maklerskie.
-      status_not_configured: Nieskonfigurowane
       setup_accounts_button: Konfiguruj konta
       connect_button: Połącz biuro maklerskie
       connected_brokerages: 'Połączone:'
