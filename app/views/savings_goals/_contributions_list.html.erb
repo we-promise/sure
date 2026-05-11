@@ -7,7 +7,7 @@
 <% else %>
   <ul>
     <% contributions.each do |contribution| %>
-      <li class="flex items-center gap-3 px-3 -mx-3 py-2 rounded-lg hover:bg-surface-hover">
+      <li class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-hover">
         <%= render Savings::GoalAvatarComponent.new(
           name: contribution.account.name,
           color: @savings_goal.color,

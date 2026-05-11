@@ -27,9 +27,18 @@ export default class extends Controller {
 
   close() {
     this.element.close();
+    this.#clearParentModalFrame();
 
     if (this.reloadOnCloseValue) {
       Turbo.visit(window.location.href);
     }
+  }
+
+  // When the dialog lives inside a top-level <turbo-frame id="modal">,
+  // emptying the frame on close stops Turbo's page cache from snapshotting
+  // an open dialog and reopening it on browser back.
+  #clearParentModalFrame() {
+    const frame = this.element.closest('turbo-frame[id="modal"]');
+    if (frame) frame.innerHTML = "";
   }
 }

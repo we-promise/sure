@@ -243,7 +243,7 @@
         <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
       </div>
-      <div class="max-h-[420px] overflow-y-auto -mx-1 px-1">
+      <div class="max-h-[420px] overflow-y-auto overflow-x-hidden">
         <%= render "contributions_list", contributions: @contributions %>
       </div>
     </div>

@@ -16,8 +16,8 @@ class Savings::GoalCardComponent < ApplicationComponent
     case goal.status
     when :reached then "var(--color-green-600)"
     when :behind then "var(--color-yellow-600)"
-    when :on_track then "var(--text-primary)"
-    else "var(--text-subdued)"
+    when :on_track then "var(--color-green-500)"
+    else "var(--color-gray-400)"
     end
   end
 

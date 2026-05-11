@@ -86,7 +86,7 @@ export default class extends Controller {
       .append("linearGradient")
       .attr("id", `saved-fill-${this._id()}`)
       .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
-    gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.10);
+    gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.22);
     gradient.append("stop").attr("offset", "100%").attr("stop-color", textPrimary).attr("stop-opacity", 0);
 
     if (targetAmount > 0) {
