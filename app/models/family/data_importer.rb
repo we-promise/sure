@@ -3,7 +3,6 @@ require "set"
 class Family::DataImporter
   SUPPORTED_TYPES = %w[Account Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPES = Accountable::TYPES.freeze
-  UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i.freeze
 
   def initialize(family, ndjson_content)
     @family = family
@@ -699,7 +698,7 @@ class Family::DataImporter
     end
 
     def uuid_like?(value)
-      value.to_s.match?(UUID_FORMAT)
+      UuidFormat.valid?(value)
     end
 
     def importable_cost_basis_source(value)

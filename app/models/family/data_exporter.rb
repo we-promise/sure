@@ -2,8 +2,6 @@ require "zip"
 require "csv"
 
 class Family::DataExporter
-  UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i.freeze
-
   def initialize(family)
     @family = family
   end
@@ -584,7 +582,7 @@ class Family::DataExporter
     end
 
     def uuid_like?(value)
-      value.to_s.match?(UUID_FORMAT)
+      UuidFormat.valid?(value)
     end
 
     def serialize_conditions_for_csv(conditions)

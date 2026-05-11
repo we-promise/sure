@@ -3,9 +3,6 @@
 class Api::V1::BaseController < ApplicationController
   include Doorkeeper::Rails::Helpers
 
-  UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-  private_constant :UUID_PATTERN
-
   InvalidFilterError = Class.new(StandardError)
 
   # Skip regular session-based authentication for API
@@ -220,7 +217,7 @@ class Api::V1::BaseController < ApplicationController
     end
 
     def valid_uuid?(value)
-      value.to_s.match?(UUID_PATTERN)
+      UuidFormat.valid?(value)
     end
 
     def safe_page_param
