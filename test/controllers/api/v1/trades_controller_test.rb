@@ -162,16 +162,18 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   test "create deposit with transfer_account_id creates linked transfer" do
     depository = accounts(:depository)
 
-    post "/api/v1/trades",
-      params: { trade: {
-        account_id: @investment_account.id,
-        type: "deposit",
-        date: Date.current,
-        amount: 500.00,
-        currency: "USD",
-        transfer_account_id: depository.id
-      } },
-      headers: api_headers(read_write_api_key)
+    assert_difference "Transfer.count", 1 do
+      post "/api/v1/trades",
+        params: { trade: {
+          account_id: @investment_account.id,
+          type: "deposit",
+          date: Date.current,
+          amount: 500.00,
+          currency: "USD",
+          transfer_account_id: depository.id
+        } },
+        headers: api_headers(read_write_api_key)
+    end
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -179,6 +181,14 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Transaction", body["entryable_type"]
     assert body["account"]["id"].present?
     assert body["account"]["account_type"].present?
+
+    transfer = Transfer.joins(inflow_transaction: :entry)
+                       .where(entries: { account_id: @investment_account.id })
+                       .last
+
+    assert transfer, "Transfer should exist linking accounts"
+    assert_equal depository.id, transfer.outflow_transaction.entry.account_id, "Outflow should be from depository"
+    assert_equal @investment_account.id, transfer.inflow_transaction.entry.account_id, "Inflow should go to investment"
   end
 
   test "create interest returns 201" do
@@ -253,17 +263,22 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return 422 for invalid date format" do
+    security = Security.create!(ticker: "INVDATE", name: "Invalid Date Security", country_code: "US")
+
     post "/api/v1/trades",
       params: { trade: {
         account_id: @investment_account.id,
         type: "buy",
         date: "invalid-date",
         qty: 10,
-        price: 100
+        price: 100,
+        security_id: security.id
       } },
       headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert body["errors"].any? { |e| e.downcase.include?("date") }, "Expected date-related error, got: #{body["errors"].inspect}"
   end
 
   # INDEX action tests
