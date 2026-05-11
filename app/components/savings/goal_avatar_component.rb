@@ -1,8 +1,9 @@
 class Savings::GoalAvatarComponent < ApplicationComponent
   SIZES = {
-    "sm" => { box: "w-6 h-6", text: "text-xs" },
-    "md" => { box: "w-8 h-8", text: "text-sm" },
-    "lg" => { box: "w-12 h-12", text: "text-lg" }
+    "sm" => { box: "w-6 h-6", text: "text-[10px]", radius: "rounded-md" },
+    "md" => { box: "w-9 h-9", text: "text-sm", radius: "rounded-lg" },
+    "lg" => { box: "w-11 h-11", text: "text-base", radius: "rounded-xl" },
+    "xl" => { box: "w-16 h-16", text: "text-2xl", radius: "rounded-2xl" }
   }.freeze
 
   def initialize(goal: nil, name: nil, color: nil, size: "md")
@@ -25,5 +26,9 @@ class Savings::GoalAvatarComponent < ApplicationComponent
 
   def text_classes
     SIZES[@size][:text]
+  end
+
+  def radius_classes
+    SIZES[@size][:radius]
   end
 end

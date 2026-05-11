@@ -1,28 +1,35 @@
-<%= link_to savings_goal_path(goal), class: "block bg-container rounded-xl shadow-border-xs hover:shadow-border-sm p-4 transition-shadow" do %>
+<%= link_to savings_goal_path(goal),
+            class: "group flex flex-col gap-3.5 p-[18px] bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors" do %>
   <div class="flex items-start gap-3">
-    <%= render Savings::GoalAvatarComponent.new(goal: goal, size: "md") %>
+    <%= render Savings::GoalAvatarComponent.new(goal: goal, size: "lg") %>
     <div class="min-w-0 flex-1">
-      <div class="flex items-center justify-between gap-2">
-        <p class="text-sm font-medium text-primary truncate"><%= goal.name %></p>
-        <%= render Savings::StatusPillComponent.new(goal: goal) %>
+      <p class="text-sm font-medium text-primary truncate"><%= goal.name %></p>
+      <p class="text-[11px] text-subdued mt-0.5 truncate"><%= secondary_line %></p>
+    </div>
+    <%= render Savings::StatusPillComponent.new(goal: goal) %>
+  </div>
+
+  <div>
+    <div class="flex items-baseline justify-between mb-1.5">
+      <div class="text-lg font-medium text-primary tabular-nums privacy-sensitive">
+        <%= goal.current_balance_money.format %>
+        <span class="text-xs text-subdued ml-1">/ <%= goal.target_amount_money.format %></span>
       </div>
-      <p class="text-xs text-secondary truncate mt-0.5"><%= linked_accounts_label %></p>
+      <span class="text-xs text-secondary tabular-nums"><%= progress_percent %>%</span>
+    </div>
+    <div class="h-1.5 w-full rounded-full bg-surface-inset overflow-hidden">
+      <div class="h-full rounded-full transition-all duration-500"
+           style="inline-size: <%= progress_percent %>%; background-color: <%= bar_color_style %>;"></div>
     </div>
   </div>
 
-  <div class="mt-4">
-    <div class="flex items-center justify-between gap-2 text-xs tabular-nums">
-      <span class="text-secondary"><%= goal.current_balance_money.format %></span>
-      <span class="text-secondary">/ <%= goal.target_amount_money.format %></span>
+  <div class="flex items-center justify-between pt-1">
+    <div class="flex items-center gap-2">
+      <%= render Savings::AccountStackComponent.new(accounts: linked_accounts) %>
+      <span class="text-[11px] text-subdued"><%= linked_accounts_count_label %></span>
     </div>
-    <div class="mt-2 h-1.5 w-full rounded-full bg-container-inset overflow-hidden">
-      <div class="h-full <%= bar_color_class %> rounded-full transition-all duration-500" style="inline-size: <%= progress_percent %>%"></div>
-    </div>
-    <div class="mt-1 flex items-center justify-between text-xs text-secondary tabular-nums">
-      <span><%= progress_percent %>%</span>
-      <% if goal.target_date %>
-        <span><%= I18n.l(goal.target_date, format: :long) %></span>
-      <% end %>
-    </div>
+    <span class="text-[11px] text-subdued tabular-nums">
+      <% if goal.completed? %>—<% else %><%= goal.remaining_amount_money.format %> to go<% end %>
+    </span>
   </div>
 <% end %>

@@ -1,25 +1,30 @@
 <%# locals: (contributions:) %>
 
 <% if contributions.empty? %>
-  <p class="text-sm text-secondary"><%= t("savings_goals.show.no_contributions_yet") %></p>
+  <div class="px-5 py-8 text-center">
+    <p class="text-sm text-secondary"><%= t("savings_goals.show.no_contributions_yet") %></p>
+  </div>
 <% else %>
-  <ul class="divide-y divide-divider">
+  <ul class="divide-y divide-subdued">
     <% contributions.each do |contribution| %>
-      <li class="flex items-center gap-3 py-2">
+      <li class="flex items-center gap-3 px-5 py-3">
         <%= render Savings::GoalAvatarComponent.new(
           name: contribution.account.name,
           color: @savings_goal.color,
           size: "sm"
         ) %>
         <div class="flex-1 min-w-0">
-          <p class="text-sm text-primary truncate"><%= contribution.account.name %></p>
-          <p class="text-xs text-secondary"><%= I18n.l(contribution.contributed_at, format: :long) %> · <%= t("savings_goals.show.source.#{contribution.source}") %></p>
+          <p class="text-sm font-medium text-primary truncate"><%= contribution.account.name %></p>
+          <p class="text-[11px] text-subdued">
+            <%= I18n.l(contribution.contributed_at, format: :long) %> ·
+            <%= t("savings_goals.show.source.#{contribution.source}") %>
+          </p>
         </div>
-        <span class="text-sm text-primary tabular-nums"><%= contribution.amount_money.format %></span>
+        <span class="text-sm font-medium text-success tabular-nums">+<%= contribution.amount_money.format %></span>
         <% if contribution.manual? %>
           <%= button_to savings_goal_contribution_path(@savings_goal, contribution),
                         method: :delete,
-                        class: "text-secondary hover:text-destructive",
+                        class: "text-secondary hover:text-destructive p-1 rounded",
                         form: { data: { turbo_confirm: t("savings_goals.show.confirm_delete_contribution") } } do %>
             <%= icon("x", size: "sm") %>
           <% end %>

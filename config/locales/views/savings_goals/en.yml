@@ -3,6 +3,7 @@ en:
   savings_goals:
     index:
       title: Savings goals
+      subtitle: Save toward what matters.
       new_goal: New goal
       empty_filtered: No %{state} goals.
       tabs:
@@ -11,6 +12,11 @@ en:
         paused: Paused
         completed: Completed
         archived: Archived
+      summary:
+        total_saved: Total saved across goals
+        active_goals: Active goals
+        on_track: On track
+        behind: Behind
     new:
       heading: New savings goal
     edit:
@@ -51,19 +57,32 @@ en:
       funding_accounts_heading: Funding accounts
       no_contributions_yet: No contributions yet.
       confirm_delete_contribution: Delete this contribution?
+      funding_balance: "balance %{amount}"
+      of_saved: of saved
+      notes: Notes
+      header:
+        target: "Target %{amount}"
+        target_by: "Target %{amount} by %{date}"
       ring:
         saved: Saved
+        of: "of %{target}"
+        to_go: "%{amount} to go"
       source:
         initial: Initial
         manual: Manual
       stats:
-        current: Current
-        target: Target
-        remaining: Remaining
+        avg_monthly: Avg monthly
+        total_contributions: Total contributions
+        across_all_accounts: Across all accounts
         target_date: Target date
         no_target_date: No target date
-        monthly_target: Per month
-        status: Status
+        no_required_pace: No required pace
+        started: Started
+        needs_per_month: "Needs %{amount}/mo"
+        above_target_pace: Above target pace
+        months_ago:
+          one: 1 month ago
+          other: "%{count} months ago"
     states:
       active: Active
       paused: Paused
@@ -83,6 +102,15 @@ en:
     goal_card:
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
+      accounts:
+        one: 1 account
+        other: "%{count} accounts"
+      no_target_date: No target date
+      completed: Completed
+      past_due: Past due
+      days_left:
+        one: 1 day left · by %{date}
+        other: "%{count} days left · by %{date}"
     form_stepper:
       continue: Continue
       back: Back

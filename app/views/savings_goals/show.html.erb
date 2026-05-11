@@ -1,138 +1,126 @@
 <div class="space-y-4">
-  <header class="flex items-center justify-between gap-3">
-    <div class="flex items-center gap-3 min-w-0">
-      <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "md") %>
-      <div class="min-w-0">
-        <h1 class="text-lg font-semibold text-primary truncate"><%= @savings_goal.name %></h1>
-        <p class="text-xs text-secondary"><%= t("savings_goals.states.#{@savings_goal.state}") %></p>
+  <header class="flex items-start gap-4">
+    <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "xl") %>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2 mb-1">
+        <h1 class="text-2xl font-semibold text-primary truncate"><%= @savings_goal.name %></h1>
+        <%= render Savings::StatusPillComponent.new(goal: @savings_goal) %>
       </div>
-    </div>
-
-    <%= render DS::Menu.new do |menu| %>
-      <% menu.with_item(
-           variant: "link",
-           text: t(".edit"),
-           icon: "pencil",
-           href: edit_savings_goal_path(@savings_goal),
-           data: { turbo_frame: :modal }
-         ) %>
-      <% if @savings_goal.may_pause? %>
-        <% menu.with_item(
-             variant: "button",
-             text: t(".pause"),
-             icon: "pause",
-             href: pause_savings_goal_path(@savings_goal),
-             method: :patch
-           ) %>
-      <% end %>
-      <% if @savings_goal.may_resume? %>
-        <% menu.with_item(
-             variant: "button",
-             text: t(".resume"),
-             icon: "play",
-             href: resume_savings_goal_path(@savings_goal),
-             method: :patch
-           ) %>
-      <% end %>
-      <% if @savings_goal.may_complete? %>
-        <% menu.with_item(
-             variant: "button",
-             text: t(".complete"),
-             icon: "circle-check-big",
-             href: complete_savings_goal_path(@savings_goal),
-             method: :patch
-           ) %>
-      <% end %>
-      <% if @savings_goal.may_archive? %>
-        <% menu.with_item(
-             variant: "button",
-             text: t(".archive"),
-             icon: "archive",
-             href: archive_savings_goal_path(@savings_goal),
-             method: :patch
-           ) %>
-      <% end %>
-      <% if @savings_goal.may_unarchive? %>
-        <% menu.with_item(
-             variant: "button",
-             text: t(".unarchive"),
-             icon: "archive-restore",
-             href: unarchive_savings_goal_path(@savings_goal),
-             method: :patch
-           ) %>
-      <% end %>
-      <% if @savings_goal.archived? %>
-        <% menu.with_item(
-             variant: "button",
-             text: t(".delete"),
-             icon: "trash-2",
-             href: savings_goal_path(@savings_goal),
-             method: :delete,
-             destructive: true,
-             confirm: CustomConfirm.for_resource_deletion(@savings_goal.name, high_severity: true)
-           ) %>
-      <% end %>
-    <% end %>
-  </header>
-
-  <section class="bg-container rounded-xl shadow-border-xs p-6">
-    <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
-      <div>
-        <%= render Savings::ProgressRingComponent.new(goal: @savings_goal) %>
-      </div>
-
-      <div class="flex-1 space-y-3 min-w-0">
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-          <div>
-            <p class="text-xs text-secondary"><%= t(".stats.current") %></p>
-            <p class="text-primary tabular-nums"><%= @savings_goal.current_balance_money.format %></p>
-          </div>
-          <div>
-            <p class="text-xs text-secondary"><%= t(".stats.target") %></p>
-            <p class="text-primary tabular-nums"><%= @savings_goal.target_amount_money.format %></p>
-          </div>
-          <div>
-            <p class="text-xs text-secondary"><%= t(".stats.remaining") %></p>
-            <p class="text-primary tabular-nums"><%= @savings_goal.remaining_amount_money.format %></p>
-          </div>
-          <div>
-            <p class="text-xs text-secondary"><%= t(".stats.target_date") %></p>
-            <p class="text-primary"><%= @savings_goal.target_date ? I18n.l(@savings_goal.target_date, format: :long) : t(".stats.no_target_date") %></p>
-          </div>
-          <% if @savings_goal.monthly_target_amount %>
-            <div>
-              <p class="text-xs text-secondary"><%= t(".stats.monthly_target") %></p>
-              <p class="text-primary tabular-nums"><%= Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format %></p>
-            </div>
+      <p class="text-sm text-secondary">
+        <% if @savings_goal.target_date %>
+          <%= t(".header.target_by", amount: @savings_goal.target_amount_money.format, date: I18n.l(@savings_goal.target_date, format: :long)) %>
+          <% days = (@savings_goal.target_date - Date.current).to_i %>
+          <% if days > 0 %>
+            · <%= t("savings_goals.goal_card.days_left", count: days, date: I18n.l(@savings_goal.target_date, format: :long)).split(" · ").first %>
           <% end %>
-          <div>
-            <p class="text-xs text-secondary"><%= t(".stats.status") %></p>
-            <%= render Savings::StatusPillComponent.new(goal: @savings_goal) %>
-          </div>
-        </div>
-
-        <% if @savings_goal.notes.present? %>
-          <p class="text-sm text-secondary"><%= simple_format(@savings_goal.notes) %></p>
+        <% else %>
+          <%= t(".header.target", amount: @savings_goal.target_amount_money.format) %>
         <% end %>
-      </div>
+      </p>
     </div>
-  </section>
-
-  <%= render Savings::FundingAccountsBreakdownComponent.new(goal: @savings_goal, rows: @funding_breakdown) %>
-
-  <section class="bg-container rounded-xl shadow-border-xs p-4">
-    <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
+    <div class="flex items-center gap-2">
+      <%= render DS::Link.new(
+        text: t(".edit"),
+        variant: "outline",
+        href: edit_savings_goal_path(@savings_goal),
+        icon: "pencil",
+        frame: :modal
+      ) %>
       <%= render DS::Link.new(
         text: t(".add_contribution"),
         variant: "primary",
-        size: "sm",
         href: new_savings_goal_contribution_path(@savings_goal),
         icon: "plus",
         frame: :modal
       ) %>
+      <%= render DS::Menu.new do |menu| %>
+        <% if @savings_goal.may_pause? %>
+          <% menu.with_item(variant: "button", text: t(".pause"), icon: "pause", href: pause_savings_goal_path(@savings_goal), method: :patch) %>
+        <% end %>
+        <% if @savings_goal.may_resume? %>
+          <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_savings_goal_path(@savings_goal), method: :patch) %>
+        <% end %>
+        <% if @savings_goal.may_complete? %>
+          <% menu.with_item(variant: "button", text: t(".complete"), icon: "circle-check-big", href: complete_savings_goal_path(@savings_goal), method: :patch) %>
+        <% end %>
+        <% if @savings_goal.may_archive? %>
+          <% menu.with_item(variant: "button", text: t(".archive"), icon: "archive", href: archive_savings_goal_path(@savings_goal), method: :patch) %>
+        <% end %>
+        <% if @savings_goal.may_unarchive? %>
+          <% menu.with_item(variant: "button", text: t(".unarchive"), icon: "archive-restore", href: unarchive_savings_goal_path(@savings_goal), method: :patch) %>
+        <% end %>
+        <% if @savings_goal.archived? %>
+          <% menu.with_item(
+               variant: "button",
+               text: t(".delete"),
+               icon: "trash-2",
+               href: savings_goal_path(@savings_goal),
+               method: :delete,
+               destructive: true,
+               confirm: CustomConfirm.for_resource_deletion(@savings_goal.name, high_severity: true)
+             ) %>
+        <% end %>
+      <% end %>
+    </div>
+  </header>
+
+  <section class="bg-container rounded-xl shadow-border-xs p-6">
+    <div class="flex flex-col items-center text-center">
+      <%= render Savings::ProgressRingComponent.new(goal: @savings_goal, size: 200) %>
+      <div class="mt-4 text-center">
+        <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive"><%= @savings_goal.current_balance_money.format %></p>
+        <p class="text-xs text-subdued tabular-nums mt-0.5">
+          <%= t(".ring.of", target: @savings_goal.target_amount_money.format) %>
+          <% unless @savings_goal.completed? %>
+            · <%= t(".ring.to_go", amount: @savings_goal.remaining_amount_money.format) %>
+          <% end %>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.avg_monthly") %></p>
+      <p class="text-lg font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @savings_goal.currency).format %></p>
+      <p class="text-[11px] text-subdued mt-1"><%= @stats[:avg_monthly_sub] %></p>
+    </div>
+    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.total_contributions") %></p>
+      <p class="text-lg font-medium text-primary tabular-nums"><%= @stats[:contributions_count] %></p>
+      <p class="text-[11px] text-subdued mt-1"><%= t(".stats.across_all_accounts") %></p>
+    </div>
+    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.target_date") %></p>
+      <p class="text-lg font-medium text-primary"><%= @savings_goal.target_date ? I18n.l(@savings_goal.target_date, format: :long) : t(".stats.no_target_date") %></p>
+      <p class="text-[11px] text-subdued mt-1"><%= @stats[:monthly_target_sub] %></p>
+    </div>
+    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.started") %></p>
+      <p class="text-lg font-medium text-primary"><%= I18n.l(@savings_goal.created_at.to_date, format: :long) %></p>
+      <p class="text-[11px] text-subdued mt-1"><%= @stats[:started_sub] %></p>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-5 gap-3">
+    <div class="bg-container rounded-xl shadow-border-xs overflow-hidden lg:col-span-3">
+      <div class="flex items-center px-5 py-3.5 border-b border-subdued">
+        <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
+        <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
+      </div>
+      <%= render "contributions_list", contributions: @contributions %>
     </div>
 
-    <%= render "contributions_list", contributions: @contributions %>
+    <div class="bg-container rounded-xl shadow-border-xs p-5 lg:col-span-2">
+      <h3 class="text-sm font-medium text-primary mb-3"><%= t(".funding_accounts_heading") %></h3>
+      <%= render Savings::FundingAccountsBreakdownComponent.new(goal: @savings_goal, rows: @funding_breakdown) %>
+    </div>
   </section>
+
+  <% if @savings_goal.notes.present? %>
+    <section class="bg-container rounded-xl shadow-border-xs p-5">
+      <h3 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h3>
+      <p class="text-sm text-secondary whitespace-pre-line"><%= @savings_goal.notes %></p>
+    </section>
+  <% end %>
 </div>

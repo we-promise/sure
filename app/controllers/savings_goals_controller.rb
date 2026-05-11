@@ -14,11 +14,13 @@ class SavingsGoalsController < ApplicationController
     end
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
+    @totals = totals_for_family
   end
 
   def show
     @contributions = @savings_goal.savings_contributions.includes(:account).chronological.limit(50)
     @funding_breakdown = funding_breakdown_for(@savings_goal)
+    @stats = stats_for(@savings_goal)
   end
 
   def new
@@ -149,6 +151,47 @@ class SavingsGoalsController < ApplicationController
         amount = totals[account.id] || 0
         { account: account, amount: amount, money: Money.new(amount, goal.currency) }
       end
+    end
+
+    def totals_for_family
+      goals = Current.family.savings_goals.with_current_balance.to_a
+      saved = goals.sum { |g| g.current_balance.to_d }
+      target = goals.sum { |g| g.target_amount.to_d }
+      currency = Current.family.primary_currency_code
+      active_goals = goals.select { |g| g.state == "active" }
+      on_track = active_goals.count { |g| g.status == :on_track || g.status == :reached }
+      behind = active_goals.count { |g| g.status == :behind }
+      overall_percent = target.zero? ? 0 : ((saved / target) * 100).round
+      {
+        saved: Money.new(saved, currency),
+        target: Money.new(target, currency),
+        overall_percent: [ overall_percent, 100 ].min,
+        on_track_count: on_track,
+        behind_count: behind
+      }
+    end
+
+    def stats_for(goal)
+      avg = goal.average_monthly_contribution.to_d
+      sub_avg = if goal.monthly_target_amount && goal.monthly_target_amount.to_d > avg
+        t("savings_goals.show.stats.needs_per_month", amount: Money.new(goal.monthly_target_amount, goal.currency).format)
+      else
+        t("savings_goals.show.stats.above_target_pace")
+      end
+      sub_target = if goal.monthly_target_amount
+        t("savings_goals.show.stats.needs_per_month", amount: Money.new(goal.monthly_target_amount, goal.currency).format)
+      else
+        t("savings_goals.show.stats.no_required_pace")
+      end
+      months_since_start = ((Date.current.year - goal.created_at.year) * 12 + (Date.current.month - goal.created_at.month)).clamp(0, 1200)
+      sub_started = t("savings_goals.show.stats.months_ago", count: months_since_start)
+      {
+        avg_monthly: avg,
+        avg_monthly_sub: sub_avg,
+        contributions_count: goal.savings_contributions.count,
+        monthly_target_sub: sub_target,
+        started_sub: sub_started
+      }
     end
 
     def perform_transition!(event)

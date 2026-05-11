@@ -1,6 +1,9 @@
-<div class="space-y-4">
-  <header class="flex items-center justify-between gap-3">
-    <h1 class="text-lg font-semibold text-primary"><%= t(".title") %></h1>
+<div class="space-y-5">
+  <header class="flex items-start justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold text-primary"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
+    </div>
     <% if @linkable_account_count > 0 %>
       <%= render DS::Link.new(
         text: t(".new_goal"),
@@ -15,13 +18,40 @@
   <% if @savings_goals.empty? && @counts["all"].zero? %>
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
-    <nav class="flex items-center gap-1 overflow-x-auto" role="tablist">
+    <% if @counts["all"].positive? %>
+      <section class="bg-container rounded-xl shadow-border-xs p-5 grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+        <div class="md:col-span-1.5">
+          <p class="text-xs text-secondary mb-1"><%= t(".summary.total_saved") %></p>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-medium text-primary tabular-nums privacy-sensitive"><%= @totals[:saved].format %></span>
+            <span class="text-xs text-subdued tabular-nums">/ <%= @totals[:target].format %></span>
+          </div>
+          <div class="mt-2 h-1.5 w-full rounded-full bg-surface-inset overflow-hidden">
+            <div class="h-full bg-primary rounded-full" style="inline-size: <%= @totals[:overall_percent] %>%; background-color: var(--text-primary);"></div>
+          </div>
+        </div>
+        <div>
+          <p class="text-xs text-secondary mb-1"><%= t(".summary.active_goals") %></p>
+          <p class="text-lg font-medium text-primary tabular-nums"><%= @counts["active"] %></p>
+        </div>
+        <div>
+          <p class="text-xs text-secondary mb-1"><%= t(".summary.on_track") %></p>
+          <p class="text-lg font-medium text-primary tabular-nums"><%= @totals[:on_track_count] %> / <%= @counts["active"] %></p>
+        </div>
+        <div>
+          <p class="text-xs text-secondary mb-1"><%= t(".summary.behind") %></p>
+          <p class="text-lg font-medium text-primary tabular-nums"><%= @totals[:behind_count] %></p>
+        </div>
+      </section>
+    <% end %>
+
+    <nav class="flex bg-surface-inset p-1 rounded-lg" role="tablist">
       <% SavingsGoalsController::STATE_FILTERS.each do |state| %>
         <% active = state == @state_filter %>
         <%= link_to savings_goals_path(state: state),
                     role: "tab",
                     "aria-selected": active,
-                    class: "inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium #{active ? 'bg-container shadow-border-xs text-primary' : 'text-secondary hover:text-primary'}" do %>
+                    class: "flex-1 inline-flex justify-center items-center gap-1.5 text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 #{active ? 'bg-white theme-dark:bg-gray-700 text-primary shadow-sm' : 'text-secondary hover:bg-surface-inset-hover'}" do %>
           <span><%= t(".tabs.#{state}") %></span>
           <span class="text-xs text-subdued tabular-nums"><%= @counts[state] %></span>
         <% end %>
@@ -29,7 +59,7 @@
     </nav>
 
     <% if @savings_goals.any? %>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
         <% @savings_goals.each do |goal| %>
           <%= render Savings::GoalCardComponent.new(goal: goal) %>
         <% end %>

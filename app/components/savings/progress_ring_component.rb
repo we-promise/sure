@@ -1,37 +1,32 @@
 class Savings::ProgressRingComponent < ApplicationComponent
-  SIZE = 220
-  STROKE = 14
-  RADIUS = (SIZE - STROKE) / 2.0
-  CIRCUMFERENCE = 2 * Math::PI * RADIUS
-
-  def initialize(goal:)
+  def initialize(goal:, size: 180)
     @goal = goal
+    @size = size
   end
 
-  attr_reader :goal
+  attr_reader :goal, :size
 
   def percent
-    [ [ goal.progress_percent.to_i, 0 ].max, 100 ].min
+    goal.progress_percent
   end
 
-  def offset
-    CIRCUMFERENCE * (1 - percent / 100.0)
-  end
-
-  def stroke_color
-    case goal.status
-    when :reached then "var(--color-green-500)"
-    when :behind then "var(--color-yellow-500)"
-    when :on_track then "var(--color-blue-500)"
-    else "var(--color-gray-400)"
-    end
-  end
-
-  def current_label
+  def amount_label
     goal.current_balance_money.format
   end
 
   def target_label
     goal.target_amount_money.format
+  end
+
+  def remaining_label
+    goal.remaining_amount_money.format
+  end
+
+  def percent_text_color
+    case goal.status
+    when :reached then "var(--color-green-600)"
+    when :behind then "var(--color-yellow-600)"
+    else "var(--text-primary)"
+    end
   end
 end

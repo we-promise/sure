@@ -113,6 +113,24 @@ class SavingsGoal < ApplicationRecord
     end
   end
 
+  # Segment array consumed by the shared `donut-chart` Stimulus controller
+  # (see app/javascript/controllers/donut_chart_controller.js). Same shape
+  # as Budget#to_donut_segments_json: filled portion in goal color, unused
+  # remainder as the system "unallocated" fill.
+  def to_donut_segments_json
+    filled = current_balance.to_d
+    rem = remaining_amount.to_d
+
+    if filled.zero? && rem.zero?
+      return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: "unused" } ]
+    end
+
+    segments = []
+    segments << { color: color.presence || "var(--color-blue-500)", amount: filled, id: "saved" } if filled.positive?
+    segments << { color: "var(--budget-unallocated-fill)", amount: rem, id: "unused" } if rem.positive?
+    segments
+  end
+
   # :reached → progress_percent >= 100
   # :on_track → has target_date and current pace >= required monthly pace
   # :behind → has target_date and current pace < required monthly pace
