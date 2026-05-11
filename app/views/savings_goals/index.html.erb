@@ -106,7 +106,7 @@
       <% end %>
 
       <% if @active_goals.any? %>
-        <div class="flex items-center gap-1.5 mb-2.5 text-[11px] font-medium uppercase tracking-wide text-secondary">
+        <div class="flex items-center gap-1.5 mb-5 text-[11px] font-medium uppercase tracking-wide text-secondary">
           <span><%= t(".ongoing_section.heading") %></span>
           <span class="text-subdued">·</span>
           <span class="tabular-nums"><%= @active_goals.size %></span>
@@ -128,7 +128,7 @@
 
     <% if @completed_goals.any? %>
       <section>
-        <div class="flex items-center gap-1.5 mb-2.5 text-[11px] font-medium uppercase tracking-wide text-secondary">
+        <div class="flex items-center gap-1.5 mb-5 text-[11px] font-medium uppercase tracking-wide text-secondary">
           <span><%= t(".completed_section.heading") %></span>
           <span class="text-subdued">·</span>
           <span class="tabular-nums"><%= @completed_goals.size %></span>
