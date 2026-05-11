@@ -1,9 +1,9 @@
 <%= link_to savings_goal_path(goal),
-            class: "group block bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-6",
+            class: "group block bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-6 #{"opacity-75" if goal.paused?}",
             data: {
               savings_goals_filter_target: "card",
               goal_name: goal.name,
-              goal_status: goal.status
+              goal_status: goal.paused? ? "paused" : goal.status
             } do %>
   <div class="flex items-start gap-3">
     <%= render Savings::GoalAvatarComponent.new(goal: goal, size: "lg") %>

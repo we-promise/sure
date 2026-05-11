@@ -2,6 +2,7 @@ class SavingsGoalsController < ApplicationController
   before_action :set_savings_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
 
   STATE_FILTERS = %w[all active paused completed archived].freeze
+  ACTIVE_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
 
   def index
     @counts = STATE_FILTERS.each_with_object({}) do |state, h|
@@ -10,6 +11,7 @@ class SavingsGoalsController < ApplicationController
 
     all_goals = Current.family.savings_goals.with_current_balance.alphabetically.to_a
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
+                             .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
     @completed_goals = all_goals.select { |g| g.state == "completed" }
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count

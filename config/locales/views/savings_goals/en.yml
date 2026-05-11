@@ -53,7 +53,8 @@ en:
         all: All
         on_track: On track
         behind: Behind
-        no_target_date: No date
+        no_target_date: Open-ended
+        paused: Paused
       account_card:
         funds:
           one: Funds 1 goal
@@ -151,6 +152,7 @@ en:
       behind: Behind
       reached: Reached
       no_target_date: No date
+      paused: Paused
     empty_state:
       heading: No goals yet
       body: Set a target, link the accounts you save into, and watch your progress add up. Goals can pull from multiple accounts.

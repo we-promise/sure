@@ -119,7 +119,7 @@
             </div>
           </div>
           <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
-            <% %w[all on_track behind no_target_date].each do |status| %>
+            <% %w[all on_track behind no_target_date paused].each do |status| %>
               <% active = status == "all" %>
               <button type="button"
                       data-savings-goals-filter-target="chip"
