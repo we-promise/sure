@@ -247,6 +247,24 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "rule operand lookup skips name fallback for stale UUID values" do
+    stale_uuid = SecureRandom.uuid
+    relation = mock
+    relation.expects(:find_by).with(id: stale_uuid).once.returns(nil)
+    relation.expects(:find_by).with(name: stale_uuid).never
+
+    operand = @exporter.send(
+      :rule_operand,
+      stale_uuid,
+      type: "Category",
+      relation: relation,
+      fallback_to_name: true
+    )
+
+    assert_equal stale_uuid, operand[:value]
+    assert_nil operand[:value_ref]
+  end
+
   test "exports rule actions and maps tag UUIDs to names" do
     # Create a rule with a tag action
     tag_rule = @family.rules.build(

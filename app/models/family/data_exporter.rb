@@ -2,6 +2,8 @@ require "zip"
 require "csv"
 
 class Family::DataExporter
+  UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i.freeze
+
   def initialize(family)
     @family = family
   end
@@ -426,12 +428,13 @@ class Family::DataExporter
     end
 
     def serialize_condition(condition)
+      operand = resolve_condition_operand(condition)
       data = {
         condition_type: condition.condition_type,
         operator: condition.operator,
-        value: resolve_condition_value(condition)
+        value: operand[:value]
       }
-      value_ref = resolve_condition_value_ref(condition)
+      value_ref = operand[:value_ref]
       data[:value_ref] = value_ref if value_ref.present?
 
       if condition.compound? && condition.sub_conditions.any?
@@ -442,89 +445,67 @@ class Family::DataExporter
     end
 
     def serialize_action(action)
+      operand = resolve_action_operand(action)
       data = {
         action_type: action.action_type,
-        value: resolve_action_value(action)
+        value: operand[:value]
       }
-      value_ref = resolve_action_value_ref(action)
+      value_ref = operand[:value_ref]
       data[:value_ref] = value_ref if value_ref.present?
 
       data
     end
 
-    def resolve_condition_value(condition)
-      return condition.value unless condition.value.present?
+    def resolve_condition_operand(condition)
+      return rule_operand(condition.value) unless condition.value.present?
 
       # Map category UUIDs to names for portability
       if condition.condition_type == "transaction_category" && condition.value.present?
-        category = @family.categories.find_by(id: condition.value)
-        return category&.name || condition.value
+        return rule_operand(condition.value, type: "Category", relation: @family.categories)
       end
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant" && condition.value.present?
-        merchant = @family.merchants.find_by(id: condition.value)
-        return merchant&.name || condition.value
+        return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
       end
 
-      condition.value
+      rule_operand(condition.value)
     end
 
-    def resolve_condition_value_ref(condition)
-      return unless condition.value.present?
-
-      if condition.condition_type == "transaction_category"
-        category = @family.categories.find_by(id: condition.value)
-        return rule_value_ref("Category", category) if category
-      end
-
-      if condition.condition_type == "transaction_merchant"
-        merchant = @family.merchants.find_by(id: condition.value)
-        rule_value_ref("Merchant", merchant) if merchant
-      end
-    end
-
-    def resolve_action_value(action)
-      return action.value unless action.value.present?
+    def resolve_action_operand(action)
+      return rule_operand(action.value) unless action.value.present?
 
       # Map category UUIDs to names for portability
       if action.action_type == "set_transaction_category" && action.value.present?
-        category = @family.categories.find_by(id: action.value) || @family.categories.find_by(name: action.value)
-        return category&.name || action.value
+        return rule_operand(action.value, type: "Category", relation: @family.categories, fallback_to_name: true)
       end
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant" && action.value.present?
-        merchant = @family.merchants.find_by(id: action.value) || @family.merchants.find_by(name: action.value)
-        return merchant&.name || action.value
+        return rule_operand(action.value, type: "Merchant", relation: @family.merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability
       if action.action_type == "set_transaction_tags" && action.value.present?
-        tag = @family.tags.find_by(id: action.value) || @family.tags.find_by(name: action.value)
-        return tag&.name || action.value
+        return rule_operand(action.value, type: "Tag", relation: @family.tags, fallback_to_name: true)
       end
 
-      action.value
+      rule_operand(action.value)
     end
 
-    def resolve_action_value_ref(action)
-      return unless action.value.present?
+    def rule_operand(value, type: nil, relation: nil, fallback_to_name: false)
+      record = relation && resolve_rule_operand_record(relation, value, fallback_to_name: fallback_to_name)
 
-      if action.action_type == "set_transaction_category"
-        category = @family.categories.find_by(id: action.value) || @family.categories.find_by(name: action.value)
-        return rule_value_ref("Category", category) if category
-      end
+      {
+        value: record&.name || value,
+        value_ref: record ? rule_value_ref(type, record) : nil
+      }
+    end
 
-      if action.action_type == "set_transaction_merchant"
-        merchant = @family.merchants.find_by(id: action.value) || @family.merchants.find_by(name: action.value)
-        return rule_value_ref("Merchant", merchant) if merchant
-      end
+    def resolve_rule_operand_record(relation, value, fallback_to_name:)
+      return relation.find_by(id: value) if uuid_like?(value)
 
-      if action.action_type == "set_transaction_tags"
-        tag = @family.tags.find_by(id: action.value) || @family.tags.find_by(name: action.value)
-        rule_value_ref("Tag", tag) if tag
-      end
+      relation.find_by(name: value) if fallback_to_name
     end
 
     def rule_value_ref(type, record)
@@ -533,6 +514,10 @@ class Family::DataExporter
         id: record.id,
         name: record.name
       }
+    end
+
+    def uuid_like?(value)
+      value.to_s.match?(UUID_FORMAT)
     end
 
     def serialize_conditions_for_csv(conditions)
