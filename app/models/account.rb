@@ -317,6 +317,14 @@ class Account < ApplicationRecord
     read_attribute(:institution_domain).presence || provider&.institution_domain
   end
 
+  def manual_crypto_exchange?
+    accountable_type == "Crypto" &&
+      accountable&.subtype == "exchange" &&
+      account_providers.none? &&
+      plaid_account_id.blank? &&
+      simplefin_account_id.blank?
+  end
+
   def logo_url
     if institution_domain.present? && Setting.brand_fetch_client_id.present?
       logo_size = Setting.brand_fetch_logo_size

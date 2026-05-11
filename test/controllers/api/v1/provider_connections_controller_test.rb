@@ -114,6 +114,13 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     get api_v1_provider_connections_url, headers: api_headers(@api_key)
     assert_response :success
 
+    json_response = JSON.parse(response.body)
+    kraken_connection = json_response["data"].detect do |connection|
+      connection["id"] == kraken_item.id && connection["provider"] == "kraken"
+    end
+
+    assert_not_nil kraken_connection
+    assert_equal "KrakenItem", kraken_connection["provider_type"]
     refute_includes response.body, @mercury_item.token
     refute_includes response.body, kraken_item.api_key
     refute_includes response.body, kraken_item.api_secret

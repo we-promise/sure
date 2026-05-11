@@ -11,9 +11,9 @@ class CreateKrakenItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.string :institution_url
       t.string :institution_color
 
-      t.string :status, default: "good"
-      t.boolean :scheduled_for_deletion, default: false
-      t.boolean :pending_account_setup, default: false
+      t.string :status, default: "good", null: false
+      t.boolean :scheduled_for_deletion, default: false, null: false
+      t.boolean :pending_account_setup, default: false, null: false
 
       t.datetime :sync_start_date
       t.jsonb :raw_payload

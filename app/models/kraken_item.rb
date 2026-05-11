@@ -25,6 +25,7 @@ class KrakenItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+  scope :credentials_configured, -> { where.not(api_key: [ nil, "" ]).where.not(api_secret: [ nil, "" ]) }
 
   before_validation :strip_credentials
 
@@ -39,7 +40,7 @@ class KrakenItem < ApplicationRecord
 
     KrakenItem::Importer.new(self, kraken_provider: provider).import
   rescue StandardError => e
-    Rails.logger.error "KrakenItem #{id} - Failed to import: #{e.message}"
+    Rails.logger.error "KrakenItem #{id} - Failed to import: #{e.full_message}"
     raise
   end
 
@@ -52,7 +53,7 @@ class KrakenItem < ApplicationRecord
         result = KrakenAccount::Processor.new(kraken_account).process
         results << { kraken_account_id: kraken_account.id, success: true, result: result }
       rescue StandardError => e
-        Rails.logger.error "KrakenItem #{id} - Failed to process account #{kraken_account.id}: #{e.message}"
+        Rails.logger.error "KrakenItem #{id} - Failed to process account #{kraken_account.id}: #{e.full_message}"
         results << { kraken_account_id: kraken_account.id, success: false, error: e.message }
       end
     end
@@ -71,7 +72,7 @@ class KrakenItem < ApplicationRecord
       )
       { account_id: account.id, success: true }
     rescue StandardError => e
-      Rails.logger.error "KrakenItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
+      Rails.logger.error "KrakenItem #{id} - Failed to schedule sync for account #{account.id}: #{e.full_message}"
       { account_id: account.id, success: false, error: e.message }
     end
   end

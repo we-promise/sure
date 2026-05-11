@@ -190,7 +190,7 @@ class KrakenItemsController < ApplicationController
     end
 
     def kraken_item_account_flow_context
-      credentialed_items = Current.family.kraken_items.active.ordered.select(&:credentials_configured?)
+      credentialed_items = Current.family.kraken_items.active.credentials_configured.ordered.select(&:credentials_configured?)
       item = if params[:kraken_item_id].present?
         credentialed_items.find { |candidate| candidate.id.to_s == params[:kraken_item_id].to_s }
       elsif credentialed_items.one?
@@ -213,11 +213,7 @@ class KrakenItemsController < ApplicationController
     end
 
     def manual_crypto_exchange_account?(account)
-      account.accountable_type == "Crypto" &&
-        account.accountable&.subtype == "exchange" &&
-        account.account_providers.none? &&
-        account.plaid_account_id.blank? &&
-        account.simplefin_account_id.blank?
+      account.manual_crypto_exchange?
     end
 
     def redirect_or_flash_error(message, fallback_path)

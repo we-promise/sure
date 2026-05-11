@@ -114,10 +114,20 @@ class Provider::Kraken
         raise ApiError, "Kraken API request failed: #{response.code}"
       end
 
-      return parsed unless parsed.is_a?(Hash)
+      unless parsed.is_a?(Hash)
+        raise ApiError, "Malformed Kraken API response"
+      end
+
+      unless parsed.key?("error")
+        raise ApiError, "Malformed Kraken API response: missing error"
+      end
 
       errors = Array(parsed["error"]).reject(&:blank?)
       raise classified_error(errors) if errors.any?
+
+      unless parsed.key?("result")
+        raise ApiError, "Malformed Kraken API response: missing result"
+      end
 
       parsed["result"]
     end

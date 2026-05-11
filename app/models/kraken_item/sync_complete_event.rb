@@ -13,6 +13,6 @@ class KrakenItem::SyncCompleteEvent
       locals: { kraken_item: @kraken_item }
     )
   rescue StandardError => e
-    Rails.logger.warn("KrakenItem::SyncCompleteEvent failed for #{@kraken_item.id}: #{e.class} - #{e.message}")
+    Rails.logger.warn("KrakenItem::SyncCompleteEvent failed for #{@kraken_item.id}: #{e.class}")
   end
 end

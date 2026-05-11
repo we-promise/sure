@@ -20,7 +20,7 @@
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @available_kraken_accounts.each do |kraken_account| %>
               <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
-                <%= radio_button_tag :kraken_account_id, kraken_account.id, false %>
+                <%= radio_button_tag :kraken_account_id, kraken_account.id, false, required: true %>
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= kraken_account.name.presence || kraken_account.id %></span>
                   <span class="text-xs text-secondary">

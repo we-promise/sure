@@ -13,7 +13,7 @@ class Provider::KrakenAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_kraken?
 
-    kraken_items = family.kraken_items.active.ordered.select(&:credentials_configured?)
+    kraken_items = family.kraken_items.active.credentials_configured.ordered.select(&:credentials_configured?)
     return [ connection_config_for(nil) ] if kraken_items.empty?
 
     kraken_items.map { |kraken_item| connection_config_for(kraken_item) }
@@ -90,13 +90,13 @@ class Provider::KrakenAdapter < Provider::Base
 
   def self.resolve_kraken_item(family, kraken_item_id)
     if kraken_item_id.present?
-      item = family.kraken_items.active.find_by(id: kraken_item_id)
+      item = family.kraken_items.active.credentials_configured.find_by(id: kraken_item_id)
       return item if item&.credentials_configured?
 
       return nil
     end
 
-    credentialed_items = family.kraken_items.active.ordered.select(&:credentials_configured?)
+    credentialed_items = family.kraken_items.active.credentials_configured.ordered.select(&:credentials_configured?)
     return credentialed_items.first if credentialed_items.one?
 
     nil

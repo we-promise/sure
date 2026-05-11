@@ -72,6 +72,36 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     end
   end
 
+  test "handle response rejects non-envelope payloads" do
+    response = mock_httparty_response(200, [ "not", "an", "envelope" ])
+
+    error = assert_raises(Provider::Kraken::ApiError) do
+      @provider.send(:handle_response, response)
+    end
+
+    assert_equal "Malformed Kraken API response", error.message
+  end
+
+  test "handle response requires error key" do
+    response = mock_httparty_response(200, { "result" => {} })
+
+    error = assert_raises(Provider::Kraken::ApiError) do
+      @provider.send(:handle_response, response)
+    end
+
+    assert_equal "Malformed Kraken API response: missing error", error.message
+  end
+
+  test "handle response requires result key" do
+    response = mock_httparty_response(200, { "error" => [] })
+
+    error = assert_raises(Provider::Kraken::ApiError) do
+      @provider.send(:handle_response, response)
+    end
+
+    assert_equal "Malformed Kraken API response: missing result", error.message
+  end
+
   test "handle response maps invalid key errors" do
     assert_raises(Provider::Kraken::AuthenticationError) do
       @provider.send(:handle_response, kraken_error_response("EAPI:Invalid key"))

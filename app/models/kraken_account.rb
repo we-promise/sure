@@ -15,7 +15,6 @@ class KrakenAccount < ApplicationRecord
 
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
-  has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :account_id, :account_type, :currency, presence: true
 
@@ -23,8 +22,8 @@ class KrakenAccount < ApplicationRecord
     account
   end
 
-  def ensure_account_provider!(linked_account = nil)
-    acct = linked_account || current_account
+  def ensure_account_provider!(target_account = nil)
+    acct = target_account || current_account
     return nil unless acct
 
     AccountProvider
