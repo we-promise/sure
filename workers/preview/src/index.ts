@@ -37,6 +37,7 @@ export class RailsContainer extends Container {
     RAILS_FORCE_SSL: "false",
     RAILS_ASSUME_SSL: "false",
     ACTIVE_STORAGE_SERVICE: "local",
+    DISABLE_BOOTSNAP: "1",
     BINDING: "::",
     PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
   };
