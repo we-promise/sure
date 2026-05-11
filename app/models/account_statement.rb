@@ -62,7 +62,7 @@ class AccountStatement < ApplicationRecord
   validate :original_file_constraints, if: -> { original_file.attached? }
 
   scope :ordered, -> { order(created_at: :desc) }
-  scope :linked, -> { where.not(account_id: nil) }
+  scope :with_account, -> { where.not(account_id: nil) }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   scope :for_month, ->(month) {
     month_start = month.to_date.beginning_of_month
@@ -110,12 +110,12 @@ class AccountStatement < ApplicationRecord
       statement
     rescue ActiveRecord::RecordNotUnique
       duplicate = duplicate_for(family, prepared_upload)
+      purge_original_file(statement)
+
       if duplicate
-        purge_original_file(statement)
         raise DuplicateUploadError, duplicate
       end
 
-      purge_original_file(statement)
       raise
     rescue StandardError
       purge_original_file(statement)
@@ -175,6 +175,8 @@ class AccountStatement < ApplicationRecord
       return unless statement&.original_file&.attached?
 
       statement.original_file.purge
+    rescue StandardError => e
+      Rails.logger.warn("AccountStatement staged blob cleanup failed: #{e.class}: #{e.message}")
     end
 
     def balance_lookup_for(account, statements)
@@ -275,6 +277,7 @@ class AccountStatement < ApplicationRecord
 
     self.suggested_account = match&.account
     self.match_confidence = match&.confidence
+    clear_invalid_suggested_account
   end
 
   def covered_months
@@ -403,10 +406,20 @@ class AccountStatement < ApplicationRecord
     end
 
     def suggested_account_belongs_to_family
-      return if suggested_account.nil?
-      return if suggested_account.family_id == family_id
+      return if suggested_account_valid_for_family?
 
       errors.add(:suggested_account, :invalid)
+    end
+
+    def clear_invalid_suggested_account
+      return if suggested_account_valid_for_family?
+
+      self.suggested_account = nil
+      self.match_confidence = nil
+    end
+
+    def suggested_account_valid_for_family?
+      suggested_account.nil? || suggested_account.family_id == family_id
     end
 
     def period_order

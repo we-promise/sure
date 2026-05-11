@@ -321,6 +321,23 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert statement.linked?
   end
 
+  test "read only shared user cannot relink linked statement to writable account" do
+    source_account = accounts(:credit_card)
+    target_account = accounts(:depository)
+    statement = AccountStatement.create_from_upload!(
+      family: source_account.family,
+      account: source_account,
+      file: uploaded_file(filename: "readonly_relink.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    sign_in users(:family_member)
+
+    patch link_account_statement_url(statement), params: { account_id: target_account.id }
+
+    assert_redirected_to account_url(source_account)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_equal source_account, statement.reload.account
+  end
+
   test "link shows friendly error when no target account is available" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,

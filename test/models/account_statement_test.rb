@@ -190,7 +190,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     end
   end
 
-  test "linked scope keeps account linkage semantics while enum predicate follows review status" do
+  test "with_account scope keeps account linkage semantics while enum predicate follows review status" do
     linked_statement = AccountStatement.create_from_upload!(
       family: @family,
       account: @account,
@@ -204,8 +204,8 @@ class AccountStatementTest < ActiveSupport::TestCase
     accountless_statement.update_columns(review_status: "linked")
 
     assert accountless_statement.reload.linked?
-    assert_includes @family.account_statements.linked, linked_statement
-    assert_not_includes @family.account_statements.linked, accountless_statement
+    assert_includes @family.account_statements.with_account, linked_statement
+    assert_not_includes @family.account_statements.with_account, accountless_statement
     assert_not_includes @family.account_statements.unmatched, accountless_statement
   end
 
@@ -490,7 +490,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_includes @family.account_statements.unmatched, statement
   end
 
-  test "unlink rolls back when recomputed suggestion is invalid" do
+  test "unlink clears invalid recomputed suggestion" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
       account: @account,
@@ -507,13 +507,13 @@ class AccountStatementTest < ActiveSupport::TestCase
     invalid_match = AccountStatement::AccountMatcher::Match.new(account: other_account, confidence: 0.9)
     AccountStatement::AccountMatcher.any_instance.stubs(:best_match).returns(invalid_match)
 
-    assert_raises(ActiveRecord::RecordInvalid) do
-      statement.unlink!
-    end
+    statement.unlink!
 
     statement.reload
-    assert_equal @account, statement.account
-    assert statement.linked?
+    assert_nil statement.account
+    assert_nil statement.suggested_account
+    assert_nil statement.match_confidence
+    assert statement.unmatched?
   end
 
   test "preserves explicit rejected review status" do

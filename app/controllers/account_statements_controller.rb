@@ -11,7 +11,7 @@ class AccountStatementsController < ApplicationController
       .ordered
 
     @unmatched_pagy, @unmatched_statements = pagy(account_statements.unmatched, limit: safe_per_page, page_param: :unmatched_page)
-    @linked_pagy, @linked_statements = pagy(account_statements.linked, limit: safe_per_page, page_param: :linked_page)
+    @linked_pagy, @linked_statements = pagy(account_statements.with_account, limit: safe_per_page, page_param: :linked_page)
     @total_storage_bytes = Current.family.account_statements.sum(:byte_size)
     @accounts = Current.user.accessible_accounts.visible.alphabetically
     @breadcrumbs = [
@@ -87,6 +87,8 @@ class AccountStatementsController < ApplicationController
   end
 
   def link
+    return if @statement.account && !require_account_permission!(@statement.account)
+
     account_id = params[:account_id].presence || @statement.suggested_account_id
     if account_id.blank?
       redirect_to account_statement_path(@statement), alert: t("account_statements.link.no_account")
