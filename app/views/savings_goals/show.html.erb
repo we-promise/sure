@@ -202,24 +202,35 @@
     <% end %>
   </section>
 
-  <%# Stat row %>
+  <%# Stat row — combo pace card + contributions count %>
   <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
-    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.avg_monthly") %></p>
-      <p class="text-lg font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @savings_goal.currency).format %></p>
-      <p class="text-[11px] text-subdued mt-1"><%= @stats[:avg_monthly_sub] %></p>
+    <%# Combo: Avg vs Target pace %>
+    <div class="md:col-span-2 bg-container rounded-xl shadow-border-xs px-5 py-4">
+      <p class="text-[11px] text-secondary mb-2"><%= t(".stats.monthly_pace") %></p>
+      <div class="flex items-baseline gap-2">
+        <p class="text-2xl font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @savings_goal.currency).format %></p>
+        <p class="text-sm text-subdued tabular-nums">/mo</p>
+        <% if @savings_goal.monthly_target_amount %>
+          <p class="text-sm text-subdued tabular-nums">· <%= t(".stats.target_of", amount: Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format) %></p>
+        <% end %>
+      </div>
+      <% if @savings_goal.monthly_target_amount %>
+        <% delta = @savings_goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
+        <% if delta.positive? %>
+          <p class="text-xs text-warning mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @savings_goal.currency).format) %></p>
+        <% else %>
+          <p class="text-xs text-success mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
+        <% end %>
+      <% else %>
+        <p class="text-xs text-subdued mt-1"><%= t(".stats.no_required_pace") %></p>
+      <% end %>
     </div>
+
+    <%# Total contributions %>
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
       <p class="text-[11px] text-secondary mb-1"><%= t(".stats.total_contributions") %></p>
       <p class="text-lg font-medium text-primary tabular-nums"><%= @stats[:contributions_count] %></p>
       <p class="text-[11px] text-subdued mt-1"><%= t(".stats.across_all_accounts") %></p>
-    </div>
-    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.target_pace") %></p>
-      <p class="text-lg font-medium text-primary tabular-nums">
-        <%= @savings_goal.monthly_target_amount ? Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format + "/mo" : t(".stats.no_required_pace") %>
-      </p>
-      <p class="text-[11px] text-subdued mt-1"><%= @stats[:monthly_target_sub] %></p>
     </div>
   </section>
 

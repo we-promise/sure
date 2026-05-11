@@ -148,6 +148,9 @@ en:
         no_required_pace: No required pace
         needs_per_month: "Needs %{amount}/mo"
         above_target_pace: Above target pace
+        monthly_pace: Monthly pace
+        target_of: "target %{amount}/mo"
+        behind_by: "Behind by %{amount}/mo"
     states:
       active: Active
       paused: Paused
