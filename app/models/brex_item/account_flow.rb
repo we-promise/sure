@@ -34,9 +34,9 @@ class BrexItem::AccountFlow
 
   def initialize(family:, brex_item_id: nil, brex_item: nil)
     @family = family
-    @brex_item_id = brex_item_id
-    @credentialed_items = family.brex_items.active.with_credentials.ordered.select(&:credentials_configured?)
-    @brex_item = brex_item || resolve_brex_item
+    @brex_item_id = brex_item_id.to_s.strip.presence
+    @credentialed_items = family.brex_items.active.with_credentials.ordered
+    @brex_item = brex_item || BrexItem.resolve_for(family: family, brex_item_id: @brex_item_id)
   end
 
   def self.cache_key(family, brex_item)
@@ -66,7 +66,7 @@ class BrexItem::AccountFlow
 
   def preload_payload
     return selection_error_payload if !selected?
-    return { success: false, error: "no_credentials", has_accounts: false } unless brex_item&.credentials_configured?
+    return { success: false, error: "no_credentials", has_accounts: false } unless brex_item.credentials_configured?
 
     cached_accounts = Rails.cache.read(cache_key)
     cached = !cached_accounts.nil?
@@ -219,7 +219,7 @@ class BrexItem::AccountFlow
   end
 
   def import_accounts_from_api_if_needed
-    raise NoApiTokenError unless brex_item.credentials_configured?
+    raise NoApiTokenError unless brex_item&.credentials_configured?
 
     available_accounts = fetch_accounts
     return nil if available_accounts.empty?
@@ -379,7 +379,7 @@ class BrexItem::AccountFlow
   def complete_setup_result(account_types:, account_subtypes:)
     result = complete_setup!(account_types: account_types, account_subtypes: account_subtypes)
 
-    SetupCompletion.new(success: result.failed_count.zero? || result.created_count.positive?, message: setup_notice(result))
+    SetupCompletion.new(success: result.failed_count.zero? && result.created_count.positive?, message: setup_notice(result))
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
     Rails.logger.error("Brex account setup failed: #{e.class} - #{e.message}")
     Rails.logger.error(Array(e.backtrace).first(10).join("\n"))
@@ -402,6 +402,15 @@ class BrexItem::AccountFlow
   private
 
     def selection_error_payload
+      if brex_item_id.present?
+        return {
+          success: false,
+          error: "select_connection",
+          error_message: I18n.t("brex_items.select_accounts.select_connection"),
+          has_accounts: nil
+        }
+      end
+
       return { success: false, error: "no_credentials", has_accounts: false } unless selection_required?
 
       {
@@ -543,17 +552,6 @@ class BrexItem::AccountFlow
       else
         I18n.t("brex_items.complete_account_setup.no_accounts")
       end
-    end
-
-    def resolve_brex_item
-      if brex_item_id.present?
-        item = family.brex_items.active.find_by(id: brex_item_id)
-        return item if item&.credentials_configured?
-
-        return nil
-      end
-
-      credentialed_items.first if credentialed_items.one?
     end
 
     def cache_key

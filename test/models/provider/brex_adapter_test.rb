@@ -205,4 +205,20 @@ class Provider::BrexAdapterTest < ActiveSupport::TestCase
     assert_equal "https://brex.com/item", adapter.institution_url
     assert_equal "#123456", adapter.institution_color
   end
+
+  test "logs institution urls without hosts" do
+    brex_account = brex_items(:one).brex_accounts.create!(
+      account_id: "metadata_bad_url_cash",
+      account_kind: "cash",
+      name: "Metadata Bad URL Cash",
+      currency: "USD",
+      institution_metadata: {
+        "url" => "not-a-url"
+      }
+    )
+
+    Rails.logger.expects(:warn).with(regexp_matches(/institution URL has no host/))
+
+    assert_nil Provider::BrexAdapter.new(brex_account).institution_domain
+  end
 end

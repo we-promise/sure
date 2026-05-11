@@ -42,7 +42,7 @@
                   <strong><%= t(".choose_account_type") %></strong>
                 </p>
                 <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
-                  <% @account_type_options.reject { |_, type| type == "skip" }.each do |label, type| %>
+                  <% @displayable_account_type_options.each do |label, type| %>
                     <li><strong><%= label %></strong></li>
                   <% end %>
                 </ul>

@@ -1726,6 +1726,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
+  add_foreign_key "brex_accounts", "brex_items"
+  add_foreign_key "brex_items", "families"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"
@@ -1733,8 +1735,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"
-  add_foreign_key "brex_accounts", "brex_items"
-  add_foreign_key "brex_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
   add_foreign_key "enable_banking_accounts", "enable_banking_items"

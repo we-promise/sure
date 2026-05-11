@@ -13,7 +13,7 @@ class Provider::BrexAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_brex?
 
-    brex_items = family.brex_items.active.with_credentials.ordered.select(&:credentials_configured?)
+    brex_items = family.brex_items.active.with_credentials.ordered
 
     return [ connection_config_for(nil) ] if brex_items.empty?
 
@@ -30,7 +30,7 @@ class Provider::BrexAdapter < Provider::Base
   def self.build_provider(family: nil, brex_item_id: nil)
     return nil unless family.present?
 
-    brex_item = resolve_brex_item(family, brex_item_id)
+    brex_item = BrexItem.resolve_for(family: family, brex_item_id: brex_item_id)
     return nil unless brex_item&.credentials_configured?
 
     base_url = brex_item.effective_base_url
@@ -66,21 +66,6 @@ class Provider::BrexAdapter < Provider::Base
   end
   private_class_method :connection_config_for
 
-  def self.resolve_brex_item(family, brex_item_id)
-    if brex_item_id.present?
-      item = family.brex_items.active.find_by(id: brex_item_id)
-      return item if item&.credentials_configured?
-
-      return nil
-    end
-
-    credentialed_items = family.brex_items.active.with_credentials.ordered.select(&:credentials_configured?)
-    return credentialed_items.first if credentialed_items.one?
-
-    nil
-  end
-  private_class_method :resolve_brex_item
-
   def sync_path
     Rails.application.routes.url_helpers.sync_brex_item_path(item)
   end
@@ -103,7 +88,9 @@ class Provider::BrexAdapter < Provider::Base
     # Derive domain from URL if missing
     if domain.blank? && url.present?
       begin
-        domain = URI.parse(url).host&.gsub(/^www\./, "")
+        parsed_host = URI.parse(url).host
+        Rails.logger.warn("Brex account #{provider_account.id} institution URL has no host: #{url}") if parsed_host.nil?
+        domain = parsed_host&.gsub(/^www\./, "")
       rescue URI::InvalidURIError
         Rails.logger.warn("Invalid institution URL for Brex account #{provider_account.id}: #{url}")
       end

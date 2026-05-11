@@ -48,7 +48,7 @@ class Provider::Brex
     cash_accounts = get_cash_accounts
     card_accounts = get_card_accounts
 
-    accounts = cash_accounts.map { |account| account.merge(account_kind: "cash") }
+    accounts = cash_accounts.dup
     accounts << aggregate_card_account(card_accounts) if card_accounts.any?
 
     {

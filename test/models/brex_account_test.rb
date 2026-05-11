@@ -45,6 +45,8 @@ class BrexAccountTest < ActiveSupport::TestCase
   end
 
   test "declares raw Brex payloads as encrypted" do
+    skip "Encryption not configured" unless BrexAccount.encryption_ready?
+
     encrypted_attributes = BrexAccount.encrypted_attributes.map(&:to_s)
 
     assert_includes encrypted_attributes, "raw_payload"
@@ -171,7 +173,7 @@ class BrexAccountTest < ActiveSupport::TestCase
           card_id: "card_1",
           pan: "test-pan-placeholder",
           private_note: "private",
-          last_four: "1111"
+          last_four: "card ending 1111"
         }
       }
     )
@@ -179,6 +181,13 @@ class BrexAccountTest < ActiveSupport::TestCase
     assert_equal({ "card_id" => "card_1", "last_four" => "1111" }, sanitized["card_metadata"])
     refute_includes sanitized.to_s, "test-pan-placeholder"
     refute_includes sanitized.to_s, "private"
+  end
+
+  test "transaction payload sanitizer limits card metadata last four to digits" do
+    sanitized = BrexAccount.sanitize_payload(card_metadata: { card_last_four: "card id abc9876" })
+
+    assert_equal "9876", sanitized["card_metadata"]["last_four"]
+    refute_includes sanitized.to_s, "abc9876"
   end
 
   test "linked_account uses the cached account association" do

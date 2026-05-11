@@ -16,7 +16,7 @@ class BrexItemsController < ApplicationController
 
   def create
     @brex_item = Current.family.brex_items.build(brex_item_params)
-    @brex_item.name ||= "Brex Connection"
+    @brex_item.name = t("brex_items.default_connection_name") if @brex_item.name.blank?
 
     if @brex_item.save
       @brex_item.sync_later

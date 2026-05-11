@@ -12,15 +12,19 @@ module BrexItem::Unlinking
     results = []
 
     brex_accounts.find_each do |provider_account|
-      link_ids = AccountProvider.where(provider_type: "BrexAccount", provider_id: provider_account.id).ids
       result = {
         provider_account_id: provider_account.id,
         name: provider_account.name,
-        provider_link_ids: link_ids
+        provider_link_ids: []
       }
       results << result
 
-      next if dry_run
+      if dry_run
+        result[:provider_link_ids] = AccountProvider.where(provider_type: "BrexAccount", provider_id: provider_account.id).ids
+        next
+      end
+
+      link_ids = []
 
       begin
         ActiveRecord::Base.transaction do

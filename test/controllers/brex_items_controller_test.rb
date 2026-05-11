@@ -40,6 +40,21 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "joint_brex_token", @family.brex_items.find_by!(name: "Joint Brex").token
   end
 
+  test "create uses localized default name when submitted name is blank" do
+    assert_difference "BrexItem.count", 1 do
+      post brex_items_url, params: {
+        brex_item: {
+          name: "  ",
+          token: "default_name_token",
+          base_url: "https://api.brex.com"
+        }
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("brex_items.default_connection_name"), @family.brex_items.order(:created_at).last.name
+  end
+
   test "update changes only the selected brex connection" do
     existing_token = @existing_item.token
 

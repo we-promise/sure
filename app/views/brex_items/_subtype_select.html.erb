@@ -1,4 +1,4 @@
-<div class="subtype-select" data-type="<%= account_type %>" style="display: none;">
+<div class="subtype-select hidden" data-type="<%= account_type %>">
   <% if subtype_config[:options].present? %>
     <%= label_tag "account_subtypes[#{brex_account.id}]", subtype_config[:label],
                  class: "block text-sm font-medium text-primary mb-2" %>

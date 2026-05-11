@@ -13,7 +13,7 @@ module Family::BrexConnectable
 
   def create_brex_item!(token:, base_url: nil, item_name: nil)
     brex_item = brex_items.create!(
-      name: item_name || "Brex Connection",
+      name: item_name.presence || I18n.t("brex_items.default_connection_name"),
       token: token,
       base_url: base_url
     )

@@ -32,8 +32,8 @@ module BrexItemsHelper
     parts = [
       t("brex_items.account_metadata.provider"),
       display.currency,
-      display.kind.to_s.titleize,
-      display.status.presence&.to_s&.titleize
+      translated_brex_metadata_value("kinds", display.kind),
+      translated_brex_metadata_value("statuses", display.status)
     ].compact
 
     parts.join(t("brex_items.account_metadata.separator"))
@@ -65,4 +65,12 @@ module BrexItemsHelper
       "checking"
     end
   end
+
+  private
+    def translated_brex_metadata_value(scope, value)
+      key = value.to_s
+      return nil if key.blank?
+
+      t("brex_items.#{scope}.#{key}", default: key.titleize)
+    end
 end

@@ -1,9 +1,20 @@
 ---
 en:
   brex_items:
+    default_connection_name: Brex Connection
     account_metadata:
       provider: Brex
       separator: " • "
+    kinds:
+      cash: Cash
+      card: Card
+    statuses:
+      ACTIVE: Active
+      active: Active
+      CLOSED: Closed
+      closed: Closed
+      frozen: Frozen
+      FROZEN: Frozen
     create:
       success: Brex connection created successfully
     default_card_name: Brex Card
@@ -92,8 +103,8 @@ en:
       disconnect_label: "Disconnect %{name}"
       disconnect_confirm: "Disconnect %{name}?"
       encryption_warning:
-        title: Brex tokens require database encryption
-        message: Configure Active Record encryption keys before adding Brex tokens. Sure will not store Brex provider credentials unless encryption is configured.
+        title: Database encryption is not configured
+        message: Configure Active Record encryption keys before adding Brex tokens in production. Without encryption keys, Sure stores Brex provider credentials and snapshots in plaintext like other provider records.
       instructions:
         copy_token_html: "Copy the token and add it as a named connection below. Sure stores the token only for syncing this family."
         create_token: "Create an API token with these read-only scopes: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
@@ -121,7 +132,7 @@ en:
       description: Select the accounts you want to link to your %{product_name} account.
       link_accounts: Link selected accounts
       no_accounts_found: No accounts found. Please check your API token configuration.
-      no_api_token: Brex API token is not configured. Please configure it in Settings.
+      no_api_token: Brex API token not found. Please configure it in Provider Settings.
       no_credentials_configured: Please configure your Brex API token first in Provider Settings.
       no_name_placeholder: "(No name)"
       select_connection: Choose a Brex connection in Provider Settings.
@@ -137,7 +148,7 @@ en:
       link_account: Link account
       no_account_specified: No account specified
       no_accounts_found: No Brex accounts found. Please check your API token configuration.
-      no_api_token: Brex API token is not configured. Please configure it in Settings.
+      no_api_token: Brex API token not found. Please configure it in Provider Settings.
       no_credentials_configured: Please configure your Brex API token first in Provider Settings.
       no_name_placeholder: "(No name)"
       select_connection: Choose a Brex connection in Provider Settings.
@@ -175,7 +186,7 @@ en:
       api_error: "API error: %{message}"
       fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
-      no_api_token: "Brex API token is not configured. Please check your connection settings."
+      no_api_token: Brex API token not found. Please configure it in Provider Settings.
       account_types:
         skip: Skip this account
         depository: Checking or Savings Account

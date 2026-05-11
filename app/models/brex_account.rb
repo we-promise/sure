@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
 class BrexAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
 
   CARD_PRIMARY_ACCOUNT_ID = "card_primary"
 
-  encrypts :raw_payload
-  encrypts :raw_transactions_payload
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :brex_item
 
@@ -125,7 +127,7 @@ class BrexAccount < ApplicationRecord
       "card_id" => metadata[:card_id].presence || metadata[:id].presence,
       "card_name" => metadata[:card_name].presence || metadata[:name].presence,
       "card_type" => metadata[:card_type].presence || metadata[:type].presence,
-      "last_four" => metadata[:last_four].presence || metadata[:last4].presence || metadata[:card_last_four].presence
+      "last_four" => last_four(metadata[:last_four].presence || metadata[:last4].presence || metadata[:card_last_four].presence)
     }.compact
   end
 

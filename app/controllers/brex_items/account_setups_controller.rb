@@ -7,6 +7,7 @@ class BrexItems::AccountSetupsController < ApplicationController
     @api_error = flow.import_accounts_with_user_facing_error
     @brex_accounts = flow.unlinked_brex_accounts
     @account_type_options = flow.account_type_options
+    @displayable_account_type_options = @account_type_options.reject { |_, type| type == "skip" }
     @subtype_options = flow.subtype_options
 
     render "brex_items/setup_accounts"

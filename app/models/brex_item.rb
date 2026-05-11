@@ -1,15 +1,13 @@
 class BrexItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Encryptable
 
   BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  encrypts :token, deterministic: true
-  encrypts :raw_payload
-
-  def self.encryption_ready?
-    ActiveRecordEncryptionConfig.ready?
+  if encryption_ready?
+    encrypts :token, deterministic: true
+    encrypts :raw_payload
   end
 
   validates :name, presence: true
@@ -30,6 +28,17 @@ class BrexItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
   scope :with_credentials, -> { where.not(token: [ nil, *BLANK_TOKEN_SENTINELS ]).where("BTRIM(token) <> ''") }
+
+  def self.resolve_for(family:, brex_item_id: nil)
+    normalized_id = brex_item_id.to_s.strip.presence
+
+    if normalized_id.present?
+      return family.brex_items.active.with_credentials.find_by(id: normalized_id)
+    end
+
+    credentialed_items = family.brex_items.active.with_credentials.ordered
+    credentialed_items.first if credentialed_items.one?
+  end
 
   def destroy_later
     update!(scheduled_for_deletion: true)

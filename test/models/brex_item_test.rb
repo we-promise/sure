@@ -102,8 +102,39 @@ class BrexItemTest < ActiveSupport::TestCase
   end
 
   test "declares Brex token and raw payload as encrypted" do
+    skip "Encryption not configured" unless BrexItem.encryption_ready?
+
     assert_includes BrexItem.encrypted_attributes.map(&:to_s), "token"
     assert_includes BrexItem.encrypted_attributes.map(&:to_s), "raw_payload"
+  end
+
+  test "resolve for returns explicit credentialed item scoped to family" do
+    resolved = BrexItem.resolve_for(family: @brex_item.family, brex_item_id: " #{@brex_item.id} ")
+
+    assert_equal @brex_item, resolved
+  end
+
+  test "resolve for refuses explicit items without usable credentials" do
+    item = BrexItem.create!(
+      family: @brex_item.family,
+      name: "Blank Resolve Brex",
+      token: "temporary_token",
+      base_url: "https://api.brex.com"
+    )
+    item.update_column(:token, "   ")
+
+    assert_nil BrexItem.resolve_for(family: @brex_item.family, brex_item_id: item.id)
+  end
+
+  test "resolve for does not select one item when multiple credentialed items exist" do
+    BrexItem.create!(
+      family: @brex_item.family,
+      name: "Second Resolve Brex",
+      token: "second_resolve_token",
+      base_url: "https://api.brex.com"
+    )
+
+    assert_nil BrexItem.resolve_for(family: @brex_item.family)
   end
 
   test "schema requires name and token" do

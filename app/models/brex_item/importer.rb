@@ -72,10 +72,6 @@ class BrexItem::Importer
       accounts_created = 0
       accounts_failed = 0
 
-      linked_account_ids = brex_item.brex_accounts
-                                   .joins(:account_provider)
-                                   .pluck("#{BrexAccount.table_name}.account_id")
-                                   .map(&:to_s)
       all_existing_ids = brex_item.brex_accounts.pluck("#{BrexAccount.table_name}.account_id").map(&:to_s)
 
       accounts.each do |account_data|
@@ -84,10 +80,10 @@ class BrexItem::Importer
         account_name = BrexAccount.name_for(snapshot)
         next if account_id.blank? || account_name.blank?
 
-        if linked_account_ids.include?(account_id)
+        if all_existing_ids.include?(account_id)
           import_account(snapshot)
           accounts_updated += 1
-        elsif !all_existing_ids.include?(account_id)
+        else
           import_account(snapshot)
           accounts_created += 1
           all_existing_ids << account_id

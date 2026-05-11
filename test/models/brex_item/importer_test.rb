@@ -197,6 +197,36 @@ class BrexItem::ImporterTest < ActiveSupport::TestCase
     assert @brex_item.reload.good?
   end
 
+  test "refreshes already discovered unlinked accounts during import" do
+    unlinked_account = @brex_item.brex_accounts.create!(
+      account_id: "cash_unlinked_1",
+      account_kind: "cash",
+      name: "Old Unlinked Cash",
+      currency: "USD",
+      current_balance: 1
+    )
+
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(
+      accounts: [
+        cash_account_payload,
+        cash_account_payload.merge(
+          id: "cash_unlinked_1",
+          name: "Updated Unlinked Cash",
+          current_balance: { amount: 987_65, currency: "USD" }
+        )
+      ]
+    )
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: anything).returns(transactions: [])
+
+    result = BrexItem::Importer.new(@brex_item, brex_provider: provider).import
+
+    assert result[:success]
+    assert_equal 2, result[:accounts_updated]
+    assert_equal "Updated Unlinked Cash", unlinked_account.reload.name
+    assert_equal BigDecimal("987.65"), unlinked_account.current_balance
+  end
+
   private
 
     def cash_account_payload

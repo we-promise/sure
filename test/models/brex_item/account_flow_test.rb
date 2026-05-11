@@ -51,6 +51,25 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     assert_equal true, payload[:cached]
   end
 
+  test "preload payload reports invalid explicit connection as selection error" do
+    payload = BrexItem::AccountFlow.new(
+      family: @family,
+      brex_item_id: " #{SecureRandom.uuid} "
+    ).preload_payload
+
+    assert_equal false, payload[:success]
+    assert_equal "select_connection", payload[:error]
+    assert_nil payload[:has_accounts]
+  end
+
+  test "import accounts reports missing selected item as no api token" do
+    flow = BrexItem::AccountFlow.new(family: @family, brex_item_id: SecureRandom.uuid)
+
+    assert_raises BrexItem::AccountFlow::NoApiTokenError do
+      flow.import_accounts_from_api_if_needed
+    end
+  end
+
   test "link result returns navigation instead of raising expected selection errors" do
     BrexItem.create!(
       family: @family,
@@ -187,6 +206,37 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     brex_account = brex_item.brex_accounts.find_by!(account_id: "cash_import_1")
     assert_equal "Updated Cash", brex_account.name
     assert_equal BigDecimal("123.45"), brex_account.current_balance
+  end
+
+  test "complete setup result is unsuccessful when any account creation fails" do
+    first_brex_account = @brex_item.brex_accounts.create!(
+      account_id: "setup_result_partial_1",
+      account_kind: "cash",
+      name: "Setup Result Partial One",
+      currency: "USD",
+      current_balance: 100
+    )
+    second_brex_account = @brex_item.brex_accounts.create!(
+      account_id: "setup_result_partial_2",
+      account_kind: "cash",
+      name: "Setup Result Partial Two",
+      currency: "USD",
+      current_balance: 100
+    )
+    second_brex_account.update_column(:name, nil)
+
+    result = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).complete_setup_result(
+      account_types: {
+        first_brex_account.id => "Depository",
+        second_brex_account.id => "Depository"
+      },
+      account_subtypes: {}
+    )
+
+    refute result.success?
+    assert_match(/failed/i, result.message)
+    assert first_brex_account.reload.account_provider.present?
+    assert_nil second_brex_account.reload.account_provider
   end
 
   test "complete setup creates account links with default subtype" do
