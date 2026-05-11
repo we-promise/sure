@@ -1,0 +1,8 @@
+---
+es:
+  chat:
+    errors:
+      rate_limited: "El proveedor de IA está limitando acceso a su API. Vuelve a intentarlo en unos minutos."
+      temporarily_unavailable: "El proveedor de IA no está disponible temporalmente. Vuelve a intentarlo en unos minutos."
+      misconfigured: "El proveedor de IA no está configurado correctamente. Ponte en contacto con tu administrador."
+      default: "No se pudo generar una respuesta. Inténtalo de nuevo."

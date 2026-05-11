@@ -55,8 +55,6 @@ fr:
       configure: Configurer
       update_configuration: Reconfigurer
       default_name: Connexion CoinStats
-      status_configured_html: Prêt à utiliser
-      status_not_configured: Non configuré
     coinstats_item:
       deletion_in_progress: Les données du portefeuille crypto sont en cours de suppression…
       provider_name: CoinStats
