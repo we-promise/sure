@@ -1,9 +1,9 @@
 class Savings::StatusPillComponent < ApplicationComponent
   VARIANTS = {
-    on_track: { classes: "bg-green-600/10 text-green-700", icon: "check" },
-    behind:   { classes: "bg-yellow-500/10 text-yellow-700", icon: "alert-triangle" },
-    reached:  { classes: "bg-green-600/10 text-green-700", icon: "circle-check-big" },
-    no_target_date: { classes: "bg-container-inset text-secondary", icon: "calendar-off" }
+    on_track: { classes: "bg-green-500/10 text-success", icon: "check-circle", icon_color: "green" },
+    behind:   { classes: "bg-yellow-500/10 text-warning", icon: "alert-triangle", icon_color: "yellow" },
+    reached:  { classes: "bg-green-500/10 text-success", icon: "circle-check-big", icon_color: "green" },
+    no_target_date: { classes: "bg-surface-inset text-secondary", icon: "calendar-off", icon_color: "default" }
   }.freeze
 
   def initialize(goal:)
@@ -24,6 +24,10 @@ class Savings::StatusPillComponent < ApplicationComponent
 
   def icon_name
     variant[:icon]
+  end
+
+  def icon_color
+    variant[:icon_color]
   end
 
   def classes

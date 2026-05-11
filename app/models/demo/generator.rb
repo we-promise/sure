@@ -1279,7 +1279,7 @@ class Demo::Generator
     end
 
     def generate_savings_goals!(family)
-      depository_accounts = family.accounts.depository.visible.to_a
+      depository_accounts = family.accounts.where(accountable_type: "Depository").visible.to_a
       return if depository_accounts.empty?
 
       currency = depository_accounts.first.currency

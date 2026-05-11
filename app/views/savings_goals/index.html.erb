@@ -1,20 +1,20 @@
-<%= content_for :page_title, t(".title") %>
-<%= content_for :page_actions do %>
-  <% if @linkable_account_count > 0 %>
-    <%= render DS::Link.new(
-      text: t(".new_goal"),
-      variant: "primary",
-      href: new_savings_goal_path,
-      icon: "plus",
-      frame: :modal
-    ) %>
-  <% end %>
-<% end %>
+<div class="space-y-4">
+  <header class="flex items-center justify-between gap-3">
+    <h1 class="text-lg font-semibold text-primary"><%= t(".title") %></h1>
+    <% if @linkable_account_count > 0 %>
+      <%= render DS::Link.new(
+        text: t(".new_goal"),
+        variant: "primary",
+        href: new_savings_goal_path,
+        icon: "plus",
+        frame: :modal
+      ) %>
+    <% end %>
+  </header>
 
-<% if @savings_goals.empty? && @counts["all"].zero? %>
-  <%= render "empty_state", linkable_account_count: @linkable_account_count %>
-<% else %>
-  <div class="space-y-4">
+  <% if @savings_goals.empty? && @counts["all"].zero? %>
+    <%= render "empty_state", linkable_account_count: @linkable_account_count %>
+  <% else %>
     <nav class="flex items-center gap-1 overflow-x-auto" role="tablist">
       <% SavingsGoalsController::STATE_FILTERS.each do |state| %>
         <% active = state == @state_filter %>
@@ -39,5 +39,5 @@
         <p class="text-sm text-secondary"><%= t(".empty_filtered", state: t(".tabs.#{@state_filter}").downcase) %></p>
       </div>
     <% end %>
-  </div>
-<% end %>
+  <% end %>
+</div>

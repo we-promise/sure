@@ -15,8 +15,8 @@
       <span class="text-secondary"><%= goal.current_balance_money.format %></span>
       <span class="text-secondary">/ <%= goal.target_amount_money.format %></span>
     </div>
-    <div class="mt-2 h-2 w-full rounded-full bg-container-inset overflow-hidden">
-      <div class="h-full <%= bar_color_class %>" style="width: <%= progress_percent %>%"></div>
+    <div class="mt-2 h-1.5 w-full rounded-full bg-container-inset overflow-hidden">
+      <div class="h-full <%= bar_color_class %> rounded-full transition-all duration-500" style="inline-size: <%= progress_percent %>%"></div>
     </div>
     <div class="mt-1 flex items-center justify-between text-xs text-secondary tabular-nums">
       <span><%= progress_percent %>%</span>

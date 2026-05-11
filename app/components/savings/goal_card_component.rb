@@ -21,10 +21,11 @@ class Savings::GoalCardComponent < ApplicationComponent
   end
 
   def bar_color_class
-    case progress_percent
-    when 0...25 then "bg-gray-400"
-    when 25...75 then "bg-blue-500"
-    else "bg-green-600"
+    case goal.status
+    when :reached then "bg-green-500"
+    when :behind then "bg-yellow-500"
+    when :on_track then "bg-blue-500"
+    else "bg-gray-400"
     end
   end
 end

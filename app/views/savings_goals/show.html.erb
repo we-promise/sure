@@ -1,73 +1,80 @@
-<%= content_for :page_title, @savings_goal.name %>
-<%= content_for :page_actions do %>
-  <%= render DS::Menu.new do |menu| %>
-    <% menu.with_item(
-         variant: "link",
-         text: t(".edit"),
-         icon: "pencil",
-         href: edit_savings_goal_path(@savings_goal),
-         data: { turbo_frame: :modal }
-       ) %>
-    <% if @savings_goal.may_pause? %>
-      <% menu.with_item(
-           variant: "button",
-           text: t(".pause"),
-           icon: "pause",
-           href: pause_savings_goal_path(@savings_goal),
-           method: :patch
-         ) %>
-    <% end %>
-    <% if @savings_goal.may_resume? %>
-      <% menu.with_item(
-           variant: "button",
-           text: t(".resume"),
-           icon: "play",
-           href: resume_savings_goal_path(@savings_goal),
-           method: :patch
-         ) %>
-    <% end %>
-    <% if @savings_goal.may_complete? %>
-      <% menu.with_item(
-           variant: "button",
-           text: t(".complete"),
-           icon: "circle-check-big",
-           href: complete_savings_goal_path(@savings_goal),
-           method: :patch
-         ) %>
-    <% end %>
-    <% if @savings_goal.may_archive? %>
-      <% menu.with_item(
-           variant: "button",
-           text: t(".archive"),
-           icon: "archive",
-           href: archive_savings_goal_path(@savings_goal),
-           method: :patch
-         ) %>
-    <% end %>
-    <% if @savings_goal.may_unarchive? %>
-      <% menu.with_item(
-           variant: "button",
-           text: t(".unarchive"),
-           icon: "archive-restore",
-           href: unarchive_savings_goal_path(@savings_goal),
-           method: :patch
-         ) %>
-    <% end %>
-    <% if @savings_goal.archived? %>
-      <% menu.with_item(
-           variant: "button",
-           text: t(".delete"),
-           icon: "trash-2",
-           href: savings_goal_path(@savings_goal),
-           method: :delete,
-           destructive: true,
-           confirm: CustomConfirm.for_resource_deletion(@savings_goal.name, high_severity: true)
-         ) %>
-    <% end %>
-  <% end %>
-<% end %>
-
 <div class="space-y-4">
+  <header class="flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "md") %>
+      <div class="min-w-0">
+        <h1 class="text-lg font-semibold text-primary truncate"><%= @savings_goal.name %></h1>
+        <p class="text-xs text-secondary"><%= t("savings_goals.states.#{@savings_goal.state}") %></p>
+      </div>
+    </div>
+
+    <%= render DS::Menu.new do |menu| %>
+      <% menu.with_item(
+           variant: "link",
+           text: t(".edit"),
+           icon: "pencil",
+           href: edit_savings_goal_path(@savings_goal),
+           data: { turbo_frame: :modal }
+         ) %>
+      <% if @savings_goal.may_pause? %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".pause"),
+             icon: "pause",
+             href: pause_savings_goal_path(@savings_goal),
+             method: :patch
+           ) %>
+      <% end %>
+      <% if @savings_goal.may_resume? %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".resume"),
+             icon: "play",
+             href: resume_savings_goal_path(@savings_goal),
+             method: :patch
+           ) %>
+      <% end %>
+      <% if @savings_goal.may_complete? %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".complete"),
+             icon: "circle-check-big",
+             href: complete_savings_goal_path(@savings_goal),
+             method: :patch
+           ) %>
+      <% end %>
+      <% if @savings_goal.may_archive? %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".archive"),
+             icon: "archive",
+             href: archive_savings_goal_path(@savings_goal),
+             method: :patch
+           ) %>
+      <% end %>
+      <% if @savings_goal.may_unarchive? %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".unarchive"),
+             icon: "archive-restore",
+             href: unarchive_savings_goal_path(@savings_goal),
+             method: :patch
+           ) %>
+      <% end %>
+      <% if @savings_goal.archived? %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".delete"),
+             icon: "trash-2",
+             href: savings_goal_path(@savings_goal),
+             method: :delete,
+             destructive: true,
+             confirm: CustomConfirm.for_resource_deletion(@savings_goal.name, high_severity: true)
+           ) %>
+      <% end %>
+    <% end %>
+  </header>
+
   <section class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
       <div>
@@ -75,14 +82,6 @@
       </div>
 
       <div class="flex-1 space-y-3 min-w-0">
-        <div class="flex items-center gap-2">
-          <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "lg") %>
-          <div class="min-w-0">
-            <h1 class="text-lg font-semibold text-primary truncate"><%= @savings_goal.name %></h1>
-            <p class="text-xs text-secondary"><%= t("savings_goals.states.#{@savings_goal.state}") %></p>
-          </div>
-        </div>
-
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           <div>
             <p class="text-xs text-secondary"><%= t(".stats.current") %></p>

@@ -52,10 +52,13 @@ export default class extends Controller {
   }
 
   validateStep1() {
+    const requiredInputs = this.step1PanelTarget.querySelectorAll(
+      'input[name="savings_goal[name]"], input[name="savings_goal[target_amount]"]'
+    );
     let ok = true;
-    this.step1FieldTargets.forEach((field) => {
-      if (!field.checkValidity()) {
-        field.reportValidity();
+    requiredInputs.forEach((input) => {
+      if (typeof input.checkValidity === "function" && !input.checkValidity()) {
+        input.reportValidity();
         ok = false;
       }
     });
@@ -95,11 +98,13 @@ export default class extends Controller {
   updateReview() {
     if (!this.hasReviewPanelTarget) return;
 
-    if (this.hasReviewNameTarget && this.hasNameFieldTarget) {
-      this.reviewNameTarget.textContent = this.nameFieldTarget.value || "—";
+    if (this.hasReviewNameTarget) {
+      const nameInput = this.element.querySelector('input[name="savings_goal[name]"]');
+      this.reviewNameTarget.textContent = nameInput?.value || "—";
     }
-    if (this.hasReviewAmountTarget && this.hasTargetAmountFieldTarget) {
-      this.reviewAmountTarget.textContent = this.targetAmountFieldTarget.value || "—";
+    if (this.hasReviewAmountTarget) {
+      const amountInput = this.element.querySelector('input[name="savings_goal[target_amount]"]');
+      this.reviewAmountTarget.textContent = amountInput?.value || "—";
     }
     if (this.hasReviewDateTarget) {
       const dateInput = this.element.querySelector('input[type="date"][name="savings_goal[target_date]"]');

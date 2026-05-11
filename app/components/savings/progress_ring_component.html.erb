@@ -20,8 +20,8 @@
             transform="rotate(-90 <%= Savings::ProgressRingComponent::SIZE / 2.0 %> <%= Savings::ProgressRingComponent::SIZE / 2.0 %>)" />
   </svg>
   <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-    <span class="text-2xl font-semibold text-primary tabular-nums"><%= percent %>%</span>
-    <span class="text-xs text-secondary tabular-nums mt-1"><%= current_label %></span>
-    <span class="text-xs text-secondary tabular-nums">of <%= target_label %></span>
+    <span class="text-secondary text-sm mb-1"><%= t("savings_goals.show.ring.saved") %></span>
+    <span class="text-3xl font-medium text-primary tabular-nums privacy-sensitive"><%= current_label %></span>
+    <span class="text-secondary text-sm mt-1 tabular-nums">of <%= target_label %></span>
   </div>
 </div>

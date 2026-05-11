@@ -1,5 +1,5 @@
 class Savings::ProgressRingComponent < ApplicationComponent
-  SIZE = 180
+  SIZE = 220
   STROKE = 14
   RADIUS = (SIZE - STROKE) / 2.0
   CIRCUMFERENCE = 2 * Math::PI * RADIUS
@@ -19,10 +19,11 @@ class Savings::ProgressRingComponent < ApplicationComponent
   end
 
   def stroke_color
-    case percent
-    when 0...25 then "var(--color-gray-400)"
-    when 25...75 then "var(--color-blue-500)"
-    else "var(--color-green-600)"
+    case goal.status
+    when :reached then "var(--color-green-500)"
+    when :behind then "var(--color-yellow-500)"
+    when :on_track then "var(--color-blue-500)"
+    else "var(--color-gray-400)"
     end
   end
 

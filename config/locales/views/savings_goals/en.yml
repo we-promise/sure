@@ -51,6 +51,8 @@ en:
       funding_accounts_heading: Funding accounts
       no_contributions_yet: No contributions yet.
       confirm_delete_contribution: Delete this contribution?
+      ring:
+        saved: Saved
       source:
         initial: Initial
         manual: Manual
