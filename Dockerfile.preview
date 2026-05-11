@@ -161,10 +161,27 @@ emit_status db-prepare-done "rails db:prepare finished"
 
 echo "Probing app boot..."
 emit_status app-boot-probe "running rails runner boot probe"
-if timeout 30 bundle exec rails runner 'puts "preview boot probe ok"' > /tmp/boot_probe.log 2>&1; then
+bundle exec rails runner 'puts "preview boot probe ok"' > /tmp/boot_probe.log 2>&1 &
+BOOT_PROBE_PID=$!
+BOOT_PROBE_OK=0
+for i in {1..30}; do
+  if ! kill -0 "$BOOT_PROBE_PID" 2>/dev/null; then
+    wait "$BOOT_PROBE_PID"
+    BOOT_PROBE_OK=1
+    break
+  fi
+  sleep 1
+done
+if [ "$BOOT_PROBE_OK" -eq 1 ]; then
   emit_status app-boot-probe-ok "$(tail -n 20 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-1000)"
 else
-  emit_status app-boot-probe-failed "$(tail -n 40 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-1000)"
+  kill -QUIT "$BOOT_PROBE_PID" 2>/dev/null || true
+  sleep 2
+  emit_status app-boot-probe-failed "$(tail -n 80 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-2000)"
+  kill -TERM "$BOOT_PROBE_PID" 2>/dev/null || true
+  sleep 1
+  kill -KILL "$BOOT_PROBE_PID" 2>/dev/null || true
+  wait "$BOOT_PROBE_PID" 2>/dev/null || true
 fi
 
 # Execute the main command with an internal readiness probe
