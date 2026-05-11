@@ -89,10 +89,8 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     tx = id_less_tx(amount: "30.00", creditor: "Netflix")
     pending_tx = tx.merge(_pending: true)
 
-    # Store the pending transaction
     @enable_banking_account.update!(raw_transactions_payload: [ pending_tx ])
 
-    # Second sync: same transaction now arrives as booked
     @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ tx ])
     @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
     @importer.stubs(:include_pending?).returns(true)
@@ -102,8 +100,46 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
 
     @enable_banking_account.reload
     stored = @enable_banking_account.raw_transactions_payload
-    # Pending entry should be gone; only the booked entry remains
     assert_equal 1, stored.count
     assert_nil stored.first["_pending"]
+  end
+
+  # Regression: pending row has entry_reference only; booked counterpart gains
+  # transaction_id on settlement. Fingerprints diverge but entry_reference is
+  # stable — the pending entry must still be removed from stored payload.
+  test "removes stored pending entry when settled book row gains a transaction_id" do
+    entry_ref = "REF-SETTLE-123"
+
+    pending_tx = {
+      "entry_reference" => entry_ref,
+      "booking_date" => Date.current.to_s,
+      "transaction_amount" => { "amount" => "15.00", "currency" => "RON" },
+      "credit_debit_indicator" => "DBIT",
+      "creditor" => { "name" => "Bolt" },
+      "_pending" => true
+    }
+
+    booked_tx = {
+      transaction_id: "TXN-NEW-456",
+      entry_reference: entry_ref,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "15.00", currency: "RON" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Bolt" }
+    }
+
+    @enable_banking_account.update!(raw_transactions_payload: [ pending_tx ])
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked_tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:include_pending?).returns(true)
+    @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    stored = @enable_banking_account.raw_transactions_payload
+    assert_equal 1, stored.count, "Stale pending entry should have been removed"
+    assert_nil stored.first["_pending"], "Remaining entry should be the booked row"
   end
 end

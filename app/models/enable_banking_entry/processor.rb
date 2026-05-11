@@ -93,7 +93,7 @@ class EnableBankingEntry::Processor
 
     def external_id
       id = self.class.compute_external_id(data)
-      raise ArgumentError, "Enable Banking transaction missing required field 'transaction_id'" unless id
+      raise ArgumentError, "Enable Banking transaction missing required identifier (transaction_id, entry_reference, or identifiable content)" unless id
       id
     end
 
