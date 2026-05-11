@@ -123,9 +123,9 @@ en:
         on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
       catch_up:
-        title: "Behind by %{delta}/mo"
-        body_with_date: "Save %{amount}/mo to stay on track for %{date}."
-        body: "Save %{amount}/mo to stay on track."
+        title: "Save %{amount}/mo to stay on track"
+        body_with_date: "You're saving %{avg}/mo today — %{delta}/mo short of the pace to finish by %{date}."
+        body: "You're saving %{avg}/mo today — %{delta}/mo short of the required pace."
         cta: "Add %{amount}"
       confirm_complete_title: Mark this goal complete?
       confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.

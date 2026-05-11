@@ -137,12 +137,13 @@
     <% catch_up_money = Money.new(@goal.monthly_target_amount, @goal.currency) %>
     <% catch_up_delta = @goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
     <% catch_up_delta_money = Money.new(catch_up_delta, @goal.currency) %>
-    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", delta: catch_up_delta_money.format)) do %>
+    <% catch_up_avg_money = Money.new(@stats[:avg_monthly], @goal.currency) %>
+    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: catch_up_money.format)) do %>
       <p class="text-secondary">
         <% if @goal.target_date %>
-          <%= t("goals.show.catch_up.body_with_date", amount: catch_up_money.format, date: I18n.l(@goal.target_date, format: :long)) %>
+          <%= t("goals.show.catch_up.body_with_date", avg: catch_up_avg_money.format, delta: catch_up_delta_money.format, date: I18n.l(@goal.target_date, format: :long)) %>
         <% else %>
-          <%= t("goals.show.catch_up.body", amount: catch_up_money.format) %>
+          <%= t("goals.show.catch_up.body", avg: catch_up_avg_money.format, delta: catch_up_delta_money.format) %>
         <% end %>
       </p>
       <div class="mt-2">
@@ -306,7 +307,7 @@
         <h2 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h2>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
       </div>
-      <div class="max-h-[420px] overflow-y-auto overflow-x-hidden">
+      <div class="max-h-[420px] overflow-y-auto overflow-x-hidden scrollbar">
         <%= render "contributions_list", contributions: @contributions %>
       </div>
     </div>
