@@ -1194,13 +1194,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.decimal "expected_amount_max", precision: 19, scale: 4
     t.decimal "expected_amount_avg", precision: 19, scale: 4
     t.uuid "account_id"
+    t.uuid "destination_account_id"
     t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
-    t.index ["family_id", "account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_acct_merchant", unique: true, where: "(merchant_id IS NOT NULL)"
-    t.index ["family_id", "account_id", "name", "amount", "currency"], name: "idx_recurring_txns_acct_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL))"
+    t.index ["destination_account_id"], name: "index_recurring_transactions_on_destination_account_id"
+    t.index ["family_id", "account_id", "destination_account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_pair_merchant", unique: true, where: "((destination_account_id IS NOT NULL) AND (merchant_id IS NOT NULL))"
+    t.index ["family_id", "account_id", "destination_account_id", "name", "amount", "currency"], name: "idx_recurring_txns_pair_name", unique: true, where: "((destination_account_id IS NOT NULL) AND (name IS NOT NULL) AND (merchant_id IS NULL))"
+    t.index ["family_id", "account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_acct_merchant", unique: true, where: "((merchant_id IS NOT NULL) AND (destination_account_id IS NULL))"
+    t.index ["family_id", "account_id", "name", "amount", "currency"], name: "idx_recurring_txns_acct_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL) AND (destination_account_id IS NULL))"
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
     t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
+    t.check_constraint "destination_account_id IS NULL OR account_id IS NOT NULL", name: "chk_recurring_txns_transfer_requires_source"
+    t.check_constraint "destination_account_id IS NULL OR destination_account_id <> account_id", name: "chk_recurring_txns_transfer_distinct_accounts"
   end
 
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1288,7 +1294,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1447,8 +1453,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.datetime "updated_at", null: false
     t.boolean "manual_sync", default: false, null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1772,7 +1778,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
-  add_foreign_key "recurring_transactions", "accounts"
+  add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
+  add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
