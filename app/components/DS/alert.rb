@@ -78,8 +78,7 @@ class DS::Alert < DesignSystemComponent
     end
 
     def variant_label
-      key = variant == :destructive ? :error : variant
-      I18n.t("ds.alert.variants.#{key}")
+      I18n.t("ds.alert.variants.#{variant}")
     end
 
     def title_id
