@@ -49,6 +49,15 @@ export default class extends Controller {
     this.refreshSubmitState();
   }
 
+  blockEnter(event) {
+    if (this.currentStep !== 1) return;
+    // Allow Enter in the notes textarea so newlines work.
+    if (event.target.tagName === "TEXTAREA") return;
+    event.preventDefault();
+    // Mirror Continue: validate + advance instead of swallowing silently.
+    this.next();
+  }
+
   footerLeft(event) {
     event.preventDefault();
     this.back();

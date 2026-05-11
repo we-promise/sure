@@ -18,7 +18,7 @@
     </div>
   </div>
 
-  <%= styled_form_with model: savings_goal, url: savings_goals_path, class: "space-y-4" do |f| %>
+  <%= styled_form_with model: savings_goal, url: savings_goals_path, class: "space-y-4", data: { action: "keydown.enter->savings-goal-stepper#blockEnter" } do |f| %>
     <section data-savings-goal-stepper-target="step1Panel" class="space-y-5">
       <div>
         <h3 class="text-lg font-semibold text-primary mb-1"><%= t("savings_goals.form_stepper.step1.heading") %></h3>
@@ -53,7 +53,10 @@
       </div>
 
       <div>
-        <span class="block text-sm font-medium text-primary mb-2"><%= t("savings_goals.form_stepper.step1.fields.funding_accounts") %></span>
+        <div class="mb-2">
+          <span class="block text-sm font-medium text-primary"><%= t("savings_goals.form_stepper.step1.fields.funding_accounts") %></span>
+          <p class="text-xs text-secondary mt-0.5"><%= t("savings_goals.form_stepper.step1.fields.funding_accounts_hint") %></p>
+        </div>
         <div class="bg-container-inset rounded-lg p-1">
           <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
           <% grouped.each_with_index do |(subtype, accts), group_idx| %>

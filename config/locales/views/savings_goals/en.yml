@@ -225,6 +225,7 @@ en:
           notes_summary: Add notes (optional)
           notes_placeholder: A reminder for future you…
           funding_accounts: Funding accounts
+          funding_accounts_hint: Balances in these accounts will count toward the goal.
         subtypes:
           checking: Checking
           savings: Savings
