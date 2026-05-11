@@ -88,8 +88,8 @@
 
       <%= render DS::Disclosure.new(title: t("savings_goals.form_stepper.step1.fields.notes_summary"), align: "right") do %>
         <%= f.text_area :notes,
-                        label: false,
-                        rows: 2,
+                        label: t("savings_goals.form_stepper.step1.fields.notes"),
+                        rows: 3,
                         placeholder: t("savings_goals.form_stepper.step1.fields.notes_placeholder") %>
       <% end %>
 
