@@ -6505,6 +6505,8 @@ paths:
       - Transactions
       security:
       - apiKeyAuth: []
+      description: Returns global ledger history for accessible accounts, including
+        disabled accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -6716,10 +6718,11 @@ paths:
     parameters:
     - name: id
       in: path
-      required: true
-      description: Transaction ID
       schema:
         type: string
+        format: uuid
+      required: true
+      description: Transaction ID
     get:
       summary: Retrieve a transaction
       tags:
