@@ -279,9 +279,6 @@ en:
           placeholder: "https://api.sophtron.com/api"
       save: "Save Configuration"
       update: "Update Configuration"
-      status:
-        configured_html: 'Configured and ready to use. Visit the <a href="%{accounts_path}" class="link">Accounts</a> tab to manage and set up accounts.'
-        not_configured: "Not configured"
     syncer:
       manual_sync_required: "Manual Sophtron sync is required for this institution; skipping those accounts during automated sync."
       importing_accounts: "Importing accounts from Sophtron..."

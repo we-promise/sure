@@ -134,8 +134,6 @@ de:
         one: "%{count} muss eingerichtet werden"
         other: "%{count} müssen eingerichtet werden"
       status_ready: "Bereit zum Verbinden von Brokern"
-      status_needs_registration: "Zugangsdaten gespeichert. Gehen Sie zur Konten-Seite, um Broker zu verbinden."
-      status_not_configured: "Nicht konfiguriert"
       setup_accounts_button: "Konten einrichten"
       connect_button: "Broker verbinden"
       connected_brokerages: "Verbunden:"

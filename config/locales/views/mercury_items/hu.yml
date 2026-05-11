@@ -44,11 +44,9 @@ hu:
       total: Összesen
       unlinked: Nincs összekapcsolva
     provider_panel:
-      accounts_link: Számlák
       add_connection: Mercury kapcsolat hozzáadása
       base_url_label: Alap URL (opcionális)
       base_url_placeholder: https://api.mercury.com/api/v1 (alapértelmezett)
-      configured_html: "Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a %{accounts_link} lapra."
       connection_name_label: Kapcsolat neve
       connection_name_placeholder: Üzleti folyószámla
       default_connection_name: Mercury kapcsolat
@@ -60,7 +58,6 @@ hu:
         sign_in_html: "Látogass el a(z) %{link} oldalra, és lépj be az összekapcsolni kívánt fiókba"
         whitelist_ip_html: "<strong>Fontos:</strong> Add a szervered IP-címét a token engedélyezési listájához"
       keep_token_placeholder: Hagyd üresen az aktuális token megtartásához
-      not_configured: Nincs beállítva
       sandbox_note_html: "Minden Mercury bejelentkezéshez/API tokenhez használj külön elnevezett kapcsolatot. Sandbox teszteléshez használd a <code>https://api-sandbox.mercury.com/api/v1</code> alap URL-t. A Mercury IP engedélyezési listát igényel — győződj meg róla, hogy hozzáadtad az IP-d a Mercury irányítópulton."
       setup_accounts: Számlák beállítása
       setup_title: "Beállítási utasítások:"

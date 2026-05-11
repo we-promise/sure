@@ -233,9 +233,6 @@ hu:
           placeholder: "https://api.sophtron.com/v2"
       save: "Konfiguráció mentése"
       update: "Konfiguráció frissítése"
-      status:
-        configured_html: "Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a <a href=\"%{accounts_path}\" class=\"link\">Számlák</a> lapra."
-        not_configured: "Nincs beállítva"
     syncer:
       manual_sync_required: "A kézi Sophtron szinkronizálás engedélyezve van; automatikus szinkronizálás kihagyva."
       importing_accounts: "Számlák importálása a Sophtron-ból..."
