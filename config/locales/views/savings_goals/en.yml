@@ -30,9 +30,6 @@ en:
             one: 1 paused
             other: "%{count} paused"
         on_track_sub_all_good: All active goals on pace
-      accounts_section:
-        heading: Accounts
-        subtitle: Your savings and emergency reserves
       goals_section:
         heading: Goals
         subtitle: Save toward what matters.
@@ -55,10 +52,6 @@ en:
         behind: Behind
         no_target_date: Open-ended
         paused: Paused
-      account_card:
-        funds:
-          one: Funds 1 goal
-          other: "Funds %{count} goals"
     new:
       heading: New savings goal
       step1_subtitle: Step 1 of 2 · Goal details

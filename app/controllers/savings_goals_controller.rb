@@ -15,8 +15,6 @@ class SavingsGoalsController < ApplicationController
     @completed_goals = all_goals.select { |g| g.state == "completed" }
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
-    @savings_accounts = Current.family.savings_subtype_accounts
-    @account_goal_counts = goal_count_per_account(@savings_accounts)
     @kpi = kpi_payload(@active_goals)
     @show_search = @active_goals.size > 6
   end
@@ -193,17 +191,6 @@ class SavingsGoalsController < ApplicationController
         paused_count: paused.size,
         active_total: active_goals.size
       }
-    end
-
-    def goal_count_per_account(accounts)
-      return {} if accounts.empty?
-
-      SavingsGoalAccount
-        .where(account_id: accounts.map(&:id))
-        .joins(:savings_goal)
-        .where.not(savings_goals: { state: %w[archived] })
-        .group(:account_id)
-        .count
     end
 
     def stats_for(goal)

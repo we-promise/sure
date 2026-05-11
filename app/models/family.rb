@@ -45,15 +45,6 @@ class Family < ApplicationRecord
   has_many :savings_goals, dependent: :destroy
   has_many :savings_contributions, through: :savings_goals
 
-  # Depository accounts with subtype = "savings". The /savings_goals
-  # index hero shows the total + sparkline across just these accounts;
-  # checking / HSA / CD / money-market are intentionally excluded.
-  def savings_subtype_accounts
-    accounts.where(accountable_type: "Depository").visible.alphabetically.select do |account|
-      account.subtype == "savings"
-    end
-  end
-
   # Sum of contribution amounts within the given date range, returned as
   # a BigDecimal in the family's primary currency. Powers the savings
   # goals "Contributed · last 30d" KPI.

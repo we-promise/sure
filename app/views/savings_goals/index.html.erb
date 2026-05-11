@@ -4,7 +4,7 @@
     <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
   </header>
 
-  <% if @counts["all"].zero? && @savings_accounts.empty? %>
+  <% if @counts["all"].zero? %>
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
     <%# KPI strip %>
@@ -66,21 +66,6 @@
         </p>
       </div>
     </section>
-
-    <%# Accounts section %>
-    <% if @savings_accounts.any? %>
-      <section>
-        <div class="mb-3">
-          <h2 class="text-base font-semibold text-primary"><%= t(".accounts_section.heading") %></h2>
-          <p class="text-sm text-secondary"><%= t(".accounts_section.subtitle") %></p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <% @savings_accounts.each do |account| %>
-            <%= render Savings::AccountCardComponent.new(account: account, goals_count: @account_goal_counts[account.id] || 0) %>
-          <% end %>
-        </div>
-      </section>
-    <% end %>
 
     <%# Goals section %>
     <section data-controller="savings-goals-filter"
