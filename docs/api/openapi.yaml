@@ -1435,6 +1435,12 @@ components:
         notes:
           type: string
           nullable: true
+        external_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
         classification:
           type: string
         account:
@@ -1727,6 +1733,114 @@ components:
         unassigned_mappings_count:
           type: integer
           minimum: 0
+    ImportPreflightContent:
+      type: object
+      required:
+      - filename
+      - content_type
+      - byte_size
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          minimum: 0
+    ImportPreflightError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    ImportPreflightStats:
+      type: object
+      required:
+      - rows_count
+      properties:
+        rows_count:
+          type: integer
+          minimum: 0
+          description: CSV parsed non-header rows, or nonblank Sure NDJSON lines.
+        valid_rows_count:
+          type: integer
+          minimum: 0
+          description: SureImport only. Valid NDJSON records.
+        invalid_rows_count:
+          type: integer
+          minimum: 0
+          description: SureImport only. Invalid NDJSON records. CSV malformed content
+            returns a 422 instead.
+        entity_counts:
+          type: object
+          additionalProperties:
+            type: integer
+          nullable: true
+        record_type_counts:
+          type: object
+          additionalProperties:
+            type: integer
+          nullable: true
+    ImportPreflight:
+      type: object
+      required:
+      - type
+      - valid
+      - content
+      - stats
+      - errors
+      - warnings
+      properties:
+        type:
+          type: string
+          enum:
+          - TransactionImport
+          - TradeImport
+          - AccountImport
+          - MintImport
+          - CategoryImport
+          - RuleImport
+          - SureImport
+        valid:
+          type: boolean
+        content:
+          "$ref": "#/components/schemas/ImportPreflightContent"
+        stats:
+          "$ref": "#/components/schemas/ImportPreflightStats"
+        headers:
+          type: array
+          items:
+            type: string
+          nullable: true
+        required_headers:
+          type: array
+          items:
+            type: string
+          nullable: true
+        missing_required_headers:
+          type: array
+          items:
+            type: string
+          nullable: true
+        errors:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ImportPreflightError"
+        warnings:
+          type: array
+          items:
+            type: string
+    ImportPreflightResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/ImportPreflight"
     ImportStatusSummary:
       type: object
       required:
@@ -4381,7 +4495,7 @@ paths:
     post:
       summary: Create import
       description: Create a new import from raw CSV content, inline Sure NDJSON content,
-        or an uploaded Sure NDJSON file.
+        or an uploaded Sure NDJSON file. CSV content is limited to 10MB.
       tags:
       - Imports
       security:
@@ -4416,8 +4530,9 @@ paths:
               properties:
                 raw_file_content:
                   type: string
-                  description: Raw CSV or Sure NDJSON content as a string. Required
-                    for SureImport unless a multipart file is uploaded.
+                  description: Raw CSV or Sure NDJSON content as a string. CSV content
+                    is limited to 10MB. Required for SureImport unless a multipart
+                    file is uploaded.
                 type:
                   type: string
                   enum:
@@ -4521,8 +4636,9 @@ paths:
               properties:
                 raw_file_content:
                   type: string
-                  description: Raw CSV or Sure NDJSON content as a string. Required
-                    for SureImport unless a multipart file is uploaded.
+                  description: Raw CSV or Sure NDJSON content as a string. CSV content
+                    is limited to 10MB. Required for SureImport unless a multipart
+                    file is uploaded.
                 type:
                   type: string
                   enum:
@@ -4709,6 +4825,264 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/imports/preflight":
+    post:
+      summary: Validate import content without creating an import
+      description: Validate CSV or Sure NDJSON import content and return counts, headers,
+        warnings, and validation errors without persisting an import or enqueueing
+        jobs. CSV content is limited to 10MB.
+      tags:
+      - Imports
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: import content preflighted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportPreflightResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing or invalid content
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                raw_file_content:
+                  type: string
+                  description: Raw CSV or Sure NDJSON content as a string. CSV content
+                    is limited to 10MB.
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or Sure NDJSON upload when using multipart/form-data.
+                    CSV files are limited to 10MB.
+                type:
+                  type: string
+                  enum:
+                  - TransactionImport
+                  - TradeImport
+                  - AccountImport
+                  - MintImport
+                  - CategoryImport
+                  - RuleImport
+                  - SureImport
+                  description: Import type to validate (defaults to TransactionImport)
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account ID used for account-scoped CSV import validation
+                date_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the date column
+                amount_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the amount column
+                name_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the transaction name
+                    column
+                category_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the category column
+                tags_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the tags column
+                notes_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the notes column
+                account_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the account column
+                qty_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the quantity
+                    column
+                ticker_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the ticker
+                    column
+                price_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the price column
+                entity_type_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the entity type column
+                currency_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the currency column
+                exchange_operating_mic_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the exchange
+                    operating MIC column
+                date_format:
+                  type: string
+                  description: CSV imports only. Date format pattern
+                number_format:
+                  type: string
+                  enum:
+                  - '1,234.56'
+                  - 1.234,56
+                  - 1 234,56
+                  - '1,234'
+                  description: CSV imports only. Number format for parsing amounts
+                signage_convention:
+                  type: string
+                  enum:
+                  - inflows_positive
+                  - inflows_negative
+                  description: CSV imports only. How to interpret positive/negative
+                    amounts
+                col_sep:
+                  type: string
+                  enum:
+                  - ","
+                  - ";"
+                  description: CSV imports only. Column separator
+                rows_to_skip:
+                  type: integer
+                  minimum: 0
+                  description: CSV imports only. Number of leading rows to skip before
+                    reading headers
+                amount_type_strategy:
+                  type: string
+                  enum:
+                  - signed_amount
+                  - custom_column
+                  description: CSV imports only. Amount parsing strategy
+                amount_type_inflow_value:
+                  type: string
+                  description: CSV imports only. Column value that marks an amount
+                    as an inflow when using custom_column strategy
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                raw_file_content:
+                  type: string
+                  description: Raw CSV or Sure NDJSON content as a string. CSV content
+                    is limited to 10MB.
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or Sure NDJSON upload when using multipart/form-data.
+                    CSV files are limited to 10MB.
+                type:
+                  type: string
+                  enum:
+                  - TransactionImport
+                  - TradeImport
+                  - AccountImport
+                  - MintImport
+                  - CategoryImport
+                  - RuleImport
+                  - SureImport
+                  description: Import type to validate (defaults to TransactionImport)
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account ID used for account-scoped CSV import validation
+                date_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the date column
+                amount_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the amount column
+                name_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the transaction name
+                    column
+                category_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the category column
+                tags_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the tags column
+                notes_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the notes column
+                account_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the account column
+                qty_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the quantity
+                    column
+                ticker_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the ticker
+                    column
+                price_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the price column
+                entity_type_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the entity type column
+                currency_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the currency column
+                exchange_operating_mic_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the exchange
+                    operating MIC column
+                date_format:
+                  type: string
+                  description: CSV imports only. Date format pattern
+                number_format:
+                  type: string
+                  enum:
+                  - '1,234.56'
+                  - 1.234,56
+                  - 1 234,56
+                  - '1,234'
+                  description: CSV imports only. Number format for parsing amounts
+                signage_convention:
+                  type: string
+                  enum:
+                  - inflows_positive
+                  - inflows_negative
+                  description: CSV imports only. How to interpret positive/negative
+                    amounts
+                col_sep:
+                  type: string
+                  enum:
+                  - ","
+                  - ";"
+                  description: CSV imports only. Column separator
+                rows_to_skip:
+                  type: integer
+                  minimum: 0
+                  description: CSV imports only. Number of leading rows to skip before
+                    reading headers
+                amount_type_strategy:
+                  type: string
+                  enum:
+                  - signed_amount
+                  - custom_column
+                  description: CSV imports only. Amount parsing strategy
+                amount_type_inflow_value:
+                  type: string
+                  description: CSV imports only. Column value that marks an amount
+                    as an inflow when using custom_column strategy
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -6131,6 +6505,8 @@ paths:
       - Transactions
       security:
       - apiKeyAuth: []
+      description: Returns global ledger history for accessible accounts, including
+        disabled accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -6256,6 +6632,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '200':
+          description: transaction already exists for external idempotency key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
         '422':
           description: validation error - missing required fields
           content:
@@ -6310,6 +6692,14 @@ paths:
                       - inflow
                       - outflow
                       description: Transaction nature (determines sign)
+                    external_id:
+                      type: string
+                      description: Optional external idempotency key scoped to account
+                        and source
+                    source:
+                      type: string
+                      description: Optional source namespace for external_id. Requires
+                        external_id and defaults to api when external_id is provided
                     tag_ids:
                       type: array
                       items:
@@ -6328,10 +6718,11 @@ paths:
     parameters:
     - name: id
       in: path
-      required: true
-      description: Transaction ID
       schema:
         type: string
+        format: uuid
+      required: true
+      description: Transaction ID
     get:
       summary: Retrieve a transaction
       tags:

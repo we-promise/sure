@@ -1,0 +1,141 @@
+<div id="kraken-providers-panel" class="space-y-4">
+  <% items = local_assigns[:kraken_items] || @kraken_items || Current.family.kraken_items.active.ordered %>
+
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: safe_join([
+          content_tag(:p, t("settings.providers.kraken_panel.read_only_title"), class: "font-medium"),
+          content_tag(:p, t("settings.providers.kraken_panel.read_only_body"), class: "mt-1")
+        ])
+      ) %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.kraken_panel.step1_html").html_safe,
+               t("settings.providers.kraken_panel.step2"),
+               t("settings.providers.kraken_panel.step3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if items.any? %>
+    <div class="space-y-3">
+      <% items.each do |item| %>
+        <details class="group bg-container p-4 shadow-border-xs rounded-xl">
+          <summary class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
+                <%= icon "waves", size: "sm", class: "text-primary" %>
+              </div>
+              <div class="min-w-0">
+                <p class="font-medium text-primary truncate"><%= item.name %></p>
+                <p class="text-xs text-secondary">
+                  <% if item.syncing? %>
+                    <%= t("settings.providers.kraken_panel.syncing") %>
+                  <% else %>
+                    <%= item.sync_status_summary %>
+                  <% end %>
+                </p>
+              </div>
+            </div>
+          </summary>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <%= button_to sync_kraken_item_path(item),
+                            method: :post,
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                            disabled: item.syncing? do %>
+                <%= icon "refresh-cw", size: "sm" %>
+                <%= t("settings.providers.kraken_panel.sync") %>
+              <% end %>
+
+              <%= render DS::Link.new(
+                text: t("settings.providers.kraken_panel.setup_accounts"),
+                icon: "settings",
+                variant: "secondary",
+                href: setup_accounts_kraken_item_path(item),
+                frame: :modal
+              ) %>
+
+              <%= button_to kraken_item_path(item),
+                            method: :delete,
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                            data: { turbo_confirm: t("settings.providers.kraken_panel.disconnect_confirm", name: item.name) } do %>
+                <%= icon "trash-2", size: "sm" %>
+                <%= t("settings.providers.kraken_panel.disconnect") %>
+              <% end %>
+            </div>
+
+            <%= styled_form_with model: item,
+                                 url: kraken_item_path(item),
+                                 scope: :kraken_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t("settings.providers.kraken_panel.connection_name_label"),
+                                  placeholder: t("settings.providers.kraken_panel.connection_name_placeholder") %>
+
+              <%= form.text_field :api_key,
+                                  label: t("settings.providers.kraken_panel.api_key_label"),
+                                  placeholder: t("settings.providers.kraken_panel.keep_api_key_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <%= form.text_field :api_secret,
+                                  label: t("settings.providers.kraken_panel.api_secret_label"),
+                                  placeholder: t("settings.providers.kraken_panel.keep_api_secret_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <div class="flex justify-end">
+                <%= form.submit t("settings.providers.kraken_panel.update_connection"),
+                                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+              </div>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% kraken_item = Current.family.kraken_items.build(name: t("settings.providers.kraken_panel.default_connection_name")) %>
+  <% if items.any? %>
+    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+      <%= icon "plus", size: "sm" %>
+      <%= t("settings.providers.kraken_panel.add_connection") %>
+    </h3>
+  <% end %>
+
+  <%= styled_form_with model: kraken_item,
+                       url: kraken_items_path,
+                       scope: :kraken_item,
+                       method: :post,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :name,
+                        label: t("settings.providers.kraken_panel.connection_name_label"),
+                        placeholder: t("settings.providers.kraken_panel.connection_name_placeholder") %>
+
+    <%= form.text_field :api_key,
+                        label: t("settings.providers.kraken_panel.api_key_label"),
+                        placeholder: t("settings.providers.kraken_panel.api_key_placeholder"),
+                        type: :password,
+                        value: nil %>
+
+    <%= form.text_field :api_secret,
+                        label: t("settings.providers.kraken_panel.api_secret_label"),
+                        placeholder: t("settings.providers.kraken_panel.api_secret_placeholder"),
+                        type: :password,
+                        value: nil %>
+
+    <div class="flex justify-end">
+      <%= form.submit t("settings.providers.kraken_panel.add_connection"),
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+    </div>
+  <% end %>
+</div>

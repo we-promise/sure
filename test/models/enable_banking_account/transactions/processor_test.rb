@@ -157,6 +157,38 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal 1, result[:imported]
   end
 
+  test "imports id-less transaction using content fingerprint" do
+    tx = {
+      "booking_date" => Date.current.to_s,
+      "transaction_amount" => { "amount" => "19.99", "currency" => "EUR" },
+      "credit_debit_indicator" => "DBIT",
+      "creditor" => { "name" => "Spotify" }
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ tx ])
+
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    expected_id = EnableBankingEntry::Processor.compute_external_id(tx)
+    assert @account.entries.exists?(external_id: expected_id, source: "enable_banking")
+  end
+
+  test "id-less transaction does not appear in failed count" do
+    tx = {
+      "booking_date" => Date.current.to_s,
+      "transaction_amount" => { "amount" => "5.00", "currency" => "EUR" },
+      "credit_debit_indicator" => "CRDT",
+      "debtor" => { "name" => "Employer" }
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ tx ])
+
+    result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal 0, result[:failed]
+    assert_equal 1, result[:imported]
+  end
+
   test "handles empty raw_transactions_payload gracefully" do
     @enable_banking_account.update!(raw_transactions_payload: nil)
 
