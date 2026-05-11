@@ -69,7 +69,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     family = current_resource_owner.family
 
     # Validate account_id is present
-    unless transaction_params[:account_id].present?
+    unless account_id_param.present?
       render json: {
         error: "validation_failed",
         message: "Account ID is required",
@@ -87,7 +87,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.writable_by(current_resource_owner).find(transaction_params[:account_id])
+    account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
       return render_existing_idempotent_entry(existing_entry)
@@ -302,9 +302,13 @@ end
 
     def transaction_params
       params.require(:transaction).permit(
-        :account_id, :date, :amount, :name, :description, :notes, :currency,
+        :date, :amount, :name, :description, :notes, :currency,
         :category_id, :merchant_id, :nature, tag_ids: []
       )
+    end
+
+    def account_id_param
+      params.dig(:transaction, :account_id).presence
     end
 
     def entry_params_for_create

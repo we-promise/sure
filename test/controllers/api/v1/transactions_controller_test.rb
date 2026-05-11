@@ -208,7 +208,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal response_data["id"], entry.transaction.id
   end
 
-  test "should default source for external idempotency key" do
+  test "should use default source when external_id provided without source" do
     transaction_params = {
       transaction: {
         account_id: @account.id,
@@ -217,7 +217,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
         date: Date.current,
         currency: "USD",
         nature: "expense",
-        external_id: "import-txn-default-source"
+        external_id: "default-source-test"
       }
     }
 
@@ -229,8 +229,17 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     response_data = JSON.parse(response.body)
-    assert_equal "import-txn-default-source", response_data["external_id"]
+    entry = @account.entries.find_by!(external_id: "default-source-test")
+    assert_equal "api", entry.source
     assert_equal "api", response_data["source"]
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params.deep_merge(transaction: { name: "Changed Name" }),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :ok
   end
 
   test "should reject source without external idempotency key" do
@@ -323,6 +332,36 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should scope external idempotency keys to source" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense",
+        external_id: "shared-source-txn",
+        source: "external_import"
+      }
+    }
+
+    assert_difference("Entry.count", 2) do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+      assert_response :created
+
+      post api_v1_transactions_url,
+           params: transaction_params.deep_merge(transaction: { source: "other_import" }),
+           headers: api_headers(@api_key)
+      assert_response :created
+    end
+
+    @account.entries.find_by!(external_id: "shared-source-txn", source: "external_import")
+    @account.entries.find_by!(external_id: "shared-source-txn", source: "other_import")
+  end
+
   test "should reject external idempotency key collision with non-transaction entry" do
     @account.entries.create!(
       name: "Existing valuation",
@@ -382,6 +421,31 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
          params: transaction_params,
          headers: api_headers(@api_key)
     assert_response :unprocessable_entity
+  end
+
+  test "should reject invalid date on create" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Invalid Date Transaction",
+        amount: 25.00,
+        date: "not-a-date",
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_equal "Transaction could not be created", response_data["message"]
+    assert response_data["errors"].any? { |error| error.match?(/Date/) }
   end
 
   test "should reject create without API key" do
