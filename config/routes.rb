@@ -93,7 +93,7 @@ Rails.application.routes.draw do
   mount Lookbook::Engine, at: "/design-system" unless Rails.env.production?
 
   # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq"
+  mount Sidekiq::Web => "/sidekiq" unless Rails.env.production?
 
   # AI chats
   resources :chats do
