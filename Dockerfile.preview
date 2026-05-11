@@ -175,6 +175,9 @@ done
 
 if ! curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
   emit_status rails-up-timeout "rails did not answer localhost:3000/up in time"
+  emit_status rails-process-status "$(ps -o pid=,ppid=,stat=,comm= -p "$RAILS_PID" 2>/dev/null | tr -s ' ' | sed 's/^ //')"
+  emit_status rails-port-check "$(ruby -rsocket -e 'begin; s=TCPSocket.new("127.0.0.1",3000); puts "tcp-open"; s.close; rescue => e; puts e.class.to_s + ":" + e.message; end' | tr '
+' ' ')"
 fi
 
 wait "$RAILS_PID"
