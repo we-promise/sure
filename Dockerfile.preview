@@ -176,6 +176,8 @@ done
 if ! curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
   emit_status rails-up-timeout "rails did not answer localhost:3000/up in time"
   emit_status rails-process-status "$(ps -o pid=,ppid=,stat=,comm=,args= -p "$RAILS_PID" 2>/dev/null | tr -s ' ' | sed 's/^ //')"
+  emit_status rails-process-wchan "$(cat /proc/$RAILS_PID/wchan 2>/dev/null | tr '\n' ' ' | cut -c 1-200)"
+  emit_status rails-process-children "$(ps -o pid=,ppid=,stat=,comm=,args= --ppid "$RAILS_PID" 2>/dev/null | tail -n +2 | tr '\n' '|' | cut -c 1-600)"
   emit_status rails-socket-state "$(ruby -e 'hex="0BB8"; rows=File.readlines("/proc/net/tcp")+File.readlines("/proc/net/tcp6"); hits=rows.select{|l| l.include?(":#{hex} ")}.map{|l| l.strip.split[3] rescue nil}.compact; puts(hits.empty? ? "no-listener" : hits.join(","))' 2>&1 | tr '\n' ' ' | cut -c 1-400)"
   emit_status rails-log-tail "$(tail -n 40 /tmp/rails.log 2>&1 | sed 's/"/'"'"'/g' | tr '
 ' ' ' | cut -c 1-1200)"
