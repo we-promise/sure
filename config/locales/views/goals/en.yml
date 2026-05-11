@@ -24,8 +24,8 @@ en:
             one: 1 behind
             other: "%{count} behind"
           no_date:
-            one: 1 open-ended
-            other: "%{count} open-ended"
+            one: 1 open
+            other: "%{count} open"
           paused:
             one: 1 paused
             other: "%{count} paused"
@@ -52,7 +52,7 @@ en:
         all: All
         on_track: On track
         behind: Behind
-        no_target_date: Open-ended
+        no_target_date: Open
         paused: Paused
     new:
       heading: New goal
@@ -156,7 +156,7 @@ en:
         across_all_accounts: Across all accounts
         target_pace: Target pace
         target_date: Target date
-        no_target_date: No target date
+        no_target_date: Open
         no_required_pace: No required pace
         needs_per_month: "Needs %{amount}/mo"
         above_target_pace: Above target pace
@@ -174,7 +174,7 @@ en:
       on_track: On track
       behind: Behind
       reached: Reached
-      no_target_date: No date
+      no_target_date: Open
       paused: Paused
       archived: Archived
     empty_state:
@@ -191,7 +191,7 @@ en:
       accounts:
         one: 1 account
         other: "%{count} accounts"
-      no_target_date: No target date
+      no_target_date: Open
       completed: Completed
       past_due: Past due
       days_left:
@@ -206,7 +206,7 @@ en:
       footer_archived: Archived
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
-      footer_no_deadline: No deadline set
+      footer_no_deadline: Open
       footer_no_contributions: No contributions yet
       footer_last_today: Last contribution today
       footer_last_days:
