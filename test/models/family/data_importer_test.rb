@@ -356,7 +356,12 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       ndjson = zip.read("all.ndjson")
     end
 
+    assert_not_nil ndjson
+    assert ndjson.include?('"type":"RecurringTransaction"')
+
     Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 2, @family.recurring_transactions.count
 
     restored_account = @family.accounts.find_by!(name: "Source Checking")
     restored_merchant = @family.merchants.find_by!(name: "Internet Provider")
