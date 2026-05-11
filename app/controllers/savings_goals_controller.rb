@@ -20,7 +20,7 @@ class SavingsGoalsController < ApplicationController
   end
 
   def show
-    @contributions = @savings_goal.savings_contributions.includes(:account).chronological.limit(50)
+    @contributions = @savings_goal.savings_contributions.includes(:account).chronological
     @funding_breakdown = funding_breakdown_for(@savings_goal)
     @stats = stats_for(@savings_goal)
   end

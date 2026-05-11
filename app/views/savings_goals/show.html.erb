@@ -202,29 +202,33 @@
     <% end %>
   </section>
 
-  <%# Stat row — combo pace card + contributions count %>
-  <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
-    <%# Combo: Avg vs Target pace %>
-    <div class="md:col-span-2 bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-2"><%= t(".stats.monthly_pace") %></p>
-      <div class="flex items-baseline gap-2">
-        <p class="text-2xl font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @savings_goal.currency).format %></p>
-        <p class="text-sm text-subdued tabular-nums">/mo</p>
-        <% if @savings_goal.monthly_target_amount %>
-          <p class="text-sm text-subdued tabular-nums">· <%= t(".stats.target_of", amount: Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format) %></p>
+  <%# Stat row — combo pace card + contributions count. Reached goals
+      hide the pace combo since the comparison is moot. %>
+  <% goal_reached = @savings_goal.completed? || @savings_goal.status == :reached %>
+  <section class="grid grid-cols-1 <%= goal_reached ? "" : "md:grid-cols-3" %> gap-3">
+    <% unless goal_reached %>
+      <%# Combo: Avg vs Target pace %>
+      <div class="md:col-span-2 bg-container rounded-xl shadow-border-xs px-5 py-4">
+        <p class="text-[11px] text-secondary mb-2"><%= t(".stats.monthly_pace") %></p>
+        <div class="flex items-baseline gap-2">
+          <p class="text-2xl font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @savings_goal.currency).format %></p>
+          <p class="text-sm text-subdued tabular-nums">/mo</p>
+          <% if @savings_goal.monthly_target_amount && @savings_goal.monthly_target_amount.to_d.positive? %>
+            <p class="text-sm text-subdued tabular-nums">· <%= t(".stats.target_of", amount: Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format) %></p>
+          <% end %>
+        </div>
+        <% if @savings_goal.monthly_target_amount && @savings_goal.monthly_target_amount.to_d.positive? %>
+          <% delta = @savings_goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
+          <% if delta.positive? %>
+            <p class="text-xs text-warning mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @savings_goal.currency).format) %></p>
+          <% else %>
+            <p class="text-xs text-success mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
+          <% end %>
+        <% else %>
+          <p class="text-xs text-subdued mt-1"><%= t(".stats.no_required_pace") %></p>
         <% end %>
       </div>
-      <% if @savings_goal.monthly_target_amount %>
-        <% delta = @savings_goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
-        <% if delta.positive? %>
-          <p class="text-xs text-warning mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @savings_goal.currency).format) %></p>
-        <% else %>
-          <p class="text-xs text-success mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
-        <% end %>
-      <% else %>
-        <p class="text-xs text-subdued mt-1"><%= t(".stats.no_required_pace") %></p>
-      <% end %>
-    </div>
+    <% end %>
 
     <%# Total contributions %>
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
@@ -241,7 +245,9 @@
         <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
       </div>
-      <%= render "contributions_list", contributions: @contributions %>
+      <div class="max-h-[480px] overflow-y-auto">
+        <%= render "contributions_list", contributions: @contributions %>
+      </div>
     </div>
 
     <div class="bg-container rounded-xl shadow-border-xs p-5">
