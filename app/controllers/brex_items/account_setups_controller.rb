@@ -7,7 +7,7 @@ class BrexItems::AccountSetupsController < ApplicationController
     @api_error = flow.import_accounts_with_user_facing_error
     @brex_accounts = flow.unlinked_brex_accounts
     @account_type_options = flow.account_type_options
-    @displayable_account_type_options = @account_type_options.reject { |_, type| type == "skip" }
+    @displayable_account_type_options = flow.displayable_account_type_options
     @subtype_options = flow.subtype_options
 
     render "brex_items/setup_accounts"
@@ -68,7 +68,6 @@ class BrexItems::AccountSetupsController < ApplicationController
     end
 
     def sanitized_account_types
-      allowed_account_ids = @brex_item.brex_accounts.pluck(:id).map(&:to_s)
       supported_types = Provider::BrexAdapter.supported_account_types
 
       setup_param_hash(:account_types, allowed_account_ids).each_with_object({}) do |(account_id, selected_type), sanitized|
@@ -80,7 +79,6 @@ class BrexItems::AccountSetupsController < ApplicationController
     end
 
     def sanitized_account_subtypes
-      allowed_account_ids = @brex_item.brex_accounts.pluck(:id).map(&:to_s)
       allowed_subtypes = (Depository::SUBTYPES.keys + CreditCard::SUBTYPES.keys).map(&:to_s)
 
       setup_param_hash(:account_subtypes, allowed_account_ids).each_with_object({}) do |(account_id, selected_subtype), sanitized|
@@ -101,5 +99,9 @@ class BrexItems::AccountSetupsController < ApplicationController
       else
         raw_params.to_h.slice(*allowed_keys)
       end
+    end
+
+    def allowed_account_ids
+      @allowed_account_ids ||= @brex_item.brex_accounts.pluck(:id).map(&:to_s)
     end
 end

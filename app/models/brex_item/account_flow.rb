@@ -265,6 +265,10 @@ class BrexItem::AccountFlow
     [ [ I18n.t("brex_items.setup_accounts.account_types.skip"), "skip" ] ] + options
   end
 
+  def displayable_account_type_options
+    account_type_options.reject { |_, type| type == "skip" }
+  end
+
   def subtype_options
     supported_types = Provider::BrexAdapter.supported_account_types
     all_subtype_options = {
