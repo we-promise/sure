@@ -69,7 +69,7 @@
                                       account_subtype: account.subtype || subtype,
                                       account_balance: account.balance
                                     } %>
-                  <%= render Savings::GoalAvatarComponent.new(name: account.name, color: "var(--color-blue-500)", size: "md") %>
+                  <%= render Savings::GoalAvatarComponent.new(name: account.name, color: Category::COLORS[account.name.hash.abs % Category::COLORS.size], size: "md") %>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
                     <p class="text-xs text-secondary"><%= (account.subtype || subtype).titleize %></p>
