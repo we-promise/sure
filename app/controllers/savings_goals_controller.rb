@@ -24,7 +24,9 @@ class SavingsGoalsController < ApplicationController
   end
 
   def show
-    @contributions = @savings_goal.savings_contributions.includes(:account).chronological
+    @contributions = @savings_goal.savings_contributions
+                                  .sort_by { |c| [ c.contributed_at, c.created_at ] }
+                                  .reverse
     @funding_breakdown = funding_breakdown_for(@savings_goal)
     @stats = stats_for(@savings_goal)
     @breadcrumbs = [
@@ -114,7 +116,10 @@ class SavingsGoalsController < ApplicationController
 
   private
     def set_savings_goal
-      @savings_goal = Current.family.savings_goals.find(params[:id])
+      @savings_goal = Current.family.savings_goals
+                             .with_current_balance
+                             .includes(savings_contributions: :account, linked_accounts: [])
+                             .find(params[:id])
     end
 
     def savings_goal_params
@@ -156,8 +161,8 @@ class SavingsGoalsController < ApplicationController
 
     def funding_breakdown_for(goal)
       totals = goal.savings_contributions
-                   .group(:account_id)
-                   .sum(:amount)
+                   .group_by(&:account_id)
+                   .transform_values { |arr| arr.sum(&:amount) }
       goal.linked_accounts.map do |account|
         amount = totals[account.id] || 0
         { account: account, amount: amount, money: Money.new(amount, goal.currency) }
@@ -219,7 +224,7 @@ class SavingsGoalsController < ApplicationController
       {
         avg_monthly: avg,
         avg_monthly_sub: sub_avg,
-        contributions_count: goal.savings_contributions.count,
+        contributions_count: goal.savings_contributions.size,
         monthly_target_sub: sub_target,
         projection_summary: summary
       }

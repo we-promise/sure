@@ -139,7 +139,7 @@ class SavingsGoal < ApplicationRecord
   # date ascending. Consumed by the
   # `savings-goal-projection-chart` Stimulus controller.
   def projection_payload
-    sorted = savings_contributions.order(contributed_at: :asc).to_a
+    sorted = savings_contributions.sort_by(&:contributed_at)
     running = 0
     saved_series = sorted.map do |c|
       running += c.amount.to_d
@@ -167,26 +167,38 @@ class SavingsGoal < ApplicationRecord
   # :behind → has target_date and current pace < required monthly pace
   # :no_target_date → progress < 100 and target_date is nil
   def status
-    return :reached if progress_percent >= 100
-    return :no_target_date if target_date.nil?
-    return :on_track if monthly_target_amount.to_d <= average_monthly_contribution.to_d
+    return @status if defined?(@status)
 
-    :behind
+    @status = if progress_percent >= 100
+      :reached
+    elsif target_date.nil?
+      :no_target_date
+    elsif monthly_target_amount.to_d <= average_monthly_contribution.to_d
+      :on_track
+    else
+      :behind
+    end
   end
 
   def average_monthly_contribution
-    return 0 if savings_contributions.empty?
+    return @average_monthly_contribution if defined?(@average_monthly_contribution)
 
-    first_at = if savings_contributions.loaded?
-      savings_contributions.map(&:contributed_at).compact.min
+    @average_monthly_contribution = if savings_contributions.empty?
+      0
     else
-      savings_contributions.minimum(:contributed_at)
+      first_at = if savings_contributions.loaded?
+        savings_contributions.map(&:contributed_at).compact.min
+      else
+        savings_contributions.minimum(:contributed_at)
+      end
+      if first_at.blank?
+        current_balance
+      else
+        months = ((Date.current.year - first_at.year) * 12 + (Date.current.month - first_at.month)) + 1
+        months = 1 if months < 1
+        (current_balance.to_d / months).round(2)
+      end
     end
-    return current_balance if first_at.blank?
-
-    months = ((Date.current.year - first_at.year) * 12 + (Date.current.month - first_at.month)) + 1
-    months = 1 if months < 1
-    (current_balance.to_d / months).round(2)
   end
 
   def last_contribution_at
