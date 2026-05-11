@@ -27,9 +27,9 @@
 
       <div>
         <label class="block text-sm font-medium text-primary mb-2"><%= t("savings_goals.form_stepper.step1.fields.name") %></label>
-        <div class="flex items-stretch gap-2">
-          <span class="shrink-0">
-            <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "lg", rounded: false) %>
+        <div class="flex items-center gap-2">
+          <span class="shrink-0" data-savings-goal-stepper-target="avatarPreview">
+            <%= render Savings::GoalAvatarComponent.new(name: savings_goal.name, color: savings_goal.color, size: "md") %>
           </span>
           <%= f.text_field :name,
                            placeholder: t("savings_goals.form_stepper.step1.fields.name_placeholder"),
@@ -160,13 +160,14 @@
     </section>
 
     <div class="flex items-center justify-between pt-2">
-      <button type="button"
-              class="text-sm font-medium text-secondary hover:text-primary px-2 py-2"
-              data-savings-goal-stepper-target="footerLeftButton"
-              data-action="click->savings-goal-stepper#footerLeft"
-              data-cancel-action="DS--dialog#close">
-        <span data-savings-goal-stepper-target="footerLeftLabel"><%= t("savings_goals.form_stepper.cancel") %></span>
-      </button>
+      <%= render DS::Button.new(
+        variant: "ghost",
+        text: t("savings_goals.form_stepper.cancel"),
+        data: {
+          savings_goal_stepper_target: "footerLeftButton",
+          action: "click->savings-goal-stepper#footerLeft"
+        }
+      ) %>
       <%= render DS::Button.new(
         text: t("savings_goals.form_stepper.continue"),
         variant: "primary",

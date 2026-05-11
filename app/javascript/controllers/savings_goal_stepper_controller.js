@@ -15,6 +15,9 @@ export default class extends Controller {
     "step2Circle",
     "stepperLine",
     "modalSubtitle",
+    "nameInput",
+    "amountInput",
+    "avatarPreview",
     "linkedAccountCheckbox",
     "initialContributionAmount",
     "initialContributionAccountSelect",
@@ -23,7 +26,6 @@ export default class extends Controller {
     "reviewAccounts",
     "reviewSuggested",
     "footerLeftButton",
-    "footerLeftLabel",
     "footerRightButton",
     "submitButton",
   ];
@@ -89,6 +91,14 @@ export default class extends Controller {
     this.refreshAccountSelect();
     this.refreshSubmitState();
     this.updateReview();
+  }
+
+  nameChanged() {
+    if (!this.hasAvatarPreviewTarget || !this.hasNameInputTarget) return;
+    const name = this.nameInputTarget.value.trim();
+    const initial = name ? name.charAt(0).toUpperCase() : "?";
+    const inner = this.avatarPreviewTarget.querySelector('[data-testid="savings-goal-avatar"]');
+    if (inner) inner.textContent = initial;
   }
 
   validateStep1() {
@@ -163,9 +173,12 @@ export default class extends Controller {
   }
 
   updateFooter() {
-    if (this.hasFooterLeftLabelTarget) {
-      this.footerLeftLabelTarget.textContent =
-        this.currentStep === 1 ? this.cancelLabelValue : this.backLabelValue;
+    if (this.hasFooterLeftButtonTarget) {
+      const labelSpan = this.footerLeftButtonTarget.querySelector("span");
+      if (labelSpan) {
+        labelSpan.textContent =
+          this.currentStep === 1 ? this.cancelLabelValue : this.backLabelValue;
+      }
     }
     if (this.hasFooterRightButtonTarget) {
       const labelSpan = this.footerRightButtonTarget.querySelector("span");
