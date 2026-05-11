@@ -26,7 +26,6 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-primary mb-2"><%= t("savings_goals.form_stepper.step1.fields.name") %></label>
         <div class="flex items-center gap-2">
           <span class="shrink-0" data-savings-goal-stepper-target="avatarPreview">
             <%= render Savings::GoalAvatarComponent.new(name: savings_goal.name, color: savings_goal.color, size: "md") %>
@@ -34,8 +33,8 @@
           <%= f.text_field :name,
                            placeholder: t("savings_goals.form_stepper.step1.fields.name_placeholder"),
                            autofocus: true,
-                           label: false,
-                           class: "flex-1",
+                           label: t("savings_goals.form_stepper.step1.fields.name"),
+                           container_class: "flex-1",
                            data: { savings_goal_stepper_target: "nameInput", action: "input->savings-goal-stepper#nameChanged" } %>
         </div>
         <p class="hidden mt-1.5 text-xs text-destructive" data-savings-goal-stepper-target="nameError"><%= t("savings_goals.form_stepper.errors.name_required") %></p>
