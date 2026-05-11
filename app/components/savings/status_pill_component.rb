@@ -1,10 +1,15 @@
 class Savings::StatusPillComponent < ApplicationComponent
+  # Text colors here intentionally use palette steps (green-700 / yellow-700 /
+  # gray-700) rather than `text-success` / `text-warning` / `text-secondary`
+  # tokens because the functional tokens drop below WCAG 1.4.3 4.5:1 on tinted
+  # surfaces in light mode (~2.88:1 / 3.0:1 / 4.16:1). Local override only;
+  # revert once we-promise/sure#1736 lands token-level fixes.
   VARIANTS = {
-    on_track: { classes: "bg-green-500/10 text-success", icon: "circle-check" },
-    behind: { classes: "bg-yellow-500/10 text-warning", icon: "triangle-alert" },
-    reached: { classes: "bg-green-500/10 text-success", icon: "star" },
-    no_target_date: { classes: "bg-surface-inset text-secondary", icon: "infinity" },
-    paused: { classes: "bg-surface-inset text-secondary", icon: "pause" }
+    on_track: { classes: "bg-green-500/10 text-green-700", icon: "circle-check" },
+    behind: { classes: "bg-yellow-500/10 text-yellow-700", icon: "triangle-alert" },
+    reached: { classes: "bg-green-500/10 text-green-700", icon: "star" },
+    no_target_date: { classes: "bg-surface-inset text-gray-700", icon: "infinity" },
+    paused: { classes: "bg-surface-inset text-gray-700", icon: "pause" }
   }.freeze
 
   def initialize(goal:)

@@ -83,10 +83,13 @@
     <%= render DS::Alert.new(variant: "info", title: t("savings_goals.show.paused_banner.title")) do %>
       <p class="text-secondary"><%= t("savings_goals.show.paused_banner.body") %></p>
       <div class="mt-2">
-        <%= button_to t("savings_goals.show.paused_banner.resume_cta"),
-                      resume_savings_goal_path(@savings_goal),
-                      method: :patch,
-                      class: "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+        <%= render DS::Button.new(
+          text: t("savings_goals.show.paused_banner.resume_cta"),
+          href: resume_savings_goal_path(@savings_goal),
+          variant: "primary",
+          size: "sm",
+          method: :patch
+        ) %>
       </div>
     <% end %>
   <% elsif @savings_goal.archived? %>
@@ -95,10 +98,13 @@
       <p class="text-secondary"><%= t("savings_goals.show.archived_banner.body") %></p>
       <% if @savings_goal.may_unarchive? %>
         <div class="mt-2">
-          <%= button_to t("savings_goals.show.archived_banner.restore_cta"),
-                        unarchive_savings_goal_path(@savings_goal),
-                        method: :patch,
-                        class: "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+          <%= render DS::Button.new(
+            text: t("savings_goals.show.archived_banner.restore_cta"),
+            href: unarchive_savings_goal_path(@savings_goal),
+            variant: "primary",
+            size: "sm",
+            method: :patch
+          ) %>
         </div>
       <% end %>
     <% end %>
@@ -149,10 +155,13 @@
         <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @savings_goal.target_amount_money.format) %></p>
         <% if @savings_goal.may_archive? %>
           <div class="mt-4">
-            <%= button_to t(".celebration.archive_cta"),
-                          archive_savings_goal_path(@savings_goal),
-                          method: :patch,
-                          class: "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary border border-secondary bg-transparent hover:bg-surface-hover" %>
+            <%= render DS::Button.new(
+              text: t(".celebration.archive_cta"),
+              href: archive_savings_goal_path(@savings_goal),
+              variant: "outline",
+              size: "sm",
+              method: :patch
+            ) %>
           </div>
         <% end %>
       </div>
