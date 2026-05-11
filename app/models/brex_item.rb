@@ -1,6 +1,8 @@
 class BrexItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
+  BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   encrypts :token, deterministic: true
@@ -27,7 +29,7 @@ class BrexItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-  scope :with_credentials, -> { where.not(token: [ nil, "" ]) }
+  scope :with_credentials, -> { where.not(token: [ nil, *BLANK_TOKEN_SENTINELS ]).where("BTRIM(token) <> ''") }
 
   def destroy_later
     update!(scheduled_for_deletion: true)

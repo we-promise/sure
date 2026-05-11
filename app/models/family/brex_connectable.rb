@@ -24,6 +24,6 @@ module Family::BrexConnectable
   end
 
   def has_brex_credentials?
-    brex_items.active.with_credentials.any?(&:credentials_configured?)
+    brex_items.active.with_credentials.exists?
   end
 end
