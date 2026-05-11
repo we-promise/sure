@@ -194,8 +194,8 @@ export default class extends Controller {
       this.step2CircleTarget.classList.toggle("text-secondary", this.currentStep < 2);
     }
     if (this.hasStepperLineTarget) {
-      this.stepperLineTarget.classList.toggle("bg-inverse", this.currentStep > 1);
-      this.stepperLineTarget.classList.toggle("bg-secondary", this.currentStep === 1);
+      this.stepperLineTarget.classList.toggle("border-inverse", this.currentStep > 1);
+      this.stepperLineTarget.classList.toggle("border-secondary", this.currentStep === 1);
     }
     // Modal subtitle lives in the dialog header, outside this controller's
     // DOM scope. Locate it by attribute and update directly.
