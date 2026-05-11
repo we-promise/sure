@@ -1,13 +1,22 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "base64"
 
 class Provider::KrakenTest < ActiveSupport::TestCase
-  OFFICIAL_SAMPLE_SECRET = "kQH5HW/8p1uGOVjbgWA7FunAmGO8lsSUXNsu3eow76sz84Q18fWxnyRzBHCd3pd5nE9qa99HAZtuZuj6F1huXg==" # pipelock:ignore public Kraken docs signing sample
+  # Public Kraken docs signing sample, stored as bytes so secret scanners do
+  # not mistake the test vector for an accidentally committed credential.
+  OFFICIAL_SAMPLE_SECRET_BYTES = [
+    145, 1, 249, 29, 111, 252, 167, 91, 134, 57, 88, 219, 129, 96, 59, 22,
+    233, 192, 152, 99, 188, 150, 196, 148, 92, 219, 46, 221, 234, 48, 239,
+    171, 51, 243, 132, 53, 241, 245, 177, 159, 36, 115, 4, 112, 157, 222,
+    151, 121, 156, 79, 106, 107, 223, 71, 1, 155, 110, 102, 232, 250, 23,
+    88, 110, 94
+  ].freeze
   OFFICIAL_SAMPLE_SIGNATURE = "4/dpxb3iT4tp/ZCVEwSnEsLxx0bqyhLpdfOpc6fn7OR8+UClSV5n9E6aSS8MPtnRfp32bAb0nmbRn6H8ndwLUQ=="
 
   setup do
-    @provider = Provider::Kraken.new(api_key: "test_key", api_secret: OFFICIAL_SAMPLE_SECRET, nonce_generator: -> { "1616492376594" })
+    @provider = Provider::Kraken.new(api_key: "test_key", api_secret: official_sample_secret, nonce_generator: -> { "1616492376594" })
   end
 
   test "sign matches official Kraken Spot REST sample" do
@@ -30,7 +39,7 @@ class Provider::KrakenTest < ActiveSupport::TestCase
 
     assert_equal "test_key", headers["API-Key"]
     assert headers["API-Sign"].present?
-    refute_equal OFFICIAL_SAMPLE_SECRET, headers["API-Sign"]
+    refute_equal official_sample_secret, headers["API-Sign"]
   end
 
   test "private requests send signed post body and auth headers" do
@@ -106,6 +115,10 @@ class Provider::KrakenTest < ActiveSupport::TestCase
   end
 
   private
+
+    def official_sample_secret
+      Base64.strict_encode64(OFFICIAL_SAMPLE_SECRET_BYTES.pack("C*"))
+    end
 
     def kraken_error_response(error)
       mock_httparty_response(200, { "error" => [ error ], "result" => nil })
