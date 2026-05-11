@@ -33,17 +33,18 @@
           </span>
           <%= f.text_field :name,
                            placeholder: t("savings_goals.form_stepper.step1.fields.name_placeholder"),
-                           required: true,
                            autofocus: true,
-                           label: "",
-                           class: "flex-1" %>
+                           label: false,
+                           class: "flex-1",
+                           data: { savings_goal_stepper_target: "nameInput", action: "input->savings-goal-stepper#nameChanged" } %>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <%= f.money_field :target_amount,
                           label: t("savings_goals.form_stepper.step1.fields.target_amount"),
-                          required: true %>
+                          hide_currency: true,
+                          amount_data: { savings_goal_stepper_target: "amountInput" } %>
         <%= f.date_field :target_date,
                          label: t("savings_goals.form_stepper.step1.fields.target_date") %>
       </div>
@@ -81,12 +82,20 @@
         </div>
       </div>
 
-      <%= f.text_area :notes,
-                      label: t("savings_goals.form_stepper.step1.fields.notes"),
-                      rows: 2 %>
+      <details class="border border-subdued rounded-lg group">
+        <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none text-sm font-medium text-primary">
+          <span><%= t("savings_goals.form_stepper.step1.fields.notes_summary") %></span>
+          <%= icon("chevron-down", size: "sm", class: "group-open:rotate-180 transition-transform") %>
+        </summary>
+        <div class="px-4 pb-4">
+          <%= f.text_area :notes,
+                          label: "",
+                          rows: 2,
+                          placeholder: t("savings_goals.form_stepper.step1.fields.notes_placeholder") %>
+        </div>
+      </details>
 
-      <%# Hidden color (random) %>
-      <%= f.hidden_field :color, value: savings_goal.color || SavingsGoal::COLORS.sample %>
+      <%= f.hidden_field :color %>
     </section>
 
     <section data-savings-goal-stepper-target="step2Panel" class="space-y-5 hidden">
@@ -150,7 +159,7 @@
       </details>
     </section>
 
-    <div class="flex items-center justify-between pt-2 border-t border-subdued -mx-1 px-1">
+    <div class="flex items-center justify-between pt-2">
       <button type="button"
               class="text-sm font-medium text-secondary hover:text-primary px-2 py-2"
               data-savings-goal-stepper-target="footerLeftButton"

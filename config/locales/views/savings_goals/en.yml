@@ -196,6 +196,8 @@ en:
           target_date: Target date
           color: Color
           notes: Notes (optional)
+          notes_summary: Add notes (optional)
+          notes_placeholder: A reminder for future you…
           funding_accounts: Funding accounts
         subtypes:
           checking: Checking
