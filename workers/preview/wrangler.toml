@@ -3,7 +3,7 @@
 
 name = "sure-preview-${PR_NUMBER}"
 main = "./src/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-05-11"
 
 # Enable workers.dev subdomain for preview access
 workers_dev = true
