@@ -71,20 +71,39 @@ class GoalsController < ApplicationController
   end
 
   def edit
+    @linkable_accounts = linkable_accounts_for_new
+    @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
   end
 
   def update
-    if @goal.update(goal_update_params)
-      flash[:notice] = t(".success")
-      respond_to do |format|
-        format.html { redirect_to goal_path(@goal) }
-        format.turbo_stream do
-          render turbo_stream: turbo_stream.action(:redirect, goal_path(@goal))
-        end
-      end
-    else
+    account_ids = params.dig(:goal, :account_ids)
+    accounts_supplied = !account_ids.nil?
+    accounts = accounts_supplied ? lookup_accounts(account_ids) : []
+
+    if accounts_supplied && accounts.empty?
+      @goal.errors.add(:base, :at_least_one_linked_account_required)
+      @linkable_accounts = linkable_accounts_for_new
+      @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
       render :edit, status: :unprocessable_entity
+      return
     end
+
+    Goal.transaction do
+      @goal.update!(goal_update_params)
+      sync_linked_accounts!(@goal, accounts) if accounts_supplied
+    end
+
+    flash[:notice] = t(".success")
+    respond_to do |format|
+      format.html { redirect_to goal_path(@goal) }
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.action(:redirect, goal_path(@goal))
+      end
+    end
+  rescue ActiveRecord::RecordInvalid
+    @linkable_accounts = linkable_accounts_for_new
+    @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
+    render :edit, status: :unprocessable_entity
   end
 
   def destroy
@@ -146,6 +165,18 @@ class GoalsController < ApplicationController
 
     def linkable_accounts_for_new
       Current.family.accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
+    end
+
+    def sync_linked_accounts!(goal, accounts)
+      desired = accounts.map(&:id).to_set
+      current = goal.goal_accounts.pluck(:account_id).to_set
+
+      (current - desired).each do |id|
+        goal.goal_accounts.where(account_id: id).destroy_all
+      end
+      (desired - current).each do |id|
+        goal.goal_accounts.create!(account_id: id)
+      end
     end
 
     def create_initial_contribution_if_provided!(goal, accounts)

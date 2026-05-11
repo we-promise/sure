@@ -104,6 +104,25 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed", @goal.reload.name
   end
 
+  test "update without account_ids leaves linked accounts intact" do
+    before = @goal.goal_accounts.pluck(:account_id).sort
+    patch goal_url(@goal), params: { goal: { name: "Still here" } }
+    assert_redirected_to goal_path(@goal)
+    assert_equal before, @goal.reload.goal_accounts.pluck(:account_id).sort
+  end
+
+  test "update with account_ids syncs linked accounts (add + remove)" do
+    patch goal_url(@goal), params: { goal: { account_ids: [ @connected.id ] } }
+    assert_redirected_to goal_path(@goal)
+    assert_equal [ @connected.id ], @goal.reload.goal_accounts.pluck(:account_id)
+  end
+
+  test "update with empty account_ids re-renders with error" do
+    patch goal_url(@goal), params: { goal: { account_ids: [ "" ] } }
+    assert_response :unprocessable_entity
+    assert_not_empty @goal.reload.goal_accounts
+  end
+
   test "pause/resume/complete/archive/unarchive flow" do
     fresh = goals(:emergency_fund)
     patch pause_goal_url(fresh)
