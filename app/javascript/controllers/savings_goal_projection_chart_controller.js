@@ -11,7 +11,7 @@ import * as d3 from "d3";
 // Data shape passed via `data-savings-goal-projection-chart-data-value`
 // matches SavingsGoal#projection_payload.
 export default class extends Controller {
-  static values = { data: Object };
+  static values = { data: Object, ariaLabel: String, ariaDescription: String };
 
   connect() {
     this._draw();
@@ -95,6 +95,12 @@ export default class extends Controller {
       .attr("height", height)
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("preserveAspectRatio", "none");
+
+    const titleId = `chart-title-${this._id()}`;
+    const descId = `chart-desc-${this._id()}`;
+    svg.attr("role", "img").attr("aria-labelledby", titleId).attr("aria-describedby", descId);
+    svg.append("title").attr("id", titleId).text(this.ariaLabelValue || "Savings goal projection");
+    svg.append("desc").attr("id", descId).text(this.ariaDescriptionValue || "");
 
     const defs = svg.append("defs");
     const gradient = defs

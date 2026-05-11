@@ -145,7 +145,7 @@
         <div class="w-16 h-16 rounded-full bg-green-500/10 inline-flex items-center justify-center text-success mb-3">
           <%= icon("party-popper", size: "2xl", color: "success") %>
         </div>
-        <h3 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h3>
+        <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
         <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @savings_goal.target_amount_money.format) %></p>
         <% if @savings_goal.may_archive? %>
           <div class="mt-4">
@@ -162,7 +162,7 @@
         <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
           <%= icon("calendar-plus", size: "2xl") %>
         </div>
-        <h3 class="text-lg font-semibold text-primary"><%= t(".no_target_date.heading") %></h3>
+        <h2 class="text-lg font-semibold text-primary"><%= t(".no_target_date.heading") %></h2>
         <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".no_target_date.body") %></p>
         <div class="mt-4">
           <%= render DS::Link.new(
@@ -179,7 +179,7 @@
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
         <div class="flex items-start justify-between mb-2 gap-3">
           <div class="min-w-0">
-            <h3 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h3>
+            <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
             <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
           </div>
           <% projection_color = @savings_goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
@@ -196,7 +196,9 @@
         </div>
         <div class="flex-1 min-h-[200px]"
              data-controller="savings-goal-projection-chart"
-             data-savings-goal-projection-chart-data-value="<%= @savings_goal.projection_payload.to_json %>"></div>
+             data-savings-goal-projection-chart-data-value="<%= @savings_goal.projection_payload.to_json %>"
+             data-savings-goal-projection-chart-aria-label-value="<%= t("savings_goals.show.projection.aria_label", name: @savings_goal.name) %>"
+             data-savings-goal-projection-chart-aria-description-value="<%= strip_tags(@stats[:projection_summary]) %>"></div>
       </div>
     <% end %>
   </section>
@@ -241,7 +243,7 @@
   <section class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3">
     <div class="bg-container rounded-xl shadow-border-xs p-5">
       <div class="flex items-center mb-4">
-        <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
+        <h2 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h2>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
       </div>
       <div class="max-h-[420px] overflow-y-auto overflow-x-hidden">
@@ -250,14 +252,14 @@
     </div>
 
     <div class="bg-container rounded-xl shadow-border-xs p-5">
-      <h3 class="text-sm font-medium text-primary mb-3"><%= t(".funding_accounts_heading") %></h3>
+      <h2 class="text-sm font-medium text-primary mb-3"><%= t(".funding_accounts_heading") %></h2>
       <%= render Savings::FundingAccountsBreakdownComponent.new(goal: @savings_goal, rows: @funding_breakdown) %>
     </div>
   </section>
 
   <% if @savings_goal.notes.present? %>
     <section class="bg-container rounded-xl shadow-border-xs p-5">
-      <h3 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h3>
+      <h2 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h2>
       <p class="text-sm text-secondary whitespace-pre-line"><%= @savings_goal.notes %></p>
     </section>
   <% end %>

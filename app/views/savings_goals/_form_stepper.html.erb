@@ -64,6 +64,7 @@
                   <%= check_box_tag "savings_goal[account_ids][]",
                                     account.id,
                                     false,
+                                    id: "savings_goal_account_ids_#{account.id}",
                                     class: "checkbox checkbox--light shrink-0",
                                     data: {
                                       savings_goal_stepper_target: "linkedAccountCheckbox",

@@ -109,6 +109,7 @@ en:
         of: "of %{target}"
         to_go: "%{amount} to go"
         of_target: of target
+        aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
       projection:
         heading: Projection
         legend_saved: Saved
@@ -118,6 +119,7 @@ en:
         no_pace: No contributions yet. Add some to start a projection.
         behind: At %{current}/mo you'll fall short. Bump to <strong class="text-primary">%{required}/mo</strong> to hit it on time.
         on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
+        aria_label: "Projection chart for %{name}"
       catch_up:
         title: "Save %{amount}/mo to catch up"
         body_with_date: "Bump your monthly contribution to stay on track for %{date}."
