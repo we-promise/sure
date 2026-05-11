@@ -288,6 +288,110 @@ export default class extends Controller {
         tickNodes[i].remove();
       }
     }
+
+    // Hover interactivity — crosshair + dots + tooltip on pointermove.
+    // Transparent rect catches pointer events across the plot area.
+    const crosshair = svg
+      .append("line")
+      .attr("y1", margin.top)
+      .attr("y2", margin.top + innerHeight)
+      .attr("stroke", textSecondary)
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "2 2")
+      .attr("pointer-events", "none")
+      .style("display", "none");
+
+    const hoverSavedDot = svg
+      .append("circle")
+      .attr("r", 4)
+      .attr("fill", textPrimary)
+      .attr("stroke", containerBg)
+      .attr("stroke-width", 2)
+      .attr("pointer-events", "none")
+      .style("display", "none");
+
+    const hoverProjDot = svg
+      .append("circle")
+      .attr("r", 4)
+      .attr("fill", projectionSeries.length && projectionEnd >= targetAmount ? "var(--color-green-600)" : "var(--color-yellow-600)")
+      .attr("stroke", containerBg)
+      .attr("stroke-width", 2)
+      .attr("pointer-events", "none")
+      .style("display", "none");
+
+    if (root.style.position !== "absolute") root.style.position = "relative";
+    const tooltip = document.createElement("div");
+    tooltip.style.cssText = "position:absolute;pointer-events:none;display:none;background:var(--color-gray-900);color:var(--color-white);font-size:11px;line-height:1.35;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,0.15);";
+    root.appendChild(tooltip);
+
+    const overlay = svg
+      .append("rect")
+      .attr("x", margin.left)
+      .attr("y", margin.top)
+      .attr("width", innerWidth)
+      .attr("height", innerHeight)
+      .attr("fill", "transparent")
+      .style("cursor", "crosshair");
+
+    const bisectDate = d3.bisector((d) => d.date).left;
+    const dateFmt = d3.timeFormat("%b %d, %Y");
+    const todayTs = today.getTime();
+    const targetTs = target ? target.getTime() : null;
+
+    const showAt = (xPos, yPos) => {
+      const xVal = x.invert(xPos);
+      if (!savedSeries.length) return;
+
+      const i = bisectDate(savedSeries, xVal);
+      const a = savedSeries[Math.max(0, i - 1)];
+      const b = savedSeries[Math.min(savedSeries.length - 1, i)];
+      const savedPoint = !a ? b : !b ? a : (xVal - a.date < b.date - xVal ? a : b);
+
+      crosshair.attr("x1", x(savedPoint.date)).attr("x2", x(savedPoint.date)).style("display", null);
+      hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
+
+      let projValue = null;
+      if (projectionSeries.length && targetTs && xVal.getTime() >= todayTs) {
+        const tFrac = (xVal.getTime() - todayTs) / (targetTs - todayTs);
+        if (tFrac >= 0 && tFrac <= 1) {
+          projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
+          hoverProjDot.attr("cx", x(savedPoint.date)).attr("cy", y(projValue)).style("display", null);
+        } else {
+          hoverProjDot.style("display", "none");
+        }
+      } else {
+        hoverProjDot.style("display", "none");
+      }
+
+      const lines = [
+        dateFmt(savedPoint.date),
+        `Saved: ${this._fmtMoney(savedPoint.value, data.currency)}`,
+      ];
+      if (projValue !== null) {
+        lines.push(`Projected: ${this._fmtMoney(projValue, data.currency)}`);
+      }
+      tooltip.textContent = lines.join("\n");
+      tooltip.style.whiteSpace = "pre";
+      tooltip.style.display = "block";
+      const tipRect = tooltip.getBoundingClientRect();
+      const left = Math.min(width - tipRect.width - 4, Math.max(4, xPos + 12));
+      const top = Math.max(4, yPos - tipRect.height - 8);
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    };
+
+    const hide = () => {
+      crosshair.style("display", "none");
+      hoverSavedDot.style("display", "none");
+      hoverProjDot.style("display", "none");
+      tooltip.style.display = "none";
+    };
+
+    overlay.on("pointermove", (event) => {
+      const [mx, my] = d3.pointer(event);
+      showAt(mx, my);
+    });
+    overlay.on("pointerleave", hide);
   }
 
   _monthsBetween(a, b) {
