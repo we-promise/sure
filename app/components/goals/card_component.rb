@@ -29,6 +29,17 @@ class Goals::CardComponent < ApplicationComponent
     I18n.t("goals.goal_card.accounts", count: linked_accounts.size)
   end
 
+  # Single screen-reader sentence for the card's title <a> aria-label.
+  # Without this, the whole-card link would inherit every nested text node
+  # as its accessible name (>15 strings on a typical card).
+  def aria_label
+    status_text = I18n.t("goals.status.#{goal.display_status}")
+    progress_text = I18n.t("goals.goal_card.aria_progress",
+                           percent: progress_percent,
+                           target: goal.target_amount_money.format)
+    [ goal.name, status_text, progress_text ].join(", ")
+  end
+
   def secondary_line
     if goal.completed?
       I18n.t("goals.goal_card.completed")

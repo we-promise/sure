@@ -1,22 +1,25 @@
-<%= link_to goal_path(goal),
-            class: "group block bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-6 #{"opacity-75" if goal.paused? || goal.archived?}",
-            data: {
-              goals_filter_target: "card",
-              goal_name: goal.name,
-              goal_status: goal.display_status
-            } do %>
+<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
+     data-goals-filter-target="card"
+     data-goal-name="<%= goal.name %>"
+     data-goal-status="<%= goal.display_status %>">
   <div class="flex items-start gap-3">
     <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2 mb-0.5">
-        <p class="text-sm font-medium text-primary truncate"><%= goal.name %></p>
+        <p class="text-sm font-medium text-primary truncate">
+          <a href="<%= goal_path(goal) %>"
+             aria-label="<%= aria_label %>"
+             class="before:absolute before:inset-0 before:rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100">
+            <%= goal.name %>
+          </a>
+        </p>
         <%= render Goals::StatusPillComponent.new(goal: goal) %>
       </div>
       <p class="text-[11px] text-subdued truncate"><%= secondary_line %></p>
     </div>
 
     <div class="shrink-0 relative" style="width: <%= Goals::CardComponent::RING_SIZE %>px; height: <%= Goals::CardComponent::RING_SIZE %>px;">
-      <svg width="<%= Goals::CardComponent::RING_SIZE %>" height="<%= Goals::CardComponent::RING_SIZE %>" viewBox="0 0 <%= Goals::CardComponent::RING_SIZE %> <%= Goals::CardComponent::RING_SIZE %>">
+      <svg width="<%= Goals::CardComponent::RING_SIZE %>" height="<%= Goals::CardComponent::RING_SIZE %>" viewBox="0 0 <%= Goals::CardComponent::RING_SIZE %> <%= Goals::CardComponent::RING_SIZE %>" aria-hidden="true">
         <circle cx="<%= Goals::CardComponent::RING_SIZE / 2.0 %>"
                 cy="<%= Goals::CardComponent::RING_SIZE / 2.0 %>"
                 r="<%= ring_radius %>"
@@ -34,7 +37,7 @@
                 stroke-dashoffset="<%= ring_offset %>"
                 transform="rotate(-90 <%= Goals::CardComponent::RING_SIZE / 2.0 %> <%= Goals::CardComponent::RING_SIZE / 2.0 %>)" />
       </svg>
-      <div class="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-primary tabular-nums">
+      <div class="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-primary tabular-nums" aria-hidden="true">
         <%= progress_percent %>%
       </div>
     </div>
@@ -57,4 +60,4 @@
     </div>
     <span class="text-[11px] text-subdued tabular-nums"><%= footer_line %></span>
   </div>
-<% end %>
+</div>

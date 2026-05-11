@@ -194,6 +194,7 @@ en:
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
       left: left
+      aria_progress: "%{percent}% of %{target}"
       accounts:
         one: 1 account
         other: "%{count} accounts"
