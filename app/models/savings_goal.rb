@@ -3,6 +3,10 @@ class SavingsGoal < ApplicationRecord
 
   COLORS = Category::COLORS
 
+  # Virtual attributes used by the create-modal stepper to capture an
+  # optional initial contribution alongside the goal create payload.
+  attr_accessor :initial_contribution_amount, :initial_contribution_account_id
+
   belongs_to :family
   has_many :savings_goal_accounts, dependent: :destroy
   has_many :linked_accounts, through: :savings_goal_accounts, source: :account

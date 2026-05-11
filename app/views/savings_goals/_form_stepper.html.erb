@@ -132,19 +132,10 @@
           <%= icon("chevron-down", size: "sm") %>
         </summary>
         <div class="px-4 pb-4 space-y-3">
-          <div class="form-field">
-            <div class="form-field__body">
-              <%= label_tag "savings_goal[initial_contribution_amount]",
-                           t("savings_goals.form_stepper.step2.initial_amount"),
-                           class: "form-field__label" %>
-              <%= number_field_tag "savings_goal[initial_contribution_amount]",
-                                   nil,
-                                   step: "0.01", min: "0",
-                                   autocomplete: "off",
-                                   class: "form-field__input",
-                                   data: { savings_goal_stepper_target: "initialContributionAmount" } %>
-            </div>
-          </div>
+          <%= f.money_field :initial_contribution_amount,
+                            label: t("savings_goals.form_stepper.step2.initial_amount"),
+                            hide_currency: true,
+                            amount_data: { savings_goal_stepper_target: "initialContributionAmount" } %>
           <div class="form-field">
             <div class="form-field__body">
               <%= label_tag "savings_goal[initial_contribution_account_id]",
