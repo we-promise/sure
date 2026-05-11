@@ -33,6 +33,8 @@ class Provider::KrakenAdapter < Provider::Base
   end
 
   def sync_path
+    return unless item
+
     Rails.application.routes.url_helpers.sync_kraken_item_path(item)
   end
 
@@ -45,23 +47,19 @@ class Provider::KrakenAdapter < Provider::Base
   end
 
   def institution_domain
-    metadata = provider_account.institution_metadata || {}
-    metadata["domain"] || item&.institution_domain
+    institution_metadata_value("domain")
   end
 
   def institution_name
-    metadata = provider_account.institution_metadata || {}
-    metadata["name"] || item&.institution_name
+    institution_metadata_value("name")
   end
 
   def institution_url
-    metadata = provider_account.institution_metadata || {}
-    metadata["url"] || item&.institution_url
+    institution_metadata_value("url")
   end
 
   def institution_color
-    metadata = provider_account.institution_metadata || {}
-    metadata["color"] || item&.institution_color
+    institution_metadata_value("color")
   end
 
   def self.connection_config_for(kraken_item)
@@ -102,4 +100,11 @@ class Provider::KrakenAdapter < Provider::Base
     nil
   end
   private_class_method :resolve_kraken_item
+
+  private
+
+    def institution_metadata_value(key)
+      metadata = provider_account.institution_metadata || {}
+      metadata[key] || item&.public_send("institution_#{key}")
+    end
 end

@@ -5,9 +5,12 @@ module KrakenItem::Unlinking
 
   def unlink_all!(dry_run: false)
     results = []
+    links_by_provider_id = AccountProvider
+      .where(provider_type: KrakenAccount.name, provider_id: kraken_accounts.select(:id))
+      .group_by { |link| link.provider_id.to_s }
 
     kraken_accounts.find_each do |provider_account|
-      links = AccountProvider.where(provider_type: KrakenAccount.name, provider_id: provider_account.id).to_a
+      links = links_by_provider_id[provider_account.id.to_s] || []
       link_ids = links.map(&:id)
       result = {
         provider_account_id: provider_account.id,

@@ -21,7 +21,7 @@ module KrakenAccount::UsdConverter
         {
           "stale_rate" => true,
           "rate_date_used" => rate_date&.to_s,
-          "rate_target_date" => target_date.to_s
+          "rate_target_date" => target_date&.to_s
         }
       else
         { "stale_rate" => false }

@@ -21,8 +21,8 @@ en:
     select_existing_account:
       title: Link Kraken Account
       no_accounts_found: No Kraken accounts found.
-      wait_for_sync: Wait for Kraken to finish syncing
-      check_provider_health: Check that your Kraken API credentials are valid
+      wait_for_sync: Wait for Kraken to finish syncing.
+      check_provider_health: Check that your Kraken API credentials are valid.
       link: Link
       cancel: Cancel
     link_existing_account:

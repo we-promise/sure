@@ -25,7 +25,7 @@ class KrakenItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-  scope :credentials_configured, -> { where.not(api_key: [ nil, "" ]).where.not(api_secret: [ nil, "" ]) }
+  scope :credentials_configured, -> { where.not(api_key: [ nil, "" ]).where.not(api_secret: nil) }
 
   before_validation :strip_credentials
 

@@ -20,7 +20,7 @@ class KrakenAccount::Processor
   private
 
     def target_currency
-      kraken_account.kraken_item.family.currency
+      kraken_account.kraken_item&.family&.currency
     end
 
     def process_account!

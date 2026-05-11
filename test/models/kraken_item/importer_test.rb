@@ -61,7 +61,7 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
   test "paginates TradesHistory in 50 fill pages" do
     @provider.stubs(:get_asset_info).returns({})
     @provider.stubs(:get_extended_balance).returns({})
-    first_page = 50.times.index_with { |i| trade_payload("tx#{i}") }
+    first_page = 50.times.to_h { |i| [ "tx#{i}", trade_payload("tx#{i}") ] }
     second_page = { "tx50" => trade_payload("tx50") }
 
     @provider.expects(:get_trades_history).with(start: nil, offset: 0).returns({ "count" => 51, "trades" => first_page })

@@ -878,9 +878,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
-    t.boolean "pending_account_setup", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "api_key"

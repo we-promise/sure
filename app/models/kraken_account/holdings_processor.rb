@@ -21,7 +21,7 @@ class KrakenAccount::HoldingsProcessor
     attr_reader :kraken_account
 
     def target_currency
-      kraken_account.kraken_item.family.currency
+      kraken_account.kraken_item&.family&.currency
     end
 
     def account
@@ -35,7 +35,7 @@ class KrakenAccount::HoldingsProcessor
     def process_asset(asset)
       symbol = asset["symbol"] || asset[:symbol]
       price_symbol = asset["price_symbol"] || asset[:price_symbol] || symbol
-      total = (asset["balance"] || asset[:balance]).to_d
+      total = (asset["balance"] || asset[:balance] || 0).to_d
       price_usd = asset["price_usd"] || asset[:price_usd]
       source = asset["source"] || asset[:source] || "spot"
 
@@ -45,8 +45,10 @@ class KrakenAccount::HoldingsProcessor
       return unless security
 
       amount_usd = total * price_usd.to_d
-      amount, _stale, _rate_date = convert_from_usd(amount_usd, date: Date.current)
-      price, = convert_from_usd(price_usd.to_d, date: Date.current)
+      amount, amount_stale, amount_rate_date = convert_from_usd(amount_usd, date: Date.current)
+      price, price_stale, price_rate_date = convert_from_usd(price_usd.to_d, date: Date.current)
+      log_stale_rate(symbol, "amount", amount_rate_date) if amount_stale
+      log_stale_rate(symbol, "price", price_rate_date) if price_stale
 
       import_adapter.import_holding(
         security: security,
@@ -72,5 +74,11 @@ class KrakenAccount::HoldingsProcessor
     def resolve_security(symbol)
       ticker = symbol.to_s.include?(":") ? symbol.to_s : "CRYPTO:#{symbol}"
       KrakenAccount::SecurityResolver.resolve(ticker, symbol)
+    end
+
+    def log_stale_rate(symbol, field, rate_date)
+      Rails.logger.warn(
+        "KrakenAccount::HoldingsProcessor - stale FX rate for #{field} symbol=#{symbol} rate_date=#{rate_date || "unknown"}"
+      )
     end
 end

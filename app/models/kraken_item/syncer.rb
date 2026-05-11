@@ -19,7 +19,7 @@ class KrakenItem::Syncer
 
     sync.update!(status_text: I18n.t("kraken_item.syncer.importing_accounts")) if sync.respond_to?(:status_text)
     kraken_item.import_latest_kraken_data
-    kraken_item.update!(status: :good) if kraken_item.status == "requires_update"
+    kraken_item.update!(status: :good) if kraken_item.requires_update?
 
     sync.update!(status_text: I18n.t("kraken_item.syncer.checking_configuration")) if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: kraken_item.kraken_accounts.to_a)

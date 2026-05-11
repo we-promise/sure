@@ -2,6 +2,8 @@
 
 class KrakenItem::SyncCompleteEvent
   def initialize(kraken_item)
+    raise ArgumentError, "kraken_item is required" unless kraken_item.respond_to?(:family) && kraken_item.respond_to?(:id)
+
     @kraken_item = kraken_item
   end
 

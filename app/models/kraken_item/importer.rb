@@ -125,7 +125,11 @@ class KrakenItem::Importer
       MAX_TRADE_PAGES.times do
         result = kraken_provider.get_trades_history(start: start_time, offset: offset)
         trades = result.to_h.fetch("trades", {})
-        all_trades.merge!(trades)
+        duplicate_trade_ids = all_trades.keys & trades.keys
+        if duplicate_trade_ids.any?
+          Rails.logger.warn("KrakenItem::Importer - #{duplicate_trade_ids.size} duplicate trade ids from Kraken page ignored")
+        end
+        all_trades.merge!(trades.except(*duplicate_trade_ids))
 
         count = result.to_h["count"].to_i
         break if trades.size < TRADE_PAGE_SIZE

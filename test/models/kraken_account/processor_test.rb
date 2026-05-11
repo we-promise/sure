@@ -84,12 +84,14 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
   private
 
     def trade_payload(type, volume, cost, fee)
+      price = volume.to_d.zero? ? 0.to_d : cost.to_d / volume.to_d
+
       {
         "ordertxid" => "order_#{type}",
         "pair" => "XBTUSD",
         "time" => Time.current.to_f,
         "type" => type,
-        "price" => "50000.0",
+        "price" => price.to_s("F"),
         "cost" => cost,
         "fee" => fee,
         "vol" => volume

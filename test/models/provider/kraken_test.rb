@@ -39,7 +39,7 @@ class Provider::KrakenTest < ActiveSupport::TestCase
 
     assert_equal "test_key", headers["API-Key"]
     assert headers["API-Sign"].present?
-    refute_equal official_sample_secret, headers["API-Sign"]
+    assert_equal 64, Base64.strict_decode64(headers["API-Sign"]).bytesize
   end
 
   test "private requests send signed post body and auth headers" do
