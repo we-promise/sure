@@ -9,7 +9,8 @@ class Savings::StatusPillComponent < ApplicationComponent
     behind: { classes: "bg-yellow-500/10 text-yellow-700", icon: "triangle-alert" },
     reached: { classes: "bg-green-500/10 text-green-700", icon: "star" },
     no_target_date: { classes: "bg-surface-inset text-gray-700", icon: "infinity" },
-    paused: { classes: "bg-surface-inset text-gray-700", icon: "pause" }
+    paused: { classes: "bg-surface-inset text-gray-700", icon: "pause" },
+    archived: { classes: "bg-surface-inset text-gray-700", icon: "archive" }
   }.freeze
 
   def initialize(goal:)
@@ -17,8 +18,7 @@ class Savings::StatusPillComponent < ApplicationComponent
   end
 
   def status_key
-    return :paused if @goal.paused?
-    @goal.status
+    @goal.display_status
   end
 
   def variant

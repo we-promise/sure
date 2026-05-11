@@ -145,7 +145,20 @@
       </p>
     </div>
 
-    <% if @savings_goal.completed? || @savings_goal.status == :reached %>
+    <% if @savings_goal.archived? || @savings_goal.paused? %>
+      <%# Paused / archived: pace + projection are misleading. Show a static recap card. %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
+          <%= icon(@savings_goal.archived? ? "archive" : "pause", size: "2xl") %>
+        </div>
+        <h2 class="text-lg font-semibold text-primary">
+          <%= t(@savings_goal.archived? ? ".inactive.heading_archived" : ".inactive.heading_paused") %>
+        </h2>
+        <p class="text-sm text-secondary mt-1 max-w-md tabular-nums">
+          <%= t(".inactive.body", saved: @savings_goal.current_balance_money.format, target: @savings_goal.target_amount_money.format) %>
+        </p>
+      </div>
+    <% elsif @savings_goal.completed? || @savings_goal.status == :reached %>
       <%# Reached celebration card %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
         <div class="w-16 h-16 rounded-full bg-green-500/10 inline-flex items-center justify-center text-success mb-3">
@@ -212,11 +225,13 @@
     <% end %>
   </section>
 
-  <%# Stat row — combo pace card + contributions count. Reached goals
-      hide the pace combo since the comparison is moot. %>
+  <%# Stat row — combo pace card + contributions count. Reached, paused,
+      or archived goals hide the pace combo since the comparison is moot
+      or misleading. %>
   <% goal_reached = @savings_goal.completed? || @savings_goal.status == :reached %>
-  <section class="grid grid-cols-1 <%= goal_reached ? "" : "md:grid-cols-3" %> gap-3">
-    <% unless goal_reached %>
+  <% hide_pace = goal_reached || @savings_goal.archived? || @savings_goal.paused? %>
+  <section class="grid grid-cols-1 <%= hide_pace ? "" : "md:grid-cols-3" %> gap-3">
+    <% unless hide_pace %>
       <%# Combo: Avg vs Target pace %>
       <div class="md:col-span-2 bg-container rounded-xl shadow-border-xs px-5 py-4">
         <p class="text-[11px] text-secondary mb-2"><%= t(".stats.monthly_pace") %></p>

@@ -126,6 +126,23 @@ class SavingsGoalTest < ActiveSupport::TestCase
     assert_equal :no_target_date, @goal.status
   end
 
+  test "display_status returns :archived for archived goal regardless of progress" do
+    @goal.save!
+    @goal.archive!
+    assert_equal :archived, @goal.display_status
+  end
+
+  test "display_status returns :paused for paused goal regardless of progress" do
+    @goal.save!
+    @goal.pause!
+    assert_equal :paused, @goal.display_status
+  end
+
+  test "display_status falls through to status for active goals" do
+    @goal.target_amount = 1
+    assert_equal :reached, @goal.display_status
+  end
+
   test "advisory_lock_key_for is stable per family" do
     k1 = SavingsGoal.advisory_lock_key_for(@family.id)
     k2 = SavingsGoal.advisory_lock_key_for(@family.id)

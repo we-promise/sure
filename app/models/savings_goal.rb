@@ -162,6 +162,21 @@ class SavingsGoal < ApplicationRecord
     }
   end
 
+  # Display-layer status. Prefers AASM state for inactive goals so the UI
+  # doesn't compute a misleading "Behind / On track" verdict against a goal
+  # that isn't accepting contributions anymore.
+  def display_status
+    return @display_status if defined?(@display_status)
+
+    @display_status = if archived?
+      :archived
+    elsif paused?
+      :paused
+    else
+      status
+    end
+  end
+
   # :reached → progress_percent >= 100
   # :on_track → has target_date and current pace >= required monthly pace
   # :behind → has target_date and current pace < required monthly pace

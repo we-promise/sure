@@ -137,6 +137,10 @@ en:
         heading: Goal reached. Nice work.
         body: "You hit your %{amount} target. Keep the goal as a record, or archive it now."
         archive_cta: Archive goal
+      inactive:
+        heading_paused: This goal is paused
+        heading_archived: This goal is archived
+        body: "%{saved} of %{target} saved so far."
       no_target_date:
         heading: Add a target date
         body: Set a deadline to project a finish line and track required pace.
@@ -168,6 +172,7 @@ en:
       reached: Reached
       no_target_date: No date
       paused: Paused
+      archived: Archived
     empty_state:
       heading: No goals yet
       body: Set a target, link the accounts you save into, and watch your progress add up. Goals can pull from multiple accounts.
