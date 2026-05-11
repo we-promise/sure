@@ -8,29 +8,27 @@
       </div>
       <p class="text-sm text-secondary">
         <%
-          parts = []
+          primary_parts = []
           if @savings_goal.target_date
-            parts << t(".header.target_by", amount: @savings_goal.target_amount_money.format, date: I18n.l(@savings_goal.target_date, format: :long))
+            primary_parts << t(".header.target_by", amount: @savings_goal.target_amount_money.format, date: I18n.l(@savings_goal.target_date, format: :long))
             unless @savings_goal.completed? || @savings_goal.status == :reached
               days = (@savings_goal.target_date - Date.current).to_i
               if days > 0
-                parts << t("savings_goals.goal_card.days_left", count: days, date: I18n.l(@savings_goal.target_date, format: :long)).split(" · ").first
+                primary_parts << t("savings_goals.goal_card.days_left", count: days, date: I18n.l(@savings_goal.target_date, format: :long)).split(" · ").first
               end
             end
           else
-            parts << t(".header.target", amount: @savings_goal.target_amount_money.format)
-          end
-          last_days = @savings_goal.last_contribution_days_ago
-          unless last_days.nil?
-            parts << if last_days.zero?
-              t("savings_goals.goal_card.footer_last_today")
-            else
-              t("savings_goals.goal_card.footer_last_days", count: last_days)
-            end
+            primary_parts << t(".header.target", amount: @savings_goal.target_amount_money.format)
           end
         %>
-        <%= parts.join(" · ") %>
+        <%= primary_parts.join(" · ") %>
       </p>
+      <% last_days = @savings_goal.last_contribution_days_ago %>
+      <% unless last_days.nil? %>
+        <p class="text-xs text-subdued mt-0.5">
+          <%= last_days.zero? ? t("savings_goals.goal_card.footer_last_today") : t("savings_goals.goal_card.footer_last_days", count: last_days) %>
+        </p>
+      <% end %>
     </div>
     <div class="flex items-center gap-2">
       <%= render DS::Link.new(
@@ -220,9 +218,9 @@
         <% if @savings_goal.monthly_target_amount && @savings_goal.monthly_target_amount.to_d.positive? %>
           <% delta = @savings_goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
           <% if delta.positive? %>
-            <p class="text-xs text-warning mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @savings_goal.currency).format) %></p>
+            <p class="text-xs text-subdued mt-1 tabular-nums"><%= t(".stats.behind_by", amount: Money.new(delta, @savings_goal.currency).format) %></p>
           <% else %>
-            <p class="text-xs text-success mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
+            <p class="text-xs text-subdued mt-1 tabular-nums"><%= t(".stats.above_target_pace") %></p>
           <% end %>
         <% else %>
           <p class="text-xs text-subdued mt-1"><%= t(".stats.no_required_pace") %></p>

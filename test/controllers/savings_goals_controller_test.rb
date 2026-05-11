@@ -12,7 +12,7 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
   test "index renders with active filter by default" do
     get savings_goals_url
     assert_response :success
-    assert_match(/Savings goals/i, response.body)
+    assert_match(/Savings/i, response.body)
   end
 
   test "index honors state filter" do

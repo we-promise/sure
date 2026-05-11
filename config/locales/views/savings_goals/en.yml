@@ -93,7 +93,11 @@ en:
       add_contribution: Add contribution
       funding_accounts_heading: Funding accounts
       no_contributions_yet: No contributions yet.
+      delete_contribution: Delete contribution
       confirm_delete_contribution: Delete this contribution?
+      confirm_delete_contribution_title: Delete contribution?
+      confirm_delete_contribution_body: "Remove the %{amount} contribution from this goal's history. This can't be undone."
+      confirm_delete_contribution_cta: Delete contribution
       funding_balance: "balance %{amount}"
       of_saved: of saved
       notes: Notes

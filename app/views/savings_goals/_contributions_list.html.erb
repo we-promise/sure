@@ -5,9 +5,9 @@
     <p class="text-sm text-secondary"><%= t("savings_goals.show.no_contributions_yet") %></p>
   </div>
 <% else %>
-  <ul class="space-y-3">
+  <ul>
     <% contributions.each do |contribution| %>
-      <li class="flex items-center gap-3 group">
+      <li class="flex items-center gap-3 px-3 -mx-3 py-2 rounded-lg hover:bg-surface-hover">
         <%= render Savings::GoalAvatarComponent.new(
           name: contribution.account.name,
           color: @savings_goal.color,
@@ -22,14 +22,24 @@
         </div>
         <span class="text-sm font-medium text-success tabular-nums">+<%= contribution.amount_money.format %></span>
         <% if contribution.manual? %>
-          <%= button_to savings_goal_contribution_path(@savings_goal, contribution),
-                        method: :delete,
-                        class: "text-subdued hover:text-destructive p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity",
-                        form: { data: { turbo_confirm: t("savings_goals.show.confirm_delete_contribution") } } do %>
-            <%= icon("x", size: "sm", color: "current") %>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t("savings_goals.show.delete_contribution"),
+              icon: "trash-2",
+              destructive: true,
+              href: savings_goal_contribution_path(@savings_goal, contribution),
+              method: :delete,
+              confirm: CustomConfirm.new(
+                destructive: true,
+                title: t("savings_goals.show.confirm_delete_contribution_title"),
+                body: t("savings_goals.show.confirm_delete_contribution_body", amount: contribution.amount_money.format),
+                btn_text: t("savings_goals.show.confirm_delete_contribution_cta")
+              )
+            ) %>
           <% end %>
         <% else %>
-          <span class="w-7 h-7"></span>
+          <span class="w-9 h-9"></span>
         <% end %>
       </li>
     <% end %>

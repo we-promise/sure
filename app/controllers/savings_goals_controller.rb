@@ -17,6 +17,10 @@ class SavingsGoalsController < ApplicationController
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
     @kpi = kpi_payload(@active_goals)
     @show_search = @active_goals.size > 6
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("savings_goals.index.title"), nil ]
+    ]
   end
 
   def show
