@@ -92,6 +92,9 @@ module SettingsHelper
     when "binance"
       return { status: :off } unless @binance_items&.any?
       sync_based_summary(key)
+    when "kraken"
+      return { status: :off } unless @kraken_items&.any?
+      sync_based_summary(key)
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:credentials_configured?)
       return { status: :off } unless configured_item

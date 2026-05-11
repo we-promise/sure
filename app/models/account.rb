@@ -266,6 +266,25 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_kraken_account(kraken_account)
+      family = kraken_account.kraken_item.family
+
+      attributes = {
+        family: family,
+        name: kraken_account.name,
+        balance: (kraken_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: kraken_account.currency.presence || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 
@@ -296,6 +315,14 @@ class Account < ApplicationRecord
 
   def institution_domain
     read_attribute(:institution_domain).presence || provider&.institution_domain
+  end
+
+  def manual_crypto_exchange?
+    accountable_type == "Crypto" &&
+      accountable&.subtype == "exchange" &&
+      account_providers.none? &&
+      plaid_account_id.blank? &&
+      simplefin_account_id.blank?
   end
 
   def logo_url
