@@ -250,14 +250,14 @@ class Demo::Generator
 
     def create_realistic_accounts!(family)
       # Checking accounts (USD)
-      @chase_checking = family.accounts.create!(accountable: Depository.new, name: "Chase Premier Checking", balance: 0, currency: "USD")
-      @ally_checking = family.accounts.create!(accountable: Depository.new, name: "Ally Online Checking", balance: 0, currency: "USD")
+      @chase_checking = family.accounts.create!(accountable: Depository.new(subtype: "checking"), name: "Chase Premier Checking", balance: 0, currency: "USD")
+      @ally_checking = family.accounts.create!(accountable: Depository.new(subtype: "checking"), name: "Ally Online Checking", balance: 0, currency: "USD")
 
       # Savings account (USD)
-      @marcus_savings = family.accounts.create!(accountable: Depository.new, name: "Marcus High-Yield Savings", balance: 0, currency: "USD")
+      @marcus_savings = family.accounts.create!(accountable: Depository.new(subtype: "savings"), name: "Marcus High-Yield Savings", balance: 0, currency: "USD")
 
       # EUR checking (EUR)
-      @eu_checking = family.accounts.create!(accountable: Depository.new, name: "Deutsche Bank EUR Account", balance: 0, currency: "EUR")
+      @eu_checking = family.accounts.create!(accountable: Depository.new(subtype: "checking"), name: "Deutsche Bank EUR Account", balance: 0, currency: "EUR")
 
       # Credit cards (USD)
       @amex_gold = family.accounts.create!(accountable: CreditCard.new, name: "Amex Gold Card", balance: 0, currency: "USD")

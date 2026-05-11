@@ -19,6 +19,8 @@ en:
         behind: Behind
     new:
       heading: New savings goal
+      step1_subtitle: Step 1 of 2 · Goal details
+      step2_subtitle: Step 2 of 2 · Review & start
     edit:
       heading: Edit savings goal
       save: Save changes
@@ -67,12 +69,24 @@ en:
         saved: Saved
         of: "of %{target}"
         to_go: "%{amount} to go"
+        of_target: of target
+      projection:
+        heading: Projection
+        legend_saved: Saved
+        legend_projection: Projection
+        reached: Goal reached. Nice work.
+        no_target_date: No target date set. Set one to project a finish line.
+        no_pace: No contributions yet. Add some to start a projection.
+        behind: At %{current}/mo you'll fall short. Bump to <strong class="text-primary">%{required}/mo</strong> to hit it on time.
+        on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
+      back_to_all: All goals
       source:
         initial: Initial
         manual: Manual
       stats:
         avg_monthly: Avg monthly
         total_contributions: Total contributions
+        linked_balance: Linked balance
         across_all_accounts: Across all accounts
         target_date: Target date
         no_target_date: No target date
@@ -80,6 +94,9 @@ en:
         started: Started
         needs_per_month: "Needs %{amount}/mo"
         above_target_pace: Above target pace
+        n_accounts:
+          one: 1 account
+          other: "%{count} accounts"
         months_ago:
           one: 1 month ago
           other: "%{count} months ago"
@@ -90,11 +107,12 @@ en:
       archived: Archived
     status:
       on_track: On track
-      behind: Behind
+      behind: Behind pace
       reached: Reached
       no_target_date: No date
     empty_state:
-      heading: No savings goals yet
+      heading: No goals yet
+      body: Set a target, link the accounts you save into, and watch your progress add up. Goals can pull from multiple accounts.
       subtitle: Set a target and start saving toward it.
       new_goal: Create your first goal
       no_depository_accounts: You need at least one Depository account (checking, savings, HSA, CD, money-market) before creating a goal.
@@ -112,26 +130,37 @@ en:
         one: 1 day left · by %{date}
         other: "%{count} days left · by %{date}"
     form_stepper:
+      cancel: Cancel
       continue: Continue
       back: Back
       submit: Create goal
       step1:
-        heading: Identity
+        label: Goal details
+        heading: What are you saving for?
+        subheading: Give your goal a name and a target. You can change these later.
         fields:
           name: Name
+          name_placeholder: Emergency fund, House down payment…
           target_amount: Target amount
-          target_date: Target date (optional)
+          target_date: Target date
           color: Color
           notes: Notes (optional)
+          funding_accounts: Funding accounts
+        subtypes:
+          checking: Checking
+          savings: Savings
+          hsa: HSA
+          cd: CD
+          money_market: Money market
+          other: Other
       step2:
-        heading: Review
-        linked_accounts_heading: Linked accounts
-        linked_accounts_hint: Pick at least one Depository account that funds this goal.
-        add_initial_contribution: Add an initial contribution (optional)
+        label: Review & start
+        heading: Looks good?
+        subheading: Review your goal and add an optional starting contribution.
+        funding_accounts: Funding accounts
+        suggested_monthly: Suggested monthly
+        add_initial_contribution: Add an initial contribution
+        add_initial_contribution_sub: Optional · jumpstart this goal with funds you've already set aside.
         initial_amount: Amount
         initial_account: From account
         select_account: Select an account
-        review_heading: Review
-        review_target: Target
-        review_date: Date
-        review_accounts: Accounts

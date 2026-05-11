@@ -131,6 +131,31 @@ class SavingsGoal < ApplicationRecord
     segments
   end
 
+  # Cumulative contributions series for the projection chart, sorted by
+  # date ascending. Consumed by the
+  # `savings-goal-projection-chart` Stimulus controller.
+  def projection_payload
+    sorted = savings_contributions.order(contributed_at: :asc).to_a
+    running = 0
+    saved_series = sorted.map do |c|
+      running += c.amount.to_d
+      { date: c.contributed_at.to_s, value: running.to_f }
+    end
+
+    {
+      saved_series: saved_series,
+      start_date: created_at.to_date.to_s,
+      today: Date.current.to_s,
+      target_date: target_date&.to_s,
+      target_amount: target_amount.to_f,
+      current_amount: current_balance.to_f,
+      avg_monthly: average_monthly_contribution.to_f,
+      required_monthly: monthly_target_amount.to_f,
+      currency: currency,
+      status: status.to_s
+    }
+  end
+
   # :reached → progress_percent >= 100
   # :on_track → has target_date and current pace >= required monthly pace
   # :behind → has target_date and current pace < required monthly pace

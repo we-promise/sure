@@ -1,4 +1,11 @@
 <div class="space-y-4">
+  <div class="text-xs">
+    <%= link_to savings_goals_path, class: "inline-flex items-center gap-1 text-secondary hover:text-primary" do %>
+      <%= icon("arrow-left", size: "sm") %>
+      <%= t(".back_to_all") %>
+    <% end %>
+  </div>
+
   <header class="flex items-start gap-4">
     <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "xl") %>
     <div class="min-w-0 flex-1">
@@ -64,21 +71,43 @@
     </div>
   </header>
 
-  <section class="bg-container rounded-xl shadow-border-xs p-6">
-    <div class="flex flex-col items-center text-center">
-      <%= render Savings::ProgressRingComponent.new(goal: @savings_goal, size: 200) %>
-      <div class="mt-4 text-center">
-        <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive"><%= @savings_goal.current_balance_money.format %></p>
-        <p class="text-xs text-subdued tabular-nums mt-0.5">
-          <%= t(".ring.of", target: @savings_goal.target_amount_money.format) %>
-          <% unless @savings_goal.completed? %>
-            · <%= t(".ring.to_go", amount: @savings_goal.remaining_amount_money.format) %>
-          <% end %>
-        </p>
+  <%# Top row: ring card + projection chart card %>
+  <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
+    <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+      <%= render Savings::ProgressRingComponent.new(goal: @savings_goal, size: 180) %>
+      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @savings_goal.current_balance_money.format %></p>
+      <p class="text-xs text-subdued tabular-nums mt-0.5">
+        <%= t(".ring.of", target: @savings_goal.target_amount_money.format) %>
+        <% unless @savings_goal.completed? %>
+          · <%= t(".ring.to_go", amount: @savings_goal.remaining_amount_money.format) %>
+        <% end %>
+      </p>
+    </div>
+
+    <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+      <div class="flex items-start justify-between mb-2 gap-3">
+        <div class="min-w-0">
+          <h3 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h3>
+          <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
+          <span class="inline-flex items-center gap-1.5">
+            <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--text-primary)" stroke-width="2" /></svg>
+            <%= t(".projection.legend_saved") %>
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--color-yellow-600)" stroke-width="2" stroke-dasharray="3 3" /></svg>
+            <%= t(".projection.legend_projection") %>
+          </span>
+        </div>
       </div>
+      <div class="flex-1 min-h-[200px]"
+           data-controller="savings-goal-projection-chart"
+           data-savings-goal-projection-chart-data-value="<%= @savings_goal.projection_payload.to_json %>"></div>
     </div>
   </section>
 
+  <%# Stat row %>
   <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
       <p class="text-[11px] text-secondary mb-1"><%= t(".stats.avg_monthly") %></p>
@@ -91,9 +120,9 @@
       <p class="text-[11px] text-subdued mt-1"><%= t(".stats.across_all_accounts") %></p>
     </div>
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.target_date") %></p>
-      <p class="text-lg font-medium text-primary"><%= @savings_goal.target_date ? I18n.l(@savings_goal.target_date, format: :long) : t(".stats.no_target_date") %></p>
-      <p class="text-[11px] text-subdued mt-1"><%= @stats[:monthly_target_sub] %></p>
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.linked_balance") %></p>
+      <p class="text-lg font-medium text-primary tabular-nums"><%= Money.new(@stats[:linked_balance], @savings_goal.currency).format %></p>
+      <p class="text-[11px] text-subdued mt-1"><%= @stats[:linked_balance_sub] %></p>
     </div>
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
       <p class="text-[11px] text-secondary mb-1"><%= t(".stats.started") %></p>
@@ -102,8 +131,9 @@
     </div>
   </section>
 
-  <section class="grid grid-cols-1 lg:grid-cols-5 gap-3">
-    <div class="bg-container rounded-xl shadow-border-xs overflow-hidden lg:col-span-3">
+  <%# Bottom row: contributions + funding accounts %>
+  <section class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3">
+    <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
       <div class="flex items-center px-5 py-3.5 border-b border-subdued">
         <h3 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h3>
         <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
@@ -111,7 +141,7 @@
       <%= render "contributions_list", contributions: @contributions %>
     </div>
 
-    <div class="bg-container rounded-xl shadow-border-xs p-5 lg:col-span-2">
+    <div class="bg-container rounded-xl shadow-border-xs p-5">
       <h3 class="text-sm font-medium text-primary mb-3"><%= t(".funding_accounts_heading") %></h3>
       <%= render Savings::FundingAccountsBreakdownComponent.new(goal: @savings_goal, rows: @funding_breakdown) %>
     </div>

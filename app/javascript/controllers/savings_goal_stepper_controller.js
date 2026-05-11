@@ -3,46 +3,86 @@ import { Controller } from "@hotwired/stimulus";
 // 2-step modal stepper for creating a savings goal.
 //
 // Single <form> with two panels. Step 1 collects identity (name, amount,
-// date, color, notes). Step 2 collects ≥1 linked depository accounts and
-// optionally an initial contribution. Submit button stays disabled until at
-// least one linked account is selected. Step state lives entirely in the
-// DOM — no half-records.
+// date, color, notes, linked accounts). Step 2 reviews + optional initial
+// contribution. All state lives in the DOM — no half-records, single POST.
 export default class extends Controller {
   static targets = [
     "step1Panel",
     "step2Panel",
     "step1Indicator",
     "step2Indicator",
-    "step1Field",
-    "nameField",
-    "targetAmountField",
+    "step1Circle",
+    "step2Circle",
+    "stepperLine",
+    "modalSubtitle",
     "linkedAccountCheckbox",
     "initialContributionAmount",
     "initialContributionAccountSelect",
-    "reviewPanel",
     "reviewName",
-    "reviewAmount",
-    "reviewDate",
+    "reviewSummary",
     "reviewAccounts",
+    "reviewSuggested",
+    "footerLeftButton",
+    "footerLeftLabel",
+    "footerRightButton",
     "submitButton",
   ];
 
-  next(event) {
-    event?.preventDefault?.();
-    if (!this.validateStep1()) return;
+  static values = {
+    step1Subtitle: { type: String, default: "Step 1 of 2 · Goal details" },
+    step2Subtitle: { type: String, default: "Step 2 of 2 · Review & start" },
+    cancelLabel: { type: String, default: "Cancel" },
+    backLabel: { type: String, default: "Back" },
+    continueLabel: { type: String, default: "Continue" },
+    submitLabel: { type: String, default: "Create goal" },
+  };
 
-    this.step1PanelTarget.classList.add("hidden");
-    this.step2PanelTarget.classList.remove("hidden");
-    this.markStepActive(2);
-    this.updateReview();
+  connect() {
+    this.currentStep = 1;
     this.refreshSubmitState();
   }
 
-  back(event) {
-    event?.preventDefault?.();
+  footerLeft(event) {
+    event.preventDefault();
+    if (this.currentStep === 1) {
+      const dialog = this.element.closest("dialog");
+      if (dialog) dialog.close();
+    } else {
+      this.back();
+    }
+  }
+
+  footerRight(event) {
+    event.preventDefault();
+    if (this.currentStep === 1) {
+      this.next();
+    } else {
+      this.submitButtonTarget.click();
+    }
+  }
+
+  next() {
+    if (!this.validateStep1()) return;
+    if (!this.linkedAccountCheckboxTargets.some((cb) => cb.checked)) {
+      this.flashLinkedAccountsRequired();
+      return;
+    }
+
+    this.currentStep = 2;
+    this.step1PanelTarget.classList.add("hidden");
+    this.step2PanelTarget.classList.remove("hidden");
+    this.updateStepperState();
+    this.refreshAccountSelect();
+    this.updateReview();
+    this.updateFooter();
+  }
+
+  back() {
+    this.currentStep = 1;
     this.step2PanelTarget.classList.add("hidden");
     this.step1PanelTarget.classList.remove("hidden");
-    this.markStepActive(1);
+    this.updateStepperState();
+    this.updateFooter();
   }
 
   linkedAccountChanged() {
@@ -66,20 +106,17 @@ export default class extends Controller {
   }
 
   refreshSubmitState() {
+    if (!this.hasFooterRightButtonTarget) return;
     const anyChecked = this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
-    this.submitButtonTarget.disabled = !anyChecked;
+    this.footerRightButtonTarget.disabled = false;
+    this.footerRightButtonTarget.classList.toggle("opacity-50", !anyChecked && this.currentStep === 1);
   }
 
   refreshAccountSelect() {
     if (!this.hasInitialContributionAccountSelectTarget) return;
-
     const select = this.initialContributionAccountSelectTarget;
     const previous = select.value;
-    select.innerHTML = "";
-    const blank = document.createElement("option");
-    blank.value = "";
-    blank.textContent = select.dataset.blankLabel || "—";
-    select.appendChild(blank);
+    while (select.options.length > 1) select.remove(1);
 
     this.linkedAccountCheckboxTargets
       .filter((cb) => cb.checked)
@@ -95,35 +132,113 @@ export default class extends Controller {
     }
   }
 
-  updateReview() {
-    if (!this.hasReviewPanelTarget) return;
-
-    if (this.hasReviewNameTarget) {
-      const nameInput = this.element.querySelector('input[name="savings_goal[name]"]');
-      this.reviewNameTarget.textContent = nameInput?.value || "—";
+  updateStepperState() {
+    if (this.hasStep1CircleTarget) {
+      this.step1CircleTarget.classList.toggle("bg-inverse", this.currentStep === 1);
+      this.step1CircleTarget.classList.toggle("text-inverse", this.currentStep === 1);
+      this.step1CircleTarget.classList.toggle("bg-success", this.currentStep > 1);
+      this.step1CircleTarget.classList.toggle("text-inverse", this.currentStep === 1);
+      if (this.currentStep > 1) {
+        this.step1CircleTarget.textContent = "✓";
+      } else {
+        this.step1CircleTarget.textContent = "1";
+      }
     }
-    if (this.hasReviewAmountTarget) {
-      const amountInput = this.element.querySelector('input[name="savings_goal[target_amount]"]');
-      this.reviewAmountTarget.textContent = amountInput?.value || "—";
+    if (this.hasStep2CircleTarget) {
+      this.step2CircleTarget.classList.toggle("bg-inverse", this.currentStep === 2);
+      this.step2CircleTarget.classList.toggle("text-inverse", this.currentStep === 2);
+      this.step2CircleTarget.classList.toggle("bg-container-inset", this.currentStep < 2);
+      this.step2CircleTarget.classList.toggle("text-secondary", this.currentStep < 2);
     }
-    if (this.hasReviewDateTarget) {
-      const dateInput = this.element.querySelector('input[type="date"][name="savings_goal[target_date]"]');
-      this.reviewDateTarget.textContent = dateInput?.value || "—";
+    if (this.hasStepperLineTarget) {
+      this.stepperLineTarget.classList.toggle("bg-inverse", this.currentStep > 1);
     }
-    if (this.hasReviewAccountsTarget) {
-      const names = this.linkedAccountCheckboxTargets
-        .filter((cb) => cb.checked)
-        .map((cb) => cb.dataset.accountName || cb.value);
-      this.reviewAccountsTarget.textContent = names.length ? names.join(", ") : "—";
+    // Modal subtitle lives in the dialog header, outside this controller's
+    // DOM scope. Locate it by attribute and update directly.
+    const subtitle = document.querySelector('[data-savings-goal-stepper-modal-subtitle]');
+    if (subtitle) {
+      subtitle.textContent =
+        this.currentStep === 1 ? this.step1SubtitleValue : this.step2SubtitleValue;
     }
   }
 
-  markStepActive(stepNumber) {
-    if (this.hasStep1IndicatorTarget) {
-      this.step1IndicatorTarget.classList.toggle("text-primary", stepNumber === 1);
+  updateFooter() {
+    if (this.hasFooterLeftLabelTarget) {
+      this.footerLeftLabelTarget.textContent =
+        this.currentStep === 1 ? this.cancelLabelValue : this.backLabelValue;
     }
-    if (this.hasStep2IndicatorTarget) {
-      this.step2IndicatorTarget.classList.toggle("text-primary", stepNumber === 2);
+    if (this.hasFooterRightButtonTarget) {
+      const labelSpan = this.footerRightButtonTarget.querySelector("span");
+      if (labelSpan) {
+        labelSpan.textContent =
+          this.currentStep === 1 ? this.continueLabelValue : this.submitLabelValue;
+      }
+    }
+    this.refreshSubmitState();
+  }
+
+  updateReview() {
+    if (!this.hasReviewNameTarget) return;
+
+    const name = this.element.querySelector('input[name="savings_goal[name]"]')?.value || "—";
+    const amountInput = this.element.querySelector('input[name="savings_goal[target_amount]"]');
+    const amount = amountInput?.value ? parseFloat(amountInput.value) : 0;
+    const dateInput = this.element.querySelector('input[type="date"][name="savings_goal[target_date]"]');
+    const dateValue = dateInput?.value;
+
+    this.reviewNameTarget.textContent = name;
+
+    if (this.hasReviewSummaryTarget) {
+      const currency = amountInput?.dataset?.currency || "$";
+      const formattedAmount = amountInput?.value ? `${currency}${amount.toLocaleString()}` : "—";
+      this.reviewSummaryTarget.textContent = dateValue
+        ? `${formattedAmount} by ${this.#formatDate(dateValue)}`
+        : formattedAmount;
+    }
+
+    if (this.hasReviewAccountsTarget) {
+      const checked = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked);
+      const total = checked.reduce(
+        (sum, cb) => sum + parseFloat(cb.dataset.accountBalance || 0),
+        0,
+      );
+      this.reviewAccountsTarget.textContent = checked.length
+        ? `${checked.length} ${checked.length === 1 ? "account" : "accounts"} · $${total.toLocaleString()} balance`
+        : "—";
+    }
+
+    if (this.hasReviewSuggestedTarget) {
+      const months = dateValue ? this.#monthsBetween(new Date(), new Date(dateValue)) : 0;
+      if (amount > 0 && months > 0) {
+        const perMonth = Math.ceil(amount / months);
+        this.reviewSuggestedTarget.textContent = `$${perMonth.toLocaleString()}/mo over ${Math.max(1, Math.round(months))} months`;
+      } else if (amount > 0) {
+        this.reviewSuggestedTarget.textContent = `$${amount.toLocaleString()} (no target date)`;
+      } else {
+        this.reviewSuggestedTarget.textContent = "—";
+      }
+    }
+  }
+
+  flashLinkedAccountsRequired() {
+    const first = this.linkedAccountCheckboxTargets[0];
+    if (first) {
+      first.focus();
+      first.classList.add("ring-2", "ring-destructive");
+      setTimeout(() => first.classList.remove("ring-2", "ring-destructive"), 1200);
+    }
+  }
+
+  #monthsBetween(from, to) {
+    return (to - from) / (1000 * 60 * 60 * 24 * 30.44);
+  }
+
+  #formatDate(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    } catch (e) {
+      return iso;
     }
   }
 }

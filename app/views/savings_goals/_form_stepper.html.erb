@@ -5,45 +5,78 @@
     <%= render "shared/form_errors", model: savings_goal %>
   <% end %>
 
-  <ol class="flex items-center gap-2 mb-4 text-xs font-medium text-secondary">
-    <li class="inline-flex items-center gap-1.5"
-        data-savings-goal-stepper-target="step1Indicator">
-      <span class="w-5 h-5 rounded-full inline-flex items-center justify-center bg-inverse text-primary">1</span>
-      <span class="text-primary"><%= t("savings_goals.form_stepper.step1.heading") %></span>
-    </li>
-    <span class="text-subdued">→</span>
-    <li class="inline-flex items-center gap-1.5"
-        data-savings-goal-stepper-target="step2Indicator">
-      <span class="w-5 h-5 rounded-full inline-flex items-center justify-center bg-container-inset">2</span>
-      <span><%= t("savings_goals.form_stepper.step2.heading") %></span>
-    </li>
-  </ol>
+  <%# Connected stepper %>
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center gap-2" data-savings-goal-stepper-target="step1Indicator">
+      <span data-savings-goal-stepper-target="step1Circle" class="w-7 h-7 rounded-full inline-flex items-center justify-center bg-inverse text-inverse text-xs font-medium">1</span>
+      <span class="text-sm font-medium text-primary"><%= t("savings_goals.form_stepper.step1.label") %></span>
+    </div>
+    <div class="flex-1 h-px bg-subdued" data-savings-goal-stepper-target="stepperLine"></div>
+    <div class="flex items-center gap-2" data-savings-goal-stepper-target="step2Indicator">
+      <span data-savings-goal-stepper-target="step2Circle" class="w-7 h-7 rounded-full inline-flex items-center justify-center bg-container-inset text-secondary text-xs font-medium">2</span>
+      <span class="text-sm font-medium text-secondary"><%= t("savings_goals.form_stepper.step2.label") %></span>
+    </div>
+  </div>
 
   <%= styled_form_with model: savings_goal, url: savings_goals_path, class: "space-y-4" do |f| %>
-    <section data-savings-goal-stepper-target="step1Panel" class="space-y-3">
-      <%= f.text_field :name,
-                       label: t("savings_goals.form_stepper.step1.fields.name"),
-                       required: true,
-                       autofocus: true,
-                       data: { savings_goal_stepper_target: "step1Field nameField" } %>
-
-      <%= f.money_field :target_amount,
-                        label: t("savings_goals.form_stepper.step1.fields.target_amount"),
-                        required: true,
-                        data: { savings_goal_stepper_target: "step1Field targetAmountField" } %>
-
-      <%= f.date_field :target_date,
-                       label: t("savings_goals.form_stepper.step1.fields.target_date") %>
+    <section data-savings-goal-stepper-target="step1Panel" class="space-y-5">
+      <div>
+        <h3 class="text-lg font-semibold text-primary mb-1"><%= t("savings_goals.form_stepper.step1.heading") %></h3>
+        <p class="text-sm text-secondary"><%= t("savings_goals.form_stepper.step1.subheading") %></p>
+      </div>
 
       <div>
-        <span class="block text-sm text-secondary mb-2"><%= t("savings_goals.form_stepper.step1.fields.color") %></span>
-        <div class="flex flex-wrap gap-2">
-          <% SavingsGoal::COLORS.each do |c| %>
-            <label class="relative">
-              <%= f.radio_button :color, c, class: "sr-only peer" %>
-              <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-gray-500"
-                   style="background-color: <%= c %>"></div>
-            </label>
+        <label class="block text-sm font-medium text-primary mb-2"><%= t("savings_goals.form_stepper.step1.fields.name") %></label>
+        <div class="flex items-stretch gap-2">
+          <span class="shrink-0">
+            <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "lg", rounded: false) %>
+          </span>
+          <%= f.text_field :name,
+                           placeholder: t("savings_goals.form_stepper.step1.fields.name_placeholder"),
+                           required: true,
+                           autofocus: true,
+                           label: "",
+                           class: "flex-1" %>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <%= f.money_field :target_amount,
+                          label: t("savings_goals.form_stepper.step1.fields.target_amount"),
+                          required: true %>
+        <%= f.date_field :target_date,
+                         label: t("savings_goals.form_stepper.step1.fields.target_date") %>
+      </div>
+
+      <div>
+        <span class="block text-sm font-medium text-primary mb-2"><%= t("savings_goals.form_stepper.step1.fields.funding_accounts") %></span>
+        <div class="bg-container-inset rounded-lg p-1">
+          <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
+          <% grouped.each_with_index do |(subtype, accts), group_idx| %>
+            <div class="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t("savings_goals.form_stepper.step1.subtypes.#{subtype}", default: subtype.titleize) %></div>
+            <div class="bg-container rounded-md <%= "mb-1" if group_idx < grouped.size - 1 %>">
+              <% accts.each_with_index do |account, idx| %>
+                <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>">
+                  <%= check_box_tag "savings_goal[account_ids][]",
+                                    account.id,
+                                    false,
+                                    class: "shrink-0",
+                                    data: {
+                                      savings_goal_stepper_target: "linkedAccountCheckbox",
+                                      action: "change->savings-goal-stepper#linkedAccountChanged",
+                                      account_name: account.name,
+                                      account_subtype: account.subtype || subtype,
+                                      account_balance: account.balance
+                                    } %>
+                  <%= render Savings::GoalAvatarComponent.new(name: account.name, color: "var(--color-blue-500)", size: "md") %>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
+                    <p class="text-xs text-secondary"><%= (account.subtype || subtype).titleize %></p>
+                  </div>
+                  <span class="text-sm text-primary tabular-nums"><%= Money.new(account.balance, account.currency).format %></span>
+                </label>
+              <% end %>
+            </div>
           <% end %>
         </div>
       </div>
@@ -52,83 +85,94 @@
                       label: t("savings_goals.form_stepper.step1.fields.notes"),
                       rows: 2 %>
 
-      <div class="flex justify-end pt-2">
-        <%= render DS::Button.new(
-          text: t("savings_goals.form_stepper.continue"),
-          variant: "primary",
-          data: { action: "click->savings-goal-stepper#next" }
-        ) %>
-      </div>
+      <%# Hidden color (random) %>
+      <%= f.hidden_field :color, value: savings_goal.color || SavingsGoal::COLORS.sample %>
     </section>
 
-    <section data-savings-goal-stepper-target="step2Panel" class="space-y-4 hidden">
+    <section data-savings-goal-stepper-target="step2Panel" class="space-y-5 hidden">
       <div>
-        <span class="block text-sm font-medium text-primary"><%= t("savings_goals.form_stepper.step2.linked_accounts_heading") %></span>
-        <p class="text-xs text-secondary mb-2"><%= t("savings_goals.form_stepper.step2.linked_accounts_hint") %></p>
+        <h3 class="text-lg font-semibold text-primary mb-1"><%= t("savings_goals.form_stepper.step2.heading") %></h3>
+        <p class="text-sm text-secondary"><%= t("savings_goals.form_stepper.step2.subheading") %></p>
+      </div>
 
-        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
-          <% linkable_accounts.each do |account| %>
-            <label class="flex items-center gap-3 px-3 py-2 rounded-md bg-container-inset hover:bg-container-inset-hover cursor-pointer">
-              <%= check_box_tag "savings_goal[account_ids][]",
-                                account.id,
-                                false,
-                                data: {
-                                  savings_goal_stepper_target: "linkedAccountCheckbox",
-                                  action: "change->savings-goal-stepper#linkedAccountChanged",
-                                  account_currency: account.currency,
-                                  account_name: account.name
-                                } %>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-primary truncate"><%= account.name %></p>
-                <p class="text-xs text-secondary"><%= account.subtype&.titleize %> · <%= Money.new(account.balance, account.currency).format %></p>
-              </div>
-            </label>
-          <% end %>
+      <div class="border border-subdued rounded-lg p-5 space-y-4">
+        <div class="flex items-center gap-3">
+          <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "lg", rounded: false) %>
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium text-primary truncate" data-savings-goal-stepper-target="reviewName">—</p>
+            <p class="text-sm text-secondary tabular-nums" data-savings-goal-stepper-target="reviewSummary">—</p>
+          </div>
+        </div>
+
+        <div class="border-t border-subdued pt-3 flex items-center justify-between text-sm">
+          <span class="text-secondary"><%= t("savings_goals.form_stepper.step2.funding_accounts") %></span>
+          <span class="text-primary tabular-nums" data-savings-goal-stepper-target="reviewAccounts">—</span>
+        </div>
+
+        <div class="border-t border-subdued pt-3 flex items-center justify-between text-sm">
+          <span class="text-secondary"><%= t("savings_goals.form_stepper.step2.suggested_monthly") %></span>
+          <span class="text-primary tabular-nums" data-savings-goal-stepper-target="reviewSuggested">—</span>
         </div>
       </div>
 
-      <details data-savings-goal-stepper-target="initialContributionToggle">
-        <summary class="cursor-pointer text-sm text-primary"><%= t("savings_goals.form_stepper.step2.add_initial_contribution") %></summary>
-        <div class="mt-3 space-y-2">
-          <%= label_tag "savings_goal[initial_contribution_amount]",
-                       t("savings_goals.form_stepper.step2.initial_amount"),
-                       class: "block text-sm text-secondary" %>
-          <%= number_field_tag "savings_goal[initial_contribution_amount]",
-                               nil,
-                               step: "0.01", min: "0",
-                               autocomplete: "off",
-                               class: "w-full",
-                               data: { savings_goal_stepper_target: "initialContributionAmount" } %>
-
-          <%= label_tag "savings_goal[initial_contribution_account_id]",
-                       t("savings_goals.form_stepper.step2.initial_account"),
-                       class: "block text-sm text-secondary" %>
-          <%= select_tag "savings_goal[initial_contribution_account_id]",
-                         options_for_select([]),
-                         include_blank: t("savings_goals.form_stepper.step2.select_account"),
-                         data: { savings_goal_stepper_target: "initialContributionAccountSelect" },
-                         class: "w-full" %>
+      <details class="border border-subdued rounded-lg group" data-savings-goal-stepper-target="initialContributionToggle">
+        <summary class="flex items-center gap-3 p-4 cursor-pointer list-none">
+          <%= render DS::FilledIcon.new(variant: :container, icon: "zap", size: "md", rounded: false) %>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-primary"><%= t("savings_goals.form_stepper.step2.add_initial_contribution") %></p>
+            <p class="text-xs text-secondary"><%= t("savings_goals.form_stepper.step2.add_initial_contribution_sub") %></p>
+          </div>
+          <%= icon("chevron-down", size: "sm") %>
+        </summary>
+        <div class="px-4 pb-4 space-y-3">
+          <div>
+            <%= label_tag "savings_goal[initial_contribution_amount]",
+                         t("savings_goals.form_stepper.step2.initial_amount"),
+                         class: "block text-sm text-secondary mb-1" %>
+            <%= number_field_tag "savings_goal[initial_contribution_amount]",
+                                 nil,
+                                 step: "0.01", min: "0",
+                                 autocomplete: "off",
+                                 class: "w-full",
+                                 data: { savings_goal_stepper_target: "initialContributionAmount" } %>
+          </div>
+          <div>
+            <%= label_tag "savings_goal[initial_contribution_account_id]",
+                         t("savings_goals.form_stepper.step2.initial_account"),
+                         class: "block text-sm text-secondary mb-1" %>
+            <%= select_tag "savings_goal[initial_contribution_account_id]",
+                           options_for_select([]),
+                           include_blank: t("savings_goals.form_stepper.step2.select_account"),
+                           data: { savings_goal_stepper_target: "initialContributionAccountSelect" },
+                           class: "w-full" %>
+          </div>
         </div>
       </details>
-
-      <div class="bg-container-inset rounded-md p-3 text-sm space-y-1" data-savings-goal-stepper-target="reviewPanel">
-        <p class="text-secondary"><%= t("savings_goals.form_stepper.step2.review_heading") %></p>
-        <p><strong data-savings-goal-stepper-target="reviewName">—</strong></p>
-        <p><span class="text-secondary"><%= t("savings_goals.form_stepper.step2.review_target") %>:</span> <span data-savings-goal-stepper-target="reviewAmount">—</span></p>
-        <p><span class="text-secondary"><%= t("savings_goals.form_stepper.step2.review_date") %>:</span> <span data-savings-goal-stepper-target="reviewDate">—</span></p>
-        <p><span class="text-secondary"><%= t("savings_goals.form_stepper.step2.review_accounts") %>:</span> <span data-savings-goal-stepper-target="reviewAccounts">—</span></p>
-      </div>
-
-      <div class="flex items-center justify-between pt-2">
-        <%= render DS::Button.new(
-          text: t("savings_goals.form_stepper.back"),
-          variant: "secondary",
-          data: { action: "click->savings-goal-stepper#back" }
-        ) %>
-        <%= f.submit t("savings_goals.form_stepper.submit"),
-                    data: { savings_goal_stepper_target: "submitButton" },
-                    disabled: true %>
-      </div>
     </section>
+
+    <div class="flex items-center justify-between pt-2 border-t border-subdued -mx-1 px-1">
+      <button type="button"
+              class="text-sm font-medium text-secondary hover:text-primary px-2 py-2"
+              data-savings-goal-stepper-target="footerLeftButton"
+              data-action="click->savings-goal-stepper#footerLeft"
+              data-cancel-action="DS--dialog#close">
+        <span data-savings-goal-stepper-target="footerLeftLabel"><%= t("savings_goals.form_stepper.cancel") %></span>
+      </button>
+      <%= render DS::Button.new(
+        text: t("savings_goals.form_stepper.continue"),
+        variant: "primary",
+        icon: "arrow-right",
+        icon_position: :right,
+        data: {
+          savings_goal_stepper_target: "footerRightButton",
+          action: "click->savings-goal-stepper#footerRight"
+        }
+      ) %>
+      <button type="submit"
+              class="sr-only"
+              tabindex="-1"
+              aria-hidden="true"
+              data-savings-goal-stepper-target="submitButton"><%= t("savings_goals.form_stepper.submit") %></button>
+    </div>
   <% end %>
 </div>

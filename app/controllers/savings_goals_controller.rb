@@ -185,13 +185,43 @@ class SavingsGoalsController < ApplicationController
       end
       months_since_start = ((Date.current.year - goal.created_at.year) * 12 + (Date.current.month - goal.created_at.month)).clamp(0, 1200)
       sub_started = t("savings_goals.show.stats.months_ago", count: months_since_start)
+      linked_balance = goal.linked_accounts.sum { |a| a.balance.to_d }
+      sub_linked = t("savings_goals.show.stats.n_accounts", count: goal.linked_accounts.size)
+
+      summary = projection_summary(goal, avg)
+
       {
         avg_monthly: avg,
         avg_monthly_sub: sub_avg,
         contributions_count: goal.savings_contributions.count,
         monthly_target_sub: sub_target,
-        started_sub: sub_started
+        started_sub: sub_started,
+        linked_balance: linked_balance,
+        linked_balance_sub: sub_linked,
+        projection_summary: summary
       }
+    end
+
+    def projection_summary(goal, avg_monthly)
+      currency = goal.currency
+      money = ->(amount) { Money.new(amount, currency).format }
+
+      if goal.completed? || goal.progress_percent >= 100
+        t("savings_goals.show.projection.reached")
+      elsif goal.target_date.nil?
+        t("savings_goals.show.projection.no_target_date")
+      elsif goal.monthly_target_amount && avg_monthly < goal.monthly_target_amount
+        t("savings_goals.show.projection.behind",
+          current: money.call(avg_monthly),
+          required: money.call(goal.monthly_target_amount))
+      elsif avg_monthly.positive?
+        months_to_target = (goal.remaining_amount.to_d / avg_monthly).ceil
+        projected_date = Date.current >> months_to_target.to_i
+        t("savings_goals.show.projection.on_track",
+          date: projected_date.strftime("%b %Y"))
+      else
+        t("savings_goals.show.projection.no_pace")
+      end
     end
 
     def perform_transition!(event)
