@@ -41,8 +41,6 @@ de:
       configure: Konfigurieren
       update_configuration: Neu konfigurieren
       default_name: CoinStats-Verbindung
-      status_configured_html: Bereit zur Nutzung
-      status_not_configured: Nicht konfiguriert
     coinstats_item:
       deletion_in_progress: Krypto-Wallet-Daten werden gelöscht…
       provider_name: CoinStats

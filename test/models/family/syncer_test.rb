@@ -5,11 +5,12 @@ class Family::SyncerTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
-  test "syncs plaid items and manual accounts" do
+  test "syncs provider items and manual accounts" do
     family_sync = syncs(:family)
 
     manual_accounts_count = @family.accounts.manual.count
-    items_count = @family.plaid_items.count
+    plaid_items_count = @family.plaid_items.syncable.count
+    binance_items_count = @family.binance_items.syncable.count
 
     syncer = Family::Syncer.new(@family)
 
@@ -19,9 +20,14 @@ class Family::SyncerTest < ActiveSupport::TestCase
            .times(manual_accounts_count)
 
     PlaidItem.any_instance
-             .expects(:sync_later)
-             .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
-             .times(items_count)
+               .expects(:sync_later)
+               .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
+               .times(plaid_items_count)
+
+    BinanceItem.any_instance
+               .expects(:sync_later)
+               .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
+               .times(binance_items_count)
 
     syncer.perform_sync(family_sync)
 
@@ -61,6 +67,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
     LunchflowItem.any_instance.stubs(:sync_later)
     EnableBankingItem.any_instance.stubs(:sync_later)
     SophtronItem.any_instance.stubs(:sync_later)
+    BinanceItem.any_instance.stubs(:sync_later)
 
     syncer.perform_sync(family_sync)
     syncer.perform_post_sync
