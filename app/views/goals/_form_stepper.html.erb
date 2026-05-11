@@ -104,7 +104,7 @@
                         placeholder: t("goals.form_stepper.step1.fields.notes_placeholder") %>
       <% end %>
 
-      <%= f.hidden_field :color %>
+      <%= render "color_picker", form: f, colors: Goal::COLORS %>
     </section>
 
     <section data-goal-stepper-target="step2Panel" class="space-y-5 hidden">
@@ -155,7 +155,7 @@
       </details>
     </section>
 
-    <div class="flex items-center justify-between pt-2">
+    <div class="flex items-center pt-2">
       <div class="hidden" data-goal-stepper-target="footerLeftButton">
         <%= render DS::Button.new(
           variant: "ghost",
@@ -167,16 +167,18 @@
           }
         ) %>
       </div>
-      <%= render DS::Button.new(
-        text: t("goals.form_stepper.continue"),
-        variant: "primary",
-        icon: "arrow-right",
-        icon_position: :right,
-        data: {
-          goal_stepper_target: "footerRightButton",
-          action: "click->goal-stepper#footerRight"
-        }
-      ) %>
+      <div class="ml-auto">
+        <%= render DS::Button.new(
+          text: t("goals.form_stepper.continue"),
+          variant: "primary",
+          icon: "arrow-right",
+          icon_position: :right,
+          data: {
+            goal_stepper_target: "footerRightButton",
+            action: "click->goal-stepper#footerRight"
+          }
+        ) %>
+      </div>
       <button type="submit"
               class="sr-only"
               tabindex="-1"

@@ -1,0 +1,16 @@
+<%# locals: (form:, colors:) %>
+<details class="relative">
+  <summary class="flex items-center gap-2 cursor-pointer text-sm text-secondary list-none">
+    <span class="block w-5 h-5 rounded-full" style="background-color: <%= form.object.color %>"></span>
+    <span><%= t("goals.form_stepper.step1.fields.color") %></span>
+    <%= icon("chevron-down", size: "sm") %>
+  </summary>
+  <div class="absolute z-10 mt-2 p-3 bg-container border border-alpha-black-25 rounded-xl shadow-border-xs flex flex-wrap gap-2 w-fit">
+    <% colors.each do |c| %>
+      <label class="relative">
+        <%= form.radio_button :color, c, class: "sr-only peer" %>
+        <span class="block w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-alpha-black-300" style="background-color: <%= c %>"></span>
+      </label>
+    <% end %>
+  </div>
+</details>
