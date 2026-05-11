@@ -11,7 +11,7 @@ export default class extends Controller {
     targetAmount: Number,
     currency: String,
     templateZero: String,
-    templateNonZero: String,
+    templateNonzero: String,
     templateReached: String,
   };
 
@@ -37,7 +37,7 @@ export default class extends Controller {
         .replaceAll("{current}", this.#money(this.currentBalanceValue))
         .replaceAll("{target}", this.#money(target));
     } else {
-      text = this.templateNonZeroValue
+      text = this.templateNonzeroValue
         .replaceAll("{percent}", percent.toString())
         .replaceAll("{newTotal}", this.#money(newTotal))
         .replaceAll("{target}", this.#money(target));
