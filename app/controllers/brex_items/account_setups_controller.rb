@@ -94,10 +94,12 @@ class BrexItems::AccountSetupsController < ApplicationController
       raw_params = params.fetch(key, {})
       return {} if raw_params.blank?
 
-      if raw_params.respond_to?(:permit)
+      if raw_params.is_a?(ActionController::Parameters)
         raw_params.permit(*allowed_keys).to_h
+      elsif raw_params.is_a?(Hash)
+        raw_params.slice(*allowed_keys)
       else
-        raw_params.to_h.slice(*allowed_keys)
+        {}
       end
     end
 

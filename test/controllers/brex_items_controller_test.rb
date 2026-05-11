@@ -445,6 +445,18 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/skipped/i, flash[:notice])
   end
 
+  test "complete account setup treats scalar setup params as empty" do
+    assert_no_difference "AccountProvider.count" do
+      post complete_account_setup_brex_item_url(@second_item), params: {
+        account_types: "not-a-hash",
+        account_subtypes: "also-not-a-hash"
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("brex_items.complete_account_setup.no_accounts"), flash[:alert]
+  end
+
   private
 
     def brex_accounts_payload
