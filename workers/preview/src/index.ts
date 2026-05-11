@@ -25,6 +25,7 @@ export class RailsContainer extends Container {
     RAILS_ENV: "development",
     RAILS_LOG_TO_STDOUT: "true",
     RAILS_SERVE_STATIC_FILES: "true",
+    PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
   };
 
   // Sleep after 30 minutes of inactivity to save resources
@@ -39,6 +40,17 @@ export class RailsContainer extends Container {
         containerRunning: this.container.running,
         diagnostics: (await this.ctx.storage.get(DIAGNOSTICS_KEY)) ?? null,
       });
+    }
+
+    if (url.pathname === "/_container_event" && request.method === "POST") {
+      const payload = await request.json();
+      await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+        event: "entrypoint",
+        at: new Date().toISOString(),
+        payload,
+        state: await this.getState(),
+      });
+      return new Response("ok");
     }
 
     const response = await super.fetch(request);
