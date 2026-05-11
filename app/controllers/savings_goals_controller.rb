@@ -13,6 +13,7 @@ class SavingsGoalsController < ApplicationController
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
     @completed_goals = all_goals.select { |g| g.state == "completed" }
+    @archived_goals = all_goals.select { |g| g.state == "archived" }
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
     @kpi = kpi_payload(@active_goals)

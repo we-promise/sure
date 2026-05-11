@@ -37,6 +37,8 @@ en:
         heading: Ongoing
       completed_section:
         heading: Completed
+      archived_section:
+        heading: Archived
       search:
         placeholder: Search goals…
         aria_label: Search savings goals
@@ -199,6 +201,7 @@ en:
       pace_with_target: "%{avg}/mo · target %{target}/mo"
       pace_no_target: "%{avg}/mo avg"
       footer_paused: Paused
+      footer_archived: Archived
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: No deadline set

@@ -58,7 +58,7 @@ class Savings::GoalCardComponent < ApplicationComponent
   end
 
   def pace_line
-    return nil if goal.paused? || goal.completed? || goal.status == :reached
+    return nil if goal.archived? || goal.paused? || goal.completed? || goal.status == :reached
 
     avg = Money.new(goal.average_monthly_contribution, goal.currency).format
     target = goal.monthly_target_amount ? Money.new(goal.monthly_target_amount, goal.currency).format : nil
@@ -70,7 +70,9 @@ class Savings::GoalCardComponent < ApplicationComponent
   end
 
   def footer_line
-    if goal.paused?
+    if goal.archived?
+      I18n.t("savings_goals.goal_card.footer_archived")
+    elsif goal.paused?
       I18n.t("savings_goals.goal_card.footer_paused")
     elsif goal.completed? || goal.status == :reached
       I18n.t("savings_goals.goal_card.footer_reached")
