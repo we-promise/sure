@@ -59,7 +59,10 @@ export default class extends Controller {
     const borderSubdued = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.10)";
     const containerBg = isDark ? "#0a0a0a" : "#ffffff";
 
-    const margin = { top: 28, right: 24, bottom: 28, left: 16 };
+    // Reserve gutter for y-axis labels when there's room. Mobile (< 320)
+    // keeps the tighter left margin and skips the y-axis entirely.
+    const yAxisVisible = width - 16 - 24 >= 320;
+    const margin = { top: 28, right: 24, bottom: 28, left: yAxisVisible ? 44 : 16 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -122,6 +125,28 @@ export default class extends Controller {
       .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
     gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.22);
     gradient.append("stop").attr("offset", "100%").attr("stop-color", textPrimary).attr("stop-opacity", 0);
+
+    if (yAxisVisible) {
+      const yTicks = y.ticks(3);
+      yTicks.forEach((tickValue) => {
+        svg
+          .append("line")
+          .attr("x1", margin.left)
+          .attr("x2", margin.left + innerWidth)
+          .attr("y1", y(tickValue))
+          .attr("y2", y(tickValue))
+          .attr("stroke", borderSubdued)
+          .attr("stroke-width", 1);
+        svg
+          .append("text")
+          .attr("x", margin.left - 6)
+          .attr("y", y(tickValue) + 3)
+          .attr("text-anchor", "end")
+          .attr("font-size", 10)
+          .attr("fill", textSecondary)
+          .text(this._fmtMoneyShort(tickValue, data.currency));
+      });
+    }
 
     if (targetAmount > 0) {
       svg
