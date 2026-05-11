@@ -98,7 +98,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
   end
 
   test "exports transaction CSV rows with import-compatible signage and account identifiers" do
-    tag2 = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+    tag2 = @family.tags.create!(name: "Food|Dining", color: "#0000FF")
     entry = @account.entries.create!(
       name: "CSV Grocery",
       amount: 42.50,
@@ -122,7 +122,28 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal @account.name, row["account"]
       assert_equal @account.id, row["account_id"]
       assert_includes row["tags"], "|"
-      assert_equal [ @tag.name, tag2.name ].sort, row["tags"].split("|").sort
+      assert_includes row["tags"], "\\|"
+      assert_equal [ @tag.name, tag2.name ].sort, Import::Row.new(tags: row["tags"]).tags_list.sort
+    end
+  end
+
+  test "exports stable balance dates for accounts without entries" do
+    empty_account = @family.accounts.create!(
+      name: "Empty Account",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD",
+      created_at: Time.zone.local(2024, 4, 3, 12, 0, 0)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("accounts.csv"), headers: true)
+      row = rows.find { |csv_row| csv_row["id"] == empty_account.id }
+
+      assert_not_nil row
+      assert_equal "04/03/2024", row["Balance Date"]
     end
   end
 

@@ -77,8 +77,11 @@ class Family::DataExporter
     end
 
     def opening_anchor_dates_by_account_id
-      account_ids = @family.accounts.ids
-      return {} if account_ids.empty?
+      accounts = @family.accounts.select(:id, :created_at).to_a
+      return {} if accounts.empty?
+
+      account_ids = accounts.map(&:id)
+      created_dates_by_account_id = accounts.to_h { |account| [ account.id, account.created_at.to_date ] }
 
       opening_anchor_dates = Entry
         .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id AND entries.entryable_type = 'Valuation'")
@@ -97,15 +100,13 @@ class Family::DataExporter
         .group(:account_id)
         .minimum(:date)
 
-      current_date = Date.current
-
       account_ids.to_h do |account_id|
         derived_date = [
           valuation_dates[account_id],
           non_valuation_dates[account_id]&.prev_day
         ].compact.min
 
-        [ account_id, opening_anchor_dates[account_id] || derived_date || current_date ]
+        [ account_id, opening_anchor_dates[account_id] || derived_date || created_dates_by_account_id[account_id] ]
       end
     end
 
@@ -118,19 +119,23 @@ class Family::DataExporter
         exportable_transactions
           .includes(:category, :tags, entry: :account)
           .find_each do |transaction|
-            csv << [
-              transaction.entry.date.strftime("%m/%d/%Y"),
-              (-transaction.entry.amount).to_s,
-              transaction.entry.name,
-              transaction.entry.currency,
-              transaction.category&.name,
-              transaction.tags.map(&:name).join("|"),
-              transaction.entry.account.name,
-              transaction.entry.notes,
-              transaction.entry.account_id
-            ]
-          end
+          csv << [
+            transaction.entry.date.strftime("%m/%d/%Y"),
+            (-transaction.entry.amount).to_s,
+            transaction.entry.name,
+            transaction.entry.currency,
+            transaction.category&.name,
+            transaction.tags.map { |tag| escape_tag_name(tag.name) }.join("|"),
+            transaction.entry.account.name,
+            transaction.entry.notes,
+            transaction.entry.account_id
+          ]
+        end
       end
+    end
+
+    def escape_tag_name(name)
+      name.to_s.gsub(/[\\|]/) { |char| "\\#{char}" }
     end
 
     def generate_trades_csv

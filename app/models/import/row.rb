@@ -14,7 +14,7 @@ class Import::Row < ApplicationRecord
     if tags.blank?
       [ "" ]
     else
-      tags.split("|").map(&:strip)
+      split_escaped_tags(tags).map(&:strip)
     end
   end
 
@@ -37,6 +37,29 @@ class Import::Row < ApplicationRecord
   end
 
   private
+    def split_escaped_tags(value)
+      tag_names = []
+      current = +""
+      escaping = false
+
+      value.each_char do |char|
+        if escaping
+          current << (char.in?([ "|", "\\" ]) ? char : "\\#{char}")
+          escaping = false
+        elsif char == "\\"
+          escaping = true
+        elsif char == "|"
+          tag_names << current
+          current = +""
+        else
+          current << char
+        end
+      end
+
+      current << "\\" if escaping
+      tag_names << current
+    end
+
     # In the Sure system, positive quantities == "inflows"
     def apply_trade_signage_convention(value)
       value * (import.signage_convention == "inflows_positive" ? 1 : -1)
