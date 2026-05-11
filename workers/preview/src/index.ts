@@ -20,8 +20,11 @@ export class RailsContainer extends Container {
   // ENTRYPOINT/CMD metadata to be carried through deployment.
   entrypoint = [
     "/rails/bin/preview-entrypoint",
-    "/rails/bin/rails",
-    "server",
+    "bundle",
+    "exec",
+    "puma",
+    "-C",
+    "config/puma.rb",
   ];
 
   envVars = {

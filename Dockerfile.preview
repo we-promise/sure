@@ -192,4 +192,4 @@ USER 1000:1000
 ENTRYPOINT ["/rails/bin/preview-entrypoint"]
 
 EXPOSE 3000
-CMD ["./bin/rails", "server"]
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
