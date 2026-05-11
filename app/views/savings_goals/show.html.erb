@@ -1,11 +1,4 @@
 <div class="space-y-4 pb-6 lg:pb-12">
-  <div class="text-xs">
-    <%= link_to savings_goals_path, class: "inline-flex items-center gap-1 text-secondary hover:text-primary" do %>
-      <%= icon("arrow-left", size: "sm") %>
-      <%= t(".back_to_all") %>
-    <% end %>
-  </div>
-
   <header class="flex items-start gap-4">
     <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "xl") %>
     <div class="min-w-0 flex-1">
@@ -14,15 +7,29 @@
         <%= render Savings::StatusPillComponent.new(goal: @savings_goal) %>
       </div>
       <p class="text-sm text-secondary">
-        <% if @savings_goal.target_date %>
-          <%= t(".header.target_by", amount: @savings_goal.target_amount_money.format, date: I18n.l(@savings_goal.target_date, format: :long)) %>
-          <% days = (@savings_goal.target_date - Date.current).to_i %>
-          <% if days > 0 %>
-            · <%= t("savings_goals.goal_card.days_left", count: days, date: I18n.l(@savings_goal.target_date, format: :long)).split(" · ").first %>
-          <% end %>
-        <% else %>
-          <%= t(".header.target", amount: @savings_goal.target_amount_money.format) %>
-        <% end %>
+        <%
+          parts = []
+          if @savings_goal.target_date
+            parts << t(".header.target_by", amount: @savings_goal.target_amount_money.format, date: I18n.l(@savings_goal.target_date, format: :long))
+            unless @savings_goal.completed? || @savings_goal.status == :reached
+              days = (@savings_goal.target_date - Date.current).to_i
+              if days > 0
+                parts << t("savings_goals.goal_card.days_left", count: days, date: I18n.l(@savings_goal.target_date, format: :long)).split(" · ").first
+              end
+            end
+          else
+            parts << t(".header.target", amount: @savings_goal.target_amount_money.format)
+          end
+          last_days = @savings_goal.last_contribution_days_ago
+          unless last_days.nil?
+            parts << if last_days.zero?
+              t("savings_goals.goal_card.footer_last_today")
+            else
+              t("savings_goals.goal_card.footer_last_days", count: last_days)
+            end
+          end
+        %>
+        <%= parts.join(" · ") %>
       </p>
     </div>
     <div class="flex items-center gap-2">
@@ -33,13 +40,15 @@
         icon: "pencil",
         frame: :modal
       ) %>
-      <%= render DS::Link.new(
-        text: t(".add_contribution"),
-        variant: "primary",
-        href: new_savings_goal_contribution_path(@savings_goal),
-        icon: "plus",
-        frame: :modal
-      ) %>
+      <% unless @savings_goal.completed? || @savings_goal.status == :reached %>
+        <%= render DS::Link.new(
+          text: t(".add_contribution"),
+          variant: "primary",
+          href: new_savings_goal_contribution_path(@savings_goal),
+          icon: "plus",
+          frame: :modal
+        ) %>
+      <% end %>
       <%= render DS::Menu.new do |menu| %>
         <% if @savings_goal.may_pause? %>
           <% menu.with_item(variant: "button", text: t(".pause"), icon: "pause", href: pause_savings_goal_path(@savings_goal), method: :patch) %>
@@ -108,7 +117,7 @@
   </section>
 
   <%# Stat row %>
-  <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
       <p class="text-[11px] text-secondary mb-1"><%= t(".stats.avg_monthly") %></p>
       <p class="text-lg font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @savings_goal.currency).format %></p>
@@ -120,14 +129,11 @@
       <p class="text-[11px] text-subdued mt-1"><%= t(".stats.across_all_accounts") %></p>
     </div>
     <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.linked_balance") %></p>
-      <p class="text-lg font-medium text-primary tabular-nums"><%= Money.new(@stats[:linked_balance], @savings_goal.currency).format %></p>
-      <p class="text-[11px] text-subdued mt-1"><%= @stats[:linked_balance_sub] %></p>
-    </div>
-    <div class="bg-container rounded-xl shadow-border-xs px-5 py-4">
-      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.started") %></p>
-      <p class="text-lg font-medium text-primary"><%= I18n.l(@savings_goal.created_at.to_date, format: :long) %></p>
-      <p class="text-[11px] text-subdued mt-1"><%= @stats[:started_sub] %></p>
+      <p class="text-[11px] text-secondary mb-1"><%= t(".stats.target_pace") %></p>
+      <p class="text-lg font-medium text-primary tabular-nums">
+        <%= @savings_goal.monthly_target_amount ? Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency).format + "/mo" : t(".stats.no_required_pace") %>
+      </p>
+      <p class="text-[11px] text-subdued mt-1"><%= @stats[:monthly_target_sub] %></p>
     </div>
   </section>
 

@@ -205,11 +205,6 @@ class SavingsGoalsController < ApplicationController
       else
         t("savings_goals.show.stats.no_required_pace")
       end
-      months_since_start = ((Date.current.year - goal.created_at.year) * 12 + (Date.current.month - goal.created_at.month)).clamp(0, 1200)
-      sub_started = t("savings_goals.show.stats.months_ago", count: months_since_start)
-      linked_balance = goal.linked_accounts.sum { |a| a.balance.to_d }
-      sub_linked = t("savings_goals.show.stats.n_accounts", count: goal.linked_accounts.size)
-
       summary = projection_summary(goal, avg)
 
       {
@@ -217,9 +212,6 @@ class SavingsGoalsController < ApplicationController
         avg_monthly_sub: sub_avg,
         contributions_count: goal.savings_contributions.count,
         monthly_target_sub: sub_target,
-        started_sub: sub_started,
-        linked_balance: linked_balance,
-        linked_balance_sub: sub_linked,
         projection_summary: summary
       }
     end

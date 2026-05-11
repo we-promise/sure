@@ -114,27 +114,19 @@ en:
         no_pace: No contributions yet. Add some to start a projection.
         behind: At %{current}/mo you'll fall short. Bump to <strong class="text-primary">%{required}/mo</strong> to hit it on time.
         on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
-      back_to_all: All goals
       source:
         initial: Initial
         manual: Manual
       stats:
         avg_monthly: Avg monthly
         total_contributions: Total contributions
-        linked_balance: Linked balance
         across_all_accounts: Across all accounts
+        target_pace: Target pace
         target_date: Target date
         no_target_date: No target date
         no_required_pace: No required pace
-        started: Started
         needs_per_month: "Needs %{amount}/mo"
         above_target_pace: Above target pace
-        n_accounts:
-          one: 1 account
-          other: "%{count} accounts"
-        months_ago:
-          one: 1 month ago
-          other: "%{count} months ago"
     states:
       active: Active
       paused: Paused
