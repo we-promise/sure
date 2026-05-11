@@ -24,11 +24,24 @@ export default class extends Controller {
       this._observer = new ResizeObserver(() => this._draw());
       this._observer.observe(this.element);
     }
+    // Repaint when the user toggles theme so SVG attributes (which bake
+    // light/dark hex values at draw time) follow data-theme. Lives here
+    // until theme_controller broadcasts a theme:change event upstream.
+    if (typeof MutationObserver !== "undefined") {
+      this._themeObserver = new MutationObserver((mutations) => {
+        if (mutations.some((m) => m.attributeName === "data-theme")) this._draw();
+      });
+      this._themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
+    }
   }
 
   disconnect() {
     window.removeEventListener("resize", this._resize);
     this._observer?.disconnect();
+    this._themeObserver?.disconnect();
   }
 
   _draw() {
@@ -162,15 +175,39 @@ export default class extends Controller {
 
     if (projectionSeries.length) {
       const willHit = projectionEnd >= targetAmount;
+      const projColor = willHit ? "var(--color-green-600)" : "var(--color-yellow-600)";
       svg
         .append("path")
         .datum(projectionSeries)
         .attr("fill", "none")
-        .attr("stroke", willHit ? "var(--color-green-600)" : "var(--color-yellow-600)")
+        .attr("stroke", projColor)
         .attr("stroke-width", 2)
         .attr("stroke-linecap", "round")
         .attr("stroke-dasharray", "4 4")
         .attr("d", line);
+
+      svg
+        .append("circle")
+        .attr("cx", x(target))
+        .attr("cy", y(projectionEnd))
+        .attr("r", 4)
+        .attr("fill", projColor)
+        .attr("stroke", containerBg)
+        .attr("stroke-width", 2);
+
+      if (innerWidth >= 320) {
+        const labelText = willHit
+          ? this._fmtMoneyShort(projectionEnd, data.currency)
+          : `Short ${this._fmtMoneyShort(targetAmount - projectionEnd, data.currency)}`;
+        svg
+          .append("text")
+          .attr("x", x(target) - 8)
+          .attr("y", y(projectionEnd) - 8)
+          .attr("text-anchor", "end")
+          .attr("font-size", 10)
+          .attr("fill", textSecondary)
+          .text(labelText);
+      }
     }
 
     svg
@@ -192,11 +229,22 @@ export default class extends Controller {
       .attr("stroke", containerBg)
       .attr("stroke-width", 2);
 
-    const tickFmt = d3.timeFormat("%b %y");
-    const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 110)));
+    if (innerWidth >= 320) {
+      svg
+        .append("text")
+        .attr("x", x(today))
+        .attr("y", margin.top - 4)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 10)
+        .attr("fill", textSecondary)
+        .text("Today");
+    }
+
+    const tickFmt = d3.timeFormat("%b '%y");
+    const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 80)));
     const ticks = x.ticks(tickCount);
-    svg
-      .append("g")
+    const tickGroup = svg.append("g");
+    tickGroup
       .selectAll("text")
       .data(ticks)
       .enter()
@@ -207,6 +255,14 @@ export default class extends Controller {
       .attr("font-size", 10)
       .attr("fill", textSecondary)
       .text((d) => tickFmt(d));
+    // De-dupe adjacent equal tick labels (e.g. multiple "May '26" on a
+    // short window where d3.ticks oversamples).
+    const tickNodes = tickGroup.selectAll("text").nodes();
+    for (let i = tickNodes.length - 1; i > 0; i--) {
+      if (tickNodes[i].textContent === tickNodes[i - 1].textContent) {
+        tickNodes[i].remove();
+      }
+    }
   }
 
   _monthsBetween(a, b) {
@@ -215,6 +271,18 @@ export default class extends Controller {
 
   _fmtMoney(amount, currency) {
     const symbol = currency === "EUR" ? "€" : currency === "GBP" ? "£" : "$";
+    return `${symbol}${Math.round(amount).toLocaleString()}`;
+  }
+
+  _fmtMoneyShort(amount, currency) {
+    const symbol = currency === "EUR" ? "€" : currency === "GBP" ? "£" : "$";
+    const abs = Math.abs(amount);
+    if (abs >= 1_000_000) {
+      return `${symbol}${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+    }
+    if (abs >= 1_000) {
+      return `${symbol}${(amount / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+    }
     return `${symbol}${Math.round(amount).toLocaleString()}`;
   }
 
