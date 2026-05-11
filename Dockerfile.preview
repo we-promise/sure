@@ -11,7 +11,7 @@ WORKDIR /rails
 # Install base packages including PostgreSQL and Redis servers
 RUN apt-get update -qq \
     && apt-get install --no-install-recommends -y \
-       curl libvips postgresql postgresql-client redis-server libyaml-0-2 procps sudo openssl \
+       curl libvips postgresql postgresql-client redis-server libyaml-0-2 procps sudo openssl strace \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set development environment
@@ -161,7 +161,7 @@ emit_status db-prepare-done "rails db:prepare finished"
 
 echo "Probing app boot..."
 emit_status app-boot-probe "running rails runner boot probe"
-bundle exec rails runner 'puts "preview boot probe ok"' > /tmp/boot_probe.log 2>&1 &
+strace -f -tt -o /tmp/boot_probe.strace bundle exec rails runner 'puts "preview boot probe ok"' > /tmp/boot_probe.log 2>&1 &
 BOOT_PROBE_PID=$!
 BOOT_PROBE_OK=0
 for i in {1..30}; do
@@ -177,7 +177,7 @@ if [ "$BOOT_PROBE_OK" -eq 1 ]; then
 else
   kill -QUIT "$BOOT_PROBE_PID" 2>/dev/null || true
   sleep 2
-  emit_status app-boot-probe-failed "$(tail -n 80 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-2000)"
+  emit_status app-boot-probe-failed "$( { echo 'boot_log:'; tail -n 40 /tmp/boot_probe.log 2>/dev/null; echo; echo 'strace_tail:'; tail -n 40 /tmp/boot_probe.strace 2>/dev/null; } | tr '\n' ' ' | cut -c 1-3500)"
   kill -TERM "$BOOT_PROBE_PID" 2>/dev/null || true
   sleep 1
   kill -KILL "$BOOT_PROBE_PID" 2>/dev/null || true
