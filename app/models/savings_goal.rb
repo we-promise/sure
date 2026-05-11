@@ -146,9 +146,11 @@ class SavingsGoal < ApplicationRecord
       { date: c.contributed_at.to_s, value: running.to_f }
     end
 
+    earliest = [ created_at.to_date, sorted.first&.contributed_at ].compact.min
+
     {
       saved_series: saved_series,
-      start_date: created_at.to_date.to_s,
+      start_date: earliest.to_s,
       today: Date.current.to_s,
       target_date: target_date&.to_s,
       target_amount: target_amount.to_f,

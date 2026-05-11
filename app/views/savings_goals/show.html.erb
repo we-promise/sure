@@ -182,13 +182,14 @@
             <h3 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h3>
             <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
           </div>
+          <% projection_color = @savings_goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
           <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
             <span class="inline-flex items-center gap-1.5">
-              <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--text-primary)" stroke-width="2" /></svg>
+              <svg width="18" height="6" class="text-primary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" /></svg>
               <%= t(".projection.legend_saved") %>
             </span>
             <span class="inline-flex items-center gap-1.5">
-              <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--color-yellow-600)" stroke-width="2" stroke-dasharray="3 3" /></svg>
+              <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="<%= projection_color %>" stroke-width="2" stroke-dasharray="3 3" /></svg>
               <%= t(".projection.legend_projection") %>
             </span>
           </div>
