@@ -329,8 +329,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["family_id", "start_date", "end_date"], name: "index_budgets_on_family_id_and_start_date_and_end_date", unique: true
+    t.uuid "user_id"
+    t.index ["family_id", "start_date", "end_date", "user_id"], name: "index_budgets_on_family_start_end_user", unique: true
     t.index ["family_id"], name: "index_budgets_on_family_id"
+    t.index ["user_id"], name: "index_budgets_on_user_id"
   end
 
   create_table "categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -690,6 +692,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
     t.datetime "last_sync_all_attempted_at"
+    t.boolean "personal_budgets", default: false, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -1868,6 +1871,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"
+  add_foreign_key "budgets", "users"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
