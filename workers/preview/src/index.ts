@@ -40,41 +40,12 @@ export class RailsContainer extends Container {
     return this.ctx.container!;
   }
 
-  async waitForManualStart(signal?: AbortSignal): Promise<void> {
-    await this.start(
-      {
-        entrypoint: this.entrypoint,
-        envVars: this.envVars,
-        enableInternet: this.enableInternet,
-      },
-      {
-        portToCheck: this.defaultPort,
-        signal,
-        retries: START_RETRIES,
-        waitInterval: START_DELAY_MS,
-      }
-    );
-
-    const attempt = await this.waitForPort({
-      portToCheck: this.defaultPort,
-      signal,
-      retries: START_RETRIES,
-      waitInterval: START_DELAY_MS,
-    });
-
-    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-      event: "manual-start-ready",
-      at: new Date().toISOString(),
-      attempt,
-      state: await this.getState(),
-    });
-  }
-
   async startWithExtendedWait(signal?: AbortSignal): Promise<void> {
     await this.startAndWaitForPorts({
       startOptions: {
         entrypoint: this.entrypoint,
         envVars: this.envVars,
+        enableInternet: this.enableInternet,
       },
       cancellationOptions: {
         abort: signal,
@@ -106,101 +77,22 @@ export class RailsContainer extends Container {
       return new Response("ok");
     }
 
-    const state = await this.getState();
-
-    if (state.status !== "healthy") {
-      try {
-        await this.startWithExtendedWait(request.signal);
-        return await this.containerFetch(request, this.defaultPort);
-      } catch (error) {
-        await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-          event: "extended-start-error",
-          at: new Date().toISOString(),
-          message: error instanceof Error ? error.message : String(error),
-          state: await this.getState(),
-        });
-      }
-    }
-
-    if (!this.runtimeContainer.running && state.status === "running") {
+    try {
+      await this.startWithExtendedWait(request.signal);
+      return await this.containerFetch(request, this.defaultPort);
+    } catch (error) {
       await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-        event: "stale-state-detected",
+        event: "extended-start-error",
         at: new Date().toISOString(),
-        state,
+        message: error instanceof Error ? error.message : String(error),
+        state: await this.getState(),
       });
 
-      try {
-        await this.destroy();
-      } catch (error) {
-        console.warn("Container destroy during stale-state recovery failed", error);
-      }
-
-      try {
-        await this.waitForManualStart(request.signal);
-        return await this.containerFetch(request, this.defaultPort);
-      } catch (error) {
-        await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-          event: "manual-recovery-error",
-          at: new Date().toISOString(),
-          message: error instanceof Error ? error.message : String(error),
-          state: await this.getState(),
-        });
-
-        return new Response(
-          `Failed to manually recover preview container: ${error instanceof Error ? error.message : String(error)}`,
-          { status: 500 }
-        );
-      }
+      return new Response(
+        `Failed to start preview container: ${error instanceof Error ? error.message : String(error)}`,
+        { status: 500 }
+      );
     }
-
-    const response = await super.fetch(request);
-
-    if (response.status === 500) {
-      const body = await response.text();
-
-      if (body.includes("The container is not running, consider calling start()")) {
-        console.warn("Detected stale container state, forcing container restart");
-
-        try {
-          await this.destroy();
-        } catch (error) {
-          console.warn("Container destroy during recovery failed", error);
-        }
-
-        try {
-          await this.startAndWaitForPorts({
-            startOptions: {
-              entrypoint: this.entrypoint,
-              envVars: this.envVars,
-            },
-            cancellationOptions: {
-              abort: request.signal,
-            },
-          });
-
-          return this.containerFetch(request, this.defaultPort);
-        } catch (error) {
-          await this.ctx.storage.put(DIAGNOSTICS_KEY, {
-            event: "recovery-error",
-            at: new Date().toISOString(),
-            message: error instanceof Error ? error.message : String(error),
-            state: await this.getState(),
-          });
-
-          return new Response(
-            `Failed to recover preview container: ${error instanceof Error ? error.message : String(error)}`,
-            { status: 500 }
-          );
-        }
-      }
-
-      return new Response(body, {
-        status: response.status,
-        headers: response.headers,
-      });
-    }
-
-    return response;
   }
 
   override async onStart(): Promise<void> {
