@@ -36,11 +36,45 @@ export class RailsContainer extends Container {
     if (url.pathname === "/_container_status") {
       return Response.json({
         state: await this.getState(),
+        containerRunning: this.container.running,
         diagnostics: (await this.ctx.storage.get(DIAGNOSTICS_KEY)) ?? null,
       });
     }
 
-    return super.fetch(request);
+    const response = await super.fetch(request);
+
+    if (response.status === 500) {
+      const body = await response.text();
+
+      if (body.includes("The container is not running, consider calling start()")) {
+        console.warn("Detected stale container state, forcing container restart");
+
+        try {
+          await this.destroy();
+        } catch (error) {
+          console.warn("Container destroy during recovery failed", error);
+        }
+
+        await this.startAndWaitForPorts({
+          startOptions: {
+            entrypoint: this.entrypoint,
+            envVars: this.envVars,
+          },
+          cancellationOptions: {
+            abort: request.signal,
+          },
+        });
+
+        return this.containerFetch(request, this.defaultPort);
+      }
+
+      return new Response(body, {
+        status: response.status,
+        headers: response.headers,
+      });
+    }
+
+    return response;
   }
 
   override async onStart(): Promise<void> {
