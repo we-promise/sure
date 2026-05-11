@@ -279,7 +279,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
-      
+
       response '201', 'dividend created with security' do
         schema '$ref' => '#/components/schemas/Trade'
 
@@ -298,7 +298,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
-      
+
       response '422', 'dividend without security returns error' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -315,7 +315,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
-      
+
       response '422', 'dividend without amount returns error' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -332,7 +332,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
-      
+
       response '422', 'invalid type returns error' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -348,7 +348,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
-      
+
       response '201', 'deposit created' do
           schema type: :object,
                  properties: {
@@ -383,7 +383,7 @@ RSpec.describe 'API V1 Trades', type: :request do
           run_test!
         end
 
-        response '201', 'withdrawal created' do
+      response '201', 'withdrawal created' do
           schema '$ref' => '#/components/schemas/TransactionResponse'
 
           let(:body) do
@@ -401,7 +401,7 @@ RSpec.describe 'API V1 Trades', type: :request do
           run_test!
         end
 
-        response '201', 'interest created' do
+      response '201', 'interest created' do
           schema '$ref' => '#/components/schemas/Trade'
 
           let(:body) do
@@ -419,7 +419,7 @@ RSpec.describe 'API V1 Trades', type: :request do
           run_test!
         end
 
-        response '422', 'deposit without amount returns error' do
+      response '422', 'deposit without amount returns error' do
           schema '$ref' => '#/components/schemas/ErrorResponse'
 
           let(:body) do
@@ -431,7 +431,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               }
             }
           end
-          
+
           run_test!
         end
     end
