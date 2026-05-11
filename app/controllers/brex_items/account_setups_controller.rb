@@ -71,7 +71,7 @@ class BrexItems::AccountSetupsController < ApplicationController
       allowed_account_ids = @brex_item.brex_accounts.pluck(:id).map(&:to_s)
       supported_types = Provider::BrexAdapter.supported_account_types
 
-      setup_param_hash(:account_types).each_with_object({}) do |(account_id, selected_type), sanitized|
+      setup_param_hash(:account_types, allowed_account_ids).each_with_object({}) do |(account_id, selected_type), sanitized|
         next unless allowed_account_ids.include?(account_id.to_s)
 
         normalized_type = selected_type.to_s
@@ -83,7 +83,7 @@ class BrexItems::AccountSetupsController < ApplicationController
       allowed_account_ids = @brex_item.brex_accounts.pluck(:id).map(&:to_s)
       allowed_subtypes = (Depository::SUBTYPES.keys + CreditCard::SUBTYPES.keys).map(&:to_s)
 
-      setup_param_hash(:account_subtypes).each_with_object({}) do |(account_id, selected_subtype), sanitized|
+      setup_param_hash(:account_subtypes, allowed_account_ids).each_with_object({}) do |(account_id, selected_subtype), sanitized|
         next unless allowed_account_ids.include?(account_id.to_s)
         next if selected_subtype.blank?
         next unless allowed_subtypes.include?(selected_subtype.to_s)
@@ -92,10 +92,14 @@ class BrexItems::AccountSetupsController < ApplicationController
       end
     end
 
-    def setup_param_hash(key)
+    def setup_param_hash(key, allowed_keys)
       raw_params = params.fetch(key, {})
       return {} if raw_params.blank?
 
-      raw_params.respond_to?(:to_unsafe_h) ? raw_params.to_unsafe_h : raw_params.to_h
+      if raw_params.respond_to?(:permit)
+        raw_params.permit(*allowed_keys).to_h
+      else
+        raw_params.to_h.slice(*allowed_keys)
+      end
     end
 end
