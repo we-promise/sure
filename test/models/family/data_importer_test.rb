@@ -164,6 +164,56 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1250.0, balance.cash_balance.to_f
   end
 
+  test "preserves omitted raw balance components on duplicate records" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Partial Balance Checking",
+          balance: "1200.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1",
+          account_id: "acct-1",
+          date: "2024-01-31",
+          balance: "1200.00",
+          currency: "USD",
+          cash_balance: "1100.00",
+          cash_inflows: "300.00",
+          cash_outflows: "200.00",
+          flows_factor: -1
+        }
+      },
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1-partial",
+          account_id: "acct-1",
+          date: "2024-01-31",
+          balance: "1300.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Partial Balance Checking")
+    balance = account.balances.find_by!(date: Date.parse("2024-01-31"), currency: "USD")
+
+    assert_equal 1300.0, balance.balance.to_f
+    assert_equal 1100.0, balance.cash_balance.to_f
+    assert_equal 300.0, balance.cash_inflows.to_f
+    assert_equal 200.0, balance.cash_outflows.to_f
+    assert_equal(-1, balance.flows_factor)
+  end
+
   test "dates synthesized account opening balance before imported balance history" do
     ndjson = build_ndjson([
       {

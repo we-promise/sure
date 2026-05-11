@@ -146,28 +146,26 @@ class Family::DataImporter
     end
 
     def imported_balance_attributes(data)
-      {
+      attributes = {
         balance: data["balance"].to_d,
         cash_balance: optional_decimal(data["cash_balance"]),
-        start_cash_balance: decimal_or_default(data["start_cash_balance"]),
-        start_non_cash_balance: decimal_or_default(data["start_non_cash_balance"]),
-        cash_inflows: decimal_or_default(data["cash_inflows"]),
-        cash_outflows: decimal_or_default(data["cash_outflows"]),
-        non_cash_inflows: decimal_or_default(data["non_cash_inflows"]),
-        non_cash_outflows: decimal_or_default(data["non_cash_outflows"]),
-        net_market_flows: decimal_or_default(data["net_market_flows"]),
-        cash_adjustments: decimal_or_default(data["cash_adjustments"]),
-        non_cash_adjustments: decimal_or_default(data["non_cash_adjustments"]),
-        flows_factor: balance_flows_factor_for(data["flows_factor"])
-      }
+        start_cash_balance: optional_decimal(data["start_cash_balance"]),
+        start_non_cash_balance: optional_decimal(data["start_non_cash_balance"]),
+        cash_inflows: optional_decimal(data["cash_inflows"]),
+        cash_outflows: optional_decimal(data["cash_outflows"]),
+        non_cash_inflows: optional_decimal(data["non_cash_inflows"]),
+        non_cash_outflows: optional_decimal(data["non_cash_outflows"]),
+        net_market_flows: optional_decimal(data["net_market_flows"]),
+        cash_adjustments: optional_decimal(data["cash_adjustments"]),
+        non_cash_adjustments: optional_decimal(data["non_cash_adjustments"])
+      }.compact
+
+      attributes[:flows_factor] = balance_flows_factor_for(data["flows_factor"]) if data["flows_factor"].present?
+      attributes
     end
 
     def optional_decimal(value)
       value.presence&.to_d
-    end
-
-    def decimal_or_default(value, default = 0)
-      value.present? ? value.to_d : default
     end
 
     def balance_flows_factor_for(value)
