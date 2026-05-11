@@ -350,90 +350,74 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'deposit created' do
-          schema type: :object,
-                 properties: {
-                   id: { type: :string },
-                   date: { type: :string, format: :date },
-                   amount: { type: :string },
-                   currency: { type: :string },
-                   name: { type: :string },
-                   entryable_type: { type: :string },
-                   account: {
-                     type: :object,
-                     properties: {
-                       id: { type: :string },
-                       name: { type: :string },
-                       account_type: { type: :string }
-                     }
-                   }
-                 }
+        schema '$ref' => '#/components/schemas/TransactionResponse'
 
-          let(:body) do
-            {
-              trade: {
-                account_id: account.id,
-                date: Date.current.to_s,
-                type: 'deposit',
-                amount: 175.25,
-                currency: 'USD'
-              }
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'deposit',
+              amount: 175.25,
+              currency: 'USD'
             }
-          end
-
-          run_test!
+          }
         end
+
+        run_test!
+      end
 
       response '201', 'withdrawal created' do
-          schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema '$ref' => '#/components/schemas/TransactionResponse'
 
-          let(:body) do
-            {
-              trade: {
-                account_id: account.id,
-                date: Date.current.to_s,
-                type: 'withdrawal',
-                amount: 100.00,
-                currency: 'USD'
-              }
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'withdrawal',
+              amount: 100.00,
+              currency: 'USD'
             }
-          end
-
-          run_test!
+          }
         end
+
+        run_test!
+      end
 
       response '201', 'interest created' do
-          schema '$ref' => '#/components/schemas/Trade'
+        schema '$ref' => '#/components/schemas/TransactionResponse'
 
-          let(:body) do
-            {
-              trade: {
-                account_id: account.id,
-                date: Date.current.to_s,
-                type: 'interest',
-                amount: 25.00,
-                currency: 'USD'
-              }
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'interest',
+              amount: 25.00,
+              currency: 'USD'
             }
-          end
-
-          run_test!
+          }
         end
+
+        run_test!
+      end
 
       response '422', 'deposit without amount returns error' do
-          schema '$ref' => '#/components/schemas/ErrorResponse'
+        schema '$ref' => '#/components/schemas/ErrorResponse'
 
-          let(:body) do
-            {
-              trade: {
-                account_id: account.id,
-                date: Date.current.to_s,
-                type: 'deposit'
-              }
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'deposit'
             }
-          end
-
-          run_test!
+          }
         end
+
+        run_test!
+      end
     end
   end
 
