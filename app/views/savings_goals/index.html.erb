@@ -1,4 +1,4 @@
-<div class="space-y-6">
+<div class="space-y-8">
   <header>
     <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
     <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
@@ -8,7 +8,7 @@
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
     <%# Hero card %>
-    <section class="bg-container rounded-xl shadow-border-xs p-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-6 items-stretch">
+    <section class="bg-container rounded-xl shadow-border-xs p-7 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] gap-6 items-stretch min-h-[220px]">
       <div class="flex flex-col">
         <p class="text-xs text-secondary"><%= t(".hero.total_in_savings") %></p>
         <p class="text-4xl font-medium text-primary tabular-nums mt-1 privacy-sensitive"><%= @hero[:total_savings_money].format %></p>
@@ -19,24 +19,24 @@
           </p>
         <% end %>
 
-        <div class="grid grid-cols-3 gap-6 mt-6">
+        <div class="grid grid-cols-3 gap-6 mt-auto pt-6">
           <div>
-            <p class="text-[11px] text-secondary"><%= t(".hero.accounts") %></p>
-            <p class="text-base font-medium text-primary mt-0.5 tabular-nums"><%= @hero[:accounts_count] %></p>
+            <p class="text-xs text-secondary"><%= t(".hero.accounts") %></p>
+            <p class="text-lg font-medium text-primary mt-1 tabular-nums"><%= @hero[:accounts_count] %></p>
           </div>
           <div>
-            <p class="text-[11px] text-secondary"><%= t(".hero.active_goals") %></p>
-            <p class="text-base font-medium text-primary mt-0.5 tabular-nums"><%= @hero[:active_goals_count] %></p>
+            <p class="text-xs text-secondary"><%= t(".hero.active_goals") %></p>
+            <p class="text-lg font-medium text-primary mt-1 tabular-nums"><%= @hero[:active_goals_count] %></p>
           </div>
           <div>
-            <p class="text-[11px] text-secondary"><%= t(".hero.saved_toward_goals") %></p>
-            <p class="text-base font-medium text-primary mt-0.5 tabular-nums privacy-sensitive"><%= @hero[:saved_toward_goals_money].format %></p>
+            <p class="text-xs text-secondary"><%= t(".hero.saved_toward_goals") %></p>
+            <p class="text-lg font-medium text-primary mt-1 tabular-nums privacy-sensitive"><%= @hero[:saved_toward_goals_money].format %></p>
           </div>
         </div>
       </div>
 
       <% if @hero[:sparkline_series].size >= 2 %>
-        <div class="min-h-[160px]"
+        <div class="h-full min-h-[200px]"
              data-controller="savings-sparkline"
              data-savings-sparkline-series-value="<%= @hero[:sparkline_series].to_json %>"></div>
       <% end %>

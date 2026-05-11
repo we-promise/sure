@@ -1,5 +1,5 @@
 <%= link_to savings_goal_path(goal),
-            class: "group block bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-[18px]",
+            class: "group block bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-6",
             data: {
               savings_goals_filter_target: "card",
               goal_name: goal.name,
@@ -40,14 +40,14 @@
     </div>
   </div>
 
-  <div class="mt-3.5">
+  <div class="mt-5">
     <div class="flex items-baseline gap-1.5">
       <span class="text-lg font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format %></span>
       <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format %></span>
     </div>
   </div>
 
-  <div class="mt-3 flex items-center justify-between">
+  <div class="mt-4 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <%= render Savings::AccountStackComponent.new(accounts: linked_accounts) %>
       <span class="text-[11px] text-subdued"><%= linked_accounts_count_label %></span>

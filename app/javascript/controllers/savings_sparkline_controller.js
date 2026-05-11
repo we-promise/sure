@@ -42,10 +42,13 @@ export default class extends Controller {
 
     const yMin = Math.min(...series.map((d) => d.value));
     const yMax = Math.max(...series.map((d) => d.value));
-    const padding = (yMax - yMin) * 0.15 || yMax * 0.05 || 1;
+    // Don't clamp to 0 — savings totals can be negative under certain
+    // demo / edge conditions, and clamping pushes the line off-canvas.
+    const range = yMax - yMin;
+    const padding = range > 0 ? range * 0.15 : Math.abs(yMax) * 0.05 || 1;
     const y = d3
       .scaleLinear()
-      .domain([Math.max(0, yMin - padding), yMax + padding])
+      .domain([yMin - padding, yMax + padding])
       .range([margin.top + innerHeight, margin.top]);
 
     const svg = d3
