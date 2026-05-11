@@ -77,6 +77,20 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_includes transaction_ids, disabled_transaction.id
   end
 
+  test "should exclude pending deletion account transactions from index history" do
+    pending_deletion_transaction = create_account_transaction(
+      status: "pending_deletion",
+      name: "Pending Delete Account Grocery"
+    )
+
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transaction_ids = response_data["transactions"].map { |transaction| transaction["id"] }
+    assert_not_includes transaction_ids, pending_deletion_transaction.id
+  end
+
   test "should filter disabled account transactions by account_id" do
     disabled_transaction = create_disabled_account_transaction(name: "Closed Account Filter")
     disabled_account = disabled_transaction.entry.account
@@ -208,9 +222,22 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal disabled_transaction.entry.account_id, response_data["account"]["id"]
   end
 
-  test "should return 404 for non-existent transaction" do
+  test "should return 404 for valid missing transaction id" do
+    get api_v1_transaction_url(SecureRandom.uuid), headers: api_headers(@api_key)
+    assert_response :not_found
+
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Transaction not found", response_data["message"]
+  end
+
+  test "should return 404 for malformed id" do
     get api_v1_transaction_url(999999), headers: api_headers(@api_key)
     assert_response :not_found
+
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Transaction not found", response_data["message"]
   end
 
   test "should reject show request without API key" do
@@ -516,15 +543,19 @@ end
     end
 
     def create_disabled_account_transaction(name:, date: Date.current)
-      disabled_account = @family.accounts.create!(
-        name: "Closed Checking #{SecureRandom.hex(4)}",
+      create_account_transaction(status: "disabled", name: name, date: date)
+    end
+
+    def create_account_transaction(status:, name:, date: Date.current)
+      account = @family.accounts.create!(
+        name: "#{status.titleize} Checking #{SecureRandom.hex(4)}",
         balance: 0,
         currency: "USD",
-        status: "disabled",
+        status: status,
         accountable: Depository.new
       )
 
-      entry = disabled_account.entries.create!(
+      entry = account.entries.create!(
         name: name,
         amount: 12.34,
         currency: "USD",

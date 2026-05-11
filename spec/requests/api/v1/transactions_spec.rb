@@ -89,7 +89,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
     get 'List transactions' do
       tags 'Transactions'
       security [ { apiKeyAuth: [] } ]
-      description 'Returns global ledger history for accessible accounts, including disabled accounts.'
+      description 'Returns global ledger history for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
@@ -235,7 +235,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
   end
 
   path '/api/v1/transactions/{id}' do
-    parameter name: :id, in: :path, type: :string, format: :uuid, required: true, description: 'Transaction ID'
+    parameter name: :id, in: :path, schema: { type: :string, format: :uuid }, required: true, description: 'Transaction ID'
 
     get 'Retrieve a transaction' do
       tags 'Transactions'
