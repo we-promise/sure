@@ -22,14 +22,13 @@ export class RailsContainer extends Container {
     "/rails/bin/preview-entrypoint",
     "/rails/bin/rails",
     "server",
-    "-b",
-    "0.0.0.0",
   ];
 
   envVars = {
     RAILS_ENV: "development",
     RAILS_LOG_TO_STDOUT: "true",
     RAILS_SERVE_STATIC_FILES: "true",
+    BINDING: "::",
     PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
   };
 
