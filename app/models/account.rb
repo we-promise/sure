@@ -20,6 +20,14 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  # Inverse for recurring transfers where this account is the destination.
+  # Account#recurring_transactions only matches account_id; without this
+  # association, destroying the destination account would hit the FK
+  # cascade silently and the AR cache wouldn't reflect the deletion.
+  has_many :inbound_recurring_transfers,
+           class_name: "RecurringTransaction",
+           foreign_key: :destination_account_id,
+           dependent: :destroy
 
   monetize :balance, :cash_balance
 
