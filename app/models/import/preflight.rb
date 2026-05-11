@@ -104,13 +104,32 @@ class Import::Preflight
 
       return unsupported_import_type_response unless import.requires_csv_workflow?
 
-      import.valid?
+      unless import.valid?
+        return Response.new(
+          status: :ok,
+          payload: {
+            data: csv_preflight_payload(
+              import: import,
+              type: type,
+              filename: filename,
+              content_type: content_type,
+              content: content,
+              parsed_rows_count: 0,
+              csv_headers: [],
+              missing_required_headers: [],
+              errors: validation_errors(import),
+              warnings: []
+            )
+          }
+        )
+      end
+
       csv_content = csv_content_for(import, content)
       csv = Import.parse_csv_str(csv_content, col_sep: import.col_sep)
       parsed_rows_count = csv.length
       csv_headers = Array(csv.headers).compact
       missing_required_headers = missing_required_headers(import, csv_headers)
-      errors = import.errors.full_messages.map { |message| { code: "validation_failed", message: message } }
+      errors = validation_errors(import)
 
       if missing_required_headers.any?
         errors << {
@@ -132,19 +151,18 @@ class Import::Preflight
       Response.new(
         status: :ok,
         payload: {
-          data: {
+          data: csv_preflight_payload(
+            import: import,
             type: type,
-            valid: errors.empty?,
-            content: content_payload(filename, content_type, content),
-            stats: {
-              rows_count: parsed_rows_count
-            },
-            headers: csv_headers,
-            required_headers: required_header_labels(import),
+            filename: filename,
+            content_type: content_type,
+            content: content,
+            parsed_rows_count: parsed_rows_count,
+            csv_headers: csv_headers,
             missing_required_headers: missing_required_headers,
             errors: errors,
             warnings: warnings
-          }
+          )
         }
       )
     end
@@ -297,7 +315,29 @@ class Import::Preflight
     def apply_import_defaults(import)
       return unless import.is_a?(MintImport)
 
-      import.assign_attributes(MintImport.default_column_mappings)
+      MintImport.default_column_mappings.each do |attribute, value|
+        import.public_send("#{attribute}=", value) if import.public_send(attribute).blank?
+      end
+    end
+
+    def validation_errors(import)
+      import.errors.full_messages.map { |message| { code: "validation_failed", message: message } }
+    end
+
+    def csv_preflight_payload(import:, type:, filename:, content_type:, content:, parsed_rows_count:, csv_headers:, missing_required_headers:, errors:, warnings:)
+      {
+        type: type,
+        valid: errors.empty?,
+        content: content_payload(filename, content_type, content),
+        stats: {
+          rows_count: parsed_rows_count
+        },
+        headers: csv_headers,
+        required_headers: required_header_labels(import),
+        missing_required_headers: missing_required_headers,
+        errors: errors,
+        warnings: warnings
+      }
     end
 
     def required_header_labels(import)

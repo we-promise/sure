@@ -654,6 +654,31 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[date amount name], data["headers"]
   end
 
+  test "should report invalid preflight CSV parser config without parsing" do
+    csv_content = "date,amount,name\n2024-01-01,-10.00,Coffee"
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             col_sep: "",
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id
+           },
+           headers: api_headers(@read_only_api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal false, data["valid"]
+    assert_equal 0, data["stats"]["rows_count"]
+    assert_empty data["headers"]
+    assert_equal "validation_failed", data["errors"].first["code"]
+  end
+
   test "should reject malformed CSV during preflight" do
     csv_content = "date,amount,name\n2024-01-01,-10.00,\"Coffee Shop"
 
@@ -672,6 +697,24 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
     assert_equal "invalid_csv", json_response["error"]
+  end
+
+  test "should include preflight exception message in internal server error response" do
+    Import::Preflight.any_instance.stubs(:call).raises(StandardError, "boom")
+
+    post preflight_api_v1_imports_url,
+         params: {
+           raw_file_content: "date,amount,name\n2024-01-01,-10.00,Coffee",
+           date_col_label: "date",
+           amount_col_label: "amount",
+           name_col_label: "name"
+         },
+         headers: api_headers(@read_only_api_key)
+
+    assert_response :internal_server_error
+    json_response = JSON.parse(response.body)
+    assert_equal "internal_server_error", json_response["error"]
+    assert_equal "Error: boom", json_response["message"]
   end
 
   test "should reject unknown preflight import type" do
@@ -943,6 +986,31 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_empty data["missing_required_headers"]
     assert_includes data["required_headers"], "Date"
     assert_includes data["required_headers"], "Amount"
+  end
+
+  test "should not overwrite explicit Mint preflight column mappings with defaults" do
+    mint_content = [
+      "Posted On,Value,Description",
+      "01/01/2024,-8.55,Starbucks"
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "MintImport",
+             raw_file_content: mint_content,
+             date_col_label: "Posted On",
+             amount_col_label: "Value"
+           },
+           headers: api_headers(@read_only_api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal true, data["valid"]
+    assert_equal [ "Posted On", "Value" ], data["required_headers"]
+    assert_empty data["missing_required_headers"]
   end
 
   test "should create import and auto-publish when configured and requested" do

@@ -56,6 +56,18 @@ class SureImportTest < ActiveSupport::TestCase
     assert_not dry_run.key?(:unknown_type)
   end
 
+  test "ndjson line type counts ignore records without data" do
+    ndjson = [
+      { type: "Account", data: { id: "uuid-1" } },
+      { type: "Transaction" },
+      { data: { id: "uuid-2" } }
+    ].map(&:to_json).join("\n")
+
+    counts = SureImport.ndjson_line_type_counts(ndjson)
+
+    assert_equal({ "Account" => 1 }, counts)
+  end
+
   test "csv_template returns nil" do
     assert_nil @import.csv_template
   end

@@ -41,7 +41,7 @@ class SureImport < Import
 
         begin
           record = JSON.parse(line)
-          counts[record["type"]] += 1 if record.is_a?(Hash) && record["type"]
+          counts[record["type"]] += 1 if record.is_a?(Hash) && record["type"] && record.key?("data")
         rescue JSON::ParserError
           # Skip invalid lines
         end
