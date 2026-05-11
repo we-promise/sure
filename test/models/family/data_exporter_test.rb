@@ -5,6 +5,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @other_family = families(:empty)
     @exporter = Family::DataExporter.new(@family)
+    @opening_anchor_date = Date.parse("2024-05-01")
 
     # Create some test data for the family
     @account = @family.accounts.create!(
@@ -12,6 +13,13 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       accountable: Depository.new,
       balance: 1000,
       currency: "USD"
+    )
+    @account.entries.create!(
+      date: @opening_anchor_date,
+      amount: 1000,
+      name: "Opening balance",
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
     )
 
     @category = @family.categories.create!(
@@ -47,7 +55,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "all.ndjson" ]
+    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
@@ -63,6 +71,11 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       accounts_csv = zip.read("accounts.csv")
       assert_equal [ "Account type*", "Name*", "Balance*", "Currency", "Balance Date", "id", "subtype", "status", "created_at" ],
                    CSV.parse(accounts_csv, headers: true).headers
+
+      # Check version marker
+      version_txt = zip.read("version.txt")
+      assert_includes version_txt, "export_version: 2"
+      assert_includes version_txt, "csv_export_version: 2"
 
       # Check transactions.csv
       transactions_csv = zip.read("transactions.csv")
@@ -85,6 +98,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
   end
 
   test "exports transaction CSV rows with import-compatible signage and account identifiers" do
+    tag2 = @family.tags.create!(name: "Second Tag", color: "#0000FF")
     entry = @account.entries.create!(
       name: "CSV Grocery",
       amount: 42.50,
@@ -94,6 +108,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       entryable: Transaction.new(category: @category)
     )
     entry.transaction.tags << @tag
+    entry.transaction.tags << tag2
 
     zip_data = @exporter.generate_export
 
@@ -106,7 +121,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "-42.5", row["amount*"]
       assert_equal @account.name, row["account"]
       assert_equal @account.id, row["account_id"]
-      assert_equal @tag.name, row["tags"]
+      assert_includes row["tags"], "|"
+      assert_equal [ @tag.name, tag2.name ].sort, row["tags"].split("|").sort
     end
   end
 
@@ -123,9 +139,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     zip_data = @exporter.generate_export
 
     Zip::File.open_buffer(zip_data) do |zip|
+      accounts_csv = zip.read("accounts.csv")
       account_import = @other_family.imports.create!(
         type: "AccountImport",
-        raw_file_str: zip.read("accounts.csv"),
+        raw_file_str: accounts_csv,
         entity_type_col_label: "Account type*",
         name_col_label: "Name*",
         amount_col_label: "Balance*",
@@ -134,7 +151,9 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         date_format: "%m/%d/%Y"
       )
       account_import.generate_rows_from_csv
-      assert account_import.rows.reload.first.valid?
+      account_row = account_import.rows.reload.find_by!(name: @account.name)
+      assert account_row.valid?
+      assert_equal @opening_anchor_date.strftime("%m/%d/%Y"), account_row.date
 
       transaction_import = @other_family.imports.create!(
         type: "TransactionImport",

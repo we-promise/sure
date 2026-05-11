@@ -2,6 +2,8 @@ require "zip"
 require "csv"
 
 class Family::DataExporter
+  EXPORT_VERSION = 2
+
   def initialize(family)
     @family = family
   end
@@ -9,6 +11,10 @@ class Family::DataExporter
   def generate_export
     # Create a StringIO to hold the zip data in memory
     zip_data = Zip::OutputStream.write_buffer do |zipfile|
+      # Add export version marker for downstream tooling
+      zipfile.put_next_entry("version.txt")
+      zipfile.write generate_version_txt
+
       # Add accounts.csv
       zipfile.put_next_entry("accounts.csv")
       zipfile.write generate_accounts_csv
@@ -40,8 +46,16 @@ class Family::DataExporter
   end
 
   private
+    def generate_version_txt
+      <<~TEXT
+        export_version: #{EXPORT_VERSION}
+        csv_export_version: #{EXPORT_VERSION}
+      TEXT
+    end
 
     def generate_accounts_csv
+      opening_anchor_dates = opening_anchor_dates_by_account_id
+
       CSV.generate do |csv|
         csv << [ "Account type*", "Name*", "Balance*", "Currency", "Balance Date", "id", "subtype", "status", "created_at" ]
 
@@ -52,13 +66,46 @@ class Family::DataExporter
             account.name,
             account.balance.to_s,
             account.currency,
-            account.opening_anchor_date&.strftime("%m/%d/%Y"),
+            opening_anchor_dates[account.id]&.strftime("%m/%d/%Y"),
             account.id,
             account.subtype,
             account.status,
             account.created_at.iso8601
           ]
         end
+      end
+    end
+
+    def opening_anchor_dates_by_account_id
+      account_ids = @family.accounts.ids
+      return {} if account_ids.empty?
+
+      opening_anchor_dates = Entry
+        .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id AND entries.entryable_type = 'Valuation'")
+        .where(account_id: account_ids, valuations: { kind: "opening_anchor" })
+        .group(:account_id)
+        .minimum(:date)
+
+      valuation_dates = Entry
+        .where(account_id: account_ids, entryable_type: "Valuation")
+        .group(:account_id)
+        .minimum(:date)
+
+      non_valuation_dates = Entry
+        .where(account_id: account_ids)
+        .where.not(entryable_type: "Valuation")
+        .group(:account_id)
+        .minimum(:date)
+
+      current_date = Date.current
+
+      account_ids.to_h do |account_id|
+        derived_date = [
+          valuation_dates[account_id],
+          non_valuation_dates[account_id]&.prev_day
+        ].compact.min
+
+        [ account_id, opening_anchor_dates[account_id] || derived_date || current_date ]
       end
     end
 
