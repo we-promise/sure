@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -595,6 +595,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
+    t.datetime "last_sync_all_attempted_at"
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -1405,6 +1406,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.string "account_number_mask"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "manual_sync", default: false, null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
@@ -1437,6 +1439,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.text "last_connection_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "manual_sync", default: false, null: false
+    t.uuid "current_job_sophtron_account_id"
+    t.index ["current_job_sophtron_account_id"], name: "index_sophtron_items_on_current_job_sophtron_account_id"
     t.index ["customer_id"], name: "index_sophtron_items_on_customer_id"
     t.index ["family_id"], name: "index_sophtron_items_on_family_id"
     t.index ["status"], name: "index_sophtron_items_on_status"

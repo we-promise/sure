@@ -1435,6 +1435,12 @@ components:
         notes:
           type: string
           nullable: true
+        external_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
         classification:
           type: string
         account:
@@ -6256,6 +6262,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '200':
+          description: transaction already exists for external idempotency key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
         '422':
           description: validation error - missing required fields
           content:
@@ -6310,6 +6322,14 @@ paths:
                       - inflow
                       - outflow
                       description: Transaction nature (determines sign)
+                    external_id:
+                      type: string
+                      description: Optional external idempotency key scoped to account
+                        and source
+                    source:
+                      type: string
+                      description: Optional source namespace for external_id. Requires
+                        external_id and defaults to api when external_id is provided
                     tag_ids:
                       type: array
                       items:

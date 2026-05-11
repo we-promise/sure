@@ -97,17 +97,23 @@ en:
       unknown_challenge: Unknown Sophtron verification step.
     sophtron_item:
       accounts_need_setup: Accounts need setup
+      automatic_sync: Use automatic sync
       delete: Delete connection
       deletion_in_progress: deletion in progress...
       error: Error
       no_accounts_description: This connection has no linked accounts yet.
       no_accounts_title: No accounts
+      manual_sync: Manual sync
+      manual_sync_action: Require manual sync
+      manual_sync_action_for: "Require manual sync for %{institution}"
+      automatic_sync_for: "Use automatic sync for %{institution}"
       setup_action: Set Up New Accounts
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Sophtron accounts."
       setup_needed: New accounts ready to set up
       status: "Synced %{timestamp} ago"
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
+      sync_now: Sync now
       syncing: Syncing...
       total: Total
       unlinked: Unlinked
@@ -203,7 +209,20 @@ en:
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:
+      already_running: Sophtron manual sync is already in progress.
+      api_error: "Sophtron manual sync failed: %{message}"
+      failed: Sophtron manual sync failed
+      no_linked_accounts: This Sophtron institution does not have any linked accounts to sync.
+      processing_failed: Sophtron manual sync could not process the refreshed transactions.
       success: Sync started
+    toggle_manual_sync:
+      success_disabled: Sophtron institution will sync automatically.
+      success_enabled: Sophtron institution now requires manual sync.
+    manual_sync_complete:
+      close: Close
+      description: Account balances will finish updating in the background.
+      message: Transactions were downloaded after Sophtron verification.
+      title: Sophtron Sync Started
     sophtron_setup_required:
       title: Sophtron Setup Required
       message: >
@@ -226,7 +245,7 @@ en:
       expired_credentials: "Expired Credentials: Generate a new User ID and Access Key from Sophtron"  
       network_issue: "Network Issue: Check your internet connection"  
       service_down: "Service Down: Sophtron API may be temporarily unavailable"  
-      bank_credentials: "Bank credentials: Check the username and password for the selected institution"
+      bad_credentials: "Bank credentials: Check the username and password are correct"
       verification_code: "Verification code: Make sure the latest code was entered before it expired"
       institution_timeout: "Institution timeout: The bank login page did not finish in time"
       unsupported_mfa: "MFA support: Sophtron may not support this institution's current verification flow"
@@ -260,10 +279,8 @@ en:
           placeholder: "https://api.sophtron.com/api"
       save: "Save Configuration"
       update: "Update Configuration"
-      status:
-        configured_html: 'Configured and ready to use. Visit the <a href="%{accounts_path}" class="link">Accounts</a> tab to manage and set up accounts.'
-        not_configured: "Not configured"
     syncer:
+      manual_sync_required: "Manual Sophtron sync is required for this institution; skipping those accounts during automated sync."
       importing_accounts: "Importing accounts from Sophtron..."
       checking_account_configuration: "Checking account configuration..."
       accounts_need_setup: "%{count} account(s) need setup"

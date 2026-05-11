@@ -788,6 +788,8 @@ RSpec.configure do |config|
               currency: { type: :string },
               name: { type: :string },
               notes: { type: :string, nullable: true },
+              external_id: { type: :string, nullable: true },
+              source: { type: :string, nullable: true },
               classification: { type: :string },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },

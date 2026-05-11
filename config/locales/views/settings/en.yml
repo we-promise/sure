@@ -176,7 +176,7 @@ en:
       whats_new_label: What's new
       api_keys_label: API Key
       appearance_label: Appearance
-      bank_sync_label: Bank Sync
+      bank_sync_label: Bank sync
     settings_nav_link_large:
       next: Next
       previous: Back
@@ -186,11 +186,73 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
-      show:
-        coinbase_title: Coinbase
+      not_authorized: Not authorized
+      bank_sync:
+        page_title: Bank sync
+        lede: Connect external accounts so transactions, balances and holdings flow into Sure automatically.
+      status:
+        ok: Connected
+        warn: Action needed
+        err: Error
+        off: Not configured
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
+      setup_steps:
+        eyebrow: Setup
+        need_help: "Need help?"
+      connect: Connect
+      groups:
+        your_connections: Your connections
+        available: Available
+        empty_available: All available providers are connected.
+      health_strip:
+        connected: connected
+        needs_attention: needs attention
+        accounts_syncing: accounts syncing
+        last_synced: Last synced %{time} ago
+      meta:
+        sync_error: Sync error
+        no_recent_sync: Sync overdue
+        registration_needed: Registration needed
+        reconsent_required: Re-consent required
+        reconsent_needed:
+          one: Re-consent needed in 1 day
+          other: Re-consent needed in %{count} days
+        last_synced: Synced %{time} ago
+      sync_all: Sync all
+      sync_all_in_progress: Syncing all connected providers…
+      sync_all_recently: Sync already in progress. Try again in a moment.
+      sync_provider: Sync now
+      sync_provider_in_progress: Sync started.
+      recently_synced: Synced recently. Try again in a moment.
+      taglines:
+        simplefin: Connect US bank accounts via the open SimpleFIN protocol.
+        lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
+        enable_banking: Sync European bank accounts via PSD2 open banking.
+        coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        mercury: Sync your Mercury business banking accounts automatically.
+        coinbase: Import your Coinbase crypto holdings and track performance.
+        binance: Sync your Binance spot balances using a read-only API key.
+        snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        indexa_capital: Track your Indexa Capital automated investment portfolio.
+        sophtron: Connect US & Canadian banks and utilities.
+        plaid: Connect thousands of US financial institutions via Plaid.
+        plaid_eu: Connect European financial institutions via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Search providers
+        placeholder: Search providers
+        chips:
+          all: All
+          bank: Banks
+          crypto: Crypto
+          investment: Investments
+      empty_filter: No providers match your filter.
+      clear_filter: Clear filters
       encryption_error:
-        title: Encryption Configuration Required
-        message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.
+        title: Encryption keys missing
+        message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
@@ -204,15 +266,14 @@ en:
         syncing: Syncing...
         sync: Sync
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
-        status_connected: Coinbase is connected and syncing your crypto holdings.
-        status_not_connected: Not connected. Enter your API credentials above to get started.
       binance_panel:
         setup_instructions: "To connect Binance, create a read-only API key:"
         step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
         step2: "Create a new API key with Enable Reading permission only"
         step3: "Paste your API Key and Secret below"
-        no_withdraw_warning: "Warning: do NOT enable withdrawal permissions"
-        ip_hint_title: "IP Whitelisting Required"
+        no_withdraw_title: "Read-only key only"
+        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key. Sure only needs read access."
+        ip_hint_title: "IP whitelisting required"
         ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
         ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
         api_key_label: API Key
@@ -223,8 +284,25 @@ en:
         syncing: Syncing...
         sync: Sync
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
-        status_connected: Binance connected
-        status_not_connected: Binance not connected
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
+        step_1_html: "Go to %{link} and grab your developer credentials."
+        step_2: "Pick your country and paste the Application ID + Client Certificate below."
+        step_3: "Save, then use Add Connection to link your bank."
+      lunchflow_panel:
+        step_1_html: "Go to %{link} and create an API key."
+        step_2: "Paste your key below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+      simplefin_panel:
+        step_1_html: "Go to %{link} for a one-time setup token."
+        step_2: "Paste the token below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+      plaid_panel:
+        step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
+        step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
+        step_3: "Paste your credentials below and connect."
+      plaid_eu_panel:
+        step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."
+      not_found: Provider not found.
+      sync_provider_no_items: No connections available to sync.
