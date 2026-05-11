@@ -159,6 +159,14 @@ emit_status db-prepare "running rails db:prepare"
 /rails/bin/rails db:prepare
 emit_status db-prepare-done "rails db:prepare finished"
 
+echo "Probing app boot..."
+emit_status app-boot-probe "running rails runner boot probe"
+if timeout 30 bundle exec rails runner 'puts "preview boot probe ok"' > /tmp/boot_probe.log 2>&1; then
+  emit_status app-boot-probe-ok "$(tail -n 20 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-1000)"
+else
+  emit_status app-boot-probe-failed "$(tail -n 40 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-1000)"
+fi
+
 # Execute the main command with an internal readiness probe
 echo "Starting Rails server..."
 emit_status rails-start "starting rails server"
