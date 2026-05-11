@@ -141,6 +141,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     other_goal.save!
 
     get goal_url(other_goal)
-    assert_response :not_found
+    assert_redirected_to goals_path
+    assert_equal I18n.t("goals.errors.not_found"), flash[:alert]
   end
 end

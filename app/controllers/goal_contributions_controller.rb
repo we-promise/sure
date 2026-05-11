@@ -1,6 +1,7 @@
 class GoalContributionsController < ApplicationController
   before_action :set_goal
   before_action :set_contribution, only: :destroy
+  rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   def new
     @contribution = @goal.goal_contributions.new(
@@ -54,5 +55,9 @@ class GoalContributionsController < ApplicationController
     def lookup_account(id)
       return nil if id.blank?
       @goal.linked_accounts.find_by(id: id)
+    end
+
+    def record_not_found
+      redirect_to goals_path, alert: t("goals.errors.not_found")
     end
 end

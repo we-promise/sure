@@ -163,6 +163,8 @@ en:
         monthly_pace: Monthly pace
         target_of: "target %{amount}/mo"
         behind_by: "Behind by %{amount}/mo"
+    errors:
+      not_found: This goal couldn't be found. It may have been deleted.
     states:
       active: Active
       paused: Paused

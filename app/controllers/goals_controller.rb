@@ -1,12 +1,14 @@
 class GoalsController < ApplicationController
   before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
+  rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
   STATE_FILTERS = %w[all active paused completed archived].freeze
   ACTIVE_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
 
   def index
+    state_counts = Current.family.goals.group(:state).count
     @counts = STATE_FILTERS.each_with_object({}) do |state, h|
-      h[state] = state == "all" ? Current.family.goals.count : Current.family.goals.where(state: state).count
+      h[state] = state == "all" ? state_counts.values.sum : (state_counts[state] || 0)
     end
 
     all_goals = Current.family.goals.with_current_balance.alphabetically.includes(:goal_contributions, :linked_accounts).to_a
@@ -121,6 +123,10 @@ class GoalsController < ApplicationController
                              .with_current_balance
                              .includes(goal_contributions: :account, linked_accounts: [])
                              .find(params[:id])
+    end
+
+    def goal_not_found
+      redirect_to goals_path, alert: t("goals.errors.not_found")
     end
 
     def goal_params
