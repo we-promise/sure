@@ -14,6 +14,42 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "bulk domain update only changes writable accounts" do
+    @user.sessions.each { |session| delete session_path(session) }
+    sign_in users(:family_member)
+
+    writable_account = accounts(:depository)
+    read_only_account = accounts(:credit_card)
+
+    post bulk_update_domains_accounts_path, params: {
+      institution_domain: "https://www.mercury.com/banking",
+      account_ids: [ writable_account.id, read_only_account.id ]
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal "mercury.com", writable_account.reload.institution_domain
+    assert_nil read_only_account.reload.institution_domain
+  end
+
+  test "bulk domains renders without the settings layout for modal use" do
+    get bulk_domains_accounts_path
+
+    assert_response :success
+    assert_no_match(/<html/i, response.body)
+  end
+
+  test "bulk domain update redirects when an account update fails validation" do
+    @account.errors.add(:base, "cannot update domain")
+    Account.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(@account))
+
+    post bulk_update_domains_accounts_path, params: {
+      institution_domain: "mercury.com",
+      account_ids: [ @account.id ]
+    }
+
+    assert_redirected_to bulk_domains_accounts_path
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success

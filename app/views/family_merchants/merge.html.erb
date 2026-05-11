@@ -1,12 +1,55 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
   <% dialog.with_body do %>
-    <%= styled_form_with url: perform_merge_family_merchants_path, method: :post, class: "space-y-4" do |f| %>
-      <%= f.collection_select :target_id,
-            @merchants,
-            :id, :name,
-            { prompt: t(".select_target"), label: t(".target_label") },
-            { required: true } %>
+    <%= styled_form_with url: perform_merge_family_merchants_path,
+          method: :post,
+          class: "space-y-4 max-h-[70vh] overflow-y-auto pr-1",
+          data: {
+            controller: "merchant-merge-target",
+            action: "submit->merchant-merge-target#beforeSubmit",
+            "merchant-merge-target-default-color-value": @default_merchant_color
+          } do |f| %>
+      <p class="text-xs text-secondary"><%= t(".target_mode_hint") %></p>
+
+      <div data-merchant-merge-target-target="existingSection">
+        <%= f.collection_select :target_id,
+              @merchants,
+              :id, :name,
+              { include_blank: t(".select_target"), label: t(".target_label") },
+              {
+                data: {
+                  "merchant-merge-target-target": "existingTarget",
+                  action: "input->merchant-merge-target#sync change->merchant-merge-target#sync"
+                }
+              } %>
+      </div>
+
+      <div class="space-y-3 rounded-lg border border-secondary p-3" data-merchant-merge-target-target="newSection">
+        <p class="text-sm font-medium text-primary"><%= t(".new_target_label") %></p>
+        <p class="text-xs text-secondary"><%= t(".new_target_hint") %></p>
+        <%= f.text_field :new_target_name,
+              name: :new_target_name,
+              label: t(".new_target_name"),
+              data: {
+                "merchant-merge-target-target": "newTextInput",
+                action: "input->merchant-merge-target#sync change->merchant-merge-target#sync"
+              } %>
+        <%= f.text_field :new_target_website_url,
+              name: :new_target_website_url,
+              label: t(".new_target_website"),
+              data: {
+                "merchant-merge-target-target": "newTextInput",
+                action: "input->merchant-merge-target#sync change->merchant-merge-target#sync"
+              } %>
+        <%= f.color_field :new_target_color,
+              name: :new_target_color,
+              value: @default_merchant_color,
+              label: t(".new_target_color"),
+              data: {
+                "merchant-merge-target-target": "newColorInput",
+                action: "input->merchant-merge-target#sync change->merchant-merge-target#sync"
+              } %>
+      </div>
 
       <div class="space-y-2">
         <p class="text-sm font-medium text-primary"><%= t(".sources_label") %></p>

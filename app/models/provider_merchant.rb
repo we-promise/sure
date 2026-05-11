@@ -24,10 +24,8 @@ class ProviderMerchant < Merchant
 
   # Generate logo URL from website_url using BrandFetch, if configured.
   def generate_logo_url_from_website!
-    if website_url.present? && Setting.brand_fetch_client_id.present?
-      domain = extract_domain(website_url)
-      size = Setting.brand_fetch_logo_size
-      update!(logo_url: "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}")
+    if website_url.present?
+      update!(logo_url: Merchant.brandfetch_logo_url_for(website_url))
     elsif website_url.blank?
       update!(logo_url: nil)
     end
@@ -43,13 +41,4 @@ class ProviderMerchant < Merchant
     association = FamilyMerchantAssociation.find_or_initialize_by(family: family, merchant: self)
     association.update!(unlinked_at: Time.current)
   end
-
-  private
-
-    def extract_domain(url)
-      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
-      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
-    rescue URI::InvalidURIError
-      url.sub(/\Awww\./, "")
-    end
 end

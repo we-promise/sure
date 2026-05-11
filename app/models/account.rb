@@ -2,6 +2,7 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  before_validation :normalize_institution_domain_value, if: -> { will_save_change_to_institution_domain? }
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -138,6 +139,9 @@ class Account < ApplicationRecord
       account
     end
 
+    def normalize_institution_domain(value)
+      Merchant.extract_domain(value)
+    end
 
     def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
       # Respect user choice when provided; otherwise infer a sensible default
@@ -299,11 +303,18 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
+    domain = institution_domain
 
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-    elsif provider&.logo_url.present?
+    if domain.present?
+      brandfetch_logo_url = Merchant.brandfetch_logo_url_for(
+        domain,
+        logo_size: Setting.brand_fetch_logo_size,
+        client_id: Setting.brand_fetch_client_id
+      )
+      return brandfetch_logo_url if brandfetch_logo_url.present?
+    end
+
+    if provider&.logo_url.present?
       provider.logo_url
     elsif logo.attached?
       Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
@@ -469,5 +480,9 @@ class Account < ApplicationRecord
     def owner_belongs_to_family
       return if User.where(id: owner_id, family_id: family_id).exists?
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def normalize_institution_domain_value
+      self[:institution_domain] = self.class.normalize_institution_domain(read_attribute(:institution_domain))
     end
 end

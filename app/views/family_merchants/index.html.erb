@@ -1,6 +1,12 @@
 <%= content_for :page_title, t(".title") %>
 <%= content_for :page_actions do %>
   <%= render DS::Link.new(
+    text: t(".bulk_websites"),
+    variant: "outline",
+    href: bulk_websites_family_merchants_path,
+    frame: :modal
+  ) %>
+  <%= render DS::Link.new(
     text: t(".merge"),
     variant: "outline",
     href: merge_family_merchants_path,

@@ -14,6 +14,7 @@ en:
       website_placeholder: Website (e.g., starbucks.com)
       website_hint: Enter the merchant's website to automatically display their logo
     index:
+      bulk_websites: Bulk websites
       empty: No merchants yet
       new: New merchant
       merge: Merge merchants
@@ -44,11 +45,31 @@ en:
     merge:
       title: Merge merchants
       description: Select a target merchant and the merchants to merge into it. All transactions from merged merchants will be reassigned to the target.
+      target_mode_hint: "Choose one: either select an existing target or create a new one."
       target_label: Merge into (target)
       select_target: Select target merchant...
+      new_target_label: Or create a new target merchant
+      new_target_hint: Leave these fields blank to merge into an existing target above.
+      new_target_name: New merchant name
+      new_target_website: New merchant website
+      new_target_color: New merchant color
       sources_label: Merchants to merge
       sources_hint: Selected merchants will be merged into the target. Family merchants will be deleted, provider merchants will be unlinked.
       submit: Merge selected
+    bulk_websites:
+      title: Bulk update merchant websites
+      description: Select reviewed merchants and apply one website domain to all of them.
+      website_label: Website domain
+      website_placeholder: mercury.com
+      merchants_label: Merchants to update
+      merchants_hint: Provider merchants are updated in place, but only if they are assigned to this family.
+      submit: Update selected merchants
+    bulk_update_websites:
+      success:
+        one: Updated website for %{count} merchant
+        other: Updated websites for %{count} merchants
+      invalid_selection: Select at least one merchant and enter a valid website domain.
+      failure: "Could not update merchant websites: %{error}"
     new:
       title: New merchant
     perform_merge:
@@ -58,6 +79,8 @@ en:
       no_merchants_selected: No merchants selected to merge
       target_not_found: Target merchant not found
       invalid_merchants: Invalid merchants selected
+      conflicting_target: Choose an existing target or create a new target, not both.
+      invalid_website: Enter a valid website domain for the new target merchant.
     provider_merchant:
       edit: Edit
       remove: Remove
