@@ -13,6 +13,28 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: I18n.t("account_statements.index.title")
   end
 
+  test "statement vault only lists linked statements for accessible accounts" do
+    accessible_statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "accessible_statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    private_account = accounts(:other_asset)
+    private_statement = AccountStatement.create_from_upload!(
+      family: private_account.family,
+      account: private_account,
+      file: uploaded_file(filename: "private_statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+    )
+    sign_in users(:family_member)
+
+    get account_statements_url
+
+    assert_response :success
+    assert_includes response.body, accessible_statement.filename
+    refute_includes response.body, private_statement.filename
+    refute_includes response.body, private_account.name
+  end
+
   test "non manager cannot open statement vault" do
     sign_in family_guest
 

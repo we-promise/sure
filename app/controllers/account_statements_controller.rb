@@ -5,14 +5,19 @@ class AccountStatementsController < ApplicationController
   before_action :ensure_statement_manager!, only: %i[index create update destroy link unlink reject]
 
   def index
+    accessible_account_ids = Current.user.accessible_accounts.select(:id)
     account_statements = Current.family.account_statements
       .with_attached_original_file
       .includes(:account, :suggested_account)
       .ordered
+    visible_storage_scope = Current.family.account_statements
+      .where(account_id: nil)
+      .or(Current.family.account_statements.where(account_id: accessible_account_ids))
+    linked_statement_scope = account_statements.with_account.where(account_id: accessible_account_ids)
 
     @unmatched_pagy, @unmatched_statements = pagy(account_statements.unmatched, limit: safe_per_page, page_param: :unmatched_page)
-    @linked_pagy, @linked_statements = pagy(account_statements.with_account, limit: safe_per_page, page_param: :linked_page)
-    @total_storage_bytes = Current.family.account_statements.sum(:byte_size)
+    @linked_pagy, @linked_statements = pagy(linked_statement_scope, limit: safe_per_page, page_param: :linked_page)
+    @total_storage_bytes = visible_storage_scope.sum(:byte_size)
     @accounts = Current.user.accessible_accounts.visible.alphabetically
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
