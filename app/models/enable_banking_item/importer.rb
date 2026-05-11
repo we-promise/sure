@@ -251,18 +251,13 @@ class EnableBankingItem::Importer
         )
       end
 
-      book_ids = all_transactions
-        .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
-        .compact.to_set
-
-      book_entry_refs = all_transactions
-        .select { |tx| tx.with_indifferent_access[:transaction_id].blank? }
-        .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
+      book_fingerprints = all_transactions
+        .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
         .compact.to_set
 
       pending_transactions.reject! do |tx|
-        tx = tx.with_indifferent_access
-        tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+        fp = EnableBankingEntry::Processor.compute_external_id(tx)
+        fp.present? && book_fingerprints.include?(fp)
       end
 
       all_transactions = all_transactions + tag_as_pending(pending_transactions)
@@ -291,17 +286,11 @@ class EnableBankingItem::Importer
       if all_transactions.any?
 
         # C4: Remove stored PDNG entries that have now settled as BOOK.
-        # When a BOOK transaction arrives with the same transaction_id as a stored
-        # PDNG entry, the pending entry is stale — drop it to avoid duplicates.
-        book_ids = all_transactions
+        # Uses compute_external_id so ID-less pending transactions are also cleaned up
+        # when their booked counterpart arrives (content fingerprint matches).
+        book_fingerprints = all_transactions
           .reject { |tx| tx.with_indifferent_access[:_pending] }
-          .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
-          .compact.to_set
-
-        # Fallback: collect entry_references for BOOK rows that have no transaction_id
-        book_entry_refs = all_transactions
-          .reject { |tx| tx.with_indifferent_access[:_pending] }
-          .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
+          .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
           .compact.to_set
 
         if include_pending
@@ -310,21 +299,18 @@ class EnableBankingItem::Importer
             pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
             next false unless pending_flag
 
-            tx[:transaction_id].present? ?
-              book_ids.include?(tx[:transaction_id]) :
-              book_entry_refs.include?(tx[:entry_reference].presence)
+            fp = EnableBankingEntry::Processor.compute_external_id(tx)
+            fp.present? && book_fingerprints.include?(fp)
           end
         end
 
         existing_ids = existing_transactions.map { |tx|
-          tx = tx.with_indifferent_access
-          tx[:transaction_id].presence || tx[:entry_reference].presence
+          EnableBankingEntry::Processor.compute_external_id(tx)
         }.compact.to_set
 
         new_transactions = all_transactions.select do |tx|
-          # Use transaction_id if present, otherwise fall back to entry_reference
-          tx_id = tx[:transaction_id].presence || tx[:entry_reference].presence
-          tx_id.present? && !existing_ids.include?(tx_id)
+          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
+          ext_id.present? && !existing_ids.include?(ext_id)
         end
 
         if new_transactions.any? || removed_pending
