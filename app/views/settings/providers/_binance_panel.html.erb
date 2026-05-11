@@ -1,32 +1,39 @@
 <div class="space-y-4">
   <% items = local_assigns[:binance_items] || @binance_items || Current.family.binance_items.active.ordered %>
 
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("settings.providers.binance_panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("settings.providers.binance_panel.step1_html").html_safe %></li>
-      <li><%= t("settings.providers.binance_panel.step2") %></li>
-      <li><%= t("settings.providers.binance_panel.step3") %></li>
-    </ol>
-    <p class="text-destructive text-xs font-medium"><%= t("settings.providers.binance_panel.no_withdraw_warning") %></p>
-  </div>
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: safe_join([
+          content_tag(:p, t("settings.providers.binance_panel.no_withdraw_title"), class: "font-medium"),
+          content_tag(:p, t("settings.providers.binance_panel.no_withdraw_body"), class: "mt-1")
+        ])
+      ) %>
 
-  <div class="bg-surface border border-primary p-3 rounded-lg text-sm">
-    <p class="font-medium text-primary"><%= t("settings.providers.binance_panel.ip_hint_title") %></p>
-    <p class="text-secondary mt-1"><%= t("settings.providers.binance_panel.ip_hint_body") %></p>
-    <% server_ip = ENV["BINANCE_EGRESS_IP"].presence %>
-    <% if server_ip %>
-      <code class="mt-1 block text-xs bg-container-inset px-2 py-1 rounded font-mono text-primary"><%= server_ip %></code>
-    <% else %>
-      <p class="mt-1 text-xs text-secondary italic"><%= t("settings.providers.binance_panel.ip_hint_contact_admin") %></p>
-    <% end %>
+  <div class="space-y-2">
+    <%= render "settings/providers/setup_steps",
+               steps: [
+                 t("settings.providers.binance_panel.step1_html").html_safe,
+                 t("settings.providers.binance_panel.step2"),
+                 t("settings.providers.binance_panel.step3")
+               ] %>
+
+    <div class="bg-surface-inset rounded-xl p-4 text-sm">
+      <p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">
+        <%= t("settings.providers.binance_panel.ip_hint_title") %>
+      </p>
+      <p class="text-secondary"><%= t("settings.providers.binance_panel.ip_hint_body") %></p>
+      <% server_ip = ENV["BINANCE_EGRESS_IP"].presence %>
+      <% if server_ip %>
+        <code class="mt-2 block text-xs bg-container px-2 py-1 rounded font-mono text-primary"><%= server_ip %></code>
+      <% else %>
+        <p class="mt-1 text-xs text-secondary italic"><%= t("settings.providers.binance_panel.ip_hint_contact_admin") %></p>
+      <% end %>
+    </div>
   </div>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= h(error_msg) %>"><%= error_msg %></p>
-    </div>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <% if items.any? %>
@@ -94,13 +101,4 @@
     <% end %>
   <% end %>
 
-  <div class="flex items-center gap-2">
-    <% if items.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("settings.providers.binance_panel.status_connected") %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-tertiary rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("settings.providers.binance_panel.status_not_connected") %></p>
-    <% end %>
-  </div>
 </div>

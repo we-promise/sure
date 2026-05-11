@@ -1,11 +1,13 @@
 ---
 es:
   accounts:
+    not_authorized: No tienes permiso para gestionar esta cuenta
     account:
       edit: Editar
       link_lunchflow: Vincular con Lunch Flow
       link_provider: Vincular con proveedor
       unlink_provider: Desvincular de proveedor
+      change_simplefin_account: Cambiar cuenta de SimpleFIN
       troubleshoot: Solucionar problemas
       enable: Activar cuenta
       disable: Desactivar cuenta
@@ -13,6 +15,7 @@ es:
       remove_default: Quitar predeterminada
       default_label: Predeterminada
       delete: Eliminar cuenta
+      sharing: Compartir
     chart:
       data_not_available: Datos no disponibles para el período seleccionado
     create:
@@ -22,12 +25,14 @@ es:
     destroy:
       success: "Cuenta %{type} programada para eliminación"
       cannot_delete_linked: "No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero."
+      failed: "No se pudo eliminar el recurso. Inténtalo de nuevo más tarde."
     empty:
       empty_message: Añade una cuenta mediante conexión, importación o introducción manual.
       new_account: Nueva cuenta
       no_accounts: Aún no hay cuentas
     form:
       balance: Saldo actual
+      opening_balance_date_label: Fecha del saldo inicial
       name_label: Nombre de la cuenta
       name_placeholder: Ejemplo de nombre de cuenta
       additional_details: Detalles adicionales
@@ -56,6 +61,7 @@ es:
         title: ¿Cómo te gustaría añadirla?
       title: ¿Qué te gustaría añadir?
     show:
+      limited_fx_history_warning: "El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada."
       activity:
         amount: Cantidad
         balance: Saldo
@@ -128,6 +134,7 @@ es:
       ca: Canadá
       au: Australia
       eu: Europa
+      in: India
       generic: General
     confirm_unlink:
       title: ¿Desvincular cuenta del proveedor?
