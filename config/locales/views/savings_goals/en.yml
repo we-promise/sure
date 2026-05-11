@@ -6,14 +6,30 @@ en:
       subtitle: Your savings accounts and the goals you're working toward.
       new_goal: New goal
       empty_filtered: No goals match.
-      hero:
-        total_in_savings: Total in savings
-        delta_up: "+%{amount} (↑ %{percent}%) vs. last 30 days"
-        delta_down: "−%{amount} (↓ %{percent}%) vs. last 30 days"
-        delta_flat: vs. last 30 days
-        accounts: Accounts
-        active_goals: Active goals
-        saved_toward_goals: Saved toward goals
+      kpi:
+        velocity_label: Contributed · last 30d
+        velocity_delta_up: "↑ %{percent}%% vs. prior 30d"
+        velocity_delta_down: "↓ %{percent}%% vs. prior 30d"
+        velocity_delta_flat: vs. prior 30d
+        velocity_delta_zero_base: First 30 days of activity
+        needs_this_month_label: Needs this month
+        needs_this_month_sub:
+          one: across 1 goal behind pace
+          other: "across %{count} goals behind pace"
+        needs_this_month_zero_sub: No goals behind pace
+        on_track_label: Goals on track
+        on_track_value: "%{on_track} of %{total}"
+        on_track_sub_parts:
+          behind:
+            one: 1 behind
+            other: "%{count} behind"
+          no_date:
+            one: 1 open-ended
+            other: "%{count} open-ended"
+          paused:
+            one: 1 paused
+            other: "%{count} paused"
+        on_track_sub_all_good: All active goals on pace
       accounts_section:
         heading: Accounts
         subtitle: Your savings and emergency reserves
@@ -28,6 +44,11 @@ en:
         placeholder: Search goals…
         aria_label: Search savings goals
         empty: No goals match.
+        empty_with_query: "No goals match \"%{query}\"."
+        empty_with_filter: No goals match this filter.
+        empty_with_both: "No goals match \"%{query}\" with this filter."
+        clear_search: Clear search
+        show_all: Show all
       chips:
         all: All
         on_track: On track

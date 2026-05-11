@@ -15,7 +15,7 @@ class SavingsGoalsController < ApplicationController
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
     @savings_accounts = Current.family.savings_subtype_accounts
     @account_goal_counts = goal_count_per_account(@savings_accounts)
-    @hero = hero_payload(all_goals)
+    @kpi = kpi_payload(@active_goals)
     @show_search = @active_goals.size > 6
   end
 
@@ -155,21 +155,41 @@ class SavingsGoalsController < ApplicationController
       end
     end
 
-    def hero_payload(all_goals)
+    def kpi_payload(active_goals)
       family = Current.family
       currency = family.primary_currency_code
-      total_savings = family.total_savings_balance
-      saved_toward_goals = all_goals.sum { |g| g.current_balance.to_d }
-      delta = family.savings_balance_30d_delta
+      today = Date.current
+
+      velocity_30d = family.contribution_velocity(range: (today - 30)..today)
+      velocity_prior_30d = family.contribution_velocity(range: (today - 60)..(today - 31))
+      delta_amount = velocity_30d - velocity_prior_30d
+      delta_percent = velocity_prior_30d.zero? ? nil : ((delta_amount / velocity_prior_30d) * 100).round(1)
+      velocity_direction = if delta_amount.positive? then :up
+      elsif delta_amount.negative? then :down
+      else :flat
+      end
+
+      behind = active_goals.select { |g| g.status == :behind }
+      on_track = active_goals.select { |g| g.status == :on_track }
+      no_date = active_goals.select { |g| g.status == :no_target_date }
+      paused = active_goals.select(&:paused?)
+      needs = behind.sum { |g| g.monthly_target_amount.to_d }
+
       {
         currency: currency,
-        total_savings_money: Money.new(total_savings, currency),
-        saved_toward_goals_money: Money.new(saved_toward_goals, currency),
-        accounts_count: family.savings_subtype_accounts.size,
-        active_goals_count: @counts["active"].to_i,
-        delta: delta,
-        delta_amount_money: Money.new(delta[:amount].abs, currency),
-        sparkline_series: family.savings_balance_series(days: 30)
+        velocity_30d: velocity_30d,
+        velocity_30d_money: Money.new(velocity_30d.abs, currency),
+        velocity_prior_30d_money: Money.new(velocity_prior_30d, currency),
+        velocity_30d_sign: velocity_direction == :down ? "−" : (velocity_direction == :up ? "+" : ""),
+        velocity_delta_amount_money: Money.new(delta_amount.abs, currency),
+        velocity_delta_percent: delta_percent,
+        velocity_direction: velocity_direction,
+        needs_this_month_money: Money.new(needs, currency),
+        behind_count: behind.size,
+        on_track_count: on_track.size,
+        no_date_count: no_date.size,
+        paused_count: paused.size,
+        active_total: active_goals.size
       }
     end
 

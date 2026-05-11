@@ -7,39 +7,64 @@
   <% if @counts["all"].zero? && @savings_accounts.empty? %>
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
-    <%# Hero card %>
-    <section class="bg-container rounded-xl shadow-border-xs p-7 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] gap-6 items-stretch min-h-[220px]">
-      <div class="flex flex-col">
-        <p class="text-xs text-secondary"><%= t(".hero.total_in_savings") %></p>
-        <p class="text-4xl font-medium text-primary tabular-nums mt-1 privacy-sensitive"><%= @hero[:total_savings_money].format %></p>
-        <% delta = @hero[:delta] %>
-        <% if delta[:direction] != :flat %>
-          <p class="text-xs <%= delta[:direction] == :up ? "text-success" : "text-destructive" %> mt-1 tabular-nums">
-            <%= t("savings_goals.index.hero.delta_#{delta[:direction]}", amount: @hero[:delta_amount_money].format, percent: delta[:percent].abs) %>
+    <%# KPI strip %>
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <%# Velocity %>
+      <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.velocity_label") %></p>
+        <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive">
+          <%= @kpi[:velocity_30d_sign] %><%= @kpi[:velocity_30d_money].format %>
+        </p>
+        <% if @kpi[:velocity_direction] == :flat %>
+          <p class="text-xs text-secondary mt-1 tabular-nums">
+            <% if @kpi[:velocity_prior_30d_money].zero? && @kpi[:velocity_30d_money].zero? %>
+              <%= t(".kpi.velocity_delta_zero_base") %>
+            <% else %>
+              <%= t(".kpi.velocity_delta_flat") %>
+            <% end %>
+          </p>
+        <% elsif @kpi[:velocity_delta_percent].nil? %>
+          <p class="text-xs text-success mt-1 tabular-nums"><%= t(".kpi.velocity_delta_zero_base") %></p>
+        <% else %>
+          <p class="text-xs <%= @kpi[:velocity_direction] == :up ? "text-success" : "text-destructive" %> mt-1 tabular-nums">
+            <%= t(".kpi.velocity_delta_#{@kpi[:velocity_direction]}", percent: @kpi[:velocity_delta_percent].abs) %>
           </p>
         <% end %>
-
-        <div class="grid grid-cols-3 gap-6 mt-auto pt-6">
-          <div>
-            <p class="text-xs text-secondary"><%= t(".hero.accounts") %></p>
-            <p class="text-lg font-medium text-primary mt-1 tabular-nums"><%= @hero[:accounts_count] %></p>
-          </div>
-          <div>
-            <p class="text-xs text-secondary"><%= t(".hero.active_goals") %></p>
-            <p class="text-lg font-medium text-primary mt-1 tabular-nums"><%= @hero[:active_goals_count] %></p>
-          </div>
-          <div>
-            <p class="text-xs text-secondary"><%= t(".hero.saved_toward_goals") %></p>
-            <p class="text-lg font-medium text-primary mt-1 tabular-nums privacy-sensitive"><%= @hero[:saved_toward_goals_money].format %></p>
-          </div>
-        </div>
       </div>
 
-      <% if @hero[:sparkline_series].size >= 2 %>
-        <div class="h-full min-h-[200px]"
-             data-controller="savings-sparkline"
-             data-savings-sparkline-series-value="<%= @hero[:sparkline_series].to_json %>"></div>
-      <% end %>
+      <%# Needs this month %>
+      <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.needs_this_month_label") %></p>
+        <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive"><%= @kpi[:needs_this_month_money].format %></p>
+        <p class="text-xs text-secondary mt-1">
+          <% if @kpi[:behind_count].zero? %>
+            <%= t(".kpi.needs_this_month_zero_sub") %>
+          <% else %>
+            <%= t(".kpi.needs_this_month_sub", count: @kpi[:behind_count]) %>
+          <% end %>
+        </p>
+      </div>
+
+      <%# On-track count %>
+      <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.on_track_label") %></p>
+        <p class="text-3xl font-medium text-primary tabular-nums mt-2">
+          <%= t(".kpi.on_track_value", on_track: @kpi[:on_track_count], total: @kpi[:active_total]) %>
+        </p>
+        <p class="text-xs text-secondary mt-1">
+          <%
+            parts = []
+            parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
+            parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
+            parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?
+          %>
+          <% if parts.any? %>
+            <%= parts.join(" · ") %>
+          <% else %>
+            <%= t(".kpi.on_track_sub_all_good") %>
+          <% end %>
+        </p>
+      </div>
     </section>
 
     <%# Accounts section %>
@@ -58,7 +83,11 @@
     <% end %>
 
     <%# Goals section %>
-    <section data-controller="savings-goals-filter">
+    <section data-controller="savings-goals-filter"
+             data-savings-goals-filter-empty-query-value="<%= t(".search.empty_with_query", query: "__QUERY__") %>"
+             data-savings-goals-filter-empty-filter-value="<%= t(".search.empty_with_filter") %>"
+             data-savings-goals-filter-empty-both-value="<%= t(".search.empty_with_both", query: "__QUERY__") %>"
+             data-savings-goals-filter-empty-default-value="<%= t(".search.empty") %>">
       <div class="flex items-start justify-between mb-3 gap-3">
         <div>
           <h2 class="text-base font-semibold text-primary"><%= t(".goals_section.heading") %></h2>
@@ -117,7 +146,21 @@
           <% end %>
         </div>
         <div class="hidden bg-container rounded-xl shadow-border-xs py-10 text-center" data-savings-goals-filter-target="empty">
-          <p class="text-sm text-secondary"><%= t(".search.empty") %></p>
+          <p class="text-sm text-secondary" data-savings-goals-filter-target="emptyCopy"><%= t(".search.empty") %></p>
+          <div class="mt-3 flex items-center justify-center gap-2">
+            <button type="button"
+                    class="hidden text-xs font-medium text-secondary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100"
+                    data-savings-goals-filter-target="emptyClearSearch"
+                    data-action="click->savings-goals-filter#clearSearch">
+              <%= t(".search.clear_search") %>
+            </button>
+            <button type="button"
+                    class="hidden text-xs font-medium text-secondary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100"
+                    data-savings-goals-filter-target="emptyClearFilter"
+                    data-action="click->savings-goals-filter#clearFilter">
+              <%= t(".search.show_all") %>
+            </button>
+          </div>
         </div>
       <% else %>
         <div class="bg-container rounded-xl shadow-border-xs py-12 text-center">

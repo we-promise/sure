@@ -5,8 +5,24 @@ import { Controller } from "@hotwired/stimulus";
 // and data-goal-status; the controller toggles `.hidden` on cards
 // based on the active query/chip.
 export default class extends Controller {
-  static targets = ["input", "chip", "card", "empty", "grid", "count"];
-  static values = { status: { type: String, default: "all" } };
+  static targets = [
+    "input",
+    "chip",
+    "card",
+    "empty",
+    "emptyCopy",
+    "emptyClearSearch",
+    "emptyClearFilter",
+    "grid",
+    "count",
+  ];
+  static values = {
+    status: { type: String, default: "all" },
+    emptyQuery: { type: String, default: "" },
+    emptyFilter: { type: String, default: "" },
+    emptyBoth: { type: String, default: "" },
+    emptyDefault: { type: String, default: "" },
+  };
 
   connect() {
     this.syncChipState();
@@ -38,6 +54,46 @@ export default class extends Controller {
     if (this.hasCountTarget) {
       this.countTarget.textContent = visible;
     }
+
+    this.updateEmptyState(visible, query, active);
+  }
+
+  updateEmptyState(visible, query, active) {
+    if (visible > 0 || !this.hasEmptyCopyTarget) return;
+    const rawQuery = this.hasInputTarget ? this.inputTarget.value.trim() : "";
+    const hasQuery = rawQuery.length > 0;
+    const hasFilter = active !== "all";
+    let copy;
+    if (hasQuery && hasFilter) {
+      copy = this.emptyBothValue.replace("__QUERY__", rawQuery);
+    } else if (hasQuery) {
+      copy = this.emptyQueryValue.replace("__QUERY__", rawQuery);
+    } else if (hasFilter) {
+      copy = this.emptyFilterValue;
+    } else {
+      copy = this.emptyDefaultValue;
+    }
+    this.emptyCopyTarget.textContent = copy;
+    if (this.hasEmptyClearSearchTarget) {
+      this.emptyClearSearchTarget.classList.toggle("hidden", !hasQuery);
+    }
+    if (this.hasEmptyClearFilterTarget) {
+      this.emptyClearFilterTarget.classList.toggle("hidden", !hasFilter);
+    }
+  }
+
+  clearSearch() {
+    if (this.hasInputTarget) {
+      this.inputTarget.value = "";
+      this.inputTarget.focus();
+    }
+    this.filter();
+  }
+
+  clearFilter() {
+    this.statusValue = "all";
+    this.syncChipState();
+    this.filter();
   }
 
   selectChip(event) {

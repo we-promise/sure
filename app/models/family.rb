@@ -54,51 +54,11 @@ class Family < ApplicationRecord
     end
   end
 
-  # Sum of current balances across savings_subtype_accounts, in the
-  # family's primary currency. Multi-currency accounts are summed
-  # naively (FX out of scope for the v1 hero card).
-  def total_savings_balance
-    savings_subtype_accounts.sum { |a| a.balance.to_d }
-  end
-
-  # Returns [{ date: "YYYY-MM-DD", value: Float }, ...] running daily
-  # totals over the trailing `days` window across savings_subtype_accounts.
-  # Uses each account's recorded balances; falls back to the current
-  # balance for any day that has no recorded snapshot.
-  def savings_balance_series(days: 30)
-    accs = savings_subtype_accounts
-    return [] if accs.empty?
-
-    start_date = days.days.ago.to_date
-    end_date = Date.current
-    balances_by_account = Balance
-      .where(account_id: accs.map(&:id), date: start_date..end_date)
-      .order(:date)
-      .group_by(&:account_id)
-
-    (start_date..end_date).map do |date|
-      total = accs.sum do |account|
-        snapshots = balances_by_account[account.id] || []
-        snapshot = snapshots.reverse.find { |b| b.date <= date }
-        (snapshot&.balance || account.balance).to_d
-      end
-      { date: date.to_s, value: total.to_f }
-    end
-  end
-
-  # 30-day delta on total savings balance, with arrow + percent helpers
-  # for the hero card. { amount:, percent:, direction: } where direction
-  # is :up / :down / :flat.
-  def savings_balance_30d_delta
-    series = savings_balance_series(days: 30)
-    return { amount: 0, percent: 0, direction: :flat } if series.size < 2
-
-    first = series.first[:value].to_d
-    last = series.last[:value].to_d
-    diff = last - first
-    pct = first.zero? ? 0 : ((diff / first) * 100).round(1)
-    dir = diff.positive? ? :up : (diff.negative? ? :down : :flat)
-    { amount: diff, percent: pct.to_f, direction: dir }
+  # Sum of contribution amounts within the given date range, returned as
+  # a BigDecimal in the family's primary currency. Powers the savings
+  # goals "Contributed · last 30d" KPI.
+  def contribution_velocity(range:)
+    savings_contributions.where(contributed_at: range).sum(:amount).to_d
   end
 
   has_many :llm_usages, dependent: :destroy
