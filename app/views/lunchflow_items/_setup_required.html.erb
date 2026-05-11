@@ -3,13 +3,11 @@
     <% dialog.with_header(title: "Lunch Flow Setup Required") %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-start gap-3">
-          <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
-          <div class="text-sm text-secondary">
-            <p class="font-medium text-primary mb-2">API Key Not Configured</p>
-            <p>Before you can link Lunch Flow accounts, you need to configure your Lunch Flow API key.</p>
-          </div>
-        </div>
+        <%= render DS::Alert.new(
+          title: "API Key Not Configured",
+          message: "Before you can link Lunch Flow accounts, you need to configure your Lunch Flow API key.",
+          variant: :warning
+        ) %>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
           <p class="font-medium text-primary">Setup Steps:</p>

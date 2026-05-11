@@ -1,22 +1,16 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
-    <ol>
-      <li>Visit <a href="https://beta-bridge.simplefin.org" target="_blank" rel="noopener noreferrer" class="link">SimpleFIN Bridge</a> to get your one-time setup token</li>
-      <li>Paste the token below and click the Save button to enable SimpleFIN bank data sync</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts and link them to your existing ones</li>
-    </ol>
-
-    <p class="text-primary font-medium">Field descriptions:</p>
-    <ul>
-      <li><strong>Setup Token:</strong> Your SimpleFIN one-time setup token from SimpleFIN Bridge (consumed on first use)</li>
-    </ul>
-  </div>
+  <%
+    sf_link = link_to("SimpleFIN Bridge", "https://beta-bridge.simplefin.org", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+  %>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.simplefin_panel.step_1_html", link: sf_link),
+               t("settings.providers.simplefin_panel.step_2"),
+               t("settings.providers.simplefin_panel.step_3")
+             ] %>
 
   <% if defined?(@error_message) && @error_message.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= @error_message %>"><%= @error_message %></p>
-    </div>
+    <%= render DS::Alert.new(message: @error_message, variant: :error) %>
   <% end %>
 
   <%= styled_form_with model: SimplefinItem.new,
@@ -31,18 +25,9 @@
                         type: :password %>
 
     <div class="flex justify-end">
-      <%= form.submit "Save Configuration",
+      <%= form.submit "Save and connect",
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-gray-900 theme-dark:focus:ring-white focus:ring-offset-2 transition-colors" %>
     </div>
   <% end %>
 
-  <div class="flex items-center gap-2">
-    <% if @simplefin_items&.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
-    <% end %>
-  </div>
 </div>

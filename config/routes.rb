@@ -205,8 +205,14 @@ Rails.application.routes.draw do
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
-    resource :bank_sync, only: :show, controller: "bank_sync"
-    resource :providers, only: %i[show update]
+    get "bank_sync", to: redirect("/settings/providers", status: 301)
+    resource :providers, only: %i[show update] do
+      collection do
+        post :sync_all
+        post ":provider_key/sync", action: :sync, as: :sync_provider
+        get ":provider_key/connect_form", action: :connect_form, as: :connect_form
+      end
+    end
   end
 
   resource :subscription, only: %i[new show create] do
