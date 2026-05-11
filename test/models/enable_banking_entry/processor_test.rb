@@ -83,16 +83,88 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises ArgumentError when both transaction_id and entry_reference are nil" do
+  # --- compute_external_id unit tests ---
+
+  test "compute_external_id returns transaction_id-based id when present" do
+    assert_equal "enable_banking_txn_abc",
+      EnableBankingEntry::Processor.compute_external_id(transaction_id: "txn_abc", entry_reference: "ref_xyz")
+  end
+
+  test "compute_external_id falls back to entry_reference when transaction_id is blank" do
+    assert_equal "enable_banking_ref_xyz",
+      EnableBankingEntry::Processor.compute_external_id(transaction_id: nil, entry_reference: "ref_xyz")
+  end
+
+  test "compute_external_id returns content fingerprint when both id fields are absent" do
+    tx = {
+      booking_date: "2026-03-15",
+      transaction_amount: { amount: "42.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Spar" }
+    }
+    result = EnableBankingEntry::Processor.compute_external_id(tx)
+    assert result.start_with?("enable_banking_content_"), "Expected content fingerprint, got: #{result}"
+  end
+
+  test "compute_external_id fingerprint is stable across calls" do
+    tx = {
+      booking_date: "2026-03-15",
+      transaction_amount: { amount: "42.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Spar" }
+    }
+    assert_equal EnableBankingEntry::Processor.compute_external_id(tx),
+                 EnableBankingEntry::Processor.compute_external_id(tx)
+  end
+
+  test "compute_external_id returns nil for transaction with no identifiable content" do
+    assert_nil EnableBankingEntry::Processor.compute_external_id({})
+    assert_nil EnableBankingEntry::Processor.compute_external_id(transaction_id: nil, entry_reference: nil)
+  end
+
+  # --- ID-less transaction processing ---
+
+  test "imports transaction using content fingerprint when transaction_id and entry_reference are absent" do
     tx = {
       transaction_id: nil,
       entry_reference: nil,
       booking_date: Date.current.to_s,
       transaction_amount: { amount: "10.00", currency: "EUR" },
-      creditor: { name: "Test" },
+      creditor: { name: "Lidl" },
       credit_debit_indicator: "DBIT",
       status: "BOOK"
     }
+
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    expected_id = EnableBankingEntry::Processor.compute_external_id(tx)
+    assert @account.entries.exists?(external_id: expected_id, source: "enable_banking")
+  end
+
+  test "does not create duplicate when same id-less transaction is processed twice" do
+    tx = {
+      transaction_id: nil,
+      entry_reference: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "10.00", currency: "EUR" },
+      creditor: { name: "Lidl" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    assert_no_difference "@account.entries.count" do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+  end
+
+  test "raises ArgumentError for transaction with no identifiable content at all" do
+    tx = { transaction_id: nil, entry_reference: nil }
 
     assert_raises(ArgumentError) do
       EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process

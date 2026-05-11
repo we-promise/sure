@@ -50,3 +50,7 @@ en:
       inactive: Inactive
     badges:
       manual: Manual
+    transfer_marked_as_recurring: Transfer marked as recurring
+    transfer_already_exists: A recurring transfer already exists for this account pair
+    transfer_creation_failed: Failed to create recurring transfer. Please check the transfer details and try again.
+    transfer_feature_disabled: Recurring transactions are disabled for this family

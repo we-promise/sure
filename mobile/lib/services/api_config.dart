@@ -1,5 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/custom_proxy_header.dart';
+import 'custom_proxy_headers_service.dart';
+
 class ApiConfig {
   // Base URL for the API - can be changed to point to different environments
   // For local development, use: http://10.0.2.2:3000 (Android emulator)
@@ -32,14 +35,53 @@ class ApiConfig {
     _apiKeyValue = null;
   }
 
+  // Custom proxy headers
+  static List<CustomProxyHeader> _customProxyHeaders = [];
+
+  static List<CustomProxyHeader> get customProxyHeaders =>
+      List.unmodifiable(_customProxyHeaders);
+
+  static void setCustomProxyHeaders(List<CustomProxyHeader> headers) {
+    _customProxyHeaders = CustomProxyHeader.sanitize(headers);
+  }
+
+  static Map<String, String> get customProxyHeaderMap {
+    return {
+      for (final header in _customProxyHeaders) header.name: header.value,
+    };
+  }
+
+  static Map<String, String> jsonHeaders() {
+    return {
+      ...customProxyHeaderMap,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+  }
+
+  static Map<String, String> htmlHeaders() {
+    return {
+      ...customProxyHeaderMap,
+      'Accept': 'text/html',
+    };
+  }
+
   /// Returns the correct auth headers based on the current auth mode.
   /// In API key mode, uses X-Api-Key header.
   /// In token mode, uses Authorization: Bearer header.
   static Map<String, String> getAuthHeaders(String token) {
     if (_isApiKeyAuth && _apiKeyValue != null) {
-      return {'X-Api-Key': _apiKeyValue!, 'Accept': 'application/json'};
+      return {
+        ...customProxyHeaderMap,
+        'X-Api-Key': _apiKeyValue!,
+        'Accept': 'application/json',
+      };
     }
-    return {'Authorization': 'Bearer $token', 'Accept': 'application/json'};
+    return {
+      ...customProxyHeaderMap,
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
   }
 
   /// Initialize the API configuration by loading the backend URL from storage
@@ -51,6 +93,7 @@ class ApiConfig {
 
       if (savedUrl != null && savedUrl.isNotEmpty) {
         _baseUrl = savedUrl;
+        _customProxyHeaders = await CustomProxyHeadersService.instance.loadHeaders();
         return true;
       }
 
@@ -58,6 +101,7 @@ class ApiConfig {
       // go straight to login while still letting users override it later.
       _baseUrl = _defaultBaseUrl;
       await prefs.setString(_backendUrlKey, _defaultBaseUrl);
+      _customProxyHeaders = await CustomProxyHeadersService.instance.loadHeaders();
       return true;
     } catch (e) {
       // If initialization fails, keep the default URL
