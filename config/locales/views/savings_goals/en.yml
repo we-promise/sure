@@ -20,6 +20,8 @@ en:
       goals_section:
         heading: Goals
         subtitle: Save toward what matters.
+      ongoing_section:
+        heading: Ongoing
       completed_section:
         heading: Completed
       search:
