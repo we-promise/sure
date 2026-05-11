@@ -21,7 +21,7 @@
       <%= render DS::Link.new(
         text: t("savings_goals.empty_state.add_account"),
         variant: "primary",
-        href: new_account_path,
+        href: new_account_path(return_to: savings_goals_path),
         icon: "plus"
       ) %>
     <% end %>
