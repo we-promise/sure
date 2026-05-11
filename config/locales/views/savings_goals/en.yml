@@ -185,6 +185,10 @@ en:
       continue: Continue
       back: Back
       submit: Create goal
+      errors:
+        name_required: Please give your goal a name.
+        amount_required: Set a target amount greater than zero.
+        accounts_required: Select at least one funding account.
       step1:
         label: Goal details
         heading: What are you saving for?

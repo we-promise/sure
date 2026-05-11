@@ -1,7 +1,7 @@
 <%# locals: (savings_goal:, linkable_accounts:) %>
 
 <div data-controller="savings-goal-stepper">
-  <% if savings_goal.errors.any? %>
+  <% if savings_goal.errors[:base].any? %>
     <%= render "shared/form_errors", model: savings_goal %>
   <% end %>
 
@@ -38,13 +38,17 @@
                            class: "flex-1",
                            data: { savings_goal_stepper_target: "nameInput", action: "input->savings-goal-stepper#nameChanged" } %>
         </div>
+        <p class="hidden mt-1.5 text-xs text-destructive" data-savings-goal-stepper-target="nameError"><%= t("savings_goals.form_stepper.errors.name_required") %></p>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <%= f.money_field :target_amount,
-                          label: t("savings_goals.form_stepper.step1.fields.target_amount"),
-                          hide_currency: true,
-                          amount_data: { savings_goal_stepper_target: "amountInput" } %>
+        <div>
+          <%= f.money_field :target_amount,
+                            label: t("savings_goals.form_stepper.step1.fields.target_amount"),
+                            hide_currency: true,
+                            amount_data: { savings_goal_stepper_target: "amountInput", action: "input->savings-goal-stepper#amountChanged" } %>
+          <p class="hidden mt-1.5 text-xs text-destructive" data-savings-goal-stepper-target="amountError"><%= t("savings_goals.form_stepper.errors.amount_required") %></p>
+        </div>
         <%= f.date_field :target_date,
                          label: t("savings_goals.form_stepper.step1.fields.target_date") %>
       </div>
@@ -80,6 +84,7 @@
             </div>
           <% end %>
         </div>
+        <p class="hidden mt-1.5 text-xs text-destructive" data-savings-goal-stepper-target="accountsError"><%= t("savings_goals.form_stepper.errors.accounts_required") %></p>
       </div>
 
       <details class="border border-subdued rounded-lg group">

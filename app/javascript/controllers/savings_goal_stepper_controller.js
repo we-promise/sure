@@ -18,6 +18,9 @@ export default class extends Controller {
     "nameInput",
     "amountInput",
     "avatarPreview",
+    "nameError",
+    "amountError",
+    "accountsError",
     "linkedAccountCheckbox",
     "initialContributionAmount",
     "initialContributionAccountSelect",
@@ -29,6 +32,8 @@ export default class extends Controller {
     "footerRightButton",
     "submitButton",
   ];
+
+  static INVALID_INPUT_CLASSES = ["ring-2", "ring-destructive", "border-destructive"];
 
   static values = {
     step1Subtitle: { type: String, default: "Step 1 of 2 · Goal details" },
@@ -65,10 +70,6 @@ export default class extends Controller {
 
   next() {
     if (!this.validateStep1()) return;
-    if (!this.linkedAccountCheckboxTargets.some((cb) => cb.checked)) {
-      this.flashLinkedAccountsRequired();
-      return;
-    }
 
     this.currentStep = 2;
     this.step1PanelTarget.classList.add("hidden");
@@ -91,9 +92,15 @@ export default class extends Controller {
     this.refreshAccountSelect();
     this.refreshSubmitState();
     this.updateReview();
+    if (this.linkedAccountCheckboxTargets.some((cb) => cb.checked) && this.hasAccountsErrorTarget) {
+      this.accountsErrorTarget.classList.add("hidden");
+    }
   }
 
   nameChanged() {
+    if (this.hasNameInputTarget) {
+      this.clearFieldError(this.nameInputTarget, this.hasNameErrorTarget ? this.nameErrorTarget : null);
+    }
     if (!this.hasAvatarPreviewTarget || !this.hasNameInputTarget) return;
     const name = this.nameInputTarget.value.trim();
     const initial = name ? name.charAt(0).toUpperCase() : "?";
@@ -102,17 +109,47 @@ export default class extends Controller {
   }
 
   validateStep1() {
-    const requiredInputs = this.step1PanelTarget.querySelectorAll(
-      'input[name="savings_goal[name]"], input[name="savings_goal[target_amount]"]'
-    );
     let ok = true;
-    requiredInputs.forEach((input) => {
-      if (typeof input.checkValidity === "function" && !input.checkValidity()) {
-        input.reportValidity();
-        ok = false;
-      }
-    });
+    let firstInvalid = null;
+
+    const nameInput = this.hasNameInputTarget ? this.nameInputTarget : null;
+    if (nameInput && nameInput.value.trim().length === 0) {
+      this.showFieldError(nameInput, this.hasNameErrorTarget ? this.nameErrorTarget : null);
+      firstInvalid ||= nameInput;
+      ok = false;
+    }
+
+    const amountInput = this.hasAmountInputTarget ? this.amountInputTarget : null;
+    const amountValue = amountInput ? parseFloat(amountInput.value) : NaN;
+    if (amountInput && (!Number.isFinite(amountValue) || amountValue <= 0)) {
+      this.showFieldError(amountInput, this.hasAmountErrorTarget ? this.amountErrorTarget : null);
+      firstInvalid ||= amountInput;
+      ok = false;
+    }
+
+    if (!this.linkedAccountCheckboxTargets.some((cb) => cb.checked)) {
+      if (this.hasAccountsErrorTarget) this.accountsErrorTarget.classList.remove("hidden");
+      ok = false;
+    }
+
+    if (firstInvalid) firstInvalid.focus();
     return ok;
+  }
+
+  showFieldError(input, errorEl) {
+    if (input) input.classList.add(...this.constructor.INVALID_INPUT_CLASSES);
+    if (errorEl) errorEl.classList.remove("hidden");
+  }
+
+  clearFieldError(input, errorEl) {
+    if (input) input.classList.remove(...this.constructor.INVALID_INPUT_CLASSES);
+    if (errorEl) errorEl.classList.add("hidden");
+  }
+
+  amountChanged() {
+    if (this.hasAmountInputTarget) {
+      this.clearFieldError(this.amountInputTarget, this.hasAmountErrorTarget ? this.amountErrorTarget : null);
+    }
   }
 
   refreshSubmitState() {
@@ -230,15 +267,6 @@ export default class extends Controller {
       } else {
         this.reviewSuggestedTarget.textContent = "—";
       }
-    }
-  }
-
-  flashLinkedAccountsRequired() {
-    const first = this.linkedAccountCheckboxTargets[0];
-    if (first) {
-      first.focus();
-      first.classList.add("ring-2", "ring-destructive");
-      setTimeout(() => first.classList.remove("ring-2", "ring-destructive"), 1200);
     }
   }
 
