@@ -4,6 +4,8 @@ interface Env {
   RAILS_CONTAINER: DurableObjectNamespace<RailsContainer>;
 }
 
+const DIAGNOSTICS_KEY = "preview-diagnostics";
+
 export class RailsContainer extends Container {
   // Rails runs on port 3000
   defaultPort = 3000;
@@ -28,16 +30,47 @@ export class RailsContainer extends Container {
   // Sleep after 30 minutes of inactivity to save resources
   sleepAfter = "30m";
 
-  override onStart(): void {
+  override async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/_container_status") {
+      return Response.json({
+        state: await this.getState(),
+        diagnostics: (await this.ctx.storage.get(DIAGNOSTICS_KEY)) ?? null,
+      });
+    }
+
+    return super.fetch(request);
+  }
+
+  override async onStart(): Promise<void> {
     console.log("Rails container starting...");
+    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+      event: "start",
+      at: new Date().toISOString(),
+      state: await this.getState(),
+    });
   }
 
-  override onStop(): void {
-    console.log("Rails container stopped");
+  override async onStop(params: { exitCode: number; reason: string }): Promise<void> {
+    console.log("Rails container stopped", params);
+    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+      event: "stop",
+      at: new Date().toISOString(),
+      exitCode: params.exitCode,
+      reason: params.reason,
+      state: await this.getState(),
+    });
   }
 
-  override onError(error: unknown): void {
+  override async onError(error: unknown): Promise<void> {
     console.error("Rails container error:", error);
+    await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+      event: "error",
+      at: new Date().toISOString(),
+      message: error instanceof Error ? error.message : String(error),
+      state: await this.getState(),
+    });
   }
 }
 
