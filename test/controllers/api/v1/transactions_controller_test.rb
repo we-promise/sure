@@ -208,6 +208,57 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal response_data["id"], entry.transaction.id
   end
 
+  test "should default source for external idempotency key" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense",
+        external_id: "import-txn-default-source"
+      }
+    }
+
+    assert_difference("@account.entries.count", 1) do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal "import-txn-default-source", response_data["external_id"]
+    assert_equal "api", response_data["source"]
+  end
+
+  test "should reject source without external idempotency key" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense",
+        source: "external_import"
+      }
+    }
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_equal "Source requires external_id", response_data["message"]
+    assert_equal [ "Source requires external_id" ], response_data["errors"]
+  end
+
   test "should return existing transaction for duplicate external idempotency key" do
     transaction_params = {
       transaction: {

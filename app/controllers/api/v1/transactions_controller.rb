@@ -78,6 +78,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    if idempotency_source_param.present? && idempotency_external_id.blank?
+      render json: {
+        error: "validation_failed",
+        message: "Source requires external_id",
+        errors: [ "Source requires external_id" ]
+      }, status: :unprocessable_entity
+      return
+    end
+
     account = family.accounts.writable_by(current_resource_owner).find(transaction_params[:account_id])
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
@@ -294,7 +303,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :account_id, :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, :external_id, :source, tag_ids: []
+        :category_id, :merchant_id, :nature, tag_ids: []
       )
     end
 
@@ -359,11 +368,20 @@ end
     end
 
     def idempotency_external_id
-      transaction_params[:external_id].presence
+      idempotency_param_value(:external_id)
     end
 
     def idempotency_source
-      transaction_params[:source].presence || "api"
+      idempotency_source_param.presence || "api"
+    end
+
+    def idempotency_source_param
+      idempotency_param_value(:source)
+    end
+
+    def idempotency_param_value(key)
+      value = params.dig(:transaction, key)
+      value.to_s.presence if value.is_a?(String) || value.is_a?(Numeric)
     end
 
     def existing_idempotent_entry(account)

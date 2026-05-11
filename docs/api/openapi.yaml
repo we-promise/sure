@@ -6328,8 +6328,8 @@ paths:
                         and source
                     source:
                       type: string
-                      description: Optional source namespace for external_id; defaults
-                        to api when external_id is provided
+                      description: Optional source namespace for external_id. Requires
+                        external_id and defaults to api when external_id is provided
                     tag_ids:
                       type: array
                       items:
