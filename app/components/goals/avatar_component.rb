@@ -24,7 +24,13 @@ class Goals::AvatarComponent < ApplicationComponent
     @size = SIZES.key?(size) ? size : "md"
   end
 
-  attr_reader :color, :icon
+  attr_reader :color
+
+  # Don't expose @icon via attr_reader — `icon` collides with the global
+  # icon helper used inside the template.
+  def icon_name
+    @icon
+  end
 
   def initial
     return "?" if @name.blank?
