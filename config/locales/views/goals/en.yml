@@ -119,14 +119,20 @@ en:
         reached: Goal reached. Nice work.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No contributions yet. Add some to start a projection.
-        behind: At %{current}/mo you'll fall short. Bump to <strong class="text-primary">%{required}/mo</strong> to hit it on time.
+        behind: At %{current}/mo you'll miss your target date.
         on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
       catch_up:
         title: "Save %{amount}/mo to catch up"
-        body_with_date: "Bump your monthly contribution to stay on track for %{date}."
-        body: Bump your monthly contribution to stay on track.
+        body_with_date: "Bump your monthly contribution to stay on track for %{date}. Currently %{delta}/mo behind."
+        body: "Bump your monthly contribution to stay on track. Currently %{delta}/mo behind."
         cta: "Add %{amount}"
+      confirm_complete_title: Mark this goal complete?
+      confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
+      confirm_complete_cta: Mark complete
+      confirm_archive_title: Archive this goal?
+      confirm_archive_body: Archived goals disappear from the main list. You can restore them later.
+      confirm_archive_cta: Archive
       paused_banner:
         title: This goal is paused
         body: Resume it to keep tracking your progress.

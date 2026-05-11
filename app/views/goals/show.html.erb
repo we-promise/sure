@@ -57,10 +57,32 @@
           <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
         <% end %>
         <% if @goal.may_complete? %>
-          <% menu.with_item(variant: "button", text: t(".complete"), icon: "circle-check-big", href: complete_goal_path(@goal), method: :patch) %>
+          <% menu.with_item(
+               variant: "button",
+               text: t(".complete"),
+               icon: "circle-check-big",
+               href: complete_goal_path(@goal),
+               method: :patch,
+               confirm: CustomConfirm.new(
+                 title: t(".confirm_complete_title"),
+                 body: t(".confirm_complete_body"),
+                 btn_text: t(".confirm_complete_cta")
+               )
+             ) %>
         <% end %>
         <% if @goal.may_archive? %>
-          <% menu.with_item(variant: "button", text: t(".archive"), icon: "archive", href: archive_goal_path(@goal), method: :patch) %>
+          <% menu.with_item(
+               variant: "button",
+               text: t(".archive"),
+               icon: "archive",
+               href: archive_goal_path(@goal),
+               method: :patch,
+               confirm: CustomConfirm.new(
+                 title: t(".confirm_archive_title"),
+                 body: t(".confirm_archive_body"),
+                 btn_text: t(".confirm_archive_cta")
+               )
+             ) %>
         <% end %>
         <% if @goal.may_unarchive? %>
           <% menu.with_item(variant: "button", text: t(".unarchive"), icon: "archive-restore", href: unarchive_goal_path(@goal), method: :patch) %>
@@ -113,12 +135,14 @@
   <% elsif @goal.status == :behind && @goal.monthly_target_amount %>
     <%# Catch-up callout %>
     <% catch_up_money = Money.new(@goal.monthly_target_amount, @goal.currency) %>
+    <% catch_up_delta = @goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
+    <% catch_up_delta_money = Money.new(catch_up_delta, @goal.currency) %>
     <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: catch_up_money.format)) do %>
       <p class="text-secondary">
         <% if @goal.target_date %>
-          <%= t("goals.show.catch_up.body_with_date", date: I18n.l(@goal.target_date, format: :long)) %>
+          <%= t("goals.show.catch_up.body_with_date", date: I18n.l(@goal.target_date, format: :long), delta: catch_up_delta_money.format) %>
         <% else %>
-          <%= t("goals.show.catch_up.body") %>
+          <%= t("goals.show.catch_up.body", delta: catch_up_delta_money.format) %>
         <% end %>
       </p>
       <div class="mt-2">
@@ -240,9 +264,6 @@
         <div class="flex items-baseline gap-2">
           <p class="text-2xl font-medium text-primary tabular-nums"><%= Money.new(@stats[:avg_monthly], @goal.currency).format %></p>
           <p class="text-sm text-subdued tabular-nums">/mo</p>
-          <% if @goal.monthly_target_amount && @goal.monthly_target_amount.to_d.positive? %>
-            <p class="text-sm text-subdued tabular-nums">· <%= t(".stats.target_of", amount: Money.new(@goal.monthly_target_amount, @goal.currency).format) %></p>
-          <% end %>
         </div>
         <% if @goal.monthly_target_amount && @goal.monthly_target_amount.to_d.positive? %>
           <% delta = @goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
