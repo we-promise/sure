@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus";
 // and data-goal-status; the controller toggles `.hidden` on cards
 // based on the active query/chip.
 export default class extends Controller {
-  static targets = ["input", "chip", "card", "empty", "grid"];
+  static targets = ["input", "chip", "card", "empty", "grid", "count"];
   static values = { status: { type: String, default: "all" } };
 
   connect() {
@@ -34,6 +34,9 @@ export default class extends Controller {
     }
     if (this.hasGridTarget) {
       this.gridTarget.classList.toggle("hidden", visible === 0);
+    }
+    if (this.hasCountTarget) {
+      this.countTarget.textContent = visible;
     }
   }
 

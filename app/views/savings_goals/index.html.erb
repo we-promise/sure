@@ -109,7 +109,7 @@
         <div class="flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
           <span><%= t(".ongoing_section.heading") %></span>
           <span class="text-subdued">·</span>
-          <span class="tabular-nums"><%= @active_goals.size %></span>
+          <span class="tabular-nums" data-savings-goals-filter-target="count"><%= @active_goals.size %></span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5" data-savings-goals-filter-target="grid">
           <% @active_goals.each do |goal| %>
