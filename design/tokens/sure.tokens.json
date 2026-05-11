@@ -21,6 +21,7 @@
     "success":     { "$value": "{color.green.600}",  "$type": "color", "$extensions": { "sure.dark": "{color.green.500}" } },
     "warning":     { "$value": "{color.yellow.600}", "$type": "color", "$extensions": { "sure.dark": "{color.yellow.400}" } },
     "destructive": { "$value": "{color.red.600}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
+    "info":        { "$value": "{color.blue.600}",   "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
     "shadow":      { "$value": "{color.black|6%}",   "$type": "color", "$extensions": { "sure.dark": "{color.white|8%}" } },
 
     "gray": {

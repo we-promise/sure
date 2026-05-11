@@ -18,6 +18,7 @@ class Family::Syncer
     coinstats_items
     mercury_items
     brex_items
+    binance_items
     snaptrade_items
     sophtron_items
   ].freeze

@@ -4,7 +4,7 @@
      {
        controller: "polling",
        polling_frame_id_value: "modal",
-       polling_url_value: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: @next_poll_attempt, post_mfa: @post_mfa_polling),
+       polling_url_value: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: @next_poll_attempt, post_mfa: @post_mfa_polling, manual_sync: @manual_sync_flow, sync_id: @manual_sync_id, sophtron_account_id: @manual_sync_sophtron_account_id),
        polling_interval_value: @poll_interval_ms
      }
    end %>
@@ -39,7 +39,7 @@
           <div class="flex gap-2 justify-end">
             <%= render DS::Link.new(
                   text: t(".check_again"),
-                  href: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: check_again_attempt, post_mfa: @post_mfa_polling),
+                  href: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: check_again_attempt, post_mfa: @post_mfa_polling, manual_sync: @manual_sync_flow, sync_id: @manual_sync_id, sophtron_account_id: @manual_sync_sophtron_account_id),
                   variant: :primary,
                   data: { turbo_frame: "modal", turbo_prefetch: false }
                 ) %>

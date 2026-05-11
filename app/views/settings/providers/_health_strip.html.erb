@@ -1,0 +1,28 @@
+<%# locals: (connected:, needs_attention:, accounts_syncing:, last_synced_at:) %>
+<div class="bg-container shadow-border-xs rounded-xl flex items-center gap-5 px-3.5 py-2.5 text-sm mt-4 mb-5">
+  <span class="inline-flex items-center gap-2">
+    <%= icon "check", size: "sm", class: "!w-3.5 !h-3.5 text-success" %>
+    <span class="font-medium tabular-nums"><%= connected %></span>
+    <span class="text-secondary"><%= t("settings.providers.health_strip.connected") %></span>
+  </span>
+  <% if needs_attention.positive? %>
+    <span class="h-3.5 border-l border-secondary"></span>
+    <span class="inline-flex items-center gap-2">
+      <%= icon "circle-alert", size: "sm", class: "!w-3.5 !h-3.5 text-warning" %>
+      <span class="font-medium tabular-nums"><%= needs_attention %></span>
+      <span class="text-secondary"><%= t("settings.providers.health_strip.needs_attention") %></span>
+    </span>
+  <% end %>
+  <% if accounts_syncing.positive? %>
+    <span class="h-3.5 border-l border-secondary"></span>
+    <span class="inline-flex items-center gap-2 text-secondary">
+      <span class="font-medium tabular-nums"><%= accounts_syncing %></span>
+      <span><%= t("settings.providers.health_strip.accounts_syncing") %></span>
+    </span>
+  <% end %>
+  <% if last_synced_at %>
+    <span class="ml-auto text-xs text-subdued">
+      <%= t("settings.providers.health_strip.last_synced", time: concise_time_ago(last_synced_at)) %>
+    </span>
+  <% end %>
+</div>

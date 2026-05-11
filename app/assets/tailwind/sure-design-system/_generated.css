@@ -12,6 +12,7 @@
   --color-success: var(--color-green-600);
   --color-warning: var(--color-yellow-600);
   --color-destructive: var(--color-red-600);
+  --color-info: var(--color-blue-600);
   --color-shadow: --alpha(var(--color-black) / 6%);
   --color-gray-25: #FAFAFA;
   --color-gray-50: #F7F7F7;
@@ -199,6 +200,7 @@
     --color-success: var(--color-green-500);
     --color-warning: var(--color-yellow-400);
     --color-destructive: var(--color-red-400);
+    --color-info: var(--color-blue-500);
     --color-shadow: --alpha(var(--color-white) / 8%);
     --budget-unused-fill: var(--color-gray-500);
     --budget-unallocated-fill: var(--color-gray-700);

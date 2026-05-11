@@ -1,18 +1,14 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("indexa_capital_items.panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("indexa_capital_items.panel.step_1") %></li>
-      <li><%= t("indexa_capital_items.panel.step_2") %></li>
-      <li><%= t("indexa_capital_items.panel.step_3") %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("indexa_capital_items.panel.step_1"),
+               t("indexa_capital_items.panel.step_2"),
+               t("indexa_capital_items.panel.step_3")
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
-    </div>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <%
@@ -27,14 +23,11 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
 
-    <div class="bg-surface border border-primary p-3 rounded-lg">
-      <p class="text-sm font-medium text-primary mb-2"><%= t("indexa_capital_items.panel.fields.api_token.label") %></p>
-      <p class="text-xs text-secondary mb-2"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
-      <%= form.text_field :api_token,
-                          label: t("indexa_capital_items.panel.fields.api_token.label"),
-                          placeholder: is_new_record ? t("indexa_capital_items.panel.fields.api_token.placeholder_new") : t("indexa_capital_items.panel.fields.api_token.placeholder_update"),
-                          type: :password %>
-    </div>
+    <%= form.text_field :api_token,
+                        label: t("indexa_capital_items.panel.fields.api_token.label"),
+                        placeholder: is_new_record ? t("indexa_capital_items.panel.fields.api_token.placeholder_new") : t("indexa_capital_items.panel.fields.api_token.placeholder_update"),
+                        type: :password %>
+    <p class="text-xs text-secondary px-1 -mt-1"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
 
     <details class="group">
       <summary class="text-sm text-secondary cursor-pointer hover:text-primary transition-colors">
@@ -64,14 +57,4 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:indexa_capital_items] || @indexa_capital_items || Current.family.indexa_capital_items.where.not(username: [nil, ""], document: [nil, ""], password: [nil, ""]).or(Current.family.indexa_capital_items.where.not(api_token: [nil, ""])) %>
-  <div class="flex items-center gap-2">
-    <% if items&.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("indexa_capital_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("indexa_capital_items.panel.status_not_configured") %></p>
-    <% end %>
-  </div>
 </div>

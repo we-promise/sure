@@ -30,18 +30,12 @@
       </div>
     </div>
 
-    <div class="bg-warning-50 border border-warning-200 rounded-xl p-4">
-      <div class="flex items-start gap-2">
-        <%= icon("alert-triangle", class: "w-5 h-5 text-warning-600 mt-0.5") %>
-        <div>
-          <h4 class="font-medium text-warning-800 text-sm">Security Warning</h4>
-          <p class="text-warning-700 text-sm mt-1">
-            Your API key will be displayed only once after creation. Make sure to copy and store it securely.
-            Anyone with access to this key can access your data according to the permissions you select.
-          </p>
-        </div>
-      </div>
-    </div>
+    <%= render DS::Alert.new(title: "Security Warning", variant: :warning) do %>
+      <p>
+        Your API key will be displayed only once after creation. Make sure to copy and store it securely.
+        Anyone with access to this key can access your data according to the permissions you select.
+      </p>
+    <% end %>
 
     <div class="flex justify-end gap-3 pt-4 border-t border-primary">
       <%= render DS::Link.new(

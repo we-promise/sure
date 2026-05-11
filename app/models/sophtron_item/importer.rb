@@ -139,7 +139,7 @@ class SophtronItem::Importer
     transactions_imported = 0
     transactions_failed = 0
 
-    linked_accounts = sophtron_item.sophtron_accounts.joins(:account).merge(Account.visible)
+    linked_accounts = sophtron_item.automatic_sync_sophtron_accounts
     linked_accounts.each do |sophtron_account|
       begin
         result = fetch_and_store_transactions(sophtron_account)
