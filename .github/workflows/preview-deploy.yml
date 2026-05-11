@@ -98,7 +98,7 @@ jobs:
 
             **Preview URL:** ${previewUrl}
 
-            > ⏰ This preview will automatically shut down after **24 hours** of the last deployment.
+            > ⏰ This preview is intended to be cleaned up after **24 hours** of the last deployment once the cleanup workflow is live on the default branch.
             > 💤 The container will sleep after 30 minutes of inactivity and wake on the next request.
 
             ---
@@ -131,21 +131,6 @@ jobs:
                 body: commentBody
               });
             }
-
-      - name: Schedule cleanup
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Create a repository dispatch event to trigger cleanup after 24 hours
-            // The cleanup workflow will use the scheduled time to determine if cleanup is needed
-            const fs = require('fs');
-            const cleanupTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-            // Store cleanup schedule in artifact for the cleanup workflow
-            core.exportVariable('CLEANUP_TIME', cleanupTime);
-            console.log(`Preview scheduled for cleanup at: ${cleanupTime}`);
-
       - name: Store cleanup metadata
         if: success()
         uses: actions/upload-artifact@v4

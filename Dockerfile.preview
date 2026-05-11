@@ -11,7 +11,7 @@ WORKDIR /rails
 # Install base packages including PostgreSQL and Redis servers
 RUN apt-get update -qq \
     && apt-get install --no-install-recommends -y \
-       curl libvips postgresql postgresql-client redis-server libyaml-0-2 procps sudo \
+       curl libvips postgresql postgresql-client redis-server libyaml-0-2 procps sudo openssl \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set development environment
@@ -45,7 +45,8 @@ FROM base
 # Create rails user and configure PostgreSQL/Redis permissions
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" >> /etc/sudoers.d/rails
+    echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" > /etc/sudoers.d/rails && \
+    chmod 0440 /etc/sudoers.d/rails
 
 # Configure PostgreSQL to allow local connections
 RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
@@ -69,6 +70,9 @@ RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
 #!/bin/bash
 set -e
 
+REDIS_READY=0
+POSTGRES_READY=0
+
 # Start Redis
 echo "Starting Redis..."
 sudo redis-server --daemonize yes --bind 127.0.0.1
@@ -78,24 +82,41 @@ echo "Waiting for Redis to be ready..."
 for i in {1..10}; do
   if redis-cli ping > /dev/null 2>&1; then
     echo "Redis is ready"
+    REDIS_READY=1
     break
   fi
   sleep 1
 done
 
+if [ "$REDIS_READY" -ne 1 ]; then
+  echo "Redis did not become ready in time"
+  exit 1
+fi
+
 # Start PostgreSQL
 echo "Starting PostgreSQL..."
-sudo pg_ctlcluster 15 main start || sudo pg_ctlcluster 16 main start || sudo pg_ctlcluster 17 main start
+PG_VERSION=$(ls /etc/postgresql/ | sort -V | tail -1)
+if [ -z "$PG_VERSION" ]; then
+  echo "Could not determine installed PostgreSQL version"
+  exit 1
+fi
+sudo pg_ctlcluster "$PG_VERSION" main start
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
 for i in {1..30}; do
   if pg_isready -h localhost -U postgres > /dev/null 2>&1; then
     echo "PostgreSQL is ready"
+    POSTGRES_READY=1
     break
   fi
   sleep 1
 done
+
+if [ "$POSTGRES_READY" -ne 1 ]; then
+  echo "PostgreSQL did not become ready in time"
+  exit 1
+fi
 
 # Create database user and database if they don't exist
 echo "Setting up database..."
