@@ -104,12 +104,21 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
       failed_at: Time.current,
       error: "raw provider token secret"
     )
+    kraken_item = kraken_items(:one)
+    kraken_item.syncs.create!(
+      status: "failed",
+      failed_at: Time.current,
+      error: "raw kraken key secret"
+    )
 
     get api_v1_provider_connections_url, headers: api_headers(@api_key)
     assert_response :success
 
     refute_includes response.body, @mercury_item.token
+    refute_includes response.body, kraken_item.api_key
+    refute_includes response.body, kraken_item.api_secret
     refute_includes response.body, "raw provider token secret"
+    refute_includes response.body, "raw kraken key secret"
   end
 
   test "fails closed when credential readiness is unknown" do
