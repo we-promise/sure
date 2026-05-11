@@ -162,7 +162,7 @@ emit_status db-prepare-done "rails db:prepare finished"
 # Execute the main command with an internal readiness probe
 echo "Starting Rails server..."
 emit_status rails-start "starting rails server"
-"$@" &
+"$@" > /tmp/rails.log 2>&1 &
 RAILS_PID=$!
 
 for i in {1..30}; do
@@ -175,9 +175,11 @@ done
 
 if ! curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
   emit_status rails-up-timeout "rails did not answer localhost:3000/up in time"
-  emit_status rails-process-status "$(ps -o pid=,ppid=,stat=,comm= -p "$RAILS_PID" 2>/dev/null | tr -s ' ' | sed 's/^ //')"
-  emit_status rails-port-check "$(ruby -rsocket -e 'begin; s=TCPSocket.new("127.0.0.1",3000); puts "tcp-open"; s.close; rescue => e; puts e.class.to_s + ":" + e.message; end' | tr '
+  emit_status rails-process-status "$(ps -o pid=,ppid=,stat=,comm=,args= -p "$RAILS_PID" 2>/dev/null | tr -s ' ' | sed 's/^ //')"
+  emit_status rails-port-check "$(timeout 3 ruby -rsocket -e 'begin; s=TCPSocket.new("127.0.0.1",3000); puts "tcp-open"; s.close; rescue => e; puts e.class.to_s + ":" + e.message; end' 2>&1 | tr '
 ' ' ')"
+  emit_status rails-log-tail "$(tail -n 40 /tmp/rails.log 2>&1 | sed 's/"/'"'"'/g' | tr '
+' ' ' | cut -c 1-1200)"
 fi
 
 wait "$RAILS_PID"
