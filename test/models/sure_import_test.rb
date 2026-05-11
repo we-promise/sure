@@ -37,7 +37,23 @@ class SureImportTest < ActiveSupport::TestCase
   end
 
   test "max_row_count is higher than standard imports" do
+    assert_equal 100_000, SureImport.max_row_count
     assert_equal 100_000, @import.max_row_count
+  end
+
+  test "dry_run totals can be derived from existing line type counts" do
+    counts = {
+      "Account" => 2,
+      "Transaction" => 3,
+      "UnknownType" => 4
+    }
+
+    dry_run = SureImport.dry_run_totals_from_line_type_counts(counts)
+
+    assert_equal 2, dry_run[:accounts]
+    assert_equal 3, dry_run[:transactions]
+    assert_equal 0, dry_run[:categories]
+    assert_not dry_run.key?(:unknown_type)
   end
 
   test "csv_template returns nil" do

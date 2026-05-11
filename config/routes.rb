@@ -453,6 +453,7 @@ Rails.application.routes.draw do
         get :download, on: :member
       end
       resources :imports, only: [ :index, :show, :create ] do
+        post :preflight, on: :collection
         get :rows, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
