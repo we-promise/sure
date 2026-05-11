@@ -112,11 +112,13 @@ export default class extends Controller {
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("preserveAspectRatio", "none");
 
-    const titleId = `chart-title-${this._id()}`;
+    // Drop the <title> child — browsers render it as a native hover tooltip
+    // that fights with our own crosshair tooltip. aria-label gives the same
+    // SR accessible name without the tooltip side-effect.
     const descId = `chart-desc-${this._id()}`;
-    svg.attr("role", "img").attr("aria-labelledby", titleId).attr("aria-describedby", descId);
-    svg.append("title").attr("id", titleId).text(this.ariaLabelValue || "Goal projection");
+    svg.attr("role", "img").attr("aria-label", this.ariaLabelValue || "Goal projection");
     svg.append("desc").attr("id", descId).text(this.ariaDescriptionValue || "");
+    svg.attr("aria-describedby", descId);
 
     const defs = svg.append("defs");
     const gradient = defs
@@ -128,6 +130,9 @@ export default class extends Controller {
 
     if (yAxisVisible) {
       const yTicks = y.ticks(3);
+      // Suppress the tick label that visually collides with the target
+      // line label (within ~5% of the y range). Keep the gridline.
+      const labelCollisionThreshold = yMax * 0.05;
       yTicks.forEach((tickValue) => {
         svg
           .append("line")
@@ -137,6 +142,8 @@ export default class extends Controller {
           .attr("y2", y(tickValue))
           .attr("stroke", borderSubdued)
           .attr("stroke-width", 1);
+        const collidesWithTarget = targetAmount > 0 && Math.abs(tickValue - targetAmount) < labelCollisionThreshold;
+        if (collidesWithTarget) return;
         svg
           .append("text")
           .attr("x", margin.left - 6)
@@ -337,39 +344,56 @@ export default class extends Controller {
     const dateFmt = d3.timeFormat("%b %d, %Y");
     const todayTs = today.getTime();
     const targetTs = target ? target.getTime() : null;
+    const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
     const showAt = (xPos, yPos) => {
       const xVal = x.invert(xPos);
       if (!savedSeries.length) return;
 
-      const i = bisectDate(savedSeries, xVal);
-      const a = savedSeries[Math.max(0, i - 1)];
-      const b = savedSeries[Math.min(savedSeries.length - 1, i)];
-      const savedPoint = !a ? b : !b ? a : (xVal - a.date < b.date - xVal ? a : b);
+      const future = xVal.getTime() > todayTs && projectionSeries.length && targetTs;
 
-      crosshair.attr("x1", x(savedPoint.date)).attr("x2", x(savedPoint.date)).style("display", null);
-      hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
-
-      let projValue = null;
-      if (projectionSeries.length && targetTs && xVal.getTime() >= todayTs) {
-        const tFrac = (xVal.getTime() - todayTs) / (targetTs - todayTs);
-        if (tFrac >= 0 && tFrac <= 1) {
-          projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
-          hoverProjDot.attr("cx", x(savedPoint.date)).attr("cy", y(projValue)).style("display", null);
-        } else {
-          hoverProjDot.style("display", "none");
-        }
+      // Date the crosshair + the active dot snaps to. Past = nearest saved
+      // contribution (sparse, monthly-ish). Future = weekly steps along the
+      // projection segment so the cursor doesn't jitter pixel-by-pixel.
+      let hoverDate;
+      if (future) {
+        const weeks = Math.round((xVal.getTime() - todayTs) / MS_PER_WEEK);
+        let snapped = todayTs + weeks * MS_PER_WEEK;
+        if (snapped > targetTs) snapped = targetTs;
+        if (snapped < todayTs) snapped = todayTs;
+        hoverDate = new Date(snapped);
       } else {
-        hoverProjDot.style("display", "none");
+        const i = bisectDate(savedSeries, xVal);
+        const a = savedSeries[Math.max(0, i - 1)];
+        const b = savedSeries[Math.min(savedSeries.length - 1, i)];
+        hoverDate = !a ? b.date : !b ? a.date : (xVal - a.date < b.date - xVal ? a.date : b.date);
       }
 
-      const lines = [
-        dateFmt(savedPoint.date),
-        `Saved: ${this._fmtMoney(savedPoint.value, data.currency)}`,
-      ];
-      if (projValue !== null) {
+      const hoverX = x(hoverDate);
+      crosshair.attr("x1", hoverX).attr("x2", hoverX).style("display", null);
+
+      const lines = [dateFmt(hoverDate)];
+
+      if (future) {
+        // Projection segment: interpolate along the dashed line; saved dot
+        // stays hidden (no saved value in the future).
+        const tFrac = (hoverDate.getTime() - todayTs) / (targetTs - todayTs);
+        const projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
+        hoverProjDot.attr("cx", hoverX).attr("cy", y(projValue)).style("display", null);
+        hoverSavedDot.style("display", "none");
         lines.push(`Projected: ${this._fmtMoney(projValue, data.currency)}`);
+      } else {
+        // Saved segment: snap saved dot to the nearest contribution; no
+        // projection dot in the past.
+        const i = bisectDate(savedSeries, hoverDate);
+        const a = savedSeries[Math.max(0, i - 1)];
+        const b = savedSeries[Math.min(savedSeries.length - 1, i)];
+        const savedPoint = !a ? b : !b ? a : (hoverDate - a.date < b.date - hoverDate ? a : b);
+        hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
+        hoverProjDot.style("display", "none");
+        lines.push(`Saved: ${this._fmtMoney(savedPoint.value, data.currency)}`);
       }
+
       tooltip.textContent = lines.join("\n");
       tooltip.style.whiteSpace = "pre";
       tooltip.style.display = "block";
