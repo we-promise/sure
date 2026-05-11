@@ -153,7 +153,7 @@ class LunchflowItem < ApplicationRecord
     api_key.present?
   end
 
-  def effective_base_url
-    base_url.presence || "https://lunchflow.app/api/v1"
-  end
+  # F-08: SSRF hardening — see BaseUrlAllowlistable.
+  include BaseUrlAllowlistable
+  allowed_base_urls "https://lunchflow.app/api/v1"
 end
