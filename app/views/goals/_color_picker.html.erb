@@ -1,8 +1,8 @@
 <%# locals: (form:, colors:, icons:) %>
 <div data-controller="color-icon-picker" data-color-icon-picker-preset-colors-value="<%= colors %>">
   <div class="w-fit relative">
-    <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl font-semibold text-base"
-          style="background-color: color-mix(in oklab, <%= form.object.color %> 10%, transparent); color: <%= form.object.color %>;"
+    <span class="goal-avatar inline-flex items-center justify-center w-11 h-11 rounded-xl font-semibold text-base"
+          style="--avatar-color: <%= form.object.color %>;"
           data-color-icon-picker-target="avatar">
       <% if form.object.icon.present? %>
         <%= icon(form.object.icon, color: "current", size: "md") %>
@@ -16,11 +16,12 @@
         <%= icon("pen", size: "xs") %>
       </summary>
 
-      <div class="absolute left-0 sm:left-auto sm:right-0 mt-2 z-50 bg-container p-4 border border-alpha-black-25 rounded-2xl shadow-xs h-fit w-87 max-w-[calc(100vw-2rem)]" data-color-icon-picker-target="popup">
-        <div class="flex gap-2 flex-col mb-4" data-color-icon-picker-target="selection">
+      <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-container p-3 border border-alpha-black-25 rounded-2xl shadow-xs w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto"
+           data-color-icon-picker-target="popup">
+        <div class="flex gap-2 flex-col mb-3" data-color-icon-picker-target="selection">
           <div data-color-icon-picker-target="pickerSection"></div>
-          <h4 class="text-secondary text-sm">Color</h4>
-          <div class="flex flex-wrap md:flex-nowrap gap-2 items-center" data-color-icon-picker-target="colorsSection">
+          <h4 class="text-secondary text-xs uppercase tracking-wide">Color</h4>
+          <div class="flex flex-wrap gap-2 items-center" data-color-icon-picker-target="colorsSection">
             <% colors.each do |c| %>
               <label class="relative">
                 <%= form.radio_button :color, c, class: "sr-only peer", data: { action: "change->color-icon-picker#handleColorChange" } %>
@@ -45,9 +46,9 @@
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-2 justify-center flex-col">
-          <h4 class="text-secondary text-sm">Icon</h4>
-          <div class="flex flex-wrap gap-0.5 max-h-52 overflow-auto">
+        <div class="flex flex-col gap-2">
+          <h4 class="text-secondary text-xs uppercase tracking-wide">Icon</h4>
+          <div class="flex flex-wrap gap-0.5 max-h-40 overflow-y-auto scrollbar">
             <% icons.each do |icon_name| %>
               <label class="relative">
                 <%= form.radio_button :icon, icon_name, class: "sr-only peer", data: { action: "change->color-icon-picker#handleIconChange change->color-icon-picker#handleIconColorChange", color_icon_picker_target: "icon" } %>
