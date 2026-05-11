@@ -7,11 +7,27 @@
 
     <%= styled_form_with model: @contribution,
                          url: goal_contributions_path(@goal),
-                         class: "space-y-3" do |f| %>
+                         class: "space-y-3",
+                         data: {
+                           controller: "goal-contribution-preview",
+                           goal_contribution_preview_current_balance_value: @goal.current_balance.to_f,
+                           goal_contribution_preview_target_amount_value: @goal.target_amount.to_f,
+                           goal_contribution_preview_currency_value: @goal.currency,
+                           goal_contribution_preview_template_zero_value: t(".preview_zero"),
+                           goal_contribution_preview_template_nonzero_value: t(".preview_nonzero"),
+                           goal_contribution_preview_template_reached_value: t(".preview_reached")
+                         } do |f| %>
       <%= f.money_field :amount,
                         label: t(".amount"),
                         hide_currency: true,
-                        autofocus: true %>
+                        autofocus: true,
+                        amount_data: {
+                          goal_contribution_preview_target: "amountInput",
+                          action: "input->goal-contribution-preview#update"
+                        } %>
+
+      <p class="text-xs text-secondary tabular-nums -mt-1"
+         data-goal-contribution-preview-target="preview"></p>
 
       <%= f.select :account_id,
                    options_from_collection_for_select(@goal.linked_accounts, :id, :name, @contribution.account_id),

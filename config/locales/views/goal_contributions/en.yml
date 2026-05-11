@@ -9,6 +9,9 @@ en:
       contributed_at: Date
       notes: Notes (optional)
       submit: Save contribution
+      preview_zero: "Currently {percent}% saved ({current} of {target})."
+      preview_nonzero: "Will bring you to {percent}% saved ({newTotal} of {target})."
+      preview_reached: "Will reach your {target} target."
     create:
       success: Contribution saved.
     destroy:
