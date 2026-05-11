@@ -5,6 +5,8 @@ interface Env {
 }
 
 const DIAGNOSTICS_KEY = "preview-diagnostics";
+const START_RETRIES = 30;
+const START_DELAY_MS = 1000;
 
 export class RailsContainer extends Container {
   // Rails runs on port 3000
@@ -31,6 +33,51 @@ export class RailsContainer extends Container {
   // Sleep after 30 minutes of inactivity to save resources
   sleepAfter = "30m";
 
+  async waitForManualStart(signal?: AbortSignal): Promise<void> {
+    this.container.start({
+      entrypoint: this.entrypoint,
+      env: this.envVars,
+    });
+
+    for (let attempt = 1; attempt <= START_RETRIES; attempt++) {
+      if (signal?.aborted) {
+        throw new Error("Container request aborted.");
+      }
+
+      if (this.container.running) {
+        try {
+          const tcpPort = this.container.getTcpPort(this.defaultPort);
+          await tcpPort.fetch("http://localhost/", { signal });
+          await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+            event: "manual-start-ready",
+            at: new Date().toISOString(),
+            attempt,
+            state: await this.getState(),
+          });
+          return;
+        } catch (error) {
+          await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+            event: "manual-start-wait",
+            at: new Date().toISOString(),
+            attempt,
+            message: error instanceof Error ? error.message : String(error),
+            state: await this.getState(),
+          });
+        }
+      }
+
+      await new Promise(resolve => setTimeout(resolve, START_DELAY_MS));
+    }
+
+    throw new Error("Manual start failed to make the preview container reachable.");
+  }
+
+  async proxyDirect(request: Request): Promise<Response> {
+    const tcpPort = this.container.getTcpPort(this.defaultPort);
+    const containerUrl = request.url.replace("https:", "http:");
+    return tcpPort.fetch(containerUrl, request);
+  }
+
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
@@ -51,6 +98,39 @@ export class RailsContainer extends Container {
         state: await this.getState(),
       });
       return new Response("ok");
+    }
+
+    const state = await this.getState();
+
+    if (!this.container.running && state.status === "running") {
+      await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+        event: "stale-state-detected",
+        at: new Date().toISOString(),
+        state,
+      });
+
+      try {
+        await this.destroy();
+      } catch (error) {
+        console.warn("Container destroy during stale-state recovery failed", error);
+      }
+
+      try {
+        await this.waitForManualStart(request.signal);
+        return await this.proxyDirect(request);
+      } catch (error) {
+        await this.ctx.storage.put(DIAGNOSTICS_KEY, {
+          event: "manual-recovery-error",
+          at: new Date().toISOString(),
+          message: error instanceof Error ? error.message : String(error),
+          state: await this.getState(),
+        });
+
+        return new Response(
+          `Failed to manually recover preview container: ${error instanceof Error ? error.message : String(error)}`,
+          { status: 500 }
+        );
+      }
     }
 
     const response = await super.fetch(request);
