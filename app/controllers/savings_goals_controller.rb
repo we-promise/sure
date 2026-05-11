@@ -4,17 +4,19 @@ class SavingsGoalsController < ApplicationController
   STATE_FILTERS = %w[all active paused completed archived].freeze
 
   def index
-    @state_filter = STATE_FILTERS.include?(params[:state]) ? params[:state] : "active"
-    scope = Current.family.savings_goals.with_current_balance.alphabetically
-    scope = scope.where(state: @state_filter) unless @state_filter == "all"
-    @savings_goals = scope.to_a
-
     @counts = STATE_FILTERS.each_with_object({}) do |state, h|
       h[state] = state == "all" ? Current.family.savings_goals.count : Current.family.savings_goals.where(state: state).count
     end
 
+    all_goals = Current.family.savings_goals.with_current_balance.alphabetically.to_a
+    @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
+    @completed_goals = all_goals.select { |g| g.state == "completed" }
+
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
-    @totals = totals_for_family
+    @savings_accounts = Current.family.savings_subtype_accounts
+    @account_goal_counts = goal_count_per_account(@savings_accounts)
+    @hero = hero_payload(all_goals)
+    @show_search = @active_goals.size > 6
   end
 
   def show
@@ -153,22 +155,33 @@ class SavingsGoalsController < ApplicationController
       end
     end
 
-    def totals_for_family
-      goals = Current.family.savings_goals.with_current_balance.to_a
-      saved = goals.sum { |g| g.current_balance.to_d }
-      target = goals.sum { |g| g.target_amount.to_d }
-      currency = Current.family.primary_currency_code
-      active_goals = goals.select { |g| g.state == "active" }
-      on_track = active_goals.count { |g| g.status == :on_track || g.status == :reached }
-      behind = active_goals.count { |g| g.status == :behind }
-      overall_percent = target.zero? ? 0 : ((saved / target) * 100).round
+    def hero_payload(all_goals)
+      family = Current.family
+      currency = family.primary_currency_code
+      total_savings = family.total_savings_balance
+      saved_toward_goals = all_goals.sum { |g| g.current_balance.to_d }
+      delta = family.savings_balance_30d_delta
       {
-        saved: Money.new(saved, currency),
-        target: Money.new(target, currency),
-        overall_percent: [ overall_percent, 100 ].min,
-        on_track_count: on_track,
-        behind_count: behind
+        currency: currency,
+        total_savings_money: Money.new(total_savings, currency),
+        saved_toward_goals_money: Money.new(saved_toward_goals, currency),
+        accounts_count: family.savings_subtype_accounts.size,
+        active_goals_count: @counts["active"].to_i,
+        delta: delta,
+        delta_amount_money: Money.new(delta[:amount].abs, currency),
+        sparkline_series: family.savings_balance_series(days: 30)
       }
+    end
+
+    def goal_count_per_account(accounts)
+      return {} if accounts.empty?
+
+      SavingsGoalAccount
+        .where(account_id: accounts.map(&:id))
+        .joins(:savings_goal)
+        .where.not(savings_goals: { state: %w[archived] })
+        .group(:account_id)
+        .count
     end
 
     def stats_for(goal)

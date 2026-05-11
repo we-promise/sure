@@ -1,0 +1,16 @@
+<div class="bg-container rounded-xl shadow-border-xs p-5">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="inline-flex items-center justify-center w-9 h-9 rounded-full text-inverse text-sm font-semibold"
+          style="background-color: var(--color-blue-500);">
+      <%= initial %>
+    </span>
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
+      <p class="text-xs text-secondary"><%= subtype_label %></p>
+    </div>
+  </div>
+  <p class="text-2xl font-medium text-primary tabular-nums privacy-sensitive">
+    <%= Money.new(account.balance, account.currency).format %>
+  </p>
+  <p class="text-xs text-subdued mt-1"><%= funds_label %></p>
+</div>

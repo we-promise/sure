@@ -1,73 +1,140 @@
-<div class="space-y-5">
-  <header class="flex items-start justify-between gap-3">
-    <div>
-      <h1 class="text-xl font-semibold text-primary"><%= t(".title") %></h1>
-      <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
-    </div>
-    <% if @linkable_account_count > 0 %>
-      <%= render DS::Link.new(
-        text: t(".new_goal"),
-        variant: "primary",
-        href: new_savings_goal_path,
-        icon: "plus",
-        frame: :modal
-      ) %>
-    <% end %>
+<div class="space-y-6">
+  <header>
+    <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
   </header>
 
-  <% if @savings_goals.empty? && @counts["all"].zero? %>
+  <% if @counts["all"].zero? && @savings_accounts.empty? %>
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
-    <% if @counts["all"].positive? %>
-      <section class="bg-container rounded-xl shadow-border-xs p-5 grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
-        <div class="md:col-span-1.5">
-          <p class="text-xs text-secondary mb-1"><%= t(".summary.total_saved") %></p>
-          <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-medium text-primary tabular-nums privacy-sensitive"><%= @totals[:saved].format %></span>
-            <span class="text-xs text-subdued tabular-nums">/ <%= @totals[:target].format %></span>
+    <%# Hero card %>
+    <section class="bg-container rounded-xl shadow-border-xs p-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-6 items-stretch">
+      <div class="flex flex-col">
+        <p class="text-xs text-secondary"><%= t(".hero.total_in_savings") %></p>
+        <p class="text-4xl font-medium text-primary tabular-nums mt-1 privacy-sensitive"><%= @hero[:total_savings_money].format %></p>
+        <% delta = @hero[:delta] %>
+        <% if delta[:direction] != :flat %>
+          <p class="text-xs <%= delta[:direction] == :up ? "text-success" : "text-destructive" %> mt-1 tabular-nums">
+            <%= t("savings_goals.index.hero.delta_#{delta[:direction]}", amount: @hero[:delta_amount_money].format, percent: delta[:percent].abs) %>
+          </p>
+        <% end %>
+
+        <div class="grid grid-cols-3 gap-6 mt-6">
+          <div>
+            <p class="text-[11px] text-secondary"><%= t(".hero.accounts") %></p>
+            <p class="text-base font-medium text-primary mt-0.5 tabular-nums"><%= @hero[:accounts_count] %></p>
           </div>
-          <div class="mt-2 h-1.5 w-full rounded-full bg-surface-inset overflow-hidden">
-            <div class="h-full bg-primary rounded-full" style="inline-size: <%= @totals[:overall_percent] %>%; background-color: var(--text-primary);"></div>
+          <div>
+            <p class="text-[11px] text-secondary"><%= t(".hero.active_goals") %></p>
+            <p class="text-base font-medium text-primary mt-0.5 tabular-nums"><%= @hero[:active_goals_count] %></p>
+          </div>
+          <div>
+            <p class="text-[11px] text-secondary"><%= t(".hero.saved_toward_goals") %></p>
+            <p class="text-base font-medium text-primary mt-0.5 tabular-nums privacy-sensitive"><%= @hero[:saved_toward_goals_money].format %></p>
           </div>
         </div>
-        <div>
-          <p class="text-xs text-secondary mb-1"><%= t(".summary.active_goals") %></p>
-          <p class="text-lg font-medium text-primary tabular-nums"><%= @counts["active"] %></p>
+      </div>
+
+      <% if @hero[:sparkline_series].size >= 2 %>
+        <div class="min-h-[160px]"
+             data-controller="savings-sparkline"
+             data-savings-sparkline-series-value="<%= @hero[:sparkline_series].to_json %>"></div>
+      <% end %>
+    </section>
+
+    <%# Accounts section %>
+    <% if @savings_accounts.any? %>
+      <section>
+        <div class="mb-3">
+          <h2 class="text-base font-semibold text-primary"><%= t(".accounts_section.heading") %></h2>
+          <p class="text-sm text-secondary"><%= t(".accounts_section.subtitle") %></p>
         </div>
-        <div>
-          <p class="text-xs text-secondary mb-1"><%= t(".summary.on_track") %></p>
-          <p class="text-lg font-medium text-primary tabular-nums"><%= @totals[:on_track_count] %> / <%= @counts["active"] %></p>
-        </div>
-        <div>
-          <p class="text-xs text-secondary mb-1"><%= t(".summary.behind") %></p>
-          <p class="text-lg font-medium text-primary tabular-nums"><%= @totals[:behind_count] %></p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <% @savings_accounts.each do |account| %>
+            <%= render Savings::AccountCardComponent.new(account: account, goals_count: @account_goal_counts[account.id] || 0) %>
+          <% end %>
         </div>
       </section>
     <% end %>
 
-    <nav class="flex bg-surface-inset p-1 rounded-lg" role="tablist">
-      <% SavingsGoalsController::STATE_FILTERS.each do |state| %>
-        <% active = state == @state_filter %>
-        <%= link_to savings_goals_path(state: state),
-                    role: "tab",
-                    "aria-selected": active,
-                    class: "flex-1 inline-flex justify-center items-center gap-1.5 text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 #{active ? 'bg-white theme-dark:bg-gray-700 text-primary shadow-sm' : 'text-secondary hover:bg-surface-inset-hover'}" do %>
-          <span><%= t(".tabs.#{state}") %></span>
-          <span class="text-xs text-subdued tabular-nums"><%= @counts[state] %></span>
+    <%# Goals section %>
+    <section data-controller="savings-goals-filter">
+      <div class="flex items-start justify-between mb-3 gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-primary"><%= t(".goals_section.heading") %></h2>
+          <p class="text-sm text-secondary"><%= t(".goals_section.subtitle") %></p>
+        </div>
+        <% if @linkable_account_count > 0 %>
+          <%= render DS::Link.new(
+            text: t(".new_goal"),
+            variant: "primary",
+            href: new_savings_goal_path,
+            icon: "plus",
+            frame: :modal
+          ) %>
         <% end %>
-      <% end %>
-    </nav>
+      </div>
 
-    <% if @savings_goals.any? %>
-      <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-        <% @savings_goals.each do |goal| %>
-          <%= render Savings::GoalCardComponent.new(goal: goal) %>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="bg-container rounded-xl shadow-border-xs py-12 text-center">
-        <p class="text-sm text-secondary"><%= t(".empty_filtered", state: t(".tabs.#{@state_filter}").downcase) %></p>
-      </div>
+      <% if @show_search %>
+        <div class="flex flex-wrap items-center gap-2.5 mb-4">
+          <div class="relative flex-1 min-w-[200px]">
+            <input type="search"
+                   autocomplete="off"
+                   data-savings-goals-filter-target="input"
+                   data-action="input->savings-goals-filter#filter"
+                   aria-label="<%= t(".search.aria_label") %>"
+                   placeholder="<%= t(".search.placeholder") %>"
+                   class="block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container focus:ring-gray-500 sm:text-sm">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <%= icon "search", class: "text-secondary" %>
+            </div>
+          </div>
+          <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
+            <% %w[all on_track behind no_target_date].each do |status| %>
+              <% active = status == "all" %>
+              <button type="button"
+                      data-savings-goals-filter-target="chip"
+                      data-action="click->savings-goals-filter#selectChip"
+                      data-status="<%= status %>"
+                      aria-pressed="<%= active %>"
+                      class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100 <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
+                <%= t(".chips.#{status}") %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @active_goals.any? %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <% @active_goals.each do |goal| %>
+            <%= render Savings::GoalCardComponent.new(goal: goal) %>
+          <% end %>
+        </div>
+        <div class="hidden bg-container rounded-xl shadow-border-xs py-10 text-center mt-3" data-savings-goals-filter-target="empty">
+          <p class="text-sm text-secondary"><%= t(".search.empty") %></p>
+        </div>
+      <% else %>
+        <div class="bg-container rounded-xl shadow-border-xs py-12 text-center">
+          <p class="text-sm text-secondary"><%= t(".empty_filtered") %></p>
+        </div>
+      <% end %>
+    </section>
+
+    <% if @completed_goals.any? %>
+      <section>
+        <div class="flex items-center gap-2 mb-3 text-sm text-secondary">
+          <%= icon("circle-check-big", size: "sm") %>
+          <span><%= t(".completed_section.heading") %></span>
+          <span class="text-subdued">·</span>
+          <span class="tabular-nums"><%= @completed_goals.size %></span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <% @completed_goals.each do |goal| %>
+            <%= render Savings::GoalCardComponent.new(goal: goal) %>
+          <% end %>
+        </div>
+      </section>
     <% end %>
   <% end %>
 </div>

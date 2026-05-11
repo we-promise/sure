@@ -1,35 +1,59 @@
 <%= link_to savings_goal_path(goal),
-            class: "group flex flex-col gap-3.5 p-[18px] bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors" do %>
+            class: "group block bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-[18px]",
+            data: {
+              savings_goals_filter_target: "card",
+              goal_name: goal.name,
+              goal_status: goal.status
+            } do %>
   <div class="flex items-start gap-3">
     <%= render Savings::GoalAvatarComponent.new(goal: goal, size: "lg") %>
     <div class="min-w-0 flex-1">
-      <p class="text-sm font-medium text-primary truncate"><%= goal.name %></p>
-      <p class="text-[11px] text-subdued mt-0.5 truncate"><%= secondary_line %></p>
-    </div>
-    <%= render Savings::StatusPillComponent.new(goal: goal) %>
-  </div>
-
-  <div>
-    <div class="flex items-baseline justify-between mb-1.5">
-      <div class="text-lg font-medium text-primary tabular-nums privacy-sensitive">
-        <%= goal.current_balance_money.format %>
-        <span class="text-xs text-subdued ml-1">/ <%= goal.target_amount_money.format %></span>
+      <div class="flex items-center gap-2 mb-0.5">
+        <p class="text-sm font-medium text-primary truncate"><%= goal.name %></p>
+        <%= render Savings::StatusPillComponent.new(goal: goal) %>
       </div>
-      <span class="text-xs text-secondary tabular-nums"><%= progress_percent %>%</span>
+      <p class="text-[11px] text-subdued truncate"><%= secondary_line %></p>
     </div>
-    <div class="h-1.5 w-full rounded-full bg-surface-inset overflow-hidden">
-      <div class="h-full rounded-full transition-all duration-500"
-           style="inline-size: <%= progress_percent %>%; background-color: <%= bar_color_style %>;"></div>
+
+    <div class="shrink-0 relative" style="width: <%= Savings::GoalCardComponent::RING_SIZE %>px; height: <%= Savings::GoalCardComponent::RING_SIZE %>px;">
+      <svg width="<%= Savings::GoalCardComponent::RING_SIZE %>" height="<%= Savings::GoalCardComponent::RING_SIZE %>" viewBox="0 0 <%= Savings::GoalCardComponent::RING_SIZE %> <%= Savings::GoalCardComponent::RING_SIZE %>">
+        <circle cx="<%= Savings::GoalCardComponent::RING_SIZE / 2.0 %>"
+                cy="<%= Savings::GoalCardComponent::RING_SIZE / 2.0 %>"
+                r="<%= ring_radius %>"
+                fill="none"
+                stroke="var(--color-gray-200)"
+                stroke-width="<%= Savings::GoalCardComponent::RING_STROKE %>" />
+        <circle cx="<%= Savings::GoalCardComponent::RING_SIZE / 2.0 %>"
+                cy="<%= Savings::GoalCardComponent::RING_SIZE / 2.0 %>"
+                r="<%= ring_radius %>"
+                fill="none"
+                stroke="<%= ring_color %>"
+                stroke-width="<%= Savings::GoalCardComponent::RING_STROKE %>"
+                stroke-linecap="round"
+                stroke-dasharray="<%= ring_circumference %>"
+                stroke-dashoffset="<%= ring_offset %>"
+                transform="rotate(-90 <%= Savings::GoalCardComponent::RING_SIZE / 2.0 %> <%= Savings::GoalCardComponent::RING_SIZE / 2.0 %>)" />
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-primary tabular-nums">
+        <%= progress_percent %>%
+      </div>
     </div>
   </div>
 
-  <div class="flex items-center justify-between pt-1">
+  <div class="mt-3.5">
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-lg font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format %></span>
+      <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format %></span>
+    </div>
+  </div>
+
+  <div class="mt-3 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <%= render Savings::AccountStackComponent.new(accounts: linked_accounts) %>
       <span class="text-[11px] text-subdued"><%= linked_accounts_count_label %></span>
     </div>
     <span class="text-[11px] text-subdued tabular-nums">
-      <% if goal.completed? %>—<% else %><%= goal.remaining_amount_money.format %> to go<% end %>
+      <% if goal.completed? %>—<% else %><%= goal.remaining_amount_money.format %> <%= t("savings_goals.goal_card.left") %><% end %>
     </span>
   </div>
 <% end %>

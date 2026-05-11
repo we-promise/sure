@@ -2,21 +2,39 @@
 en:
   savings_goals:
     index:
-      title: Savings goals
-      subtitle: Save toward what matters.
+      title: Savings
+      subtitle: Your savings accounts and the goals you're working toward.
       new_goal: New goal
-      empty_filtered: No %{state} goals.
-      tabs:
-        all: All
-        active: Active
-        paused: Paused
-        completed: Completed
-        archived: Archived
-      summary:
-        total_saved: Total saved across goals
+      empty_filtered: No goals match.
+      hero:
+        total_in_savings: Total in savings
+        delta_up: "+%{amount} (↑ %{percent}%) vs. last 30 days"
+        delta_down: "−%{amount} (↓ %{percent}%) vs. last 30 days"
+        delta_flat: vs. last 30 days
+        accounts: Accounts
         active_goals: Active goals
+        saved_toward_goals: Saved toward goals
+      accounts_section:
+        heading: Accounts
+        subtitle: Your savings and emergency reserves
+      goals_section:
+        heading: Goals
+        subtitle: Save toward what matters.
+      completed_section:
+        heading: Completed
+      search:
+        placeholder: Search goals…
+        aria_label: Search savings goals
+        empty: No goals match.
+      chips:
+        all: All
         on_track: On track
         behind: Behind
+        no_target_date: No date
+      account_card:
+        funds:
+          one: Funds 1 goal
+          other: "Funds %{count} goals"
     new:
       heading: New savings goal
       step1_subtitle: Step 1 of 2 · Goal details
@@ -107,7 +125,7 @@ en:
       archived: Archived
     status:
       on_track: On track
-      behind: Behind pace
+      behind: Behind
       reached: Reached
       no_target_date: No date
     empty_state:
@@ -120,6 +138,7 @@ en:
     goal_card:
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
+      left: left
       accounts:
         one: 1 account
         other: "%{count} accounts"
@@ -127,6 +146,9 @@ en:
       completed: Completed
       past_due: Past due
       days_left:
+        one: 1 day left
+        other: "%{count} days left"
+      days_left_by:
         one: 1 day left · by %{date}
         other: "%{count} days left · by %{date}"
     form_stepper:
