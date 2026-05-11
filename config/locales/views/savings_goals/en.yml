@@ -119,6 +119,22 @@ en:
         body_with_date: "Bump your monthly contribution to stay on track for %{date}."
         body: Bump your monthly contribution to stay on track.
         cta: "Add %{amount}"
+      paused_banner:
+        title: This goal is paused
+        body: Resume it to keep tracking your progress.
+        resume_cta: Resume goal
+      archived_banner:
+        title: This goal is archived
+        body: Restore it to continue contributing, or leave it as a record.
+        restore_cta: Restore goal
+      celebration:
+        heading: Goal reached. Nice work.
+        body: "You hit your %{amount} target. Keep the goal as a record, or archive it now."
+        archive_cta: Archive goal
+      no_target_date:
+        heading: Add a target date
+        body: Set a deadline to project a finish line and track required pace.
+        cta: Set target date
       source:
         initial: Initial
         manual: Manual

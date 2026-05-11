@@ -80,7 +80,31 @@
     </div>
   </header>
 
-  <% if @savings_goal.status == :behind && @savings_goal.monthly_target_amount && !@savings_goal.paused? %>
+  <% if @savings_goal.paused? %>
+    <%# Paused banner %>
+    <%= render DS::Alert.new(variant: "info", title: t("savings_goals.show.paused_banner.title")) do %>
+      <p class="text-secondary"><%= t("savings_goals.show.paused_banner.body") %></p>
+      <div class="mt-2">
+        <%= button_to t("savings_goals.show.paused_banner.resume_cta"),
+                      resume_savings_goal_path(@savings_goal),
+                      method: :patch,
+                      class: "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+      </div>
+    <% end %>
+  <% elsif @savings_goal.archived? %>
+    <%# Archived banner %>
+    <%= render DS::Alert.new(variant: "info", title: t("savings_goals.show.archived_banner.title")) do %>
+      <p class="text-secondary"><%= t("savings_goals.show.archived_banner.body") %></p>
+      <% if @savings_goal.may_unarchive? %>
+        <div class="mt-2">
+          <%= button_to t("savings_goals.show.archived_banner.restore_cta"),
+                        unarchive_savings_goal_path(@savings_goal),
+                        method: :patch,
+                        class: "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
+        </div>
+      <% end %>
+    <% end %>
+  <% elsif @savings_goal.status == :behind && @savings_goal.monthly_target_amount %>
     <%# Catch-up callout %>
     <% catch_up_money = Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %>
     <%= render DS::Alert.new(variant: "warning", title: t("savings_goals.show.catch_up.title", amount: catch_up_money.format)) do %>
@@ -117,27 +141,65 @@
       </p>
     </div>
 
-    <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
-      <div class="flex items-start justify-between mb-2 gap-3">
-        <div class="min-w-0">
-          <h3 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h3>
-          <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
+    <% if @savings_goal.completed? || @savings_goal.status == :reached %>
+      <%# Reached celebration card %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-green-500/10 inline-flex items-center justify-center text-success mb-3">
+          <%= icon("party-popper", size: "2xl", color: "success") %>
         </div>
-        <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
-          <span class="inline-flex items-center gap-1.5">
-            <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--text-primary)" stroke-width="2" /></svg>
-            <%= t(".projection.legend_saved") %>
-          </span>
-          <span class="inline-flex items-center gap-1.5">
-            <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--color-yellow-600)" stroke-width="2" stroke-dasharray="3 3" /></svg>
-            <%= t(".projection.legend_projection") %>
-          </span>
+        <h3 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h3>
+        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @savings_goal.target_amount_money.format) %></p>
+        <% if @savings_goal.may_archive? %>
+          <div class="mt-4">
+            <%= button_to t(".celebration.archive_cta"),
+                          archive_savings_goal_path(@savings_goal),
+                          method: :patch,
+                          class: "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary border border-secondary bg-transparent hover:bg-surface-hover" %>
+          </div>
+        <% end %>
+      </div>
+    <% elsif @savings_goal.target_date.nil? %>
+      <%# No-target-date prompt %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
+          <%= icon("calendar-plus", size: "2xl") %>
+        </div>
+        <h3 class="text-lg font-semibold text-primary"><%= t(".no_target_date.heading") %></h3>
+        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".no_target_date.body") %></p>
+        <div class="mt-4">
+          <%= render DS::Link.new(
+            text: t(".no_target_date.cta"),
+            variant: "outline",
+            size: "sm",
+            href: edit_savings_goal_path(@savings_goal),
+            icon: "calendar-plus",
+            frame: :modal
+          ) %>
         </div>
       </div>
-      <div class="flex-1 min-h-[200px]"
-           data-controller="savings-goal-projection-chart"
-           data-savings-goal-projection-chart-data-value="<%= @savings_goal.projection_payload.to_json %>"></div>
-    </div>
+    <% else %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+        <div class="flex items-start justify-between mb-2 gap-3">
+          <div class="min-w-0">
+            <h3 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h3>
+            <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
+          </div>
+          <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
+            <span class="inline-flex items-center gap-1.5">
+              <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--text-primary)" stroke-width="2" /></svg>
+              <%= t(".projection.legend_saved") %>
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--color-yellow-600)" stroke-width="2" stroke-dasharray="3 3" /></svg>
+              <%= t(".projection.legend_projection") %>
+            </span>
+          </div>
+        </div>
+        <div class="flex-1 min-h-[200px]"
+             data-controller="savings-goal-projection-chart"
+             data-savings-goal-projection-chart-data-value="<%= @savings_goal.projection_payload.to_json %>"></div>
+      </div>
+    <% end %>
   </section>
 
   <%# Stat row %>
