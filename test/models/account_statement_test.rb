@@ -543,6 +543,20 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal @account, statement.account
   end
 
+  test "allows intentional review status changes away from rejected" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.reject_match!
+
+    statement.link_to_account!(@account)
+
+    assert statement.linked?
+    assert_equal @account, statement.account
+  end
+
   test "normalizes account last four hint when matching accounts" do
     @account.update!(institution_name: "Acme Bank ABCD", notes: "Private note")
 

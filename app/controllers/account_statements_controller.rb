@@ -44,19 +44,15 @@ class AccountStatementsController < ApplicationController
 
     return if account && !require_account_permission!(account)
 
-    begin
-      prepared_uploads = files.map { |file| AccountStatement.prepare_upload!(file) }
-    rescue AccountStatement::InvalidUploadError
-      redirect_back_or_to redirect_after_create(account), alert: t("account_statements.create.invalid_file_type")
-      return
-    end
-
     created = []
     duplicates = []
     validation_errors = []
 
-    prepared_uploads.each do |prepared_upload|
+    files.each do |file|
+      prepared_upload = AccountStatement.prepare_upload!(file)
       created << AccountStatement.create_from_prepared_upload!(family: Current.family, account: account, prepared_upload: prepared_upload)
+    rescue AccountStatement::InvalidUploadError
+      validation_errors << t("account_statements.create.invalid_file_type")
     rescue AccountStatement::DuplicateUploadError => e
       duplicates << e.statement
     rescue ActiveRecord::RecordInvalid => e

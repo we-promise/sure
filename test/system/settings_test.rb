@@ -42,7 +42,7 @@ class SettingsTest < ApplicationSystemTestCase
       assert_current_path accounts_path, ignore_query: true
 
       @settings_links.each do |name, path|
-        click_link name
+        click_link name, match: :first
         assert_selector "h1", text: name
         assert_current_path path
       end
@@ -57,7 +57,7 @@ class SettingsTest < ApplicationSystemTestCase
     Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"
-    click_link "Self-Hosting"
+    click_link "Self-Hosting", match: :first
     assert_current_path settings_hosting_path
     assert_selector "h1", text: "Self-Hosting"
     find("select#setting_onboarding_state").select("Invite-only")
@@ -102,9 +102,10 @@ class SettingsTest < ApplicationSystemTestCase
   private
 
     def open_settings_from_sidebar
-      within "div[data-testid=user-menu]" do
-        find("button").click
+      user_menu = find("div[data-testid=user-menu]", match: :first, visible: :visible)
+      within user_menu do
+        find("[data-DS--menu-target='button']", match: :first).click
+        click_link "Settings", match: :first
       end
-      click_link "Settings"
     end
 end

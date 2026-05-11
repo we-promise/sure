@@ -148,6 +148,24 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
   end
 
+  test "continues upload loop after an invalid file type" do
+    assert_difference "AccountStatement.count", 1 do
+      post account_statements_url, params: {
+        account_statement: {
+          files: [
+            uploaded_file(filename: "statement.bin", content_type: "application/octet-stream", content: "\x00\x01\x02".b),
+            uploaded_file(filename: "valid.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+          ]
+        }
+      }
+    end
+
+    statement = AccountStatement.order(:created_at).last
+    assert_redirected_to account_statement_url(statement)
+    assert_equal I18n.t("account_statements.create.success", count: 1), flash[:notice]
+    assert_includes flash[:alert], I18n.t("account_statements.create.invalid_file_type")
+  end
+
   test "rejects txt and xls statement uploads" do
     [
       uploaded_file(filename: "statement.txt", content_type: "text/plain"),
