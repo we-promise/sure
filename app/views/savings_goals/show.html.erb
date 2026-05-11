@@ -1,11 +1,12 @@
 <div class="space-y-4 pb-6 lg:pb-12">
-  <header class="flex items-start gap-4">
-    <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "xl") %>
-    <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-2 mb-1">
-        <h1 class="text-2xl font-semibold text-primary truncate"><%= @savings_goal.name %></h1>
-        <%= render Savings::StatusPillComponent.new(goal: @savings_goal) %>
-      </div>
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+    <div class="flex items-start gap-3 min-w-0 flex-1">
+      <%= render Savings::GoalAvatarComponent.new(goal: @savings_goal, size: "xl") %>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 mb-1 flex-wrap">
+          <h1 class="text-2xl font-semibold text-primary min-w-0 break-words"><%= @savings_goal.name %></h1>
+          <%= render Savings::StatusPillComponent.new(goal: @savings_goal) %>
+        </div>
       <p class="text-sm text-secondary">
         <%
           primary_parts = []
@@ -29,8 +30,9 @@
           <%= last_days.zero? ? t("savings_goals.goal_card.footer_last_today") : t("savings_goals.goal_card.footer_last_days", count: last_days) %>
         </p>
       <% end %>
+      </div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap sm:shrink-0">
       <%= render DS::Link.new(
         text: t(".edit"),
         variant: "outline",
