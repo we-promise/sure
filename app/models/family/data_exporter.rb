@@ -460,12 +460,12 @@ class Family::DataExporter
       return rule_operand(condition.value) unless condition.value.present?
 
       # Map category UUIDs to names for portability
-      if condition.condition_type == "transaction_category" && condition.value.present?
+      if condition.condition_type == "transaction_category"
         return rule_operand(condition.value, type: "Category", relation: @family.categories)
       end
 
       # Map merchant UUIDs to names for portability
-      if condition.condition_type == "transaction_merchant" && condition.value.present?
+      if condition.condition_type == "transaction_merchant"
         return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
       end
 
@@ -476,17 +476,17 @@ class Family::DataExporter
       return rule_operand(action.value) unless action.value.present?
 
       # Map category UUIDs to names for portability
-      if action.action_type == "set_transaction_category" && action.value.present?
+      if action.action_type == "set_transaction_category"
         return rule_operand(action.value, type: "Category", relation: @family.categories, fallback_to_name: true)
       end
 
       # Map merchant UUIDs to names for portability
-      if action.action_type == "set_transaction_merchant" && action.value.present?
+      if action.action_type == "set_transaction_merchant"
         return rule_operand(action.value, type: "Merchant", relation: @family.merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability
-      if action.action_type == "set_transaction_tags" && action.value.present?
+      if action.action_type == "set_transaction_tags"
         return rule_operand(action.value, type: "Tag", relation: @family.tags, fallback_to_name: true)
       end
 
