@@ -28,9 +28,15 @@ export class RailsContainer extends Container {
   ];
 
   envVars = {
-    RAILS_ENV: "development",
+    RAILS_ENV: "production",
     RAILS_LOG_TO_STDOUT: "true",
     RAILS_SERVE_STATIC_FILES: "true",
+    SECRET_KEY_BASE: "preview-secret-key-base-for-pr-880",
+    APP_DOMAIN: "sure-preview-880.sure-finances.workers.dev",
+    APP_URL: "https://sure-preview-880.sure-finances.workers.dev",
+    RAILS_FORCE_SSL: "false",
+    RAILS_ASSUME_SSL: "false",
+    ACTIVE_STORAGE_SERVICE: "local",
     BINDING: "::",
     PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
   };
