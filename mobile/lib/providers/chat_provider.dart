@@ -60,7 +60,8 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('fetchChats error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -93,7 +94,8 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = result['error'] ?? 'Failed to fetch chat';
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('fetchChat error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -151,11 +153,23 @@ class ChatProvider with ChangeNotifier {
         return null;
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('createChat error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       _isLoading = false;
       notifyListeners();
       return null;
     }
+  }
+
+  void _rollbackOptimisticMessage(String optimisticId, String chatId) {
+    if (_currentChat != null && _currentChat!.id == chatId) {
+      _currentChat = _currentChat!.copyWith(
+        messages: _currentChat!.messages
+            .where((m) => m.id != optimisticId)
+            .toList(),
+      );
+    }
+    _isWaitingForResponse = false;
   }
 
   /// Send a message to the current chat.
@@ -172,8 +186,9 @@ class ChatProvider with ChangeNotifier {
     // the network round-trip completes. This makes the empty-state disappear
     // and the typing indicator show at the same instant.
     final now = DateTime.now();
+    final optimisticId = 'pending-${now.millisecondsSinceEpoch}';
     final optimisticMessage = Message(
-      id: 'pending-${now.millisecondsSinceEpoch}',
+      id: optimisticId,
       type: 'text',
       role: 'user',
       content: content,
@@ -214,28 +229,15 @@ class ChatProvider with ChangeNotifier {
         return true;
       } else {
         // Roll back the optimistic message on failure.
-        if (_currentChat != null) {
-          _currentChat = _currentChat!.copyWith(
-            messages: _currentChat!.messages
-                .where((m) => m.id != optimisticMessage.id)
-                .toList(),
-          );
-        }
-        _isWaitingForResponse = false;
+        _rollbackOptimisticMessage(optimisticId, chatId);
         _errorMessage = result['error'] ?? 'Failed to send message';
         return false;
       }
     } catch (e) {
       // Roll back the optimistic message on error.
-      if (_currentChat != null) {
-        _currentChat = _currentChat!.copyWith(
-          messages: _currentChat!.messages
-              .where((m) => m.id != optimisticMessage.id)
-              .toList(),
-        );
-      }
-      _isWaitingForResponse = false;
-      _errorMessage = 'Error: ${e.toString()}';
+      _rollbackOptimisticMessage(optimisticId, chatId);
+      debugPrint('sendMessage error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       return false;
     } finally {
       _isSendingMessage = false;
@@ -268,15 +270,20 @@ class ChatProvider with ChangeNotifier {
         // Update current chat if it's the same.
         // Preserve existing messages — the title-update response may omit them.
         if (_currentChat != null && _currentChat!.id == chatId) {
-          _currentChat = updatedChat.messages.isEmpty
-              ? updatedChat.copyWith(messages: _currentChat!.messages)
-              : updatedChat;
+          final Chat newChat;
+          if (updatedChat.messages.isEmpty) {
+            newChat = updatedChat.copyWith(messages: _currentChat!.messages);
+          } else {
+            newChat = updatedChat;
+          }
+          _currentChat = newChat;
         }
 
         notifyListeners();
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('updateChatTitle error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
     }
   }
@@ -307,7 +314,8 @@ class ChatProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('deleteChat error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
     }

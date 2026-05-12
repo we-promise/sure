@@ -341,7 +341,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 }).toList()
               : allMessages;
           final firstName =
-              Provider.of<AuthProvider>(context, listen: false).user?.firstName;
+              Provider.of<AuthProvider>(context, listen: true).user?.firstName;
 
           return Column(
             children: [
