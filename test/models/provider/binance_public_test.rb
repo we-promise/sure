@@ -68,6 +68,38 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     assert_equal [ "BTCUSD" ], response.data.map(&:symbol)
   end
 
+  test "search_securities strips CRYPTO: prefix from holdings-processor symbols" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+
+    response = @provider.search_securities("CRYPTO:BTC")
+
+    assert response.success?
+    assert_includes response.data.map(&:symbol), "BTCUSD"
+  end
+
+  test "search_securities returns a synthetic stablecoin result without hitting exchangeInfo" do
+    @provider.expects(:exchange_info_symbols).never
+
+    response = @provider.search_securities("CRYPTO:USDT")
+
+    assert response.success?
+    assert_equal 1, response.data.size
+    row = response.data.first
+    assert_equal "USDTUSD", row.symbol
+    assert_equal "USDT", row.name
+    assert_equal "USD", row.currency
+    assert_equal "BNCX", row.exchange_operating_mic
+    assert_nil row.country_code
+  end
+
+  test "parse_ticker treats stablecoin/USD search-result form as stablecoin" do
+    parsed = @provider.send(:parse_ticker, "USDTUSD")
+    assert parsed[:stablecoin]
+    assert_nil parsed[:binance_pair]
+    assert_equal "USDT", parsed[:base]
+    assert_equal "USD", parsed[:display_currency]
+  end
+
   test "search_securities returns empty array when query does not match" do
     @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
 

@@ -68,8 +68,12 @@ class Provider::BinancePublic < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      query = symbol.to_s.strip.upcase
+      query = symbol.to_s.strip.upcase.delete_prefix(CRYPTO_PREFIX)
       next [] if query.empty?
+
+      if USD_STABLECOINS.include?(query)
+        next [ stablecoin_search_result(query) ]
+      end
 
       symbols = exchange_info_symbols
 
@@ -236,6 +240,21 @@ class Provider::BinancePublic < Provider
   end
 
   private
+    # Synthetic search hit for a USD-pegged stablecoin. Binance has no self-pair
+    # (USDTUSDT etc. don't exist), so we manufacture a result instead of letting
+    # the resolver fall back to an offline CRYPTO:* row. The downstream price
+    # path short-circuits via parse_ticker -> stablecoin_prices.
+    def stablecoin_search_result(base)
+      Security.new(
+        symbol: "#{base}USD",
+        name: base,
+        logo_url: ::Security.brandfetch_crypto_url(base),
+        exchange_operating_mic: BINANCE_MIC,
+        country_code: nil,
+        currency: "USD"
+      )
+    end
+
     # Synthesize flat 1.0 USD prices for USD-pegged stablecoins across the
     # requested range. Avoids a Binance round-trip (there is no self-pair like
     # USDTUSDT) and produces stable values for portfolio aggregation.
@@ -302,6 +321,12 @@ class Provider::BinancePublic < Provider
 
         base = ticker_up.delete_suffix(display_currency)
         next if base.empty?
+
+        # "{stablecoin}USD" form (e.g. "USDTUSD" produced by search_securities)
+        # routes to synthetic 1.0 USD pricing — there is no Binance self-pair.
+        if display_currency == "USD" && USD_STABLECOINS.include?(base)
+          return { binance_pair: nil, base: base, display_currency: "USD", stablecoin: true }
+        end
 
         return { binance_pair: "#{base}#{quote}", base: base, display_currency: display_currency }
       end
