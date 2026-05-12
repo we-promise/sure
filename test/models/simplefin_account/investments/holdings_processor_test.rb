@@ -80,64 +80,67 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal "total_cost", source_key
   end
 
-  test "cost_basis reported as a total (Vanguard / Fidelity) is divided when market_value disagrees" do
-    # Issue #1718 / #1182: Vanguard puts the total position cost in cost_basis.
-    # Raw 22004.40 is two orders of magnitude above the ~$162 share price,
-    # so the heuristic should recognize it as a total and divide by qty.
-    payload = {
-      "shares" => "139.00",
-      "cost_basis" => "22004.40",
-      "market_value" => "22626.42"
-    }
-
-    raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
+  test "cost_basis from a known total-basis institution is divided by qty" do
+    # Issue #1718 / #1182: Vanguard populates cost_basis with the total
+    # position cost. When the institution is on the allowlist we divide.
     cost_basis = @processor.send(
       :normalize_cost_basis,
-      raw_cost_basis,
+      BigDecimal("22004.40"),
       BigDecimal("139.00"),
-      source_key,
-      BigDecimal("22626.42")
+      "cost_basis",
+      true # institution_reports_total_basis?
     )
 
     assert_in_delta 158.30, cost_basis.to_f, 0.01
-    assert_equal "cost_basis", source_key
   end
 
-  test "cost_basis reported as per-share is kept when market_value agrees" do
-    # Brokerage correctly reports per-share basis ($45) for a $50 share price.
-    # Heuristic must NOT divide this — that would produce a $0.45 phantom basis.
-    payload = {
-      "shares" => "100",
-      "cost_basis" => "45.00",
-      "market_value" => "5000.00"
-    }
-
-    raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
+  test "basis from a known total-basis institution is divided by qty" do
     cost_basis = @processor.send(
       :normalize_cost_basis,
-      raw_cost_basis,
-      BigDecimal("100"),
-      source_key,
-      BigDecimal("5000.00")
+      BigDecimal("9000.00"),
+      BigDecimal("200"),
+      "basis",
+      true
     )
 
     assert_equal BigDecimal("45.00"), cost_basis
   end
 
-  test "cost_basis heuristic falls back to per-share when market_value missing" do
-    # No market_value → can't sanity-check. Preserve pre-fix behavior of
-    # trusting the spec (treat as per-share) so we never regress a known-good
-    # provider just because the market value happens to be absent.
-    raw_cost_basis = BigDecimal("22004.40")
+  test "cost_basis from a compliant institution is kept untouched (no false divide)" do
+    # Codex regression: a legitimate per-share basis on a holding with a
+    # large unrealized loss (e.g. $100/share basis now worth $5/share) must
+    # NOT be divided by qty. Per the SimpleFIN spec, cost_basis is per-share
+    # — only the institution allowlist should override that.
     cost_basis = @processor.send(
       :normalize_cost_basis,
-      raw_cost_basis,
-      BigDecimal("139.00"),
+      BigDecimal("100.00"),
+      BigDecimal("100"),
       "cost_basis",
-      nil
+      false
     )
 
-    assert_equal raw_cost_basis, cost_basis
+    assert_equal BigDecimal("100.00"), cost_basis
+  end
+
+  test "institution_reports_total_basis? matches Vanguard and Fidelity org metadata" do
+    cases = {
+      { "name" => "Vanguard" }                          => true,
+      { "name" => "VANGUARD BROKERAGE" }                => true,
+      { "name" => "Fidelity Investments" }              => true,
+      { "domain" => "vanguard.com" }                    => true,
+      { "domain" => "401k.fidelity.com" }               => true,
+      { "name" => "Charles Schwab", "domain" => "schwab.com" } => false,
+      { "name" => "Chase" }                             => false,
+      {}                                                => false
+    }
+
+    cases.each do |org, expected|
+      account = Struct.new(:org_data).new(org)
+      processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
+      assert_equal expected,
+        processor.send(:institution_reports_total_basis?),
+        "org_data #{org.inspect} expected #{expected}"
+    end
   end
 
   test "missing cost basis fields return nil" do

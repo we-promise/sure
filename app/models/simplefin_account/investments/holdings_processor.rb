@@ -48,7 +48,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
-        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, market_value)
+        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
@@ -125,42 +125,49 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     # Sure stores holding cost_basis as per-share average cost. SimpleFIN
-    # brokerages are inconsistent:
-    #   - total_cost / value: always total position cost (per the SimpleFIN
-    #     spec / observed payloads); divide unconditionally.
-    #   - cost_basis / basis: the spec calls this per-share, but Vanguard and
-    #     Fidelity (issue #1718, #1182) populate it with the total instead.
-    #     We can't trust the key name, so we compare the raw value against
-    #     the holding's market share price and pick the interpretation that
-    #     lands closer to a believable per-share number.
+    # brokerages are inconsistent about which field carries which shape:
     #
-    # Heuristic for cost_basis/basis: let share_price = market_value / qty.
-    # The geometric midpoint between "raw is per-share" (raw ≈ share_price)
-    # and "raw is total" (raw ≈ qty × share_price) is share_price × √qty.
-    # If raw is above the midpoint it's almost certainly a total, so divide
-    # by qty; otherwise keep as per-share. Falls back to "treat as per-share"
-    # when market_value or qty is missing — same as the pre-fix behavior, so
-    # we never make a confidently-correct read worse.
-    def normalize_cost_basis(raw_cost_basis, qty, source_key, market_value = nil)
+    #   - total_cost / value: always a total position cost per the SimpleFIN
+    #     spec and observed payloads; divide by qty unconditionally.
+    #   - cost_basis / basis: the spec calls this per-share, and most
+    #     brokerages comply. Keep these values unchanged by default.
+    #
+    # Exception: a small allowlist of brokerages (Vanguard, Fidelity) is
+    # known to populate cost_basis with the total position cost in violation
+    # of the spec (#1718, #1182). For those connections only, divide by qty.
+    #
+    # An earlier revision of this fix used a magnitude heuristic
+    # (share_price × √qty midpoint). It was withdrawn because a legitimate
+    # per-share basis on a holding with a large unrealized loss
+    # (e.g. 100 shares with basis $100 now worth $5) trips the midpoint and
+    # gets mis-divided to $1/share — corrupting compliant providers. The
+    # allowlist trades some manual maintenance for that safety.
+    def normalize_cost_basis(raw_cost_basis, qty, source_key, total_basis_institution = false)
       return nil if raw_cost_basis.nil?
 
-      if %w[total_cost value].include?(source_key)
+      if %w[total_cost value].include?(source_key) ||
+         (total_basis_institution && %w[cost_basis basis].include?(source_key))
         return nil unless qty.to_d.positive?
         return raw_cost_basis / qty
       end
 
-      return raw_cost_basis unless qty.to_d.positive?
-      return raw_cost_basis unless market_value && market_value.to_d.positive?
+      raw_cost_basis
+    end
 
-      qty_f         = qty.to_f
-      share_price_f = market_value.to_f / qty_f
-      midpoint_f    = share_price_f * Math.sqrt(qty_f)
+    # Institutions known to populate the SimpleFIN `cost_basis` / `basis`
+    # field with the total position cost rather than the per-share value the
+    # spec requires. Matched as case-insensitive substrings against the
+    # account's stored org name and domain.
+    TOTAL_BASIS_INSTITUTIONS = %w[vanguard fidelity].freeze
 
-      if raw_cost_basis.to_f > midpoint_f
-        raw_cost_basis / qty
-      else
-        raw_cost_basis
-      end
+    def institution_reports_total_basis?
+      org = simplefin_account.respond_to?(:org_data) ? simplefin_account.org_data : nil
+      return false if org.blank?
+
+      candidates = [ org["name"], org[:name], org["domain"], org[:domain] ].compact.map(&:to_s).map(&:downcase)
+      return false if candidates.empty?
+
+      TOTAL_BASIS_INSTITUTIONS.any? { |needle| candidates.any? { |c| c.include?(needle) } }
     end
 
     def resolve_security(symbol, description)
