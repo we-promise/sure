@@ -191,6 +191,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
+      { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" }
     ].freeze
@@ -208,6 +209,7 @@ class Settings::ProvidersController < ApplicationController
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
       "snaptrade"      => "SnaptradeItem",
+      "ibkr"           => "IbkrItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
     }.freeze
@@ -232,6 +234,8 @@ class Settings::ProvidersController < ApplicationController
         @kraken_items = Current.family.kraken_items.active.ordered
       when "snaptrade"
         @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
+      when "ibkr"
+        @ibkr_items = Current.family.ibkr_items.ordered
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -257,6 +261,7 @@ class Settings::ProvidersController < ApplicationController
       @mercury_items = Current.family.mercury_items.active.ordered
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.ordered
+      @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
@@ -286,6 +291,7 @@ class Settings::ProvidersController < ApplicationController
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
         "snaptrade"      => @snaptrade_items,
+        "ibkr"           => @ibkr_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items
       }

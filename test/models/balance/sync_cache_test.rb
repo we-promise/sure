@@ -60,6 +60,31 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 120.0, converted_entry.amount  # 100 * 1.2 = 120
   end
 
+  test "uses custom exchange rate from trade when present" do
+    security = Security.create!(ticker: "TST", name: "Test")
+
+    _entry = @account.entries.create!(
+      date: Date.current,
+      name: "Test Trade",
+      amount: 100,
+      currency: "EUR",
+      entryable: Trade.new(
+        security: security,
+        qty: 1,
+        price: 100,
+        currency: "EUR",
+        exchange_rate: 1.5
+      )
+    )
+
+    sync_cache = Balance::SyncCache.new(@account)
+    converted_entries = sync_cache.send(:converted_entries)
+
+    converted_entry = converted_entries.first
+    assert_equal "USD", converted_entry.currency
+    assert_equal 150.0, converted_entry.amount
+  end
+
   test "converts multiple entries with correct rates" do
     # Create exchange rates
     ExchangeRate.create!(
@@ -196,5 +221,36 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     converted_entry = converted_entries.first
     # Should use custom rate (1.5), not fetched rate (1.2)
     assert_equal 150.0, converted_entry.amount  # 100 * 1.5, not 100 * 1.2
+  end
+
+  test "prioritizes trade custom rate over fetched rate" do
+    ExchangeRate.create!(
+      from_currency: "EUR",
+      to_currency: "USD",
+      date: Date.current,
+      rate: 1.2
+    )
+
+    security = Security.create!(ticker: "TST2", name: "Test 2")
+
+    _entry = @account.entries.create!(
+      date: Date.current,
+      name: "EUR Trade with custom rate",
+      amount: 100,
+      currency: "EUR",
+      entryable: Trade.new(
+        security: security,
+        qty: 1,
+        price: 100,
+        currency: "EUR",
+        exchange_rate: 1.5
+      )
+    )
+
+    sync_cache = Balance::SyncCache.new(@account)
+    converted_entries = sync_cache.send(:converted_entries)
+
+    converted_entry = converted_entries.first
+    assert_equal 150.0, converted_entry.amount
   end
 end

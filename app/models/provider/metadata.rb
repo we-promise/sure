@@ -10,6 +10,7 @@ class Provider
       binance:        { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "BI", logo_bg: "bg-yellow-600" },
       kraken:         { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "KR", logo_bg: "bg-violet-600" },
       snaptrade:      { region: "US / CA", kind: "Investment", maturity: :beta,   logo_text: "ST", logo_bg: "bg-green-600" },
+      ibkr:           { region: "Global",  kind: "Investment", maturity: :beta,   logo_text: "IB", logo_bg: "bg-red-600" },
       indexa_capital: { region: "ES",      kind: "Investment", maturity: :alpha,  logo_text: "IC", logo_bg: "bg-red-600" },
       sophtron:       { region: "US",      kind: "Bank",       maturity: :alpha,  logo_text: "SO", logo_bg: "bg-teal-600" },
       plaid:          { region: "US",      kind: "Bank",       tier: "Paid", maturity: :stable, logo_text: "PL", logo_bg: "bg-indigo-600" },

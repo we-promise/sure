@@ -1,0 +1,39 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "Link Interactive Brokers account") %>
+
+    <% dialog.with_body do %>
+      <% if @available_ibkr_accounts.blank? %>
+        <div class="p-4 text-sm text-secondary">
+          <p class="mb-2">No unlinked Interactive Brokers accounts are available yet.</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Run a sync from Settings &gt; Providers after updating your Flex query.</li>
+            <li>Wait for the account discovery sync to finish.</li>
+          </ul>
+        </div>
+      <% else %>
+        <%= form_with url: link_existing_account_ibkr_items_path, method: :post, data: { turbo_frame: "_top" }, class: "space-y-4" do %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <div class="space-y-2 max-h-64 overflow-auto">
+            <% @available_ibkr_accounts.each do |ibkr_account| %>
+              <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
+                <%= radio_button_tag :ibkr_account_id, ibkr_account.id, false %>
+                <div class="flex flex-col">
+                  <span class="text-sm text-primary font-medium"><%= ibkr_account.name.presence || ibkr_account.ibkr_account_id %></span>
+                  <span class="text-xs text-secondary">
+                    <%= ibkr_account.currency %> • Balance: <%= number_to_currency((ibkr_account.current_balance || 0), unit: Money::Currency.new(ibkr_account.currency || "USD").symbol) %>
+                  </span>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -288,4 +288,55 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "read_write", share.permission
     assert share.include_in_finances?
   end
+
+  test "current_holdings prefers latest provider snapshot holdings across currencies" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Linked Brokerage",
+      balance: 1000,
+      currency: "USD",
+      accountable: Investment.new
+    )
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: account, provider: coinstats_account)
+
+    eur_security = Security.create!(ticker: "ASML", name: "ASML")
+    chf_security = Security.create!(ticker: "NOVN", name: "Novartis")
+
+    provider_holding = account.holdings.create!(
+      security: eur_security,
+      date: Date.current,
+      qty: 2,
+      price: 500,
+      amount: 1000,
+      currency: "EUR",
+      account_provider: account_provider,
+      cost_basis: 450
+    )
+
+    account.holdings.create!(
+      security: eur_security,
+      date: Date.current,
+      qty: 2,
+      price: 540,
+      amount: 1080,
+      currency: "USD"
+    )
+
+    second_provider_holding = account.holdings.create!(
+      security: chf_security,
+      date: Date.current,
+      qty: 3,
+      price: 90,
+      amount: 270,
+      currency: "CHF",
+      account_provider: account_provider,
+      cost_basis: 80
+    )
+
+    assert_equal [ provider_holding.id, second_provider_holding.id ].sort, account.current_holdings.pluck(:id).sort
+    assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
+  end
 end

@@ -102,6 +102,9 @@ module SettingsHelper
         return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
       end
       sync_based_summary(key)
+    when "ibkr"
+      return { status: :off } unless @ibkr_items&.any?
+      sync_based_summary(key)
     when "indexa_capital"
       return { status: :off } unless @indexa_capital_items&.any?
       sync_based_summary(key)

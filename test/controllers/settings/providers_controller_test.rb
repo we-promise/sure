@@ -355,6 +355,37 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sync started/i, response.body)
   end
 
+  test "GET show includes Interactive Brokers in bank sync providers" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_match(/Interactive Brokers/i, response.body)
+    assert_match(/Flex Query/i, response.body)
+  end
+
+  test "GET connect_form renders Interactive Brokers panel" do
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    assert_match(/Interactive Brokers/i, response.body)
+    assert_match(/Query ID/i, response.body)
+  end
+
+  test "POST sync for ibkr without an active Ibkr sync enqueues SyncJob" do
+    item = ibkr_items(:configured_item)
+    Sync.where(syncable_type: "IbkrItem", syncable_id: item.id).delete_all
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      post sync_provider_settings_providers_path(provider_key: "ibkr")
+    end
+
+    assert_redirected_to settings_providers_path
+
+    follow_redirect!
+    assert_response :success
+    assert_match(/Sync started/i, response.body)
+  end
+
   test "non-admin users cannot update providers" do
     with_self_hosting do
       sign_in users(:family_member)
