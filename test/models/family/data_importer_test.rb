@@ -77,6 +77,176 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "active", account.status
   end
 
+  test "imports raw balance history records" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Balance History Checking",
+          balance: "1200.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1",
+          account_id: "acct-1",
+          date: "2024-01-31",
+          balance: "1200.00",
+          currency: "USD",
+          cash_balance: "1100.00",
+          start_cash_balance: "1000.00",
+          start_non_cash_balance: "0.00",
+          cash_inflows: "300.00",
+          cash_outflows: "200.00",
+          non_cash_inflows: "0.00",
+          non_cash_outflows: "0.00",
+          net_market_flows: "0.00",
+          cash_adjustments: "0.00",
+          non_cash_adjustments: "0.00",
+          flows_factor: 1
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Balance History Checking")
+    balance = account.balances.find_by!(date: Date.parse("2024-01-31"), currency: "USD")
+
+    assert_equal 1200.0, balance.balance.to_f
+    assert_equal 1100.0, balance.cash_balance.to_f
+    assert_equal 1000.0, balance.start_cash_balance.to_f
+    assert_equal 300.0, balance.cash_inflows.to_f
+    assert_equal 200.0, balance.cash_outflows.to_f
+    assert_equal 1, balance.flows_factor
+  end
+
+  test "imports duplicate raw balance records idempotently by account date and currency" do
+    balance_record = {
+      type: "Balance",
+      data: {
+        id: "balance-1",
+        account_id: "acct-1",
+        date: "2024-01-31",
+        balance: "1200.00",
+        currency: "USD",
+        cash_balance: "1100.00",
+        flows_factor: 1
+      }
+    }
+
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Idempotent Balance Checking",
+          balance: "1200.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      balance_record,
+      balance_record.deep_merge(data: { id: "balance-1-duplicate", balance: "1300.00", cash_balance: "1250.00" })
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Idempotent Balance Checking")
+    assert_equal 1, account.balances.where(date: Date.parse("2024-01-31"), currency: "USD").count
+
+    balance = account.balances.find_by!(date: Date.parse("2024-01-31"), currency: "USD")
+    assert_equal 1300.0, balance.balance.to_f
+    assert_equal 1250.0, balance.cash_balance.to_f
+  end
+
+  test "preserves omitted raw balance components on duplicate records" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Partial Balance Checking",
+          balance: "1200.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1",
+          account_id: "acct-1",
+          date: "2024-01-31",
+          balance: "1200.00",
+          currency: "USD",
+          cash_balance: "1100.00",
+          cash_inflows: "300.00",
+          cash_outflows: "200.00",
+          flows_factor: -1
+        }
+      },
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1-partial",
+          account_id: "acct-1",
+          date: "2024-01-31",
+          balance: "1300.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Partial Balance Checking")
+    balance = account.balances.find_by!(date: Date.parse("2024-01-31"), currency: "USD")
+
+    assert_equal 1300.0, balance.balance.to_f
+    assert_equal 1100.0, balance.cash_balance.to_f
+    assert_equal 300.0, balance.cash_inflows.to_f
+    assert_equal 200.0, balance.cash_outflows.to_f
+    assert_equal(-1, balance.flows_factor)
+  end
+
+  test "dates synthesized account opening balance before imported balance history" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Balance Anchored Checking",
+          balance: "500.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1",
+          account_id: "acct-1",
+          date: "2024-02-01",
+          balance: "500.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Balance Anchored Checking")
+    opening_anchor = account.valuations.opening_anchor.first
+
+    assert_not_nil opening_anchor
+    assert_equal Date.parse("2024-01-31"), opening_anchor.entry.date
+  end
+
   test "dates synthesized account opening balance before oldest imported activity" do
     ndjson = build_ndjson([
       {
@@ -796,6 +966,54 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "manual", imported_holding.cost_basis_source
     assert imported_holding.cost_basis_locked
     assert imported_holding.security_locked
+  end
+
+  test "round trips raw balance history through full export" do
+    source_family = Family.create!(
+      name: "Source Balance Family",
+      currency: "USD",
+      locale: "en",
+      date_format: "%Y-%m-%d"
+    )
+    source_account = source_family.accounts.create!(
+      name: "Round Trip Balance Checking",
+      accountable: Depository.new,
+      balance: 1_500,
+      currency: "USD"
+    )
+    source_account.balances.create!(
+      date: Date.parse("2024-01-31"),
+      balance: 1_500,
+      cash_balance: 1_450,
+      currency: "USD",
+      start_cash_balance: 1_000,
+      start_non_cash_balance: 0,
+      cash_inflows: 700,
+      cash_outflows: 250,
+      non_cash_inflows: 0,
+      non_cash_outflows: 0,
+      net_market_flows: 0,
+      cash_adjustments: 0,
+      non_cash_adjustments: 0,
+      flows_factor: 1
+    )
+
+    zip_data = Family::DataExporter.new(source_family).generate_export
+    ndjson = nil
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson = zip.read("all.ndjson")
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    imported_account = @family.accounts.find_by!(name: "Round Trip Balance Checking")
+    imported_balance = imported_account.balances.find_by!(date: Date.parse("2024-01-31"), currency: "USD")
+
+    assert_equal 1500.0, imported_balance.balance.to_f
+    assert_equal 1450.0, imported_balance.cash_balance.to_f
+    assert_equal 1000.0, imported_balance.start_cash_balance.to_f
+    assert_equal 700.0, imported_balance.cash_inflows.to_f
+    assert_equal 250.0, imported_balance.cash_outflows.to_f
   end
 
   test "imports holding snapshots with ticker fallback when exchange mic is missing" do
