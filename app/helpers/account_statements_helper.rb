@@ -56,11 +56,12 @@ module AccountStatementsHelper
   def account_statement_reconciliation_label(check)
     key = check[:key] if check.respond_to?(:key?) && check.key?(:key)
     key ||= check["key"] if check.respond_to?(:key?) && check.key?("key")
-    return t("account_statements.reconciliation.checks.unknown") if key.blank?
+    fallback = t("account_statements.reconciliation.checks.unknown_check")
+    return fallback if key.blank?
 
     t(
       "account_statements.reconciliation.checks.#{key}",
-      default: t("account_statements.reconciliation.checks.unknown")
+      default: fallback
     )
   end
 

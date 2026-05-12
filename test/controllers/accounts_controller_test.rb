@@ -19,6 +19,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show lazily loads statement tab data unless statements tab is active" do
+    AccountStatement::Coverage.expects(:for_year).never
+    AccountStatement.expects(:reconciliation_statuses_for).never
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "select[name='statement_year']", count: 0
+    statements_path = account_path(@account, tab: "statements")
+    assert_select "turbo-frame[src='#{statements_path}']"
+  end
+
   test "statements tab shows coverage and upload for statement managers with account write access" do
     get account_url(@account, tab: "statements")
 
@@ -26,6 +38,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=file][accept='.pdf,.csv,.xlsx']"
     assert_select "select[name='statement_year']"
     assert_select "p", text: I18n.l(Date.current.prev_month.beginning_of_month, format: "%b %Y")
+  end
+
+  test "statements tab lazy frame returns matching frame content" do
+    frame_id = dom_id(@account, :statements_tab)
+
+    get account_url(@account, tab: "statements"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "select[name='statement_year']"
+    assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
   end
 
   test "statements tab filters historical coverage by year" do

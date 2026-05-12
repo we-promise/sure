@@ -79,6 +79,7 @@ class Account < ApplicationRecord
   }
 
   has_one_attached :logo, dependent: :purge_later
+  # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy

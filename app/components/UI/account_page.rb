@@ -80,12 +80,31 @@ class UI::AccountPage < ApplicationComponent
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
     when :statements
-      render "accounts/show/statements",
-             account: account,
-             coverage: statement_coverage,
-             statements: statements,
-             reconciliation_statuses: reconciliation_statuses,
-             can_manage_statements: can_manage_statements
+      render_statement_tab
     end
+  end
+
+  def render_statement_tab
+    return render "accounts/show/statements_frame", **statement_tab_locals if statement_tab_loaded?
+
+    turbo_frame_tag statement_tab_frame_id, src: helpers.account_path(account, tab: "statements"), loading: :lazy
+  end
+
+  def statement_tab_loaded?
+    statement_coverage.present?
+  end
+
+  def statement_tab_frame_id
+    dom_id(account, :statements_tab)
+  end
+
+  def statement_tab_locals
+    {
+      account: account,
+      coverage: statement_coverage,
+      statements: statements,
+      reconciliation_statuses: reconciliation_statuses,
+      can_manage_statements: can_manage_statements
+    }
   end
 end
