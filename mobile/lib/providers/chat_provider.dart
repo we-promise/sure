@@ -332,9 +332,9 @@ class ChatProvider with ChangeNotifier {
         chatIds: chatIds,
       );
 
-      final deletedCount = result['deletedCount'] as int;
+      final deletedCount = (result['deletedCount'] as int?) ?? 0;
       if (result['success'] == true || deletedCount > 0) {
-        final failedIds = (result['failedIds'] as List).cast<String>().toSet();
+        final failedIds = ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
         final deleted = chatIds.toSet().difference(failedIds);
         _chats.removeWhere((c) => deleted.contains(c.id));
 

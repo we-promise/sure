@@ -114,7 +114,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          success ? 'Chats deleted' : 'Some chats could not be deleted',
+          success ? 'Chats deleted' : 'Failed to delete chats',
         ),
         backgroundColor: success ? Colors.green : Colors.red,
       ),

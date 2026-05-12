@@ -337,7 +337,14 @@ class ChatService {
     required List<String> chatIds,
   }) async {
     final results = await Future.wait(
-      chatIds.map((id) => deleteChat(accessToken: accessToken, chatId: id)),
+      chatIds.map((id) async {
+        try {
+          return await deleteChat(accessToken: accessToken, chatId: id);
+        } catch (_) {
+          return {'success': false};
+        }
+      }),
+      eagerError: false,
     );
     final failedIds = chatIds
         .asMap()
