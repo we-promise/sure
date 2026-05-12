@@ -2,7 +2,8 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
-  before_destroy :move_account_statements_to_inbox
+  before_destroy :capture_account_statement_ids_to_move
+  after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -265,25 +266,6 @@ class Account < ApplicationRecord
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
-    def create_from_kraken_account(kraken_account)
-      family = kraken_account.kraken_item.family
-
-      attributes = {
-        family: family,
-        name: kraken_account.name,
-        balance: (kraken_account.current_balance || 0).to_d,
-        cash_balance: 0,
-        currency: kraken_account.currency.presence || family.currency,
-        accountable_type: "Crypto",
-        accountable_attributes: {
-          subtype: "exchange",
-          tax_treatment: "taxable"
-        }
-      }
-
-      create_and_sync(attributes, skip_initial_sync: true)
-    end
-
 
     private
 
@@ -514,9 +496,16 @@ class Account < ApplicationRecord
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
     end
 
+    def capture_account_statement_ids_to_move
+      @statement_ids_to_move = account_statements.ids
+    end
+
     def move_account_statements_to_inbox
-      # Bypass callbacks deliberately: the account is being destroyed, so linked statements need a direct inbox move.
-      account_statements.update_all(
+      statement_ids = Array(@statement_ids_to_move).compact
+      return if statement_ids.empty?
+
+      # Bypass callbacks deliberately: the account was destroyed, so linked statements need a direct inbox move.
+      AccountStatement.where(id: statement_ids).update_all(
         account_id: nil,
         review_status: "unmatched",
         match_confidence: nil,

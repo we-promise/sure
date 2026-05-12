@@ -47,20 +47,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.uuid "family_id", null: false
     t.uuid "account_id"
     t.uuid "suggested_account_id"
-    t.string "filename", null: false
-    t.string "content_type", null: false
+    t.string "filename", limit: 255, null: false
+    t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
     t.string "checksum", null: false
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
-    t.string "institution_name_hint"
-    t.string "account_name_hint"
-    t.string "account_last4_hint"
+    t.string "institution_name_hint", limit: 200
+    t.string "account_name_hint", limit: 200
+    t.string "account_last4_hint", limit: 4
     t.date "period_start_on"
     t.date "period_end_on"
     t.decimal "opening_balance", precision: 19, scale: 4
     t.decimal "closing_balance", precision: 19, scale: 4
-    t.string "currency"
+    t.string "currency", limit: 3
     t.decimal "parser_confidence", precision: 5, scale: 4
     t.decimal "match_confidence", precision: 5, scale: 4
     t.string "review_status", default: "unmatched", null: false
@@ -78,7 +78,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
     t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
     t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
+    t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
+    t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
+    t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"
     t.check_constraint "content_sha256 IS NULL OR content_sha256::text ~ '^[0-9a-f]{64}$'::text", name: "chk_account_statements_content_sha256"
+    t.check_constraint "currency IS NULL OR char_length(currency::text) <= 3", name: "chk_account_statements_currency_length"
+    t.check_constraint "char_length(filename::text) <= 255", name: "chk_account_statements_filename_length"
+    t.check_constraint "institution_name_hint IS NULL OR char_length(institution_name_hint::text) <= 200", name: "chk_account_statements_institution_hint_length"
     t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
     t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
     t.check_constraint "period_start_on IS NULL OR period_end_on IS NULL OR period_start_on <= period_end_on", name: "chk_account_statements_period_order"
