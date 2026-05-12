@@ -81,7 +81,7 @@ class Transaction < ApplicationRecord
   # Kinds excluded from budget/income-statement analytics.
   # loan_payment and investment_contribution are intentionally NOT here —
   # they represent real cash outflow from a budgeting perspective.
-  BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
+  BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment investment_contribution].freeze
 
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
