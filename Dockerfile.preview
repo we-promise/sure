@@ -163,43 +163,13 @@ emit_status db-prepare "running rails db:prepare"
 /rails/bin/rails db:prepare
 emit_status db-prepare-done "rails db:prepare finished"
 
-echo "Probing app boot..."
-emit_status app-boot-probe "running rails runner boot probe"
-strace -f -tt -o /tmp/boot_probe.strace bundle exec rails runner 'puts "preview boot probe ok"' > /tmp/boot_probe.log 2>&1 &
-BOOT_PROBE_PID=$!
-BOOT_PROBE_OK=0
-for i in {1..30}; do
-  if ! kill -0 "$BOOT_PROBE_PID" 2>/dev/null; then
-    wait "$BOOT_PROBE_PID"
-    BOOT_PROBE_OK=1
-    break
-  fi
-  sleep 1
-done
-if [ "$BOOT_PROBE_OK" -eq 1 ]; then
-  emit_status app-boot-probe-ok "$(tail -n 20 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-1000)"
-else
-  BOOT_RUBY_PID=$(pgrep -P "$BOOT_PROBE_PID" ruby | head -n 1)
-  if [ -n "$BOOT_RUBY_PID" ]; then
-    kill -QUIT "$BOOT_RUBY_PID" 2>/dev/null || true
-  else
-    kill -QUIT "$BOOT_PROBE_PID" 2>/dev/null || true
-  fi
-  sleep 3
-  emit_status app-boot-probe-failed "$( { echo 'boot_log:'; tail -n 120 /tmp/boot_probe.log 2>/dev/null; echo; echo 'strace_tail:'; tail -n 120 /tmp/boot_probe.strace 2>/dev/null; } | tr '\n' ' ' | cut -c 1-7000)"
-  kill -TERM "$BOOT_PROBE_PID" 2>/dev/null || true
-  sleep 1
-  kill -KILL "$BOOT_PROBE_PID" 2>/dev/null || true
-  wait "$BOOT_PROBE_PID" 2>/dev/null || true
-fi
-
 # Execute the main command with an internal readiness probe
 echo "Starting Rails server..."
 emit_status rails-start "starting rails server"
 "$@" > /tmp/rails.log 2>&1 &
 RAILS_PID=$!
 
-for i in {1..30}; do
+for i in {1..180}; do
   if curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
     emit_status rails-up-ready "rails responded on localhost:3000/up"
     break

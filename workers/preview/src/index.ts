@@ -8,8 +8,8 @@ const DIAGNOSTICS_KEY = "preview-diagnostics";
 const DIAGNOSTICS_HISTORY_KEY = "preview-diagnostics-history";
 const START_RETRIES = 90;
 const START_DELAY_MS = 1000;
-const PORT_READY_TIMEOUT_MS = 120000;
-const INSTANCE_GET_TIMEOUT_MS = 30000;
+const PORT_READY_TIMEOUT_MS = 300000;
+const INSTANCE_GET_TIMEOUT_MS = 60000;
 
 export class RailsContainer extends Container {
   // Rails runs on port 3000
