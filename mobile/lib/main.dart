@@ -257,12 +257,6 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
     });
   }
 
-  void _goToBackendConfig() {
-    setState(() {
-      _hasBackendUrl = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isCheckingConfig) {
@@ -314,9 +308,7 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
           return const SsoOnboardingScreen();
         }
 
-        return LoginScreen(
-          onGoToSettings: _goToBackendConfig,
-        );
+        return const LoginScreen();
       },
     );
   }

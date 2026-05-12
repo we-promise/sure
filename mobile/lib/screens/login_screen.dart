@@ -5,11 +5,26 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
+import 'backend_config_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onGoToSettings;
 
   const LoginScreen({super.key, this.onGoToSettings});
+
+  void _openSettings(BuildContext context) {
+    if (onGoToSettings != null) {
+      onGoToSettings!();
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => BackendConfigScreen(
+          onConfigSaved: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
+  }
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -17,9 +32,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'user@example.com');
-  final _passwordController = TextEditingController(text: 'Password1!');
+  static const _emailPlaceholder = 'user@example.com';
+  static const _passwordPlaceholder = 'Password1!';
+  final _emailController = TextEditingController(text: _emailPlaceholder);
+  final _passwordController = TextEditingController(text: _passwordPlaceholder);
   final _otpController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _obscurePassword = true;
   late final TapGestureRecognizer _signUpTapRecognizer;
 
@@ -27,6 +46,17 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _signUpTapRecognizer = TapGestureRecognizer()..onTap = _openSignUpPage;
+    _emailFocus.addListener(() => _clearPlaceholderOnFocus(
+          _emailFocus, _emailController, _emailPlaceholder));
+    _passwordFocus.addListener(() => _clearPlaceholderOnFocus(
+          _passwordFocus, _passwordController, _passwordPlaceholder));
+  }
+
+  void _clearPlaceholderOnFocus(
+      FocusNode node, TextEditingController controller, String placeholder) {
+    if (node.hasFocus && controller.text == placeholder) {
+      controller.clear();
+    }
   }
 
   @override
@@ -35,6 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -261,6 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Email Field
                     TextFormField(
                       controller: _emailController,
+                      focusNode: _emailFocus,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       textInputAction: TextInputAction.next,
@@ -291,6 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Password Field
                             TextFormField(
                               controller: _passwordController,
+                              focusNode: _passwordFocus,
                               obscureText: _obscurePassword,
                               textInputAction: showOtp
                                   ? TextInputAction.next
@@ -442,7 +476,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Backend URL info
                     InkWell(
-                      onTap: widget.onGoToSettings,
+                      onTap: () => widget._openSettings(context),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -494,7 +528,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: 'Backend Settings',
-                onPressed: widget.onGoToSettings,
+                onPressed: () => widget._openSettings(context),
               ),
             ),
           ],

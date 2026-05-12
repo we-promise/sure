@@ -235,6 +235,7 @@ en:
         mercury: Sync your Mercury business banking accounts automatically.
         coinbase: Import your Coinbase crypto holdings and track performance.
         binance: Sync your Binance spot balances using a read-only API key.
+        kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
@@ -284,6 +285,28 @@ en:
         syncing: Syncing...
         sync: Sync
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
+      kraken_panel:
+        step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
+        step2: "Create an API key with Query Funds and Query Closed Orders & Trades only."
+        step3: "Paste the API key and private key below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant trading, cancellation, withdrawal, export, ledger, Earn, staking, or transfer permissions. Sure only imports balances, holdings, and spot trade fills."
+        default_connection_name: Kraken
+        add_connection: Add Kraken connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main Kraken
+        api_key_label: API Key
+        api_key_placeholder: Paste your Kraken API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: Private Key
+        api_secret_placeholder: Paste your Kraken private key
+        keep_api_secret_placeholder: Leave blank to keep the existing private key
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error

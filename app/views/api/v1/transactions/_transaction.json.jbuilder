@@ -17,6 +17,8 @@ json.signed_amount_cents(transaction.entry.classification == "income" ? amount_c
 json.currency transaction.entry.currency
 json.name transaction.entry.name
 json.notes transaction.entry.notes
+json.external_id transaction.entry.external_id
+json.source transaction.entry.source
 json.classification transaction.entry.classification
 
 # Account information

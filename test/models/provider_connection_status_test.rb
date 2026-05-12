@@ -78,4 +78,15 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     assert_equal 1, status.dig(:accounts, :linked_count)
     assert_equal 1, status.dig(:accounts, :unlinked_count)
   end
+
+  test "kraken provider status is included without credential fields" do
+    statuses = ProviderConnectionStatus.for_family(families(:dylan_family))
+    kraken_status = statuses.find { |status| status[:provider] == "kraken" }
+
+    assert kraken_status
+    assert_equal "KrakenItem", kraken_status[:provider_type]
+    refute_includes kraken_status.keys, :api_key
+    refute_includes kraken_status.keys, :api_secret
+    assert_equal true, kraken_status[:credentials_configured]
+  end
 end

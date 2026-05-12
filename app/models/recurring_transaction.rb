@@ -3,6 +3,7 @@ class RecurringTransaction < ApplicationRecord
 
   belongs_to :family
   belongs_to :account, optional: true
+  belongs_to :destination_account, optional: true, class_name: "Account"
   belongs_to :merchant, optional: true
 
   monetize :amount
@@ -19,6 +20,7 @@ class RecurringTransaction < ApplicationRecord
   validates :occurrence_count, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :merchant_or_name_present
   validate :amount_variance_consistency
+  validate :transfer_endpoints_consistent
 
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
@@ -36,10 +38,50 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
+  # When this row represents a recurring transfer, both endpoints must be
+  # present, belong to the same family, and not be the same account.
+  def transfer_endpoints_consistent
+    return if destination_account_id.blank?
+
+    if account_id.blank?
+      errors.add(:account, "must be present on a recurring transfer")
+    elsif account.blank?
+      # account_id references a row that was destroyed. Mirror the
+      # destination_account.blank? branch so the source side surfaces a
+      # normal validation error too.
+      errors.add(:account, "must exist")
+    elsif destination_account.blank?
+      # destination_account_id references a row that was destroyed (or never
+      # existed). Surface as a normal validation error instead of letting
+      # the FK fire on save.
+      errors.add(:destination_account, "must exist")
+    elsif account_id == destination_account_id
+      errors.add(:destination_account, "cannot be the same as the source account")
+    elsif account.family_id != destination_account.family_id
+      errors.add(:destination_account, "must belong to the same family as the source account")
+    end
+  end
+
+  def transfer?
+    destination_account_id.present?
+  end
+
   scope :for_family, ->(family) { where(family: family) }
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
   scope :accessible_by, ->(user) {
-    where(account_id: Account.accessible_by(user).select(:id)).or(where(account_id: nil))
+    accessible_account_ids = Account.accessible_by(user).select(:id)
+    # A recurring row is accessible when:
+    #   * its account_id is in the user's accessible set or null (legacy rows
+    #     with no account scoping survive), AND
+    #   * its destination_account_id is also accessible OR null (so a recurring
+    #     transfer never leaks into the list of a user without access to BOTH
+    #     endpoints).
+    where(account_id: accessible_account_ids)
+      .or(where(account_id: nil))
+      .merge(
+        where(destination_account_id: accessible_account_ids)
+          .or(where(destination_account_id: nil))
+      )
   }
 
   # Class methods for identification and cleanup
@@ -56,6 +98,44 @@ class RecurringTransaction < ApplicationRecord
 
   def self.cleanup_stale_for(family)
     Cleaner.new(family).cleanup_stale_transactions
+  end
+
+  # Create a manual recurring transfer from an existing Transfer pair.
+  # Mirrors `create_from_transaction` but populates source + destination
+  # accounts and skips merchant / variance lookup -- transfers are
+  # account-pair-shaped, not merchant-shaped.
+  def self.create_from_transfer(transfer)
+    outflow_entry = transfer.outflow_transaction&.entry
+    inflow_entry  = transfer.inflow_transaction&.entry
+
+    raise ArgumentError, "transfer is missing one of its entries" unless outflow_entry && inflow_entry
+
+    source_account      = outflow_entry.account
+    destination_account = inflow_entry.account
+    family              = source_account.family
+
+    expected_day = outflow_entry.date.day
+    next_expected = calculate_next_expected_date_from_today(expected_day)
+
+    create!(
+      family: family,
+      account: source_account,
+      destination_account: destination_account,
+      merchant_id: nil,
+      # Transfer#name yields "Payment to ..." for liability destinations
+      # and "Transfer to ..." otherwise, matching Transfer::Creator's
+      # name_prefix logic so the recurring row reads consistently with
+      # the originating Transfer.
+      name: transfer.name,
+      amount: outflow_entry.amount, # positive (outflow), per Sure sign convention
+      currency: outflow_entry.currency,
+      expected_day_of_month: expected_day,
+      last_occurrence_date: outflow_entry.date,
+      next_expected_date: next_expected,
+      status: "active",
+      occurrence_count: 1,
+      manual: true
+    )
   end
 
   # Create a manual recurring transaction from an existing transaction
@@ -313,7 +393,10 @@ class RecurringTransaction < ApplicationRecord
       amount_min: expected_amount_min,
       amount_max: expected_amount_max,
       amount_avg: expected_amount_avg,
-      has_variance: has_amount_variance?
+      has_variance: has_amount_variance?,
+      transfer: transfer?,
+      source_account: account,
+      destination_account: destination_account
     )
   end
 

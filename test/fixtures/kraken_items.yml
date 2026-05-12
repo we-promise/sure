@@ -1,0 +1,20 @@
+one:
+  family: dylan_family
+  name: My Kraken
+  api_key: test_kraken_key_123
+  api_secret: test_kraken_secret_456
+  last_nonce: 0
+  status: good
+  institution_name: Kraken
+  institution_domain: kraken.com
+  institution_url: https://www.kraken.com
+  institution_color: "#5841D8"
+
+requires_update:
+  family: dylan_family
+  name: Stale Kraken
+  api_key: old_kraken_key
+  api_secret: old_kraken_secret
+  last_nonce: 0
+  status: requires_update
+  institution_name: Kraken

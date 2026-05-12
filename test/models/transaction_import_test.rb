@@ -100,7 +100,7 @@ class TransactionImportTest < ActiveSupport::TestCase
       @import.publish
     end
 
-    assert_equal [ -100, 200, -300 ], @import.entries.map(&:amount)
+    assert_equal [ -100, 200, -300 ], @import.entries.order(:date).map(&:amount)
   end
 
   test "does not create duplicate when matching transaction exists with same name" do

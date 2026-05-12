@@ -13,7 +13,25 @@ class EnableBankingEntry::Processor
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
-    id ? "enable_banking_#{id}" : nil
+    return "enable_banking_#{id}" if id
+
+    # Some ASPSPs omit both transaction_id and entry_reference (both are optional
+    # in PSD2). Generate a deterministic content-based ID so these transactions
+    # can still be imported idempotently. Uses the same fields as the importer's
+    # dedup key so the two strategies stay in sync.
+    date = data[:booking_date].presence || data[:value_date].presence || data[:transaction_date]
+    amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
+    currency = data.dig(:transaction_amount, :currency).presence || data[:currency]
+    direction = data[:credit_debit_indicator]
+    creditor = data.dig(:creditor, :name).presence || data[:creditor_name]
+    debtor = data.dig(:debtor, :name).presence || data[:debtor_name]
+    remittance = data[:remittance_information]
+    remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
+
+    content = [ date, amount, currency, direction, creditor, debtor, remittance_key ].map(&:to_s).join("\x1F")
+    return nil if content.gsub("\x1F", "").blank?
+
+    "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
   end
 
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
@@ -75,7 +93,7 @@ class EnableBankingEntry::Processor
 
     def external_id
       id = self.class.compute_external_id(data)
-      raise ArgumentError, "Enable Banking transaction missing required field 'transaction_id'" unless id
+      raise ArgumentError, "Enable Banking transaction missing required identifier (transaction_id, entry_reference, or identifiable content)" unless id
       id
     end
 

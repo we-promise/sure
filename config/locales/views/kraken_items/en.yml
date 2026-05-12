@@ -1,0 +1,85 @@
+---
+en:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Link to a Kraken exchange account
+      name: "Kraken - %{name}"
+      description: "Link to %{name}"
+    create:
+      default_name: Kraken
+      success: Successfully connected to Kraken. Your exchange account is being synced.
+    update:
+      success: Successfully updated Kraken connection.
+    destroy:
+      success: Scheduled Kraken connection for deletion.
+    select_accounts:
+      select_connection: Choose a Kraken connection in Provider Settings.
+      no_credentials_configured: Add Kraken API credentials before setting up accounts.
+    link_accounts:
+      select_connection: Choose a Kraken connection before linking accounts.
+    select_existing_account:
+      title: Link Kraken Account
+      no_accounts_found: No Kraken accounts found.
+      wait_for_sync: Wait for Kraken to finish syncing.
+      check_provider_health: Check that your Kraken API credentials are valid.
+      link: Link
+      cancel: Cancel
+    link_existing_account:
+      success: Successfully linked to Kraken account
+      select_connection: Choose a Kraken connection before linking accounts.
+      errors:
+        only_manual: Only manual Crypto exchange accounts without an existing provider link can be linked to Kraken
+        invalid_kraken_account: Invalid Kraken account
+        kraken_account_already_linked: This Kraken account is already linked
+    setup_accounts:
+      title: Import Kraken Account
+      subtitle: Select the exchange account to track
+      instructions: Kraken imports one combined Crypto exchange account for this connection, with holdings and spot trade fills only.
+      no_accounts: All Kraken accounts have been imported.
+      accounts_count:
+        one: "%{count} account available"
+        other: "%{count} accounts available"
+      select_all: Select all
+      import_selected: Import Selected
+      cancel: Cancel
+      creating: Importing...
+    complete_account_setup:
+      success:
+        one: "Imported %{count} account"
+        other: "Imported %{count} accounts"
+      none_selected: No accounts selected
+      no_accounts: No accounts to import
+    kraken_item:
+      provider_name: Kraken
+      syncing: Syncing...
+      reconnect: Credentials need updating
+      deletion_in_progress: Deleting...
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+      status: "Last synced %{timestamp} ago"
+      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
+      status_never: Never synced
+      delete: Delete
+      no_accounts_title: No accounts found
+      no_accounts_message: Your Kraken exchange account will appear here after syncing.
+      setup_needed: Account ready to import
+      setup_description: Import this Kraken connection as a Crypto exchange account.
+      setup_action: Import Account
+      import_accounts_menu: Import Account
+      stale_rate_warning: "Balance is approximate because the exact exchange rate for %{date} was unavailable. Will update on next sync."
+  kraken_item:
+    syncer:
+      checking_credentials: Checking credentials...
+      credentials_invalid: Invalid Kraken API credentials. Please check your API key and secret.
+      importing_accounts: Importing accounts from Kraken...
+      checking_configuration: Checking account configuration...
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      processing_accounts: Processing account data...
+      calculating_balances: Calculating balances...

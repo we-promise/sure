@@ -36,10 +36,7 @@ class AuthService {
 
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.jsonHeaders(),
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 
@@ -145,10 +142,7 @@ class AuthService {
 
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.jsonHeaders(),
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 
@@ -227,10 +221,7 @@ class AuthService {
 
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.jsonHeaders(),
         body: jsonEncode({
           'refresh_token': refreshToken,
           'device': deviceInfo,
@@ -301,6 +292,7 @@ class AuthService {
       final response = await http.get(
         url,
         headers: {
+          ...ApiConfig.customProxyHeaderMap,
           'X-Api-Key': apiKey,
           'Accept': 'application/json',
         },
@@ -398,10 +390,7 @@ class AuthService {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_exchange');
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.jsonHeaders(),
         body: jsonEncode({'code': code}),
       ).timeout(const Duration(seconds: 30));
 
@@ -463,10 +452,7 @@ class AuthService {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_link');
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.jsonHeaders(),
         body: jsonEncode({
           'linking_code': linkingCode,
           'email': email,
@@ -523,10 +509,7 @@ class AuthService {
 
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.jsonHeaders(),
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 

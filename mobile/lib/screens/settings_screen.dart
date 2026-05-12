@@ -11,6 +11,10 @@ import '../services/biometric_service.dart';
 import '../services/preferences_service.dart';
 import '../services/user_service.dart';
 import 'log_viewer_screen.dart';
+import '../models/custom_proxy_header.dart';
+import '../services/api_config.dart';
+import '../services/custom_proxy_headers_service.dart';
+import '../widgets/custom_proxy_headers_editor.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,6 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricSupported = false;
   bool _biometricEnabled = false;
   bool _isTogglingBiometric = false;
+  List<CustomProxyHeader> _customHeaders = [];
 
   @override
   void initState() {
@@ -34,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadPreferences();
     _loadAppVersion();
     _loadBiometricState();
+    _loadCustomHeaders();
   }
 
   Future<void> _loadBiometricState() async {
@@ -90,6 +96,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _groupByType = groupByType;
       });
+    }
+  }
+
+  Future<void> _loadCustomHeaders() async {
+    try {
+      final headers = await CustomProxyHeadersService.instance.loadHeaders();
+      if (mounted) {
+        setState(() => _customHeaders = headers);
+      }
+    } catch (e, stack) {
+      debugPrint('SettingsScreen: failed to load custom headers: $e\n$stack');
+      // Keep the existing _customHeaders state so the screen remains usable.
     }
   }
 
@@ -318,6 +336,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showCustomHeadersDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final latestHeaders = await CustomProxyHeadersService.instance.loadHeaders();
+    if (!mounted) return;
+
+    setState(() => _customHeaders = latestHeaders);
+    var draftHeaders = List<CustomProxyHeader>.from(latestHeaders);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Custom proxy headers'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CustomProxyHeadersEditor(
+                    initialHeaders: draftHeaders,
+                    onChanged: (headers) => draftHeaders = headers,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Headers are sent by the app with API requests. External browser SSO pages may not receive them.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.pop(context, true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (saved != true) return;
+
+    try {
+      await CustomProxyHeadersService.instance.saveHeaders(draftHeaders);
+      ApiConfig.setCustomProxyHeaders(draftHeaders);
+      if (!mounted) return;
+      setState(() => _customHeaders = draftHeaders);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Custom proxy headers saved')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save custom proxy headers: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -478,6 +569,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
             },
+          ),
+
+          const Divider(),
+
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Connection',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.http_outlined),
+            title: const Text('Custom proxy headers'),
+            subtitle: Text(
+              _customHeaders.isEmpty
+                  ? 'Optional headers for a reverse proxy or auth gateway'
+                  : '${_customHeaders.length} configured',
+            ),
+            onTap: _showCustomHeadersDialog,
           ),
 
           const Divider(),

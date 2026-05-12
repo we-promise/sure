@@ -251,18 +251,23 @@ class EnableBankingItem::Importer
         )
       end
 
-      book_ids = all_transactions
-        .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
+      book_fingerprints = all_transactions
+        .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
         .compact.to_set
 
+      # Also index all booked entry_references so a pending row that lacks
+      # transaction_id can still be matched when the settled BOOK row adds one
+      # (fingerprints differ; entry_reference stays the same across settlement).
       book_entry_refs = all_transactions
-        .select { |tx| tx.with_indifferent_access[:transaction_id].blank? }
         .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
         .compact.to_set
 
       pending_transactions.reject! do |tx|
-        tx = tx.with_indifferent_access
-        tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+        tx_ia = tx.with_indifferent_access
+        fp = EnableBankingEntry::Processor.compute_external_id(tx_ia)
+        entry_ref = tx_ia[:entry_reference].presence
+        (fp.present? && book_fingerprints.include?(fp)) ||
+          (entry_ref.present? && book_entry_refs.include?(entry_ref))
       end
 
       all_transactions = all_transactions + tag_as_pending(pending_transactions)
@@ -291,14 +296,17 @@ class EnableBankingItem::Importer
       if all_transactions.any?
 
         # C4: Remove stored PDNG entries that have now settled as BOOK.
-        # When a BOOK transaction arrives with the same transaction_id as a stored
-        # PDNG entry, the pending entry is stale — drop it to avoid duplicates.
-        book_ids = all_transactions
+        # Two match strategies run in parallel:
+        # 1. Fingerprint: covers same-ID rows and ID-less rows matched by content.
+        # 2. Entry-reference cross-match: covers the case where a pending row had
+        #    no transaction_id but the settled BOOK row gained one — fingerprints
+        #    diverge (enable_banking_<ref> vs enable_banking_<txn_id>) but the
+        #    shared entry_reference is a reliable settlement signal.
+        book_fingerprints = all_transactions
           .reject { |tx| tx.with_indifferent_access[:_pending] }
-          .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
+          .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
           .compact.to_set
 
-        # Fallback: collect entry_references for BOOK rows that have no transaction_id
         book_entry_refs = all_transactions
           .reject { |tx| tx.with_indifferent_access[:_pending] }
           .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
@@ -310,21 +318,20 @@ class EnableBankingItem::Importer
             pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
             next false unless pending_flag
 
-            tx[:transaction_id].present? ?
-              book_ids.include?(tx[:transaction_id]) :
-              book_entry_refs.include?(tx[:entry_reference].presence)
+            fp = EnableBankingEntry::Processor.compute_external_id(tx)
+            entry_ref = tx[:entry_reference].presence
+            (fp.present? && book_fingerprints.include?(fp)) ||
+              (entry_ref.present? && book_entry_refs.include?(entry_ref))
           end
         end
 
         existing_ids = existing_transactions.map { |tx|
-          tx = tx.with_indifferent_access
-          tx[:transaction_id].presence || tx[:entry_reference].presence
+          EnableBankingEntry::Processor.compute_external_id(tx)
         }.compact.to_set
 
         new_transactions = all_transactions.select do |tx|
-          # Use transaction_id if present, otherwise fall back to entry_reference
-          tx_id = tx[:transaction_id].presence || tx[:entry_reference].presence
-          tx_id.present? && !existing_ids.include?(tx_id)
+          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
+          ext_id.present? && !existing_ids.include?(ext_id)
         end
 
         if new_transactions.any? || removed_pending
@@ -398,7 +405,7 @@ class EnableBankingItem::Importer
     # omit transaction_id rarely produce such exact duplicates in the same
     # API response; timestamps or remittance info usually differ. (Issue #954)
     def build_transaction_content_key(tx)
-      date = tx[:booking_date].presence || tx[:value_date]
+      date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
       currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
       creditor = tx.dig(:creditor, :name).presence || tx[:creditor_name]

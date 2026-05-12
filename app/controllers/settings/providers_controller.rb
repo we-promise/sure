@@ -189,6 +189,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
+      { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" }
@@ -205,6 +206,7 @@ class Settings::ProvidersController < ApplicationController
       "mercury"        => "MercuryItem",
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
+      "kraken"         => "KrakenItem",
       "snaptrade"      => "SnaptradeItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
@@ -226,6 +228,8 @@ class Settings::ProvidersController < ApplicationController
         @coinbase_items = Current.family.coinbase_items.ordered
       when "binance"
         @binance_items = Current.family.binance_items.active.ordered
+      when "kraken"
+        @kraken_items = Current.family.kraken_items.active.ordered
       when "snaptrade"
         @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       when "indexa_capital"
@@ -255,6 +259,7 @@ class Settings::ProvidersController < ApplicationController
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
+      @kraken_items = Current.family.kraken_items.active.ordered
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -279,6 +284,7 @@ class Settings::ProvidersController < ApplicationController
         "mercury"        => @mercury_items,
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
+        "kraken"         => @kraken_items,
         "snaptrade"      => @snaptrade_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items

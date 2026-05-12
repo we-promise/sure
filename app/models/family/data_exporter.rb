@@ -29,6 +29,10 @@ class Family::DataExporter
       zipfile.put_next_entry("rules.csv")
       zipfile.write generate_rules_csv
 
+      # Add attachment manifest metadata. Binary file payloads are not included.
+      zipfile.put_next_entry("attachments.json")
+      zipfile.write generate_attachments_manifest
+
       # Add all.ndjson
       zipfile.put_next_entry("all.ndjson")
       zipfile.write generate_ndjson
@@ -136,6 +140,69 @@ class Family::DataExporter
           ]
         end
       end
+    end
+
+    def generate_attachments_manifest
+      {
+        version: 1,
+        binary_included: false,
+        attachments: attachment_manifest_items
+      }.to_json
+    end
+
+    def attachment_manifest_items
+      (transaction_attachment_manifest_items + family_document_attachment_manifest_items)
+        .sort_by { |item| [ item[:record_type], item[:record_id].to_s, item[:filename].to_s, item[:id].to_s ] }
+    end
+
+    def transaction_attachment_manifest_items
+      @family.transactions
+        .with_attached_attachments
+        .includes(:attachments_attachments, entry: :account)
+        .flat_map do |transaction|
+          transaction.attachments.map do |attachment|
+            attachment_manifest_item(
+              attachment,
+              record_type: "Transaction",
+              record_id: transaction.id,
+              extra: {
+                entry_id: transaction.entry.id,
+                account_id: transaction.entry.account_id
+              }
+            )
+          end
+        end
+    end
+
+    def family_document_attachment_manifest_items
+      @family.family_documents.with_attached_file.filter_map do |document|
+        next unless document.file.attached?
+
+        attachment_manifest_item(
+          document.file.attachment,
+          record_type: "FamilyDocument",
+          record_id: document.id,
+          extra: {
+            status: document.status
+          }
+        )
+      end
+    end
+
+    def attachment_manifest_item(attachment, record_type:, record_id:, extra: {})
+      blob = attachment.blob
+      {
+        id: attachment.id,
+        record_type: record_type,
+        record_id: record_id,
+        name: attachment.name,
+        filename: blob.filename.to_s,
+        content_type: blob.content_type,
+        byte_size: blob.byte_size,
+        checksum: blob.checksum,
+        binary_included: false,
+        created_at: attachment.created_at
+      }.merge(extra)
     end
 
     def generate_ndjson

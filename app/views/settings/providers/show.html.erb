@@ -4,10 +4,8 @@
   <% if @encryption_error %>
     <%= render DS::Alert.new(
           variant: :error,
-          message: safe_join([
-            content_tag(:h2, t("settings.providers.encryption_error.title"), class: "font-medium"),
-            content_tag(:p, t("settings.providers.encryption_error.message"), class: "text-sm mt-1")
-          ])
+          title: t("settings.providers.encryption_error.title"),
+          message: t("settings.providers.encryption_error.message")
         ) %>
   <% else %>
     <div class="flex items-center justify-between gap-4">

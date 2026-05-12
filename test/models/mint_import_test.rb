@@ -5,6 +5,14 @@ class MintImportTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
+  test "default column mappings are applied after create" do
+    import = @family.imports.create!(type: "MintImport")
+
+    MintImport.default_column_mappings.each do |attribute, value|
+      assert_equal value, import.public_send(attribute)
+    end
+  end
+
   test "generated rows preserve stable source row numbers" do
     import = @family.imports.create!(
       type: "MintImport",
