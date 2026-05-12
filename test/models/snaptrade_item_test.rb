@@ -75,4 +75,42 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     provider = item.snaptrade_provider
     assert_instance_of Provider::Snaptrade, provider
   end
+
+  test "orphaned_users only includes users for the same family" do
+    item = SnaptradeItem.new(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_111",
+      snaptrade_user_secret: "secret"
+    )
+
+    item.stubs(:list_all_users).returns([
+      "family_#{@family.id}_111",
+      "family_#{@family.id}_222",
+      "family_999_333",
+      "legacy_user_444"
+    ])
+
+    assert_equal([ "family_#{@family.id}_222" ], item.orphaned_users)
+  end
+
+  test "delete_orphaned_user rejects users outside the current family namespace" do
+    item = SnaptradeItem.new(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_111",
+      snaptrade_user_secret: "secret"
+    )
+
+    provider = mock
+    provider.expects(:delete_user).never
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert_not item.delete_orphaned_user("family_999_222")
+    assert_not item.delete_orphaned_user("legacy_user_333")
+  end
 end

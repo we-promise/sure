@@ -1,6 +1,8 @@
 class LunchflowItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
+  DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
@@ -154,6 +156,17 @@ class LunchflowItem < ApplicationRecord
   end
 
   def effective_base_url
-    base_url.presence || "https://lunchflow.app/api/v1"
+    return DEFAULT_BASE_URL if base_url.blank?
+
+    uri = URI.parse(base_url)
+    return DEFAULT_BASE_URL unless uri.is_a?(URI::HTTPS)
+    return DEFAULT_BASE_URL unless uri.host == "lunchflow.app"
+    return DEFAULT_BASE_URL unless [ "", "/", "/api/v1", "/api/v1/" ].include?(uri.path)
+    return DEFAULT_BASE_URL unless uri.query.blank?
+    return DEFAULT_BASE_URL unless uri.fragment.blank?
+
+    DEFAULT_BASE_URL
+  rescue URI::InvalidURIError
+    DEFAULT_BASE_URL
   end
 end
