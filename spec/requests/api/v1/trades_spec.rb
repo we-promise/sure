@@ -172,7 +172,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               category_id: { type: :string, format: :uuid, description: 'Category ID' },
               transfer_account_id: { type: :string, format: :uuid, description: 'Destination/source account ID for linked transfers' }
             },
-            required: %w[account_id date qty price type]
+            required: %w[account_id date type]
           }
         },
         required: %w[trade]
