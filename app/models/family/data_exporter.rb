@@ -53,114 +53,71 @@ class Family::DataExporter
     def generate_version_txt
       <<~TEXT
         export_version: #{EXPORT_VERSION}
-        csv_export_version: #{EXPORT_VERSION}
       TEXT
     end
 
     def generate_accounts_csv
-      opening_anchor_dates = opening_anchor_dates_by_account_id
-
       CSV.generate do |csv|
-        csv << [ "Account type*", "Name*", "Balance*", "Currency", "Balance Date", "id", "subtype", "status", "created_at" ]
+        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
 
         # Only export accounts belonging to this family
         @family.accounts.includes(:accountable).find_each do |account|
           csv << [
-            account.accountable_type,
+            account.id,
             account.name,
+            account.accountable_type,
+            account.subtype,
             account.balance.to_s,
             account.currency,
-            opening_anchor_dates[account.id]&.strftime("%m/%d/%Y"),
-            account.id,
-            account.subtype,
-            account.status,
             account.created_at.iso8601
           ]
         end
       end
     end
 
-    def opening_anchor_dates_by_account_id
-      accounts = @family.accounts.select(:id, :created_at).to_a
-      return {} if accounts.empty?
-
-      account_ids = accounts.map(&:id)
-      created_dates_by_account_id = accounts.to_h { |account| [ account.id, account.created_at.to_date ] }
-
-      opening_anchor_dates = Entry
-        .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id AND entries.entryable_type = 'Valuation'")
-        .where(account_id: account_ids, valuations: { kind: "opening_anchor" })
-        .group(:account_id)
-        .minimum(:date)
-
-      valuation_dates = Entry
-        .where(account_id: account_ids, entryable_type: "Valuation")
-        .group(:account_id)
-        .minimum(:date)
-
-      non_valuation_dates = Entry
-        .where(account_id: account_ids)
-        .where.not(entryable_type: "Valuation")
-        .group(:account_id)
-        .minimum(:date)
-
-      account_ids.to_h do |account_id|
-        derived_date = [
-          valuation_dates[account_id],
-          non_valuation_dates[account_id]&.prev_day
-        ].compact.min
-
-        [ account_id, opening_anchor_dates[account_id] || derived_date || created_dates_by_account_id[account_id] ]
-      end
-    end
-
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date*", "amount*", "name", "currency", "category", "tags", "account", "notes", "account_id" ]
+        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
         exportable_transactions
           .includes(:category, :tags, entry: :account)
           .find_each do |transaction|
-          csv << [
-            transaction.entry.date.strftime("%m/%d/%Y"),
-            (-transaction.entry.amount).to_s,
-            transaction.entry.name,
-            transaction.entry.currency,
-            transaction.category&.name,
-            transaction.tags.map { |tag| escape_tag_name(tag.name) }.join("|"),
-            transaction.entry.account.name,
-            transaction.entry.notes,
-            transaction.entry.account_id
-          ]
-        end
+            csv << [
+              transaction.entry.date&.iso8601,
+              transaction.entry.account.name,
+              transaction.entry.amount.to_s,
+              transaction.entry.name,
+              transaction.category&.name,
+              transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
+              transaction.entry.notes,
+              transaction.entry.currency
+            ]
+          end
       end
     end
 
-    def escape_tag_name(name)
-      name.to_s.gsub(/[\\|]/) { |char| "\\#{char}" }
+    def escape_legacy_tag_name(name)
+      name.to_s.gsub(/[\\,]/) { |char| "\\#{char}" }
     end
 
     def generate_trades_csv
       CSV.generate do |csv|
-        csv << [ "date*", "ticker*", "exchange_operating_mic", "currency", "qty*", "price*", "account", "name", "account_id", "amount" ]
+        csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
 
         # Only export trades from accounts belonging to this family
         @family.trades
           .includes(:security, entry: :account)
           .find_each do |trade|
             csv << [
-              trade.entry.date.strftime("%m/%d/%Y"),
+              trade.entry.date&.iso8601,
+              trade.entry.account.name,
               trade.security.ticker,
-              trade.security.exchange_operating_mic,
-              trade.currency,
               trade.qty.to_s,
               trade.price.to_s,
-              trade.entry.account.name,
-              trade.entry.name,
-              trade.entry.account_id,
-              trade.entry.amount.to_s
+              trade.entry.amount.to_s,
+              trade.currency
             ]
           end
       end

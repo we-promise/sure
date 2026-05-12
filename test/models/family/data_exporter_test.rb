@@ -172,22 +172,22 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     Zip::File.open_buffer(zip_data) do |zip|
       # Check accounts.csv
       accounts_csv = zip.read("accounts.csv")
-      assert_equal [ "Account type*", "Name*", "Balance*", "Currency", "Balance Date", "id", "subtype", "status", "created_at" ],
+      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ],
                    CSV.parse(accounts_csv, headers: true).headers
 
       # Check version marker
       version_txt = zip.read("version.txt")
       assert_includes version_txt, "export_version: 2"
-      assert_includes version_txt, "csv_export_version: 2"
+      refute_includes version_txt, "csv_export_version"
 
       # Check transactions.csv
       transactions_csv = zip.read("transactions.csv")
-      assert_equal [ "date*", "amount*", "name", "currency", "category", "tags", "account", "notes", "account_id" ],
+      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ],
                    CSV.parse(transactions_csv, headers: true).headers
 
       # Check trades.csv
       trades_csv = zip.read("trades.csv")
-      assert_equal [ "date*", "ticker*", "exchange_operating_mic", "currency", "qty*", "price*", "account", "name", "account_id", "amount" ],
+      assert_equal [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ],
                    CSV.parse(trades_csv, headers: true).headers
 
       # Check categories.csv
@@ -200,8 +200,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
-  test "exports transaction CSV rows with import-compatible signage and account identifiers" do
-    tag2 = @family.tags.create!(name: "Food|Dining", color: "#0000FF")
+  test "exports transaction CSV rows with restored legacy ISO date stored amount account name and comma tags" do
+    tag2 = @family.tags.create!(name: "Food, Dining", color: "#0000FF")
     entry = @account.entries.create!(
       name: "CSV Grocery",
       amount: 42.50,
@@ -220,33 +220,12 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       row = rows.find { |csv_row| csv_row["name"] == "CSV Grocery" }
 
       assert_not_nil row
-      assert_equal "05/15/2024", row["date*"]
-      assert_equal "-42.5", row["amount*"]
-      assert_equal @account.name, row["account"]
-      assert_equal @account.id, row["account_id"]
-      assert_includes row["tags"], "|"
-      assert_includes row["tags"], "\\|"
+      assert_equal "2024-05-15", row["date"]
+      assert_equal "42.5", row["amount"]
+      assert_equal @account.name, row["account_name"]
+      assert_includes row["tags"], ","
+      assert_includes row["tags"], "\\,"
       assert_equal [ @tag.name, tag2.name ].sort, Import::Row.new(tags: row["tags"]).tags_list.sort
-    end
-  end
-
-  test "exports stable balance dates for accounts without entries" do
-    empty_account = @family.accounts.create!(
-      name: "Empty Account",
-      accountable: Depository.new,
-      balance: 0,
-      currency: "USD",
-      created_at: Time.zone.local(2024, 4, 3, 12, 0, 0)
-    )
-
-    zip_data = @exporter.generate_export
-
-    Zip::File.open_buffer(zip_data) do |zip|
-      rows = CSV.parse(zip.read("accounts.csv"), headers: true)
-      row = rows.find { |csv_row| csv_row["id"] == empty_account.id }
-
-      assert_not_nil row
-      assert_equal "04/03/2024", row["Balance Date"]
     end
   end
 
@@ -272,12 +251,14 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         amount_col_label: "Balance*",
         currency_col_label: "Currency",
         date_col_label: "Balance Date",
-        date_format: "%m/%d/%Y"
+        date_format: "%Y-%m-%d"
       )
       account_import.generate_rows_from_csv
       account_row = account_import.rows.reload.find_by!(name: @account.name)
       assert account_row.valid?
-      assert_equal @opening_anchor_date.strftime("%m/%d/%Y"), account_row.date
+      assert_equal @account.accountable_type, account_row.entity_type
+      assert_equal BigDecimal(@account.balance.to_s), BigDecimal(account_row.amount)
+      assert account_row.date.blank?
 
       transaction_import = @other_family.imports.create!(
         type: "TransactionImport",
@@ -290,11 +271,14 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         tags_col_label: "tags",
         account_col_label: "account",
         notes_col_label: "notes",
-        date_format: "%m/%d/%Y",
-        signage_convention: "inflows_positive"
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_negative"
       )
       transaction_import.generate_rows_from_csv
-      assert transaction_import.rows.reload.first.valid?
+      transaction_row = transaction_import.rows.reload.find_by!(name: "CSV Importable Transaction")
+      assert transaction_row.valid?
+      assert_equal @account.name, transaction_row.account
+      assert_equal BigDecimal("15.25"), transaction_row.signed_amount
 
       trade_import = @other_family.imports.create!(
         type: "TradeImport",
@@ -307,11 +291,14 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         price_col_label: "price*",
         account_col_label: "account",
         name_col_label: "name",
-        date_format: "%m/%d/%Y",
+        date_format: "%Y-%m-%d",
         signage_convention: "inflows_positive"
       )
       trade_import.generate_rows_from_csv
-      assert trade_import.rows.reload.first.valid?
+      trade_row = trade_import.rows.reload.find_by!(ticker: @csv_export_trade_ticker)
+      assert trade_row.valid?
+      assert_equal @account.name, trade_row.account
+      assert_equal BigDecimal("10"), BigDecimal(trade_row.qty)
     end
   end
 
@@ -840,6 +827,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         name: "CSV Export Security",
         exchange_operating_mic: "XNAS"
       )
+      @csv_export_trade_ticker = security.ticker
 
       @account.entries.create!(
         date: Date.parse("2024-05-17"),
