@@ -1,0 +1,562 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+LOG_DEBUG="false"
+RELEASE_TYPE=""
+DRY_RUN="false"
+ALLOW_DIRTY="false"
+DO_COMMIT="true"
+DO_TAG="true"
+DO_PUSH="true"
+CURRENT_VERSION=""
+NEXT_VERSION=""
+
+if [[ -t 2 ]]; then
+  readonly COLOR_RESET=$'\033[0m'
+  readonly COLOR_DIM=$'\033[2m'
+  readonly COLOR_RED=$'\033[31m'
+  readonly COLOR_GREEN=$'\033[32m'
+  readonly COLOR_YELLOW=$'\033[33m'
+  readonly COLOR_BLUE=$'\033[34m'
+  readonly COLOR_MAGENTA=$'\033[35m'
+else
+  readonly COLOR_RESET=''
+  readonly COLOR_DIM=''
+  readonly COLOR_RED=''
+  readonly COLOR_GREEN=''
+  readonly COLOR_YELLOW=''
+  readonly COLOR_BLUE=''
+  readonly COLOR_MAGENTA=''
+fi
+
+################################################################################
+# log::*                                                                       #
+#                                                                              #
+# User-facing logging helpers. They keep output consistently timestamped,      #
+# level-tagged, and colorized when stderr is a TTY.                            #
+################################################################################
+log::timestamp() {
+  date -u +"%H:%M:%S"
+}
+
+log::line() {
+  local color="$1"
+  local level="$2"
+  shift 2
+
+  printf '%s[%s]%s %s[%s]%s %s\n' \
+    "${COLOR_DIM}" \
+    "$(log::timestamp)" \
+    "${COLOR_RESET}" \
+    "${color}" "${level}" "${COLOR_RESET}" \
+    "$*" >&2
+}
+
+log::info() {
+  log::line "${COLOR_BLUE}" "INF" "$@"
+}
+
+log::debug() {
+  [[ "${LOG_DEBUG}" == "true" ]] || return 0
+  log::line "${COLOR_MAGENTA}" "DBG" "$@"
+}
+
+log::success() {
+  log::line "${COLOR_GREEN}" "SUC" "$@"
+}
+
+log::warn() {
+  log::line "${COLOR_YELLOW}" "WRN" "$@"
+}
+
+log::error() {
+  log::line "${COLOR_RED}" "ERR" "$@"
+}
+
+################################################################################
+# check::*                                                                     #
+#                                                                              #
+# Guard and validation helpers. These fail early when repository state or      #
+# input files are not safe for cutting a version.                              #
+################################################################################
+check::dirty() {
+  local status
+
+  status="$(git status --porcelain)"
+  if [[ -z "${status}" ]]; then
+    log::debug "working tree is clean"
+    return 0
+  fi
+
+  log::error "Working tree is dirty. Commit or stash changes."
+  printf '%s\n' "${status}" >&2
+  return 1
+}
+
+check::sure-version() {
+  local line_count
+  local version
+
+  if [[ ! -f .sure-version ]]; then
+    log::error "Missing .sure-version"
+    return 1
+  fi
+
+  line_count="$(wc -l < .sure-version)"
+  if [[ "${line_count}" -ne 1 ]]; then
+    log::error ".sure-version must contain exactly one line and end with a newline"
+    return 1
+  fi
+
+  IFS= read -r version < .sure-version
+  if [[ -z "${version}" ]]; then
+    log::error ".sure-version must not be empty"
+    return 1
+  fi
+
+  if [[ "${version}" =~ [[:space:]] ]]; then
+    log::error ".sure-version must not contain whitespace"
+    return 1
+  fi
+
+  if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+    log::error "Invalid .sure-version value: ${version}"
+    return 1
+  fi
+
+  CURRENT_VERSION="${version}"
+}
+
+check::version-kind-not() {
+  local version="$1"
+  local kind
+  local forbidden_kind
+  shift
+
+  kind="$(version::kind "${version}")"
+
+  for forbidden_kind in "$@"; do
+    if [[ "${kind}" == "${forbidden_kind}" ]]; then
+      log::error "Version kind must not be ${forbidden_kind}: ${version}"
+      return 1
+    fi
+  done
+}
+
+################################################################################
+# version::*                                                                   #
+#                                                                              #
+# Pure version helpers. These operate only on explicit version arguments and   #
+# write their result to stdout without reading or mutating global state.       #
+################################################################################
+version::kind() {
+  local version="$1"
+  local suffix
+
+  if [[ "${version}" != *-* ]]; then
+    printf '\n'
+    return 0
+  fi
+
+  suffix="${version#*-}"
+  printf '%s\n' "${suffix%%.*}"
+}
+
+version::point() {
+  local version="$1"
+
+  printf '%s\n' "${version%%-*}"
+}
+
+version::bump-point() {
+  local version="$1"
+  local major
+  local minor
+  local patch
+
+  IFS='.' read -r major minor patch <<< "${version}"
+
+  if [[ -z "${major}" || -z "${minor}" || -z "${patch}" ]]; then
+    log::error "Invalid point version: ${version}"
+    return 1
+  fi
+
+  printf '%s.%s.%s\n' "${major}" "$((minor + 1))" "0"
+}
+
+version::bump-fix() {
+  local version="$1"
+  local major
+  local minor
+  local patch
+
+  IFS='.' read -r major minor patch <<< "${version}"
+
+  if [[ -z "${major}" || -z "${minor}" || -z "${patch}" ]]; then
+    log::error "Invalid point version: ${version}"
+    return 1
+  fi
+
+  printf '%s.%s.%s\n' "${major}" "${minor}" "$((patch + 1))"
+}
+
+version::bump-prerelease() {
+  local kind="$1"
+  local version="$2"
+  local point
+  local number
+
+  point="${version%%-*}"
+  number="${version##*-"${kind}".}"
+
+  if [[ "${number}" == "${version}" || ! "${number}" =~ ^[0-9]+$ ]]; then
+    log::error "Invalid ${kind} version: ${version}"
+    return 1
+  fi
+
+  printf '%s-%s.%s\n' "${point}" "${kind}" "$((10#${number} + 1))"
+}
+
+version::next-point() {
+  local version="$1"
+  local point
+
+  point="$(version::point "${version}")"
+  version::bump-point "${point}"
+}
+
+version::next-fix() {
+  local version="$1"
+  local point
+
+  point="$(version::point "${version}")"
+  version::bump-fix "${point}"
+}
+
+version::next-alpha() {
+  local version="$1"
+  local kind
+  local next_point
+
+  check::version-kind-not "${version}" "beta" "rc"
+
+  kind="$(version::kind "${version}")" || return
+  if [[ "${kind}" == "alpha" ]]; then
+    version::bump-prerelease "alpha" "${version}"
+  else
+    next_point="$(version::next-point "${version}")" || return
+    printf '%s\n' "${next_point}-alpha.1"
+  fi
+}
+
+version::next-beta() {
+  local version="$1"
+  local kind
+  local point
+  local next_point
+
+  check::version-kind-not "${version}" "rc"
+
+  kind="$(version::kind "${version}")" || return
+  if [[ "${kind}" == "beta" ]]; then
+    version::bump-prerelease "beta" "${version}"
+  elif [[ -n "${kind}" ]]; then
+    point="$(version::point "${version}")" || return
+    printf '%s\n' "${point}-beta.1"
+  else
+    next_point="$(version::next-point "${version}")" || return
+    printf '%s\n' "${next_point}-beta.1"
+  fi
+}
+
+version::next-rc() {
+  local version="$1"
+  local kind
+  local point
+  local next_point
+
+  kind="$(version::kind "${version}")" || return
+  if [[ "${kind}" == "rc" ]]; then
+    version::bump-prerelease "rc" "${version}"
+  elif [[ -n "${kind}" ]]; then
+    point="$(version::point "${version}")" || return
+    printf '%s\n' "${point}-rc.1"
+  else
+    next_point="$(version::next-point "${version}")" || return
+    printf '%s\n' "${next_point}-rc.1"
+  fi
+}
+
+################################################################################
+# current-version::*                                                           #
+#                                                                              #
+# Thin wrappers around version::* for the version loaded from .sure-version.   #
+# These are the only version helpers that read CURRENT_VERSION.                #
+################################################################################
+current-version::point() {
+  version::point "${CURRENT_VERSION}"
+}
+
+current-version::kind() {
+  version::kind "${CURRENT_VERSION}"
+}
+
+current-version::next-point() {
+  version::next-point "${CURRENT_VERSION}"
+}
+
+current-version::next-fix() {
+  version::next-fix "${CURRENT_VERSION}"
+}
+
+current-version::next-alpha() {
+  version::next-alpha "${CURRENT_VERSION}"
+}
+
+current-version::next-beta() {
+  version::next-beta "${CURRENT_VERSION}"
+}
+
+current-version::next-rc() {
+  version::next-rc "${CURRENT_VERSION}"
+}
+
+################################################################################
+# step::*                                                                      #
+#                                                                              #
+# Individual steps as part of the cut-version process. All the steps can be    #
+# individually disabled (with the exception of update-version), and all the    #
+# steps respect --dry-run.                                                     #
+################################################################################
+step::tag() {
+  local tag="$1"
+
+  if [[ "${DO_TAG}" == "false" ]]; then
+    log::warn "skipping tag: ${tag}"
+    return 0
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log::info "would tag: ${tag}"
+    return 0
+  fi
+
+  git fetch --tags --quiet
+  if git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+    log::error "Tag already exists: ${tag}"
+    return 1
+  fi
+
+  log::debug "tagging: ${tag}"
+  git tag "${tag}"
+  log::success "tagged: ${tag}"
+}
+
+step::push() {
+  local ref="${1:-}"
+
+  if [[ "${DO_PUSH}" == "false" ]]; then
+    log::warn "skipping push"
+    return 0
+  fi
+
+  if [[ -z "${ref}" ]]; then
+    if [[ "${DRY_RUN}" == "true" ]]; then
+      log::info "would push current branch"
+      return 0
+    fi
+
+    log::debug "pushing current branch"
+    git push
+    log::success "pushed current branch"
+    return
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log::info "would push: ${ref}"
+    return 0
+  fi
+
+  log::debug "pushing: ${ref}"
+  git push origin "${ref}"
+  log::success "pushed: ${ref}"
+}
+
+step::push-tag() {
+  local tag="$1"
+
+  if [[ "${DO_TAG}" == "false" ]]; then
+    log::warn "skipping tag push because tag creation is disabled: ${tag}"
+    return 0
+  fi
+
+  step::push "refs/tags/${tag}"
+}
+
+step::update-version() {
+  local version="$1"
+  local chart_app_version
+  local chart_version
+  local file_version
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log::info "would update version to: ${version}"
+    return 0
+  fi
+
+  log::debug "updating version to: ${version}"
+  printf '%s\n' "${version}" > .sure-version
+  sed -i .bak -E "s/^version:.*/version: ${version}/" charts/sure/Chart.yaml
+  sed -i .bak -E "s/^appVersion:.*/appVersion: \"${version}\"/" charts/sure/Chart.yaml
+  rm -f charts/sure/Chart.yaml.bak
+
+  file_version="$(< .sure-version)"
+  chart_version="$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)"
+  chart_app_version="$(sed -n 's/^appVersion: "\{0,1\}\([^"]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml | head -n 1)"
+
+  if [[ "${file_version}" != "${version}" ]]; then
+    log::error "Failed to update .sure-version: expected ${version}, got ${file_version:-<empty>}"
+    return 1
+  fi
+
+  if [[ "${chart_version}" != "${version}" ]]; then
+    log::error "Failed to update Chart.yaml version: expected ${version}, got ${chart_version:-<empty>}"
+    return 1
+  fi
+
+  if [[ "${chart_app_version}" != "${version}" ]]; then
+    log::error "Failed to update Chart.yaml appVersion: expected ${version}, got ${chart_app_version:-<empty>}"
+    return 1
+  fi
+
+  git add .sure-version charts/sure/Chart.yaml
+  log::success "updated version to: ${version}"
+}
+
+step::commit() {
+  local message="$1"
+
+  if [[ "${DO_COMMIT}" == "false" ]]; then
+    log::warn "skipping commit: ${message}"
+    return 0
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log::info "would commit with message: ${message}"
+    return 0
+  fi
+
+  log::debug "committing with message: ${message}"
+  git commit -m "${message}"
+  log::success "committed: ${message}"
+}
+
+################################################################################
+# run::*                                                                       #
+#                                                                              #
+# Top-level run functions. This is the entrypoint after parsing flags.         #
+################################################################################
+run::cut-version() {
+  if [[ "${ALLOW_DIRTY}" == "false" ]]; then
+    check::dirty
+  else
+    log::warn "ALLOW_DIRTY=true - skipping dirty check"
+  fi
+
+  NEXT_VERSION="$("current-version::next-${RELEASE_TYPE}")" || return
+  log::debug "next version: ${NEXT_VERSION}"
+
+  step::tag "v${CURRENT_VERSION}"
+  step::push-tag "v${CURRENT_VERSION}"
+  step::update-version "${NEXT_VERSION}"
+  step::commit "chore: bump version v${NEXT_VERSION}"
+  step::push
+}
+
+################################################################################
+# main                                                                         #
+#                                                                              #
+# Entrypoint for the cut-version script. Parses flags and calls the            #
+# appropriate run function.                                                    #
+################################################################################
+main() {
+  cd "${ROOT_DIR}"
+
+  log::debug "pwd: $(pwd)"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --alpha)
+        [[ -z "${RELEASE_TYPE}" ]] || {
+          log::error "Only one release type flag may be provided"
+          return 1
+        }
+        RELEASE_TYPE="alpha"
+        ;;
+      --beta)
+        [[ -z "${RELEASE_TYPE}" ]] || {
+          log::error "Only one release type flag may be provided"
+          return 1
+        }
+        RELEASE_TYPE="beta"
+        ;;
+      --rc)
+        [[ -z "${RELEASE_TYPE}" ]] || {
+          log::error "Only one release type flag may be provided"
+          return 1
+        }
+        RELEASE_TYPE="rc"
+        ;;
+      --fix)
+        [[ -z "${RELEASE_TYPE}" ]] || {
+          log::error "Only one release type flag may be provided"
+          return 1
+        }
+        RELEASE_TYPE="fix"
+        ;;
+      --dry-run)
+        DRY_RUN="true"
+        ;;
+      --allow-dirty)
+        ALLOW_DIRTY="true"
+        ;;
+      --no-commit)
+        DO_COMMIT="false"
+        ;;
+      --no-tag)
+        DO_TAG="false"
+        ;;
+      --no-push)
+        DO_PUSH="false"
+        ;;
+      --verbose | -v)
+        LOG_DEBUG="true"
+        ;;
+      *)
+        log::error "Unknown argument: $1"
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  RELEASE_TYPE="${RELEASE_TYPE:-point}"
+  check::sure-version
+
+  log::debug "current version: ${CURRENT_VERSION}"
+  log::debug "release type: ${RELEASE_TYPE}"
+  log::debug "dry run: ${DRY_RUN}"
+  log::debug "allow dirty: ${ALLOW_DIRTY}"
+  log::debug "do commit: ${DO_COMMIT}"
+  log::debug "do tag: ${DO_TAG}"
+  log::debug "do push: ${DO_PUSH}"
+
+  run::cut-version
+}
+
+# Only execute main if the script is run directly
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

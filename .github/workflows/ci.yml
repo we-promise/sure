@@ -72,6 +72,24 @@ jobs:
       - name: Lint/Format js code
         run: npm run lint
 
+  test_shell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: "./scripts"
+          check_together: "yes"
+          additional_files: "cut-version"
+
+      - name: Test shell scripts
+        run: |
+          FORCE_COLOR=true ./vendor/scripts/bash_unit ./scripts/*.test.sh
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
