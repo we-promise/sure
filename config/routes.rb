@@ -1,5 +1,7 @@
-require "sidekiq/web"
-require "sidekiq/cron/web"
+unless Rails.env.production?
+  require "sidekiq/web"
+  require "sidekiq/cron/web"
+end
 
 Rails.application.routes.draw do
   resources :mercury_items, only: %i[index new create show edit update destroy] do
