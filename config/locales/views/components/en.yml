@@ -1,5 +1,13 @@
 ---
 en:
+  ds:
+    alert:
+      variants:
+        info: Info
+        success: Success
+        warning: Warning
+        error: Error
+        destructive: Error
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

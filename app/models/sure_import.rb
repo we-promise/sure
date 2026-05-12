@@ -1,5 +1,17 @@
 class SureImport < Import
   MAX_NDJSON_SIZE = 10.megabytes
+  IMPORTABLE_NDJSON_TYPES = {
+    "Account" => :accounts,
+    "Category" => :categories,
+    "Tag" => :tags,
+    "Merchant" => :merchants,
+    "Transaction" => :transactions,
+    "Trade" => :trades,
+    "Valuation" => :valuations,
+    "Budget" => :budgets,
+    "BudgetCategory" => :budget_categories,
+    "Rule" => :rules
+  }.freeze
   ALLOWED_NDJSON_CONTENT_TYPES = %w[
     application/x-ndjson
     application/ndjson
@@ -11,6 +23,14 @@ class SureImport < Import
   has_one_attached :ndjson_file, dependent: :purge_later
 
   class << self
+    def max_row_count
+      100_000
+    end
+
+    def max_ndjson_size
+      MAX_NDJSON_SIZE
+    end
+
     # Counts JSON lines by top-level "type" (used for dry-run summaries and row limits).
     def ndjson_line_type_counts(content)
       return {} unless content.present?
@@ -21,7 +41,7 @@ class SureImport < Import
 
         begin
           record = JSON.parse(line)
-          counts[record["type"]] += 1 if record["type"]
+          counts[record["type"]] += 1 if record.is_a?(Hash) && record["type"] && record.key?("data")
         rescue JSON::ParserError
           # Skip invalid lines
         end
@@ -30,19 +50,17 @@ class SureImport < Import
     end
 
     def dry_run_totals_from_ndjson(content)
-      counts = ndjson_line_type_counts(content)
-      {
-        accounts: counts["Account"] || 0,
-        categories: counts["Category"] || 0,
-        tags: counts["Tag"] || 0,
-        merchants: counts["Merchant"] || 0,
-        transactions: counts["Transaction"] || 0,
-        trades: counts["Trade"] || 0,
-        valuations: counts["Valuation"] || 0,
-        budgets: counts["Budget"] || 0,
-        budget_categories: counts["BudgetCategory"] || 0,
-        rules: counts["Rule"] || 0
-      }
+      dry_run_totals_from_line_type_counts(ndjson_line_type_counts(content))
+    end
+
+    def dry_run_totals_from_line_type_counts(counts)
+      IMPORTABLE_NDJSON_TYPES.to_h do |record_type, entity_key|
+        [ entity_key, counts[record_type] || 0 ]
+      end
+    end
+
+    def importable_ndjson_types
+      IMPORTABLE_NDJSON_TYPES.keys
     end
 
     def valid_ndjson_first_line?(str)
@@ -53,7 +71,7 @@ class SureImport < Import
 
       begin
         record = JSON.parse(first_line)
-        record.key?("type") && record.key?("data")
+        record.is_a?(Hash) && record.key?("type") && record.key?("data")
       rescue JSON::ParserError
         false
       end
@@ -121,7 +139,7 @@ class SureImport < Import
   end
 
   def max_row_count
-    100_000
+    self.class.max_row_count
   end
 
   # Row total for max-row enforcement (counts every parsed line with a "type", including unsupported types).
