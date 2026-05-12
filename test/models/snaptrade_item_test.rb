@@ -93,7 +93,7 @@ class SnaptradeItemTest < ActiveSupport::TestCase
       "legacy_user_444"
     ])
 
-    assert_equal(["family_#{@family.id}_222"], item.orphaned_users)
+    assert_equal([ "family_#{@family.id}_222" ], item.orphaned_users)
   end
 
   test "delete_orphaned_user rejects users outside the current family namespace" do
