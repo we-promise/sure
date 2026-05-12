@@ -160,6 +160,73 @@ class BrexItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  test "imports aggregate card transactions only into the selected connection" do
+    first_card_account = @family.accounts.create!(
+      name: "First Brex Card",
+      balance: 0,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+    first_brex_card_account = @brex_item.brex_accounts.create!(
+      account_id: BrexAccount.card_account_id,
+      account_kind: "card",
+      name: "First Brex Card",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: first_card_account, provider: first_brex_card_account)
+
+    second_item = BrexItem.create!(
+      family: @family,
+      name: "Second Brex",
+      token: "second_brex_token",
+      base_url: "https://api.brex.com"
+    )
+    second_card_account = @family.accounts.create!(
+      name: "Second Brex Card",
+      balance: 0,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+    second_brex_card_account = second_item.brex_accounts.create!(
+      account_id: BrexAccount.card_account_id,
+      account_kind: "card",
+      name: "Second Brex Card",
+      currency: "USD",
+      current_balance: 0,
+      raw_transactions_payload: [
+        {
+          id: "second_connection_card_tx",
+          amount: { amount: 42_00, currency: "USD" },
+          description: "Existing second connection card transaction",
+          posted_at_date: "2026-02-01"
+        }
+      ]
+    )
+    AccountProvider.create!(account: second_card_account, provider: second_brex_card_account)
+
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload, card_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: anything).returns(transactions: [])
+    provider.expects(:get_primary_card_transactions).with(start_date: anything).returns(
+      transactions: [
+        {
+          id: "first_connection_card_tx",
+          amount: { amount: 21_00, currency: "USD" },
+          description: "First connection card transaction",
+          posted_at_date: "2026-02-02",
+          card_id: "card_account_1"
+        }
+      ]
+    )
+
+    result = BrexItem::Importer.new(@brex_item, brex_provider: provider, sync_start_date: Date.new(2026, 2, 1)).import
+
+    assert result[:success]
+    assert_equal [ "first_connection_card_tx" ], first_brex_card_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+    assert_equal [ "second_connection_card_tx" ], second_brex_card_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
   test "raises and reports snapshot persistence failures" do
     provider = mock("brex_provider")
     provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])

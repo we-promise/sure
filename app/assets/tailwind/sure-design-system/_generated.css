@@ -276,14 +276,6 @@
   }
 }
 
-@utility bg-destructive-surface {
-  @apply bg-red-tint-5;
-
-  @variant theme-dark {
-    @apply bg-red-tint-10;
-  }
-}
-
 @utility bg-inverse {
   @apply bg-gray-800;
 

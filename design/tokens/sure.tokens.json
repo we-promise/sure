@@ -261,7 +261,6 @@
     "bg-container-hover":     { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.800}" } },
     "bg-container-inset":     { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.800}" } },
     "bg-container-inset-hover":{ "$type": "utility","$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
-    "bg-destructive-surface": { "$type": "utility", "$value": "{color.red.tint-5}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.tint-10}" } },
     "bg-inverse":             { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
     "bg-inverse-hover":       { "$type": "utility", "$value": "{color.gray.700}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.100}" } },
     "bg-overlay": {

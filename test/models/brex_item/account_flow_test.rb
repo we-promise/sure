@@ -51,6 +51,30 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     assert_equal true, payload[:cached]
   end
 
+  test "account cache keys isolate multiple credentialed connections with shared upstream ids" do
+    second_item = BrexItem.create!(
+      family: @family,
+      name: "Second Brex",
+      token: "second_brex_token",
+      base_url: "https://api.brex.com"
+    )
+    first_cache_key = BrexItem::AccountFlow.cache_key(@family, @brex_item)
+    second_cache_key = BrexItem::AccountFlow.cache_key(@family, second_item)
+
+    refute_equal first_cache_key, second_cache_key
+
+    Rails.cache.expects(:read).with(first_cache_key).never
+    Rails.cache.expects(:read).with(second_cache_key).returns(
+      [ { id: BrexAccount.card_account_id, name: "Second Brex Card", account_kind: "card" } ]
+    )
+    Rails.cache.expects(:write).never
+
+    result = BrexItem::AccountFlow.new(family: @family, brex_item: second_item).select_accounts_result(accountable_type: "CreditCard")
+
+    assert result.success?
+    assert_equal [ "Second Brex Card" ], result.available_accounts.map { |account| account.with_indifferent_access[:name] }
+  end
+
   test "preload payload reports invalid explicit connection as selection error" do
     payload = BrexItem::AccountFlow.new(
       family: @family,
