@@ -1498,6 +1498,119 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, action.value
   end
 
+  test "imports rules from normalized operand value refs" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Map Merchant To Dining",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            {
+              condition_type: "transaction_merchant",
+              operator: "=",
+              value_ref: {
+                type: "Merchant",
+                id: "source-merchant-id",
+                name: "Coffee Bar"
+              }
+            }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_category",
+              value_ref: {
+                type: "Category",
+                id: "source-category-id",
+                name: "Dining"
+              }
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Map Merchant To Dining")
+    merchant = @family.merchants.find_by!(name: "Coffee Bar")
+    category = @family.categories.find_by!(name: "Dining")
+
+    assert_equal merchant.id, rule.conditions.first.value
+    assert_equal category.id, rule.actions.first.value
+  end
+
+  test "imports rule value refs when legacy operand values are stale UUIDs" do
+    stale_merchant_id = SecureRandom.uuid
+    stale_category_id = SecureRandom.uuid
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Map Stale UUID Operands",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            {
+              condition_type: "transaction_merchant",
+              operator: "=",
+              value: stale_merchant_id,
+              value_ref: {
+                type: "Merchant",
+                id: stale_merchant_id,
+                name: "Coffee Bar"
+              }
+            }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_category",
+              value: stale_category_id,
+              value_ref: {
+                type: "Category",
+                id: stale_category_id,
+                name: "Dining"
+              }
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Map Stale UUID Operands")
+    merchant = @family.merchants.find_by!(name: "Coffee Bar")
+    category = @family.categories.find_by!(name: "Dining")
+
+    assert_equal merchant.id, rule.conditions.first.value
+    assert_equal category.id, rule.actions.first.value
+    assert_not @family.merchants.exists?(name: stale_merchant_id)
+    assert_not @family.categories.exists?(name: stale_category_id)
+  end
+
+  test "preserves explicit false rule operand values" do
+    importer = Family::DataImporter.new(@family, "")
+
+    value = importer.send(
+      :rule_operand_value,
+      {
+        "value" => false,
+        "value_ref" => {
+          "type" => "Category",
+          "name" => "Fallback"
+        }
+      }
+    )
+
+    assert_equal false, value
+  end
+
   test "imports rules with compound conditions" do
     ndjson = build_ndjson([
       {
