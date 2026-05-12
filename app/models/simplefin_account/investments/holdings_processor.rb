@@ -48,7 +48,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
-        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key)
+        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, market_value)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
@@ -124,15 +124,39 @@ class SimplefinAccount::Investments::HoldingsProcessor
       [ nil, nil ]
     end
 
-    # Sure stores holding cost_basis as per-share average cost. Some SimpleFIN
-    # providers expose total position basis via total_cost/value, so normalize only
-    # when the selected provider field is known to represent total position basis.
-    def normalize_cost_basis(raw_cost_basis, qty, source_key)
+    # Sure stores holding cost_basis as per-share average cost. SimpleFIN
+    # brokerages are inconsistent:
+    #   - total_cost / value: always total position cost (per the SimpleFIN
+    #     spec / observed payloads); divide unconditionally.
+    #   - cost_basis / basis: the spec calls this per-share, but Vanguard and
+    #     Fidelity (issue #1718, #1182) populate it with the total instead.
+    #     We can't trust the key name, so we compare the raw value against
+    #     the holding's market share price and pick the interpretation that
+    #     lands closer to a believable per-share number.
+    #
+    # Heuristic for cost_basis/basis: let share_price = market_value / qty.
+    # The geometric midpoint between "raw is per-share" (raw ≈ share_price)
+    # and "raw is total" (raw ≈ qty × share_price) is share_price × √qty.
+    # If raw is above the midpoint it's almost certainly a total, so divide
+    # by qty; otherwise keep as per-share. Falls back to "treat as per-share"
+    # when market_value or qty is missing — same as the pre-fix behavior, so
+    # we never make a confidently-correct read worse.
+    def normalize_cost_basis(raw_cost_basis, qty, source_key, market_value = nil)
       return nil if raw_cost_basis.nil?
 
       if %w[total_cost value].include?(source_key)
         return nil unless qty.to_d.positive?
+        return raw_cost_basis / qty
+      end
 
+      return raw_cost_basis unless qty.to_d.positive?
+      return raw_cost_basis unless market_value && market_value.to_d.positive?
+
+      qty_f         = qty.to_f
+      share_price_f = market_value.to_f / qty_f
+      midpoint_f    = share_price_f * Math.sqrt(qty_f)
+
+      if raw_cost_basis.to_f > midpoint_f
         raw_cost_basis / qty
       else
         raw_cost_basis
