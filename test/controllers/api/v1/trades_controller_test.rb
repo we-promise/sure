@@ -617,7 +617,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       @read_write_api_key ||= ApiKey.create!(
         user: @user,
         name: "Test RW Key",
-        display_key: "test_rw_#{SecureRandom.hex(8)}",
+        key: ApiKey.generate_secure_key,
         scopes: %w[read_write],
         source: "web"
       ).tap do |key|
@@ -629,7 +629,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       @read_only_api_key ||= ApiKey.create!(
         user: @user,
         name: "Test RO Key",
-        display_key: "test_ro_#{SecureRandom.hex(8)}",
+        key: ApiKey.generate_secure_key,
         scopes: %w[read],
         source: "mobile"
       ).tap do |key|
@@ -638,6 +638,6 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     end
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 end
