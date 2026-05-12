@@ -76,7 +76,7 @@ class ApplicationHelperTest < ActionView::TestCase
   test "#stripe_one_time_contribution_text(url) renders default stripe payment text when unavailable" do
     assert_equal I18n.t("settings.payments.show.payment_via_stripe"), stripe_one_time_contribution_text(nil)
   end
-  
+
   test "#currency_picker_options_for_family returns enabled family currencies" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
