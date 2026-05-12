@@ -74,9 +74,14 @@ cd /rails
 
 emit_status() {
   if [ -n "$PREVIEW_ORIGIN" ]; then
+    local stage="$1"
+    local detail="$2"
+    local payload
+    payload=$(ruby -rjson -e 'print JSON.generate({stage: ENV.fetch("STAGE"), detail: ENV.fetch("DETAIL", "")})' 2>/dev/null \
+      STAGE="$stage" DETAIL="$detail") || return 0
     curl -fsS -X POST "$PREVIEW_ORIGIN/_container_event" \
       -H 'content-type: application/json' \
-      --data "{\"stage\":\"$1\",\"detail\":\"$2\"}" >/dev/null || true
+      --data "$payload" >/dev/null || true
   fi
 }
 
