@@ -49,6 +49,36 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :binance_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :kraken_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -103,6 +133,8 @@ Rails.application.routes.draw do
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
     post :verify, to: "mfa#verify_code"
+    post :webauthn_options
+    post :verify_webauthn
     delete :disable
   end
 
@@ -180,13 +212,22 @@ Rails.application.routes.draw do
     end
     resource :payment, only: :show
     resource :security, only: :show
+    resources :webauthn_credentials, only: %i[create destroy] do
+      post :options, on: :collection
+    end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
-    resource :bank_sync, only: :show, controller: "bank_sync"
-    resource :providers, only: %i[show update]
+    get "bank_sync", to: redirect("/settings/providers", status: 301)
+    resource :providers, only: %i[show update] do
+      collection do
+        post :sync_all
+        post ":provider_key/sync", action: :sync, as: :sync_provider
+        get ":provider_key/connect_form", action: :connect_form, as: :connect_form
+      end
+    end
   end
 
   resource :subscription, only: %i[new show create] do
@@ -234,7 +275,13 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :transfers, only: %i[new create destroy show update]
+  get :exchange_rate, to: "exchange_rates#show"
+
+  resources :transfers, only: %i[new create destroy show update] do
+    member do
+      post :mark_as_recurring
+    end
+  end
 
   resources :imports, only: %i[index new show create update destroy] do
     member do
@@ -274,6 +321,10 @@ Rails.application.routes.draw do
   namespace :transactions do
     resource :bulk_deletion, only: :create
     resource :bulk_update, only: %i[new create]
+    resource :categorize, only: %i[show create] do
+      patch :assign_entry, on: :collection
+      get :preview_rule, on: :collection
+    end
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
@@ -399,18 +450,39 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
-      resources :categories, only: [ :index, :show ]
-      resources :merchants, only: %i[index show]
-      resources :tags, only: %i[index show create update destroy]
+      resources :balances, only: [ :index, :show ]
+      resources :budgets, only: [ :index, :show ]
+      resources :budget_categories, only: [ :index, :show ]
+      resources :categories, only: [ :index, :show, :create ]
+      resources :merchants, only: [ :index, :show ]
+      resources :rules, only: [ :index, :show ]
+      resources :rule_runs, only: [ :index, :show ]
+      resources :securities, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show ]
+      resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
-      resources :valuations, only: [ :create, :update, :show ]
-      resources :imports, only: [ :index, :show, :create ]
+      resources :transfers, only: [ :index, :show ]
+      resources :rejected_transfers, only: [ :index, :show ]
+      resources :valuations, only: [ :index, :create, :update, :show ]
+      resources :recurring_transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :family_exports, only: [ :index, :show, :create ] do
+        get :download, on: :member
+      end
+      resources :imports, only: [ :index, :show, :create ] do
+        post :preflight, on: :collection
+        get :rows, on: :member
+      end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
-      post :sync, to: "sync#create"
+      resource :family_settings, only: [ :show ], controller: :family_settings
+      post :sync, to: "sync#create", as: :sync_job
+      resources :syncs, only: [ :index, :show ] do
+        get :latest, on: :collection
+      end
+      resources :provider_connections, only: [ :index ]
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do
@@ -418,6 +490,7 @@ Rails.application.routes.draw do
         end
       end
 
+      get "users/reset/status", to: "users#reset_status"
       delete "users/reset", to: "users#reset"
       delete "users/me", to: "users#destroy"
 
@@ -469,6 +542,7 @@ Rails.application.routes.draw do
       post :balances
       get :setup_accounts
       post :complete_account_setup
+      post :dismiss_replacement_suggestion
     end
   end
 
@@ -483,6 +557,27 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :sophtron_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :connect_institution
+      post :sync
+      post :toggle_manual_sync
+      post :balances
+      get :connection_status
+      post :submit_mfa
       get :setup_accounts
       post :complete_account_setup
     end

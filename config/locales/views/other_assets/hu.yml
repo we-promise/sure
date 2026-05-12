@@ -1,0 +1,9 @@
+---
+hu:
+  other_assets:
+    edit:
+      edit: '%{account} szerkesztése'
+      balance_tracking_info: 'Az egyéb eszközök értékét manuális értékelésekkel lehet követni az „Új egyenleg” funkcióval, nem tranzakciókkal. A pénzforgalom nem befolyásolja a számlaegyenleget.'
+    new:
+      title: Add meg az eszköz adatait
+      balance_tracking_info: 'Az egyéb eszközök értékét manuális értékelésekkel lehet követni az „Új egyenleg" funkcióval, nem tranzakciókkal. A pénzforgalom nem befolyásolja a számlaegyenleget.'

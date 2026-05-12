@@ -1,6 +1,15 @@
 class Settings::HostingsController < ApplicationController
   layout "settings"
 
+  # Minimum accepted value for each configurable LLM budget field. Mirrors the
+  # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
+  # controller rejects what the browser-side validator would reject.
+  LLM_BUDGET_MINIMUMS = {
+    llm_context_window: 256,
+    llm_max_response_tokens: 64,
+    llm_max_items_per_call: 1
+  }.freeze
+
   guard_feature unless: -> { self_hosted? }
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
@@ -14,13 +23,14 @@ class Settings::HostingsController < ApplicationController
 
     # Determine which providers are currently selected
     exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-    securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
+    enabled_securities = Setting.enabled_securities_providers
 
-    # Show Twelve Data settings if either provider is set to twelve_data
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
-
-    # Show Yahoo Finance settings if either provider is set to yahoo_finance
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
+    # Show provider settings if used for FX or enabled for securities
+    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
+    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
+    @show_tiingo_settings = enabled_securities.include?("tiingo")
+    @show_eodhd_settings = enabled_securities.include?("eodhd")
+    @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
 
     # Only fetch provider data if we're showing the section
     if @show_twelve_data_settings
@@ -57,9 +67,7 @@ class Settings::HostingsController < ApplicationController
       Setting.brand_fetch_high_res_logos = hosting_params[:brand_fetch_high_res_logos] == "1"
     end
 
-    if hosting_params.key?(:twelve_data_api_key)
-      Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
-    end
+    update_encrypted_setting(:twelve_data_api_key)
 
     if hosting_params.key?(:exchange_rate_provider)
       Setting.exchange_rate_provider = hosting_params[:exchange_rate_provider]
@@ -68,6 +76,40 @@ class Settings::HostingsController < ApplicationController
     if hosting_params.key?(:securities_provider)
       Setting.securities_provider = hosting_params[:securities_provider]
     end
+
+    if hosting_params.key?(:securities_providers)
+      new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?) & Security.valid_price_providers
+      old_providers = Setting.enabled_securities_providers
+
+      Setting.securities_providers = new_providers.join(",")
+
+      # Clear the legacy singular setting so the fallback in
+      # enabled_securities_providers doesn't re-enable a provider
+      # the user just unchecked.
+      Setting.securities_provider = nil if new_providers.empty?
+
+      # Mark securities linked to removed providers as offline so they aren't
+      # silently queried against an incompatible fallback provider (e.g. MFAPI
+      # scheme codes sent to TwelveData). The price_provider is preserved so
+      # provider_status can report :provider_unavailable.
+      removed = old_providers - new_providers
+      removed.each do |removed_provider|
+        Security.where(price_provider: removed_provider, offline: false)
+                .in_batches.update_all(offline: true, offline_reason: "provider_disabled")
+      end
+
+      # Bring securities back online when their provider is re-enabled — but only
+      # those that were taken offline by a provider toggle, not by health checks.
+      added = new_providers - old_providers
+      added.each do |added_provider|
+        Security.where(price_provider: added_provider, offline: true, offline_reason: "provider_disabled")
+                .in_batches.update_all(offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil)
+      end
+    end
+
+    update_encrypted_setting(:tiingo_api_key)
+    update_encrypted_setting(:eodhd_api_key)
+    update_encrypted_setting(:alpha_vantage_api_key)
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -124,6 +166,21 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    LLM_BUDGET_MINIMUMS.each do |key, minimum|
+      next unless hosting_params.key?(key)
+      raw = hosting_params[key].to_s.strip
+      if raw.blank?
+        Setting.public_send("#{key}=", nil)
+        next
+      end
+      parsed = Integer(raw, 10) rescue nil
+      if parsed.nil? || parsed < minimum
+        label = t("settings.hostings.openai_settings.#{key}_label")
+        raise Setting::ValidationError, t(".invalid_llm_budget", field: label, minimum: minimum)
+      end
+      Setting.public_send("#{key}=", parsed)
+    end
+
     if hosting_params.key?(:external_assistant_url)
       Setting.external_assistant_url = hosting_params[:external_assistant_url]
     end
@@ -166,7 +223,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type
@@ -193,6 +250,12 @@ class Settings::HostingsController < ApplicationController
       Rails.logger.error("[AutoSyncScheduler] Failed to sync scheduler: #{error.message}")
       Rails.logger.error(error.backtrace.join("\n"))
       flash[:alert] = t(".scheduler_sync_failed")
+    end
+
+    def update_encrypted_setting(param_key)
+      return unless hosting_params.key?(param_key)
+      value = hosting_params[param_key].to_s.strip
+      Setting.public_send(:"#{param_key}=", value) unless value.blank? || value == "********"
     end
 
     def current_user_timezone

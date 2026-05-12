@@ -6,6 +6,10 @@ class Provider::TwelveData < Provider
   Error = Class.new(Provider::Error)
   InvalidExchangeRateError = Class.new(Error)
   InvalidSecurityPriceError = Class.new(Error)
+  RateLimitError = Class.new(Error)
+
+  # Minimum delay between requests to avoid rate limiting (in seconds)
+  MIN_REQUEST_INTERVAL = 1.0
 
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
@@ -59,20 +63,23 @@ class Provider::TwelveData < Provider
 
   def fetch_exchange_rate(from:, to:, date:)
     with_provider_response do
+      throttle_request
       response = client.get("#{base_url}/exchange_rate") do |req|
         req.params["symbol"] = "#{from}/#{to}"
         req.params["date"] = date.to_s
       end
 
-      rate = JSON.parse(response.body).dig("rate")
+      parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
 
-      Rate.new(date: date.to_date, from:, to:, rate: rate)
+      Rate.new(date: date.to_date, from:, to:, rate: parsed.dig("rate"))
     end
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     with_provider_response do
       # Try to fetch the currency pair via the time_series API (consumes 1 credit) - this might not return anything as the API does not provide time series data for all possible currency pairs
+      throttle_request
       response = client.get("#{base_url}/time_series") do |req|
         req.params["symbol"] = "#{from}/#{to}"
         req.params["start_date"] = start_date.to_s
@@ -81,11 +88,13 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
       data = parsed.dig("values")
 
       # If currency pair is not available, try to fetch via the time_series/cross API (consumes 5 credits)
       if data.nil?
         Rails.logger.info("#{self.class.name}: Currency pair #{from}/#{to} not available, fetching via time_series/cross API")
+        throttle_request(credits: 5)
         response = client.get("#{base_url}/time_series/cross") do |req|
           req.params["base"] = from
           req.params["quote"] = to
@@ -95,6 +104,7 @@ class Provider::TwelveData < Provider
         end
 
         parsed = JSON.parse(response.body)
+        check_api_error!(parsed)
         data = parsed.dig("values")
       end
 
@@ -123,12 +133,14 @@ class Provider::TwelveData < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
+      throttle_request
       response = client.get("#{base_url}/symbol_search") do |req|
         req.params["symbol"] = symbol
         req.params["outputsize"] = 25
       end
 
       parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
       data = parsed.dig("data")
 
       if data.nil?
@@ -137,7 +149,7 @@ class Provider::TwelveData < Provider
         raise Error, "API error (code: #{error_code}): #{error_message}"
       end
 
-      data.map do |security|
+      data.reject { |row| crypto_row?(row) }.map do |security|
         country = ISO3166::Country.find_country_by_any_name(security.dig("country"))
 
         Security.new(
@@ -145,7 +157,8 @@ class Provider::TwelveData < Provider
           name: security.dig("instrument_name"),
           logo_url: nil,
           exchange_operating_mic: security.dig("mic_code"),
-          country_code: country ? country.alpha2 : nil
+          country_code: country ? country.alpha2 : nil,
+          currency: security.dig("currency")
         )
       end
     end
@@ -153,19 +166,23 @@ class Provider::TwelveData < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
+      throttle_request
       response = client.get("#{base_url}/profile") do |req|
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
       end
 
       profile = JSON.parse(response.body)
+      check_api_error!(profile)
 
+      throttle_request
       response = client.get("#{base_url}/logo") do |req|
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
       end
 
       logo = JSON.parse(response.body)
+      check_api_error!(logo)
 
       SecurityInfo.new(
         symbol: symbol,
@@ -183,7 +200,8 @@ class Provider::TwelveData < Provider
     with_provider_response do
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date, end_date: date)
 
-      raise ProviderError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
+      raise historical_data.error if historical_data.error.present?
+      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.blank?
 
       historical_data.data.first
     end
@@ -191,6 +209,7 @@ class Provider::TwelveData < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
+      throttle_request
       response = client.get("#{base_url}/time_series") do |req|
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
@@ -200,6 +219,7 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
       values = parsed.dig("values")
 
       if values.nil?
@@ -230,6 +250,16 @@ class Provider::TwelveData < Provider
   private
     attr_reader :api_key
 
+    # TwelveData tags crypto symbols with `instrument_type: "Digital Currency"` and
+    # `mic_code: "DIGITAL_CURRENCY"`, and returns an empty `currency` field for them.
+    # We exclude them so crypto is handled exclusively by Provider::BinancePublic —
+    # TD's empty currency would otherwise cascade into Security::Price rows defaulting
+    # to USD, silently mispricing EUR/GBP crypto holdings.
+    def crypto_row?(row)
+      row["instrument_type"].to_s.casecmp?("Digital Currency") ||
+        row["mic_code"].to_s.casecmp?("DIGITAL_CURRENCY")
+    end
+
     def base_url
       ENV["TWELVE_DATA_URL"] || "https://api.twelvedata.com"
     end
@@ -237,15 +267,81 @@ class Provider::TwelveData < Provider
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.request(:retry, {
-          max: 2,
-          interval: 0.05,
+          max: 3,
+          interval: 1.0,
           interval_randomness: 0.5,
-          backoff_factor: 2
+          backoff_factor: 2,
+          exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
 
         faraday.request :json
         faraday.response :raise_error
         faraday.headers["Authorization"] = "apikey #{api_key}"
+      end
+    end
+
+    # Paces API requests to stay within TwelveData's rate limits. Sleeps inline
+    # because the API physically cannot be called faster — this is unavoidable
+    # with a rate-limited provider. The 5-minute cache lock TTL in
+    # ExchangeRate::Provided accounts for worst-case throttle waits.
+    def throttle_request(credits: 1)
+      # Layer 1: Per-instance minimum interval between calls
+      @last_request_time ||= Time.at(0)
+      elapsed = Time.current - @last_request_time
+      sleep_time = min_request_interval - elapsed
+      sleep(sleep_time) if sleep_time > 0
+
+      # Layer 2: Global per-minute credit counter via cache (Redis in prod).
+      # Read current usage first — if adding these credits would exceed the limit,
+      # wait for the next minute BEFORE incrementing. This ensures credits are
+      # charged to the minute the request actually fires in, not a stale minute
+      # we slept through (which would undercount the new minute's usage).
+      minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
+      current_count = Rails.cache.read(minute_key).to_i
+
+      if current_count + credits > max_requests_per_minute
+        wait_seconds = 60 - (Time.current.to_i % 60) + 1
+        Rails.logger.info("TwelveData: #{current_count + credits}/#{max_requests_per_minute} credits this minute, waiting #{wait_seconds}s")
+        sleep(wait_seconds)
+      end
+
+      # Charge credits to the minute the request actually fires in
+      active_minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
+      Rails.cache.increment(active_minute_key, credits, expires_in: 120.seconds)
+
+      # Set timestamp after all waits so the next call's 1s pacing is measured
+      # from when this request actually fires, not from before the minute wait.
+      @last_request_time = Time.current
+    end
+
+    def min_request_interval
+      ENV.fetch("TWELVE_DATA_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
+    end
+
+    def max_requests_per_minute
+      ENV.fetch("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE", 7).to_i
+    end
+
+    def check_api_error!(parsed)
+      return unless parsed.is_a?(Hash) && parsed["code"].present?
+
+      if parsed["code"] == 429
+        raise RateLimitError, parsed["message"] || "Rate limit exceeded"
+      end
+
+      raise Error, "API error (code: #{parsed["code"]}): #{parsed["message"] || "Unknown error"}"
+    end
+
+    def default_error_transformer(error)
+      case error
+      when RateLimitError
+        error
+      when Faraday::TooManyRequestsError
+        RateLimitError.new("TwelveData rate limit exceeded", details: error.response&.dig(:body))
+      when Faraday::Error
+        self.class::Error.new(error.message, details: error.response&.dig(:body))
+      else
+        self.class::Error.new(error.message)
       end
     end
 end

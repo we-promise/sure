@@ -4,11 +4,15 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
     @transaction = transactions :one
+    ensure_tailwind_build
   end
 
   test "index" do
     get categories_url
     assert_response :success
+    assert_select "#category_#{categories(:food_and_drink).id} > [data-testid='category-content']", count: 1
+    assert_select "#category_#{categories(:food_and_drink).id} > [data-testid='category-actions']", count: 1
+    assert_select "#category_#{categories(:food_and_drink).id} [data-testid='category-name']", text: categories(:food_and_drink).name
   end
 
   test "new" do

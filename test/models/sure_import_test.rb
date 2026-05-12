@@ -37,7 +37,35 @@ class SureImportTest < ActiveSupport::TestCase
   end
 
   test "max_row_count is higher than standard imports" do
+    assert_equal 100_000, SureImport.max_row_count
     assert_equal 100_000, @import.max_row_count
+  end
+
+  test "dry_run totals can be derived from existing line type counts" do
+    counts = {
+      "Account" => 2,
+      "Transaction" => 3,
+      "UnknownType" => 4
+    }
+
+    dry_run = SureImport.dry_run_totals_from_line_type_counts(counts)
+
+    assert_equal 2, dry_run[:accounts]
+    assert_equal 3, dry_run[:transactions]
+    assert_equal 0, dry_run[:categories]
+    assert_not dry_run.key?(:unknown_type)
+  end
+
+  test "ndjson line type counts ignore records without data" do
+    ndjson = [
+      { type: "Account", data: { id: "uuid-1" } },
+      { type: "Transaction" },
+      { data: { id: "uuid-2" } }
+    ].map(&:to_json).join("\n")
+
+    counts = SureImport.ndjson_line_type_counts(ndjson)
+
+    assert_equal({ "Account" => 1 }, counts)
   end
 
   test "csv_template returns nil" do
@@ -79,6 +107,17 @@ class SureImportTest < ActiveSupport::TestCase
     assert @import.publishable?
   end
 
+  test "status predicates honor validation stats" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }
+    ]))
+
+    assert @import.cleaned_from_validation_stats?(invalid_rows_count: 0)
+    assert @import.publishable_from_validation_stats?(invalid_rows_count: 0)
+    assert_not @import.cleaned_from_validation_stats?(invalid_rows_count: 1)
+    assert_not @import.publishable_from_validation_stats?(invalid_rows_count: 1)
+  end
+
   test "dry_run returns counts by type" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1" } },
@@ -95,6 +134,22 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 1, dry_run[:categories]
     assert_equal 3, dry_run[:transactions]
     assert_equal 0, dry_run[:tags]
+  end
+
+  test "cached ndjson content is refreshed when attachment is replaced" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: { id: "uuid-1" } }
+    ]))
+    assert_equal 1, @import.dry_run[:accounts]
+
+    attach_ndjson(build_ndjson([
+      { type: "Transaction", data: { id: "uuid-2" } }
+    ]))
+
+    dry_run = @import.dry_run
+    assert_equal 0, dry_run[:accounts]
+    assert_equal 1, dry_run[:transactions]
+    assert_equal 1, @import.rows_count
   end
 
   test "sync_ndjson_rows_count! sets total row count" do

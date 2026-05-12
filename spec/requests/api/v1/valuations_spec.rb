@@ -20,25 +20,18 @@ RSpec.describe 'API V1 Valuations', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
     Account.create!(
@@ -66,13 +59,59 @@ RSpec.describe 'API V1 Valuations', type: :request do
   let!(:valuation_id) { valuation_entry.id }
 
   path '/api/v1/valuations' do
+    get 'List valuations' do
+      tags 'Valuations'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      parameter name: :page, in: :query, type: :integer, required: false,
+                description: 'Page number (default: 1)'
+      parameter name: :per_page, in: :query, type: :integer, required: false,
+                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :account_id, in: :query, required: false, description: 'Filter by account ID',
+                schema: { type: :string, format: :uuid }
+      parameter name: :start_date, in: :query, required: false,
+                description: 'Filter valuations from this date',
+                schema: { type: :string, format: :date }
+      parameter name: :end_date, in: :query, required: false,
+                description: 'Filter valuations until this date',
+                schema: { type: :string, format: :date }
+
+      response '200', 'valuations listed' do
+        schema '$ref' => '#/components/schemas/ValuationCollection'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '422', 'invalid date filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:start_date) { 'not-a-date' }
+
+        run_test!
+      end
+
+      response '422', 'invalid account filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:account_id) { 'not-a-uuid' }
+
+        run_test!
+      end
+    end
+
     post 'Create valuation' do
       tags 'Valuations'
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with write scope'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -82,9 +121,17 @@ RSpec.describe 'API V1 Valuations', type: :request do
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               amount: { type: :number, description: 'Valuation amount (required)' },
               date: { type: :string, format: :date, description: 'Valuation date (required)' },
-              notes: { type: :string, description: 'Additional notes' }
+              notes: { type: :string, description: 'Additional notes' },
+              upsert: {
+                type: :boolean,
+                description: 'Nested alternative to the top-level response-status flag. Top-level upsert takes precedence when both are provided.'
+              }
             },
             required: %w[account_id amount date]
+          },
+          upsert: {
+            type: :boolean,
+            description: 'Response-status signal only. When true and a same-account same-date valuation exists before the request, the endpoint returns 200 OK instead of 201 Created. The underlying reconciliation write path is unchanged; this flag does not add duplicate-prevention or safe-retry guarantees beyond existing same-date reconciliation behavior.'
           }
         },
         required: %w[valuation]
@@ -102,6 +149,23 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
       response '201', 'valuation created' do
         schema '$ref' => '#/components/schemas/Valuation'
+
+        run_test!
+      end
+
+      response '200', 'existing valuation upserted' do
+        schema '$ref' => '#/components/schemas/Valuation'
+
+        let(:body) do
+          {
+            upsert: true,
+            valuation: {
+              account_id: account.id,
+              amount: 15000.00,
+              date: Date.current.to_s
+            }
+          }
+        end
 
         run_test!
       end
@@ -170,8 +234,6 @@ RSpec.describe 'API V1 Valuations', type: :request do
   end
 
   path '/api/v1/valuations/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Valuation ID (entry ID)'
 
     get 'Retrieve a valuation' do

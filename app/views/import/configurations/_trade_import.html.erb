@@ -27,7 +27,7 @@
 
     <%= form.select :name_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Name" } %>
 
-    <% unless Security.provider %>
+    <% unless Security.providers.any? %>
       <div class="alert alert-warning">
         <p>
           <strong>Note:</strong> The security prices provider is not configured.  Your trade imports will work, but Sure will not backfill price history.  Please go to your settings to configure this.

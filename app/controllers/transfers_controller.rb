@@ -1,22 +1,27 @@
 class TransfersController < ApplicationController
   include StreamExtensions
 
-  before_action :set_transfer, only: %i[show destroy update]
+  before_action :set_transfer, only: %i[show destroy update mark_as_recurring]
+  before_action :set_accounts, only: %i[new create]
 
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
-
-    @accounts = accessible_accounts
-    .alphabetically
-    .includes(
-      :account_providers,
-      logo_attachment: :blob
-    )
   end
 
   def show
     @categories = Current.family.categories.alphabetically
+
+    # Whether the current user can hit `mark_as_recurring`: feature flag on,
+    # AND they have write access to BOTH transfer endpoints. Gating the
+    # view button on this avoids showing a CTA that the controller would
+    # reject via `require_account_permission!` for read-only sharers.
+    endpoint_ids = [ @transfer.from_account&.id, @transfer.to_account&.id ].compact
+    writable_endpoint_count = Account.writable_by(Current.user).where(id: endpoint_ids).distinct.count
+    @can_mark_as_recurring_transfer =
+      !Current.family.recurring_transactions_disabled? &&
+      endpoint_ids.size == 2 &&
+      writable_endpoint_count == 2
   end
 
   def create
@@ -31,8 +36,9 @@ class TransfersController < ApplicationController
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
-      date: Date.parse(transfer_params[:date]),
-      amount: transfer_params[:amount].to_d
+      date: transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current,
+      amount: transfer_params[:amount].to_d,
+      exchange_rate: transfer_params[:exchange_rate].presence&.to_d
     ).create
 
     if @transfer.persisted?
@@ -45,6 +51,16 @@ class TransfersController < ApplicationController
       @from_account_id = transfer_params[:from_account_id]
       render :new, status: :unprocessable_entity
     end
+  rescue Money::ConversionError
+    @transfer ||= Transfer.new
+    @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
+    set_accounts
+    render :new, status: :unprocessable_entity
+  rescue ArgumentError
+    @transfer ||= Transfer.new
+    @transfer.errors.add(:date, "is invalid")
+    set_accounts
+    render :new, status: :unprocessable_entity
   end
 
   def update
@@ -70,6 +86,65 @@ class TransfersController < ApplicationController
     redirect_back_or_to transactions_url, notice: t(".success")
   end
 
+  def mark_as_recurring
+    if Current.family.recurring_transactions_disabled?
+      flash[:alert] = t("recurring_transactions.transfer_feature_disabled")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    source_account      = @transfer.from_account
+    destination_account = @transfer.to_account
+
+    if source_account.nil? || destination_account.nil?
+      flash[:alert] = t("recurring_transactions.unexpected_error")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    return unless require_account_permission!(source_account)
+    return unless require_account_permission!(destination_account)
+
+    existing = Current.family.recurring_transactions.find_by(
+      account_id: source_account.id,
+      destination_account_id: destination_account.id,
+      amount: @transfer.outflow_transaction.entry.amount,
+      currency: @transfer.outflow_transaction.entry.currency
+    )
+
+    if existing
+      flash[:alert] = t("recurring_transactions.transfer_already_exists")
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_path }
+      end
+      return
+    end
+
+    begin
+      RecurringTransaction.create_from_transfer(@transfer)
+      flash[:notice] = t("recurring_transactions.transfer_marked_as_recurring")
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_path }
+      end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      # RecordNotUnique covers the race window between `find_by` and `create!`
+      # (the partial unique index protects us at the DB level).
+      flash[:alert] = t("recurring_transactions.transfer_creation_failed")
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_path }
+      end
+    rescue StandardError => e
+      Rails.logger.error(
+        "transfers#mark_as_recurring failed: #{e.class} #{e.message} " \
+        "(transfer=#{@transfer&.id} family=#{Current.family&.id} user=#{Current.user&.id})"
+      )
+      flash[:alert] = t("recurring_transactions.unexpected_error")
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_path }
+      end
+    end
+  end
+
   private
     def set_transfer
       # Finds the transfer and ensures the user has access to it
@@ -85,7 +160,16 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded)
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate)
+    end
+
+    def set_accounts
+      @accounts = accessible_accounts
+        .alphabetically
+        .includes(
+          :account_providers,
+          logo_attachment: :blob
+        )
     end
 
     def transfer_update_params

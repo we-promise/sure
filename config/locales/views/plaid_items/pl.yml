@@ -1,0 +1,28 @@
+---
+pl:
+  plaid_items:
+    create:
+      success: Konto zostało pomyślnie połączone. Poczekaj na synchronizację kont.
+    destroy:
+      success: Konta zostały zaplanowane do usunięcia.
+    plaid_item:
+      add_new: Dodaj nowe połączenie
+      confirm_accept: Usuń instytucję
+      confirm_body: To trwale usunie wszystkie konta w tej grupie oraz wszystkie powiązane dane.
+      confirm_title: Usunąć instytucję?
+      connection_lost: Utracono połączenie
+      connection_lost_description: To połączenie nie jest już prawidłowe. Aby kontynuować synchronizację danych, usuń je i dodaj ponownie.
+      delete: Usuń
+      error: Wystąpił błąd podczas synchronizacji danych
+      no_accounts_description: Nie udało się wczytać żadnych kont z tej instytucji finansowej.
+      no_accounts_title: Nie znaleziono kont
+      requires_update: Połącz ponownie
+      status: Ostatnia synchronizacja %{timestamp} temu
+      status_never: Wymaga synchronizacji danych
+      syncing: Synchronizacja...
+      update: Aktualizuj
+    select_existing_account:
+      title: Połącz %{account_name} z Plaid
+      description: Wybierz konto Plaid, aby połączyć je z istniejącym kontem
+      cancel: Anuluj
+      link_account: Połącz konto

@@ -3,10 +3,12 @@ class Loan < ApplicationRecord
 
   SUBTYPES = {
     "mortgage" => { short: "Mortgage", long: "Mortgage" },
-    "student" => { short: "Student", long: "Student Loan" },
-    "auto" => { short: "Auto", long: "Auto Loan" },
-    "other" => { short: "Other", long: "Other Loan" }
+    "student" => { short: "Student Loan", long: "Student Loan" },
+    "auto" => { short: "Auto Loan", long: "Auto Loan" },
+    "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
+
+  validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
 
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"

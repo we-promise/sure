@@ -22,7 +22,7 @@
                     <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
                     <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
                   </div>
-                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
+                  <p class="text-sm font-medium privacy-sensitive <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
                     <%= format_money(-potential_match.amount_money) %>
                   </p>
                 </div>
@@ -54,6 +54,7 @@
               url: transaction_path(@entry),
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
+          <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
           <%= f.text_field :name,
                 label: t(".name_label"),
                 disabled: @entry.split_child? || edit_locked,
@@ -95,6 +96,7 @@
             url: transaction_path(@entry),
             class: "space-y-2",
             data: { controller: "auto-submit-form" } do |f| %>
+        <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
         <% unless @entry.transaction.transfer? %>
           <%= f.select :account,
               options_for_select(
@@ -109,7 +111,7 @@
                   :id, :name,
                   { include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    class: "text-subdued", variant: :logo, searchable: true, disabled: @entry.split_child? || !can_annotate_entry? },
+                    variant: :logo, searchable: true, menu_placement: :auto, disabled: @entry.split_child? || !can_annotate_entry? },
                   "data-auto-submit-form-target": "auto" %>
             <%= ef.select :tag_ids,
                   Current.family.tags.alphabetically.pluck(:name, :id),
@@ -117,18 +119,13 @@
                     include_blank: t(".none"),
                     multiple: true,
                     label:    t(".tags_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?
+                    disabled: !can_annotate_entry?
                   },
                   { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
           <% end %>
         <% end %>
-        <%= f.text_area :notes,
-                label: t(".note_label"),
-                placeholder: t(".note_placeholder"),
-                rows: 5,
-                disabled: @entry.split_child? || !can_annotate_entry?,
-                "data-auto-submit-form-target": "auto" %>
       <% end %>
+      <%= render "transactions/notes", entry: @entry, can_annotate: can_annotate_entry? %>
     <% end %>
 
     <% dialog.with_section(title: t(".attachments")) do %>
@@ -267,12 +264,13 @@
 
     <% if can_edit_entry? %>
       <% dialog.with_section(title: t(".settings")) do %>
-        <% unless @entry.split_parent? || @entry.split_child? %>
+        <% unless @entry.split_parent? %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,
                   url: transaction_path(@entry),
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <div class="flex cursor-pointer items-center gap-4 justify-between">
                 <div class="text-sm space-y-1">
                   <h4 class="text-primary"><%= t(".exclude") %></h4>
@@ -289,6 +287,7 @@
                   url: transaction_path(@entry),
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">
@@ -314,6 +313,7 @@
                   url: transaction_path(@entry),
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">
@@ -349,7 +349,7 @@
           <div class="flex items-center justify-between gap-4 p-3">
             <div class="text-sm space-y-1">
               <h4 class="text-primary">Transfer or Debt Payment?</h4>
-              <p class="text-secondary">Transfers and payments are special types of transactions that indicate money movement between 2 accounts.</p>
+              <p class="text-secondary"><%= t(".transfer_matcher_description") %></p>
             </div>
             <%= render DS::Link.new(
               text: "Open matcher",

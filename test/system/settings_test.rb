@@ -6,8 +6,12 @@ class SettingsTest < ApplicationSystemTestCase
 
     # Base settings available to all users
     @settings_links = [
-      [ "Accounts", accounts_path ],
-      [ "Bank Sync", settings_bank_sync_path ],
+      [ "Accounts", accounts_path ]
+    ]
+
+    @settings_links << [ "Bank sync", settings_providers_path ] if @user.admin?
+
+    @settings_links += [
       [ "Preferences", settings_preferences_path ],
       [ "Profile Info", settings_profile_path ],
       [ "Security", settings_security_path ],
@@ -60,6 +64,7 @@ class SettingsTest < ApplicationSystemTestCase
     click_button "Generate new code"
     assert_selector 'span[data-clipboard-target="source"]', visible: true, count: 1 # invite code copy widget
     copy_button = find('button[data-action="clipboard#copy"]', match: :first) # Find the first copy button (adjust if needed)
+    page.execute_script("Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.resolve() }, writable: true, configurable: true })") # Mock clipboard API due to browser security restrictions in tests
     copy_button.click
     assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true, count: 1 # text copied and icon changed to checkmark
   end
@@ -86,6 +91,7 @@ class SettingsTest < ApplicationSystemTestCase
       # Assert that admin-only settings are not present in the navigation
       assert_no_selector "li", text: "AI Prompts"
       assert_no_selector "li", text: "API Key"
+      assert_no_selector "li", text: "Bank sync"
     end
   end
 

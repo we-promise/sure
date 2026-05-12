@@ -66,11 +66,21 @@ class Security::HealthChecker
     attr_reader :security
 
     def provider
-      Security.provider
+      security.price_data_provider
+    end
+
+    # Some providers (e.g., Alpha Vantage) have very low daily limits and no
+    # lightweight endpoint — each health check burns a full API call that
+    # fetches ~100 data points. Skip health checks for those providers to
+    # avoid exhausting their quota on monitoring alone.
+    def skip_health_check?
+      provider.present? && provider.respond_to?(:max_history_days) &&
+        provider.is_a?(Provider::AlphaVantage)
     end
 
     def latest_provider_price
       return nil unless provider.present?
+      return true if skip_health_check? # treat as healthy — quota too precious
 
       response = provider.fetch_security_price(
         symbol: security.ticker,
@@ -111,6 +121,7 @@ class Security::HealthChecker
       Security.transaction do
         security.update!(
           offline: true,
+          offline_reason: "health_check_failed",
           failed_fetch_count: MAX_CONSECUTIVE_FAILURES + 1,
           failed_fetch_at: Time.current
         )

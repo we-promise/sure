@@ -1,0 +1,66 @@
+---
+pl:
+  onboardings:
+    header:
+      sign_out: Wyloguj się
+      setup: Konfiguracja
+      preferences: Preferencje
+      goals: Cele
+      start: Początek
+    logout:
+      sign_out: Wyloguj się
+    show:
+      title: Skonfigurujmy Twoje konto
+      subtitle: Na początek skonfigurujmy Twój profil.
+      first_name: Imię
+      first_name_placeholder: Imię
+      last_name: Nazwisko
+      last_name_placeholder: Nazwisko
+      group_name: Nazwa grupy
+      group_name_placeholder: Nazwa grupy
+      household_name: Nazwa gospodarstwa domowego
+      household_name_placeholder: Nazwa gospodarstwa domowego
+      moniker_prompt: Będę używać %{product_name} z ...
+      moniker_family: Członkami rodziny (tylko sobą lub z partnerem, nastolatkami itd.)
+      moniker_group: Grupą osób (firma, klub, stowarzyszenie lub inny typ)
+      country: Kraj
+      submit: Dalej
+    preferences:
+      title: Skonfiguruj swoje preferencje
+      subtitle: Skonfigurujmy Twoje preferencje.
+      example: Przykładowe konto
+      preview: Podgląd sposobu wyświetlania danych na podstawie preferencji.
+      color_theme: Motyw kolorystyczny
+      theme_system: Systemowy
+      theme_light: Jasny
+      theme_dark: Ciemny
+      locale: Język
+      currency: Waluta
+      date_format: Format daty
+      submit: Zakończ
+    goals:
+      title: Co Cię tutaj sprowadza?
+      subtitle: Wybierz jeden lub więcej celów, które chcesz osiągnąć, używając %{product_name} do zarządzania finansami osobistymi.
+      unified_accounts: Widzieć wszystkie moje konta w jednym miejscu
+      cashflow: Lepiej rozumieć przepływy pieniężne i wydatki
+      budgeting: Zarządzać planami finansowymi i budżetem
+      partner: Zarządzać finansami z partnerem
+      investments: Śledzić inwestycje
+      ai_insights: Korzystać z AI do lepszego zrozumienia moich finansów
+      optimization: Analizować i optymalizować konta
+      reduce_stress: Zmniejszyć stres lub niepokój związany z finansami
+      submit: Dalej
+    trial:
+      title: Wypróbuj Sure przez 45 dni
+      data_deletion: Dane zostaną wtedy usunięte
+      description_html: Od dziś możesz dokładnie przetestować produkt.<br/>Jeśli Ci się spodoba, uruchom go samodzielnie lub wesprzyj projekt, aby dalej korzystać tutaj.
+      try_button: Wypróbuj Sure przez 45 dni
+      continue_trial: Kontynuuj okres próbny
+      upgrade: Ulepsz
+      how_it_works: Jak to tutaj działa
+      today: Dziś
+      today_description: Otrzymasz bezpłatny dostęp do Sure na 45 dni na naszym AWS.
+      in_40_days: Za 40 dni (%{date})
+      in_40_days_description: Wyślemy Ci przypomnienie o eksporcie danych.
+      in_45_days: Za 45 dni (%{date})
+      in_45_days_description: Usuwamy dane — wesprzyj projekt, aby dalej korzystać z Sure tutaj!

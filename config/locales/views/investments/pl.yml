@@ -1,0 +1,120 @@
+---
+pl:
+  investments:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      none: Brak
+      subtype_prompt: Wybierz typ inwestycji
+    new:
+      title: Wprowadź saldo konta
+    show:
+      chart_title: Łączna wartość
+    subtypes:
+      brokerage:
+        short: Maklerskie
+        long: Konto maklerskie
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Plan oszczędnościowy Thrift
+      ira:
+        short: IRA
+        long: Tradycyjne IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 Plan
+        long: Edukacyjny plan oszczędnościowy 529
+      hsa:
+        short: HSA
+        long: Konto oszczędnościowe na cele zdrowotne
+      ugma:
+        short: UGMA
+        long: Powiernicze konto UGMA
+      utma:
+        short: UTMA
+        long: Powiernicze konto UTMA
+      isa:
+        short: ISA
+        long: Indywidualne konto oszczędnościowe
+      lisa:
+        short: LISA
+        long: Dożywotnie konto ISA
+      sipp:
+        short: SIPP
+        long: Indywidualna emerytura samodzielnie inwestowana
+      workplace_pension_uk:
+        short: Emerytalne
+        long: Emerytura pracownicza
+      rrsp:
+        short: RRSP
+        long: Zarejestrowany emerytalny plan oszczędnościowy
+      tfsa:
+        short: TFSA
+        long: Konto oszczędnościowe zwolnione z podatku
+      resp:
+        short: RESP
+        long: Zarejestrowany edukacyjny plan oszczędnościowy
+      lira:
+        short: LIRA
+        long: Zablokowane konto emerytalne
+      rrif:
+        short: RRIF
+        long: Zarejestrowany fundusz dochodu emerytalnego
+      super:
+        short: Super
+        long: Fundusz emerytalny
+      smsf:
+        short: SMSF
+        long: Samodzielnie zarządzany fundusz emerytalny
+      pea:
+        short: PEA
+        long: Plan oszczędnościowy w akcjach (PEA)
+      pillar_3a:
+        short: Pillar 3a
+        long: Prywatna emerytura (Filar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      pension:
+        short: Emerytalne
+        long: Emerytalne
+      retirement:
+        short: Emerytalne
+        long: Konto emerytalne
+      mutual_fund:
+        short: Fundusz
+        long: Fundusz inwestycyjny
+      angel:
+        short: Anioł
+        long: Inwestycja anielska
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Inne
+        long: Inna inwestycja
+    value_tooltip:
+      cash: Gotówka
+      holdings: Pozycje
+      total: Saldo portfela
+      total_value_tooltip: Łączne saldo portfela to suma gotówki maklerskiej (dostępnej do handlu) oraz aktualnej wartości rynkowej Twoich pozycji.

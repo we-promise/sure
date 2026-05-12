@@ -1,0 +1,99 @@
+---
+hu:
+  holdings:
+    cash:
+      brokerage_cash: Brókeri készpénz
+    destroy:
+      success: Pozíció törölve
+    update:
+      success: Bekerülési érték mentve.
+      error: Érvénytelen bekerülési érték.
+    unlock_cost_basis:
+      success: Bekerülési érték feloldva. A következő szinkronizáláskor frissülhet.
+    remap_security:
+      success: Értékpapír sikeresen frissítve.
+      security_not_found: A kiválasztott értékpapír nem található.
+    reset_security:
+      success: Értékpapír visszaállítva a szolgáltató értékére.
+    sync_prices:
+      success: Piaci adatok sikeresen szinkronizálva.
+      unavailable: Az offline értékpapíroknál a piaci adatok szinkronizálása nem elérhető.
+      provider_error: Nem sikerült lekérni a legújabb árakat. Próbáld meg újra néhány perc múlva.
+    errors:
+      security_collision: "Nem lehet átrendeli: már van egy pozíciód a(z) %{ticker} részvényből %{date} dátummal."
+    cost_basis_sources:
+      manual: Felhasználó által megadott
+      calculated: Ügyletekből számított
+      provider: Szolgáltatótól
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Bekerülési érték megadása: %{ticker} (%{qty} részvény)"
+      total_cost_basis_label: Teljes bekerülési érték
+      or_per_share_label: "Vagy add meg részvényenként:"
+      per_share: részvényenként
+      cancel: Mégse
+      save: Mentés
+      overwrite_confirm_title: Felülírja a bekerülési értéket?
+      overwrite_confirm_body: "Ez felváltja a jelenlegi %{current} bekerülési értéket."
+    holding:
+      per_share: részvényenként
+      shares: "%{qty} részvény"
+      unknown: "--"
+      no_cost_basis: Nincs bekerülési érték
+    index:
+      average_cost: Átlagos bekerülési érték
+      holdings: Pozíciók
+      name: Név
+      new_holding: Új tevékenység
+      no_holdings: Nincs megjeleníthető pozíció.
+      return: Teljes hozam
+      weight: Súly
+    missing_price_tooltip:
+      description: Ennél a befektetésnél hiányoznak adatok, ezért a hozamot és az értéket nem lehetett kiszámítani.
+      missing_data: Hiányzó adatok
+    show:
+      avg_cost_label: Átlagos bekerülési érték
+      current_market_price_label: Aktuális piaci ár
+      delete: Törlés
+      delete_subtitle: Ez törli a pozíciót és az összes kapcsolódó ügyletet ezen a számlán. Ez a művelet nem vonható vissza.
+      delete_title: Pozíció törlése
+      edit_security: Értékpapír szerkesztése
+      history: Előzmények
+      no_trade_history: Ehhez a pozícióhoz nem áll rendelkezésre ügyleti előzmény.
+      overview: Áttekintés
+      portfolio_weight_label: Portfólió-súly
+      settings: Beállítások
+      security_label: Értékpapír
+      originally: "korábban: %{ticker}"
+      search_security: Értékpapír keresése
+      search_security_placeholder: Keresés szimbólum vagy név alapján
+      cancel: Mégse
+      remap_security: Mentés
+      provider_disabled_warning: "Az árfrissítés szünetel – a(z) %{provider} szolgáltató le van tiltva. Válassz másik szolgáltatót alább, vagy engedélyezd újra a Beállításokban."
+      truncated_history_warning: "Az árfolyamtörténet csak %{date} dátumtól érhető el. A korábbi dátumoknál a kiválasztott szolgáltatótól nem érkeztek adatok – ez akkor fordulhat elő, ha az eszközt az ügyletkötés után vezették be, vagy a szolgáltató az aktuális csomagján korlátozott historikus ablakot kínál."
+      switch_provider_label: Szolgáltató váltása
+      switch_provider_description: "A(z) %{provider} le van tiltva. Keress rá erre az értékpapírra egy másik engedélyezett szolgáltatónál."
+      switch_provider_button: Váltás
+      no_security_provider: Az értékpapír-szolgáltató nincs beállítva. Nem lehet értékpapírt keresni.
+      security_remapped_label: Értékpapír átrendeli
+      provider_sent: "Szolgáltató által küldött: %{ticker}"
+      reset_to_provider: Visszaállítás a szolgáltató értékére
+      reset_confirm_title: Visszaállítja az értékpapírt a szolgáltató értékére?
+      reset_confirm_body: "Ez megváltoztatja az értékpapírt %{current} helyett %{original} értékre, és áthelyezi az összes kapcsolódó ügyletet."
+      ticker_label: Tőzsdei szimbólum
+      trade_history_entry: "%{qty} részvény %{security} értékpapírból, %{price} áron"
+      total_return_label: Teljes hozam
+      unknown: Ismeretlen
+      cost_basis_locked_label: A bekerülési érték zárolva van
+      cost_basis_locked_description: A kézzel megadott bekerülési értéket a szinkronizálások nem módosítják.
+      unlock_cost_basis: Feloldás
+      unlock_confirm_title: Feloldja a bekerülési értéket?
+      unlock_confirm_body: Ez lehetővé teszi, hogy a bekerülési értéket a szolgáltatói szinkronizálások vagy az ügyleti számítások frissítsék.
+      shares_label: Részvények
+      book_value_label: Könyv szerinti érték
+      market_value_label: Piaci érték
+      market_data_label: Piaci adatok
+      market_data_sync_button: Frissítés
+      last_price_update: Utolsó árfrissítés
+      syncing: Szinkronizálás...
+      never: Soha

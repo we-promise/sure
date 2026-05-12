@@ -18,7 +18,9 @@ es:
       success:
         one: "Se ha vinculado %{count} cuenta correctamente."
         other: "Se han vinculado %{count} cuentas correctamente."
-      partial_success: "Se han vinculado %{linked} cuenta(s). %{failed} han fallado."
+      partial_success:
+        one: "Se ha vinculado %{count} cuenta. %{failed_count} ha fallado."
+        other: "Se han vinculado %{count} cuentas. %{failed_count} han fallado."
       link_failed: "Error al vincular las cuentas: %{errors}"
       no_accounts: "No se ha seleccionado ninguna cuenta para vincular."
     preload_accounts:
@@ -132,8 +134,6 @@ es:
         one: "%{count} necesita configuración"
         other: "%{count} necesitan configuración"
       status_ready: "Listo para conectar brókers"
-      status_needs_registration: "Credenciales guardadas. Ve a la página de Cuentas para conectar brókers."
-      status_not_configured: "No configurado"
       setup_accounts_button: "Configurar cuentas"
       connect_button: "Conectar bróker"
       connected_brokerages: "Conectados:"

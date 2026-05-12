@@ -1,0 +1,56 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description", product_name: product_name) %>
+        </p>
+
+        <form action="<%= link_accounts_sophtron_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <%= hidden_field_tag :accountable_type, @accountable_type %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <div class="space-y-2">
+            <% @available_accounts.each do |account| %>
+              <% Rails.logger.debug "Sophtron account data: #{account.inspect}" %>
+              <% has_blank_name = account[:account_name].blank? %>
+              <label class="flex items-start gap-3 rounded-lg border <%= has_blank_name ? "border-destructive bg-container-inset opacity-60" : "border-primary bg-container-inset hover:bg-container-inset-hover" %> p-3 <%= has_blank_name ? "cursor-not-allowed" : "cursor-pointer" %> transition-colors">
+                <%= check_box_tag "account_ids[]", account[:id], false, disabled: has_blank_name, class: "mt-1" %>
+                <div class="flex-1">
+                  <div class="text-sm font-medium <%= has_blank_name ? "text-destructive" : "text-primary" %>">
+                    <% if has_blank_name %>
+                      <%= t(".no_name_placeholder") %>
+                    <% else %>
+                      <%= account[:account_name] %>
+                    <% end %>
+                  </div>
+                  <div class="text-xs text-secondary mt-1">
+                    <%= account[:institution_name] %> • <%= account[:currency] %> • <%= account[:status] %>
+                  </div>
+                  <% if has_blank_name %>
+                    <div class="mt-1 text-xs text-destructive">
+                      <%= t(".configure_name_in_sophtron") %>
+                    </div>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= render DS::Link.new(
+                  text: t(".cancel"),
+                  href: @return_to || new_account_path,
+                  variant: :secondary,
+                  data: { turbo_frame: "_top", action: "DS--dialog#close" }
+                ) %>
+            <%= render DS::Button.new(text: t(".link_accounts"), type: "submit") %>
+          </div>
+        </form>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

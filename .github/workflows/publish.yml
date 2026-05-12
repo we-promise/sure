@@ -55,9 +55,14 @@ jobs:
       fail-fast: false
       matrix:
         platform: [amd64, arm64]
+        include:
+          - platform: amd64
+            runs-on: ubuntu-24.04
+          - platform: arm64
+            runs-on: ubuntu-24.04-arm
 
     timeout-minutes: 60
-    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.runs-on }}
 
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
@@ -428,7 +433,7 @@ jobs:
 
       - name: Bump pre-release version
         run: |
-           VERSION_FILE="config/initializers/version.rb"
+           VERSION_FILE=".sure-version"
            CHART_FILE="charts/sure/Chart.yaml"
 
            # Ensure version file exists
@@ -444,7 +449,7 @@ jobs:
            fi
  
            # Extract current version
-           CURRENT_VERSION=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+' "$VERSION_FILE")
+           CURRENT_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
            if [ -z "$CURRENT_VERSION" ]; then
              echo "ERROR: Could not extract version from $VERSION_FILE"
              exit 1
@@ -475,11 +480,11 @@ jobs:
            echo "New version: $NEW_VERSION"
 
            # Update the version file
-           sed -i "s/\"$CURRENT_VERSION\"/\"$NEW_VERSION\"/" "$VERSION_FILE"
+           echo "$NEW_VERSION" > "$VERSION_FILE"
 
            # Verify the change
-           echo "Updated version.rb:"
-           grep "semver" "$VERSION_FILE"
+           echo "Updated .sure-version:"
+           cat "$VERSION_FILE"
 
            # Update Helm chart version and appVersion
            sed -i -E "s/^version: .*/version: ${NEW_VERSION}/" "$CHART_FILE"
@@ -496,7 +501,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add config/initializers/version.rb
+          git add .sure-version
           git add charts/sure/Chart.yaml
 
           # Check if there are changes to commit

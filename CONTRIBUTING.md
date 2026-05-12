@@ -24,6 +24,9 @@ In general, _full features_ that get us closer to [our 🔜 Vision](https://gith
 To get setup for local development, you have two options:
 
 1. [Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers) with VSCode (see the `.devcontainer` folder)
+   - A `selenium/standalone-chrome` service is included in the Dev Container setup, so **system tests work out of the box** — no local Chrome required.
+   - Run system tests: `DISABLE_PARALLELIZATION=true bin/rails test:system`
+   - Watch the browser live at `http://localhost:7900` or `http://localhost:4444` (password: `secret`)
 2. Local Development
    - [Mac Setup Guide](https://github.com/we-promise/sure/wiki/Mac-Dev-Setup-Guide)
    - [Linux Setup Guide](https://github.com/we-promise/sure/wiki/Linux-Dev-Setup-Guide)

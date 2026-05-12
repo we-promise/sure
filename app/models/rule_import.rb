@@ -52,10 +52,11 @@ class RuleImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
-    csv_rows.each do |row|
+    csv_rows.each.with_index(1) do |row, index|
       normalized_row = normalize_rule_row(row)
 
       rows.create!(
+        source_row_number: index,
         name: normalized_row[:name].to_s.strip,
         resource_type: normalized_row[:resource_type].to_s.strip,
         active: parse_boolean(normalized_row[:active]),

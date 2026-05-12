@@ -1,0 +1,11 @@
+---
+pl:
+  address:
+    attributes:
+      country: Kraj
+      line1: Ulica i numer
+      line2: Numer mieszkania (opcjonalnie)
+      locality: Miejscowość
+      postal_code: Kod pocztowy
+      region: Województwo/Region
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

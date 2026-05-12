@@ -1,0 +1,76 @@
+---
+pl:
+  settings:
+    api_keys_controller:
+      success: Twój klucz API został pomyślnie utworzony
+      revoked_successfully: Klucz API został pomyślnie unieważniony
+      revoke_failed: Nie udało się unieważnić klucza API
+      scope_descriptions:
+        read_accounts: Podgląd kont
+        read_transactions: Podgląd transakcji
+        read_balances: Podgląd sald
+        write_transactions: Tworzenie transakcji
+    api_keys:
+      show:
+        title: Zarządzanie kluczami API
+        no_api_key:
+          title: Klucz API
+          heading: Uzyskaj programowy dostęp do danych konta
+          description: Uzyskaj programowy dostęp do danych Sure za pomocą bezpiecznego klucza API.
+          what_you_can_do: 'Co możesz zrobić przez API:'
+          feature_1: Uzyskiwać programowy dostęp do danych konta
+          feature_2: Budować własne integracje i aplikacje
+          feature_3: Automatyzować pobieranie i analizę danych
+          security_note_title: Bezpieczeństwo przede wszystkim
+          security_note: Twój klucz API będzie miał ograniczone uprawnienia zależne od wybranych zakresów. Jednocześnie możesz mieć tylko jeden aktywny klucz API.
+          create_api_key: Utwórz klucz API
+        current_api_key:
+          title: Twój klucz API
+          description: Twój aktywny klucz API jest gotowy do użycia. Przechowuj go bezpiecznie i nigdy nie udostępniaj publicznie.
+          active: Aktywny
+          key_name: Nazwa
+          created_at: Utworzono
+          last_used: Ostatnie użycie
+          expires: Wygasa
+          ago: temu
+          never_used: Nigdy nie użyto
+          never_expires: Nigdy nie wygasa
+          permissions: Uprawnienia
+          usage_instructions_title: Jak używać klucza API
+          usage_instructions: 'Dołącz klucz API w nagłówku X-Api-Key podczas wysyłania żądań do API Maybe:'
+          regenerate_key: Utwórz nowy klucz
+          revoke_key: Unieważnij klucz
+          revoke_confirmation: Czy na pewno chcesz unieważnić ten klucz API? Tej akcji nie można cofnąć, a wszystkie aplikacje używające tego klucza zostaną natychmiast wyłączone.
+      new:
+        title: Utwórz klucz API
+        create_new_key: Utwórz nowy klucz API
+        description: Skonfiguruj nowy klucz API, nadając mu opisową nazwę i odpowiednie uprawnienia.
+        name_label: Nazwa klucza API
+        name_placeholder: np. Aplikacja produkcyjna, Dashboard analityczny
+        name_help: Wybierz opisową nazwę, aby łatwo rozpoznać przeznaczenie tego klucza.
+        permissions_label: Uprawnienia
+        permissions_help: Wybierz uprawnienia potrzebne dla klucza API. Zawsze możesz utworzyć nowy klucz z innymi uprawnieniami.
+        scope_details:
+          read_accounts: Podgląd informacji o kontach, sald i danych na poziomie konta
+          read_transactions: Podgląd danych transakcyjnych, kategorii i szczegółów transakcji
+          read_balances: Podgląd historycznych danych salda i trendów wartości kont
+          write_transactions: Tworzenie i aktualizacja rekordów transakcji (wkrótce)
+        security_warning_title: Ważna informacja o bezpieczeństwie
+        security_warning: Klucz API zostanie wyświetlony tylko raz po utworzeniu. Przechowuj go bezpiecznie i nigdy nie udostępniaj publicznie. Jeśli go zgubisz, trzeba będzie utworzyć nowy.
+        create_key: Utwórz klucz API
+        cancel: Anuluj
+      created:
+        title: Klucz API utworzony
+        success_title: Klucz API został pomyślnie utworzony
+        success_description: Twój nowy klucz API jest gotowy do użycia. Skopiuj go teraz, ponieważ później nie będzie już widoczny.
+        your_api_key: Twój klucz API
+        key_name: Nazwa
+        permissions: Uprawnienia
+        critical_warning_title: "⚠️ Ważne: zapisz klucz API teraz"
+        critical_warning_1: To jedyny moment, kiedy zobaczysz klucz API w postaci jawnej.
+        critical_warning_2: Skopiuj go i przechowuj bezpiecznie w menedżerze haseł lub aplikacji.
+        critical_warning_3: Jeśli zgubisz ten klucz, trzeba będzie utworzyć nowy.
+        usage_instructions_title: Szybki start
+        usage_instructions: 'Użyj klucza API, dodając go w nagłówku X-Api-Key:'
+        copy_key: Skopiuj klucz API
+        continue: Przejdź do ustawień klucza API

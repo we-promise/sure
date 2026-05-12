@@ -1,4 +1,6 @@
 class EnableBankingItem::Syncer
+  include SyncStats::Collector
+
   attr_reader :enable_banking_item
 
   def initialize(enable_banking_item)
@@ -30,16 +32,9 @@ class EnableBankingItem::Syncer
 
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
-    total_accounts = enable_banking_item.enable_banking_accounts.count
+    collect_setup_stats(sync, provider_accounts: enable_banking_item.enable_banking_accounts.includes(:account_provider, :account))
 
-    linked_accounts = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
     unlinked_accounts = enable_banking_item.enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
-
-    sync_stats = {
-      total_accounts: total_accounts,
-      linked_accounts: linked_accounts.count,
-      unlinked_accounts: unlinked_accounts.count
-    }
 
     if unlinked_accounts.any?
       enable_banking_item.update!(pending_account_setup: true)
@@ -48,10 +43,19 @@ class EnableBankingItem::Syncer
       enable_banking_item.update!(pending_account_setup: false)
     end
 
-    # Phase 3: Process transactions for linked accounts only
-    if linked_accounts.any?
+    # Phase 3: Process transactions for linked and visible accounts only
+    linked_account_ids = enable_banking_item.enable_banking_accounts
+      .joins(:account_provider)
+      .joins(:account)
+      .merge(Account.visible)
+      .pluck("accounts.id")
+
+    if linked_account_ids.any?
       sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
       enable_banking_item.process_accounts
+
+      # Collect transaction statistics
+      collect_transaction_stats(sync, account_ids: linked_account_ids, source: "enable_banking")
 
       # Phase 4: Schedule balance calculations for linked accounts
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
@@ -62,9 +66,10 @@ class EnableBankingItem::Syncer
       )
     end
 
-    if sync.respond_to?(:sync_stats)
-      sync.update!(sync_stats: sync_stats)
-    end
+    collect_health_stats(sync, errors: nil)
+  rescue => e
+    collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
+    raise
   end
 
   def perform_post_sync

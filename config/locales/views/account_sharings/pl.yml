@@ -1,0 +1,31 @@
+---
+pl:
+  account_sharings:
+    show:
+      title: Udostępnianie konta
+      subtitle: Zarządzaj tym, kto może przeglądać i używać tego konta
+      member: Członek
+      permission: Uprawnienie
+      shared: Udostępnione
+      no_members: Brak innych członków w Twoim %{moniker}, którym można udostępnić
+      permissions:
+        full_control: Pełna kontrola
+        full_control_description: Może przeglądać, edytować i zarządzać transakcjami
+        read_write: Odczyt i zapis
+        read_write_description: Może kategoryzować, tagować i dodawać notatki
+        read_only: Tylko podgląd
+        read_only_description: Może tylko przeglądać dane konta
+      save: Zapisz ustawienia udostępniania
+      owner_label: 'Właściciel: %{name}'
+      shared_with_count:
+        one: Udostępniono 1 członkowi
+        few: Udostępniono %{count} członkom
+        many: Udostępniono %{count} członkom
+        other: Udostępniono %{count} członkom
+      include_in_finances: Uwzględniaj w moich budżetach i raportach
+      exclude_from_finances: Wykluczaj z moich budżetów i raportów
+      finance_toggle_description: Uwzględniaj to konto w majątku netto, budżetach i raportach
+    update:
+      success: Zaktualizowano ustawienia udostępniania
+      not_owner: Tylko właściciel konta może zarządzać udostępnianiem
+      finance_toggle_success: Zaktualizowano preferencję uwzględniania w finansach

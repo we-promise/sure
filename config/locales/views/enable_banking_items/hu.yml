@@ -1,0 +1,61 @@
+---
+hu:
+  enable_banking_items:
+    errors:
+      api_error: "Kommunikációs hiba lépett fel a bankkal."
+      network_unreachable: "A banki szolgáltatás átmenetileg nem érhető el. Kérjük, próbáld újra később."
+      session_invalid: "A munkamenet lejárt. Kérjük, csatlakoztasd újra a bankod."
+      unexpected: "Váratlan hiba történt a szinkronizálás során."
+    authorize:
+      authorization_failed: "Nem sikerült elindítani az engedélyezést: %{message}"
+      bank_required: Kérjük, válassz bankot.
+      decoupled_not_supported: Ez a bank egy különálló eszközös hitelesítési módszert használ, amely jelenleg nem támogatott. Kérjük, add hozzá ezt a számlát manuálisan.
+      invalid_redirect: A kapott engedélyezési URL érvénytelen. Kérjük, próbáld újra.
+      redirect_uri_not_allowed: Az átirányítás nem engedélyezett. Kérjük, konfiguráld a `%{callback_url}` címet az Enable Banking alkalmazás beállításaiban.
+      unexpected_error: Váratlan hiba történt. Kérjük, próbáld újra.
+    callback:
+      authorization_error: Az engedélyezés sikertelen
+      invalid_callback: Érvénytelen visszahívási paraméterek.
+      item_not_found: A kapcsolat nem található.
+      session_failed: Az engedélyezés nem sikerült befejezni
+      success: Sikeresen csatlakoztál a bankodhoz. A számlák szinkronizálódnak.
+      unexpected_error: Váratlan hiba történt. Kérjük, próbáld újra.
+    complete_account_setup:
+      all_skipped: Minden számla ki lett hagyva. Beállíthatod őket később a számlák oldalon.
+      no_accounts: Nincs elérhető beállítandó számla.
+      success: Sikeresen létrehozva %{count} számla!
+    create:
+      success: Az Enable Banking konfigurálása sikeres.
+    destroy:
+      success: Az Enable Banking kapcsolat törlési sorba került.
+    link_accounts:
+      already_linked: A kiválasztott számlák már össze vannak kapcsolva.
+      link_failed: A számlák összekapcsolása sikertelen
+      no_accounts_selected: Nincs kiválasztott számla.
+      no_session: Nincs aktív Enable Banking kapcsolat. Kérjük, először csatlakozz egy bankhoz.
+      success: Sikeresen összekapcsolva %{count} számla.
+    link_existing_account:
+      success: A számla sikeresen össze lett kapcsolva az Enable Banking-gel
+      errors:
+        only_manual: Csak manuális számlákat lehet összekapcsolni
+        invalid_enable_banking_account: Érvénytelen Enable Banking-számla választva
+    new:
+      link_enable_banking_title: Enable Banking összekapcsolása
+    reauthorize:
+      invalid_redirect: A kapott engedélyezési URL érvénytelen. Kérjük, próbáld újra.
+      reauthorization_failed: Az újraengedélyezés sikertelen
+    select_bank:
+      beta_label: Béta
+      cancel: Mégse
+      check_country: Kérjük, ellenőrizd az országkód beállításait.
+      credentials_required: Kérjük, először konfiguráld az Enable Banking hitelesítő adatait.
+      description: Válaszd ki azt a bankot, amelyet össze szeretnél kapcsolni a számlákkal.
+      no_banks: Nem érhető el bank ehhez az országhoz/régióhoz.
+      no_search_results: Nincs a keresésnek megfelelő bank.
+      search_label: Keresd meg a bankod
+      search_placeholder: Keresd meg a bankod...
+      title: Válaszd ki a bankod
+    setup_accounts:
+      psd2_savings_notice: "Megjegyzés: Egyes szabályozott francia megtakarítási számlákhoz (Livret A, PEL, LEP, LDDS) korlátozott vagy semmilyen hozzáférés nem áll rendelkezésre az Open Banking (PSD2) révén. Ha egy megtakarítási számla hiányzik, manuálisan is hozzáadhatod."
+    update:
+      success: Az Enable Banking konfiguráció frissítve.

@@ -43,7 +43,7 @@ class ChatsController < ApplicationController
 
   def retry
     @chat.retry_last_message!
-    redirect_to chat_path(@chat, thinking: true)
+    redirect_to chat_path(@chat)
   end
 
   private

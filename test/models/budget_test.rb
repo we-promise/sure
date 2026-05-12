@@ -58,8 +58,35 @@ class BudgetTest < ActiveSupport::TestCase
     refute Budget.budget_date_valid?(3.years.ago.beginning_of_month, family: @family)
   end
 
-  test "budget_date_valid? does not allow future dates beyond current month" do
-    refute Budget.budget_date_valid?(2.months.from_now, family: @family)
+  test "budget_date_valid? allows future dates up to 2 years ahead" do
+    travel_to Date.current.beginning_of_month do
+      assert Budget.budget_date_valid?(Date.current.beginning_of_month + 1.month, family: @family)
+      assert Budget.budget_date_valid?(Date.current.beginning_of_month + 2.years, family: @family)
+    end
+  end
+
+  test "budget_date_valid? does not allow future dates beyond 2 years ahead" do
+    travel_to Date.current.beginning_of_month do
+      refute Budget.budget_date_valid?(Date.current.beginning_of_month + 2.years + 1.month, family: @family)
+    end
+  end
+
+  test "budget_date_valid? for custom month start allows dates up to 2 years ahead" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.current.beginning_of_month do
+      cap_start = @family.current_custom_month_period.start_date + 2.years
+      assert Budget.budget_date_valid?(cap_start, family: @family)
+    end
+  end
+
+  test "budget_date_valid? for custom month start does not allow dates beyond 2 years ahead" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.current.beginning_of_month do
+      beyond_cap = @family.current_custom_month_period.start_date + 2.years + 1.month
+      refute Budget.budget_date_valid?(beyond_cap, family: @family)
+    end
   end
 
   test "previous_budget_param returns nil when date is too old" do
@@ -73,6 +100,49 @@ class BudgetTest < ActiveSupport::TestCase
     )
 
     assert_nil budget.previous_budget_param
+  end
+
+  test "next_budget_param returns next month when current month budget is selected" do
+    travel_to Date.current.beginning_of_month do
+      budget = Budget.create!(
+        family: @family,
+        start_date: Date.current.beginning_of_month,
+        end_date: Date.current.end_of_month,
+        currency: "USD"
+      )
+
+      assert_equal Budget.date_to_param(Date.current.beginning_of_month + 1.month), budget.next_budget_param
+    end
+  end
+
+  test "next_budget_param returns nil at future cap" do
+    travel_to Date.current.beginning_of_month do
+      cap_start = Date.current.beginning_of_month + 2.years
+      budget = Budget.create!(
+        family: @family,
+        start_date: cap_start,
+        end_date: cap_start.end_of_month,
+        currency: "USD"
+      )
+
+      assert_nil budget.next_budget_param
+    end
+  end
+
+  test "next_budget_param returns nil at future cap for custom month start" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.current.beginning_of_month do
+      cap_start = @family.current_custom_month_period.start_date + 2.years
+      budget = Budget.create!(
+        family: @family,
+        start_date: cap_start,
+        end_date: cap_start + 1.month - 1.day,
+        currency: "USD"
+      )
+
+      assert_nil budget.next_budget_param
+    end
   end
 
   test "actual_spending nets refunds against expenses in same category" do
@@ -153,6 +223,61 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.budget_category_actual_spending(
       budget.budget_categories.find_by(category: category)
     )
+  end
+
+  test "to_donut_segments_json only includes top-level budget categories" do
+    family = @family
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    budget.update!(budgeted_spending: 500, currency: family.currency)
+
+    parent_category = Category.create!(
+      name: "Transport #{Time.now.to_f}",
+      family: family,
+      color: "#6471eb"
+    )
+
+    child_category = Category.create!(
+      name: "Petrol #{Time.now.to_f}",
+      family: family,
+      parent: parent_category,
+      color: "#61c9ea"
+    )
+
+    standalone_category = Category.create!(
+      name: "Shopping #{Time.now.to_f}",
+      family: family,
+      color: "#df4e92"
+    )
+
+    budget.sync_budget_categories
+
+    parent_budget_category = budget.budget_categories.find_by!(category: parent_category)
+    child_budget_category = budget.budget_categories.find_by!(category: child_category)
+    standalone_budget_category = budget.budget_categories.find_by!(category: standalone_category)
+
+    parent_budget_category.update!(budgeted_spending: 150, currency: family.currency)
+    child_budget_category.update!(budgeted_spending: 50, currency: family.currency)
+    standalone_budget_category.update!(budgeted_spending: 100, currency: family.currency)
+
+    budget.stubs(:allocations_valid?).returns(true)
+    budget.stubs(:available_to_spend).returns(200)
+    budget.stubs(:budget_category_actual_spending).with(parent_budget_category).returns(63.11)
+    budget.stubs(:budget_category_actual_spending).with(standalone_budget_category).returns(25)
+
+    segments = budget.to_donut_segments_json
+
+    segment_ids = segments.pluck(:id)
+    segments_by_id = segments.index_by { |segment| segment[:id] }
+
+    assert_equal 3, segments.size
+    assert_includes segment_ids, parent_budget_category.id
+    assert_includes segment_ids, standalone_budget_category.id
+    assert_includes segment_ids, "unused"
+    refute_includes segment_ids, child_budget_category.id
+
+    assert_equal 63.11, segments_by_id[parent_budget_category.id][:amount]
+    assert_equal 25, segments_by_id[standalone_budget_category.id][:amount]
+    assert_equal 200, segments_by_id["unused"][:amount]
   end
 
   test "actual_spending subtracts uncategorized refunds" do

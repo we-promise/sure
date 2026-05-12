@@ -1,0 +1,14 @@
+---
+pl:
+  pending_duplicate_merges:
+    new:
+      title: Połącz z zaksięgowaną transakcją
+      warning_title: Ręczne łączenie duplikatów
+      warning_description: Użyj tej opcji, aby ręcznie połączyć transakcję oczekującą z jej zaksięgowaną wersją. Transakcja oczekująca zostanie usunięta, a pozostanie tylko zaksięgowana.
+      pending_transaction: Transakcja oczekująca
+      select_posted: Wybierz zaksięgowaną transakcję do połączenia
+      showing_range: "Wyświetlane %{start} - %{end}"
+      previous: "← Poprzednie 10"
+      next: "Następne 10 →"
+      no_candidates: Nie znaleziono zaksięgowanych transakcji na tym koncie.
+      submit_button: Połącz transakcje

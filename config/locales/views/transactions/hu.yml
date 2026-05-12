@@ -1,0 +1,282 @@
+---
+hu:
+  transactions:
+    bulk_updates:
+      new:
+        name_label: Név
+        name_placeholder: Add meg a kiválasztott tranzakciókra alkalmazandó nevet
+    unknown_name: Ismeretlen tranzakció
+    selection_bar:
+      duplicate: Duplikálás
+      edit: Szerkesztés
+    form:
+      account: Számla
+      account_prompt: Válassz számlát
+      amount: Összeg
+      category: Kategória
+      category_prompt: Válassz kategóriát
+      date: Dátum
+      description: Leírás
+      description_placeholder: Tranzakció leírása
+      expense: Kiadás
+      income: Bevétel
+      merchant_label: Kereskedő
+      none: (egyik sem)
+      note_label: Megjegyzések
+      note_placeholder: Megjegyzés írása
+      submit: Tranzakció hozzáadása
+      tags_label: Címkék
+      transfer: Átutalás
+    new:
+      new_transaction: Új tranzakció
+    show:
+      account_label: Számla
+      amount: Összeg
+      category_label: Kategória
+      date_label: Dátum
+      delete: Törlés
+      delete_subtitle: Ez véglegesen törli a tranzakciót, befolyásolja a korábbi egyenlegeidet, és nem vonható vissza.
+      delete_title: Tranzakció törlése
+      details: Részletek
+      attachments: Mellékletek
+      exclude: Kizárás
+      exclude_description: A kizárt tranzakciók eltávolításra kerülnek a költségvetési számításokból és a jelentésekből.
+      activity_type: Tevékenység típusa
+      activity_type_description: Befektetési tevékenység típusa (Vétel, Eladás, Osztalék stb.). Automatikusan felismert vagy manuálisan beállított.
+      one_time_title: Egyszeri %{type}
+      one_time_description: Az egyszeri tranzakciók bizonyos költségvetési számításokból és jelentésekből kizárásra kerülnek, hogy lássad, mi igazán fontos.
+      convert_to_trade_title: Konvertálás értékpapír-ügyletre
+      convert_to_trade_description: Konvertáld ezt a tranzakciót Vétel vagy Eladás ügyletté értékpapír-részletekkel a portfólió követéséhez.
+      convert_to_trade_button: Konvertálás ügyletre
+      transfer_matcher_description: Kösd össze ezt a tranzakciót a megfelelőjével egy másik számlán.
+      pending_duplicate_merger_title: Közzétett tranzakció duplikátuma?
+      pending_duplicate_merger_description: Egyesítsd manuálisan ezt a függőben lévő tranzakciót a közzétett verziójával.
+      pending_duplicate_merger_button: Összevonó megnyitása
+      merchant_label: Kereskedő
+      name_label: Név
+      nature: Típus
+      none: "(egyik sem)"
+      note_label: Megjegyzések
+      note_placeholder: Megjegyzés írása
+      overview: Áttekintés
+      settings: Beállítások
+      tags_label: Címkék
+      tab_transactions: Tranzakciók
+      tab_upcoming: Közelgő
+      uncategorized: "(kategorizálatlan)"
+    activity_labels:
+      buy: Vétel
+      sell: Eladás
+      sweep_in: Beáramlás
+      sweep_out: Kiáramlás
+      dividend: Osztalék
+      reinvestment: Újrabefektetés
+      interest: Kamat
+      fee: Díj
+      transfer: Átutalás
+      contribution: Befizetés
+      withdrawal: Kifizetés
+      exchange: Csere
+      other: Egyéb
+    mark_recurring: Ismétlődőként jelölés
+    mark_recurring_subtitle: Kövesd ezt ismétlődő tranzakcióként. Az összegeltérés automatikusan kiszámításra kerül az elmúlt 6 hónap hasonló tranzakcióiból.
+    mark_recurring_title: Ismétlődő tranzakció
+    potential_duplicate_title: Lehetséges duplikátum észlelve
+    potential_duplicate_description: Ez a függőben lévő tranzakció megegyezhet az alábbi közzétett tranzakcióval. Ha igen, egyesítsd őket a kettős könyvelés elkerülése érdekében.
+    merge_duplicate: Igen, egyesítsd őket
+    keep_both: Nem, mindkettőt tartsd meg
+    split_parent_row:
+      split_label: "Felosztva"
+    transaction:
+      pending: Függőben
+      pending_tooltip: Függőben lévő tranzakció — közzétételkor változhat
+      linked_with_provider: "Összekapcsolva: %{provider}"
+      activity_type_tooltip: Befektetési tevékenység típusa
+      possible_duplicate: Duplikátum?
+      potential_duplicate_tooltip: Ez egy másik tranzakció duplikátuma lehet
+      review_recommended: Ellenőrzés
+      review_recommended_tooltip: Nagy összegkülönbség — ajánlott ellenőrizni, hogy ez duplikátum-e
+      split: Felosztva
+      split_tooltip: Ez a tranzakció több tételre lett felosztva
+      split_child_tooltip: Egy felosztott tranzakció része
+    merge_duplicate:
+      success: Tranzakciók sikeresen egyesítve
+      failure: Nem sikerült egyesíteni a tranzakciókat
+    dismiss_duplicate:
+      success: Különálló tranzakcióként megtartva
+      failure: Nem sikerült elvetni a duplikátum-javaslatot
+    pending_duplicate_merge:
+      possible_duplicate: Duplikátum?
+      possible_duplicate_short: Dup?
+      review_recommended: Ellenőrzés
+      review_recommended_short: Ell.
+      confirm_title: "Egyesítés a közzétett tranzakcióval (%{posted_amount})"
+      reject_title: Különálló tranzakcióként megtartás
+    summary:
+      total_transactions: Tranzakciók összesen
+      income: Bevétel
+      expenses: Kiadások
+      inflow: Beáramlás
+      outflow: Kiáramlás
+    header:
+      edit_categories: Kategóriák szerkesztése
+      edit_imports: Importok szerkesztése
+      edit_merchants: Kereskedők szerkesztése
+      edit_tags: Címkék szerkesztése
+      import: Import
+    index:
+      transaction: tranzakció
+      transactions: tranzakció
+      import: Import
+      categorize_button:
+        one: "Kategorizálás (1)"
+        other: "Kategorizálás (%{count})"
+    categorizes:
+      show:
+        exit: "Kilépés"
+        skip: "Kihagyás"
+        remaining:
+          one: "1 kategorizálatlan tranzakció maradt"
+          other: "%{count} kategorizálatlan tranzakció maradt"
+        transaction_count:
+          one: "1 tranzakció"
+          other: "%{count} tranzakció"
+        transactions_hint: "Jelöld ki a kizáráshoz, vagy rendelj hozzá közvetlenül a sorban eltérő kategóriát."
+        assign_category: "Kategória hozzárendelése"
+        assign_category_prompt: "→ hozzárendelés"
+        filter_placeholder: "Kategóriák keresése..."
+        col_transaction: "Tranzakció"
+        col_date: "Dátum"
+        col_amount: "Összeg"
+        col_category: "Kategória"
+        type_income: "Bevétel"
+        type_expense: "Kiadás"
+        create_rule_label: "Kategorizálási szabály létrehozása"
+        rule_description_prefix: "A jövőbeli %{type} tranzakciók, amelyek neve tartalmazza:"
+        rule_description_suffix: "szintén ezt a kategóriát kapják."
+        no_categories: "Nincs egyező kategória"
+        all_done: "Minden tranzakció kategorizálva van"
+      create:
+        categorized:
+          one: "1 tranzakció kategorizálva"
+          other: "%{count} tranzakció kategorizálva"
+        rule_creation_failed: "Tranzakciók kategorizálva, de a szabály nem hozható létre (lehet, hogy már létezik)."
+      entry_row:
+        include_checkbox: "%{name} bevonása"
+        assign_category_select: "Kategória hozzárendelése: %{name}"
+    list:
+      drag_drop_title: CSV fájl húzása az importáláshoz
+      drag_drop_subtitle: Tranzakciók közvetlen feltöltése
+      transaction: tranzakció
+      transactions: tranzakció
+    toggle_recurring_section: Közelgő ismétlődő tranzakciók megjelenítése/elrejtése
+    search:
+      filters:
+        account: Számla
+        date: Dátum
+        type: Típus
+        status: Állapot
+        amount: Összeg
+        category: Kategória
+        tag: Címke
+        merchant: Kereskedő
+    convert_to_trade:
+      title: Konvertálás értékpapír-ügyletre
+      description: Tranzakció konvertálása ügyletté értékpapír-részletekkel
+      date_label: "Dátum:"
+      account_label: "Számla:"
+      amount_label: "Összeg:"
+      security_label: Értékpapír
+      security_prompt: Értékpapír kiválasztása...
+      security_custom: "+ Egyedi ticker megadása"
+      security_not_listed_hint: Nem látod az értékpapírodat? Válaszd az "Egyedi ticker megadása" lehetőséget a lista alján.
+      ticker_placeholder: AAPL
+      ticker_hint: Add meg a részvény/ETF ticker szimbólumát (pl. AAPL, MSFT)
+      ticker_search_placeholder: Ticker keresése...
+      ticker_search_hint: Keress ticker szimbólum vagy cégnév alapján, vagy írj be egyedi tickert
+      price_mismatch_title: Az ár eltérhet
+      price_mismatch_message: "Az árad (%{entered_price}/részvény) jelentősen eltér a(z) %{ticker} aktuális piaci árától (%{market_price}). Ha ez tévesnek tűnik, lehet, hogy rossz értékpapírt választottál — próbáld meg az \"Egyedi ticker megadása\" opciót a helyes értékpapír megadásához."
+      quantity_label: Mennyiség (részvény)
+      quantity_placeholder: pl. 20
+      quantity_hint: Kereskedett részvények száma
+      price_label: Részvényenkénti ár
+      price_placeholder: pl. 52.15
+      price_hint: "Részvényenkénti ár (%{currency})"
+      qty_or_price_hint: "Add meg legalább a mennyiséget VAGY az árat. A másik kiszámításra kerül a tranzakció összegéből (%{amount})."
+      trade_type_label: Ügylet típusa
+      trade_type_hint: Értékpapír vétele vagy eladása
+      exchange_label: Tőzsde (opcionális)
+      exchange_placeholder: XNAS
+      exchange_hint: Hagyd üresen az automatikus felismeréshez
+      cancel: Mégse
+      submit: Konvertálás ügyletre
+      success: Tranzakció sikeresen konvertálva ügyletre
+      conversion_note: "Konvertálva tranzakcióból: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Csak befektetési számlák tranzakciói konvertálhatók ügyletekre
+        already_converted: Ez a tranzakció már konvertálva vagy kizárva lett
+        enter_ticker: Kérlek adj meg egy ticker szimbólumot
+        security_not_found: A kiválasztott értékpapír már nem létezik. Kérlek válassz másikat.
+        select_security: Kérlek válassz vagy adj meg egy értékpapírt
+        enter_qty_or_price: Kérlek adj meg mennyiséget vagy részvényenkénti árat. A másik kiszámításra kerül a tranzakció összegéből.
+        invalid_qty_or_price: Érvénytelen mennyiség vagy ár. Kérlek adj meg érvényes pozitív értékeket.
+        conversion_failed: "Nem sikerült konvertálni a tranzakciót: %{error}"
+        unexpected_error: "Váratlan hiba a konverzió során: %{error}"
+    searches:
+      filters:
+        amount_filter:
+          equal_to: Egyenlő
+          greater_than: Nagyobb, mint
+          less_than: Kisebb, mint
+          placeholder: '0'
+        badge:
+          expense: Kiadás
+          income: Bevétel
+          on_or_after: "%{date} után"
+          on_or_before: "%{date} előtt"
+          transfer: Átutalás
+          confirmed: Megerősítve
+          pending: Függőben
+        type_filter:
+          expense: Kiadás
+          income: Bevétel
+          transfer: Átutalás
+        status_filter:
+          confirmed: Megerősítve
+          pending: Függőben
+      menu:
+        account_filter: Számla
+        amount_filter: Összeg
+        apply: Alkalmaz
+        cancel: Mégse
+        category_filter: Kategória
+        clear_filters: Szűrők törlése
+        date_filter: Dátum
+        merchant_filter: Kereskedő
+        status_filter: Állapot
+        tag_filter: Címke
+        type_filter: Típus
+      search:
+        equal_to: egyenlő
+        greater_than: nagyobb, mint
+        less_than: kisebb, mint
+      form:
+        toggle_selection_checkboxes: Összes jelölőnégyzet be/ki
+    attachments:
+      cannot_exceed: "Tranzakciónként legfeljebb %{count} melléklet engedélyezett"
+      uploaded_one: "Melléklet sikeresen feltöltve"
+      uploaded_many: "%{count} melléklet sikeresen feltöltve"
+      failed_upload: "Nem sikerült feltölteni a mellékletet: %{error}"
+      no_files_selected: "Nincsenek kijelölt fájlok a feltöltéshez"
+      attachment_deleted: "Melléklet sikeresen törölve"
+      failed_delete: "Nem sikerült törölni a mellékletet: %{error}"
+      upload_failed: "Nem sikerült feltölteni a mellékletet. Kérlek próbáld újra, vagy lépj kapcsolatba a támogatással."
+      delete_failed: "Nem sikerült törölni a mellékletet. Kérlek próbáld újra, vagy lépj kapcsolatba a támogatással."
+      upload: "Feltöltés"
+      no_attachments: "Még nincsenek mellékletek"
+      select_up_to: "Legfeljebb %{count} fájl kijelölése (képek vagy PDF-ek, max. %{size} MB darabonként) • %{used} / %{count} felhasználva"
+      files:
+        one: "Fájl (1)"
+        other: "Fájlok (%{count})"
+      browse_to_add: "Fájlok hozzáadásához böngéssz"
+      max_reached: "Elérted a maximális fájlkorlátot (%{count}/%{max}). Töröl egy meglévő fájlt, hogy másikat tölthess fel."

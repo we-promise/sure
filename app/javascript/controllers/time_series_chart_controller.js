@@ -110,7 +110,7 @@ export default class extends Controller {
       .attr("cx", this._d3InitialContainerWidth / 2)
       .attr("cy", this._d3InitialContainerHeight / 2)
       .attr("r", 4)
-      .attr("class", "fg-subdued")
+      .attr("class", "text-subdued")
       .style("fill", "currentColor");
   }
 
@@ -220,7 +220,7 @@ export default class extends Controller {
     // Style ticks
     this._d3Group
       .selectAll(".tick text")
-      .attr("class", "fg-gray")
+      .attr("class", "text-secondary")
       .style("font-size", "12px")
       .style("font-weight", "500")
       .attr("text-anchor", "middle")
@@ -334,7 +334,7 @@ export default class extends Controller {
         // Guideline
         this._d3Group
           .append("line")
-          .attr("class", "guideline fg-subdued")
+          .attr("class", "guideline text-subdued")
           .attr("x1", this._d3XScale(d.date))
           .attr("y1", 0)
           .attr("x2", this._d3XScale(d.date))

@@ -1,6 +1,8 @@
 ---
 en:
   valuations:
+    errors:
+      amount_required: Amount is required
     form:
       amount: Amount
       submit: Add balance update
@@ -28,3 +30,4 @@ en:
       note_placeholder: Add any additional details about this entry
       overview: Overview
       settings: Settings
+      opening_balance: "Opening balance"

@@ -1,0 +1,457 @@
+name: LLM Evals
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+env:
+  EVAL_MODELS: gpt-4.1
+  RAILS_ENV: test
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432
+  REDIS_URL: redis://localhost:6379
+  PLAID_CLIENT_ID: foo
+  PLAID_SECRET: bar
+
+jobs:
+  check_openai:
+    name: Check OpenAI credentials
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+      reason: ${{ steps.gate.outputs.reason }}
+
+    steps:
+      - name: Validate OpenAI token and quota
+        id: gate
+        env:
+          OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${OPENAI_ACCESS_TOKEN:-}" ]; then
+            echo "OpenAI token is not configured; skipping eval workflow."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=OPENAI_ACCESS_TOKEN secret is missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TEST_MODEL=$(printf '%s' "$EVAL_MODELS" | cut -d',' -f1 | xargs)
+          if [ -z "$TEST_MODEL" ]; then
+            TEST_MODEL="gpt-4.1"
+          fi
+
+          echo "Checking API access with model: ${TEST_MODEL}"
+
+          RESPONSE_FILE="$(mktemp)"
+          STATUS_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
+            https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer ${OPENAI_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"${TEST_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1}")
+
+          if [ "$STATUS_CODE" = "200" ]; then
+            echo "OpenAI token check passed."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ERROR_MESSAGE=$(ruby -rjson -e '
+            body = File.read(ARGV[0]) rescue ""
+            data = JSON.parse(body) rescue {}
+            message = data.dig("error", "message") || data["message"] || "unknown error"
+            puts message.gsub(/\s+/, " ").strip
+          ' "$RESPONSE_FILE")
+
+          echo "OpenAI check failed (${STATUS_CODE}): ${ERROR_MESSAGE}"
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+          echo "reason=OpenAI token invalid or insufficient quota (${STATUS_CODE})" >> "$GITHUB_OUTPUT"
+          exit 0
+
+  discover_datasets:
+    name: Discover eval datasets
+    needs: check_openai
+    if: needs.check_openai.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.2
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    outputs:
+      datasets: ${{ steps.datasets.outputs.datasets }}
+      models: ${{ steps.models.outputs.models }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Import eval datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          dataset_files=(db/eval_data/*.yml)
+
+          if [ ${#dataset_files[@]} -eq 0 ]; then
+            echo "::error::No eval dataset files found under db/eval_data/*.yml"
+            exit 1
+          fi
+
+          for dataset_file in "${dataset_files[@]}"; do
+            echo "Importing ${dataset_file}"
+            bundle exec rake "evals:import_dataset[${dataset_file}]"
+          done
+
+
+      - name: Resolve eval models
+        id: models
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODELS_JSON=$(bin/rails runner '
+            models = ENV.fetch("EVAL_MODELS", "").split(",").map(&:strip).reject(&:blank?)
+            puts models.to_json
+          ')
+
+          if [ "$MODELS_JSON" = "[]" ]; then
+            echo "::error::EVAL_MODELS is empty. Set at least one model, for example: EVAL_MODELS=gpt-4.1"
+            exit 1
+          fi
+
+          {
+            echo "models<<EOF"
+            echo "$MODELS_JSON"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve available eval datasets
+        id: datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DATASETS_JSON=$(bin/rails runner 'puts Eval::Dataset.order(:name).pluck(:name).to_json')
+
+          if [ "$DATASETS_JSON" = "[]" ]; then
+            echo "::error::No eval datasets found. Import one first with: rake evals:import_dataset[path/to/file.yml]"
+            exit 1
+          fi
+
+          {
+            echo "datasets<<EOF"
+            echo "$DATASETS_JSON"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  run_evals:
+    name: Run eval for ${{ matrix.dataset }} on ${{ matrix.model }}
+    needs: [check_openai, discover_datasets]
+    if: needs.check_openai.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: ${{ fromJson(needs.discover_datasets.outputs.datasets) }}
+        model: ${{ fromJson(needs.discover_datasets.outputs.models) }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.2
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Import eval datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          dataset_files=(db/eval_data/*.yml)
+
+          if [ ${#dataset_files[@]} -eq 0 ]; then
+            echo "::error::No eval dataset files found under db/eval_data/*.yml"
+            exit 1
+          fi
+
+          for dataset_file in "${dataset_files[@]}"; do
+            echo "Importing ${dataset_file}"
+            bundle exec rake "evals:import_dataset[${dataset_file}]"
+          done
+
+      - name: Prepare dataset artifact names
+        id: dataset_slug
+        env:
+          DATASET: ${{ matrix.dataset }}
+          MODEL: ${{ matrix.model }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          slug=$(printf '%s' "$DATASET" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')
+
+          if [ -z "$slug" ]; then
+            echo "::error::Could not generate dataset slug from '$DATASET'"
+            exit 1
+          fi
+
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          model_slug=$(printf '%s' "$MODEL" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')
+
+          if [ -z "$model_slug" ]; then
+            echo "::error::Could not generate model slug from '$MODEL'"
+            exit 1
+          fi
+
+          echo "model_slug=$model_slug" >> "$GITHUB_OUTPUT"
+          echo "log_path=tmp/evals/${slug}-${model_slug}.log" >> "$GITHUB_OUTPUT"
+          echo "json_path=tmp/evals/${slug}-${model_slug}.json" >> "$GITHUB_OUTPUT"
+
+      - name: Verify dataset exists
+        env:
+          DATASET: ${{ matrix.dataset }}
+          MODEL: ${{ matrix.model }}
+        run: |
+          bin/rails runner 'dataset = Eval::Dataset.find_by(name: ENV.fetch("DATASET")); abort("Dataset not found: #{ENV.fetch("DATASET")}") if dataset.nil?'
+
+      - name: Run eval
+        env:
+          DATASET: ${{ matrix.dataset }}
+          MODEL: ${{ matrix.model }}
+          OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p tmp/evals
+          bundle exec rake "evals:run[${DATASET},${MODEL}]" | tee "${{ steps.dataset_slug.outputs.log_path }}"
+
+      - name: Export run summary
+        id: export_summary
+        env:
+          DATASET: ${{ matrix.dataset }}
+          MODEL: ${{ matrix.model }}
+          JSON_PATH: ${{ steps.dataset_slug.outputs.json_path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$JSON_PATH")"
+
+          bin/rails runner '
+            dataset = Eval::Dataset.find_by!(name: ENV.fetch("DATASET"))
+            run = Eval::Run.where(dataset: dataset, model: ENV.fetch("MODEL")).order(created_at: :desc).first
+            abort("No eval run found for dataset #{dataset.name} and model #{ENV.fetch("MODEL")}") if run.nil?
+            payload = {
+              dataset: dataset.name,
+              dataset_metadata: dataset.metadata,
+              model: ENV.fetch("MODEL"),
+              run_id: run.id,
+              status: run.status,
+              created_at: run.created_at,
+              completed_at: run.completed_at,
+              total_prompt_tokens: run.total_prompt_tokens,
+              total_completion_tokens: run.total_completion_tokens,
+              total_cost: run.total_cost,
+              metrics: run.metrics,
+              accuracy: run.accuracy || 0.0,
+              duration_seconds: run.duration_seconds
+            }
+            File.write(ENV.fetch("JSON_PATH"), JSON.pretty_generate(payload))
+          '
+
+          echo "accuracy=$(jq -r '.accuracy // 0' "$JSON_PATH")" >> "$GITHUB_OUTPUT"
+          echo "status=$(jq -r '.status' "$JSON_PATH")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload eval artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-evals-${{ steps.dataset_slug.outputs.slug }}-${{ steps.dataset_slug.outputs.model_slug }}
+          path: |
+            ${{ steps.dataset_slug.outputs.log_path }}
+            ${{ steps.dataset_slug.outputs.json_path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Output eval result
+        shell: bash
+        run: |
+          echo "### Eval Result: ${{ matrix.dataset }} / ${{ matrix.model }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: ${{ steps.export_summary.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Accuracy**: ${{ steps.export_summary.outputs.accuracy }}%" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+  summarize_evals:
+    name: Summarize LLM Evals
+    needs: [check_openai, run_evals]
+    if: always() && needs.check_openai.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: eval-artifacts
+          pattern: llm-evals-*
+
+      - name: Generate summary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "# 🧪 LLM Evals Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          printf "Triggered by: \`%s\`\n" "$GITHUB_REF" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Find all JSON result files
+          shopt -s globstar nullglob
+          json_files=(eval-artifacts/**/*.json)
+
+          if [ ${#json_files[@]} -eq 0 ]; then
+            echo "⚠️ No eval results found." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Table header
+          echo "| Dataset | Model | Status | Accuracy | Cost | Duration |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|-------|--------|----------|------|----------|" >> "$GITHUB_STEP_SUMMARY"
+
+          all_passed=true
+          accuracy_threshold=70
+          for json_file in "${json_files[@]}"; do
+            dataset=$(jq -r '.dataset' "$json_file")
+            model=$(jq -r '.model' "$json_file")
+            status=$(jq -r '.status' "$json_file")
+            accuracy=$(jq -r '.accuracy // 0' "$json_file")
+            cost=$(jq -r '.total_cost // 0' "$json_file")
+            duration=$(jq -r '.duration_seconds // 0' "$json_file")
+
+            if [ "$status" = "completed" ] && awk -v accuracy="$accuracy" -v threshold="$accuracy_threshold" 'BEGIN { exit !((accuracy + 0) >= threshold) }'; then
+              icon="✅"
+            else
+              icon="❌"
+              all_passed=false
+            fi
+
+            printf '| %s | %s | %s %s | %s%% | \\$%s | %ss |\n' \
+              "$dataset" "$model" "$icon" "$status" "$accuracy" "$cost" "$duration" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$all_passed" = "true" ]; then
+            echo "✅ **All evals passed!**" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Some evals failed. Check the details above.**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "📦 Artifacts with full logs are available for download." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check eval thresholds
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s globstar nullglob
+          json_files=(eval-artifacts/**/*.json)
+
+          failed=0
+          accuracy_threshold=70
+          for json_file in "${json_files[@]}"; do
+            status=$(jq -r '.status' "$json_file")
+            accuracy=$(jq -r '.accuracy // 0' "$json_file")
+            dataset=$(jq -r '.dataset' "$json_file")
+            model=$(jq -r '.model' "$json_file")
+
+            if [ "$status" != "completed" ]; then
+              echo "::error::Eval for $dataset / $model did not complete successfully"
+              failed=$((failed + 1))
+            fi
+
+            # Fail if accuracy is below 70%
+            if awk -v accuracy="$accuracy" -v threshold="$accuracy_threshold" 'BEGIN { exit !((accuracy + 0) < threshold) }'; then
+              echo "::error::Accuracy for $dataset / $model is below threshold: ${accuracy}%"
+              failed=$((failed + 1))
+            fi
+          done
+
+          if [ $failed -gt 0 ]; then
+            echo "::error::$failed eval(s) failed or below threshold"
+            exit 1
+          fi
+
+          echo "All evals passed with acceptable accuracy."
+
+  skip_evals:
+    name: Skip evals (no valid OpenAI token/quota)
+    needs: check_openai
+    if: needs.check_openai.outputs.should_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report skip reason
+        run: |
+          echo "LLM evals were skipped gracefully."
+          echo "Reason: ${{ needs.check_openai.outputs.reason }}"

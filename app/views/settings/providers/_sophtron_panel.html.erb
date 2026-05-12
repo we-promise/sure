@@ -1,0 +1,48 @@
+<div class="space-y-4">
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("sophtron_items.sophtron_panel.setup_instructions.step_1_html", url: "https://www.sophtron.com").html_safe,
+               t("sophtron_items.sophtron_panel.setup_instructions.step_2"),
+               t("sophtron_items.sophtron_panel.setup_instructions.step_3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%
+    # Variables passed from controller
+    sophtron_item = @sophtron_item || Current.family.sophtron_items.build
+    is_new_record = @is_new_record || sophtron_item.new_record?
+    sophtron_items = @sophtron_items
+  %>
+
+  <%= styled_form_with model: sophtron_item,
+                       url: sophtron_item.new_record? ? sophtron_items_path : sophtron_item_path(sophtron_item),
+                       scope: :sophtron_item,
+                       method: sophtron_item.new_record? ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :user_id,
+                        label: t("sophtron_items.sophtron_panel.fields.user_id.label"),
+                        placeholder: is_new_record ? t("sophtron_items.sophtron_panel.fields.user_id.placeholder_new") : t("sophtron_items.sophtron_panel.fields.user_id.placeholder_edit"),
+                        type: :password %>
+
+    <%= form.text_field :access_key,
+                        label: t("sophtron_items.sophtron_panel.fields.access_key.label"),
+                        placeholder: is_new_record ? t("sophtron_items.sophtron_panel.fields.access_key.placeholder_new") : t("sophtron_items.sophtron_panel.fields.access_key.placeholder_edit"),
+                        type: :password %>
+
+    <%= form.text_field :base_url,
+                        label: t("sophtron_items.sophtron_panel.fields.base_url.label"),
+                        placeholder: t("sophtron_items.sophtron_panel.fields.base_url.placeholder"),
+                        value: sophtron_item.base_url %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t("sophtron_items.sophtron_panel.save") : t("sophtron_items.sophtron_panel.update"),
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+    </div>
+  <% end %>
+
+</div>

@@ -71,12 +71,22 @@ jobs:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
+  play-store:
+    name: Upload Android to Google Play
+    if: ${{ needs.build.outputs.has_app_release_aab == 'true' }}
+    needs: [build, prepare_release]
+    uses: ./.github/workflows/google-play-upload.yml
+    with:
+      notes: "Mobile release ${{ needs.prepare_release.outputs.tag_name }}"
+      track: internal
+    secrets: inherit
+
   testflight:
     name: Upload iOS to TestFlight
-    needs: [build, release]
+    needs: [build, prepare_release]
     uses: ./.github/workflows/ios-testflight.yml
     with:
-      notes: "Mobile release ${{ needs.release.outputs.tag_name }}"
+      notes: "Mobile release ${{ needs.prepare_release.outputs.tag_name }}"
     secrets: inherit
 
   release:

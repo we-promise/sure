@@ -9,9 +9,6 @@ class User < ApplicationRecord
   if encryption_ready?
     # MFA secrets
     encrypts :otp_secret, deterministic: true
-    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
-    # AR encryption. To encrypt it, a migration would be needed to change the
-    # column type from array to text/jsonb.
 
     # PII - emails (deterministic for lookups, downcase for case-insensitive)
     encrypts :email, deterministic: true, downcase: true
@@ -28,6 +25,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
+  has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
   has_many :impersonator_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonator_id, dependent: :destroy
@@ -38,6 +36,8 @@ class User < ApplicationRecord
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
   accepts_nested_attributes_for :family, update_only: true
+
+  MFA_BACKUP_CODE_COUNT = 8
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validate :ensure_valid_profile_image
@@ -220,29 +220,58 @@ class User < ApplicationRecord
   end
 
   def enable_mfa!
+    raise ArgumentError, "OTP secret must be set before enabling MFA" if otp_secret.blank?
+
+    backup_codes = generate_backup_codes
+
+    # Store bcrypt digests only; this Postgres array cannot use AR encryption.
     update!(
       otp_required: true,
-      otp_backup_codes: generate_backup_codes
+      otp_backup_codes: backup_codes.map { |code| digest_backup_code(code) }
     )
+
+    backup_codes
   end
 
   def disable_mfa!
-    update!(
-      otp_secret: nil,
-      otp_required: false,
-      otp_backup_codes: []
-    )
+    transaction do
+      update!(
+        otp_secret: nil,
+        otp_required: false,
+        otp_backup_codes: []
+      )
+      webauthn_credentials.destroy_all
+    end
   end
 
   def verify_otp?(code)
     return false if otp_secret.blank?
-    return true if verify_backup_code?(code)
-    totp.verify(code, drift_behind: 15)
+
+    normalized_code = normalize_mfa_code(code)
+    return false if normalized_code.blank?
+    return true if totp.verify(normalized_code, drift_behind: 15)
+    return false unless backup_code_input?(normalized_code)
+
+    consume_backup_code!(normalized_code)
   end
 
   def provisioning_uri
     return nil unless otp_secret.present?
     totp.provisioning_uri(email)
+  end
+
+  def ensure_webauthn_id!
+    return webauthn_id if webauthn_id.present?
+
+    with_lock do
+      update!(webauthn_id: WebAuthn.generate_user_id) unless webauthn_id.present?
+    end
+
+    webauthn_id
+  end
+
+  def webauthn_enabled?
+    otp_required? && webauthn_credentials.exists?
   end
 
   def onboarded?
@@ -379,6 +408,10 @@ class User < ApplicationRecord
         self.show_sidebar = true unless show_sidebar
         self.show_ai_sidebar = true unless show_ai_sidebar
       end
+
+      if new_record? && member? && !ai_available?
+        self.show_ai_sidebar = false
+      end
     end
 
     def leaving_guest_role?
@@ -442,21 +475,72 @@ class User < ApplicationRecord
       ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
     end
 
-    def verify_backup_code?(code)
-      return false if otp_backup_codes.blank?
+    def consume_backup_code!(normalized_code)
+      consumed = false
 
-      # Find and remove the used backup code
-      if (index = otp_backup_codes.index(code))
-        remaining_codes = otp_backup_codes.dup
-        remaining_codes.delete_at(index)
-        update!(otp_backup_codes: remaining_codes)
-        true
-      else
-        false
+      transaction do
+        lock!
+
+        if otp_backup_codes.present?
+          matching_index = otp_backup_codes.index do |stored_code|
+            backup_code_matches?(stored_code, normalized_code)
+          end
+
+          if matching_index
+            remaining_codes = otp_backup_codes.dup
+            remaining_codes.delete_at(matching_index)
+            update!(otp_backup_codes: remaining_codes)
+            consumed = true
+          end
+        end
       end
+
+      consumed
     end
 
     def generate_backup_codes
-      8.times.map { SecureRandom.hex(4) }
+      MFA_BACKUP_CODE_COUNT.times.map { SecureRandom.hex(8) }
+    end
+
+    def digest_backup_code(code)
+      BCrypt::Password.create(normalize_mfa_code(code), cost: backup_code_digest_cost).to_s
+    end
+
+    def backup_code_matches?(stored_code, normalized_code)
+      if backup_code_digest?(stored_code)
+        return false unless backup_code_input?(normalized_code)
+
+        BCrypt::Password.new(stored_code).is_password?(normalized_code)
+      else
+        # Legacy plaintext codes are accepted once so existing MFA users are
+        # not locked out after backup-code hashing ships.
+        ActiveSupport::SecurityUtils.secure_compare(stored_code.to_s, normalized_code)
+      end
+    rescue BCrypt::Errors::InvalidHash
+      false
+    end
+
+    def backup_code_digest?(stored_code)
+      stored_code.to_s.start_with?("$2a$", "$2b$", "$2y$")
+    end
+
+    def normalize_mfa_code(code)
+      code.to_s.strip.downcase
+    end
+
+    def backup_code_input?(code)
+      backup_code_candidate?(code) || legacy_plaintext_backup_code_candidate?(code)
+    end
+
+    def backup_code_candidate?(code)
+      code.to_s.match?(/\A[0-9a-f]{16}\z/)
+    end
+
+    def legacy_plaintext_backup_code_candidate?(code)
+      code.to_s.match?(/\A[0-9a-f]{8}\z/)
+    end
+
+    def backup_code_digest_cost
+      ActiveModel::SecurePassword.min_cost ? BCrypt::Engine::MIN_COST : BCrypt::Engine.cost
     end
 end

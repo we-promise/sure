@@ -50,7 +50,7 @@
         </thead>
         <tbody>
           <% net_worth_metrics[:asset_groups].each_with_index do |group, idx| %>
-            <tr class="<%= idx < net_worth_metrics[:asset_groups].size - 1 ? "border-b border-divider" : "" %>">
+            <tr class="<%= idx < net_worth_metrics[:asset_groups].size - 1 ? "table-divider" : "" %>">
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-secondary"><%= group[:name] %></td>
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-right text-success privacy-sensitive"><%= group[:total].format %></td>
             </tr>
@@ -77,7 +77,7 @@
         </thead>
         <tbody>
           <% net_worth_metrics[:liability_groups].each_with_index do |group, idx| %>
-            <tr class="<%= idx < net_worth_metrics[:liability_groups].size - 1 ? "border-b border-divider" : "" %>">
+            <tr class="<%= idx < net_worth_metrics[:liability_groups].size - 1 ? "table-divider" : "" %>">
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-secondary"><%= group[:name] %></td>
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-right text-destructive privacy-sensitive"><%= group[:total].format %></td>
             </tr>
