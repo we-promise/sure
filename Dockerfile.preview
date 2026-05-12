@@ -77,8 +77,7 @@ emit_status() {
     local stage="$1"
     local detail="$2"
     local payload
-    payload=$(ruby -rjson -e 'print JSON.generate({stage: ENV.fetch("STAGE"), detail: ENV.fetch("DETAIL", "")})' 2>/dev/null \
-      STAGE="$stage" DETAIL="$detail") || return 0
+    payload=$(STAGE="$stage" DETAIL="$detail" ruby -rjson -e 'print JSON.generate({stage: ENV.fetch("STAGE"), detail: ENV.fetch("DETAIL", "")})' 2>/dev/null) || return 0
     curl -fsS -X POST "$PREVIEW_ORIGIN/_container_event" \
       -H 'content-type: application/json' \
       --data "$payload" >/dev/null || true
