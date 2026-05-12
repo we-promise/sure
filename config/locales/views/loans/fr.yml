@@ -48,7 +48,7 @@ fr:
       rate_types:
         fixed: Fixe
         variable: Variable
-        adjustable: Révisable
+        adjustable: Adjustable
       unknown: Inconnu
       already_paid_html: "Vous avez déjà remboursé <span class=\"font-medium text-amber-500\">%{percentage}</span> de votre prêt"
       initial_leverage: Effet de levier initial
