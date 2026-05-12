@@ -179,9 +179,14 @@ done
 if [ "$BOOT_PROBE_OK" -eq 1 ]; then
   emit_status app-boot-probe-ok "$(tail -n 20 /tmp/boot_probe.log 2>&1 | tr '\n' ' ' | cut -c 1-1000)"
 else
-  kill -QUIT "$BOOT_PROBE_PID" 2>/dev/null || true
-  sleep 2
-  emit_status app-boot-probe-failed "$( { echo 'boot_log:'; tail -n 40 /tmp/boot_probe.log 2>/dev/null; echo; echo 'strace_tail:'; tail -n 40 /tmp/boot_probe.strace 2>/dev/null; } | tr '\n' ' ' | cut -c 1-3500)"
+  BOOT_RUBY_PID=$(pgrep -P "$BOOT_PROBE_PID" ruby | head -n 1)
+  if [ -n "$BOOT_RUBY_PID" ]; then
+    kill -QUIT "$BOOT_RUBY_PID" 2>/dev/null || true
+  else
+    kill -QUIT "$BOOT_PROBE_PID" 2>/dev/null || true
+  fi
+  sleep 3
+  emit_status app-boot-probe-failed "$( { echo 'boot_log:'; tail -n 120 /tmp/boot_probe.log 2>/dev/null; echo; echo 'strace_tail:'; tail -n 120 /tmp/boot_probe.strace 2>/dev/null; } | tr '\n' ' ' | cut -c 1-7000)"
   kill -TERM "$BOOT_PROBE_PID" 2>/dev/null || true
   sleep 1
   kill -KILL "$BOOT_PROBE_PID" 2>/dev/null || true
