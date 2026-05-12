@@ -269,6 +269,9 @@ class Api::V1::TradesController < Api::V1::BaseController
           manual_ticker: manual_ticker_value
         }.compact
 
+      when "dividend"
+        build_dividend_params(account)
+
       else
         build_investment_trade_params(account)
       end
@@ -295,47 +298,67 @@ class Api::V1::TradesController < Api::V1::BaseController
         return nil
       end
 
-      if params.dig(:trade, :type).to_s.downcase == "dividend"
-        unless trade_params[:amount].present?
-          render_validation_error("Amount is required", [ "amount must be present for dividend" ])
-          return nil
-        end
+      qty_raw = trade_params[:qty].to_s.strip
+      price_raw = trade_params[:price].to_s.strip
+      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty_raw.blank? || price_raw.blank?
 
-        {
-          account: account,
-          date: trade_params[:date],
-          amount: trade_params[:amount].to_d,
-          currency: trade_params[:currency].presence || account.currency,
-          type: "dividend",
-          ticker: ticker_value,
-          manual_ticker: manual_ticker_value
-        }.compact
-      else
-        qty_raw = trade_params[:qty].to_s.strip
-        price_raw = trade_params[:price].to_s.strip
-        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty_raw.blank? || price_raw.blank?
-
-        qty = qty_raw.to_d
-        price = price_raw.to_d
-        if qty <= 0 || price <= 0
-          # Non-numeric input (e.g. "abc") becomes 0 with to_d; give a clearer message than "must be present"
-          non_numeric = (qty.zero? && qty_raw !~ /\A0(\.0*)?\z/) || (price.zero? && price_raw !~ /\A0(\.0*)?\z/)
-          return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ]) if non_numeric
-          return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
-        end
-
-        {
-          account: account,
-          date: trade_params[:date],
-          qty: qty,
-          price: price,
-          fee: trade_params[:fee].to_d,
-          currency: trade_params[:currency].presence || account.currency,
-          type: params.dig(:trade, :type),
-          ticker: ticker_value,
-          manual_ticker: manual_ticker_value
-        }.compact
+      qty = qty_raw.to_d
+      price = price_raw.to_d
+      if qty <= 0 || price <= 0
+        # Non-numeric input (e.g. "abc") becomes 0 with to_d; give a clearer message than "must be present"
+        non_numeric = (qty.zero? && qty_raw !~ /\A0(\.0*)?\z/) || (price.zero? && price_raw !~ /\A0(\.0*)?\z/)
+        return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ]) if non_numeric
+        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
       end
+
+      {
+        account: account,
+        date: trade_params[:date],
+        qty: qty,
+        price: price,
+        fee: trade_params[:fee].to_d,
+        currency: trade_params[:currency].presence || account.currency,
+        type: params.dig(:trade, :type),
+        ticker: ticker_value,
+        manual_ticker: manual_ticker_value
+      }.compact
+    end
+
+    def build_dividend_params(account)
+      ticker_value = nil
+      manual_ticker_value = nil
+
+      unless trade_params[:date].present?
+        render_validation_error("Date is required", [ "date must be present" ])
+        return nil
+      end
+
+      if trade_params[:security_id].present?
+        security = Security.find(trade_params[:security_id])
+        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+      elsif trade_params[:ticker].present?
+        ticker_value = trade_params[:ticker]
+      elsif trade_params[:manual_ticker].present?
+        manual_ticker_value = trade_params[:manual_ticker]
+      else
+        render_validation_error("Security identifier required", [ "Provide security_id, ticker, or manual_ticker" ])
+        return nil
+      end
+
+      unless trade_params[:amount].present?
+        render_validation_error("Amount is required", [ "amount must be present for dividend" ])
+        return nil
+      end
+
+      {
+        account: account,
+        date: trade_params[:date],
+        amount: trade_params[:amount].to_d,
+        currency: trade_params[:currency].presence || account.currency,
+        type: "dividend",
+        ticker: ticker_value,
+        manual_ticker: manual_ticker_value
+      }.compact
     end
 
     def apply_trade_create_options!
