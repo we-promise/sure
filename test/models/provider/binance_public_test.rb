@@ -162,6 +162,95 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     assert_nil @provider.send(:parse_ticker, "GIBBERISH")
   end
 
+  test "parse_ticker strips CRYPTO: prefix from holdings processors" do
+    parsed = @provider.send(:parse_ticker, "CRYPTO:BTCUSD")
+    assert_equal "BTCUSDT", parsed[:binance_pair]
+    assert_equal "BTC", parsed[:base]
+    assert_equal "USD", parsed[:display_currency]
+  end
+
+  test "parse_ticker flags USD stablecoins for synthetic pricing" do
+    %w[USDT USDC BUSD DAI FDUSD TUSD USDP PYUSD].each do |stable|
+      parsed = @provider.send(:parse_ticker, "CRYPTO:#{stable}")
+      assert parsed[:stablecoin], "expected #{stable} to be flagged as stablecoin"
+      assert_nil parsed[:binance_pair]
+      assert_equal stable, parsed[:base]
+      assert_equal "USD", parsed[:display_currency]
+    end
+  end
+
+  test "parse_ticker defaults prefixed bare base assets to the USDT pair" do
+    parsed = @provider.send(:parse_ticker, "CRYPTO:SOL")
+    assert_equal "SOLUSDT", parsed[:binance_pair]
+    assert_equal "SOL", parsed[:base]
+    assert_equal "USD", parsed[:display_currency]
+  end
+
+  test "parse_ticker still rejects unprefixed malformed tickers" do
+    # No CRYPTO: prefix → behaves like a Binance-search ticker (must end in a
+    # supported fiat). Protects against false defaults like "BTCBNB" → "BTCBNBUSDT".
+    assert_nil @provider.send(:parse_ticker, "SOL")
+    assert_nil @provider.send(:parse_ticker, "BTCBNB")
+  end
+
+  test "fetch_security_prices returns synthetic 1.0 USD prices for stablecoins" do
+    # No HTTP call expected — short-circuited entirely.
+    @provider.expects(:client).never
+
+    response = @provider.fetch_security_prices(
+      symbol: "CRYPTO:USDT",
+      exchange_operating_mic: "BNCX",
+      start_date: Date.parse("2026-01-01"),
+      end_date: Date.parse("2026-01-03")
+    )
+
+    assert response.success?
+    assert_equal 3, response.data.size
+    assert response.data.all? { |p| p.price == 1.0 && p.currency == "USD" }
+    assert_equal Date.parse("2026-01-01"), response.data.first.date
+    assert_equal Date.parse("2026-01-03"), response.data.last.date
+  end
+
+  test "fetch_security_price returns 1.0 USD for a stablecoin single day" do
+    @provider.expects(:client).never
+
+    response = @provider.fetch_security_price(
+      symbol: "CRYPTO:USDT",
+      exchange_operating_mic: "BNCX",
+      date: Date.parse("2026-01-15")
+    )
+
+    assert response.success?
+    assert_equal 1.0, response.data.price
+    assert_equal "USD", response.data.currency
+  end
+
+  test "fetch_security_info handles stablecoin (no Binance pair link)" do
+    response = @provider.fetch_security_info(symbol: "CRYPTO:USDT", exchange_operating_mic: "BNCX")
+
+    assert response.success?
+    assert_equal "USDT", response.data.name
+    assert_equal "crypto", response.data.kind
+    assert_nil response.data.links
+  end
+
+  test "fetch_security_prices resolves a bare CRYPTO: ticker against the USDT pair" do
+    rows = [ kline_row("2026-01-15", "150.25") ]
+    mock_client_returning_klines(rows)
+
+    response = @provider.fetch_security_prices(
+      symbol: "CRYPTO:SOL",
+      exchange_operating_mic: "BNCX",
+      start_date: Date.parse("2026-01-15"),
+      end_date: Date.parse("2026-01-15")
+    )
+
+    assert response.success?
+    assert_equal 1, response.data.size
+    assert_equal "USD", response.data.first.currency
+    assert_in_delta 150.25, response.data.first.price
+  end
+
   # ================================
   #       Single price
   # ================================

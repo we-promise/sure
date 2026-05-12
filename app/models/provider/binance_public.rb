@@ -35,6 +35,16 @@ class Provider::BinancePublic < Provider
   MS_PER_DAY = 24 * 60 * 60 * 1000
   SEARCH_LIMIT = 25
 
+  # USD-pegged stablecoins. Binance has no self-pair (USDTUSDT is invalid) and
+  # the few stablecoin/USDT pairs that do exist (USDCUSDT, etc.) hover at ~1.0
+  # with sub-cent noise — synthesizing a flat 1.0 USD price is both accurate
+  # enough and avoids surfacing transient depeg ticks from market data.
+  USD_STABLECOINS = %w[USDT USDC BUSD DAI FDUSD TUSD USDP PYUSD].freeze
+
+  # Symbol prefix applied by holdings processors (CoinStats, Coinbase, Kraken,
+  # Binance, SimpleFIN, Lunchflow) to distinguish crypto from stock tickers.
+  CRYPTO_PREFIX = "CRYPTO:".freeze
+
   def initialize
     # No API key required — public market data only.
   end
@@ -128,10 +138,12 @@ class Provider::BinancePublic < Provider
       # logo_url is intentionally nil — crypto logos are set at save time by
       # Security#generate_logo_url_from_brandfetch via the /crypto/{base}
       # route, not returned from this provider.
+      links = parsed[:binance_pair] ? "https://www.binance.com/en/trade/#{parsed[:binance_pair]}" : nil
+
       SecurityInfo.new(
         symbol: symbol,
         name: parsed[:base],
-        links: "https://www.binance.com/en/trade/#{parsed[:binance_pair]}",
+        links: links,
         logo_url: nil,
         description: nil,
         kind: "crypto",
@@ -160,6 +172,10 @@ class Provider::BinancePublic < Provider
     with_provider_response do
       parsed = parse_ticker(symbol)
       raise InvalidSecurityPriceError, "Unsupported Binance ticker: #{symbol}" if parsed.nil?
+
+      if parsed[:stablecoin]
+        next stablecoin_prices(symbol, parsed, start_date, end_date, exchange_operating_mic)
+      end
 
       binance_pair = parsed[:binance_pair]
       display_currency = parsed[:display_currency]
@@ -220,6 +236,21 @@ class Provider::BinancePublic < Provider
   end
 
   private
+    # Synthesize flat 1.0 USD prices for USD-pegged stablecoins across the
+    # requested range. Avoids a Binance round-trip (there is no self-pair like
+    # USDTUSDT) and produces stable values for portfolio aggregation.
+    def stablecoin_prices(symbol, parsed, start_date, end_date, exchange_operating_mic)
+      (start_date..end_date).map do |date|
+        Price.new(
+          symbol: symbol,
+          date: date,
+          price: 1.0,
+          currency: parsed[:display_currency],
+          exchange_operating_mic: exchange_operating_mic
+        )
+      end
+    end
+
     def base_url
       ENV["BINANCE_PUBLIC_URL"] || "https://data-api.binance.vision"
     end
@@ -247,11 +278,24 @@ class Provider::BinancePublic < Provider
       end
     end
 
-    # Maps a user-visible ticker (e.g. "BTCUSD", "ETHEUR") to the Binance pair
-    # symbol, base asset, and display currency. Returns nil if the ticker does
-    # not end with a supported quote currency.
+    # Maps a user-visible ticker to the Binance pair symbol, base asset, and
+    # display currency. Accepts:
+    #   - "BTCUSD"/"ETHEUR" — fiat suffix from search_securities output
+    #   - "CRYPTO:BTCUSD" — prefixed form stored by holdings processors
+    #   - "CRYPTO:SOL"/"SOL" — bare base asset; defaults to the USDT pair (USD)
+    #   - "CRYPTO:USDT"/"USDT" — USD-pegged stablecoin; binance_pair is nil and
+    #     callers short-circuit to a synthetic 1.0 USD price
+    # Returns nil only when the input is empty after stripping the prefix.
     def parse_ticker(ticker)
-      ticker_up = ticker.to_s.upcase
+      raw = ticker.to_s.upcase
+      prefixed = raw.start_with?(CRYPTO_PREFIX)
+      ticker_up = raw.delete_prefix(CRYPTO_PREFIX)
+      return nil if ticker_up.empty?
+
+      if USD_STABLECOINS.include?(ticker_up)
+        return { binance_pair: nil, base: ticker_up, display_currency: "USD", stablecoin: true }
+      end
+
       SUPPORTED_QUOTES.each do |quote|
         display_currency = QUOTE_TO_CURRENCY[quote]
         next unless ticker_up.end_with?(display_currency)
@@ -261,7 +305,14 @@ class Provider::BinancePublic < Provider
 
         return { binance_pair: "#{base}#{quote}", base: base, display_currency: display_currency }
       end
-      nil
+
+      # No fiat suffix matched. Only treat the input as a bare base asset when
+      # it arrived with the CRYPTO: prefix from a holdings processor — that
+      # tells us it really is a single coin symbol (SOL, TRUMP, KAITO), not a
+      # malformed pair like "BTCBNB" or "BTCGBP" that we want to reject.
+      return nil unless prefixed
+
+      { binance_pair: "#{ticker_up}USDT", base: ticker_up, display_currency: "USD" }
     end
 
     # Cached for 24h — exchangeInfo returns the full symbol universe (thousands
