@@ -265,6 +265,25 @@ class Account < ApplicationRecord
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
+    def create_from_kraken_account(kraken_account)
+      family = kraken_account.kraken_item.family
+
+      attributes = {
+        family: family,
+        name: kraken_account.name,
+        balance: (kraken_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: kraken_account.currency.presence || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 

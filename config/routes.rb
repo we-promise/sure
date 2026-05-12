@@ -64,6 +64,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :kraken_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -262,7 +277,11 @@ Rails.application.routes.draw do
 
   get :exchange_rate, to: "exchange_rates#show"
 
-  resources :transfers, only: %i[new create destroy show update]
+  resources :transfers, only: %i[new create destroy show update] do
+    member do
+      post :mark_as_recurring
+    end
+  end
 
   resources :imports, only: %i[index new show create update destroy] do
     member do
@@ -461,6 +480,7 @@ Rails.application.routes.draw do
         get :download, on: :member
       end
       resources :imports, only: [ :index, :show, :create ] do
+        post :preflight, on: :collection
         get :rows, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
