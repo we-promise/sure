@@ -54,7 +54,14 @@ module AccountStatementsHelper
   end
 
   def account_statement_reconciliation_label(check)
-    t("account_statements.reconciliation.checks.#{check[:key]}")
+    key = check[:key] if check.respond_to?(:key?) && check.key?(:key)
+    key ||= check["key"] if check.respond_to?(:key?) && check.key?("key")
+    return t("account_statements.reconciliation.checks.unknown") if key.blank?
+
+    t(
+      "account_statements.reconciliation.checks.#{key}",
+      default: t("account_statements.reconciliation.checks.unknown")
+    )
   end
 
   def account_statement_balance_label(statement, field)

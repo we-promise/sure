@@ -50,7 +50,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.string "filename", limit: 255, null: false
     t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
-    t.string "checksum", null: false
+    t.string "checksum", limit: 64, null: false
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
     t.string "institution_name_hint", limit: 200
@@ -80,6 +80,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
     t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
+    t.check_constraint "char_length(checksum::text) <= 64", name: "chk_account_statements_checksum_length"
     t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"
     t.check_constraint "content_sha256 IS NULL OR content_sha256::text ~ '^[0-9a-f]{64}$'::text", name: "chk_account_statements_content_sha256"
     t.check_constraint "currency IS NULL OR char_length(currency::text) <= 3", name: "chk_account_statements_currency_length"
@@ -1769,7 +1770,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
   add_foreign_key "account_shares", "users"
   add_foreign_key "account_statements", "accounts", column: "suggested_account_id", on_delete: :nullify
   add_foreign_key "account_statements", "accounts", on_delete: :nullify
-  add_foreign_key "account_statements", "families"
+  add_foreign_key "account_statements", "families", on_delete: :cascade
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"

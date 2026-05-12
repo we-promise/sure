@@ -48,6 +48,7 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological
+    build_statement_tab_data
 
     @pagy, @entries = pagy(
       entries,
@@ -232,6 +233,15 @@ class AccountsController < ApplicationController
         Current.user.admin? ||
           (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
+    end
+
+    def build_statement_tab_data
+      @statement_coverage = AccountStatement::Coverage.for_year(@account, params[:statement_year])
+      @account_statements = @account.account_statements.with_attached_original_file.ordered.to_a
+      @statement_reconciliation_statuses = AccountStatement.reconciliation_statuses_for(@account_statements, account: @account)
+      permission = @account.permission_for(Current.user)
+      @can_manage_statements = AccountStatement.statement_manager?(Current.user) &&
+        permission.in?([ :owner, :full_control ])
     end
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views

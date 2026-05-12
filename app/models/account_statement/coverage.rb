@@ -92,6 +92,8 @@ class AccountStatement::Coverage
   end
 
   def initialize(account, start_month: nil, end_month: nil, expected_start_month: nil, expected_end_month: nil, selected_year: nil, available_years: nil)
+    raise ArgumentError, "account is required" if account.nil?
+
     @account = account
     @expected_end_month = (expected_end_month || end_month || self.class.default_expected_end_month).to_date.beginning_of_month
     resolved_expected_start_month = (expected_start_month || start_month || self.class.default_expected_start_month(account, fallback_end_month: @expected_end_month)).to_date.beginning_of_month

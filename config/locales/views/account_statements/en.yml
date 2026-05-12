@@ -59,6 +59,7 @@ en:
         closing_balance: Closing balance
         opening_balance: Opening balance
         period_movement: Period movement
+        unknown: Unknown check
       matched: Matched
       mismatched: Mismatched
       unavailable: Not checked

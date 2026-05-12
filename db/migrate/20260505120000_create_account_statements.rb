@@ -3,14 +3,14 @@
 class CreateAccountStatements < ActiveRecord::Migration[7.2]
   def change
     create_table :account_statements, id: :uuid do |t|
-      t.references :family, null: false, foreign_key: true, type: :uuid
+      t.references :family, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
       t.references :account, null: true, type: :uuid, foreign_key: { to_table: :accounts, on_delete: :nullify }
       t.references :suggested_account, null: true, type: :uuid, foreign_key: { to_table: :accounts, on_delete: :nullify }
 
       t.string :filename, null: false, limit: 255
       t.string :content_type, null: false, limit: 100
       t.bigint :byte_size, null: false
-      t.string :checksum, null: false
+      t.string :checksum, null: false, limit: 64
       t.string :content_sha256
       t.string :source, null: false, default: "manual_upload"
       t.string :upload_status, null: false, default: "stored"
@@ -48,6 +48,9 @@ class CreateAccountStatements < ActiveRecord::Migration[7.2]
     add_check_constraint :account_statements,
                          "char_length(content_type) <= 100",
                          name: "chk_account_statements_content_type_length"
+    add_check_constraint :account_statements,
+                         "char_length(checksum) <= 64",
+                         name: "chk_account_statements_checksum_length"
     add_check_constraint :account_statements,
                          "institution_name_hint IS NULL OR char_length(institution_name_hint) <= 200",
                          name: "chk_account_statements_institution_hint_length"

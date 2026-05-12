@@ -1,14 +1,19 @@
 class UI::AccountPage < ApplicationComponent
-  attr_reader :account, :chart_view, :chart_period, :statement_year
+  attr_reader :account, :chart_view, :chart_period, :statement_coverage, :statements, :reconciliation_statuses,
+              :can_manage_statements
 
   renders_one :activity_feed, ->(feed_data:, pagy:, search:) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, search: search) }
 
-  def initialize(account:, chart_view: nil, chart_period: nil, active_tab: nil, statement_year: nil)
+  def initialize(account:, chart_view: nil, chart_period: nil, active_tab: nil, statement_coverage: nil, statements: [],
+                 reconciliation_statuses: {}, can_manage_statements: false)
     @account = account
     @chart_view = chart_view
     @chart_period = chart_period
     @active_tab = active_tab
-    @statement_year = statement_year
+    @statement_coverage = statement_coverage
+    @statements = statements
+    @reconciliation_statuses = reconciliation_statuses
+    @can_manage_statements = can_manage_statements
   end
 
   def id
@@ -75,7 +80,12 @@ class UI::AccountPage < ApplicationComponent
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
     when :statements
-      render "accounts/show/statements", account: account, statement_year: statement_year
+      render "accounts/show/statements",
+             account: account,
+             coverage: statement_coverage,
+             statements: statements,
+             reconciliation_statuses: reconciliation_statuses,
+             can_manage_statements: can_manage_statements
     end
   end
 end

@@ -488,6 +488,13 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "unavailable", statement.reconciliation_status
   end
 
+  test "coverage requires account" do
+    error = assert_raises(ArgumentError) do
+      AccountStatement::Coverage.new(nil)
+    end
+    assert_match(/account is required/, error.message)
+  end
+
   test "database constraints reject invalid persisted status values" do
     attrs = {
       family_id: @family.id,

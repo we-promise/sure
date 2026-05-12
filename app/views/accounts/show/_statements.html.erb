@@ -1,10 +1,4 @@
-<%# locals: (account:, statement_year: nil) %>
-
-<% coverage = AccountStatement::Coverage.for_year(account, statement_year) %>
-<% statements = account.account_statements.with_attached_original_file.ordered.to_a %>
-<% reconciliation_statuses = AccountStatement.reconciliation_statuses_for(statements, account: account) %>
-<% permission = account.permission_for(Current.user) %>
-<% can_manage_statements = AccountStatement.statement_manager?(Current.user) && permission.in?([ :owner, :full_control ]) %>
+<%# locals: (account:, coverage:, statements:, reconciliation_statuses:, can_manage_statements:) %>
 
 <div class="space-y-4">
   <div class="rounded-xl bg-container-inset p-1">
