@@ -161,7 +161,7 @@ class LunchflowItem < ApplicationRecord
     uri = URI.parse(base_url)
     return DEFAULT_BASE_URL unless uri.is_a?(URI::HTTPS)
     return DEFAULT_BASE_URL unless uri.host == "lunchflow.app"
-    return DEFAULT_BASE_URL unless ["", "/", "/api/v1", "/api/v1/"].include?(uri.path)
+    return DEFAULT_BASE_URL unless [ "", "/", "/api/v1", "/api/v1/" ].include?(uri.path)
     return DEFAULT_BASE_URL unless uri.query.blank?
     return DEFAULT_BASE_URL unless uri.fragment.blank?
 
