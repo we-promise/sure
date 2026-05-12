@@ -55,4 +55,14 @@ class MerchantTest < ActiveSupport::TestCase
 
     assert_includes logo_url, "w/#{Setting::BRAND_FETCH_LOGO_SIZE_STANDARD}/h/#{Setting::BRAND_FETCH_LOGO_SIZE_STANDARD}"
   end
+
+  test "brandfetch_logo_url_for returns nil when domain cannot be extracted" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client")
+    Setting.stubs(:brand_fetch_logo_size).returns(128)
+    Merchant.stubs(:extract_domain).returns(nil)
+
+    logo_url = Merchant.brandfetch_logo_url_for("invalid-url")
+
+    assert_nil logo_url
+  end
 end
