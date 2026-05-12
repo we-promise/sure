@@ -36,7 +36,7 @@ class Loan < ApplicationRecord
             numericality: { greater_than_or_equal_to: 0 },
             allow_nil: true
 
-  validates :start_date, presence: true, on: :create
+  validates :start_date, presence: true
 
 
 
