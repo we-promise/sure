@@ -378,6 +378,40 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_not_includes statement.sanitized_parser_output.to_json, "Row 299"
   end
 
+  test "bounds csv metadata detection column count" do
+    headers = [ "posted_at", *101.times.map { |index| "column_#{index}" } ].join(",")
+    values = [ "2024-01-01", *101.times.map { "value" } ].join(",")
+
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(
+        filename: "Checking.csv",
+        content_type: "text/csv",
+        content: "#{headers}\n#{values}\n"
+      )
+    )
+
+    assert_nil statement.sanitized_parser_output["csv"]
+  end
+
+  test "bounds csv metadata detection sample length" do
+    oversized_date = "2024-01-01" + ("x" * AccountStatement::MetadataDetector::MAX_CSV_SAMPLE_BYTES)
+
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(
+        filename: "Checking.csv",
+        content_type: "text/csv",
+        content: "posted_at,description\n#{oversized_date},oversized\n"
+      )
+    )
+
+    assert_nil statement.sanitized_parser_output["csv"]
+    assert_not_includes statement.sanitized_parser_output.to_json, oversized_date
+  end
+
   test "preserves sanitized pdf metadata output" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -394,6 +428,31 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.institution_name_hint
     assert_nil statement.account_name_hint
     assert_equal 0.1.to_d, statement.parser_confidence
+  end
+
+  test "stores an actual pdf document fixture as a statement" do
+    fixture_path = file_fixture("imports/sample_bank_statement.pdf")
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: Rack::Test::UploadedFile.new(
+        fixture_path,
+        "application/pdf",
+        true,
+        original_filename: "sample_bank_statement_2024-01.pdf"
+      )
+    )
+
+    assert statement.linked?
+    assert statement.original_file.attached?
+    assert_equal "application/pdf", statement.content_type
+    assert_equal fixture_path.size, statement.byte_size
+    assert_equal Digest::SHA256.file(fixture_path).hexdigest, statement.content_sha256
+    assert_equal "filename_only", statement.sanitized_parser_output["pdf_detection"]
+    assert_equal [ "filename" ], statement.sanitized_parser_output["metadata_sources"]
+    assert_equal Date.new(2024, 1, 1), statement.period_start_on
+    assert_equal Date.new(2024, 1, 31), statement.period_end_on
+    assert statement.original_file.blob.download.start_with?("%PDF-")
   end
 
   test "handles malformed csv metadata detection without raw parser output" do

@@ -62,6 +62,9 @@ class AccountStatement::AccountMatcher
     end
 
     def account_sensitive_match_text(account)
+      # Exclude user-controlled account notes from matching hints. Statement
+      # matching should use conservative account metadata, not free-form prose
+      # that can accidentally manufacture a last-four match.
       [
         account.name,
         account.institution_name

@@ -11,6 +11,7 @@ class CreateAccountStatements < ActiveRecord::Migration[7.2]
       t.string :content_type, null: false
       t.bigint :byte_size, null: false
       t.string :checksum, null: false
+      t.string :content_sha256
       t.string :source, null: false, default: "manual_upload"
       t.string :upload_status, null: false, default: "stored"
 
@@ -31,6 +32,10 @@ class CreateAccountStatements < ActiveRecord::Migration[7.2]
       t.timestamps
 
       t.index [ :family_id, :checksum ], name: "index_account_statements_on_family_checksum"
+      t.index [ :family_id, :content_sha256 ],
+              unique: true,
+              where: "content_sha256 IS NOT NULL",
+              name: "index_account_statements_on_family_content_sha256"
       t.index [ :family_id, :review_status ], name: "index_account_statements_on_family_review_status"
       t.index [ :account_id, :period_start_on, :period_end_on ], name: "index_account_statements_on_account_period"
       t.index [ :suggested_account_id, :review_status ], name: "index_account_statements_on_suggested_account_review"
@@ -46,5 +51,20 @@ class CreateAccountStatements < ActiveRecord::Migration[7.2]
     add_check_constraint :account_statements,
                          "match_confidence IS NULL OR (match_confidence >= 0 AND match_confidence <= 1)",
                          name: "chk_account_statements_match_confidence"
+    add_check_constraint :account_statements,
+                         "byte_size <= 26214400",
+                         name: "chk_account_statements_byte_size_max"
+    add_check_constraint :account_statements,
+                         "source IN ('manual_upload')",
+                         name: "chk_account_statements_source"
+    add_check_constraint :account_statements,
+                         "upload_status IN ('stored', 'failed')",
+                         name: "chk_account_statements_upload_status"
+    add_check_constraint :account_statements,
+                         "review_status IN ('unmatched', 'linked', 'rejected')",
+                         name: "chk_account_statements_review_status"
+    add_check_constraint :account_statements,
+                         "content_sha256 IS NULL OR content_sha256 ~ '^[0-9a-f]{64}$'",
+                         name: "chk_account_statements_content_sha256"
   end
 end

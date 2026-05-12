@@ -39,6 +39,33 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_match(/rails\/active_storage\/disk/, response.header["Location"])
   end
 
+  test "disk service urls require authentication" do
+    sign_in @user_a
+
+    get rails_blob_path(@statement_a.original_file)
+    assert_response :redirect
+    disk_url = response.location
+    sign_out @user_a
+
+    get disk_url
+
+    assert_redirected_to new_session_url
+  end
+
+  test "disk service urls enforce statement blob authorization" do
+    sign_in @user_a
+
+    get rails_blob_path(@statement_a.original_file)
+    assert_response :redirect
+    disk_url = response.location
+    sign_out @user_a
+    sign_in @user_b
+
+    get disk_url
+
+    assert_response :not_found
+  end
+
   test "user cannot access attachments from a different family" do
     sign_in @user_b
 
@@ -149,6 +176,105 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "unattached blobs fail closed" do
+    blob = ActiveStorage::Blob.create_and_upload!(
+      io: StringIO.new("unattached statement"),
+      filename: "unattached.csv",
+      content_type: "text/csv"
+    )
+
+    sign_in @user_a
+
+    get rails_blob_path(blob)
+
+    assert_response :not_found
+  end
+
+  test "blob authorization checks protected attachments even when blob is also attached elsewhere" do
+    document = FamilyDocument.create!(family: @user_a.family, filename: "shared.pdf", status: "ready")
+    document.file.attach(@statement_a.original_file.blob)
+
+    sign_in @user_b
+
+    get rails_blob_path(document.file)
+
+    assert_response :not_found
+  end
+
+  test "blob authorization denies when any protected attachment is unauthorized" do
+    statement_b = AccountStatement.new(
+      family: @user_b.family,
+      filename: "shared_statement.pdf",
+      content_type: @statement_a.content_type,
+      byte_size: @statement_a.byte_size,
+      checksum: @statement_a.checksum,
+      content_sha256: @statement_a.content_sha256,
+      currency: @user_b.family.currency
+    )
+    statement_b.original_file.attach(@statement_a.original_file.blob)
+    statement_b.save!
+
+    sign_in @user_a
+
+    get rails_blob_path(@statement_a.original_file)
+
+    assert_response :not_found
+  end
+
+  test "unknown protected attachment types fail closed" do
+    blob = ActiveStorage::Blob.create_and_upload!(
+      io: StringIO.new("unknown protected attachment"),
+      filename: "unknown.csv",
+      content_type: "text/csv"
+    )
+    ActiveStorage::Attachment.insert!(
+      {
+      name: "file",
+      record_type: "ProtectedAttachmentProbe",
+      record_id: SecureRandom.uuid,
+      blob_id: blob.id,
+      created_at: Time.current
+      }
+    )
+
+    with_protected_record_types("Transaction", "AccountStatement", "ProtectedAttachmentProbe") do
+      sign_in @user_a
+
+      get rails_blob_path(blob)
+
+      assert_response :not_found
+    end
+  end
+
+  test "direct uploads require authentication" do
+    post rails_direct_uploads_path, params: {
+      blob: {
+        filename: "statement.csv",
+        byte_size: 1,
+        checksum: Digest::MD5.base64digest("1"),
+        content_type: "text/csv"
+      }
+    }, as: :json
+
+    assert_redirected_to new_session_url
+  end
+
+  test "authenticated direct uploads can create unattached blobs" do
+    sign_in @user_a
+
+    post rails_direct_uploads_path, params: {
+      blob: {
+        filename: "statement.csv",
+        byte_size: 1,
+        checksum: Digest::MD5.base64digest("1"),
+        content_type: "text/csv"
+      }
+    }, as: :json
+
+    assert_response :success
+    assert response.parsed_body["signed_id"].present?
+  end
+
   test "orphaned transaction attachment fails closed" do
     @attachment_a.update_columns(record_id: SecureRandom.uuid)
 
@@ -158,4 +284,21 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  private
+
+    def sign_out(user)
+      user.sessions.each { |session| delete session_path(session) }
+    end
+
+    def with_protected_record_types(*types)
+      previous_types = ActiveStorageAttachmentAuthorization::PROTECTED_RECORD_TYPES
+      ActiveStorageAttachmentAuthorization.send(:remove_const, :PROTECTED_RECORD_TYPES)
+      ActiveStorageAttachmentAuthorization.const_set(:PROTECTED_RECORD_TYPES, types.flatten.freeze)
+
+      yield
+    ensure
+      ActiveStorageAttachmentAuthorization.send(:remove_const, :PROTECTED_RECORD_TYPES)
+      ActiveStorageAttachmentAuthorization.const_set(:PROTECTED_RECORD_TYPES, previous_types)
+    end
 end

@@ -32,6 +32,9 @@ class AccountStatement::MetadataDetector
     "credit card statement",
     "card statement"
   ].freeze
+  MAX_CSV_COLUMNS = 100
+  MAX_CSV_DATE_SAMPLES = 250
+  MAX_CSV_SAMPLE_BYTES = 256
 
   attr_reader :statement, :content
 
@@ -124,14 +127,17 @@ class AccountStatement::MetadataDetector
       first_row = csv.shift
       return false if first_row.blank?
 
-      date_header = first_row.headers.compact.find { |header| header.to_s.match?(/date|posted|transaction/i) }
+      headers = first_row.headers.compact.map(&:to_s)
+      return false if headers.size > MAX_CSV_COLUMNS
+
+      date_header = headers.find { |header| csv_sample_text(header).to_s.match?(/date|posted|transaction/i) }
       return false if date_header.blank?
 
-      samples = [ first_row[date_header].to_s ].reject(&:blank?)
+      samples = [ csv_sample_text(first_row[date_header]) ].compact_blank
       csv.each do |row|
-        break if samples.size >= 250
+        break if samples.size >= MAX_CSV_DATE_SAMPLES
 
-        sample = row[date_header].to_s
+        sample = csv_sample_text(row[date_header])
         samples << sample if sample.present?
       end
       return false if samples.blank?
@@ -150,6 +156,13 @@ class AccountStatement::MetadataDetector
       true
     rescue CSV::MalformedCSVError
       false
+    end
+
+    def csv_sample_text(value)
+      text = value.to_s
+      return nil if text.bytesize > MAX_CSV_SAMPLE_BYTES
+
+      text
     end
 
     def meaningful_filename_hint(hint)
