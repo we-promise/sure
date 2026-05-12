@@ -38,7 +38,7 @@ class Import::Row < ApplicationRecord
 
   private
     # Supports historical comma-delimited exports and pipe-delimited templates.
-    # Backslash escapes the active delimiter and backslash itself in both formats.
+    # Backslash escapes comma, pipe, and backslash so tag names can contain either delimiter.
     def split_tags(value)
       split_escaped_tags(value, tag_delimiter_for(value))
     end
@@ -73,7 +73,7 @@ class Import::Row < ApplicationRecord
 
       value.each_char do |char|
         if escaping
-          current << (char.in?([ delimiter, "\\" ]) ? char : "\\#{char}")
+          current << (char.in?([ delimiter, ",", "|", "\\" ]) ? char : "\\#{char}")
           escaping = false
         elsif char == "\\"
           escaping = true

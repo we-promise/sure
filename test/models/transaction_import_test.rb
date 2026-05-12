@@ -183,6 +183,7 @@ class TransactionImportTest < ActiveSupport::TestCase
   test "parses legacy comma tags and escaped pipe tags" do
     assert_equal [ "groceries", "essentials" ], Import::Row.new(tags: "groceries,essentials").tags_list
     assert_equal [ "Food, Dining", "essentials" ], Import::Row.new(tags: "Food\\, Dining,essentials").tags_list
+    assert_equal [ "Food|Dining" ], Import::Row.new(tags: "Food\\|Dining").tags_list
     assert_equal [ "Food|Dining", "essentials" ], Import::Row.new(tags: "Food\\|Dining|essentials").tags_list
   end
 

@@ -201,7 +201,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
   end
 
   test "exports transaction CSV rows with restored legacy ISO date stored amount account name and comma tags" do
-    tag2 = @family.tags.create!(name: "Food, Dining", color: "#0000FF")
+    tag2 = @family.tags.create!(name: "Food, Dining|Cafe", color: "#0000FF")
     entry = @account.entries.create!(
       name: "CSV Grocery",
       amount: 42.50,
@@ -225,6 +225,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal @account.name, row["account_name"]
       assert_includes row["tags"], ","
       assert_includes row["tags"], "\\,"
+      assert_includes row["tags"], "\\|"
       assert_equal [ @tag.name, tag2.name ].sort, Import::Row.new(tags: row["tags"]).tags_list.sort
     end
   end

@@ -99,7 +99,7 @@ class Family::DataExporter
     end
 
     def escape_legacy_tag_name(name)
-      name.to_s.gsub(/[\\,]/) { |char| "\\#{char}" }
+      name.to_s.gsub(/[\\,|]/) { |char| "\\#{char}" }
     end
 
     def generate_trades_csv
