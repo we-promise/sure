@@ -17,10 +17,16 @@ export default class extends Controller {
   }
 
   sync() {
-    const existingTargetSelected = this.hasExistingTargetTarget && this.existingTargetTarget.value !== ""
+    const existingTargetSelected = this.existingTargetSelected()
     const newTargetStarted = this.newTargetStarted()
 
-    this.setSectionDisabled(this.existingSectionTarget, newTargetStarted)
+    if (existingTargetSelected) {
+      this.clearNewTargetFields()
+    } else if (newTargetStarted) {
+      this.clearExistingTarget()
+    }
+
+    this.setSectionDisabled(this.existingSectionTarget, !existingTargetSelected && newTargetStarted)
     this.setSectionDisabled(this.newSectionTarget, existingTargetSelected)
   }
 
@@ -35,6 +41,24 @@ export default class extends Controller {
       this.newColorInputTarget.value.toLowerCase() !== this.defaultColorValue.toLowerCase()
 
     return textEntered || colorChanged
+  }
+
+  existingTargetSelected() {
+    return this.hasExistingTargetTarget && this.existingTargetTarget.value !== ""
+  }
+
+  clearExistingTarget() {
+    if (this.hasExistingTargetTarget) this.existingTargetTarget.value = ""
+  }
+
+  clearNewTargetFields() {
+    this.newTextInputTargets.forEach((input) => {
+      input.value = ""
+    })
+
+    if (this.hasNewColorInputTarget && this.defaultColorValue) {
+      this.newColorInputTarget.value = this.defaultColorValue
+    }
   }
 
   setSectionDisabled(section, disabled) {

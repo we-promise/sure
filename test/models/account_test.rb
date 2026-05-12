@@ -22,6 +22,12 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "example.com", @account.reload.read_attribute(:institution_domain)
   end
 
+  test "normalizes trimmed institution domain with uppercase scheme and www" do
+    @account.update!(institution_domain: "  HTTPS://WWW.Example.com/checking  ")
+
+    assert_equal "example.com", @account.reload.read_attribute(:institution_domain)
+  end
+
   test "normalizes malformed institution domain to host only" do
     @account.update!(institution_domain: "https://www.Example.com/%")
 
@@ -31,6 +37,17 @@ class AccountTest < ActiveSupport::TestCase
   test "rejects malformed institution domain without a host" do
     @account.update!(institution_domain: "https://bad host")
 
+    assert_nil @account.reload.read_attribute(:institution_domain)
+  end
+
+  test "rejects localhost and bare IP institution domains" do
+    @account.update!(institution_domain: "localhost")
+    assert_nil @account.reload.read_attribute(:institution_domain)
+
+    @account.update!(institution_domain: "127.0.0.1")
+    assert_nil @account.reload.read_attribute(:institution_domain)
+
+    @account.update!(institution_domain: "http://[::1]:3000")
     assert_nil @account.reload.read_attribute(:institution_domain)
   end
 

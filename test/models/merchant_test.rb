@@ -9,8 +9,26 @@ class MerchantTest < ActiveSupport::TestCase
     assert_equal "example.com", Merchant.extract_domain("https://WWW.example.com")
   end
 
+  test "extract_domain trims valid URLs with schemes and paths" do
+    assert_equal "example.com", Merchant.extract_domain("  HTTPS://WWW.Example.com/path  ")
+  end
+
   test "extract_domain returns nil for malformed URLs" do
     assert_nil Merchant.extract_domain("https://bad host")
+  end
+
+  test "extract_domain rejects localhost and bare IP addresses" do
+    assert_nil Merchant.extract_domain("localhost")
+    assert_nil Merchant.extract_domain("http://localhost:3000")
+    assert_nil Merchant.extract_domain("127.0.0.1")
+    assert_nil Merchant.extract_domain("http://127.0.0.1:3000")
+    assert_nil Merchant.extract_domain("http://[::1]:3000")
+  end
+
+  test "extract_domain rejects malformed domain labels" do
+    assert_nil Merchant.extract_domain("https://bad..example.com")
+    assert_nil Merchant.extract_domain("https://-bad.example.com")
+    assert_nil Merchant.extract_domain("https://bad-.example.com")
   end
 
   test "extract_domain salvages host from malformed URL paths" do

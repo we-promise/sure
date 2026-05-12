@@ -14,11 +14,8 @@ class Merchant < ApplicationRecord
       return nil if url.blank?
 
       normalized_url = url.to_s.strip
-      normalized_url = "https://#{normalized_url}" unless normalized_url.start_with?("http://", "https://")
-      domain = URI.parse(normalized_url).host&.sub(/\Awww\./i, "")
-      return nil unless domain.present? && domain.match?(/\A[a-z0-9.-]+\.[a-z0-9-]+\z/i)
-
-      domain.downcase
+      normalized_url = "https://#{normalized_url}" unless normalized_url.match?(/\Ahttps?:\/\//i)
+      normalize_domain(URI.parse(normalized_url).host)
     rescue URI::InvalidURIError
       sanitized_domain_from(url)
     end
@@ -34,17 +31,31 @@ class Merchant < ApplicationRecord
     end
 
     private
+      def normalize_domain(domain)
+        domain = domain.to_s.strip.sub(/\Awww\./i, "").downcase
+        return nil unless valid_domain?(domain)
+
+        domain
+      end
+
+      def valid_domain?(domain)
+        labels = domain.split(".")
+
+        domain.present? &&
+          domain != "localhost" &&
+          labels.length >= 2 &&
+          labels.last.match?(/[a-z]/i) &&
+          labels.all? { |label| label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/i) }
+      end
+
       def sanitized_domain_from(url)
         domain = url.to_s.strip
           .sub(/\Ahttps?:\/\//i, "")
           .split(/[\/:?#]/, 2)
           .first
           .to_s
-          .sub(/\Awww\./i, "")
 
-        return nil unless domain.present? && domain.match?(/\A[a-z0-9.-]+\.[a-z0-9-]+\z/i)
-
-        domain.downcase
+        normalize_domain(domain)
       end
   end
 end
