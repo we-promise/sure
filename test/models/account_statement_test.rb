@@ -728,6 +728,27 @@ class AccountStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "coverage start ignores statements without complete periods" do
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Partial Archive Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    create_statement(account: account, month: Date.new(2018, 1, 1), content: "linked-partial").update!(period_end_on: nil)
+    create_statement(account: nil, suggested_account: account, month: Date.new(2017, 1, 1), content: "suggested-partial").update!(period_end_on: nil)
+
+    travel_to Date.new(2026, 5, 6) do
+      coverage = AccountStatement::Coverage.for_year(account, nil)
+
+      assert_equal Date.new(2025, 5, 1), coverage.expected_start_month
+      assert_equal [ 2026, 2025 ], coverage.available_years
+    end
+  end
+
   test "coverage marks covered duplicate ambiguous and mismatched months" do
     covered_month = 5.months.ago.to_date.beginning_of_month
     missing_month = 4.months.ago.to_date.beginning_of_month

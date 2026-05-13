@@ -88,8 +88,19 @@ class PdfImportTest < ActiveSupport::TestCase
 
   test "process_with_ai_later enqueues ProcessPdfJob" do
     assert_enqueued_with job: ProcessPdfJob, args: [ @import ] do
-      @import.process_with_ai_later
+      assert @import.process_with_ai_later
     end
+
+    assert_equal "importing", @import.reload.status
+  end
+
+  test "process_with_ai_later does not enqueue duplicate jobs while importing" do
+    assert_enqueued_jobs 1, only: ProcessPdfJob do
+      assert @import.process_with_ai_later
+      assert_not @import.reload.process_with_ai_later
+    end
+
+    assert_equal "importing", @import.reload.status
   end
 
   test "generate_rows_from_extracted_data creates import rows" do

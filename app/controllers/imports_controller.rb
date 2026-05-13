@@ -144,13 +144,18 @@ class ImportsController < ApplicationController
     end
 
     def create_pdf_import(file)
+      unless AccountStatement.statement_manager?(Current.user)
+        redirect_to new_import_path, alert: t("accounts.not_authorized")
+        return
+      end
+
       if file.size > Import::MAX_PDF_SIZE
         redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
         return
       end
 
       pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
-      pdf_import.process_with_ai_later if pdf_import.pending? && !pdf_import.ai_processed? && pdf_import.rows_count.zero?
+      pdf_import.process_with_ai_later
 
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError

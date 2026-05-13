@@ -91,7 +91,17 @@ class PdfImport < Import
   end
 
   def process_with_ai_later
-    ProcessPdfJob.perform_later(self)
+    should_enqueue = with_lock do
+      if pending? && !ai_processed? && rows_count.zero?
+        update!(status: :importing)
+        true
+      else
+        false
+      end
+    end
+
+    ProcessPdfJob.perform_later(self) if should_enqueue
+    should_enqueue
   end
 
   def process_with_ai

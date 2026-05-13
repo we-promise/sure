@@ -70,8 +70,8 @@ class AccountStatement::Coverage
       candidates = [
         account.entries.minimum(:date),
         account.balances.minimum(:date),
-        account.account_statements.where.not(period_start_on: nil).minimum(:period_start_on),
-        account.family.account_statements.unmatched.where(suggested_account: account).where.not(period_start_on: nil).minimum(:period_start_on)
+        account.account_statements.where.not(period_start_on: nil).where.not(period_end_on: nil).minimum(:period_start_on),
+        account.family.account_statements.unmatched.where(suggested_account: account).where.not(period_start_on: nil).where.not(period_end_on: nil).minimum(:period_start_on)
       ].compact
 
       start_month = (candidates.min || fallback_end_month.advance(months: -11)).to_date.beginning_of_month

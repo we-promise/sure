@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ImportsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     sign_in @user = users(:family_admin)
   end
@@ -120,6 +122,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.pdf_processing"), flash[:notice]
   end
 
+  test "guest cannot create statement backed pdf import" do
+    sign_in users(:intro_user)
+
+    assert_no_difference [ "AccountStatement.count", "Import.where(type: 'PdfImport').count" ] do
+      assert_no_enqueued_jobs only: ProcessPdfJob do
+        post imports_url, params: {
+          import: {
+            import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+          }
+        }
+      end
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
   test "duplicate pdf import reuses account statement" do
     statement = AccountStatement.create_from_upload!(
       family: @user.family,
@@ -143,6 +162,30 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     created_import = PdfImport.order(:created_at).last
     assert_equal statement, created_import.account_statement
+    assert_redirected_to import_url(created_import)
+  end
+
+  test "duplicate pdf import does not enqueue processing twice for reused import" do
+    assert_difference "AccountStatement.count", 1 do
+      assert_difference "Import.where(type: 'PdfImport').count", 1 do
+        assert_enqueued_jobs 1, only: ProcessPdfJob do
+          post imports_url, params: {
+            import: {
+              import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+            }
+          }
+
+          post imports_url, params: {
+            import: {
+              import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+            }
+          }
+        end
+      end
+    end
+
+    created_import = PdfImport.order(:created_at).last
+    assert_equal "importing", created_import.status
     assert_redirected_to import_url(created_import)
   end
 

@@ -152,7 +152,7 @@ class AccountStatementsController < ApplicationController
     end
 
     pdf_import = PdfImport.create_from_statement!(statement: @statement)
-    pdf_import.process_with_ai_later if pdf_import.pending? && !pdf_import.ai_processed? && pdf_import.rows_count.zero?
+    pdf_import.process_with_ai_later
 
     redirect_to import_path(pdf_import), notice: t("account_statements.extract.started")
   end
