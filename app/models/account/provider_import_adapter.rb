@@ -110,6 +110,7 @@ class Account::ProviderImportAdapter
 
         if pending_match
           old_pending_external_id = pending_match.external_id
+          pending_entry_date      = pending_match.date
           entry = pending_match
           entry.assign_attributes(external_id: external_id)
 
@@ -139,7 +140,7 @@ class Account::ProviderImportAdapter
       entry.assign_attributes(
         amount: amount,
         currency: currency,
-        date: date
+        date: pending_entry_date || date
       )
 
       # Use enrichment pattern to respect user overrides
