@@ -43,8 +43,8 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     api_key_display = find("#api-key-display")
     assert api_key_display.text.length > 30 # Should be a long hex string
 
-    # Should show copy buttons
-    assert_button "Copy API Key"
+    # Should expose a copy action for the generated API key
+    assert_selector '[data-action="clipboard#copy"]', minimum: 1
     assert_link "Create New Key"
   end
 
@@ -65,7 +65,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     assert_text "Read/Write"
     assert_text "Never used"
     assert_link "Create New Key"
-    assert_button "Revoke Key"
+    assert_button "Revoke API Key"
   end
 
   test "should show usage instructions and example curl command" do
@@ -121,7 +121,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     visit settings_api_key_path
 
     # Click the revoke button to open the modal
-    click_button "Revoke Key"
+    click_button "Revoke API Key"
 
     # Wait for the dialog and then confirm
     assert_selector "#confirm-dialog", visible: true
