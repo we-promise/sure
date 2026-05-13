@@ -139,6 +139,32 @@
         </div>
 
         <div class="rounded-xl bg-container-inset p-4">
+          <h3 class="text-sm font-medium text-primary mb-3"><%= t("account_statements.extract.title") %></h3>
+
+          <% if @statement.pdf? %>
+            <div class="space-y-3">
+              <% if @latest_pdf_import.present? %>
+                <%= link_to import_path(@latest_pdf_import), class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+                  <%= icon("file-search", size: "sm") %>
+                  <%= t("account_statements.extract.latest_import") %>
+                <% end %>
+              <% end %>
+
+              <% if @can_manage_statement %>
+                <%= button_to extract_account_statement_path(@statement),
+                              method: :post,
+                              class: "inline-flex items-center gap-2 text-sm font-medium text-primary" do %>
+                  <%= icon("scan-text", size: "sm") %>
+                  <%= t("account_statements.extract.start") %>
+                <% end %>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-sm text-secondary"><%= t("account_statements.extract.unavailable") %></p>
+          <% end %>
+        </div>
+
+        <div class="rounded-xl bg-container-inset p-4">
           <h3 class="text-sm font-medium text-primary mb-3"><%= t(".reconciliation_title") %></h3>
 
           <% if @reconciliation_checks.any? %>

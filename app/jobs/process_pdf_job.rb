@@ -62,7 +62,7 @@ class ProcessPdfJob < ApplicationJob
     end
 
     def upload_to_vector_store(pdf_import, document_type:)
-      filename = pdf_import.pdf_file.filename.to_s
+      filename = pdf_import.pdf_filename
       file_content = pdf_import.pdf_file_content
 
       family_document = pdf_import.family.upload_document(

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class AccountStatementsController < ApplicationController
-  before_action :set_statement, only: %i[show update destroy link unlink reject]
-  before_action :ensure_statement_manager!, only: %i[index create update destroy link unlink reject]
+  before_action :set_statement, only: %i[show update destroy extract link unlink reject]
+  before_action :ensure_statement_manager!, only: %i[index create update destroy extract link unlink reject]
 
   def index
     accessible_account_ids = Current.user.accessible_accounts.select(:id)
@@ -30,6 +30,7 @@ class AccountStatementsController < ApplicationController
     @accounts = Current.user.accessible_accounts.visible.alphabetically
     @can_manage_statement = @statement.manageable_by?(Current.user)
     @reconciliation_checks = @statement.reconciliation_checks
+    @latest_pdf_import = @statement.pdf_imports.first if @statement.pdf?
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("account_statements.index.title"), account_statements_path ],
@@ -130,6 +131,23 @@ class AccountStatementsController < ApplicationController
     else
       redirect_back_or_to redirect_path, alert: t("account_statements.destroy.failure")
     end
+  end
+
+  def extract
+    unless @statement.manageable_by?(Current.user)
+      redirect_to account_statement_path(@statement), alert: t("accounts.not_authorized")
+      return
+    end
+
+    unless @statement.pdf?
+      redirect_to account_statement_path(@statement), alert: t("account_statements.extract.not_pdf")
+      return
+    end
+
+    pdf_import = PdfImport.create_from_statement!(statement: @statement)
+    pdf_import.process_with_ai_later if pdf_import.pending? && !pdf_import.ai_processed? && pdf_import.rows_count.zero?
+
+    redirect_to import_path(pdf_import), notice: t("account_statements.extract.started")
   end
 
   private

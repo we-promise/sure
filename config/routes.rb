@@ -437,6 +437,7 @@ Rails.application.routes.draw do
 
   resources :account_statements, only: %i[index show create update destroy] do
     member do
+      post :extract
       patch :link
       patch :unlink
       patch :reject

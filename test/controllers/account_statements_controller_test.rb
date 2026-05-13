@@ -107,6 +107,42 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_statement_url(statement)
   end
 
+  test "starts pdf extraction from statement" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(
+        filename: "statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+
+    assert_difference "Import.where(type: 'PdfImport').count", 1 do
+      post extract_account_statement_url(statement)
+    end
+
+    pdf_import = PdfImport.order(:created_at).last
+    assert_equal statement, pdf_import.account_statement
+    assert_redirected_to import_url(pdf_import)
+    assert_equal I18n.t("account_statements.extract.started"), flash[:notice]
+  end
+
+  test "does not start extraction for non pdf statement" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv")
+    )
+
+    assert_no_difference "Import.count" do
+      post extract_account_statement_url(statement)
+    end
+
+    assert_redirected_to account_statement_url(statement)
+    assert_equal I18n.t("account_statements.extract.not_pdf"), flash[:alert]
+  end
+
   test "skips duplicate statement upload" do
     AccountStatement.create_from_upload!(
       family: @account.family,

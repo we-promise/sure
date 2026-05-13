@@ -248,6 +248,7 @@ en:
       complete_title: Document analyzed
       complete_description: We've analyzed your PDF and here's what we found.
       document_type_label: Document Type
+      source_statement: Source statement
       summary_label: Summary
       email_sent_notice: An email has been sent to you with next steps.
       back_to_imports: Back to imports
