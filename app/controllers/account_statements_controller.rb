@@ -30,7 +30,7 @@ class AccountStatementsController < ApplicationController
     @accounts = Current.user.accessible_accounts.visible.alphabetically
     @can_manage_statement = @statement.manageable_by?(Current.user)
     @reconciliation_checks = @statement.reconciliation_checks
-    @latest_pdf_import = @statement.pdf_imports.first if @statement.pdf?
+    @latest_pdf_import = @statement.latest_reusable_pdf_import if @statement.pdf?
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("account_statements.index.title"), account_statements_path ],

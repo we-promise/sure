@@ -100,8 +100,16 @@ class PdfImport < Import
       end
     end
 
-    ProcessPdfJob.perform_later(self) if should_enqueue
-    should_enqueue
+    return false unless should_enqueue
+
+    begin
+      ProcessPdfJob.perform_later(self)
+      true
+    rescue StandardError => e
+      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
+      reload.with_lock { update!(status: :pending) }
+      false
+    end
   end
 
   def process_with_ai

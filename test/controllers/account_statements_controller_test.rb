@@ -128,6 +128,34 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("account_statements.extract.started"), flash[:notice]
   end
 
+  test "statement detail links latest reusable pdf import" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(
+        filename: "statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+    reusable_import = PdfImport.create_from_statement!(statement: statement)
+    failed_import = PdfImport.create!(
+      family: statement.family,
+      account: statement.account,
+      account_statement: statement,
+      date_format: statement.family.date_format,
+      status: :failed,
+      created_at: 1.minute.from_now,
+      updated_at: 1.minute.from_now
+    )
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_select "a[href='#{import_path(reusable_import)}']", text: I18n.t("account_statements.extract.latest_import")
+    assert_select "a[href='#{import_path(failed_import)}']", count: 0
+  end
+
   test "does not start extraction for non pdf statement" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,

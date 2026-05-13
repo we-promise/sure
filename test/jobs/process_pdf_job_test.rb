@@ -18,6 +18,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
   test "skips if PDF not uploaded" do
     assert_not @import.pdf_uploaded?
+    @import.update!(status: :importing)
 
     ProcessPdfJob.perform_now(@import)
 
@@ -31,6 +32,17 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     # Should not change status since already complete
     assert_equal "complete", processed_import.reload.status
+  end
+
+  test "skips already processed importing import and releases processing claim" do
+    processed_import = imports(:pdf_processed)
+    attach_pdf!(processed_import)
+    processed_import.update!(status: :importing, document_type: "financial_document")
+    processed_import.expects(:process_with_ai).never
+
+    ProcessPdfJob.perform_now(processed_import)
+
+    assert_equal "pending", processed_import.reload.status
   end
 
   test "uploads non-bank PDF to vector store with classified type metadata" do

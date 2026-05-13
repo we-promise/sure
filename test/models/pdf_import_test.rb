@@ -103,6 +103,13 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal "importing", @import.reload.status
   end
 
+  test "process_with_ai_later resets pending when enqueue fails" do
+    ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue offline")
+
+    assert_not @import.process_with_ai_later
+    assert_equal "pending", @import.reload.status
+  end
+
   test "generate_rows_from_extracted_data creates import rows" do
     import = imports(:pdf_with_rows)
     import.rows.destroy_all

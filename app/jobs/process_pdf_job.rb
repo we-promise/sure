@@ -3,9 +3,9 @@ class ProcessPdfJob < ApplicationJob
 
   def perform(pdf_import)
     return unless pdf_import.is_a?(PdfImport)
-    return unless pdf_import.pdf_uploaded?
+    return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
     return if pdf_import.status == "complete"
-    return if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
+    return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
 
     pdf_import.update!(status: :importing)
 
@@ -84,5 +84,11 @@ class ProcessPdfJob < ApplicationJob
 
     def statement_with_transactions?(document_type)
       document_type.in?(%w[bank_statement credit_card_statement])
+    end
+
+    def reset_processing_claim(pdf_import)
+      pdf_import.reload.with_lock do
+        pdf_import.update!(status: :pending) if pdf_import.importing?
+      end
     end
 end
