@@ -6,7 +6,7 @@
     <div class="space-y-2">
       <% if series.trend.present? %>
         <p class="text-primary -space-x-0.5 text-3xl font-medium privacy-sensitive <%= "animate-pulse" if balance_sheet.syncing? %>">
-          <%= series.trend.current.format %>
+          <%= format_money(series.trend.current) %>
         </p>
         <%= render partial: "shared/trend_change", locals: { trend: series.trend, comparison_label: period.comparison_label } %>
       <% else %>

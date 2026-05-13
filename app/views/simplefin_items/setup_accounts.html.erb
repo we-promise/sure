@@ -92,7 +92,7 @@
                   <% end %>
                 </h3>
                 <p class="text-sm text-secondary">
-                  <%= t(".account_card.balance") %>: <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %>
+                  <%= t(".account_card.balance") %>: <span class="font-mono tabular-nums"><%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %></span>
                 </p>
                 <%= render "activity_badge", activity: activity, likely_closed: likely_closed %>
               </div>

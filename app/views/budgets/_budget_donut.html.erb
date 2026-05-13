@@ -13,7 +13,7 @@
         </div>
 
         <%= render DS::Link.new(
-          text: "of #{budget.budgeted_spending_money.format}",
+          text: "of #{format_money(budget.budgeted_spending_money, html: false)}",
           variant: "secondary",
           icon: "pencil",
           icon_position: "right",
@@ -47,7 +47,7 @@
           </p>
 
           <%= render DS::Link.new(
-            text: "of #{bc.budgeted_spending_money.format(precision: 0)}",
+            text: "of #{format_money(bc.budgeted_spending_money, precision: 0, html: false)}",
             variant: "secondary",
             icon: "pencil",
             icon_position: "right",

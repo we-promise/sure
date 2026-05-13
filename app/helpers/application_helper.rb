@@ -89,17 +89,31 @@ module ApplicationHelper
     family_moniker_plural.downcase
   end
 
+  # Renders a money value. By default, wraps the formatted string in a
+  # `<span class="font-mono tabular-nums">` so monetary numbers display in
+  # Geist Mono with tabular figures across the UI.
+  #
+  # Pass `html: false` when the return value must be a plain string (JSON
+  # payloads, HTML attribute values, translation interpolations, etc.).
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 
-    Money.new(number_or_money).format(options)
+    html_output = options.delete(:html)
+    html_output = true if html_output.nil?
+
+    formatted = Money.new(number_or_money).format(options)
+
+    return formatted unless html_output
+
+    content_tag(:span, formatted, class: "font-mono tabular-nums")
   end
 
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
-    collection.group_by(&:currency)
-              .transform_values { |item| calculate_total(item, money_method, negate) }
-              .map { |_currency, money| format_money(money) }
-              .join(separator)
+    formatted = collection.group_by(&:currency)
+                          .transform_values { |item| calculate_total(item, money_method, negate) }
+                          .map { |_currency, money| format_money(money) }
+
+    safe_join(formatted, separator)
   end
 
   def currency_picker_options_for_family(family = Current.family, extra: [])

@@ -11,7 +11,7 @@
 
           <% if classification_group.account_groups.any? %>
             <span class="text-secondary">&middot;</span>
-            <span class="text-secondary font-medium text-lg privacy-sensitive"><%= classification_group.total_money.format(precision: 0) %></span>
+            <span class="text-secondary font-medium text-lg privacy-sensitive"><%= format_money(classification_group.total_money, precision: 0) %></span>
           <% end %>
         </h2>
       </div>

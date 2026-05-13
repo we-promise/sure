@@ -73,14 +73,14 @@
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">Monthly average spending</dt>
             <dd class="text-primary font-medium privacy-sensitive">
-              <%= @budget_category.avg_monthly_expense_money.format %>
+              <%= format_money(@budget_category.avg_monthly_expense_money) %>
             </dd>
           </div>
 
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">Monthly median spending</dt>
             <dd class="text-primary font-medium privacy-sensitive">
-              <%= @budget_category.median_monthly_expense_money.format %>
+              <%= format_money(@budget_category.median_monthly_expense_money) %>
             </dd>
           </div>
         </dl>

@@ -28,7 +28,7 @@
                 <p class="text-xs text-secondary">
                   <%= @transaction.entry.account.name %>
                   • <%= I18n.l(@transaction.entry.date, format: :long) %>
-                  • <%= number_to_currency(@transaction.entry.amount.abs, unit: Money::Currency.new(@transaction.entry.currency).symbol) %>
+                  • <span class="font-mono tabular-nums"><%= number_to_currency(@transaction.entry.amount.abs, unit: Money::Currency.new(@transaction.entry.currency).symbol) %></span>
                 </p>
               </div>
             </div>
@@ -53,7 +53,7 @@
                       <div class="font-medium text-primary"><%= entry.name %></div>
                       <div class="text-xs text-secondary">
                         <%= I18n.l(entry.date, format: :short) %> •
-                        <%= number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol) %>
+                        <span class="font-mono tabular-nums"><%= number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol) %></span>
                       </div>
                     </div>
                   </label>

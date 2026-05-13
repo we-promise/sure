@@ -11,7 +11,7 @@
       </dt>
       <hr class="grow border-dashed <%= item[:style] == :final ? "border-primary" : "border-secondary" %>">
       <dd class="<%= item[:style] == :start || item[:style] == :final ? "font-bold" : item[:style] == :subtotal ? "font-medium" : "" %>">
-        <%= item[:value].format %>
+        <%= helpers.format_money(item[:value]) %>
       </dd>
     </dl>
 

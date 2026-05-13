@@ -14,12 +14,12 @@
     <% if show_transfers %>
       <p class="text-sm text-secondary"><%= t("transactions.summary.inflow") %></p>
       <p class="text-primary font-medium text-xl privacy-sensitive" id="total-income">
-        <%= (totals.income_money + totals.transfer_inflow_money).format %>
+        <%= format_money(totals.income_money + totals.transfer_inflow_money) %>
       </p>
     <% else %>
       <p class="text-sm text-secondary"><%= t("transactions.summary.income") %></p>
       <p class="text-primary font-medium text-xl privacy-sensitive" id="total-income">
-        <%= totals.income_money.format %>
+        <%= format_money(totals.income_money) %>
       </p>
     <% end %>
   </div>
@@ -27,12 +27,12 @@
     <% if show_transfers %>
       <p class="text-sm text-secondary"><%= t("transactions.summary.outflow") %></p>
       <p class="text-primary font-medium text-xl privacy-sensitive" id="total-expense">
-        <%= (totals.expense_money + totals.transfer_outflow_money).format %>
+        <%= format_money(totals.expense_money + totals.transfer_outflow_money) %>
       </p>
     <% else %>
       <p class="text-sm text-secondary"><%= t("transactions.summary.expenses") %></p>
       <p class="text-primary font-medium text-xl privacy-sensitive" id="total-expense">
-        <%= totals.expense_money.format %>
+        <%= format_money(totals.expense_money) %>
       </p>
     <% end %>
   </div>

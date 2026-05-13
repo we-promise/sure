@@ -41,7 +41,7 @@
                     <%= snaptrade_account.brokerage_name %> •
                   <% end %>
                   <%= t("snaptrade_items.select_existing_account.balance_label", default: "Balance:") %>
-                  <%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %>
+                  <span class="font-mono tabular-nums"><%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %></span>
                 </p>
               </div>
               <%= render DS::Button.new(

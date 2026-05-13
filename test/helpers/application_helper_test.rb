@@ -51,11 +51,29 @@ class ApplicationHelperTest < ActionView::TestCase
   end
 
   test "#totals_by_currency(collection: collection, money_method: money_method)" do
-    assert_equal "$3.00", totals_by_currency(collection: [ @account1, @account2 ], money_method: :balance_money)
-    assert_equal "$3.00 | -€7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money)
+    mono = ->(amount) { %(<span class="font-mono tabular-nums">#{amount}</span>) }
+
+    assert_equal mono.call("$3.00"), totals_by_currency(collection: [ @account1, @account2 ], money_method: :balance_money)
+    assert_equal "#{mono.call('$3.00')} | #{mono.call('-€7.00')}", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money)
     assert_equal "", totals_by_currency(collection: [], money_method: :balance_money)
-    assert_equal "$0.00", totals_by_currency(collection: [ Account.new(currency: "USD", balance: 0) ], money_method: :balance_money)
-    assert_equal "-$3.00 | €7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money, negate: true)
+    assert_equal mono.call("$0.00"), totals_by_currency(collection: [ Account.new(currency: "USD", balance: 0) ], money_method: :balance_money)
+    assert_equal "#{mono.call('-$3.00')} | #{mono.call('€7.00')}", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money, negate: true)
+  end
+
+  test "#format_money wraps output in mono span by default" do
+    assert_equal %(<span class="font-mono tabular-nums">$1.00</span>), format_money(Money.new(1, "USD"))
+    assert format_money(Money.new(1, "USD")).html_safe?
+  end
+
+  test "#format_money returns a plain string when html: false" do
+    result = format_money(Money.new(1, "USD"), html: false)
+    assert_equal "$1.00", result
+    refute_includes result, "<span"
+  end
+
+  test "#format_money returns nil for nil input" do
+    assert_nil format_money(nil)
+    assert_nil format_money(nil, html: false)
   end
 
   test "#currency_picker_options_for_family returns enabled family currencies" do

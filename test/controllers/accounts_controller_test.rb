@@ -21,7 +21,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "account activity marks trade amounts as privacy-sensitive" do
     trade_entry = entries(:trade)
-    expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)
+    expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money, html: false)
 
     get account_url(accounts(:investment))
 

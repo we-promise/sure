@@ -21,7 +21,7 @@
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= ibkr_account.name.presence || ibkr_account.ibkr_account_id %></span>
                   <span class="text-xs text-secondary">
-                    <%= ibkr_account.currency %> • Balance: <%= number_to_currency((ibkr_account.current_balance || 0), unit: Money::Currency.new(ibkr_account.currency || "USD").symbol) %>
+                    <%= ibkr_account.currency %> • Balance: <span class="font-mono tabular-nums"><%= number_to_currency((ibkr_account.current_balance || 0), unit: Money::Currency.new(ibkr_account.currency || "USD").symbol) %></span>
                   </span>
                 </div>
               </label>

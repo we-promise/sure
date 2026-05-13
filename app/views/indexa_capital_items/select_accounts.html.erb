@@ -50,7 +50,7 @@
                     <% if indexa_capital_account.account_type.present? %>
                       <%= indexa_capital_account.account_type.titleize %> &middot;
                     <% end %>
-                    <%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %>
+                    <span class="font-mono tabular-nums"><%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %></span>
                   </p>
                 </label>
               </div>

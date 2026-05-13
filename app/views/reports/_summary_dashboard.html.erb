@@ -12,7 +12,7 @@
 
     <div class="space-y-2">
       <p class="text-2xl font-semibold text-primary privacy-sensitive">
-        <%= metrics[:current_income].format %>
+        <%= format_money(metrics[:current_income]) %>
       </p>
 
       <% if metrics[:income_change] %>
@@ -49,7 +49,7 @@
 
     <div class="space-y-2">
       <p class="text-2xl font-semibold text-primary privacy-sensitive">
-        <%= metrics[:current_expenses].format %>
+        <%= format_money(metrics[:current_expenses]) %>
       </p>
 
       <% if metrics[:expense_change] %>
@@ -86,7 +86,7 @@
 
     <div class="space-y-2">
       <p class="text-2xl font-semibold privacy-sensitive <%= metrics[:net_savings] >= 0 ? "text-success" : "text-destructive" %>">
-        <%= metrics[:net_savings].format %>
+        <%= format_money(metrics[:net_savings]) %>
       </p>
 
       <p class="text-sm text-subdued">

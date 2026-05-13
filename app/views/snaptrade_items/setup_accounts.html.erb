@@ -116,7 +116,7 @@
                           <%= snaptrade_account.account_type.titleize %> •
                         <% end %>
                         <%= t("snaptrade_items.setup_accounts.balance_label", default: "Balance:") %>
-                        <%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %>
+                        <span class="font-mono tabular-nums"><%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %></span>
                       </p>
                       <% if snaptrade_account.account_number.present? %>
                         <p class="text-xs text-secondary"><%= t("snaptrade_items.setup_accounts.account_number", default: "Account:") %> •••<%= snaptrade_account.account_number.last(4) %></p>

@@ -41,7 +41,7 @@
                     <%= indexa_capital_account.account_type.titleize %> &middot;
                   <% end %>
                   <%= t("indexa_capital_items.select_existing_account.balance_label") %>
-                  <%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %>
+                  <span class="font-mono tabular-nums"><%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %></span>
                 </p>
               </div>
               <%= render DS::Button.new(

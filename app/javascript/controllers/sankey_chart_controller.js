@@ -233,7 +233,7 @@ export default class extends Controller {
         textEl.append("tspan")
           .attr("x", textEl.attr("x"))
           .attr("dy", "1.2em")
-          .attr("class", "font-mono text-secondary")
+          .attr("class", "font-mono tabular-nums text-secondary")
           .style("font-size", "0.65rem")
           .text(controller.#formatCurrency(d.value));
       });
@@ -357,9 +357,10 @@ export default class extends Controller {
   #showTooltip(event, value, percentage, title = null) {
     if (!this.tooltip) this.#createTooltip();
 
+    const formattedValue = `<span class="font-mono tabular-nums">${this.#formatCurrency(value)}</span>`;
     const content = title
-      ? `${title}<br/>${this.#formatCurrency(value)} (${percentage || 0}%)`
-      : `${this.#formatCurrency(value)} (${percentage || 0}%)`;
+      ? `${title}<br/>${formattedValue} (${percentage || 0}%)`
+      : `${formattedValue} (${percentage || 0}%)`;
 
     const isInDialog = !!this.element.closest("dialog");
     const x = isInDialog ? event.clientX : event.pageX;

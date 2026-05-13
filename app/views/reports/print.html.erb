@@ -16,7 +16,7 @@
     <div class="tufte-metric-row">
       <div class="tufte-metric-card tufte-metric-card-sm">
         <span class="tufte-metric-card-label"><%= t("reports.print.summary.income") %></span>
-        <span class="tufte-metric-card-value tufte-income"><%= @summary_metrics[:current_income].format %></span>
+        <span class="tufte-metric-card-value tufte-income"><%= format_money(@summary_metrics[:current_income]) %></span>
         <% if @summary_metrics[:income_change] && @summary_metrics[:income_change] != 0 %>
           <span class="tufte-metric-card-change <%= @summary_metrics[:income_change] >= 0 ? "tufte-up" : "tufte-down" %>">
             <%= t("reports.print.summary.vs_prior", percent: (@summary_metrics[:income_change] >= 0 ? "+#{@summary_metrics[:income_change]}" : @summary_metrics[:income_change].to_s)) %>
@@ -31,7 +31,7 @@
 
       <div class="tufte-metric-card tufte-metric-card-sm">
         <span class="tufte-metric-card-label"><%= t("reports.print.summary.expenses") %></span>
-        <span class="tufte-metric-card-value tufte-expense"><%= @summary_metrics[:current_expenses].format %></span>
+        <span class="tufte-metric-card-value tufte-expense"><%= format_money(@summary_metrics[:current_expenses]) %></span>
         <% if @summary_metrics[:expense_change] && @summary_metrics[:expense_change] != 0 %>
           <span class="tufte-metric-card-change <%= @summary_metrics[:expense_change] >= 0 ? "tufte-down" : "tufte-up" %>">
             <%= t("reports.print.summary.vs_prior", percent: (@summary_metrics[:expense_change] >= 0 ? "+#{@summary_metrics[:expense_change]}" : @summary_metrics[:expense_change].to_s)) %>
@@ -46,7 +46,7 @@
 
       <div class="tufte-metric-card tufte-metric-card-sm">
         <span class="tufte-metric-card-label"><%= t("reports.print.summary.net_savings") %></span>
-        <span class="tufte-metric-card-value <%= @summary_metrics[:net_savings] >= 0 ? "tufte-income" : "tufte-expense" %>"><%= @summary_metrics[:net_savings].format %></span>
+        <span class="tufte-metric-card-value <%= @summary_metrics[:net_savings] >= 0 ? "tufte-income" : "tufte-expense" %>"><%= format_money(@summary_metrics[:net_savings]) %></span>
         <%
           # Calculate savings rate
           savings_rate = @summary_metrics[:current_income].amount > 0 ? ((@summary_metrics[:net_savings].amount / @summary_metrics[:current_income].amount) * 100).round(0) : 0
@@ -79,11 +79,11 @@
         <div class="tufte-metric-card">
           <span class="tufte-metric-card-label"><%= t("reports.print.net_worth.current_balance") %></span>
           <span class="tufte-metric-card-value <%= @net_worth_metrics[:current_net_worth] >= 0 ? "tufte-income" : "tufte-expense" %>">
-            <%= @net_worth_metrics[:current_net_worth].format %>
+            <%= format_money(@net_worth_metrics[:current_net_worth]) %>
           </span>
           <% if @net_worth_metrics[:trend] %>
             <span class="tufte-metric-card-change" style="color: <%= @net_worth_metrics[:trend].color %>">
-              <%= @net_worth_metrics[:trend].value >= 0 ? "+" : "" %><%= @net_worth_metrics[:trend].value.format %> (<%= @net_worth_metrics[:trend].percent_formatted %>) <%= t("reports.print.net_worth.this_period") %>
+              <%= @net_worth_metrics[:trend].value >= 0 ? "+" : "" %><%= format_money(@net_worth_metrics[:trend].value) %> (<%= @net_worth_metrics[:trend].percent_formatted %>) <%= t("reports.print.net_worth.this_period") %>
             </span>
           <% end %>
           <% if has_sparkline_data?(@trends_data) %>
@@ -96,14 +96,14 @@
 
       <div class="tufte-two-col">
         <div>
-          <h3 class="tufte-subsection"><%= t("reports.print.net_worth.assets") %> <span class="tufte-income"><%= @net_worth_metrics[:total_assets].format %></span></h3>
+          <h3 class="tufte-subsection"><%= t("reports.print.net_worth.assets") %> <span class="tufte-income"><%= format_money(@net_worth_metrics[:total_assets]) %></span></h3>
           <% if @net_worth_metrics[:asset_groups].any? %>
             <table class="tufte-table tufte-compact">
               <tbody>
                 <% @net_worth_metrics[:asset_groups].each do |group| %>
                   <tr>
                     <td><%= group[:name] %></td>
-                    <td class="tufte-right"><%= group[:total].format %></td>
+                    <td class="tufte-right"><%= format_money(group[:total]) %></td>
                   </tr>
                 <% end %>
               </tbody>
@@ -111,14 +111,14 @@
           <% end %>
         </div>
         <div>
-          <h3 class="tufte-subsection"><%= t("reports.print.net_worth.liabilities") %> <span class="tufte-expense"><%= @net_worth_metrics[:total_liabilities].format %></span></h3>
+          <h3 class="tufte-subsection"><%= t("reports.print.net_worth.liabilities") %> <span class="tufte-expense"><%= format_money(@net_worth_metrics[:total_liabilities]) %></span></h3>
           <% if @net_worth_metrics[:liability_groups].any? %>
             <table class="tufte-table tufte-compact">
               <tbody>
                 <% @net_worth_metrics[:liability_groups].each do |group| %>
                   <tr>
                     <td><%= group[:name] %></td>
-                    <td class="tufte-right"><%= group[:total].format %></td>
+                    <td class="tufte-right"><%= format_money(group[:total]) %></td>
                   </tr>
                 <% end %>
               </tbody>
@@ -149,9 +149,9 @@
           <% @trends_data.each do |trend| %>
             <tr class="<%= trend[:is_current_month] ? "tufte-highlight" : "" %>">
               <td><%= trend[:month] %><%= trend[:is_current_month] ? " *" : "" %></td>
-              <td class="tufte-right tufte-income"><%= Money.new(trend[:income], Current.family.currency).format %></td>
-              <td class="tufte-right tufte-expense"><%= Money.new(trend[:expenses], Current.family.currency).format %></td>
-              <td class="tufte-right <%= trend[:net] >= 0 ? "tufte-income" : "tufte-expense" %>"><%= Money.new(trend[:net], Current.family.currency).format %></td>
+              <td class="tufte-right tufte-income"><%= format_money(Money.new(trend[:income], Current.family.currency)) %></td>
+              <td class="tufte-right tufte-expense"><%= format_money(Money.new(trend[:expenses], Current.family.currency)) %></td>
+              <td class="tufte-right <%= trend[:net] >= 0 ? "tufte-income" : "tufte-expense" %>"><%= format_money(Money.new(trend[:net], Current.family.currency)) %></td>
               <td class="tufte-right">
                 <% month_savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(0) : 0 %>
                 <%= month_savings_rate %>%
@@ -172,9 +172,9 @@
           %>
           <tr>
             <td><%= t("reports.print.trends.average") %></td>
-            <td class="tufte-right tufte-income"><%= Money.new(avg_income, Current.family.currency).format %></td>
-            <td class="tufte-right tufte-expense"><%= Money.new(avg_expenses, Current.family.currency).format %></td>
-            <td class="tufte-right <%= avg_net >= 0 ? "tufte-income" : "tufte-expense" %>"><%= Money.new(avg_net, Current.family.currency).format %></td>
+            <td class="tufte-right tufte-income"><%= format_money(Money.new(avg_income, Current.family.currency)) %></td>
+            <td class="tufte-right tufte-expense"><%= format_money(Money.new(avg_expenses, Current.family.currency)) %></td>
+            <td class="tufte-right <%= avg_net >= 0 ? "tufte-income" : "tufte-expense" %>"><%= format_money(Money.new(avg_net, Current.family.currency)) %></td>
             <td class="tufte-right"><%= overall_savings_rate %>%</td>
           </tr>
         </tfoot>
@@ -268,7 +268,7 @@
       <div class="tufte-two-col">
         <% if income_groups.any? %>
           <div>
-            <h3 class="tufte-subsection"><%= t("reports.print.spending.income") %> <span class="tufte-income"><%= Money.new(income_total, Current.family.currency).format %></span></h3>
+            <h3 class="tufte-subsection"><%= t("reports.print.spending.income") %> <span class="tufte-income"><%= format_money(Money.new(income_total, Current.family.currency)) %></span></h3>
             <table class="tufte-table tufte-compact">
               <thead>
                 <tr>
@@ -285,7 +285,7 @@
                       <span class="tufte-dot" style="background: <%= group[:category_color] %>"></span>
                       <%= group[:category_name] %>
                     </td>
-                    <td class="tufte-right"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                    <td class="tufte-right"><%= format_money(Money.new(group[:total], Current.family.currency)) %></td>
                     <td class="tufte-right tufte-muted"><%= percentage %>%</td>
                   </tr>
                 <% end %>
@@ -303,7 +303,7 @@
 
         <% if expense_groups.any? %>
           <div>
-            <h3 class="tufte-subsection"><%= t("reports.print.spending.expenses") %> <span class="tufte-expense"><%= Money.new(expense_total, Current.family.currency).format %></span></h3>
+            <h3 class="tufte-subsection"><%= t("reports.print.spending.expenses") %> <span class="tufte-expense"><%= format_money(Money.new(expense_total, Current.family.currency)) %></span></h3>
             <table class="tufte-table tufte-compact">
               <thead>
                 <tr>
@@ -320,7 +320,7 @@
                       <span class="tufte-dot" style="background: <%= group[:category_color] %>"></span>
                       <%= group[:category_name] %>
                     </td>
-                    <td class="tufte-right"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                    <td class="tufte-right"><%= format_money(Money.new(group[:total], Current.family.currency)) %></td>
                     <td class="tufte-right tufte-muted"><%= percentage %>%</td>
                   </tr>
                 <% end %>

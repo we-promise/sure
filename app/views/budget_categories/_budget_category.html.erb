@@ -76,8 +76,7 @@
           <div class="w-full sm:w-auto text-xs text-subdued">
             <%= t("reports.budget_performance.suggested_daily",
               amount: daily_info[:amount].format,
-              days: daily_info[:days_remaining])
-            %>
+              days: daily_info[:days_remaining]) %>
           </div>
         <% end %>
         <% end %>
@@ -116,7 +115,7 @@
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-primary truncate"><%= budget_category.category.name %></p>
           <p class="text-sm text-secondary font-medium privacy-sensitive">
-            <%= budget_category.median_monthly_expense_money.format %> avg
+            <%= format_money(budget_category.median_monthly_expense_money) %> avg
           </p>
         </div>
 
