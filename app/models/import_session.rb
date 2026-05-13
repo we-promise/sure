@@ -143,22 +143,29 @@ class ImportSession < ApplicationRecord
   private :create_chunk!
 
   def publish_later
-    should_enqueue = false
+    enqueue_error = nil
 
     with_lock do
       return if complete? || importing?
 
       raise Import::MaxRowCountExceededError if row_count_exceeded?
       raise ConflictError, "import session has no chunks" unless imports.exists?
-      if expected_chunks.present? && imports.count < expected_chunks
-        raise ConflictError, "import session is missing expected chunks"
-      end
+      validate_expected_chunk_sequences!
 
-      update!(status: :importing, error_details: {})
-      should_enqueue = true
+      previous_status = status
+      begin
+        self.class.transaction(requires_new: true) do
+          update!(status: :importing, error_details: {})
+          ImportSessionJob.perform_later(self)
+        end
+      rescue => error
+        reload
+        update!(status: previous_status, error_details: error_details_for(error))
+        enqueue_error = error
+      end
     end
 
-    ImportSessionJob.perform_later(self) if should_enqueue
+    raise enqueue_error if enqueue_error
   end
 
   def publish
@@ -281,6 +288,22 @@ class ImportSession < ApplicationRecord
 
     def row_count_exceeded?
       imports.sum(:rows_count) > SureImport.max_row_count
+    end
+
+    def validate_expected_chunk_sequences!
+      return if expected_chunks.blank?
+
+      expected_sequences = (1..expected_chunks).to_a
+      actual_sequences = imports.pluck(:sequence).sort
+      return if actual_sequences == expected_sequences
+
+      missing_sequences = expected_sequences - actual_sequences
+      unexpected_sequences = actual_sequences - expected_sequences
+      details = []
+      details << "missing sequences: #{missing_sequences.join(', ')}" if missing_sequences.any?
+      details << "unexpected sequences: #{unexpected_sequences.join(', ')}" if unexpected_sequences.any?
+
+      raise ConflictError, "import session chunks do not match expected sequences (#{details.join('; ')})"
     end
 
     def error_details_for(error)

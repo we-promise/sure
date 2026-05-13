@@ -60,6 +60,53 @@ class ImportSessionTest < ActiveSupport::TestCase
     end
   end
 
+  test "publish later requires the exact expected chunk sequences" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 3,
+      content: build_ndjson(transaction_records),
+      filename: "transactions.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    error = assert_raises(ImportSession::ConflictError) do
+      session.publish_later
+    end
+
+    expected_message = "import session chunks do not match expected sequences " \
+                       "(missing sequences: 2; unexpected sequences: 3)"
+    assert_equal expected_message, error.message
+    assert session.reload.pending?
+  end
+
+  test "publish later restores status and records enqueue failures" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    ImportSessionJob.stub(:perform_later, ->(_import_session) { raise StandardError, "queue offline" }) do
+      error = assert_raises(StandardError) do
+        session.publish_later
+      end
+
+      assert_equal "queue offline", error.message
+    end
+
+    assert session.reload.pending?
+    assert_equal "import_failed", session.error_details["code"]
+    assert_equal "queue offline", session.error_details["message"]
+  end
+
   test "fails loudly when a later chunk references a missing source id" do
     session = @family.import_sessions.create!(expected_chunks: 1)
     session.attach_chunk!(
