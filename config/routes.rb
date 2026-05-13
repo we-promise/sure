@@ -434,6 +434,14 @@ Rails.application.routes.draw do
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
   end
 
+  resources :account_statements, only: %i[index show create update destroy] do
+    member do
+      patch :link
+      patch :unlink
+      patch :reject
+    end
+  end
+
   # Convenience routes for polymorphic paths
   # Example: account_path(Account.new(accountable: Depository.new)) => /depositories/123
   direct :edit_account do |model, options|
