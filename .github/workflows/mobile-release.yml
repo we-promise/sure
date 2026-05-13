@@ -216,7 +216,7 @@ jobs:
             RELEASE_ARGS+=("--prerelease")
           fi
 
-          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+          if release_view_output="$(gh release view "$TAG" --repo "$REPO" 2>&1)"; then
             is_immutable="$(gh release view "$TAG" --repo "$REPO" --json isImmutable --jq '.isImmutable')"
             existing_assets="$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name')"
             echo "Release ${TAG} already exists. Updating metadata."
@@ -242,6 +242,12 @@ jobs:
               exit 0
             fi
           else
+            if ! echo "$release_view_output" | grep -Eiq "(not found|404)"; then
+              echo "::error::Failed to inspect existing release ${TAG}."
+              echo "$release_view_output"
+              exit 1
+            fi
+
             echo "Creating release ${TAG} with attached assets."
             gh release create "$TAG" "${RELEASE_ARGS[@]}" "${RELEASE_ASSETS[@]}"
             exit 0
