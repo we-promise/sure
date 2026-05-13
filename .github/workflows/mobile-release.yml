@@ -194,17 +194,29 @@ jobs:
           # Strip heredoc indentation
           sed -i 's/^          //' /tmp/release-notes.md
 
-          PRERELEASE_FLAG=""
+          RELEASE_ARGS=(
+            "--repo"
+            "${{ github.repository }}"
+            "--title"
+            "$TAG"
+            "--notes-file"
+            /tmp/release-notes.md
+          )
           if [[ "$TAG" == *"alpha"* ]] || [[ "$TAG" == *"beta"* ]] || [[ "$TAG" == *"rc"* ]]; then
-            PRERELEASE_FLAG="--prerelease"
+            RELEASE_ARGS+=("--prerelease")
           fi
 
-          gh release create "$TAG" \
-            --repo "${{ github.repository }}" \
-            --title "$TAG" \
-            --notes-file /tmp/release-notes.md \
-            $PRERELEASE_FLAG \
-            ${{ runner.temp }}/release-assets/*
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists. Updating it."
+            gh release edit "$TAG" "${RELEASE_ARGS[@]}"
+          else
+            echo "Creating release ${TAG}."
+            gh release create "$TAG" "${RELEASE_ARGS[@]}"
+          fi
+
+          for asset in "${{ runner.temp }}"/release-assets/*; do
+            gh release upload "$TAG" "$asset" --repo "${{ github.repository }}" --clobber
+          done
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
