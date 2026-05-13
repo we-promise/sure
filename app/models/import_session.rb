@@ -1,0 +1,323 @@
+require "digest"
+
+class ImportSession < ApplicationRecord
+  ConflictError = Class.new(StandardError)
+
+  IMPORT_TYPES = %w[SureImport].freeze
+  STATUSES = %w[pending importing complete failed].freeze
+
+  belongs_to :family
+  has_many :imports, -> { order(:sequence, :created_at) }, dependent: :destroy
+  has_many :source_mappings,
+           class_name: "ImportSourceMapping",
+           dependent: :destroy
+
+  enum :status, {
+    pending: "pending",
+    importing: "importing",
+    complete: "complete",
+    failed: "failed"
+  }, validate: true, default: "pending"
+
+  validates :import_type, inclusion: { in: IMPORT_TYPES }
+  validates :client_session_id, uniqueness: { scope: :family_id }, allow_blank: true
+  validates :client_session_id, length: { maximum: 255 }, allow_blank: true
+  validates :expected_chunks,
+            numericality: { only_integer: true, greater_than: 0 },
+            allow_nil: true
+
+  def self.create_or_find_for!(family:, import_type:, client_session_id:, expected_chunks:)
+    import_type = import_type.presence || "SureImport"
+    expected_chunks = expected_chunks.present? ? expected_chunks.to_i : nil
+    unless IMPORT_TYPES.include?(import_type)
+      session = new(import_type: import_type)
+      session.errors.add(:import_type, "must be SureImport")
+      raise ActiveRecord::RecordInvalid.new(session)
+    end
+
+    if client_session_id.present?
+      session = family.import_sessions.find_or_initialize_by(client_session_id: client_session_id)
+      if session.persisted? &&
+         expected_chunks.present? &&
+         session.expected_chunks.present? &&
+         session.expected_chunks != expected_chunks
+        raise ConflictError, "client_session_id already exists with a different expected_chunks value"
+      end
+    else
+      session = family.import_sessions.build
+    end
+
+    session.import_type = import_type
+    session.expected_chunks ||= expected_chunks
+    session.save!
+    session
+  rescue ActiveRecord::RecordNotUnique
+    raise unless client_session_id.present?
+
+    existing = family.import_sessions.find_by(client_session_id: client_session_id)
+    raise unless existing
+
+    if expected_chunks.present? &&
+       existing.expected_chunks.present? &&
+       existing.expected_chunks != expected_chunks
+      raise ConflictError, "client_session_id already exists with a different expected_chunks value"
+    end
+
+    existing
+  end
+
+  def attach_chunk!(sequence:, content:, filename:, content_type:, client_chunk_id: nil)
+    sequence = sequence.to_i
+    raise ConflictError, "sequence must be a positive integer" unless sequence.positive?
+
+    checksum = Digest::SHA256.hexdigest(content)
+    normalized_client_chunk_id = client_chunk_id.presence
+    chunk_needs_finalization = false
+
+    chunk = with_lock do
+      raise ConflictError, "cannot add chunks after publishing starts" unless pending? || failed?
+
+      existing = existing_chunk_for!(
+        sequence: sequence,
+        client_chunk_id: normalized_client_chunk_id,
+        checksum: checksum
+      )
+
+      if existing
+        chunk_needs_finalization = prepare_existing_chunk_for_retry!(
+          existing,
+          checksum: checksum,
+          content: content,
+          filename: filename,
+          content_type: content_type
+        )
+        existing
+      else
+        chunk_needs_finalization = true
+        chunk = create_chunk!(
+          sequence: sequence,
+          client_chunk_id: normalized_client_chunk_id,
+          checksum: checksum,
+          content: content,
+          filename: filename,
+          content_type: content_type
+        )
+      end
+    end
+
+    finalize_chunk_for_retry!(chunk, checksum) if chunk_needs_finalization
+    chunk
+  rescue ActiveRecord::RecordNotUnique
+    imports.reset
+    existing = existing_chunk_for!(
+      sequence: sequence,
+      client_chunk_id: normalized_client_chunk_id,
+      checksum: checksum
+    )
+    return prepare_and_finalize_existing_chunk!(
+      existing,
+      checksum: checksum,
+      content: content,
+      filename: filename,
+      content_type: content_type
+    ) if existing
+
+    raise ConflictError, "chunk already exists with different content"
+  end
+
+  def create_chunk!(sequence:, client_chunk_id:, checksum:, content:, filename:, content_type:)
+    imports.create!(
+      family: family,
+      type: "SureImport",
+      sequence: sequence,
+      client_chunk_id: client_chunk_id,
+      checksum: checksum
+    ).tap do |import|
+      import.ndjson_file.attach(
+        io: StringIO.new(content),
+        filename: filename,
+        content_type: content_type
+      )
+    end
+  end
+  private :create_chunk!
+
+  def publish_later
+    should_enqueue = false
+
+    with_lock do
+      return if complete? || importing?
+
+      raise Import::MaxRowCountExceededError if row_count_exceeded?
+      raise ConflictError, "import session has no chunks" unless imports.exists?
+      if expected_chunks.present? && imports.count < expected_chunks
+        raise ConflictError, "import session is missing expected chunks"
+      end
+
+      update!(status: :importing, error_details: {})
+      should_enqueue = true
+    end
+
+    ImportSessionJob.perform_later(self) if should_enqueue
+  end
+
+  def publish
+    return if complete?
+
+    Rails.logger.info("ImportSession publish started import_session_id=#{id}")
+    update!(status: :importing, error_details: {})
+
+    imports.ordered_by_sequence.each do |import|
+      process_chunk!(import)
+    end
+
+    family.sync_later
+    update!(status: :complete, summary: aggregate_chunk_summaries, error_details: {})
+    Rails.logger.info("ImportSession publish completed import_session_id=#{id}")
+  rescue => error
+    update!(
+      status: :failed,
+      error_details: error_details_for(error),
+      summary: aggregate_chunk_summaries
+    )
+    Rails.logger.error("ImportSession publish failed import_session_id=#{id} exception=#{error.class}")
+  end
+
+  def aggregate_chunk_summaries
+    imports.each_with_object({}) do |import, totals|
+      merge_summary!(totals, import.summary || {})
+    end
+  end
+
+  private
+    def existing_chunk_for!(sequence:, client_chunk_id:, checksum:)
+      sequence_match = imports.find_by(sequence: sequence)
+      client_chunk_match = imports.find_by(client_chunk_id: client_chunk_id) if client_chunk_id.present?
+
+      if sequence_match && client_chunk_match && sequence_match.id != client_chunk_match.id
+        raise ConflictError, "sequence and client_chunk_id refer to different chunks"
+      end
+
+      existing = sequence_match || client_chunk_match
+      return unless existing
+
+      if existing.sequence != sequence
+        raise ConflictError, "client_chunk_id already exists with a different sequence"
+      end
+
+      if client_chunk_id.present? && existing.client_chunk_id.present? && existing.client_chunk_id != client_chunk_id
+        raise ConflictError, "sequence already exists with a different client_chunk_id"
+      end
+
+      raise ConflictError, "chunk already exists with different content" unless existing.checksum == checksum
+
+      existing
+    end
+
+    def prepare_and_finalize_existing_chunk!(chunk, checksum:, content:, filename:, content_type:)
+      needs_finalization = with_lock do
+        prepare_existing_chunk_for_retry!(
+          chunk.reload,
+          checksum: checksum,
+          content: content,
+          filename: filename,
+          content_type: content_type
+        )
+      end
+
+      finalize_chunk_for_retry!(chunk, checksum) if needs_finalization
+      chunk
+    end
+
+    def prepare_existing_chunk_for_retry!(chunk, checksum:, content:, filename:, content_type:)
+      return false if chunk_ready_for_retry?(chunk, checksum)
+      return true if chunk.ndjson_file.attached? && chunk_content_checksum(chunk) == checksum
+
+      chunk.ndjson_file.attach(
+        io: StringIO.new(content),
+        filename: filename,
+        content_type: content_type
+      )
+      true
+    end
+
+    def finalize_chunk_for_retry!(chunk, checksum)
+      chunk.sync_ndjson_rows_count!
+      chunk.reload
+      return chunk if chunk_ready_for_retry?(chunk, checksum)
+
+      raise ConflictError, "chunk already exists but is incomplete"
+    rescue ActiveStorage::FileNotFoundError
+      raise ConflictError, "chunk already exists but is incomplete"
+    end
+
+    def chunk_ready_for_retry?(chunk, checksum)
+      chunk.ndjson_file.attached? &&
+        chunk.rows_count.to_i.positive? &&
+        chunk_content_checksum(chunk) == checksum
+    end
+
+    def chunk_content_checksum(chunk)
+      Digest::SHA256.hexdigest(chunk.ndjson_file.download)
+    rescue ActiveStorage::FileNotFoundError
+      nil
+    end
+
+    def process_chunk!(import)
+      return if import.complete?
+
+      import.update!(status: :importing, error: nil, error_details: {})
+      result = import.import!(import_session: self)
+      import.update!(status: :complete, summary: result.fetch(:summary, {}), error_details: {})
+    rescue => error
+      import.update!(
+        status: :failed,
+        error: error.message,
+        error_details: error_details_for(error),
+        summary: failed_summary_for(error)
+      )
+      raise
+    end
+
+    def row_count_exceeded?
+      imports.sum(:rows_count) > SureImport.max_row_count
+    end
+
+    def error_details_for(error)
+      details = {
+        "code" => error.respond_to?(:code) ? error.code : "import_failed",
+        "message" => error.message
+      }
+
+      if error.respond_to?(:details)
+        details.merge!(error.details.stringify_keys)
+      end
+
+      details
+    end
+
+    def merge_summary!(totals, summary)
+      summary.each do |entity_type, counts|
+        next unless counts.respond_to?(:each)
+
+        totals[entity_type] ||= {}
+        counts.each do |status, count|
+          totals[entity_type][status] = totals[entity_type].fetch(status, 0) + count.to_i
+        end
+      end
+    end
+
+    def failed_summary_for(error)
+      record_type = error_details_for(error)["record_type"]
+      return {} if record_type.blank?
+
+      {
+        record_type.to_s.underscore.pluralize => {
+          "created" => 0,
+          "updated" => 0,
+          "skipped" => 0,
+          "failed" => 1
+        }
+      }
+    end
+end
