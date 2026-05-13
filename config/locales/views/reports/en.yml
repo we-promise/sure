@@ -18,6 +18,21 @@ en:
         from: From
         to: To
       showing_period: "Showing data from %{start} to %{end}"
+      previous_period: "Previous period"
+      next_period: "Next period"
+      today: "Today"
+      period_label:
+        quarterly: "Q%{quarter} %{year}"
+        ytd: "YTD %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "Q%{quarter} %{year}"
+        ytd: "YTD %{year}"
+      previous_year: "Previous year"
+      next_year: "Next year"
+      previous_decade: "Previous decade"
+      next_decade: "Next decade"
     invalid_date_range: "End date cannot be before start date. The dates have been swapped."
     summary:
       total_income: Total Income
