@@ -47,11 +47,114 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "all.ndjson" ]
+    expected_files = [ "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "attachments.json", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
       assert_equal expected_files.sort, actual_files.sort
+    end
+  end
+
+  test "exports attachment manifest metadata without binary payloads" do
+    entry = @account.entries.create!(
+      name: "Receipt Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+    transaction = entry.transaction
+    transaction.attachments.attach(
+      io: StringIO.new("receipt bytes"),
+      filename: "receipt.pdf",
+      content_type: "application/pdf"
+    )
+
+    family_document = @family.family_documents.create!(
+      filename: "statement.pdf",
+      status: "ready"
+    )
+    family_document.file.attach(
+      io: StringIO.new("statement bytes"),
+      filename: "statement.pdf",
+      content_type: "application/pdf"
+    )
+
+    other_account = @other_family.accounts.create!(
+      name: "Other Attachment Account",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+    other_entry = other_account.entries.create!(
+      name: "Other Receipt",
+      amount: 1,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+    other_entry.transaction.attachments.attach(
+      io: StringIO.new("other bytes"),
+      filename: "other-receipt.pdf",
+      content_type: "application/pdf"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      manifest = JSON.parse(zip.read("attachments.json"))
+      attachments = manifest["attachments"]
+      filenames = attachments.map { |attachment| attachment["filename"] }
+
+      assert_equal 1, manifest["version"]
+      assert_equal false, manifest["binary_included"]
+      assert_includes filenames, "receipt.pdf"
+      assert_includes filenames, "statement.pdf"
+      refute_includes filenames, "other-receipt.pdf"
+
+      transaction_item = attachments.find { |attachment| attachment["record_type"] == "Transaction" }
+      assert_equal transaction.id, transaction_item["record_id"]
+      assert_equal entry.id, transaction_item["entry_id"]
+      assert_equal @account.id, transaction_item["account_id"]
+      assert_equal "attachments", transaction_item["name"]
+      assert_equal "application/pdf", transaction_item["content_type"]
+      assert_equal false, transaction_item["binary_included"]
+
+      document_item = attachments.find { |attachment| attachment["record_type"] == "FamilyDocument" }
+      assert_equal family_document.id, document_item["record_id"]
+      assert_equal "ready", document_item["status"]
+      assert_equal "file", document_item["name"]
+      assert_equal false, document_item["binary_included"]
+    end
+  end
+
+  test "exports split parent receipts in attachment manifest" do
+    split_parent = create_transaction_entry(
+      @account,
+      amount: 60,
+      date: Date.parse("2024-01-25"),
+      name: "Split parent receipt"
+    )
+    split_parent.entryable.attachments.attach(
+      io: StringIO.new("split parent receipt bytes"),
+      filename: "split-parent-receipt.pdf",
+      content_type: "application/pdf"
+    )
+    split_parent.split!([
+      { name: "Split child", amount: 60, category_id: @category.id }
+    ])
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      manifest = JSON.parse(zip.read("attachments.json"))
+      attachment = manifest["attachments"].find { |item| item["filename"] == "split-parent-receipt.pdf" }
+
+      assert attachment
+      assert_equal "Transaction", attachment["record_type"]
+      assert_equal split_parent.entryable.id, attachment["record_id"]
+      assert_equal split_parent.id, attachment["entry_id"]
+      assert_equal @account.id, attachment["account_id"]
     end
   end
 
@@ -215,7 +318,54 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "set_transaction_category", actions[0]["action_type"]
       # Should export category name instead of UUID
       assert_equal "Test Category", actions[0]["value"]
+      assert_equal({ "type" => "Category", "id" => @category.id, "name" => "Test Category" }, actions[0]["value_ref"])
     end
+  end
+
+  test "exports rule condition value refs for mapped operands" do
+    category_rule = @family.rules.build(
+      name: "Category Condition Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    category_rule.conditions.build(
+      condition_type: "transaction_category",
+      operator: "=",
+      value: @category.id
+    )
+    category_rule.actions.build(action_type: "auto_categorize")
+    category_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").filter_map do |line|
+        parsed = JSON.parse(line)
+        parsed if parsed["type"] == "Rule" && parsed["data"]["name"] == "Category Condition Rule"
+      end.first
+
+      condition = rule_data["data"]["conditions"].first
+      assert_equal "Test Category", condition["value"]
+      assert_equal({ "type" => "Category", "id" => @category.id, "name" => "Test Category" }, condition["value_ref"])
+    end
+  end
+
+  test "rule operand lookup skips name fallback for stale UUID values" do
+    stale_uuid = SecureRandom.uuid
+    relation = mock
+    relation.expects(:find_by).with(id: stale_uuid).once.returns(nil)
+    relation.expects(:find_by).with(name: stale_uuid).never
+
+    operand = @exporter.send(
+      :rule_operand,
+      stale_uuid,
+      type: "Category",
+      relation: relation,
+      fallback_to_name: true
+    )
+
+    assert_equal stale_uuid, operand[:value]
+    assert_nil operand[:value_ref]
   end
 
   test "exports rule actions and maps tag UUIDs to names" do
@@ -256,6 +406,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "set_transaction_tags", actions[0]["action_type"]
       # Should export tag name instead of UUID
       assert_equal "Test Tag", actions[0]["value"]
+      assert_equal({ "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" }, actions[0]["value_ref"])
     end
   end
 

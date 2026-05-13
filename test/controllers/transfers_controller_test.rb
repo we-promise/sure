@@ -198,4 +198,48 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       transfer.reload
     end
   end
+
+  test "mark_as_recurring creates a recurring transfer" do
+    transfer = transfers(:one)
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+
+    assert_difference -> { RecurringTransaction.where(family: family).count }, +1 do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+
+    rt = RecurringTransaction.where(family: family).last
+    assert rt.transfer?
+    assert_equal transfer.outflow_transaction.entry.account, rt.account
+    assert_equal transfer.inflow_transaction.entry.account, rt.destination_account
+    assert rt.manual?
+    assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+    assert_redirected_to transactions_path
+  end
+
+  test "mark_as_recurring is idempotent: second call flashes already-exists" do
+    transfer = transfers(:one)
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+
+    post mark_as_recurring_transfer_url(transfer)
+    assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
+  test "mark_as_recurring is rejected when recurring_transactions_disabled" do
+    transfer = transfers(:one)
+    family = users(:family_admin).family
+    family.update!(recurring_transactions_disabled: true)
+    family.recurring_transactions.destroy_all
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
+  end
 end

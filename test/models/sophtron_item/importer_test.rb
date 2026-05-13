@@ -104,6 +104,40 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1, sophtron_account.reload.raw_transactions_payload.count
   end
 
+  test "automatic import skips linked accounts that require manual sync" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      manual_sync: true
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          account_id: "acct-1",
+          account_name: "Checking",
+          balance: "100.00",
+          balance_currency: "USD",
+          currency: "USD"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+    provider.expects(:refresh_account).never
+    provider.expects(:get_account_transactions).never
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert result[:success]
+    assert_equal 0, result[:transactions_imported]
+    assert_nil sophtron_account.reload.raw_transactions_payload
+  end
+
   test "later sync refreshes account after an empty initial transaction fetch" do
     account = accounts(:depository)
     sophtron_account = @item.sophtron_accounts.create!(
