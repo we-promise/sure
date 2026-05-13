@@ -83,6 +83,25 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     assert_text "/api/v1/accounts"
   end
 
+  test "should show temporary copied feedback when copying api key" do
+    ApiKey.create!(
+      user: @user,
+      name: "Clipboard API Key",
+      display_key: "clipboard_key_123",
+      scopes: [ "read" ]
+    )
+
+    visit settings_api_key_path
+    page.execute_script("Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.resolve() }, writable: true, configurable: true })")
+
+    click_button "Copy API Key"
+
+    using_wait_time 5 do
+      assert_selector 'span[data-clipboard-target="textSuccess"]', text: "Copied!", visible: true
+      assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true
+    end
+  end
+
   test "should allow regenerating API key" do
     api_key = ApiKey.create!(
       user: @user,

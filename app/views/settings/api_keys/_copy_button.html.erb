@@ -1,0 +1,8 @@
+<button type="button"
+        data-action="clipboard#copy"
+        class="font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary bg-transparent hover:bg-surface-inset-hover">
+  <span data-clipboard-target="iconDefault"><%= icon("copy", size: "md") %></span>
+  <span class="hidden" data-clipboard-target="iconSuccess"><%= icon("check", size: "md") %></span>
+  <span data-clipboard-target="textDefault"><%= t("settings.api_keys.shared.copy_key") %></span>
+  <span class="hidden" data-clipboard-target="textSuccess"><%= t("settings.api_keys.shared.copied") %></span>
+</button>
