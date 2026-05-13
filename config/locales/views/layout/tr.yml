@@ -3,6 +3,7 @@ tr:
   layouts:
     application:
       privacy_mode: Gizlilik modunu değiştir
+      skip_to_main: Ana içeriğe atla
       nav:
         assistant: Asistan
         budgets: Bütçeler
