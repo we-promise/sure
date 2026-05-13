@@ -7,6 +7,7 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     @family = families(:empty)
     @account = @family.accounts.create!(name: "Test", balance: 20000, cash_balance: 20000, currency: "USD", accountable: Investment.new)
     @aapl = securities(:aapl)
+    @msft = securities(:msft)
   end
 
   test "syncs holdings" do
@@ -122,5 +123,84 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_nil yesterday_holding.account_provider_id
     assert_equal BigDecimal("10"), yesterday_holding.qty
     assert_equal yesterday_holding.qty * yesterday_holding.price, yesterday_holding.amount
+  end
+
+  test "cleans up calculated current-day holdings when a provider snapshot exists in another currency" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "EUR",
+      date: Date.current,
+      account_provider: account_provider,
+      cost_basis: 150
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holdings = @account.holdings.where(security: @aapl, date: Date.current).order(:currency)
+
+    assert_equal [ "EUR" ], today_holdings.pluck(:currency)
+    assert_equal [ account_provider.id ], today_holdings.pluck(:account_provider_id)
+  end
+
+  test "preserves same-day non-provider holdings for securities absent from the provider snapshot" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "EUR",
+      date: Date.current,
+      account_provider: account_provider,
+      cost_basis: 150
+    )
+
+    manual_holding = Holding.create!(
+      account: @account,
+      security: @msft,
+      qty: 3,
+      price: 250,
+      amount: 750,
+      currency: "USD",
+      date: Date.current,
+      cost_basis: 225,
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    assert_equal manual_holding.id, manual_holding.reload.id
+    assert_equal @msft.id, manual_holding.security_id
+    assert_nil manual_holding.account_provider_id
+
+    today_holdings = @account.holdings.where(date: Date.current)
+
+    assert_equal(
+      [ [ @aapl.id, "EUR" ], [ @msft.id, "USD" ] ].sort,
+      today_holdings.pluck(:security_id, :currency).sort
+    )
   end
 end

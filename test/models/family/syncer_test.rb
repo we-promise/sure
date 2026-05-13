@@ -10,6 +10,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     manual_accounts_count = @family.accounts.manual.count
     plaid_items_count = @family.plaid_items.syncable.count
+    brex_items_count = @family.brex_items.syncable.count
     binance_items_count = @family.binance_items.syncable.count
 
     syncer = Family::Syncer.new(@family)
@@ -23,6 +24,11 @@ class Family::SyncerTest < ActiveSupport::TestCase
                .expects(:sync_later)
                .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
                .times(plaid_items_count)
+
+    BrexItem.any_instance
+            .expects(:sync_later)
+            .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
+            .times(brex_items_count)
 
     BinanceItem.any_instance
                .expects(:sync_later)
@@ -67,6 +73,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
     LunchflowItem.any_instance.stubs(:sync_later)
     EnableBankingItem.any_instance.stubs(:sync_later)
     SophtronItem.any_instance.stubs(:sync_later)
+    BrexItem.any_instance.stubs(:sync_later)
     BinanceItem.any_instance.stubs(:sync_later)
 
     syncer.perform_sync(family_sync)

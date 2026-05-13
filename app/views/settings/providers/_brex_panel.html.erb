@@ -1,0 +1,154 @@
+<div id="brex-providers-panel" class="space-y-4">
+  <% active_items = local_assigns[:brex_items] || @brex_items || Current.family.brex_items.active.ordered %>
+  <% credentialed_items = active_items.select(&:credentials_configured?) %>
+
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("brex_items.provider_panel.setup_title") %></p>
+    <ol>
+      <li><%= t("brex_items.provider_panel.instructions.sign_in_html", link: link_to("Brex", "https://brex.com", target: "_blank", rel: "noopener noreferrer", class: "link")) %></li>
+      <li><%= t("brex_items.provider_panel.instructions.open_tokens") %></li>
+      <li><%= t("brex_items.provider_panel.instructions.create_token") %></li>
+      <li><%= t("brex_items.provider_panel.instructions.copy_token_html") %></li>
+    </ol>
+
+    <p class="text-sm text-subdued mt-2">
+      <%= t("brex_items.provider_panel.sandbox_note_html") %>
+    </p>
+  </div>
+
+  <% unless BrexItem.encryption_ready? %>
+    <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
+      <div class="flex items-start gap-2">
+        <%= icon "shield-alert", size: "sm", class: "mt-0.5 shrink-0" %>
+        <div>
+          <p class="font-medium"><%= t("brex_items.provider_panel.encryption_warning.title") %></p>
+          <p class="mt-1"><%= t("brex_items.provider_panel.encryption_warning.message") %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <% if active_items.any? %>
+    <div class="space-y-3">
+      <% active_items.each do |item| %>
+        <details class="group bg-container p-4 shadow-border-xs rounded-xl">
+          <summary class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-8 w-8 bg-container-inset rounded-full">
+                <p class="text-primary text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>
+              </div>
+              <div>
+                <p class="font-medium text-primary"><%= item.name %></p>
+                <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+              </div>
+            </div>
+          </summary>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex items-center gap-2">
+              <%= button_to sync_brex_item_path(item),
+                            method: :post,
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                            disabled: item.syncing? do %>
+                <%= icon "refresh-cw", size: "sm" %>
+                <%= t("brex_items.provider_panel.sync") %>
+              <% end %>
+              <%= button_to brex_item_path(item),
+                            method: :delete,
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                            aria: { label: t("brex_items.provider_panel.disconnect_label", name: item.name) },
+                            data: { turbo_confirm: t("brex_items.provider_panel.disconnect_confirm", name: item.name) } do %>
+                <%= icon "trash-2", size: "sm" %>
+              <% end %>
+            </div>
+
+            <%= styled_form_with model: item,
+                                 url: brex_item_path(item),
+                                 scope: :brex_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t("brex_items.provider_panel.connection_name_label"),
+                                  placeholder: t("brex_items.provider_panel.connection_name_placeholder") %>
+
+              <%= form.text_field :token,
+                                  label: t("brex_items.provider_panel.token_label"),
+                                  placeholder: t("brex_items.provider_panel.keep_token_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <%= form.text_field :base_url,
+                                  label: t("brex_items.provider_panel.base_url_label"),
+                                  placeholder: t("brex_items.provider_panel.base_url_placeholder"),
+                                  value: item.base_url %>
+
+              <div class="flex flex-wrap justify-end gap-2">
+                <%= render DS::Link.new(
+                  text: t("brex_items.provider_panel.setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  href: setup_accounts_brex_item_path(item),
+                  frame: :modal
+                ) %>
+                <%= form.submit t("brex_items.provider_panel.update_connection"),
+                                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+              </div>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
+    </div>
+  <% end %>
+
+  <details <%= "open" unless active_items.any? %> class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center gap-2 text-sm font-medium text-primary">
+      <%= icon "plus" %>
+      <%= t("brex_items.provider_panel.add_connection") %>
+    </summary>
+
+    <% brex_item = Current.family.brex_items.build(name: t("brex_items.provider_panel.default_connection_name")) %>
+    <%= styled_form_with model: brex_item,
+                         url: brex_items_path,
+                         scope: :brex_item,
+                         method: :post,
+                         data: { turbo: true },
+                         class: "space-y-3 mt-4" do |form| %>
+      <%= form.text_field :name,
+                          label: t("brex_items.provider_panel.connection_name_label"),
+                          placeholder: t("brex_items.provider_panel.connection_name_placeholder") %>
+
+      <%= form.text_field :token,
+                          label: t("brex_items.provider_panel.token_label"),
+                          placeholder: t("brex_items.provider_panel.token_placeholder"),
+                          type: :password,
+                          value: nil %>
+
+      <%= form.text_field :base_url,
+                          label: t("brex_items.provider_panel.base_url_label"),
+                          placeholder: t("brex_items.provider_panel.base_url_placeholder") %>
+
+      <div class="flex justify-end">
+        <%= form.submit t("brex_items.provider_panel.add_connection"),
+                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+      </div>
+    <% end %>
+  </details>
+
+  <div class="flex items-center gap-2">
+    <% if credentialed_items.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("brex_items.provider_panel.configured_html", accounts_link: link_to(t("brex_items.provider_panel.accounts_link"), accounts_path, class: "link")) %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("brex_items.provider_panel.not_configured") %></p>
+    <% end %>
+  </div>
+</div>

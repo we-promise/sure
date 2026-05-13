@@ -1,7 +1,7 @@
 require "set"
 
 class Family::DataImporter
-  SUPPORTED_TYPES = %w[Account Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPES = Accountable::TYPES.freeze
 
   def initialize(family, ndjson_content)
@@ -30,6 +30,7 @@ class Family::DataImporter
     Import.transaction do
       # Import in dependency order
       import_accounts(records["Account"] || [])
+      import_balances(records["Balance"] || [])
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
       import_merchants(records["Merchant"] || [])
@@ -126,6 +127,49 @@ class Family::DataImporter
 
     def importable_account_status(status)
       status.to_s.in?(%w[active disabled draft]) ? status.to_s : "active"
+    end
+
+    def import_balances(records)
+      records.each do |record|
+        data = record["data"] || {}
+        new_account_id = @id_mappings[:accounts][data["account_id"]]
+        balance_date = parse_import_date(data["date"])
+        next if new_account_id.blank? || balance_date.blank? || data["balance"].blank?
+
+        account = @family.accounts.find(new_account_id)
+        currency = data["currency"].presence || account.currency
+        balance = account.balances.find_or_initialize_by(date: balance_date, currency: currency)
+
+        balance.assign_attributes(imported_balance_attributes(data))
+        balance.save!
+      end
+    end
+
+    def imported_balance_attributes(data)
+      attributes = {
+        balance: data["balance"].to_d,
+        cash_balance: optional_decimal(data["cash_balance"]),
+        start_cash_balance: optional_decimal(data["start_cash_balance"]),
+        start_non_cash_balance: optional_decimal(data["start_non_cash_balance"]),
+        cash_inflows: optional_decimal(data["cash_inflows"]),
+        cash_outflows: optional_decimal(data["cash_outflows"]),
+        non_cash_inflows: optional_decimal(data["non_cash_inflows"]),
+        non_cash_outflows: optional_decimal(data["non_cash_outflows"]),
+        net_market_flows: optional_decimal(data["net_market_flows"]),
+        cash_adjustments: optional_decimal(data["cash_adjustments"]),
+        non_cash_adjustments: optional_decimal(data["non_cash_adjustments"])
+      }.compact
+
+      attributes[:flows_factor] = balance_flows_factor_for(data["flows_factor"]) if data["flows_factor"].present?
+      attributes
+    end
+
+    def optional_decimal(value)
+      value.presence&.to_d
+    end
+
+    def balance_flows_factor_for(value)
+      value.to_i.in?([ -1, 1 ]) ? value.to_i : 1
     end
 
     def import_categories(records)
@@ -472,7 +516,7 @@ class Family::DataImporter
 
       # Account-level opening balances must precede every imported account
       # activity, including standalone valuation snapshots.
-      %w[Transaction Trade Holding Valuation].each do |type|
+      %w[Balance Transaction Trade Holding Valuation].each do |type|
         records[type].to_a.each do |record|
           data = record["data"] || {}
           account_id = data["account_id"]
@@ -627,7 +671,7 @@ class Family::DataImporter
 
     def resolve_rule_condition_value(condition_data)
       condition_type = condition_data["condition_type"]
-      value = condition_data["value"]
+      value = rule_operand_value(condition_data)
 
       return value unless value.present?
 
@@ -655,7 +699,7 @@ class Family::DataImporter
 
     def resolve_rule_action_value(action_data)
       action_type = action_data["action_type"]
-      value = action_data["value"]
+      value = rule_operand_value(action_data)
 
       return value unless value.present?
 
@@ -686,6 +730,21 @@ class Family::DataImporter
       end
 
       value
+    end
+
+    def rule_operand_value(data)
+      raw_value = data["value"]
+      value = raw_value.is_a?(String) ? raw_value.presence : raw_value
+      value_ref_name = data.dig("value_ref", "name")
+
+      return value_ref_name if value.is_a?(String) && uuid_like?(value) && value_ref_name.present?
+      return value unless value.nil?
+
+      value_ref_name
+    end
+
+    def uuid_like?(value)
+      UuidFormat.valid?(value)
     end
 
     def importable_cost_basis_source(value)
