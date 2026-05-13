@@ -20,7 +20,7 @@
 
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
-            <span class="font-medium"><%= end_balance_money.format %></span>
+            <span class="font-medium privacy-sensitive"><%= end_balance_money.format %></span>
             <%= render DS::Tooltip.new(text: "The end of day balance, after all transactions and adjustments", placement: "left", size: "sm") %>
           </div>
           <%= helpers.icon "chevron-down", class: "group-open:rotate-180" %>

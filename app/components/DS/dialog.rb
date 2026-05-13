@@ -133,8 +133,8 @@ class DS::Dialog < DesignSystemComponent
       variant: "icon",
       class: classes,
       icon: "x",
-      title: I18n.t("common.close"),
-      aria_label: I18n.t("common.close"),
+      title: I18n.t("ds.dialog.close"),
+      aria_label: I18n.t("ds.dialog.close"),
       data: { action: "DS--dialog#close" }
     )
   end

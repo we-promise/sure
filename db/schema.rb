@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -263,6 +263,49 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_binance_items_on_family_id"
     t.index ["status"], name: "index_binance_items_on_status"
+  end
+
+  create_table "brex_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "brex_item_id", null: false
+    t.string "name"
+    t.string "account_id", null: false
+    t.string "account_kind", default: "cash", null: false
+    t.string "currency", default: "USD", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.decimal "account_limit", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["brex_item_id", "account_id"], name: "index_brex_accounts_on_item_and_account_id", unique: true
+    t.index ["brex_item_id"], name: "index_brex_accounts_on_brex_item_id"
+  end
+
+  create_table "brex_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "token", null: false
+    t.string "base_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_brex_items_on_family_id"
+    t.index ["status"], name: "index_brex_items_on_status"
   end
 
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -708,6 +751,42 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.index ["account_provider_id"], name: "index_holdings_on_account_provider_id"
     t.index ["provider_security_id"], name: "index_holdings_on_provider_security_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
+  end
+
+  create_table "ibkr_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "ibkr_item_id", null: false
+    t.string "name"
+    t.string "ibkr_account_id"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_holdings_payload", default: []
+    t.jsonb "raw_activities_payload", default: {}
+    t.jsonb "raw_cash_report_payload", default: []
+    t.date "report_date"
+    t.datetime "last_holdings_sync"
+    t.datetime "last_activities_sync"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "raw_equity_summary_payload", default: [], null: false
+    t.index ["ibkr_item_id", "ibkr_account_id"], name: "index_ibkr_accounts_on_item_and_ibkr_account_id", unique: true, where: "(ibkr_account_id IS NOT NULL)"
+    t.index ["ibkr_item_id"], name: "index_ibkr_accounts_on_ibkr_item_id"
+  end
+
+  create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_payload"
+    t.string "query_id"
+    t.string "token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_ibkr_items_on_family_id"
+    t.index ["status"], name: "index_ibkr_items_on_status"
   end
 
   create_table "impersonation_session_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1654,6 +1733,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.jsonb "locked_attributes", default: {}
     t.string "investment_activity_label"
     t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
+    t.jsonb "extra", default: {}, null: false
+    t.index ["extra"], name: "index_trades_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
@@ -1760,9 +1841,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
@@ -1782,6 +1863,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
+  add_foreign_key "brex_accounts", "brex_items"
+  add_foreign_key "brex_items", "families"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"
@@ -1808,6 +1891,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_11_090000) do
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
   add_foreign_key "holdings", "securities", column: "provider_security_id"
+  add_foreign_key "ibkr_accounts", "ibkr_items"
+  add_foreign_key "ibkr_items", "families"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"

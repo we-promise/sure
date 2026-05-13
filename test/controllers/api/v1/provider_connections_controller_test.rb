@@ -158,6 +158,24 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     assert_response :success
   end
 
+  test "lists Brex provider connection status" do
+    brex_item = brex_items(:one)
+
+    get api_v1_provider_connections_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    brex_connection = JSON.parse(response.body)["data"].detect do |connection|
+      connection["id"] == brex_item.id && connection["provider"] == "brex"
+    end
+
+    assert_not_nil brex_connection
+    assert_equal "BrexItem", brex_connection["provider_type"]
+    assert_equal brex_item.name, brex_connection["name"]
+    assert_equal brex_item.brex_accounts.count, brex_connection["accounts"]["total_count"]
+    assert_equal brex_item.linked_accounts_count, brex_connection["accounts"]["linked_count"]
+    assert_equal brex_item.unlinked_accounts_count, brex_connection["accounts"]["unlinked_count"]
+  end
+
   test "returns an empty list when no provider connections exist" do
     ProviderConnectionStatus.stub(:for_family, []) do
       get api_v1_provider_connections_url, headers: api_headers(@api_key)
