@@ -6,7 +6,7 @@ class PdfImport < Import
   validate :account_statement_is_pdf
 
   class << self
-    def create_from_upload!(family:, file:, user: nil)
+    def create_from_upload!(family:, file:, user:)
       prepared_upload = AccountStatement.prepare_upload!(file)
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
@@ -16,7 +16,7 @@ class PdfImport < Import
 
       create_from_statement!(statement: statement)
     rescue AccountStatement::DuplicateUploadError => e
-      raise if user.present? && !e.statement.viewable_by?(user)
+      raise unless e.statement.viewable_by?(user)
 
       create_from_statement!(statement: e.statement)
     end

@@ -198,7 +198,8 @@ class PdfImportTest < ActiveSupport::TestCase
   test "statement backed import reuse requires current account and date format" do
     statement = create_pdf_statement
     stale_import = PdfImport.create_from_statement!(statement: statement)
-    alternate_date_format = (Family::DATE_FORMATS.map(&:last) - [ statement.family.date_format ]).first
+    formats = Family::DATE_FORMATS.map(&:last)
+    alternate_date_format = (formats - [ statement.family.date_format ]).first || "#{statement.family.date_format}-alternate"
     stale_import.update!(account: nil, date_format: alternate_date_format)
 
     fresh_import = PdfImport.create_from_statement!(statement: statement)
