@@ -37,10 +37,7 @@ class Balance::SyncCache
       @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
 
-        # Extract custom exchange rate if present on Transaction
-        custom_rate = if e.entryable.is_a?(Transaction)
-          e.entryable.extra&.dig("exchange_rate")
-        end
+        custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
         # Use Money#exchange_to with custom rate if available, standard lookup otherwise
         converted_entry.amount = converted_entry.amount_money.exchange_to(

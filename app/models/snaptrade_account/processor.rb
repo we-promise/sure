@@ -71,6 +71,11 @@ class SnaptradeAccount::Processor
     end
 
     def calculate_total_balance
+      if use_api_total_balance?
+        Rails.logger.debug "SnaptradeAccount::Processor - Using API total for multi-currency holdings for snaptrade_account=#{snaptrade_account.id}"
+        return snaptrade_account.current_balance || 0
+      end
+
       # Calculate total from holdings + cash for accuracy
       # SnapTrade's current_balance can sometimes be stale or just the cash value
       holdings_value = calculate_holdings_value
@@ -108,5 +113,25 @@ class SnaptradeAccount::Processor
         price = parse_decimal(data[:price]) || 0
         units * price
       end
+    end
+
+    def use_api_total_balance?
+      return false unless snaptrade_account.current_balance.present?
+
+      holdings_currencies.any? { |currency| currency.present? && currency != snaptrade_account.currency }
+    end
+
+    def holdings_currencies
+      Array(snaptrade_account.raw_holdings_payload).filter_map do |holding|
+        data = holding.respond_to?(:with_indifferent_access) ? holding.with_indifferent_access : {}
+        extract_currency(data, extract_symbol_data(data), snaptrade_account.currency)
+      end.uniq
+    end
+
+    def extract_symbol_data(data)
+      symbol_wrapper = data[:symbol].is_a?(Hash) ? data[:symbol].with_indifferent_access : {}
+      raw_symbol_data = symbol_wrapper[:symbol]
+
+      raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
     end
 end

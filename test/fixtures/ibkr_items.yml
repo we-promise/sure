@@ -1,0 +1,15 @@
+configured_item:
+  family: dylan_family
+  name: Interactive Brokers
+  status: good
+  query_id: QUERY123
+  token: TOKEN123
+  pending_account_setup: true
+
+empty_item:
+  family: empty
+  name: Interactive Brokers
+  status: good
+  query_id: QUERYEMPTY
+  token: TOKENEMPTY
+  pending_account_setup: false

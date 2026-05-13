@@ -11,6 +11,7 @@ class ProviderConnectionStatus
     { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },
     { key: "coinstats", type: "CoinstatsItem", association: :coinstats_items, accounts: :coinstats_accounts },
     { key: "snaptrade", type: "SnaptradeItem", association: :snaptrade_items, accounts: :snaptrade_accounts, linked_accounts: :linked_accounts },
+    { key: "ibkr", type: "IbkrItem", association: :ibkr_items, accounts: :ibkr_accounts },
     { key: "mercury", type: "MercuryItem", association: :mercury_items, accounts: :mercury_accounts },
     { key: "sophtron", type: "SophtronItem", association: :sophtron_items, accounts: :sophtron_accounts },
     { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts }

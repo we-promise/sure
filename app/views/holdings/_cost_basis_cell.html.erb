@@ -12,7 +12,7 @@
   <% if holding.cost_basis_locked? && !editable %>
     <%# Locked and not editable (from holdings list) - just show value, right-aligned %>
     <div class="flex items-center justify-end gap-1">
-      <%= tag.span format_money(holding.avg_cost) %>
+      <%= tag.span format_money(holding.avg_cost), class: "privacy-sensitive" %>
       <%= icon "lock", size: "xs", class: "text-secondary" %>
     </div>
   <% else %>
@@ -21,7 +21,7 @@
       <% menu.with_button(class: "hover:text-primary cursor-pointer group") do %>
         <% if holding.avg_cost %>
           <div class="flex items-center gap-1">
-            <%= tag.span format_money(holding.avg_cost) %>
+            <%= tag.span format_money(holding.avg_cost), class: "privacy-sensitive" %>
             <% if holding.cost_basis_locked? %>
               <%= icon "lock", size: "xs", class: "text-secondary" %>
             <% end %>

@@ -1,0 +1,114 @@
+<%# locals: (ibkr_item:) %>
+
+<%= tag.div id: dom_id(ibkr_item) do %>
+  <% unlinked_count = ibkr_item.unlinked_accounts_count %>
+
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 rounded-full bg-[#D32F2F]/10">
+          <span class="text-[#D32F2F] text-xs font-medium">IB</span>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p ibkr_item.institution_display_name, class: "font-medium text-primary" %>
+            <% if ibkr_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".flex_web_service") %></p>
+          <% if ibkr_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif ibkr_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".requires_update") %>
+            </div>
+          <% elsif ibkr_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= render DS::Tooltip.new(text: ibkr_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if ibkr_item.last_synced_at %>
+                <%= t(".synced", time: time_ago_in_words(ibkr_item.last_synced_at), summary: ibkr_item.sync_status_summary) %>
+              <% else %>
+                <%= t(".never_synced") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_ibkr_item_path(ibkr_item),
+            disabled: ibkr_item.syncing?
+          ) %>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% if unlinked_count > 0 %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".setup_accounts"),
+                icon: "settings",
+                href: setup_accounts_ibkr_item_path(ibkr_item),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: ibkr_item_path(ibkr_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(ibkr_item.institution_display_name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
+    </summary>
+
+    <% unless ibkr_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if ibkr_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: ibkr_item.accounts %>
+        <% end %>
+
+        <% stats = ibkr_item.syncs.ordered.first&.sync_stats || {} %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: ibkr_item) %>
+
+        <% if Current.user&.admin? %>
+          <% if unlinked_count > 0 && ibkr_item.accounts.empty? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".accounts_need_setup") %></p>
+              <p class="text-secondary text-sm"><%= t(".accounts_need_setup_description") %></p>
+              <%= render DS::Link.new(
+                text: t(".setup_accounts"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_ibkr_item_path(ibkr_item),
+                frame: :modal
+              ) %>
+            </div>
+          <% elsif ibkr_item.ibkr_accounts.none? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".no_accounts_discovered") %></p>
+              <p class="text-secondary text-sm"><%= t(".no_accounts_discovered_description") %></p>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

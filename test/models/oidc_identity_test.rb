@@ -57,6 +57,41 @@ class OidcIdentityTest < ActiveSupport::TestCase
     end
   end
 
+  test "sync_user_attributes! preserves user-edited first and last name" do
+    # Regression for #1103: every SSO login used to overwrite user.first_name
+    # with the IdP value, clobbering edits the user made inside Sure.
+    @user.update!(first_name: "Adam", last_name: "Smith")
+    auth = OmniAuth::AuthHash.new(
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email, first_name: "Ben", last_name: "Jones" }
+    )
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    @user.reload
+    assert_equal "Adam", @user.first_name
+    assert_equal "Smith", @user.last_name
+    # Identity record itself still mirrors the IdP for audit / debugging.
+    assert_equal "Ben",   @oidc_identity.info["first_name"]
+    assert_equal "Jones", @oidc_identity.info["last_name"]
+  end
+
+  test "sync_user_attributes! fills blank user names from the IdP" do
+    @user.update!(first_name: nil, last_name: nil)
+    auth = OmniAuth::AuthHash.new(
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email, first_name: "Ben", last_name: "Jones" }
+    )
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    @user.reload
+    assert_equal "Ben", @user.first_name
+    assert_equal "Jones", @user.last_name
+  end
+
   test "creates from omniauth hash" do
     auth = OmniAuth::AuthHash.new({
       provider: "google_oauth2",

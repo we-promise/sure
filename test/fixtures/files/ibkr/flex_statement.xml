@@ -1,0 +1,45 @@
+<FlexQueryResponse queryName="Sure Test" type="AF">
+  <FlexStatements count="2">
+    <FlexStatement accountId="U1234567" fromDate="2025-05-08" toDate="2026-05-08" whenGenerated="2026-05-08;12:00:00">
+      <AccountInformation accountId="U1234567" currency="CHF" />
+      <ChangeInPositionValues>
+        <ChangeInPositionValue accountId="U1234567" currency="BASE_SUMMARY" endOfPeriodValue="2350.50" />
+      </ChangeInPositionValues>
+      <CashReport>
+        <CashReportCurrency currency="BASE_SUMMARY" endingCash="1000.50" />
+        <CashReportCurrency currency="CHF" endingCash="1000.50" />
+        <CashReportCurrency currency="USD" endingCash="500.00" />
+      </CashReport>
+      <EquitySummaryInBase>
+        <EquitySummaryByReportDateInBase currency="CHF" reportDate="2026-05-07" cash="900.50" stock="2300.50" total="3201.00" />
+        <EquitySummaryByReportDateInBase currency="CHF" reportDate="2026-05-08" cash="1000.50" stock="2350.50" total="3351.00" />
+      </EquitySummaryInBase>
+      <OpenPositions>
+        <OpenPosition assetCategory="STK" conid="265598" securityID="US0378331005" securityIDType="ISIN" symbol="AAPL" position="10" markPrice="150.00" currency="USD" fxRateToBase="0.90" costBasisPrice="125.50" reportDate="2026-05-08" side="Long" />
+      </OpenPositions>
+      <Trades>
+        <Trade assetCategory="STK" tradeID="1001" transactionID="1001a" conid="265598" symbol="AAPL" quantity="2" tradePrice="140.00" currency="USD" fxRateToBase="0.90" buySell="BUY" tradeDate="2026-05-01" ibCommission="-1.25" ibCommissionCurrency="USD" />
+        <Trade assetCategory="STK" tradeID="1002" transactionID="1002a" conid="265598" symbol="AAPL" quantity="-1" tradePrice="155.00" currency="USD" fxRateToBase="0.92" buySell="SELL" tradeDate="2026-05-05" ibCommission="-1.10" ibCommissionCurrency="USD" />
+      </Trades>
+      <CashTransactions>
+        <CashTransaction transactionID="4001" type="Deposits/Withdrawals" amount="500.00" currency="CHF" fxRateToBase="1" reportDate="2026-05-03" />
+        <CashTransaction transactionID="4002" type="Dividends" amount="2.50" currency="USD" fxRateToBase="0.91" reportDate="2026-05-04" conid="265598" />
+      </CashTransactions>
+    </FlexStatement>
+    <FlexStatement accountId="U7654321" fromDate="2025-05-08" toDate="2026-05-08" whenGenerated="2026-05-08;12:00:00">
+      <AccountInformation accountId="U7654321" currency="USD" />
+      <ChangeInPositionValues>
+        <ChangeInPositionValue accountId="U7654321" currency="BASE_SUMMARY" endOfPeriodValue="0.00" />
+      </ChangeInPositionValues>
+      <CashReport>
+        <CashReportCurrency currency="BASE_SUMMARY" endingCash="250.00" />
+      </CashReport>
+      <EquitySummaryInBase>
+        <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-08" cash="250.00" stock="0.00" total="250.00" />
+      </EquitySummaryInBase>
+      <OpenPositions />
+      <Trades />
+      <CashTransactions />
+    </FlexStatement>
+  </FlexStatements>
+</FlexQueryResponse>

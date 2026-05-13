@@ -237,6 +237,7 @@ en:
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
         plaid: Connect thousands of US financial institutions via Plaid.
@@ -329,3 +330,58 @@ en:
         step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."
       not_found: Provider not found.
       sync_provider_no_items: No connections available to sync.
+      ibkr_panel:
+        steps:
+          step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
+          step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
+          step_3: 'Name your query (e.g., "Sure Sync"), then review the Flex Query details below and enable the listed sections, fields, and configuration options.'
+          step_4: 'Save the query, note your "Query ID", then use the gear icon in the "Flex Web Service Configuration" section to generate an access Token.'
+          step_5: "Paste your Query ID and Token below, save the configuration, then head to Accounts to link discovered IBKR accounts."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sections, fields, and configuration
+          summary: Expand to see the exact sections, fields, and settings your IBKR Activity Flex Query must include.
+          sections_heading: Enable these sections and fields
+          configuration_heading: Set these query options
+        sections:
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report:"
+          cash_report_options: "Options: None"
+          cash_report_fields: "Fields: Currency, Ending Cash"
+          cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Options: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base:"
+          net_asset_value_options: "Options: None"
+          net_asset_value_fields: "Fields: Currency, Report Date, Total"
+          open_positions: "Open Positions:"
+          open_positions_options: "Options: Summary"
+          open_positions_fields: "Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Trades:"
+          trades_options: "Options: Execution"
+          trades_fields: "Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Models: Optional"
+          format: "Format: XML"
+          period: "Period: Last 365 Calendar Days"
+          date_format: "Date Format: yyyy-MM-dd"
+          time_format: "Time Format: HH:mm:ss"
+          date_time_separator: "Date/Time Separator: ; (semi-colon)"
+          profit_and_loss: "Profit and Loss: Default"
+          all_other_options: 'All other configuration options: "No"'
+        report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
+        sync: Sync
+        disconnect_confirm: Disconnect Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Enter your IBKR Flex Query ID
+        query_id_placeholder_existing: Leave blank to keep the current Query ID
+        token_label: Token
+        token_placeholder_new: Enter your IBKR Flex Web Service Token
+        token_placeholder_existing: Leave blank to keep the current Token
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "%{summary}. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.

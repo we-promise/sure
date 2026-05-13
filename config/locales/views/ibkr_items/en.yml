@@ -1,0 +1,84 @@
+---
+en:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Connect an Interactive Brokers Flex Web Service report
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Deletion in progress
+      flex_web_service: Flex Web Service
+      syncing: Syncing
+      requires_update: Credentials need attention
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Accounts need setup
+      accounts_need_setup_description: Some accounts from IBKR need to be linked to Sure accounts.
+      no_accounts_discovered: No IBKR accounts discovered yet.
+      no_accounts_discovered_description: Run a sync after configuring your Flex query to discover accounts.
+    setup_accounts:
+      page_title: Set Up Interactive Brokers Accounts
+      dialog_title: Set Up Your Interactive Brokers Accounts
+      subtitle: Select which IBKR brokerage accounts to link.
+      info_box:
+        title: IBKR Flex Query Import
+        items:
+          item_1: Holdings with current prices and quantities
+          item_2: Cost basis per position
+          item_3: Trades, dividends, commissions, and cash deposits or withdrawals
+        warning: Historical activity is limited to the report window of the Flex Query
+      status:
+        fetching_accounts: Fetching accounts from Interactive Brokers...
+        no_accounts_found_title: No accounts found.
+        no_accounts_found_description: Sure could not find any IBKR accounts in the latest Flex report.
+      available_accounts:
+        title: Available accounts
+        account_type_investment: Investment
+        account_summary: "%{account_type} • Balance: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Or link a discovered IBKR account to an existing manual investment account.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync_status:
+      no_accounts: No IBKR accounts discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    create:
+      success: Successfully configured Interactive Brokers.
+    update:
+      success: Successfully updated Interactive Brokers configuration.
+    destroy:
+      success: Scheduled Interactive Brokers connection for deletion.
+    select_accounts:
+      not_configured: Interactive Brokers is not configured.
+    link_existing_account:
+      not_found: Account or Interactive Brokers configuration not found.
+      only_manual_investment: Only manual investment accounts can be linked to Interactive Brokers.
+      already_linked: This Interactive Brokers account is already linked.
+      success: Successfully linked to Interactive Brokers account.
+      failed: Failed to link Interactive Brokers account.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} Interactive Brokers account.
+        other: Successfully created %{count} Interactive Brokers accounts.
+      none_selected: No accounts were selected.
+      none_created: No accounts were created.
