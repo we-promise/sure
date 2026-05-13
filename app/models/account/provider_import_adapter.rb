@@ -109,8 +109,28 @@ class Account::ProviderImportAdapter
         end
 
         if pending_match
+          old_pending_external_id = pending_match.external_id
+          pending_entry_date      = pending_match.date
           entry = pending_match
           entry.assign_attributes(external_id: external_id)
+
+          # Clear the pending flag so this entry no longer shows as pending after being claimed
+          # by a booked transaction. Also record the old external_id so the sync engine can
+          # exclude it from re-import (preventing the old pending from being recreated on the
+          # next sync when the stored raw payload still contains the pending transaction data).
+          if entry.entryable.is_a?(Transaction)
+            ex = (entry.transaction.extra || {}).deep_dup
+            Transaction::PENDING_PROVIDERS.each do |provider|
+              next unless ex.key?(provider)
+              ex[provider].delete("pending")
+              ex.delete(provider) if ex[provider].empty?
+            end
+            if old_pending_external_id.present?
+              existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
+              ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
+            end
+            entry.transaction.extra = ex
+          end
         end
       end
 
@@ -120,7 +140,7 @@ class Account::ProviderImportAdapter
       entry.assign_attributes(
         amount: amount,
         currency: currency,
-        date: date
+        date: pending_entry_date || date
       )
 
       # Use enrichment pattern to respect user overrides
