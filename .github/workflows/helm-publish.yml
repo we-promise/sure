@@ -16,9 +16,15 @@ on:
         required: false
         type: boolean
         default: true
+      publish_oci:
+        description: Whether to publish packaged chart to the OCI registry
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   publish:
@@ -95,6 +101,25 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+
+      - name: Log in to GHCR for Helm OCI publish
+        if: ${{ inputs.publish_oci }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Push chart to GHCR as OCI artifact
+        if: ${{ inputs.publish_oci }}
+        run: |
+          set -euo pipefail
+          CHART_PACKAGE=$(find .cr-release-packages -maxdepth 1 -name '*.tgz' | head -n 1)
+          if [ -z "$CHART_PACKAGE" ]; then
+            echo "::error::No packaged chart found to publish"
+            exit 1
+          fi
+
+          helm push "$CHART_PACKAGE" oci://ghcr.io/we-promise/charts
 
       - name: Checkout gh-pages
         if: ${{ inputs.update_gh_pages }}

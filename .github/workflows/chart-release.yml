@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   prepare_release:
@@ -71,6 +72,7 @@ jobs:
     with:
       chart_version: ${{ needs.prepare_release.outputs.chart_version }}
       app_version: ${{ needs.prepare_release.outputs.app_version }}
+      publish_oci: true
       update_gh_pages: true
     secrets: inherit
 

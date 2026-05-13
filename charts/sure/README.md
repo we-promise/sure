@@ -23,6 +23,10 @@ Official Helm chart for deploying the Sure Rails application on Kubernetes. It s
 
 - Kubernetes >= 1.25
 - Helm >= 3.10
+- OCI install (published to GHCR):
+  ```sh
+  helm install sure oci://ghcr.io/we-promise/charts/sure --version <chart-version> -n sure --create-namespace
+  ```
 - For subcharts: add repositories first
   ```sh
   helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
@@ -40,13 +44,24 @@ Important: For production stability, use immutable image tags (for example, set 
 # Namespace
 kubectl create ns sure || true
 
-# Install chart (example: provide SECRET_KEY_BASE and pin an immutable image tag)
+# Install from OCI (recommended)
+helm upgrade --install sure oci://ghcr.io/we-promise/charts/sure \
+  --version <chart-version> \
+  -n sure \
+  --create-namespace \
+  --set image.tag=v1.2.3 \
+  --set rails.secret.enabled=true \
+  --set rails.secret.values.SECRET_KEY_BASE=$(openssl rand -hex 32)
+
+# Or install from a local checkout while developing the chart
 helm upgrade --install sure charts/sure \
   -n sure \
   --set image.tag=v1.2.3 \
   --set rails.secret.enabled=true \
   --set rails.secret.values.SECRET_KEY_BASE=$(openssl rand -hex 32)
 ```
+
+If you still prefer the legacy Helm repository flow, the chart also remains available via `https://we-promise.github.io/sure`.
 
 Expose the app via an Ingress (see values) or `kubectl port-forward svc/sure 8080:80 -n sure`.
 
