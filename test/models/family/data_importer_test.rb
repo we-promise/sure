@@ -142,6 +142,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = Family::DataImporter.new(@family, ndjson).import!
 
     assert_equal 1, result.dig(:summary, "balances", "skipped")
+    assert_not Balance.exists?(date: Date.iso8601("2024-01-31"), currency: "USD", balance: BigDecimal("1200.00"))
   end
 
   test "imports duplicate raw balance records idempotently by account date and currency" do
