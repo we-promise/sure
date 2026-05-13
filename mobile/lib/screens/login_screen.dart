@@ -16,8 +16,7 @@ class LoginFormBody extends StatefulWidget {
     this.allowSignUp = false,
   });
 
-  /// When true: Chancen logo + "Sign in to your Companion" headline
-  /// + Sign In | Sign Up toggle. Hides Google SSO.
+  /// When true: Chancen logo + "Sign in to your Companion" headline.
   final bool branded;
 
   /// When true: shows Sign In | Sign Up toggle and first/last name fields.
@@ -385,42 +384,40 @@ class _LoginFormBodyState extends State<LoginFormBody> {
             },
           ),
 
-          // ── Google SSO (non-branded only) ────────────────────────────
-          if (!widget.branded) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: Divider(color: colorScheme.outlineVariant)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('or',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant)),
+          // ── Google SSO ───────────────────────────────────────────────
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: Divider(color: colorScheme.outlineVariant)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('or',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant)),
+              ),
+              Expanded(child: Divider(color: colorScheme.outlineVariant)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, _) {
+              return OutlinedButton.icon(
+                onPressed: authProvider.isLoading
+                    ? null
+                    : () => authProvider.startSsoLogin('google_oauth2'),
+                icon: SvgPicture.asset(
+                  'assets/images/google_g_logo.svg',
+                  width: 18,
+                  height: 18,
                 ),
-                Expanded(child: Divider(color: colorScheme.outlineVariant)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Consumer<AuthProvider>(
-              builder: (context, authProvider, _) {
-                return OutlinedButton.icon(
-                  onPressed: authProvider.isLoading
-                      ? null
-                      : () => authProvider.startSsoLogin('google_oauth2'),
-                  icon: SvgPicture.asset(
-                    'assets/images/google_g_logo.svg',
-                    width: 18,
-                    height: 18,
-                  ),
-                  label: const Text('Sign in with Google'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
-              },
-            ),
-          ],
+                label: const Text('Sign in with Google'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            },
+          ),
 
           const SizedBox(height: 24),
         ],
