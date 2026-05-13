@@ -2118,9 +2118,6 @@ components:
         rows_count:
           type: integer
           minimum: 0
-        checksum:
-          type: string
-          nullable: true
         summary:
           type: object
           additionalProperties:
@@ -4836,7 +4833,7 @@ paths:
     post:
       summary: Upload import session chunk
       description: Attach an ordered Sure NDJSON chunk to an import session. Chunks
-        are idempotent by sequence, client_chunk_id, and checksum.
+        are idempotent by sequence and client_chunk_id with content verification.
       tags:
       - Import Sessions
       security:

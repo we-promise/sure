@@ -6,35 +6,9 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
   let(:user) { users(:empty) }
   let(:family) { user.family }
 
-  let(:api_key) do
-    ApiKey.create!(
-      user: user,
-      name: 'Import Session Docs Key',
-      display_key: "docs_#{SecureRandom.hex(24)}",
-      scopes: %w[read_write],
-      source: 'web'
-    )
-  end
-
-  let(:api_key_without_write_scope) do
-    ApiKey.create!(
-      user: user,
-      name: 'Import Session Read Key',
-      display_key: "docs_read_#{SecureRandom.hex(24)}",
-      scopes: %w[read],
-      source: 'web'
-    )
-  end
-
-  let(:api_key_without_read_scope) do
-    ApiKey.new(
-      user: user,
-      name: 'Import Session Write Key',
-      display_key: "docs_write_#{SecureRandom.hex(24)}",
-      scopes: %w[write],
-      source: 'web'
-    ).tap { |api_key| api_key.save!(validate: false) }
-  end
+  let(:api_key) { api_keys(:active_key) }
+  let(:api_key_without_write_scope) { api_keys(:one) }
+  let(:api_key_without_read_scope) { api_keys(:expired_key) }
 
   let(:'X-Api-Key') { api_key.plain_key }
 
@@ -210,7 +184,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
     let(:id) { import_session.id }
 
     post 'Upload import session chunk' do
-      description 'Attach an ordered Sure NDJSON chunk to an import session. Chunks are idempotent by sequence, client_chunk_id, and checksum.'
+      description 'Attach an ordered Sure NDJSON chunk to an import session. Chunks are idempotent by sequence and client_chunk_id with content verification.'
       tags 'Import Sessions'
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json', 'multipart/form-data'

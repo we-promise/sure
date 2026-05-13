@@ -8,23 +8,8 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
     @family = @user.family
-    @user.api_keys.active.destroy_all
-
-    @api_key = ApiKey.create!(
-      user: @user,
-      name: "Test Read-Write Key",
-      scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}",
-      source: "web"
-    )
-
-    @read_only_api_key = ApiKey.create!(
-      user: @user,
-      name: "Test Read-Only Key",
-      scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
-      source: "mobile"
-    )
+    @api_key = api_keys(:active_key)
+    @read_only_api_key = api_keys(:one)
 
     Redis.new.del("api_rate_limit:#{@api_key.id}")
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")

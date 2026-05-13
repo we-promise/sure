@@ -19,7 +19,6 @@ json.data do
       json.client_chunk_id import.client_chunk_id
       json.status import.status
       json.rows_count import.rows_count
-      json.checksum import.checksum
       json.summary import.summary || {}
       json.error import.error_details.presence
       json.created_at import.created_at
