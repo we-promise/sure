@@ -42,6 +42,7 @@ class AccountStatementsController < ApplicationController
   def create
     files = Array(statement_upload_params[:files]).reject(&:blank?).select { |file| file.respond_to?(:read) }
     account = target_account
+    return if performed?
 
     if files.empty?
       redirect_back_or_to account_statements_path, alert: t("account_statements.create.no_files")
@@ -49,7 +50,6 @@ class AccountStatementsController < ApplicationController
     end
 
     return if account && !require_account_permission!(account)
-    return if performed?
 
     created = []
     duplicates = []

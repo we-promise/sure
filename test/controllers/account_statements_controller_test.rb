@@ -107,6 +107,19 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_statement_url(statement)
   end
 
+  test "invalid target account with no files redirects once" do
+    assert_no_difference "AccountStatement.count" do
+      post account_statements_url, params: {
+        account_statement: {
+          account_id: "0"
+        }
+      }
+    end
+
+    assert_redirected_to account_statements_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
   test "starts pdf extraction from statement" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,

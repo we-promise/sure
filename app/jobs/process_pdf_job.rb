@@ -1,4 +1,6 @@
 class ProcessPdfJob < ApplicationJob
+  PROCESSING_CLAIM_TTL = 30.minutes
+
   queue_as :medium_priority
 
   def perform(pdf_import)
@@ -88,7 +90,13 @@ class ProcessPdfJob < ApplicationJob
 
     def reset_processing_claim(pdf_import)
       pdf_import.reload.with_lock do
-        pdf_import.update!(status: :pending) if pdf_import.importing?
+        if pdf_import.importing? && processing_claim_stale?(pdf_import)
+          pdf_import.update!(status: :pending)
+        end
       end
+    end
+
+    def processing_claim_stale?(pdf_import)
+      pdf_import.updated_at <= PROCESSING_CLAIM_TTL.ago
     end
 end
