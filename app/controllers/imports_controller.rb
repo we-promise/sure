@@ -149,10 +149,12 @@ class ImportsController < ApplicationController
         return
       end
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file)
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
       pdf_import.process_with_ai_later if pdf_import.pending? && !pdf_import.ai_processed? && pdf_import.rows_count.zero?
 
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
+    rescue AccountStatement::DuplicateUploadError
+      redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
     rescue AccountStatement::InvalidUploadError
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
     end

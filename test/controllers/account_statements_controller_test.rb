@@ -163,6 +163,27 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("account_statements.create.duplicates", count: 1), flash[:alert]
   end
 
+  test "duplicate upload for inaccessible statement redirects to vault" do
+    private_account = accounts(:investment)
+    AccountStatement.create_from_upload!(
+      family: private_account.family,
+      account: private_account,
+      file: uploaded_file(filename: "private_statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    sign_in users(:family_member)
+
+    assert_no_difference "AccountStatement.count" do
+      post account_statements_url, params: {
+        account_statement: {
+          files: [ uploaded_file(filename: "duplicate.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n") ]
+        }
+      }
+    end
+
+    assert_redirected_to account_statements_url
+    assert_equal I18n.t("account_statements.create.duplicates", count: 1), flash[:alert]
+  end
+
   test "continues upload loop after a validation error" do
     invalid_record = AccountStatement.new
     invalid_record.errors.add(:filename, "is invalid")
@@ -203,7 +224,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_statements_url
-    assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
+    assert_equal I18n.t("account_statements.create.upload_errors.unsupported_type"), flash[:alert]
   end
 
   test "continues upload loop after an invalid file type" do
@@ -221,7 +242,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     statement = AccountStatement.order(:created_at).last
     assert_redirected_to account_statement_url(statement)
     assert_equal I18n.t("account_statements.create.success", count: 1), flash[:notice]
-    assert_includes flash[:alert], I18n.t("account_statements.create.invalid_file_type")
+    assert_includes flash[:alert], I18n.t("account_statements.create.upload_errors.unsupported_type")
   end
 
   test "rejects txt and xls statement uploads" do
@@ -238,7 +259,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_redirected_to account_statements_url
-      assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
+      assert_equal I18n.t("account_statements.create.upload_errors.unsupported_type"), flash[:alert]
     end
   end
 
@@ -260,7 +281,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_redirected_to account_statements_url
-      assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
+      assert_equal I18n.t("account_statements.create.upload_errors.empty"), flash[:alert]
     end
   end
 
@@ -287,7 +308,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_statements_url
-    assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
+    assert_equal I18n.t("account_statements.create.upload_errors.oversize"), flash[:alert]
   end
 
   test "rejects cross-family account id" do
@@ -308,7 +329,8 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
-    assert_response :not_found
+    assert_redirected_to account_statements_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
   test "read only shared user cannot upload to account" do
@@ -455,7 +477,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
         period_start_on: "2024-01-01",
         period_end_on: "2024-01-31",
         closing_balance: "123.45",
-        currency: "usd"
+        currency: " usd "
       }
     }
 
@@ -485,6 +507,26 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     statement.reload
     assert_equal @account, statement.account
     assert statement.linked?
+  end
+
+  test "metadata update handles invalid target account with redirect" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    sign_in users(:family_member)
+
+    patch account_statement_url(statement), params: {
+      account_statement: {
+        account_id: accounts(:investment).id,
+        period_start_on: "2024-01-01"
+      }
+    }
+
+    assert_redirected_to account_statements_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_nil statement.reload.account
   end
 
   test "deletes statement" do

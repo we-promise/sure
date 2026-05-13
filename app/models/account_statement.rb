@@ -15,7 +15,14 @@ class AccountStatement < ApplicationRecord
       super("Statement file has already been uploaded")
     end
   end
-  InvalidUploadError = Class.new(StandardError)
+  InvalidUploadError = Class.new(StandardError) do
+    attr_reader :reason
+
+    def initialize(reason = :invalid_file_type)
+      @reason = reason
+      super("Invalid statement upload: #{reason}")
+    end
+  end
 
   PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256)
 
@@ -83,6 +90,7 @@ class AccountStatement < ApplicationRecord
 
     def create_from_prepared_upload!(family:, account:, prepared_upload:)
       statement = nil
+      saved = false
       duplicate = duplicate_for(family, prepared_upload)
       raise DuplicateUploadError, duplicate if duplicate
 
@@ -108,19 +116,15 @@ class AccountStatement < ApplicationRecord
       MetadataDetector.new(statement, content: prepared_upload.content).apply
       statement.assign_account_match unless account.present?
       statement.save!
+      saved = true
       statement
     rescue ActiveRecord::RecordNotUnique
       duplicate = duplicate_for(family, prepared_upload)
-      purge_original_file(statement)
-
-      if duplicate
-        raise DuplicateUploadError, duplicate
-      end
+      raise DuplicateUploadError, duplicate if duplicate
 
       raise
-    rescue StandardError
-      purge_original_file(statement)
-      raise
+    ensure
+      purge_original_file(statement) if statement && !saved
     end
 
     def reconciliation_statuses_for(statements, account:)
@@ -136,11 +140,11 @@ class AccountStatement < ApplicationRecord
       filename = file.original_filename.to_s
       content = read_upload_content!(file)
       byte_size = content.bytesize
-      raise InvalidUploadError if byte_size.zero?
+      raise InvalidUploadError, :empty if byte_size.zero?
 
       content_type = detected_content_type(content:, filename:, declared_content_type: file.content_type)
-      raise InvalidUploadError unless allowed_upload?(filename:, content_type:)
-      raise InvalidUploadError if content_type == "application/pdf" && !valid_pdf_content?(content)
+      raise InvalidUploadError, :unsupported_type unless allowed_upload?(filename:, content_type:)
+      raise InvalidUploadError, :invalid_pdf_header if content_type == "application/pdf" && !valid_pdf_content?(content)
 
       PreparedUpload.new(
         content: content,
@@ -195,7 +199,7 @@ class AccountStatement < ApplicationRecord
 
     def read_upload_content!(file)
       declared_size = declared_upload_size(file)
-      raise InvalidUploadError if declared_size.present? && declared_size > MAX_FILE_SIZE
+      raise InvalidUploadError, :oversize if declared_size.present? && declared_size > MAX_FILE_SIZE
 
       content = +"".b
       loop do
@@ -203,7 +207,7 @@ class AccountStatement < ApplicationRecord
         break if chunk.nil? || chunk.empty?
 
         content << chunk
-        raise InvalidUploadError if content.bytesize > MAX_FILE_SIZE
+        raise InvalidUploadError, :oversize if content.bytesize > MAX_FILE_SIZE
       end
 
       file.rewind if file.respond_to?(:rewind)
@@ -255,7 +259,7 @@ class AccountStatement < ApplicationRecord
 
   def unlink!
     transaction do
-      update!(
+      assign_attributes(
         account: nil,
         review_status: :unmatched,
         match_confidence: nil
@@ -362,7 +366,7 @@ class AccountStatement < ApplicationRecord
   end
 
   def latest_reusable_pdf_import
-    pdf_imports.where.not(status: :failed).first
+    pdf_imports.where.not(status: :failed).order(created_at: :desc).first
   end
 
   private
@@ -393,7 +397,7 @@ class AccountStatement < ApplicationRecord
     end
 
     def normalize_currency
-      self.currency = currency.to_s.upcase.presence if currency.present?
+      self.currency = currency.to_s.strip.upcase.presence if currency.present?
     end
 
     def sync_review_status

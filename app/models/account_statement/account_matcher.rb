@@ -10,7 +10,7 @@ class AccountStatement::AccountMatcher
   end
 
   def best_match
-    candidates = statement.family.accounts.visible.to_a.filter_map do |account|
+    candidates = statement.family.accounts.visible.includes(:account_providers).to_a.filter_map do |account|
       confidence = confidence_for(account)
       next if confidence < 0.35
 

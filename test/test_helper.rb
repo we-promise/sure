@@ -112,7 +112,9 @@ module ActiveSupport
       tempfile.write(content)
       tempfile.rewind
 
-      Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
+      Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename).tap do |uploaded_file|
+        uploaded_file.instance_variable_set(:@tempfile, tempfile)
+      end
     end
 
     def family_guest

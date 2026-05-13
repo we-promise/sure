@@ -146,6 +146,31 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_url(created_import)
   end
 
+  test "duplicate pdf import for inaccessible statement does not create import" do
+    AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: accounts(:investment),
+      file: uploaded_file(
+        filename: "existing_statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+
+    sign_in users(:family_member)
+
+    assert_no_difference [ "AccountStatement.count", "Import.where(type: 'PdfImport').count" ] do
+      post imports_url, params: {
+        import: {
+          import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+        }
+      }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.duplicate_pdf_unavailable"), flash[:alert]
+  end
+
   test "setting statement backed pdf import account links source statement" do
     statement = AccountStatement.create_from_upload!(
       family: @user.family,

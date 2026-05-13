@@ -6,7 +6,7 @@ class PdfImport < Import
   validate :account_statement_is_pdf
 
   class << self
-    def create_from_upload!(family:, file:)
+    def create_from_upload!(family:, file:, user: nil)
       prepared_upload = AccountStatement.prepare_upload!(file)
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
@@ -16,12 +16,14 @@ class PdfImport < Import
 
       create_from_statement!(statement: statement)
     rescue AccountStatement::DuplicateUploadError => e
+      raise if user.present? && !e.statement.viewable_by?(user)
+
       create_from_statement!(statement: e.statement)
     end
 
     def create_from_statement!(statement:)
       reusable_import = statement.latest_reusable_pdf_import
-      return reusable_import if reusable_import.present?
+      return reusable_import if reusable_pdf_import_current?(reusable_import, statement)
 
       create!(
         family: statement.family,
@@ -31,6 +33,14 @@ class PdfImport < Import
         status: :pending
       )
     end
+
+    private
+
+      def reusable_pdf_import_current?(pdf_import, statement)
+        pdf_import.present? &&
+          pdf_import.account_id == statement.account_id &&
+          pdf_import.date_format == statement.family.date_format
+      end
   end
 
   def import!
@@ -64,8 +74,10 @@ class PdfImport < Import
   def assign_account!(account)
     transaction do
       update!(account: account)
-      if account_statement.present? && account.present? && account_statement.account_id != account.id
-        account_statement.link_to_account!(account)
+      statement = account_statement
+      if statement.present? && account.present?
+        statement.lock!
+        statement.link_to_account!(account) if statement.account_id != account.id
       end
     end
   end
@@ -211,10 +223,13 @@ class PdfImport < Import
   end
 
   def pdf_file_content
-    return account_statement.original_file.download if statement_backed?
-    return nil unless pdf_file.attached?
+    return @pdf_file_content if defined?(@pdf_file_content)
 
-    pdf_file.download
+    @pdf_file_content = if statement_backed?
+      account_statement.original_file.download
+    elsif pdf_file.attached?
+      pdf_file.download
+    end
   end
 
   def pdf_filename

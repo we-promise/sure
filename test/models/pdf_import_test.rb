@@ -186,6 +186,35 @@ class PdfImportTest < ActiveSupport::TestCase
     assert ActiveStorage::Attachment.exists?(attachment_id)
   end
 
+  test "statement backed import memoizes pdf content" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement: statement)
+    statement.original_file.expects(:download).once.returns("%PDF-test")
+
+    assert_equal "%PDF-test", import.pdf_file_content
+    assert_equal "%PDF-test", import.pdf_file_content
+  end
+
+  test "statement backed import reuse requires current account and date format" do
+    statement = create_pdf_statement
+    stale_import = PdfImport.create_from_statement!(statement: statement)
+    alternate_date_format = (Family::DATE_FORMATS.map(&:last) - [ statement.family.date_format ]).first
+    stale_import.update!(account: nil, date_format: alternate_date_format)
+
+    fresh_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert_not_equal stale_import, fresh_import
+    assert_equal statement.account, fresh_import.account
+    assert_equal statement.family.date_format, fresh_import.date_format
+  end
+
+  test "statement backed import reuses matching reusable import" do
+    statement = create_pdf_statement
+    existing_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert_equal existing_import, PdfImport.create_from_statement!(statement: statement)
+  end
+
   test "assigning account links statement backed import statement" do
     statement = create_pdf_statement(account: nil)
     import = PdfImport.create_from_statement!(statement: statement)

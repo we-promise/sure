@@ -28,6 +28,12 @@ en:
       success:
         one: 1 statement uploaded.
         other: "%{count} statements uploaded."
+      upload_errors:
+        empty: The statement file is empty.
+        invalid_file_type: Upload a PDF, CSV, or XLSX statement under the size limit.
+        invalid_pdf_header: The PDF file does not look valid.
+        oversize: The statement file is too large.
+        unsupported_type: Upload a PDF, CSV, or XLSX statement under the size limit.
     destroy:
       failure: Statement could not be deleted.
       success: Statement deleted.

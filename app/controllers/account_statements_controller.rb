@@ -49,6 +49,7 @@ class AccountStatementsController < ApplicationController
     end
 
     return if account && !require_account_permission!(account)
+    return if performed?
 
     created = []
     duplicates = []
@@ -57,22 +58,24 @@ class AccountStatementsController < ApplicationController
     files.each do |file|
       prepared_upload = AccountStatement.prepare_upload!(file)
       created << AccountStatement.create_from_prepared_upload!(family: Current.family, account: account, prepared_upload: prepared_upload)
-    rescue AccountStatement::InvalidUploadError
-      validation_errors << t("account_statements.create.invalid_file_type")
+    rescue AccountStatement::InvalidUploadError => e
+      validation_errors << invalid_upload_message(e)
     rescue AccountStatement::DuplicateUploadError => e
       duplicates << e.statement
     rescue ActiveRecord::RecordInvalid => e
       validation_errors << e.record.errors.full_messages.to_sentence
     end
 
-    redirect_to redirect_after_create(account, created.first || duplicates.first),
+    redirect_statement = created.first || duplicates.find { |statement| statement.viewable_by?(Current.user) }
+    redirect_to redirect_after_create(account, redirect_statement),
                 flash_for_upload(created:, duplicates:, validation_errors:)
   end
 
   def update
     return if @statement.account && !require_account_permission!(@statement.account)
 
-    target = statement_account_id.present? ? Current.user.accessible_accounts.find(statement_account_id) : nil
+    target = statement_account_id.present? ? target_account : nil
+    return if performed?
     return if target && !require_account_permission!(target)
 
     attrs = statement_params.to_h
@@ -101,7 +104,11 @@ class AccountStatementsController < ApplicationController
       return
     end
 
-    account = Current.user.accessible_accounts.find(account_id)
+    account = Current.user.accessible_accounts.find_by(id: account_id)
+    unless account
+      redirect_to account_statement_path(@statement), alert: t("accounts.not_authorized")
+      return
+    end
     return unless require_account_permission!(account)
 
     @statement.link_to_account!(account)
@@ -188,7 +195,11 @@ class AccountStatementsController < ApplicationController
       account_id = statement_account_id.presence
       return nil if account_id.blank?
 
-      Current.user.accessible_accounts.find(account_id)
+      account = Current.user.accessible_accounts.find_by(id: account_id)
+      return account if account
+
+      redirect_back_or_to account_statements_path, alert: t("accounts.not_authorized")
+      nil
     end
 
     def statement_account_id
@@ -207,6 +218,14 @@ class AccountStatementsController < ApplicationController
       else
         account_statements_path
       end
+    end
+
+    def invalid_upload_message(error)
+      reason = error.respond_to?(:reason) ? error.reason : nil
+      key = reason.in?(%i[oversize unsupported_type empty invalid_pdf_header]) ? reason : :invalid_file_type
+
+      t("account_statements.create.upload_errors.#{key}",
+        default: t("account_statements.create.invalid_file_type"))
     end
 
     def post_link_path(statement)

@@ -261,21 +261,23 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   test "rejects unsupported file extension even when mime type is broadly allowed" do
-    assert_raises(AccountStatement::InvalidUploadError) do
+    error = assert_raises(AccountStatement::InvalidUploadError) do
       AccountStatement.create_from_upload!(
         family: @family,
         account: @account,
         file: uploaded_file(filename: "statement.txt", content_type: "text/plain", content: "date,amount\n2024-01-01,1\n")
       )
     end
+    assert_equal :unsupported_type, error.reason
 
-    assert_raises(AccountStatement::InvalidUploadError) do
+    error = assert_raises(AccountStatement::InvalidUploadError) do
       AccountStatement.create_from_upload!(
         family: @family,
         account: @account,
         file: uploaded_file(filename: "statement.xls", content_type: "application/vnd.ms-excel", content: "date,amount\n2024-01-01,1\n")
       )
     end
+    assert_equal :unsupported_type, error.reason
   end
 
   test "rejects empty csv and xlsx statement uploads" do
@@ -288,17 +290,19 @@ class AccountStatementTest < ActiveSupport::TestCase
       )
     ].each do |file|
       assert_no_difference "AccountStatement.count" do
-        assert_raises(AccountStatement::InvalidUploadError) do
+        error = assert_raises(AccountStatement::InvalidUploadError) do
           AccountStatement.create_from_upload!(family: @family, account: @account, file: file)
         end
+        assert_equal :empty, error.reason
       end
     end
   end
 
   test "rejects declared oversized upload before reading content" do
-    assert_raises(AccountStatement::InvalidUploadError) do
+    error = assert_raises(AccountStatement::InvalidUploadError) do
       AccountStatement.prepare_upload!(OversizedDeclaredUpload.new(original_filename: "oversized.csv"))
     end
+    assert_equal :oversize, error.reason
   end
 
   test "streams unknown-size uploads and rejects when content exceeds size limit" do
@@ -308,9 +312,22 @@ class AccountStatementTest < ActiveSupport::TestCase
       content: "x" * (AccountStatement::MAX_FILE_SIZE + 1)
     )
 
-    assert_raises(AccountStatement::InvalidUploadError) do
+    error = assert_raises(AccountStatement::InvalidUploadError) do
       AccountStatement.prepare_upload!(file)
     end
+    assert_equal :oversize, error.reason
+  end
+
+  test "rejects pdf uploads without pdf header" do
+    error = assert_raises(AccountStatement::InvalidUploadError) do
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: @account,
+        file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf", content: "not a pdf")
+      )
+    end
+
+    assert_equal :invalid_pdf_header, error.reason
   end
 
   test "stores sanitized csv parser output without raw rows" do

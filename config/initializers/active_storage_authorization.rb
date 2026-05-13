@@ -56,7 +56,7 @@ Rails.application.config.to_prepare do
       end
 
       def authorized_attachments
-        return nil unless authorized_blob
+        return [] unless authorized_blob
 
         @authorized_attachments ||= ActiveStorage::Attachment.where(blob: authorized_blob).to_a
       end
