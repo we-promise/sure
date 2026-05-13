@@ -251,11 +251,8 @@ class EnableBankingItem::Importer
             psu_headers: enable_banking_item.build_psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
-          if e.error_type == :validation_error
-            Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{e.message}"
-          else
-            raise
-          end
+          raise unless e.error_type == :validation_error && e.message.include?("transactionStatus")
+          Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{e.message}"
         end
       end
 
