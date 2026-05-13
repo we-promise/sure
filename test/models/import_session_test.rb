@@ -103,8 +103,8 @@ class ImportSessionTest < ActiveSupport::TestCase
     end
 
     assert session.reload.pending?
-    assert_equal "import_failed", session.error_details["code"]
-    assert_equal "queue offline", session.error_details["message"]
+    assert_equal "import_enqueue_failed", session.error_details["code"]
+    assert_equal "Import session could not be queued.", session.error_details["message"]
   end
 
   test "fails loudly when a later chunk references a missing source id" do
@@ -284,6 +284,24 @@ class ImportSessionTest < ActiveSupport::TestCase
     )
 
     assert_equal existing, session
+  end
+
+  test "client session creation race backfills missing expected chunks" do
+    existing = @family.import_sessions.create!(client_session_id: "race-session")
+    racing_session = @family.import_sessions.build(client_session_id: "race-session")
+    racing_session.stubs(:save!).raises(ActiveRecord::RecordNotUnique)
+
+    @family.import_sessions.stub(:find_or_initialize_by, racing_session) do
+      session = ImportSession.create_or_find_for!(
+        family: @family,
+        import_type: "SureImport",
+        client_session_id: "race-session",
+        expected_chunks: 2
+      )
+
+      assert_equal existing, session
+    end
+    assert_equal 2, existing.reload.expected_chunks
   end
 
   test "client session creation race preserves expected chunks conflict" do

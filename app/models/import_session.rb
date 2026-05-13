@@ -62,6 +62,9 @@ class ImportSession < ApplicationRecord
        existing.expected_chunks != expected_chunks
       raise ConflictError, "client_session_id already exists with a different expected_chunks value"
     end
+    if expected_chunks.present? && existing.expected_chunks.nil?
+      existing.update!(expected_chunks: expected_chunks)
+    end
 
     existing
   end
@@ -143,7 +146,8 @@ class ImportSession < ApplicationRecord
   private :create_chunk!
 
   def publish_later
-    enqueue_error = nil
+    previous_status = nil
+    should_enqueue = false
 
     with_lock do
       return if complete? || importing?
@@ -153,19 +157,23 @@ class ImportSession < ApplicationRecord
       validate_expected_chunk_sequences!
 
       previous_status = status
-      begin
-        self.class.transaction(requires_new: true) do
-          update!(status: :importing, error_details: {})
-          ImportSessionJob.perform_later(self)
-        end
-      rescue => error
-        reload
-        update!(status: previous_status, error_details: error_details_for(error))
-        enqueue_error = error
-      end
+      update!(status: :importing, error_details: {})
+      should_enqueue = true
     end
 
-    raise enqueue_error if enqueue_error
+    return unless should_enqueue
+
+    begin
+      ImportSessionJob.perform_later(self)
+    rescue => error
+      with_lock do
+        reload
+        if importing?
+          update!(status: previous_status, error_details: enqueue_error_details)
+        end
+      end
+      raise
+    end
   end
 
   def publish
@@ -317,6 +325,13 @@ class ImportSession < ApplicationRecord
       end
 
       details
+    end
+
+    def enqueue_error_details
+      {
+        "code" => "import_enqueue_failed",
+        "message" => "Import session could not be queued."
+      }
     end
 
     def merge_summary!(totals, summary)
