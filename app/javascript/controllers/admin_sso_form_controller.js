@@ -65,29 +65,6 @@ export default class extends Controller {
     this.samlCallbackUrlTarget.textContent = `${baseUrl}/auth/${providerName}/callback`
   }
 
-  copySamlCallback(event) {
-    event.preventDefault()
-
-    if (!this.hasSamlCallbackUrlTarget) return
-
-    const callbackUrl = this.samlCallbackUrlTarget.textContent
-
-    navigator.clipboard.writeText(callbackUrl).then(() => {
-      const button = event.currentTarget
-      const originalText = button.innerHTML
-      button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
-      button.classList.add('text-green-600')
-
-      setTimeout(() => {
-        button.innerHTML = originalText
-        button.classList.remove('text-green-600')
-      }, 2000)
-    }).catch(err => {
-      console.error('Failed to copy:', err)
-      alert('Failed to copy to clipboard')
-    })
-  }
-
   async validateIssuer(event) {
     const issuerInput = event.target
     const issuer = issuerInput.value.trim()
@@ -138,32 +115,6 @@ export default class extends Controller {
       issuerInput.classList.add('border-amber-300')
       this.showValidationMessage(issuerInput, "Could not validate from browser (CORS). Provider can still be saved.", 'warning')
     }
-  }
-
-  copyCallback(event) {
-    event.preventDefault()
-
-    const callbackDisplay = this.callbackUrlTarget
-    if (!callbackDisplay) return
-
-    const callbackUrl = callbackDisplay.textContent
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(callbackUrl).then(() => {
-      // Show success feedback
-      const button = event.currentTarget
-      const originalText = button.innerHTML
-      button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
-      button.classList.add('text-green-600')
-      
-      setTimeout(() => {
-        button.innerHTML = originalText
-        button.classList.remove('text-green-600')
-      }, 2000)
-    }).catch(err => {
-      console.error('Failed to copy:', err)
-      alert('Failed to copy to clipboard')
-    })
   }
 
   showValidationMessage(input, message, type) {
