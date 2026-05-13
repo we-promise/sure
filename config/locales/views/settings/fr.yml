@@ -159,8 +159,10 @@ fr:
       general_section_title: Général
       imports_label: Importations
       exports_label: Exportations
+      llm_usage_label: Utilisation LLM
       logout: Se déconnecter
       merchants_label: Marchands
+      providers_label: Fournisseurs
       guides_label: Guides
       other_section_title: Plus
       preferences_label: Préférences
@@ -169,6 +171,7 @@ fr:
       rules_label: Règles
       security_label: Sécurité
       self_hosting_label: Auto-hébergement
+      statement_vault_label: Coffre des relevés
       tags_label: Étiquettes
       transactions_section_title: Transactions
       whats_new_label: Dernières nouvelles

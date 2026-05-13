@@ -1,30 +1,31 @@
 module SettingsHelper
   SETTINGS_ORDER = [
     # General section
-    { name: "Accounts", path: :accounts_path },
-    { name: "Bank Sync", path: :settings_providers_path, condition: :admin_user? },
-    { name: "Preferences", path: :settings_preferences_path },
-    { name: "Appearance", path: :settings_appearance_path },
-    { name: "Profile Info", path: :settings_profile_path },
-    { name: "Security", path: :settings_security_path },
-    { name: "Payment", path: :settings_payment_path, condition: :not_self_hosted? },
+    { name: -> { t("settings.settings_nav.accounts_label") }, path: :accounts_path },
+    { name: -> { t("settings.settings_nav.bank_sync_label") }, path: :settings_providers_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.preferences_label") }, path: :settings_preferences_path },
+    { name: -> { t("settings.settings_nav.appearance_label") }, path: :settings_appearance_path },
+    { name: -> { t("settings.settings_nav.profile_label") }, path: :settings_profile_path },
+    { name: -> { t("settings.settings_nav.security_label") }, path: :settings_security_path },
+    { name: -> { t("settings.settings_nav.payment_label") }, path: :settings_payment_path, condition: :not_self_hosted? },
     # Transactions section
-    { name: "Categories", path: :categories_path },
-    { name: "Tags", path: :tags_path },
-    { name: "Rules", path: :rules_path },
-    { name: "Merchants", path: :family_merchants_path },
-    { name: "Recurring", path: :recurring_transactions_path },
+    { name: -> { t("settings.settings_nav.categories_label") }, path: :categories_path },
+    { name: -> { t("settings.settings_nav.tags_label") }, path: :tags_path },
+    { name: -> { t("settings.settings_nav.rules_label") }, path: :rules_path },
+    { name: -> { t("settings.settings_nav.merchants_label") }, path: :family_merchants_path },
+    { name: -> { t("settings.settings_nav.recurring_transactions_label") }, path: :recurring_transactions_path },
+    { name: -> { t("settings.settings_nav.statement_vault_label") }, path: :account_statements_path, condition: :admin_user? },
     # Advanced section
-    { name: "AI Prompts", path: :settings_ai_prompts_path, condition: :admin_user? },
-    { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
-    { name: "API Key", path: :settings_api_key_path, condition: :admin_user? },
-    { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
-    { name: "Imports", path: :imports_path, condition: :admin_user? },
-    { name: "Exports", path: :family_exports_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.ai_prompts_label") }, path: :settings_ai_prompts_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.llm_usage_label") }, path: :settings_llm_usage_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.api_key_label") }, path: :settings_api_key_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.self_hosting_label") }, path: :settings_hosting_path, condition: :self_hosted_and_admin? },
+    { name: -> { t("settings.settings_nav.imports_label") }, path: :imports_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.exports_label") }, path: :family_exports_path, condition: :admin_user? },
     # More section
-    { name: "Guides", path: :settings_guides_path },
-    { name: "What's new", path: :changelog_path },
-    { name: "Feedback", path: :feedback_path }
+    { name: -> { t("settings.settings_nav.guides_label") }, path: :settings_guides_path },
+    { name: -> { t("settings.settings_nav.whats_new_label") }, path: :changelog_path },
+    { name: -> { t("settings.settings_nav.feedback_label") }, path: :feedback_path }
   ]
 
   def adjacent_setting(current_path, offset)
@@ -40,7 +41,7 @@ module SettingsHelper
     render partial: "settings/settings_nav_link_large", locals: {
       path: send(adjacent[:path]),
       direction: offset > 0 ? "next" : "previous",
-      title: adjacent[:name]
+      title: setting_name(adjacent)
     }
   end
 
@@ -85,6 +86,9 @@ module SettingsHelper
       sync_based_summary(key)
     when "mercury"
       return { status: :off } unless @mercury_items&.any?
+      sync_based_summary(key)
+    when "brex"
+      return { status: :off } unless @brex_items&.any?
       sync_based_summary(key)
     when "coinbase"
       return { status: :off } unless @coinbase_items&.any?
@@ -217,6 +221,11 @@ module SettingsHelper
 
     def not_self_hosted?
       !self_hosted?
+    end
+
+    def setting_name(setting)
+      name = setting[:name]
+      name.respond_to?(:call) ? instance_exec(&name) : name
     end
 
     # Helper used by SETTINGS_ORDER conditions

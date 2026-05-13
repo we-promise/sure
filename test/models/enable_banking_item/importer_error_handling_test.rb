@@ -63,6 +63,42 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     assert @enable_banking_item.reload.requires_update?
   end
 
+  test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG transaction_status" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:include_pending?).returns(true)
+
+    pdng_error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: {\"message\":\"Wrong transactionStatus provided in getAccountTransactions call: PDNG\"}",
+      :validation_error
+    )
+
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(pdng_error)
+
+    result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+
+    assert result[:success]
+  end
+
+  test "fetch_and_store_transactions fails when validation error is unrelated to transactionStatus" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:include_pending?).returns(true)
+
+    date_error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: {\"message\":\"Invalid date_from format\"}",
+      :validation_error
+    )
+
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(date_error)
+
+    result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+
+    assert_not result[:success]
+  end
+
   test "fetch_and_update_balance updates status to requires_update on unauthorized error" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     def @mock_provider.get_account_balances(**args)

@@ -2,7 +2,11 @@
       account: @account,
       chart_view: @chart_view,
       chart_period: @period,
-      active_tab: @tab
+      active_tab: @tab,
+      statement_coverage: @statement_coverage,
+      statements: @account_statements,
+      reconciliation_statuses: @statement_reconciliation_statuses,
+      can_manage_statements: @can_manage_statements
     ) do |account_page| %>
   <%= account_page.with_activity_feed(feed_data: @activity_feed_data, pagy: @pagy, search: @q[:search]) %>
 <% end %>

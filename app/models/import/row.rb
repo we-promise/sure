@@ -14,7 +14,7 @@ class Import::Row < ApplicationRecord
     if tags.blank?
       [ "" ]
     else
-      tags.split("|").map(&:strip)
+      split_tags(tags).map(&:strip)
     end
   end
 
@@ -37,6 +37,58 @@ class Import::Row < ApplicationRecord
   end
 
   private
+    # Supports historical comma-delimited exports and pipe-delimited templates.
+    # Backslash escapes comma, pipe, and backslash so tag names can contain either delimiter.
+    def split_tags(value)
+      split_escaped_tags(value, tag_delimiter_for(value))
+    end
+
+    def tag_delimiter_for(value)
+      return "," if unescaped_delimiter?(value, ",")
+      return "|" if unescaped_delimiter?(value, "|")
+
+      ","
+    end
+
+    def unescaped_delimiter?(value, delimiter)
+      escaping = false
+
+      value.each_char do |char|
+        if escaping
+          escaping = false
+        elsif char == "\\"
+          escaping = true
+        elsif char == delimiter
+          return true
+        end
+      end
+
+      false
+    end
+
+    def split_escaped_tags(value, delimiter)
+      tag_names = []
+      current = +""
+      escaping = false
+
+      value.each_char do |char|
+        if escaping
+          current << (char.in?([ delimiter, ",", "|", "\\" ]) ? char : "\\#{char}")
+          escaping = false
+        elsif char == "\\"
+          escaping = true
+        elsif char == delimiter
+          tag_names << current
+          current = +""
+        else
+          current << char
+        end
+      end
+
+      current << "\\" if escaping
+      tag_names << current
+    end
+
     # In the Sure system, positive quantities == "inflows"
     def apply_trade_signage_convention(value)
       value * (import.signage_convention == "inflows_positive" ? 1 : -1)

@@ -1,7 +1,7 @@
 class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
-  include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, SophtronConnectable
+  include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable
 
   DATE_FORMATS = [
@@ -28,6 +28,7 @@ class Family < ApplicationRecord
 
   has_many :imports, dependent: :destroy
   has_many :family_exports, dependent: :destroy
+  has_many :account_statements, dependent: :destroy
 
   has_many :entries, through: :accounts
   has_many :transactions, through: :accounts

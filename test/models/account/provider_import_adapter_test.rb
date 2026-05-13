@@ -881,6 +881,51 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "clears pending flag, preserves pending date, and records old external_id when claiming pending entry with nil extra" do
+    # Enable Banking booked transactions often have nil extra (no FX, no MCC).
+    # The deep_merge path is skipped, so we must clear the pending flag explicitly.
+    pending_date = Date.today - 2.days
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_pending_nil_extra",
+      amount: 42.00,
+      currency: "EUR",
+      date: pending_date,
+      name: "Supermarket",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    assert pending_entry.transaction.pending?, "should be pending before claim"
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "eb_booked_nil_extra",
+        amount: 42.00,
+        currency: "EUR",
+        date: Date.today,   # booked date is later than pending date
+        name: "Supermarket Posted",
+        source: "enable_banking",
+        extra: nil  # typical for simple Enable Banking booked transactions
+      )
+
+      assert_equal pending_entry.id, posted_entry.id, "should claim the pending entry"
+      assert_equal "eb_booked_nil_extra", posted_entry.external_id
+
+      posted_entry.reload
+
+      # Pending flag must be cleared so the entry no longer shows a pending badge
+      assert_not posted_entry.transaction.pending?, "pending flag should be cleared after claim"
+
+      # Date must be the original pending date, not the later booked date
+      assert_equal pending_date, posted_entry.date, "pending date should be preserved, not overwritten with booked date"
+
+      # Old pending external_id must be stored so the sync engine can skip re-importing it
+      claimed_ids = posted_entry.transaction.extra&.dig("auto_claimed_pending_ids") || []
+      assert_includes claimed_ids, "eb_pending_nil_extra",
+        "auto_claimed_pending_ids should record the old pending external_id"
+    end
+  end
+
   test "does not reconcile when posted transaction has same external_id as pending" do
     # When external_id matches, normal dedup should handle it
     pending_entry = @adapter.import_transaction(

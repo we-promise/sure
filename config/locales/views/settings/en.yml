@@ -161,8 +161,10 @@ en:
       general_section_title: General
       imports_label: Imports
       exports_label: Exports
+      llm_usage_label: LLM Usage
       logout: Logout
       merchants_label: Merchants
+      providers_label: Providers
       guides_label: Guides
       other_section_title: More
       preferences_label: Preferences
@@ -171,6 +173,7 @@ en:
       rules_label: Rules
       security_label: Security
       self_hosting_label: Self-Hosting
+      statement_vault_label: Statement Vault
       tags_label: Tags
       transactions_section_title: Transactions
       whats_new_label: What's new
@@ -233,6 +236,7 @@ en:
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         mercury: Sync your Mercury business banking accounts automatically.
+        brex: Sync Brex cash and corporate card activity with read-only access.
         coinbase: Import your Coinbase crypto holdings and track performance.
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.

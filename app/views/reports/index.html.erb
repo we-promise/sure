@@ -90,11 +90,54 @@
     <% end %>
 
     <%# Period Display %>
-    <div class="text-sm text-subdued">
-      <%= t("reports.index.showing_period",
-            start: @start_date.strftime("%b %-d, %Y"),
-            end: @end_date.strftime("%b %-d, %Y")) %>
-    </div>
+    <% if @nav %>
+      <div class="flex items-center gap-1 mb-4">
+        <div class="flex items-center gap-2">
+          <%= render DS::Link.new(
+            variant: "icon",
+            icon: "chevron-left",
+            href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
+            aria: { label: t("reports.index.previous_period") },
+          ) %>
+
+          <% if @nav[:at_latest] %>
+            <button disabled aria-label="<%= t('reports.index.next_period') %>" class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-not-allowed">
+              <%= icon("chevron-right", color: "current") %>
+            </button>
+          <% else %>
+            <%= render DS::Link.new(
+              variant: "icon",
+              icon: "chevron-right",
+              href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
+              aria: { label: t("reports.index.next_period") },
+            ) %>
+          <% end %>
+        </div>
+
+        <% if [:monthly, :quarterly, :ytd].include?(@period_type) %>
+          <%= render DS::Menu.new(variant: "button") do |menu| %>
+            <% menu.with_button class: "flex items-center gap-1 hover:bg-alpha-black-25 cursor-pointer rounded-md p-2" do %>
+              <span class="text-primary font-medium text-lg lg:text-base"><%= @nav[:label] %></span>
+              <%= icon("chevron-down") %>
+            <% end %>
+
+            <% menu.with_custom_content do %>
+              <%= render "reports/period_picker", period_type: @period_type, start_date: @start_date %>
+            <% end %>
+          <% end %>
+        <% else %>
+          <span class="text-primary font-medium text-lg lg:text-base"><%= @nav[:label] %></span>
+        <% end %>
+
+        <div class="ml-auto">
+          <%= render DS::Link.new(
+            text: t("reports.index.today"),
+            variant: "outline",
+            href: reports_path(period_type: @period_type),
+          ) %>
+        </div>
+      </div>
+    <% end %>
   </div>
 <% end %>
 

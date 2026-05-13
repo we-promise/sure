@@ -5,6 +5,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @other_family = families(:empty)
     @exporter = Family::DataExporter.new(@family)
+    @opening_anchor_date = Date.parse("2024-05-01")
 
     # Create some test data for the family
     @account = @family.accounts.create!(
@@ -12,6 +13,13 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       accountable: Depository.new,
       balance: 1000,
       currency: "USD"
+    )
+    @account.entries.create!(
+      date: @opening_anchor_date,
+      amount: 1000,
+      name: "Opening balance",
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
     )
 
     @category = @family.categories.create!(
@@ -47,7 +55,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "attachments.json", "all.ndjson" ]
+    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "attachments.json", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
@@ -164,15 +172,23 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     Zip::File.open_buffer(zip_data) do |zip|
       # Check accounts.csv
       accounts_csv = zip.read("accounts.csv")
-      assert accounts_csv.include?("id,name,type,subtype,balance,currency,created_at")
+      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ],
+                   CSV.parse(accounts_csv, headers: true).headers
+
+      # Check version marker
+      version_txt = zip.read("version.txt")
+      assert_includes version_txt, "export_version: 2"
+      refute_includes version_txt, "csv_export_version"
 
       # Check transactions.csv
       transactions_csv = zip.read("transactions.csv")
-      assert transactions_csv.include?("date,account_name,amount,name,category,tags,notes,currency")
+      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ],
+                   CSV.parse(transactions_csv, headers: true).headers
 
       # Check trades.csv
       trades_csv = zip.read("trades.csv")
-      assert trades_csv.include?("date,account_name,ticker,quantity,price,amount,currency")
+      assert_equal [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ],
+                   CSV.parse(trades_csv, headers: true).headers
 
       # Check categories.csv
       categories_csv = zip.read("categories.csv")
@@ -181,6 +197,109 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
       assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
+    end
+  end
+
+  test "exports transaction CSV rows with restored legacy ISO date stored amount account name and comma tags" do
+    tag2 = @family.tags.create!(name: "Food, Dining|Cafe", color: "#0000FF")
+    entry = @account.entries.create!(
+      name: "CSV Grocery",
+      amount: 42.50,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      notes: "Weekly grocery run",
+      entryable: Transaction.new(category: @category)
+    )
+    entry.transaction.tags << @tag
+    entry.transaction.tags << tag2
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("transactions.csv"), headers: true)
+      row = rows.find { |csv_row| csv_row["name"] == "CSV Grocery" }
+
+      assert_not_nil row
+      assert_equal "2024-05-15", row["date"]
+      assert_equal "42.5", row["amount"]
+      assert_equal @account.name, row["account_name"]
+      assert_includes row["tags"], ","
+      assert_includes row["tags"], "\\,"
+      assert_includes row["tags"], "\\|"
+      assert_equal [ @tag.name, tag2.name ].sort, Import::Row.new(tags: row["tags"]).tags_list.sort
+    end
+  end
+
+  test "exported CSV files can generate matching import rows" do
+    create_csv_export_trade!
+    @account.entries.create!(
+      name: "CSV Importable Transaction",
+      amount: 15.25,
+      currency: "USD",
+      date: Date.parse("2024-05-16"),
+      entryable: Transaction.new(category: @category)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      accounts_csv = zip.read("accounts.csv")
+      account_import = @other_family.imports.create!(
+        type: "AccountImport",
+        raw_file_str: accounts_csv,
+        entity_type_col_label: "Account type*",
+        name_col_label: "Name*",
+        amount_col_label: "Balance*",
+        currency_col_label: "Currency",
+        date_col_label: "Balance Date",
+        date_format: "%Y-%m-%d"
+      )
+      account_import.generate_rows_from_csv
+      account_row = account_import.rows.reload.find_by!(name: @account.name)
+      assert account_row.valid?
+      assert_equal @account.accountable_type, account_row.entity_type
+      assert_equal BigDecimal(@account.balance.to_s), BigDecimal(account_row.amount)
+      assert account_row.date.blank?
+
+      transaction_import = @other_family.imports.create!(
+        type: "TransactionImport",
+        raw_file_str: zip.read("transactions.csv"),
+        date_col_label: "date*",
+        amount_col_label: "amount*",
+        name_col_label: "name",
+        currency_col_label: "currency",
+        category_col_label: "category",
+        tags_col_label: "tags",
+        account_col_label: "account",
+        notes_col_label: "notes",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_negative"
+      )
+      transaction_import.generate_rows_from_csv
+      transaction_row = transaction_import.rows.reload.find_by!(name: "CSV Importable Transaction")
+      assert transaction_row.valid?
+      assert_equal @account.name, transaction_row.account
+      assert_equal BigDecimal("15.25"), transaction_row.signed_amount
+
+      trade_import = @other_family.imports.create!(
+        type: "TradeImport",
+        raw_file_str: zip.read("trades.csv"),
+        date_col_label: "date*",
+        ticker_col_label: "ticker*",
+        exchange_operating_mic_col_label: "exchange_operating_mic",
+        currency_col_label: "currency",
+        qty_col_label: "qty*",
+        price_col_label: "price*",
+        account_col_label: "account",
+        name_col_label: "name",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_positive"
+      )
+      trade_import.generate_rows_from_csv
+      trade_row = trade_import.rows.reload.find_by!(ticker: @csv_export_trade_ticker)
+      assert trade_row.valid?
+      assert_equal @account.name, trade_row.account
+      assert_equal BigDecimal("10"), BigDecimal(trade_row.qty)
     end
   end
 
@@ -748,6 +867,28 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         name: name,
         currency: account.currency,
         entryable: Transaction.new(kind: "funds_movement")
+      )
+    end
+
+    def create_csv_export_trade!
+      security = Security.create!(
+        ticker: "CSV#{SecureRandom.hex(3).upcase}",
+        name: "CSV Export Security",
+        exchange_operating_mic: "XNAS"
+      )
+      @csv_export_trade_ticker = security.ticker
+
+      @account.entries.create!(
+        date: Date.parse("2024-05-17"),
+        amount: 1500,
+        name: "CSV Export Buy",
+        currency: "USD",
+        entryable: Trade.new(
+          security: security,
+          qty: 10,
+          price: 150,
+          currency: "USD"
+        )
       )
     end
 end

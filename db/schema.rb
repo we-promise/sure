@@ -43,6 +43,57 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying::text, 'read_write'::character varying::text, 'read_only'::character varying::text])", name: "chk_account_shares_permission"
   end
 
+  create_table "account_statements", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "account_id"
+    t.uuid "suggested_account_id"
+    t.string "filename", limit: 255, null: false
+    t.string "content_type", limit: 100, null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum", limit: 64, null: false
+    t.string "source", default: "manual_upload", null: false
+    t.string "upload_status", default: "stored", null: false
+    t.string "institution_name_hint", limit: 200
+    t.string "account_name_hint", limit: 200
+    t.string "account_last4_hint", limit: 4
+    t.date "period_start_on"
+    t.date "period_end_on"
+    t.decimal "opening_balance", precision: 19, scale: 4
+    t.decimal "closing_balance", precision: 19, scale: 4
+    t.string "currency", limit: 3
+    t.decimal "parser_confidence", precision: 5, scale: 4
+    t.decimal "match_confidence", precision: 5, scale: 4
+    t.string "review_status", default: "unmatched", null: false
+    t.jsonb "sanitized_parser_output", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "content_sha256"
+    t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
+    t.index ["account_id"], name: "index_account_statements_on_account_id"
+    t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
+    t.index ["family_id", "content_sha256"], name: "index_account_statements_on_family_content_sha256", unique: true, where: "(content_sha256 IS NOT NULL)"
+    t.index ["family_id", "review_status"], name: "index_account_statements_on_family_review_status"
+    t.index ["family_id"], name: "index_account_statements_on_family_id"
+    t.index ["suggested_account_id", "review_status"], name: "index_account_statements_on_suggested_account_review"
+    t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
+    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
+    t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
+    t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
+    t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
+    t.check_constraint "char_length(checksum::text) <= 64", name: "chk_account_statements_checksum_length"
+    t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"
+    t.check_constraint "content_sha256 IS NULL OR content_sha256::text ~ '^[0-9a-f]{64}$'::text", name: "chk_account_statements_content_sha256"
+    t.check_constraint "currency IS NULL OR char_length(currency::text) <= 3", name: "chk_account_statements_currency_length"
+    t.check_constraint "char_length(filename::text) <= 255", name: "chk_account_statements_filename_length"
+    t.check_constraint "institution_name_hint IS NULL OR char_length(institution_name_hint::text) <= 200", name: "chk_account_statements_institution_hint_length"
+    t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
+    t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
+    t.check_constraint "period_start_on IS NULL OR period_end_on IS NULL OR period_start_on <= period_end_on", name: "chk_account_statements_period_order"
+    t.check_constraint "review_status::text = ANY (ARRAY['unmatched'::character varying::text, 'linked'::character varying::text, 'rejected'::character varying::text])", name: "chk_account_statements_review_status"
+    t.check_constraint "source::text = 'manual_upload'::text", name: "chk_account_statements_source"
+    t.check_constraint "upload_status::text = ANY (ARRAY['stored'::character varying::text, 'failed'::character varying::text])", name: "chk_account_statements_upload_status"
+  end
+
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "subtype"
     t.uuid "family_id", null: false
@@ -212,6 +263,49 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_binance_items_on_family_id"
     t.index ["status"], name: "index_binance_items_on_status"
+  end
+
+  create_table "brex_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "brex_item_id", null: false
+    t.string "name"
+    t.string "account_id", null: false
+    t.string "account_kind", default: "cash", null: false
+    t.string "currency", default: "USD", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.decimal "account_limit", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["brex_item_id", "account_id"], name: "index_brex_accounts_on_item_and_account_id", unique: true
+    t.index ["brex_item_id"], name: "index_brex_accounts_on_brex_item_id"
+  end
+
+  create_table "brex_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "token", null: false
+    t.string "base_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_brex_items_on_family_id"
+    t.index ["status"], name: "index_brex_items_on_status"
   end
 
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1755,6 +1849,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "account_shares", "accounts"
   add_foreign_key "account_shares", "users"
+  add_foreign_key "account_statements", "accounts", column: "suggested_account_id", on_delete: :nullify
+  add_foreign_key "account_statements", "accounts", on_delete: :nullify
+  add_foreign_key "account_statements", "families", on_delete: :cascade
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
@@ -1766,6 +1863,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
+  add_foreign_key "brex_accounts", "brex_items"
+  add_foreign_key "brex_items", "families"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"

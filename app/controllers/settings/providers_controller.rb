@@ -187,6 +187,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
+      { key: "brex",           title: "Brex",            turbo_id: "brex",           partial: "brex_panel" },
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
@@ -205,6 +206,7 @@ class Settings::ProvidersController < ApplicationController
       "enable_banking" => "EnableBankingItem",
       "coinstats"      => "CoinstatsItem",
       "mercury"        => "MercuryItem",
+      "brex"           => "BrexItem",
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
@@ -226,6 +228,8 @@ class Settings::ProvidersController < ApplicationController
         @coinstats_items = Current.family.coinstats_items.ordered
       when "mercury"
         @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
+      when "brex"
+        @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)
       when "coinbase"
         @coinbase_items = Current.family.coinbase_items.ordered
       when "binance"
@@ -259,6 +263,7 @@ class Settings::ProvidersController < ApplicationController
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @mercury_items = Current.family.mercury_items.active.ordered
+      @brex_items = Current.family.brex_items.active.ordered
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
@@ -287,6 +292,7 @@ class Settings::ProvidersController < ApplicationController
         "enable_banking" => @enable_banking_items,
         "coinstats"      => @coinstats_items,
         "mercury"        => @mercury_items,
+        "brex"           => @brex_items,
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,

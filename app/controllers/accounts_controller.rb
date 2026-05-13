@@ -18,6 +18,7 @@ class AccountsController < ApplicationController
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
+    @brex_items = visible_provider_items(family.brex_items.ordered.includes(:accounts, :syncs, brex_accounts: :account_provider))
     @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
     @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
     @ibkr_items = visible_provider_items(family.ibkr_items.ordered.includes(:syncs, :ibkr_accounts))
@@ -49,6 +50,10 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+    if statement_tab_active?
+      build_statement_tab_data
+      return render_statement_tab_frame if statement_tab_frame_request?
+    end
 
     @pagy, @entries = pagy(
       entries,
@@ -236,6 +241,39 @@ class AccountsController < ApplicationController
       end
     end
 
+    def build_statement_tab_data
+      return unless statement_tab_active?
+
+      @statement_coverage = AccountStatement::Coverage.for_year(@account, params[:statement_year])
+      @account_statements = @account.account_statements.with_attached_original_file.ordered.to_a
+      @statement_reconciliation_statuses = AccountStatement.reconciliation_statuses_for(@account_statements, account: @account)
+      permission = @account.permission_for(Current.user)
+      @can_manage_statements = AccountStatement.statement_manager?(Current.user) &&
+        permission.in?([ :owner, :full_control ])
+    end
+
+    def statement_tab_frame_request?
+      turbo_frame_request? && request.headers["Turbo-Frame"] == helpers.dom_id(@account, :statements_tab)
+    end
+
+    def render_statement_tab_frame
+      render partial: "accounts/show/statements_frame", locals: statement_tab_locals, layout: false
+    end
+
+    def statement_tab_locals
+      {
+        account: @account,
+        coverage: @statement_coverage,
+        statements: @account_statements,
+        reconciliation_statuses: @statement_reconciliation_statuses,
+        can_manage_statements: @can_manage_statements
+      }
+    end
+
+    def statement_tab_active?
+      @tab == "statements"
+    end
+
     # Builds sync stats maps for all provider types to avoid N+1 queries in views
     def build_sync_stats_maps
       # SimpleFIN sync stats
@@ -315,6 +353,27 @@ class AccountsController < ApplicationController
       @mercury_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Brex sync stats
+      @brex_sync_stats_map = {}
+      @brex_account_counts_map = {}
+      @brex_institutions_count_map = {}
+      @brex_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @brex_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        brex_accounts = item.brex_accounts.to_a
+        linked_count = brex_accounts.count { |brex_account| brex_account.account_provider.present? }
+        total_count = brex_accounts.count
+        @brex_account_counts_map[item.id] = {
+          linked: linked_count,
+          unlinked: total_count - linked_count,
+          total: total_count
+        }
+        @brex_institutions_count_map[item.id] = brex_accounts
+          .filter_map(&:institution_metadata)
+          .uniq { |institution| institution["name"] || institution["institution_name"] }
+          .count
       end
 
       # Coinbase sync stats
