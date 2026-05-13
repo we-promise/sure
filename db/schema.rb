@@ -982,6 +982,38 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.check_constraint "source_row_number > 0", name: "chk_import_rows_source_row_number_positive"
   end
 
+  create_table "import_sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "import_type", default: "SureImport", null: false
+    t.string "status", default: "pending", null: false
+    t.string "client_session_id", limit: 255
+    t.integer "expected_chunks"
+    t.jsonb "summary", default: {}, null: false
+    t.jsonb "error_details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "client_session_id"], name: "idx_import_sessions_on_family_client_session", unique: true, where: "(client_session_id IS NOT NULL)"
+    t.index ["family_id", "status"], name: "index_import_sessions_on_family_id_and_status"
+    t.index ["family_id"], name: "index_import_sessions_on_family_id"
+    t.index ["id", "family_id"], name: "idx_import_sessions_on_id_family", unique: true
+  end
+
+  create_table "import_source_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "import_session_id", null: false
+    t.string "source_type", limit: 64, null: false
+    t.string "source_id", limit: 255, null: false
+    t.string "target_type", null: false
+    t.uuid "target_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "source_type", "source_id"], name: "idx_import_source_mappings_on_family_source"
+    t.index ["family_id"], name: "index_import_source_mappings_on_family_id"
+    t.index ["import_session_id", "source_type", "source_id"], name: "index_import_source_mappings_on_session_type_and_source", unique: true
+    t.index ["import_session_id"], name: "index_import_source_mappings_on_import_session_id"
+    t.index ["target_type", "target_id"], name: "idx_import_source_mappings_on_target"
+  end
+
   create_table "imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "column_mappings"
     t.string "status"
@@ -1021,8 +1053,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.uuid "account_statement_id"
     t.jsonb "expected_record_counts", default: {}, null: false
     t.jsonb "readback_verification", default: {}, null: false
+    t.uuid "import_session_id"
+    t.integer "sequence"
+    t.string "client_chunk_id", limit: 255
+    t.string "checksum", limit: 64
+    t.jsonb "summary", default: {}, null: false
+    t.jsonb "error_details", default: {}, null: false
     t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
+    t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
+    t.index ["import_session_id", "sequence"], name: "idx_imports_on_session_sequence", unique: true, where: "((import_session_id IS NOT NULL) AND (sequence IS NOT NULL))"
+    t.index ["import_session_id"], name: "index_imports_on_import_session_id"
   end
 
   create_table "indexa_capital_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2043,8 +2084,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
+  add_foreign_key "import_sessions", "families"
+  add_foreign_key "import_source_mappings", "families"
+  add_foreign_key "import_source_mappings", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_import_source_mappings_session_family", on_delete: :cascade
   add_foreign_key "imports", "account_statements", on_delete: :nullify
   add_foreign_key "imports", "families"
+  add_foreign_key "imports", "import_sessions", on_delete: :cascade
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "invitations", "families"
