@@ -122,12 +122,11 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       } },
       headers: api_headers(read_write_api_key)
 
-    assert_response :created
-    body = JSON.parse(response.body)
-    assert body["id"].present?
-    assert_match(/Deposit to/, body["name"])
-    assert_equal "Transaction", body["entryable_type"]
-  end
+assert_response :created
+     body = JSON.parse(response.body)
+     assert body["id"].present?
+     assert_match(/Deposit to/, body["name"])
+   end
 
   test "create withdrawal returns 201" do
     post "/api/v1/trades",
@@ -140,12 +139,11 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       } },
       headers: api_headers(read_write_api_key)
 
-    assert_response :created
-    body = JSON.parse(response.body)
-    assert body["id"].present?
-    assert_match(/Withdrawal/, body["name"])
-    assert_equal "Transaction", body["entryable_type"]
-  end
+assert_response :created
+     body = JSON.parse(response.body)
+     assert body["id"].present?
+     assert_match(/Withdrawal/, body["name"])
+   end
 
   test "create deposit without amount returns 422" do
     post "/api/v1/trades",
@@ -175,12 +173,11 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
         headers: api_headers(read_write_api_key)
     end
 
-    assert_response :created
-    body = JSON.parse(response.body)
-    assert body["id"].present?
-    assert_equal "Transaction", body["entryable_type"]
-    assert body["account"]["id"].present?
-    assert body["account"]["account_type"].present?
+assert_response :created
+     body = JSON.parse(response.body)
+     assert body["id"].present?
+     assert body["inflow_transaction"]["account"]["id"].present?
+     assert body["inflow_transaction"]["account"]["account_type"].present?
 
     transfer = Transfer.joins(inflow_transaction: :entry)
                        .where(entries: { account_id: @investment_account.id })

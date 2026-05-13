@@ -58,31 +58,31 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Trade could not be created", errors)
     end
 
-    if model.is_a?(Entry)
-      model.lock_saved_attributes!
-      model.mark_user_modified!
-      model.sync_account_later
+if model.is_a?(Entry)
+       model.lock_saved_attributes!
+       model.mark_user_modified!
+       model.sync_account_later
 
-      if model.entryable.is_a?(Transaction)
-        @entry = model
-        render json: entry_response_payload(@entry), status: :created
-      else
-        @trade = model.trade
-        apply_trade_create_options!
-        return if performed?
-        @entry = @trade.entry
-        render :show, status: :created
-      end
-    elsif model.is_a?(Transfer)
-      @entry = model.inflow_transaction.entry
-      render json: entry_response_payload(@entry), status: :created
-    else
-      @trade = model
-      apply_trade_create_options!
-      return if performed?
-      @entry = @trade.entry
-      render :show, status: :created
-    end
+       if model.entryable.is_a?(Transaction)
+         @transaction = model.entryable
+         render template: "api/v1/transactions/show", status: :created
+       else
+         @trade = model.trade
+         apply_trade_create_options!
+         return if performed?
+         @entry = @trade.entry
+         render :show, status: :created
+       end
+     elsif model.is_a?(Transfer)
+       @transfer = model
+       render template: "api/v1/transfers/show", status: :created
+     else
+       @trade = model
+       apply_trade_create_options!
+       return if performed?
+       @entry = @trade.entry
+       render :show, status: :created
+     end
   rescue ActiveRecord::RecordNotFound => e
     message = (e.model == "Account") ? "Account not found" : "Security not found"
     render json: { error: "not_found", message: message }, status: :not_found
@@ -405,23 +405,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       }, status: :internal_server_error
     end
 
-    def entry_response_payload(entry)
-      {
-        id: entry.id,
-        date: entry.date,
-        amount: entry.amount_money.format,
-        currency: entry.currency,
-        name: entry.name,
-        entryable_type: "Transaction",
-        account: {
-          id: entry.account.id,
-          name: entry.account.name,
-          account_type: entry.account.accountable_type.underscore
-        }
-      }
-    end
-
-    def safe_page_param
+def safe_page_param
       page = params[:page].to_i
       page > 0 ? page : 1
     end
