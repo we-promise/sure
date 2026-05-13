@@ -28,7 +28,7 @@ class RuleRun < ApplicationRecord
   end
 
   def transactions_blocked
-    [ transactions_queued - transactions_processed, 0 ].max
+    [ transactions_processed - transactions_modified, 0 ].max
   end
 
   # Thread-safe method to complete a job and update the run
