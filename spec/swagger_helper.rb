@@ -1127,7 +1127,6 @@ RSpec.configure do |config|
               client_chunk_id: { type: :string, nullable: true },
               status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
               rows_count: { type: :integer, minimum: 0 },
-              checksum: { type: :string, nullable: true },
               summary: {
                 type: :object,
                 additionalProperties: {
