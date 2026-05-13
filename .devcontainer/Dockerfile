@@ -11,6 +11,7 @@ RUN apt-get update -qq \
     git \
     imagemagick \
     iproute2 \
+    libvips42 \
     libpq-dev \
     libyaml-dev \
     libyaml-0-2 \

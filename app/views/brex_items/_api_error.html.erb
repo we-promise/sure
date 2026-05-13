@@ -1,0 +1,36 @@
+<%# locals: (error_message:, return_path:) %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="flex items-start gap-3">
+          <%= icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
+          <div class="text-sm">
+            <p class="font-medium text-primary mb-2"><%= t(".heading") %></p>
+            <p class="text-secondary"><%= error_message %></p>
+          </div>
+        </div>
+
+        <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+          <p class="font-medium text-primary"><%= t(".common_issues") %></p>
+          <ul class="list-disc list-inside space-y-1 text-secondary">
+            <li><strong><%= t(".invalid_token_label") %></strong> <%= t(".invalid_token") %></li>
+            <li><strong><%= t(".expired_credentials_label") %></strong> <%= t(".expired_credentials") %></li>
+            <li><strong><%= t(".permissions_label") %></strong> <%= t(".permissions") %></li>
+            <li><strong><%= t(".network_label") %></strong> <%= t(".network") %></li>
+            <li><strong><%= t(".service_label") %></strong> <%= t(".service") %></li>
+          </ul>
+        </div>
+
+        <div class="mt-4">
+          <%= link_to return_path.presence || settings_providers_path,
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors",
+                      data: { turbo: false } do %>
+            <%= t(".settings_link") %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

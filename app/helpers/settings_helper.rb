@@ -86,6 +86,9 @@ module SettingsHelper
     when "mercury"
       return { status: :off } unless @mercury_items&.any?
       sync_based_summary(key)
+    when "brex"
+      return { status: :off } unless @brex_items&.any?
+      sync_based_summary(key)
     when "coinbase"
       return { status: :off } unless @coinbase_items&.any?
       sync_based_summary(key)

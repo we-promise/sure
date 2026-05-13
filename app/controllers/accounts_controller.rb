@@ -18,6 +18,7 @@ class AccountsController < ApplicationController
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
+    @brex_items = visible_provider_items(family.brex_items.ordered.includes(:accounts, :syncs, brex_accounts: :account_provider))
     @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
     @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
     @ibkr_items = visible_provider_items(family.ibkr_items.ordered.includes(:syncs, :ibkr_accounts))
@@ -315,6 +316,27 @@ class AccountsController < ApplicationController
       @mercury_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Brex sync stats
+      @brex_sync_stats_map = {}
+      @brex_account_counts_map = {}
+      @brex_institutions_count_map = {}
+      @brex_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @brex_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        brex_accounts = item.brex_accounts.to_a
+        linked_count = brex_accounts.count { |brex_account| brex_account.account_provider.present? }
+        total_count = brex_accounts.count
+        @brex_account_counts_map[item.id] = {
+          linked: linked_count,
+          unlinked: total_count - linked_count,
+          total: total_count
+        }
+        @brex_institutions_count_map[item.id] = brex_accounts
+          .filter_map(&:institution_metadata)
+          .uniq { |institution| institution["name"] || institution["institution_name"] }
+          .count
       end
 
       # Coinbase sync stats
