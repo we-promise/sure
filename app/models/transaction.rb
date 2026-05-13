@@ -35,11 +35,13 @@ class Transaction < ApplicationRecord
 
   def exchange_rate=(value)
     if value.blank?
-      self.extra = (extra || {}).merge("exchange_rate" => nil)
+      self.extra = (extra || {}).merge("exchange_rate" => nil, "exchange_rate_invalid" => false)
     else
       begin
         normalized_value = Float(value)
-        self.extra = (extra || {}).merge("exchange_rate" => normalized_value)
+        raise ArgumentError unless normalized_value.finite?
+
+        self.extra = (extra || {}).merge("exchange_rate" => normalized_value, "exchange_rate_invalid" => false)
       rescue ArgumentError, TypeError
         # Store the raw value for validation error reporting
         self.extra = (extra || {}).merge("exchange_rate" => value, "exchange_rate_invalid" => true)
@@ -55,9 +57,8 @@ class Transaction < ApplicationRecord
       if extra&.dig("exchange_rate_invalid")
         errors.add(:exchange_rate, "must be a number")
       elsif exchange_rate.present?
-        # Convert to float for comparison
-        numeric_rate = exchange_rate.to_d rescue nil
-        if numeric_rate.nil? || numeric_rate <= 0
+        numeric_rate = Float(exchange_rate) rescue nil
+        if numeric_rate.nil? || !numeric_rate.finite? || numeric_rate <= 0
           errors.add(:exchange_rate, "must be greater than 0")
         end
       end
@@ -149,6 +150,24 @@ class Transaction < ApplicationRecord
     end
   rescue StandardError
     false
+  end
+
+  def activity_security_id
+    extra&.dig("security_id").presence || extra&.dig("security", "id").presence
+  end
+
+  def activity_security
+    security_id = activity_security_id.to_s
+    return @activity_security = nil if security_id.blank?
+    return @activity_security if defined?(@activity_security_id) && @activity_security_id == security_id
+
+    @activity_security_id = security_id
+    @activity_security = Security.find_by(id: security_id)
+  end
+
+  def set_preloaded_activity_security(security)
+    @activity_security_id = security&.id&.to_s
+    @activity_security = security
   end
 
   # Potential duplicate matching methods

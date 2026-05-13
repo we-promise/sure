@@ -21,6 +21,7 @@ class AccountsController < ApplicationController
     @brex_items = visible_provider_items(family.brex_items.ordered.includes(:accounts, :syncs, brex_accounts: :account_provider))
     @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
     @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
+    @ibkr_items = visible_provider_items(family.ibkr_items.ordered.includes(:syncs, :ibkr_accounts))
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
 
@@ -48,13 +49,14 @@ class AccountsController < ApplicationController
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological
+    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
 
     @pagy, @entries = pagy(
       entries,
       limit: safe_per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
+    Transaction::ActivitySecurityPreloader.new(@entries).preload
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end

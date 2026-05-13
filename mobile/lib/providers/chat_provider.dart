@@ -23,6 +23,11 @@ class ChatProvider with ChangeNotifier {
   /// Used to detect when the LLM has finished writing (no growth between polls).
   int? _lastAssistantContentLength;
 
+  /// Number of consecutive polls with no content growth.
+  /// Requires 2 consecutive stable polls before declaring the response complete,
+  /// to avoid prematurely stopping on a brief server-side generation pause.
+  int _stablePollingCount = 0;
+
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
@@ -55,7 +60,8 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('fetchChats error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -67,6 +73,10 @@ class ChatProvider with ChangeNotifier {
     required String accessToken,
     required String chatId,
   }) async {
+    // Stop any in-progress polling — the server response is the source of truth
+    // when explicitly fetching a chat. This prevents a stale poll from
+    // overwriting the freshly fetched data and ensures the message filter lifts.
+    _stopPolling();
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -84,7 +94,8 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = result['error'] ?? 'Failed to fetch chat';
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('fetchChat error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -142,11 +153,23 @@ class ChatProvider with ChangeNotifier {
         return null;
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('createChat error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       _isLoading = false;
       notifyListeners();
       return null;
     }
+  }
+
+  void _rollbackOptimisticMessage(String optimisticId, String chatId) {
+    if (_currentChat != null && _currentChat!.id == chatId) {
+      _currentChat = _currentChat!.copyWith(
+        messages: _currentChat!.messages
+            .where((m) => m.id != optimisticId)
+            .toList(),
+      );
+    }
+    _isWaitingForResponse = false;
   }
 
   /// Send a message to the current chat.
@@ -158,6 +181,26 @@ class ChatProvider with ChangeNotifier {
   }) async {
     _isSendingMessage = true;
     _errorMessage = null;
+
+    // Optimistically add the user message so it appears immediately — before
+    // the network round-trip completes. This makes the empty-state disappear
+    // and the typing indicator show at the same instant.
+    final now = DateTime.now();
+    final optimisticId = 'pending-${now.millisecondsSinceEpoch}';
+    final optimisticMessage = Message(
+      id: optimisticId,
+      type: 'text',
+      role: 'user',
+      content: content,
+      createdAt: now,
+      updatedAt: now,
+    );
+    if (_currentChat != null && _currentChat!.id == chatId) {
+      _currentChat = _currentChat!.copyWith(
+        messages: [..._currentChat!.messages, optimisticMessage],
+      );
+    }
+    _isWaitingForResponse = true;
     notifyListeners();
 
     try {
@@ -170,11 +213,13 @@ class ChatProvider with ChangeNotifier {
       if (result['success'] == true) {
         final message = result['message'] as Message;
 
-        // Add the message to current chat if it's loaded
+        // Replace the optimistic message with the confirmed one from the server.
         if (_currentChat != null && _currentChat!.id == chatId) {
-          _currentChat = _currentChat!.copyWith(
-            messages: [..._currentChat!.messages, message],
-          );
+          final updated = _currentChat!.messages
+              .where((m) => m.id != optimisticMessage.id)
+              .toList()
+            ..add(message);
+          _currentChat = _currentChat!.copyWith(messages: updated);
         }
 
         _errorMessage = null;
@@ -183,11 +228,16 @@ class ChatProvider with ChangeNotifier {
         _startPolling(accessToken, chatId);
         return true;
       } else {
+        // Roll back the optimistic message on failure.
+        _rollbackOptimisticMessage(optimisticId, chatId);
         _errorMessage = result['error'] ?? 'Failed to send message';
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      // Roll back the optimistic message on error.
+      _rollbackOptimisticMessage(optimisticId, chatId);
+      debugPrint('sendMessage error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       return false;
     } finally {
       _isSendingMessage = false;
@@ -217,15 +267,23 @@ class ChatProvider with ChangeNotifier {
           _chats[index] = updatedChat;
         }
 
-        // Update current chat if it's the same
+        // Update current chat if it's the same.
+        // Preserve existing messages — the title-update response may omit them.
         if (_currentChat != null && _currentChat!.id == chatId) {
-          _currentChat = updatedChat;
+          final Chat newChat;
+          if (updatedChat.messages.isEmpty) {
+            newChat = updatedChat.copyWith(messages: _currentChat!.messages);
+          } else {
+            newChat = updatedChat;
+          }
+          _currentChat = newChat;
         }
 
         notifyListeners();
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('updateChatTitle error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
     }
   }
@@ -256,7 +314,44 @@ class ChatProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      debugPrint('deleteChat error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Delete multiple chats
+  Future<bool> deleteMultipleChats({
+    required String accessToken,
+    required List<String> chatIds,
+  }) async {
+    try {
+      final result = await _chatService.deleteMultipleChats(
+        accessToken: accessToken,
+        chatIds: chatIds,
+      );
+
+      final deletedCount = (result['deletedCount'] as int?) ?? 0;
+      if (result['success'] == true || deletedCount > 0) {
+        final failedIds = ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
+        final deleted = chatIds.toSet().difference(failedIds);
+        _chats.removeWhere((c) => deleted.contains(c.id));
+
+        if (_currentChat != null && deleted.contains(_currentChat!.id)) {
+          _currentChat = null;
+        }
+
+        notifyListeners();
+        return true;
+      }
+
+      _errorMessage = 'Failed to delete chats';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('deleteMultipleChats error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
     }
@@ -266,6 +361,7 @@ class ChatProvider with ChangeNotifier {
   void _startPolling(String accessToken, String chatId) {
     _pollingTimer?.cancel();
     _lastAssistantContentLength = null;
+    _stablePollingCount = 0;
     _isWaitingForResponse = true;
     _pollingStartTime = DateTime.now();
     notifyListeners();
@@ -289,6 +385,7 @@ class ChatProvider with ChangeNotifier {
     _isPollingRequestInFlight = false;
     _isWaitingForResponse = false;
     _lastAssistantContentLength = null;
+    _stablePollingCount = 0;
   }
 
   /// Poll for updates
@@ -335,13 +432,6 @@ class ChatProvider with ChangeNotifier {
 
         if (shouldUpdate) {
           _currentChat = updatedChat;
-          // Hide thinking indicator as soon as the first assistant content arrives.
-          if (_isWaitingForResponse) {
-            final lastMsg = updatedChat.messages.lastOrNull;
-            if (lastMsg != null && lastMsg.isAssistant && lastMsg.content.isNotEmpty) {
-              _isWaitingForResponse = false;
-            }
-          }
           notifyListeners();
         }
 
@@ -362,6 +452,7 @@ class ChatProvider with ChangeNotifier {
 
           if (newLen > (previousLen ?? -1)) {
             _lastAssistantContentLength = newLen;
+            _stablePollingCount = 0;
             if (newLen > 0) {
               // Content is growing — reset the inactivity clock.
               _pollingStartTime = DateTime.now();
@@ -369,11 +460,16 @@ class ChatProvider with ChangeNotifier {
             }
             // newLen == 0: empty placeholder, keep polling
           } else if (newLen > 0) {
-            // Content stable and non-empty: no growth since last poll — done.
-            _stopPolling();
-            _lastAssistantContentLength = null;
-            notifyListeners();
-            return;
+            // Content stable and non-empty.
+            // Require 2 consecutive stable polls before declaring done, to avoid
+            // stopping prematurely on a brief server-side generation pause.
+            _stablePollingCount++;
+            if (_stablePollingCount >= 2) {
+              _stopPolling();
+              _lastAssistantContentLength = null;
+              notifyListeners();
+              return;
+            }
           }
           // newLen == 0 with previousLen already 0: still empty, keep polling
         }

@@ -25,10 +25,13 @@ class OidcIdentity < ApplicationRecord
       groups: groups
     })
 
-    # Sync name to user if provided (keep existing if IdP doesn't provide)
+    # Sync name to user only when Sure has nothing on file (first link, or an
+    # admin blanked the field). Edits made inside Sure must survive subsequent
+    # SSO logins — previously the IdP value won unconditionally and clobbered
+    # any manually-edited name on every login (#1103).
     user.update!(
-      first_name: auth.info&.first_name.presence || user.first_name,
-      last_name: auth.info&.last_name.presence || user.last_name
+      first_name: user.first_name.presence || auth.info&.first_name.presence,
+      last_name: user.last_name.presence || auth.info&.last_name.presence
     )
 
     # Apply role mapping based on group membership

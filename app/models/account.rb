@@ -274,6 +274,29 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_ibkr_account(ibkr_account)
+      family = ibkr_account.ibkr_item.family
+      default_name = if ibkr_account.ibkr_account_id.present?
+        "Interactive Brokers (#{ibkr_account.ibkr_account_id})"
+      else
+        "Interactive Brokers"
+      end
+
+      attributes = {
+        family: family,
+        name: default_name,
+        balance: 0,
+        cash_balance: 0,
+        currency: ibkr_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     def create_from_kraken_account(kraken_account)
       family = kraken_account.kraken_item.family
 
@@ -292,7 +315,6 @@ class Account < ApplicationRecord
 
       create_and_sync(attributes, skip_initial_sync: true)
     end
-
 
     private
 
@@ -363,15 +385,23 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    holdings
-      .where(currency: currency)
-      .where.not(qty: 0)
-      .where(
-        id: holdings.select("DISTINCT ON (security_id) id")
-                    .where(currency: currency)
-                    .order(:security_id, date: :desc)
-      )
-      .order(amount: :desc)
+    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
+      holdings
+        .where.not(account_provider_id: nil)
+        .where(date: provider_snapshot_date)
+        .where.not(qty: 0)
+        .order(amount: :desc)
+    else
+      holdings
+        .where(currency: currency)
+        .where.not(qty: 0)
+        .where(
+          id: holdings.select("DISTINCT ON (security_id) id")
+                      .where(currency: currency)
+                      .order(:security_id, date: :desc)
+        )
+        .order(amount: :desc)
+    end
   end
 
   def latest_provider_holdings_snapshot_date
