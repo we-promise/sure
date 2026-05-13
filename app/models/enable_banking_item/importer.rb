@@ -243,12 +243,20 @@ class EnableBankingItem::Importer
       pending_transactions = []
       if include_pending
         # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
-        pending_transactions = fetch_paginated_transactions(
-          enable_banking_account,
-          start_date: start_date,
-          transaction_status: "PDNG",
-          psu_headers: enable_banking_item.build_psu_headers
-        )
+        begin
+          pending_transactions = fetch_paginated_transactions(
+            enable_banking_account,
+            start_date: start_date,
+            transaction_status: "PDNG",
+            psu_headers: enable_banking_item.build_psu_headers
+          )
+        rescue Provider::EnableBanking::EnableBankingError => e
+          if e.error_type == :validation_error
+            Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{e.message}"
+          else
+            raise
+          end
+        end
       end
 
       book_ids = all_transactions
