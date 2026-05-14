@@ -187,6 +187,9 @@ class GoalTest < ActiveSupport::TestCase
     @goal.goal_accounts.where(account_id: @connected.id).destroy_all
     @goal.reload
     @goal.instance_variable_set(:@current_balance, nil)
-    assert_equal "goals.show.pledge_just_transferred", @goal.pledge_action_label_key if @goal.linked_accounts.any?(&:plaid_account)
+    # After removing the only connected account, the goal is manual-only;
+    # the copy must flip to "pledge_just_saved" so users aren't told to
+    # wait for a sync that won't run.
+    assert_equal "goals.show.pledge_just_saved", @goal.pledge_action_label_key
   end
 end

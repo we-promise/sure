@@ -10,7 +10,7 @@ class Goals::AccountStackComponent < ApplicationComponent
   end
 
   def extra_count
-    [ @accounts.size - @max, 0 ].max
+    (@accounts.size - @max).clamp(0..)
   end
 
   def initial_for(account)

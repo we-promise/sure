@@ -1285,63 +1285,68 @@ class Demo::Generator
       currency = depository_accounts.first.currency
       eligible = depository_accounts.select { |a| a.currency == currency }
       primary = eligible.first
+      secondary = (eligible - [ primary ]).first || primary
 
-      # Demo coverage matrix. Picks targets + target_dates so every visible
-      # goal surface fires on at least one card:
+      # Demo coverage matrix. The demo seeds a heavy primary checking
+      # balance (~$150k) plus a smaller secondary account (~$10k). To
+      # surface every goal state we deliberately route goals to different
+      # account pools so progress lands above or below the target:
+      #
       #   AASM states:    active, paused, completed, archived
       #   Computed status (on active goals):
       #                   :reached, :on_track, :behind, :no_target_date
       #   Edge surfaces:  past-due target_date ("was due"), open pledge
       #                   banner, matched pledge ("last pledge matched")
       goals = [
-        # active · behind (short timeline + non-trivial target)
+        # active · behind — secondary account only, target above its balance
         {
           name: "Vacation in Italy",
-          target: 5_000,
+          target: 20_000,
           target_date: 4.months.from_now.to_date,
-          accounts: eligible.first(2),
+          accounts: [ secondary ],
           pledges: [
-            { account: primary, amount: 250, kind: "transfer", status: "open", expires_at: 5.days.from_now }
+            { account: secondary, amount: 250, kind: "transfer", status: "open", expires_at: 5.days.from_now }
           ]
         },
-        # active · on_track-ish (small target, year out — required rate fits any reasonable pace)
+        # active · reached — primary balance comfortably above target
         {
           name: "Wedding fund",
           target: 2_400,
           target_date: 12.months.from_now.to_date,
-          accounts: eligible.first(2)
-        },
-        # active · no_target_date — exercises the open-ended branch
-        {
-          name: "Emergency fund",
-          target: 10_000,
-          target_date: nil,
           accounts: [ primary ]
         },
-        # active · behind (large multi-year target — no realistic pace covers $50k/24mo)
+        # active · no_target_date — secondary so progress doesn't auto-cap at 100%
+        {
+          name: "Emergency fund",
+          target: 30_000,
+          target_date: nil,
+          accounts: [ secondary ]
+        },
+        # active · behind big — combined pools still well short of the target
         {
           name: "House downpayment",
-          target: 50_000,
+          target: 500_000,
           target_date: 24.months.from_now.to_date,
           accounts: eligible.first(2),
           pledges: [
             { account: primary, amount: 2_000, kind: "transfer", status: "open", expires_at: 4.days.from_now }
           ]
         },
-        # active · reached (target intentionally below any plausible primary balance)
+        # active · on_track — primary balance close to target, long horizon makes
+        # the required monthly rate small enough for the demo's pace to cover
         {
-          name: "Coffee gear",
-          target: 150,
-          target_date: 8.months.from_now.to_date,
+          name: "Long-term portfolio",
+          target: 200_000,
+          target_date: 60.months.from_now.to_date,
           accounts: [ primary ]
         },
-        # active · past-due (target_date in the past — exercises "was due" header copy
-        # and the months_remaining = 0 branch in monthly_target_amount)
+        # active · past-due — exercises "was due" header copy + the
+        # months_remaining = 0 branch in monthly_target_amount
         {
           name: "Tax prep buffer",
           target: 1_200,
           target_date: 2.months.ago.to_date,
-          accounts: [ primary ]
+          accounts: [ secondary ]
         },
         # AASM paused
         {
@@ -1369,6 +1374,7 @@ class Demo::Generator
         }
       ]
 
+      wedding_goal = nil
       goals.each do |goal_spec|
         goal = family.goals.new(
           name: goal_spec[:name],
@@ -1380,6 +1386,7 @@ class Demo::Generator
         )
         goal_spec[:accounts].uniq.each { |a| goal.goal_accounts.build(account: a) }
         goal.save!
+        wedding_goal = goal if goal_spec[:name] == "Wedding fund"
 
         Array(goal_spec[:pledges]).each do |pledge_spec|
           goal.goal_pledges.create!(
@@ -1393,7 +1400,7 @@ class Demo::Generator
         end
       end
 
-      seed_matched_pledge_demo_for_wedding!(family, currency, primary)
+      seed_matched_pledge_demo_for_wedding!(wedding_goal, currency, primary) if wedding_goal && primary
 
       puts "   ✅ Seeded #{goals.size} goals"
     end
@@ -1402,8 +1409,7 @@ class Demo::Generator
     # inflow Transaction. Surfaces the "Last pledge matched N days ago"
     # header copy + exercises the partial-unique index on
     # transactions.extra->'goal'->>'pledge_id'.
-    def seed_matched_pledge_demo_for_wedding!(family, currency, primary)
-      wedding = family.goals.find_by(name: "Wedding fund")
+    def seed_matched_pledge_demo_for_wedding!(wedding, currency, primary)
       return unless wedding && primary
 
       recent_inflow_entry = Entry

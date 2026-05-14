@@ -9,10 +9,14 @@ class GoalPledge::Reconciler
     return unless eligible_entry?
     return if already_stamped?
 
+    # Older pledges resolve first. Deterministic so "first claim wins"
+    # under ties doesn't depend on PK ordering (which find_each batches
+    # by) — relevant the day Sure adopts ULID/UUID PKs.
     GoalPledge
       .where(account_id: entry.account_id, status: "open", kind: expected_kind)
       .where("expires_at >= ?", Time.current)
-      .find_each do |pledge|
+      .order(:created_at, :id)
+      .each do |pledge|
       next unless pledge.matches?(entry)
 
       begin
@@ -24,6 +28,7 @@ class GoalPledge::Reconciler
         Rails.logger.info("GoalPledge ##{pledge.id} matched entry ##{entry.id}")
         return
       rescue GoalPledge::NotOpenError,
+             GoalPledge::AlreadyClaimedError,
              ActiveRecord::RecordInvalid,
              ActiveRecord::RecordNotUnique => e
         # Race vs another worker (this pledge got claimed, or this txn got

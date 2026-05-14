@@ -38,9 +38,13 @@ class GoalPledge < ApplicationRecord
 
   # Tolerance check: entry date within [created_at − 5d, expires_at] (so
   # extend! widens the upper bound) and amount within ±$0.50 OR ±1%.
+  # Transfer pledges only fire on inflows (Sure convention: inflow < 0).
+  # Without this guard, .abs below lets a $200 outflow satisfy a $200
+  # transfer pledge as readily as a $200 deposit.
   def matches?(entry)
     return false unless status_open?
     return false unless entry.account_id == account_id
+    return false if kind_transfer? && !entry.amount.to_d.negative?
 
     earliest = created_at.to_date - MATCH_DATE_TOLERANCE_DAYS.days
     latest = [ created_at.to_date + MATCH_DATE_TOLERANCE_DAYS.days, expires_at.to_date ].max
@@ -62,7 +66,9 @@ class GoalPledge < ApplicationRecord
 
       transaction.with_lock do
         pledge_id_in_extra = transaction.extra.dig("goal", "pledge_id")
-        raise ActiveRecord::RecordInvalid if pledge_id_in_extra.present? && pledge_id_in_extra != id
+        if pledge_id_in_extra.present? && pledge_id_in_extra != id
+          raise AlreadyClaimedError, "Transaction ##{transaction.id} already claimed by pledge ##{pledge_id_in_extra}"
+        end
 
         extra = transaction.extra || {}
         extra["goal"] = (extra["goal"] || {}).merge("pledge_id" => id)
@@ -83,6 +89,10 @@ class GoalPledge < ApplicationRecord
   end
 
   class NotOpenError < StandardError; end
+  # Raised when a Transaction is already claimed by a different open
+  # pledge. Lets the reconciler distinguish a known race ("another worker
+  # got there first") from a generic validation failure.
+  class AlreadyClaimedError < StandardError; end
 
   def extend!(days: EXTEND_DAYS)
     raise NotOpenError, "Only open pledges can be extended" unless status_open?

@@ -29,7 +29,7 @@ class Goals::StatusPillComponent < ApplicationComponent
   end
 
   def label
-    I18n.t("goals.status.#{status_key}")
+    I18n.t("goals.status.#{status_key}", default: status_key.to_s.titleize)
   end
 
   def classes

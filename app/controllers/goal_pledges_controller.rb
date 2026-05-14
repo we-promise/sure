@@ -16,7 +16,7 @@ class GoalPledgesController < ApplicationController
     @pledge = @goal.goal_pledges.new(
       currency: @goal.currency,
       account: account,
-      kind: kind_for_account(account),
+      kind: account&.default_pledge_kind || "transfer",
       amount: params[:amount].presence
     )
   end
@@ -24,7 +24,7 @@ class GoalPledgesController < ApplicationController
   def create
     @pledge = @goal.goal_pledges.new(pledge_params)
     @pledge.account = lookup_account(params.dig(:goal_pledge, :account_id))
-    @pledge.kind = kind_for_account(@pledge.account)
+    @pledge.kind = @pledge.account&.default_pledge_kind || "transfer"
     @pledge.currency = @goal.currency
 
     if @pledge.save
@@ -56,7 +56,12 @@ class GoalPledgesController < ApplicationController
 
   private
     def set_goal
-      @goal = Current.family.goals.find(params[:goal_id])
+      # Preload linked accounts + their providers so any_connected_account?
+      # and the new-pledge form's per-account helpers don't trigger N+1
+      # queries on account_providers.
+      @goal = Current.family.goals
+                            .includes(:open_pledges, linked_accounts: :account_providers)
+                            .find(params[:goal_id])
     end
 
     def set_pledge
@@ -75,17 +80,6 @@ class GoalPledgesController < ApplicationController
     def preselected_account
       requested = params[:account_id].presence && @goal.linked_accounts.find_by(id: params[:account_id])
       requested || @goal.linked_accounts.first
-    end
-
-    # Per-account: manual accounts get a `manual_save` pledge (resolves on the
-    # user's next valuation), connected accounts get a `transfer` pledge
-    # (resolves when the synced deposit posts). Account-level avoids the
-    # mixed-funding goal bug where the goal-level toggle picked one kind for
-    # all pledges regardless of which account the user actually moved money
-    # into.
-    def kind_for_account(account)
-      return "transfer" if account.nil?
-      account.manual? ? "manual_save" : "transfer"
     end
 
     def record_not_found

@@ -55,7 +55,7 @@
             <% icons.each do |icon_name| %>
               <label class="relative">
                 <%= form.radio_button :icon, icon_name, class: "sr-only peer", data: { action: "change->color-icon-picker#handleIconChange change->color-icon-picker#handleIconColorChange", color_icon_picker_target: "icon" } %>
-                <div class="text-secondary w-7 h-7 flex m-0.5 items-center justify-center rounded-full cursor-pointer hover:bg-container-inset-hover peer-checked:bg-container-inset border-1 border-transparent">
+                <div class="text-secondary w-7 h-7 flex m-0.5 items-center justify-center rounded-full cursor-pointer hover:bg-container-inset-hover peer-checked:bg-container-inset border border-transparent">
                   <%= icon(icon_name, size: "sm", color: "current") %>
                 </div>
               </label>

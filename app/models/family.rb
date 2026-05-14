@@ -59,7 +59,11 @@ class Family < ApplicationRecord
   # Result is allowed to go negative (net outflow last 30d) so the headline
   # reflects reality; the controller decides how to render.
   def savings_inflow_velocity(range: 30.days.ago.to_date..Date.current)
-    account_ids = Account
+    # Defensive scope: goal_id is already family-bound (this family's
+    # goals), but pinning family_id keeps cross-family bleed-through
+    # impossible if a goal_account ever ends up pointing at a foreign
+    # account through a future bug.
+    account_ids = accounts
       .joins(:goal_accounts)
       .where(goal_accounts: { goal_id: goals.select(:id) })
       .where(currency: primary_currency_code)

@@ -283,6 +283,33 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Header copy under the goal title on show. Used to live as a multi-line
+  # if/elsif block in show.html.erb. Keeps the view template free of date
+  # math + i18n key picking.
+  def header_summary
+    parts = []
+    if target_date
+      days = (target_date - Date.current).to_i
+      past_due = days < 0 && !(completed? || status == :reached)
+      if past_due
+        parts << I18n.t("goals.show.header.target_by_past",
+                        amount: target_amount_money.format(precision: 0),
+                        date: I18n.l(target_date, format: :long))
+      else
+        parts << I18n.t("goals.show.header.target_by",
+                        amount: target_amount_money.format(precision: 0),
+                        date: I18n.l(target_date, format: :long))
+        if days > 0 && !(completed? || status == :reached)
+          parts << I18n.t("goals.goal_card.days_left", count: days).split(" · ").first
+        end
+      end
+    else
+      parts << I18n.t("goals.show.header.target",
+                      amount: target_amount_money.format(precision: 0))
+    end
+    parts.join(" · ")
+  end
+
   # Single source of truth for the projection-chart subtitle / chart-aria
   # description. Used to live inline in show.html.erb as a 17-line if/elsif
   # chain. Returns an `html_safe` string when it picks the `_html` variant.
@@ -300,7 +327,7 @@ class Goal < ApplicationRecord
         months = (remaining_amount.to_d / pace.to_d).ceil
         I18n.t(
           "goals.show.projection.on_track_html",
-          date: (Date.current >> months.to_i).strftime("%b %Y")
+          date: I18n.l(Date.current >> months.to_i, format: "%b %Y")
         )
       else
         I18n.t("goals.show.projection.no_pace")
@@ -316,7 +343,7 @@ class Goal < ApplicationRecord
   def catch_up_delta_money
     return Money.new(0, currency) if monthly_target_amount.nil?
 
-    pending = open_pledges.to_a.sum { |p| p.amount.to_d }
+    pending = open_pledges.sum(:amount).to_d
     delta = [ monthly_target_amount.to_d - pace.to_d - pending, 0 ].max
     Money.new(delta, currency)
   end

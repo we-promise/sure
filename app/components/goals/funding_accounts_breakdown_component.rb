@@ -75,7 +75,7 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
 
         result = Hash.new { |h, k| h[k] = { last_30: 0.to_d, last_90: 0.to_d } }
         rows.each do |aid, date, amount|
-          inflow = (-amount.to_d).clamp(0, Float::INFINITY)
+          inflow = (-amount.to_d).clamp(0..)
           result[aid][:last_90] += inflow
           result[aid][:last_30] += inflow if date >= cutoff_30
         end

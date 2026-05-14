@@ -75,13 +75,16 @@ export default class extends Controller {
 
   #money(value) {
     try {
+      // Let Intl pick the currency-specific default fraction digits so
+      // USD/EUR previews show cents while JPY/KRW stay whole-unit. The
+      // server saves the user-entered amount verbatim; the preview must
+      // not silently round it.
       return new Intl.NumberFormat(undefined, {
         style: "currency",
         currency: this.currencyValue || "USD",
-        maximumFractionDigits: 0,
       }).format(value);
     } catch {
-      return `${this.currencyValue || "$"}${Math.round(value).toLocaleString()}`;
+      return `${this.currencyValue || "$"}${value.toLocaleString()}`;
     }
   }
 }

@@ -175,15 +175,18 @@ class GoalsController < ApplicationController
     end
 
     def sync_linked_accounts!(goal, accounts)
-      desired = accounts.map(&:id).to_set
-      current = goal.goal_accounts.pluck(:account_id).to_set
+      desired_ids = accounts.map(&:id).to_set
+      current_ids = goal.goal_accounts.pluck(:account_id).to_set
 
-      (current - desired).each do |id|
+      (current_ids - desired_ids).each do |id|
         goal.goal_accounts.where(account_id: id).destroy_all
       end
-      (desired - current).each do |id|
-        goal.goal_accounts.create!(account_id: id)
-      end
+      additions = accounts.reject { |a| current_ids.include?(a.id) }
+      additions.each { |a| goal.goal_accounts.build(account: a) }
+      # Save through the goal so currency / depository / family
+      # validations fire. `create!` on goal_accounts directly bypasses them
+      # and let cross-currency / non-depository attachments through.
+      goal.save!
     end
 
     def kpi_payload(active_goals)

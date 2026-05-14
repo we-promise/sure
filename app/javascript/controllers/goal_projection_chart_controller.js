@@ -14,15 +14,16 @@ export default class extends Controller {
   static values = { data: Object, ariaLabel: String, ariaDescription: String };
 
   connect() {
-    this._draw();
     this._resize = this._draw.bind(this);
     window.addEventListener("resize", this._resize);
     // Container may have 0 width on initial connect (Turbo restoration,
     // hidden parent, etc). Re-draw whenever the box settles into a real
-    // size.
+    // size. The first observer callback also performs the initial paint.
     if (typeof ResizeObserver !== "undefined") {
       this._observer = new ResizeObserver(() => this._draw());
       this._observer.observe(this.element);
+    } else {
+      this._draw();
     }
     // Repaint when the user toggles theme so SVG attributes (which bake
     // light/dark hex values at draw time) follow data-theme. Lives here
@@ -87,7 +88,11 @@ export default class extends Controller {
     const currentAmount = data.current_amount || 0;
     const avgMonthly = data.avg_monthly || 0;
 
-    const endDate = target || new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+    // Past-due goals: pin endDate at today so the "today" marker stays inside
+    // the x-domain instead of clipping right at the edge.
+    const endDate = target
+      ? new Date(Math.max(target.getTime(), today.getTime()))
+      : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     // Drop any same-day-or-later points from the balance series: we own the
     // endpoint with `currentAmount` (live `linked_accounts.sum(:balance)`)
@@ -144,8 +149,7 @@ export default class extends Controller {
       .append("svg")
       .attr("width", width)
       .attr("height", height)
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "none");
+      .attr("viewBox", `0 0 ${width} ${height}`);
 
     // Drop the <title> child; browsers render it as a native hover tooltip
     // that fights with our own crosshair tooltip. aria-label gives the same
@@ -502,12 +506,10 @@ export default class extends Controller {
         hoverSavedDot.style("display", "none");
         lines.push(`Projected: ${this._fmtMoney(projValue, data.currency)}`);
       } else {
-        // Saved segment: snap saved dot to the nearest contribution; no
-        // projection dot in the past.
-        const i = bisectDate(savedSeries, hoverDate);
-        const a = savedSeries[Math.max(0, i - 1)];
-        const b = savedSeries[Math.min(savedSeries.length - 1, i)];
-        const savedPoint = !a ? b : !b ? a : (hoverDate - a.date < b.date - hoverDate ? a : b);
+        // Saved segment: hoverDate is already snapped to nearest savedSeries
+        // entry above, so reuse that entry directly instead of running
+        // bisectDate a second time.
+        const savedPoint = savedSeries.find((p) => p.date.getTime() === hoverDate.getTime()) || savedSeries[savedSeries.length - 1];
         hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
         hoverProjDot.style("display", "none");
         lines.push(`Saved: ${this._fmtMoney(savedPoint.value, data.currency)}`);

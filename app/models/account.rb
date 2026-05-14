@@ -355,6 +355,15 @@ class Account < ApplicationRecord
       simplefin_account_id.blank?
   end
 
+  # Default GoalPledge kind for this account. Manual accounts get
+  # `manual_save` (resolves on the next valuation), live-synced accounts
+  # get `transfer` (resolves when the synced deposit posts). Keeps the
+  # decision in one place so the new-pledge controller / preview helper
+  # can't disagree on what they're going to save.
+  def default_pledge_kind
+    manual? ? "manual_save" : "transfer"
+  end
+
   def logo_url
     if institution_domain.present? && Setting.brand_fetch_client_id.present?
       logo_size = Setting.brand_fetch_logo_size

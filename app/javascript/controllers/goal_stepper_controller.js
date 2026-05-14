@@ -204,8 +204,11 @@ export default class extends Controller {
       this.stepperLineTarget.classList.toggle("border-subdued", this.currentStep === 1);
     }
     // Modal subtitle lives in the dialog header, outside this controller's
-    // DOM scope. Locate it by attribute and update directly.
-    const subtitle = document.querySelector('[data-goal-stepper-modal-subtitle]');
+    // DOM scope. Walk up to the enclosing dialog first so two stepper
+    // instances on the same page (eg. edit modal opened over the new modal)
+    // each update their own header rather than the first match in the DOM.
+    const dialog = this.element.closest("dialog, [role='dialog']");
+    const subtitle = (dialog || document).querySelector("[data-goal-stepper-modal-subtitle]");
     if (subtitle) {
       subtitle.textContent =
         this.currentStep === 1 ? this.step1SubtitleValue : this.step2SubtitleValue;

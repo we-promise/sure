@@ -104,6 +104,24 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_not_empty @goal.reload.goal_accounts
   end
 
+  test "update rejects a cross-currency account attachment" do
+    # Regression: sync_linked_accounts! used to call goal_accounts.create!
+    # directly, bypassing Goal#linked_accounts_must_match_goal_currency.
+    eur_account = Account.create!(
+      family: @goal.family,
+      accountable: Depository.new,
+      name: "EUR Checking",
+      currency: "EUR",
+      balance: 100
+    )
+    before_ids = @goal.goal_accounts.pluck(:account_id).sort
+
+    patch goal_url(@goal), params: { goal: { account_ids: [ eur_account.id ] } }
+
+    assert_response :unprocessable_entity
+    assert_equal before_ids, @goal.reload.goal_accounts.pluck(:account_id).sort
+  end
+
   test "pause/resume/complete/archive/unarchive flow" do
     fresh = goals(:emergency_fund)
     patch pause_goal_url(fresh)
