@@ -25,19 +25,23 @@
         <% rows.each_with_index do |row, idx| %>
           <% account = row[:account] %>
           <% color = color_for(account) %>
-          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1fr)_48px_120px] items-center gap-3">
+          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1fr)_auto] sm:grid-cols-[24px_minmax(0,1fr)_48px_120px] items-center gap-3">
             <%= render Goals::AvatarComponent.new(name: account.name, color: color, size: "sm") %>
 
             <div class="min-w-0">
               <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
               <p class="text-xs text-subdued tabular-nums privacy-sensitive">
-                <%= accountable_label(account) %> · <%= row[:balance_money].format %>
+                <%= accountable_label(account) %> · <%= row[:balance_money].format(precision: 0) %>
               </p>
             </div>
 
-            <p class="text-sm text-secondary tabular-nums text-right privacy-sensitive">
-              <%= rows.size > 1 ? "#{percent_for(row[:balance])}%" : "" %>
-            </p>
+            <% if rows.size > 1 %>
+              <p class="hidden sm:block text-sm text-secondary tabular-nums text-right privacy-sensitive">
+                <%= percent_for(row[:balance]) %>%
+              </p>
+            <% else %>
+              <span class="hidden sm:block"></span>
+            <% end %>
 
             <div class="text-right space-y-0.5">
               <div class="flex items-baseline justify-end gap-1.5">

@@ -70,6 +70,7 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
           .where(account_id: account_ids, date: TREND_WINDOW_DAYS.days.ago.to_date..Date.current)
           .where(excluded: false)
+          .merge(Transaction.excluding_pending)
           .pluck(:account_id, :date, :amount)
 
         result = Hash.new { |h, k| h[k] = { last_30: 0.to_d, last_90: 0.to_d } }
