@@ -92,11 +92,16 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Day-precision so the near-deadline cliff doesn't kick in: at
+  # calendar-month precision, May 30 → June 1 returned 1 ("save $5k this
+  # month") then June 1 → June 1 returned 0 (falls through to
+  # "remaining_amount in one month"). Now a 2-day-out deadline reports
+  # ~0.07 months and `monthly_target_amount` scales accordingly.
   def months_remaining
     return nil unless target_date
 
-    months = (target_date.year - Date.current.year) * 12 + (target_date.month - Date.current.month)
-    [ months, 0 ].max
+    days = (target_date - Date.current).to_i
+    [ (days / 30.0), 0.0 ].max
   end
 
   def monthly_target_amount
@@ -107,7 +112,7 @@ class Goal < ApplicationRecord
     elsif months_remaining.zero?
       remaining_amount
     else
-      (remaining_amount.to_d / months_remaining).ceil(2)
+      (remaining_amount.to_d / months_remaining.to_d).ceil(2)
     end
   end
 
