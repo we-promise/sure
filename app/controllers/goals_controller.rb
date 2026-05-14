@@ -182,20 +182,37 @@ class GoalsController < ApplicationController
     def kpi_payload(active_goals)
       family = Current.family
       currency = family.primary_currency_code
+      today = Date.current
 
-      contributed_last_30d = family.savings_inflow_velocity(days: 30)
+      velocity_30d = family.savings_inflow_velocity(range: (today - 30)..today)
+      velocity_prior_30d = family.savings_inflow_velocity(range: (today - 60)..(today - 31))
+      delta_amount = velocity_30d - velocity_prior_30d
+      delta_percent = velocity_prior_30d.zero? ? nil : ((delta_amount / velocity_prior_30d) * 100).round(1)
+      velocity_direction = if delta_amount.positive? then :up
+      elsif delta_amount.negative? then :down
+      else :flat
+      end
+
       needs = active_goals
         .select { |g| g.status == :behind }
         .sum { |g| g.monthly_target_amount.to_d }
       behind = active_goals.count { |g| g.status == :behind }
       on_track = active_goals.count { |g| g.status == :on_track || g.status == :reached }
+      no_date = active_goals.count { |g| g.status == :no_target_date }
+      paused = active_goals.count(&:paused?)
 
       {
         currency: currency,
-        contributed_last_30d_money: Money.new(contributed_last_30d, currency),
+        velocity_30d_money: Money.new(velocity_30d.abs, currency),
+        velocity_prior_30d_money: Money.new(velocity_prior_30d, currency),
+        velocity_30d_sign: velocity_direction == :down ? "−" : (velocity_direction == :up ? "+" : ""),
+        velocity_delta_percent: delta_percent,
+        velocity_direction: velocity_direction,
         needs_this_month_money: Money.new(needs, currency),
         on_track_count: on_track,
         behind_count: behind,
+        no_date_count: no_date,
+        paused_count: paused,
         active_total: active_goals.size
       }
     end

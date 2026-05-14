@@ -46,9 +46,9 @@ class Family < ApplicationRecord
   has_many :goals, dependent: :destroy
 
   # Net non-transfer inflow into every depository account linked to any goal,
-  # over the trailing window. Entry amount convention in Sure: inflow is
-  # negative, so we flip the sign for the user-facing "contributed" value.
-  def savings_inflow_velocity(days: 30)
+  # over the given window. Entry amount convention in Sure: inflow is negative,
+  # so we flip the sign for the user-facing "contributed" value.
+  def savings_inflow_velocity(range: 30.days.ago.to_date..Date.current)
     account_ids = Account
       .joins(:goal_accounts)
       .where(goal_accounts: { goal_id: goals.select(:id) })
@@ -58,7 +58,7 @@ class Family < ApplicationRecord
 
     net = Entry
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .where(account_id: account_ids, date: days.days.ago.to_date..Date.current)
+      .where(account_id: account_ids, date: range)
       .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
       .where(excluded: false)
       .sum(:amount)

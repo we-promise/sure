@@ -9,7 +9,10 @@ en:
       pending_pledges_callout: One or more pending pledges. Sure is watching your linked accounts to confirm the transfer.
       kpi:
         contributed_label: Contributed · last 30d
-        contributed_sub: Net inflow across linked accounts
+        velocity_delta_up: "↑ %{percent}%% vs. prior 30d"
+        velocity_delta_down: "↓ %{percent}%% vs. prior 30d"
+        velocity_delta_flat: vs. prior 30d
+        velocity_delta_zero_base: First 30 days of activity
         needs_this_month_label: Needs this month
         needs_this_month_sub:
           one: across 1 goal behind pace
@@ -17,9 +20,16 @@ en:
         needs_this_month_zero_sub: No goals behind pace
         on_track_label: Goals on track
         on_track_value: "%{on_track} of %{total}"
-        on_track_sub_behind:
-          one: 1 behind pace
-          other: "%{count} behind pace"
+        on_track_sub_parts:
+          behind:
+            one: 1 behind
+            other: "%{count} behind"
+          no_date:
+            one: 1 open
+            other: "%{count} open"
+          paused:
+            one: 1 paused
+            other: "%{count} paused"
         on_track_sub_all_good: All active goals on pace
       goals_section:
         heading: Goals

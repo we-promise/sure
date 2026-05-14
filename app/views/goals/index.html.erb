@@ -7,14 +7,28 @@
   <% if @counts["all"].zero? %>
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
-    <%# KPI strip — v1: Contributed last 30d / Needs this month / On track %>
+    <%# KPI strip — Contributed last 30d (with prior-30d comparison) / Needs / On track %>
     <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
         <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.contributed_label") %></p>
         <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive">
-          <%= @kpi[:contributed_last_30d_money].format %>
+          <%= @kpi[:velocity_30d_sign] %><%= @kpi[:velocity_30d_money].format %>
         </p>
-        <p class="text-xs text-secondary mt-1"><%= t(".kpi.contributed_sub") %></p>
+        <% if @kpi[:velocity_direction] == :flat %>
+          <p class="text-xs text-secondary mt-1 tabular-nums">
+            <% if @kpi[:velocity_prior_30d_money].zero? && @kpi[:velocity_30d_money].zero? %>
+              <%= t(".kpi.velocity_delta_zero_base") %>
+            <% else %>
+              <%= t(".kpi.velocity_delta_flat") %>
+            <% end %>
+          </p>
+        <% elsif @kpi[:velocity_delta_percent].nil? %>
+          <p class="text-xs text-success mt-1 tabular-nums"><%= t(".kpi.velocity_delta_zero_base") %></p>
+        <% else %>
+          <p class="text-xs <%= @kpi[:velocity_direction] == :up ? "text-success" : "text-destructive" %> mt-1 tabular-nums">
+            <%= t(".kpi.velocity_delta_#{@kpi[:velocity_direction]}", percent: @kpi[:velocity_delta_percent].abs) %>
+          </p>
+        <% end %>
       </div>
 
       <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
@@ -35,8 +49,14 @@
           <%= t(".kpi.on_track_value", on_track: @kpi[:on_track_count], total: @kpi[:active_total]) %>
         </p>
         <p class="text-xs text-secondary mt-1">
-          <% if @kpi[:behind_count].positive? %>
-            <%= t(".kpi.on_track_sub_behind", count: @kpi[:behind_count]) %>
+          <%
+            parts = []
+            parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
+            parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
+            parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?
+          %>
+          <% if parts.any? %>
+            <%= parts.join(" · ") %>
           <% else %>
             <%= t(".kpi.on_track_sub_all_good") %>
           <% end %>
