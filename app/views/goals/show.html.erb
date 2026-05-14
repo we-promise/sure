@@ -170,12 +170,9 @@
     <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
       <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
-      <p class="text-xs text-subdued tabular-nums mt-0.5">
-        <%= t(".ring.of", target: @goal.target_amount_money.format(precision: 0)) %>
-        <% unless @goal.completed? %>
-          · <%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %>
-        <% end %>
-      </p>
+      <% unless @goal.completed? %>
+        <p class="text-xs text-subdued tabular-nums mt-0.5"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
+      <% end %>
     </div>
 
     <% if @goal.archived? || @goal.paused? %>
