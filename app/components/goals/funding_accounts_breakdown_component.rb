@@ -30,11 +30,11 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
     ((balance.to_d / total) * 100).round
   end
 
-  # Deterministic palette pick keyed on account.id (not name) so renaming an
-  # account doesn't recolor it retroactively across every goal view, and two
-  # accounts with colliding name-hashes don't end up sharing a color.
+  # Pull from the goal's per-goal account color map so the colors here
+  # (distribution bar, row avatars) match the AccountStackComponent on the
+  # index card. Stable + collision-free within the goal up to PALETTE size.
   def color_for(account)
-    Goals::AvatarComponent.color_for(account.id.to_s)
+    goal.account_color_map[account.id] || Goals::AvatarComponent.color_for(account.name)
   end
 
   # Label shown beneath the account name. Prefers the depository subtype

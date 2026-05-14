@@ -268,6 +268,21 @@ class Goal < ApplicationRecord
     any_connected_account? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
   end
 
+  # { account_id => palette_hex } for this goal's linked accounts. Stable
+  # within a goal (so the preview-card avatar stack on the index and the
+  # funding-widget rows + distribution bar on the show page agree on which
+  # color belongs to which account) and collision-free up to PALETTE size
+  # (10 colors). Sort by id so the assignment doesn't shuffle when the
+  # accounts are re-loaded in a different order.
+  def account_color_map
+    @account_color_map ||= begin
+      palette = Goals::AvatarComponent::PALETTE
+      linked_accounts.sort_by(&:id).each_with_index.to_h do |account, i|
+        [ account.id, palette[i % palette.size] ]
+      end
+    end
+  end
+
   # Single source of truth for the projection-chart subtitle / chart-aria
   # description. Used to live inline in show.html.erb as a 17-line if/elsif
   # chain. Returns an `html_safe` string when it picks the `_html` variant.
