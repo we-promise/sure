@@ -12,7 +12,6 @@ class GoalPledge::Reconciler
     GoalPledge
       .where(account_id: entry.account_id, status: "open", kind: expected_kind)
       .where("expires_at >= ?", Time.current)
-      .order(created_at: :asc)
       .find_each do |pledge|
       next unless pledge.matches?(entry)
 
