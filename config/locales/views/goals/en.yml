@@ -113,6 +113,7 @@ en:
           other: "Pending: %{amount} into %{account} · %{count} days left"
         body_transfer: Auto-confirms when Sure spots a matching deposit on the next sync.
         body_manual: Confirms on your next manual balance edit.
+        pledged_at: "Pledged %{time_ago} ago"
         extend: Extend 7 days
         cancel: Cancel
         confirm_cancel_title: Cancel this pledge?
@@ -218,11 +219,11 @@ en:
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: Open
-      footer_no_pledges: No pledges yet
-      footer_last_today: Last saved today
+      footer_no_pledges: No matched pledges yet
+      footer_last_today: Last pledge matched today
       footer_last_days:
-        one: Last saved 1 day ago
-        other: "Last saved %{count} days ago"
+        one: Last pledge matched 1 day ago
+        other: "Last pledge matched %{count} days ago"
     form_stepper:
       cancel: Cancel
       continue: Continue

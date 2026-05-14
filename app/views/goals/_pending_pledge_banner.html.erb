@@ -7,6 +7,7 @@
 %>
 <%= render DS::Alert.new(variant: "warning", title: title, live: :polite) do %>
   <p class="text-secondary"><%= t(body_key) %></p>
+  <p class="text-xs text-subdued mt-1"><%= t("goals.show.pending_pledge.pledged_at", time_ago: time_ago_in_words(pledge.created_at)) %></p>
   <div class="mt-2 flex items-center gap-2 flex-wrap">
     <%= render DS::Button.new(
       text: t("goals.show.pending_pledge.extend"),
