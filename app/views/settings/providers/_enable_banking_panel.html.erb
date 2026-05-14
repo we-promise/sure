@@ -71,10 +71,8 @@
     <% if has_authenticated_connections && !is_new_record %>
       <%= render DS::Alert.new(
             variant: :warning,
-            message: safe_join([
-              content_tag(:p, "Configuration locked", class: "font-medium"),
-              content_tag(:p, "Disconnect all linked banks before changing these credentials.", class: "mt-1")
-            ])
+            title: "Configuration locked",
+            message: "Disconnect all linked banks before changing these credentials."
           ) %>
     <% end %>
 

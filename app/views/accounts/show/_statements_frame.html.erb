@@ -1,0 +1,10 @@
+<%# locals: (account:, coverage:, statements:, reconciliation_statuses:, can_manage_statements:) %>
+
+<%= turbo_frame_tag dom_id(account, :statements_tab) do %>
+  <%= render "accounts/show/statements",
+             account: account,
+             coverage: coverage,
+             statements: statements,
+             reconciliation_statuses: reconciliation_statuses,
+             can_manage_statements: can_manage_statements %>
+<% end %>

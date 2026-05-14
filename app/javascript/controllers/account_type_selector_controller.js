@@ -18,7 +18,8 @@ export default class extends Controller {
     // Hide all subtype selects
     const subtypeSelects = container.querySelectorAll('.subtype-select')
     subtypeSelects.forEach(select => {
-      select.style.display = 'none'
+      select.classList.add('hidden')
+      select.style.removeProperty('display')
       // Clear the name attribute so it doesn't get submitted
       const selectElement = select.querySelector('select')
       if (selectElement) {
@@ -34,7 +35,8 @@ export default class extends Controller {
     // Show the relevant subtype select
     const relevantSubtype = container.querySelector(`[data-type="${selectedType}"]`)
     if (relevantSubtype) {
-      relevantSubtype.style.display = 'block'
+      relevantSubtype.classList.remove('hidden')
+      relevantSubtype.style.removeProperty('display')
       // Re-add the name attribute so it gets submitted
       const selectElement = relevantSubtype.querySelector('select')
       if (selectElement) {
