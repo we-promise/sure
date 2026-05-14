@@ -9,9 +9,14 @@ class GoalPledgesControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
-  test "new renders the pledge form" do
-    get new_goal_pledge_url(@goal)
+  test "new renders the pledge form inside a turbo frame" do
+    get new_goal_pledge_url(@goal), headers: { "Turbo-Frame" => "modal" }
     assert_response :success
+  end
+
+  test "new redirects to the goal show page on a non-frame GET" do
+    get new_goal_pledge_url(@goal)
+    assert_redirected_to goal_path(@goal)
   end
 
   test "create opens a pledge with default kind" do
