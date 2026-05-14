@@ -249,6 +249,44 @@ class Goal < ApplicationRecord
     any_connected_account? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
   end
 
+  # Single source of truth for the projection-chart subtitle / chart-aria
+  # description. Used to live inline in show.html.erb as a 17-line if/elsif
+  # chain. Returns an `html_safe` string when it picks the `_html` variant.
+  def projection_summary
+    return @projection_summary if defined?(@projection_summary)
+
+    @projection_summary =
+      if completed? || progress_percent >= 100
+        I18n.t("goals.show.projection.reached")
+      elsif target_date.nil?
+        I18n.t("goals.show.projection.no_target_date")
+      elsif monthly_target_amount && pace.to_d < monthly_target_amount.to_d
+        I18n.t(
+          "goals.show.projection.behind",
+          current: Money.new(pace, currency).format,
+          required: Money.new(monthly_target_amount, currency).format
+        )
+      elsif pace.positive?
+        months = (remaining_amount.to_d / pace.to_d).ceil
+        I18n.t(
+          "goals.show.projection.on_track_html",
+          date: (Date.current >> months.to_i).strftime("%b %Y")
+        )
+      else
+        I18n.t("goals.show.projection.no_pace")
+      end
+  end
+
+  # Monthly extra needed beyond the current pace to hit the target on time.
+  # Clamps at zero — never asks the user to "make up" a deficit they're
+  # already ahead of.
+  def catch_up_delta_money
+    return Money.new(0, currency) if monthly_target_amount.nil?
+
+    delta = [ monthly_target_amount.to_d - pace.to_d, 0 ].max
+    Money.new(delta, currency)
+  end
+
   private
     def balance_series_values
       return [] if linked_accounts.empty?
