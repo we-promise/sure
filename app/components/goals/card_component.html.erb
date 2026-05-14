@@ -45,8 +45,8 @@
 
   <div class="mt-5">
     <div class="flex items-baseline gap-1.5">
-      <span class="text-lg font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format %></span>
-      <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format %></span>
+      <span class="text-lg font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format(precision: 0) %></span>
+      <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format(precision: 0) %></span>
     </div>
     <% if pace_line %>
       <p class="text-[11px] text-subdued tabular-nums mt-1"><%= pace_line %></p>

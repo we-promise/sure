@@ -107,7 +107,10 @@ en:
       funding_last_30d: last 30d
       funding_last_90d: last 90d
       pending_pledge:
-        title: "Watching for %{amount} into %{account} · %{days_left} days left"
+        title:
+          zero: "Pending: %{amount} into %{account} · expires today"
+          one: "Pending: %{amount} into %{account} · 1 day left"
+          other: "Pending: %{amount} into %{account} · %{count} days left"
         body_transfer: Auto-confirms when Sure spots a matching deposit on the next sync.
         body_manual: Confirms on your next manual balance edit.
         extend: Extend 7 days

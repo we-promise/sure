@@ -3,7 +3,7 @@
   amount_money = pledge.amount_money
   days_left = pledge.days_left
   body_key = pledge.kind_transfer? ? "goals.show.pending_pledge.body_transfer" : "goals.show.pending_pledge.body_manual"
-  title = t("goals.show.pending_pledge.title", amount: amount_money.format, account: account.name, days_left: days_left)
+  title = t("goals.show.pending_pledge.title", amount: amount_money.format(precision: 0), account: account.name, count: days_left)
 %>
 <%= render DS::Alert.new(variant: "warning", title: title, live: :polite) do %>
   <p class="text-secondary"><%= t(body_key) %></p>
@@ -24,7 +24,7 @@
       confirm: CustomConfirm.new(
         destructive: true,
         title: t("goals.show.pending_pledge.confirm_cancel_title"),
-        body: t("goals.show.pending_pledge.confirm_cancel_body", amount: amount_money.format),
+        body: t("goals.show.pending_pledge.confirm_cancel_body", amount: amount_money.format(precision: 0)),
         btn_text: t("goals.show.pending_pledge.confirm_cancel_cta")
       )
     ) %>

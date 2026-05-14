@@ -36,7 +36,7 @@ class Goals::CardComponent < ApplicationComponent
     status_text = I18n.t("goals.status.#{goal.display_status}")
     progress_text = I18n.t("goals.goal_card.aria_progress",
                            percent: progress_percent,
-                           target: goal.target_amount_money.format)
+                           target: goal.target_amount_money.format(precision: 0))
     [ goal.name, status_text, progress_text ].join(", ")
   end
 
@@ -71,8 +71,8 @@ class Goals::CardComponent < ApplicationComponent
   def pace_line
     return nil if goal.archived? || goal.paused? || goal.completed? || goal.status == :reached
 
-    avg = goal.pace_money.format
-    target = goal.monthly_target_amount ? Money.new(goal.monthly_target_amount, goal.currency).format : nil
+    avg = goal.pace_money.format(precision: 0)
+    target = goal.monthly_target_amount ? Money.new(goal.monthly_target_amount, goal.currency).format(precision: 0) : nil
     if target
       I18n.t("goals.goal_card.pace_with_target", avg: avg, target: target)
     else
@@ -88,8 +88,7 @@ class Goals::CardComponent < ApplicationComponent
     elsif goal.completed? || goal.status == :reached
       I18n.t("goals.goal_card.footer_reached")
     elsif goal.status == :behind && goal.monthly_target_amount
-      catch_up = Money.new(goal.monthly_target_amount, goal.currency).format
-      I18n.t("goals.goal_card.footer_catch_up", amount: catch_up)
+      I18n.t("goals.goal_card.footer_catch_up", amount: goal.catch_up_delta_money.format(precision: 0))
     elsif goal.status == :no_target_date
       I18n.t("goals.goal_card.footer_no_deadline")
     else
