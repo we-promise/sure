@@ -203,7 +203,7 @@
           <%= icon("party-popper", size: "2xl", color: "success") %>
         </div>
         <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
-        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @goal.target_amount_money.format(precision: 0)) %></p>
+        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %></p>
         <% if @goal.may_archive? %>
           <div class="mt-4">
             <%= render DS::Button.new(

@@ -34,7 +34,7 @@ class GoalTest < ActiveSupport::TestCase
     new_goal = @family.goals.new(name: "Test", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: investment)
     assert_not new_goal.valid?
-    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be Depository (checking, savings, HSA, CD, money-market)."
+    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be depository (checking, savings, HSA, CD, money-market)."
   end
 
   test "linked accounts must belong to family" do

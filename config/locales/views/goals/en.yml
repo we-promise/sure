@@ -6,13 +6,13 @@ en:
       subtitle: Save toward what matters.
       new_goal: New goal
       empty_filtered: No goals match.
-      pending_pledges_callout: One or more pending pledges. Sure is watching your linked accounts to confirm the transfer.
+      pending_pledges_callout: You have pending pledges. Sure will confirm them on the next sync.
       kpi:
         contributed_label: Contributed · last 30d
         velocity_delta_up: "↑ %{percent}%% vs. prior 30d"
         velocity_delta_down: "↓ %{percent}%% vs. prior 30d"
         velocity_delta_flat: vs. prior 30d
-        velocity_delta_zero_base: First 30 days of activity
+        velocity_delta_zero_base: First 30d of activity
         needs_this_month_label: Needs this month
         needs_this_month_sub:
           one: 1 goal behind pace
@@ -134,7 +134,7 @@ en:
         legend_saved: Saved
         legend_projection: Projection
         legend_required: Required
-        reached: Goal reached. Nice work.
+        reached: You've hit the target. No projection needed.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
         behind: Falling short at current pace.
@@ -161,7 +161,7 @@ en:
         restore_cta: Restore goal
       celebration:
         heading: Goal reached. Nice work.
-        body: "You hit your %{amount} target. Keep the goal as a record, or archive it now."
+        body: "Goal closed at %{saved} of %{target}. Keep it as a record, or archive it now."
         archive_cta: Archive goal
       inactive:
         heading_paused: This goal is paused
@@ -194,7 +194,7 @@ en:
       body: Set a target, link the accounts you save into, and watch your progress add up.
       subtitle: Set a target and start saving toward it.
       new_goal: Create your first goal
-      no_depository_accounts: You need at least one Depository account (checking, savings, HSA, CD, money-market) before creating a goal.
+      no_depository_accounts: You need at least one depository account (checking, savings, HSA, CD, money-market) before creating a goal.
       add_account: Add an account
     goal_card:
       no_accounts: No linked accounts
@@ -231,9 +231,9 @@ en:
       back: Back
       submit: Create goal
       errors:
-        name_required: Please give your goal a name.
-        amount_required: Please set a target amount above zero.
-        accounts_required: Please select at least one funding account.
+        name_required: Give your goal a name.
+        amount_required: Set a target above zero.
+        accounts_required: Pick at least one funding account.
       step1:
         label: Goal details
         heading: What are you saving for?

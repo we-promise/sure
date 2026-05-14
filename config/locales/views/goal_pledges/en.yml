@@ -3,7 +3,7 @@ en:
   goal_pledges:
     new:
       helper_transfer: Sure will look for a matching deposit in your linked account. The pledge stays pending for 7 days, then auto-confirms once Sure spots it.
-      helper_manual: We'll record this on your next manual balance edit and confirm the contribution.
+      helper_manual: Sure will record this on your next manual balance edit and confirm the contribution.
       amount_label: Amount
       account_label: Into account
       submit: Record pledge
