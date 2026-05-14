@@ -44,6 +44,15 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "non manager returns to previous page when blocked from statement vault" do
+    sign_in family_guest
+
+    get account_statements_url, headers: { "HTTP_REFERER" => root_url }
+
+    assert_redirected_to root_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
   test "non manager cannot view unmatched statement" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,
@@ -504,6 +513,22 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     statement.reload
     assert statement.rejected?
     assert_nil statement.suggested_account
+  end
+
+  test "does not reject already linked statement" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    patch reject_account_statement_url(statement)
+
+    assert_redirected_to account_statement_url(statement)
+    assert_equal I18n.t("account_statements.reject.linked"), flash[:alert]
+    statement.reload
+    assert statement.linked?
+    assert_equal @account, statement.account
   end
 
   test "updates metadata" do

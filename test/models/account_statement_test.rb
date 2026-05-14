@@ -6,6 +6,8 @@ class AccountStatementTest < ActiveSupport::TestCase
     @account = accounts(:depository)
   end
 
+  LedgerBalance = Struct.new(:start_balance, :end_balance, keyword_init: true)
+
   OversizedDeclaredUpload = Struct.new(:original_filename, keyword_init: true) do
     def size
       AccountStatement::MAX_FILE_SIZE + 1
@@ -364,6 +366,21 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal Date.new(2024, 1, 31), statement.period_end_on
   end
 
+  test "uses a filename hint only as institution metadata" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(
+        filename: "Chase_2024-01.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 statement"
+      )
+    )
+
+    assert_equal "Chase", statement.institution_name_hint
+    assert_nil statement.account_name_hint
+  end
+
   test "ignores unreasonable filename dates" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -505,6 +522,52 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "unavailable", statement.reconciliation_status
   end
 
+  test "reconciliation checks match when statement and ledger amounts align" do
+    statement = reconciliation_statement(opening_balance: "100.00", closing_balance: "150.00")
+    checks = statement.reconciliation_checks(
+      balance_lookup: reconciliation_lookup(opening_start: "100.00", closing_end: "150.00")
+    )
+
+    assert_reconciliation_statuses checks, {
+      "opening_balance" => "matched",
+      "closing_balance" => "matched",
+      "period_movement" => "matched"
+    }
+  end
+
+  test "reconciliation checks mismatch when amounts exceed tolerance" do
+    statement = reconciliation_statement(opening_balance: "100.00", closing_balance: "150.00")
+    checks = statement.reconciliation_checks(
+      balance_lookup: reconciliation_lookup(opening_start: "99.98", closing_end: "150.02")
+    )
+
+    assert_reconciliation_statuses checks, {
+      "opening_balance" => "mismatched",
+      "closing_balance" => "mismatched",
+      "period_movement" => "mismatched"
+    }
+  end
+
+  test "reconciliation checks treat exact one cent differences as matched" do
+    positive_checks = reconciliation_statement(opening_balance: "100.00", closing_balance: "150.00").reconciliation_checks(
+      balance_lookup: reconciliation_lookup(opening_start: "99.99", closing_end: "149.99")
+    )
+    negative_checks = reconciliation_statement(opening_balance: "100.00", closing_balance: "150.00").reconciliation_checks(
+      balance_lookup: reconciliation_lookup(opening_start: "100.01", closing_end: "150.01")
+    )
+
+    assert_reconciliation_statuses positive_checks, {
+      "opening_balance" => "matched",
+      "closing_balance" => "matched",
+      "period_movement" => "matched"
+    }
+    assert_reconciliation_statuses negative_checks, {
+      "opening_balance" => "matched",
+      "closing_balance" => "matched",
+      "period_movement" => "matched"
+    }
+  end
+
   test "coverage requires account" do
     error = assert_raises(ArgumentError) do
       AccountStatement::Coverage.new(nil)
@@ -599,23 +662,25 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert statement.unmatched?
   end
 
-  test "preserves explicit rejected review status" do
+  test "does not reject linked statements" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
       account: @account,
       file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
     )
 
-    statement.reject_match!
+    assert_raises(AccountStatement::LinkedStatementRejectionError) do
+      statement.reject_match!
+    end
 
-    assert statement.rejected?
+    assert statement.linked?
     assert_equal @account, statement.account
   end
 
   test "preserves rejected review status across unrelated saves" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
-      account: @account,
+      account: nil,
       file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
     )
     statement.reject_match!
@@ -623,13 +688,13 @@ class AccountStatementTest < ActiveSupport::TestCase
     statement.update!(period_start_on: Date.new(2024, 1, 1))
 
     assert statement.rejected?
-    assert_equal @account, statement.account
+    assert_nil statement.account
   end
 
   test "allows intentional review status changes away from rejected" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
-      account: @account,
+      account: nil,
       file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
     )
     statement.reject_match!
@@ -786,6 +851,37 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   private
+
+    def reconciliation_statement(opening_balance:, closing_balance:)
+      AccountStatement.new(
+        family: @family,
+        account: @account,
+        period_start_on: Date.new(2024, 1, 1),
+        period_end_on: Date.new(2024, 1, 31),
+        opening_balance: opening_balance,
+        closing_balance: closing_balance,
+        currency: "USD"
+      )
+    end
+
+    def reconciliation_lookup(opening_start:, closing_end:)
+      opening_balance = LedgerBalance.new(start_balance: opening_start.to_d, end_balance: opening_start.to_d)
+      closing_balance = LedgerBalance.new(start_balance: closing_end.to_d, end_balance: closing_end.to_d)
+
+      lambda do |date, _currency|
+        case date
+        when Date.new(2024, 1, 1)
+          opening_balance
+        when Date.new(2024, 1, 31)
+          closing_balance
+        end
+      end
+    end
+
+    def assert_reconciliation_statuses(checks, expected)
+      statuses = checks.index_by { |check| check[:key] }.transform_values { |check| check[:status] }
+      assert_equal expected, statuses
+    end
 
     def create_statement(account:, month:, content:, suggested_account: nil, closing_balance: nil)
       statement = AccountStatement.create_from_upload!(

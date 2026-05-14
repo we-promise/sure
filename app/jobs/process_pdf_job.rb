@@ -89,7 +89,7 @@ class ProcessPdfJob < ApplicationJob
     end
 
     def reset_processing_claim(pdf_import)
-      pdf_import.reload.with_lock do
+      pdf_import.with_lock do
         if pdf_import.importing? && processing_claim_stale?(pdf_import)
           pdf_import.update!(status: :pending)
         end

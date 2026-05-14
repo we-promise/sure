@@ -124,6 +124,7 @@ class AccountStatementsController < ApplicationController
 
   def reject
     return if @statement.account && !require_account_permission!(@statement.account)
+    return redirect_to(account_statement_path(@statement), alert: t("account_statements.reject.linked")) if @statement.account.present?
 
     @statement.reject_match!
     redirect_to account_statements_path, notice: t("account_statements.reject.success")
@@ -171,7 +172,7 @@ class AccountStatementsController < ApplicationController
     def ensure_statement_manager!
       return if AccountStatement.statement_manager?(Current.user)
 
-      redirect_to accounts_path, alert: t("accounts.not_authorized")
+      redirect_back_or_to accounts_path, alert: t("accounts.not_authorized")
     end
 
     def statement_upload_params

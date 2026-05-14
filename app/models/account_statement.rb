@@ -23,6 +23,7 @@ class AccountStatement < ApplicationRecord
       super("Invalid statement upload: #{reason}")
     end
   end
+  LinkedStatementRejectionError = Class.new(StandardError)
 
   PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256)
 
@@ -270,6 +271,8 @@ class AccountStatement < ApplicationRecord
   end
 
   def reject_match!
+    raise LinkedStatementRejectionError, "Linked statements cannot reject a suggested match" if account.present?
+
     update!(
       suggested_account: nil,
       match_confidence: nil,

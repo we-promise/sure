@@ -78,6 +78,10 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
+    teardown do
+      cleanup_uploaded_file_tempfiles
+    end
+
     # Add more helper methods to be used by all tests here...
     def sign_in(user)
       post sessions_path, params: { email: user.email, password: user_password_test }
@@ -114,7 +118,23 @@ module ActiveSupport
 
       Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename).tap do |uploaded_file|
         uploaded_file.instance_variable_set(:@tempfile, tempfile)
+        uploaded_file_tempfiles << tempfile
       end
+    end
+
+    def uploaded_file_tempfiles
+      @uploaded_file_tempfiles ||= []
+    end
+
+    def cleanup_uploaded_file_tempfiles
+      uploaded_file_tempfiles.each do |tempfile|
+        tempfile.close unless tempfile.closed?
+        tempfile.unlink if tempfile.path && File.exist?(tempfile.path)
+      rescue Errno::ENOENT
+        # File was already consumed and removed.
+      end
+    ensure
+      @uploaded_file_tempfiles = []
     end
 
     def family_guest
