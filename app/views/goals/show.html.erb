@@ -36,13 +36,6 @@
       </div>
     </div>
     <div class="flex items-center gap-2 flex-wrap sm:shrink-0">
-      <%= render DS::Link.new(
-        text: t(".edit"),
-        variant: "outline",
-        href: edit_goal_path(@goal),
-        icon: "pencil",
-        frame: :modal
-      ) %>
       <% unless @goal.completed? || @goal.status == :reached %>
         <%# Demote to outline when the catch-up alert below owns the primary
             action. One primary per surface. %>
@@ -55,6 +48,11 @@
         ) %>
       <% end %>
       <%= render DS::Menu.new do |menu| %>
+        <%# Edit lives in the kebab, matching the rest of Sure (accounts,
+            categories, rules, family_merchants, chats, transactions all
+            put their Edit action inside the kebab dropdown). Keeps the
+            header to one primary action. %>
+        <% menu.with_item(variant: "link", text: t(".edit"), icon: "pencil", href: edit_goal_path(@goal), data: { turbo_frame: :modal }) %>
         <% if @goal.may_pause? %>
           <% menu.with_item(variant: "button", text: t(".pause"), icon: "pause", href: pause_goal_path(@goal), method: :patch) %>
         <% end %>
