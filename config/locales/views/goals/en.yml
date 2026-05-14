@@ -95,6 +95,7 @@ en:
       archive: Archive
       unarchive: Restore
       delete: Delete permanently
+      record_pledge_cta: Record pledge
       pledge_just_transferred: I just transferred…
       pledge_just_saved: I just saved…
       funding_accounts_heading: Funding accounts

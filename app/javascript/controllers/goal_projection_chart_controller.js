@@ -251,17 +251,19 @@ export default class extends Controller {
       .attr("d", line);
 
     if (requiredSeries.length) {
-      // Light dashed line: the path needed to hit the target. Sits behind
-      // the projection so the user sees both the goal and the ask.
+      // Light dashed reference line: the path needed to hit the target.
+      // Neutral stroke (text-secondary) instead of green — both the
+      // projection and the required line are otherwise green when the
+      // goal is on track, and the two would visually merge.
       svg
         .append("path")
         .datum(requiredSeries)
         .attr("fill", "none")
-        .attr("stroke", "var(--color-green-600)")
+        .attr("stroke", textSecondary)
         .attr("stroke-width", 1.2)
         .attr("stroke-linecap", "round")
         .attr("stroke-dasharray", "2 4")
-        .attr("opacity", 0.45)
+        .attr("opacity", 0.5)
         .attr("d", line);
     }
 

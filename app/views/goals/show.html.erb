@@ -42,10 +42,10 @@
       ) %>
       <% unless @goal.completed? || @goal.status == :reached %>
         <%= render DS::Link.new(
-          text: t(@goal.pledge_action_label_key),
+          text: t(".record_pledge_cta"),
           variant: "primary",
           href: new_goal_pledge_path(@goal),
-          icon: "arrow-up-right",
+          icon: "plus",
           frame: :modal
         ) %>
       <% end %>
@@ -146,11 +146,11 @@
       </p>
       <div class="mt-2 flex items-center gap-3 flex-wrap">
         <%= render DS::Link.new(
-          text: t(@goal.pledge_action_label_key),
+          text: t(".record_pledge_cta"),
           variant: "primary",
           size: "sm",
           href: new_goal_pledge_path(@goal, amount: @goal.monthly_target_amount.to_f),
-          icon: "arrow-up-right",
+          icon: "plus",
           frame: :modal
         ) %>
         <%= link_to t("goals.show.catch_up.adjust_target_cta"),
@@ -216,11 +216,11 @@
         <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".empty.body") %></p>
         <div class="mt-4">
           <%= render DS::Link.new(
-            text: t(@goal.pledge_action_label_key),
+            text: t(".record_pledge_cta"),
             variant: "primary",
             size: "sm",
             href: new_goal_pledge_path(@goal),
-            icon: "arrow-up-right",
+            icon: "plus",
             frame: :modal
           ) %>
         </div>
