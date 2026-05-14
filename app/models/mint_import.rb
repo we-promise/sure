@@ -1,6 +1,24 @@
 class MintImport < Import
   after_create :set_mappings
 
+  DEFAULT_COLUMN_MAPPINGS = {
+    signage_convention: "inflows_positive",
+    date_col_label: "Date",
+    date_format: "%m/%d/%Y",
+    name_col_label: "Description",
+    amount_col_label: "Amount",
+    currency_col_label: "Currency",
+    account_col_label: "Account Name",
+    category_col_label: "Category",
+    tags_col_label: "Labels",
+    notes_col_label: "Notes",
+    entity_type_col_label: "Transaction Type"
+  }.freeze
+
+  def self.default_column_mappings
+    DEFAULT_COLUMN_MAPPINGS
+  end
+
   def generate_rows_from_csv
     rows.destroy_all
 
@@ -83,18 +101,7 @@ class MintImport < Import
 
   private
     def set_mappings
-      self.signage_convention = "inflows_positive"
-      self.date_col_label = "Date"
-      self.date_format = "%m/%d/%Y"
-      self.name_col_label = "Description"
-      self.amount_col_label = "Amount"
-      self.currency_col_label = "Currency"
-      self.account_col_label = "Account Name"
-      self.category_col_label = "Category"
-      self.tags_col_label = "Labels"
-      self.notes_col_label = "Notes"
-      self.entity_type_col_label = "Transaction Type"
-
+      assign_attributes(self.class.default_column_mappings)
       save!
     end
 end

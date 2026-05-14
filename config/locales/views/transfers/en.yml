@@ -31,6 +31,10 @@ en:
         transactions.
       delete_title: Remove transfer?
       details: Details
+      mark_recurring: Mark as recurring
+      mark_recurring_subtitle: Track this transfer as a recurring pattern in the upcoming
+        feed and recurring page.
+      mark_recurring_title: Mark transfer as recurring
       note_label: Notes
       note_placeholder: Add a note to this transfer
       overview: Overview

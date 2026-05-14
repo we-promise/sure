@@ -1,15 +1,37 @@
-<div class="<%= container_classes %>">
-  <%= helpers.icon icon_name, size: "sm", color: icon_color, class: "shrink-0 mt-0.5" %>
+<%= tag.div(class: container_classes, role: aria_role, "aria-labelledby": (aria_role && title.present?) ? title_id : nil) do %>
+  <% if title.present? %>
+    <div class="flex items-center gap-3">
+      <%= helpers.icon icon_name, size: "sm", color: icon_color, class: "shrink-0 -mt-0.5" %>
+      <p id="<%= title_id %>" class="text-sm font-semibold text-primary flex-1 leading-5">
+        <span class="sr-only"><%= variant_label %>:</span>
+        <%= title %>
+      </p>
+    </div>
 
-  <div class="flex-1 text-sm text-primary space-y-1">
-    <% if title.present? %>
-      <p class="font-medium text-primary"><%= title %></p>
+    <% if content.present? || message.present? %>
+      <div class="text-sm text-primary mt-2 pl-7 space-y-1">
+        <% if content.present? %>
+          <%= content %>
+        <% else %>
+          <%= message %>
+        <% end %>
+      </div>
     <% end %>
-
-    <% if content.present? %>
-      <%= content %>
-    <% elsif message.present? %>
-      <%= message %>
-    <% end %>
-  </div>
-</div>
+  <% elsif content.present? %>
+    <div class="flex items-start gap-3">
+      <%= helpers.icon icon_name, size: "sm", color: icon_color, class: "shrink-0" %>
+      <div class="flex-1 text-sm text-primary space-y-1">
+        <span class="sr-only"><%= variant_label %>:</span>
+        <%= content %>
+      </div>
+    </div>
+  <% elsif message.present? %>
+    <div class="flex items-center gap-3">
+      <%= helpers.icon icon_name, size: "sm", color: icon_color, class: "shrink-0 -mt-0.5" %>
+      <p class="text-sm text-primary flex-1 leading-5">
+        <span class="sr-only"><%= variant_label %>:</span>
+        <%= message %>
+      </p>
+    </div>
+  <% end %>
+<% end %>

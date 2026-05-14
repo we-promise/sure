@@ -33,6 +33,22 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :brex_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts, to: "brex_items/account_flows#preload_accounts"
+      get :select_accounts, to: "brex_items/account_flows#select_accounts"
+      post :link_accounts, to: "brex_items/account_flows#link_accounts"
+      get :select_existing_account, to: "brex_items/account_flows#select_existing_account"
+      post :link_existing_account, to: "brex_items/account_flows#link_existing_account"
+    end
+
+    member do
+      post :sync
+      get :setup_accounts, to: "brex_items/account_setups#setup_accounts"
+      post :complete_account_setup, to: "brex_items/account_setups#complete_account_setup"
+    end
+  end
+
   resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -50,6 +66,21 @@ Rails.application.routes.draw do
   end
 
   resources :binance_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :kraken_items, only: [ :create, :update, :destroy ] do
     collection do
       get :select_accounts
       post :link_accounts
@@ -82,6 +113,20 @@ Rails.application.routes.draw do
       get :connections
       delete :delete_connection
       delete :delete_orphaned_user
+    end
+  end
+
+  resources :ibkr_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
     end
   end
 
@@ -243,6 +288,7 @@ Rails.application.routes.draw do
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
     get :print, on: :collection
+    get :picker, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
@@ -262,7 +308,11 @@ Rails.application.routes.draw do
 
   get :exchange_rate, to: "exchange_rates#show"
 
-  resources :transfers, only: %i[new create destroy show update]
+  resources :transfers, only: %i[new create destroy show update] do
+    member do
+      post :mark_as_recurring
+    end
+  end
 
   resources :imports, only: %i[index new show create update destroy] do
     member do
@@ -385,6 +435,14 @@ Rails.application.routes.draw do
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
   end
 
+  resources :account_statements, only: %i[index show create update destroy] do
+    member do
+      patch :link
+      patch :unlink
+      patch :reject
+    end
+  end
+
   # Convenience routes for polymorphic paths
   # Example: account_path(Account.new(accountable: Depository.new)) => /depositories/123
   direct :edit_account do |model, options|
@@ -453,6 +511,7 @@ Rails.application.routes.draw do
         get :download, on: :member
       end
       resources :imports, only: [ :index, :show, :create ] do
+        post :preflight, on: :collection
         get :rows, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage

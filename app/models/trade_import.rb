@@ -65,11 +65,11 @@ class TradeImport < Import
   end
 
   def csv_template
-    template = <<-CSV
+    template = <<~CSV
       date*,ticker*,exchange_operating_mic,currency,qty*,price*,account,name
-      05/15/2024,AAPL,XNAS,USD,10,150.00,Trading Account,Apple Inc. Purchase
-      05/16/2024,GOOGL,XNAS,USD,-5,2500.00,Investment Account,Alphabet Inc. Sale
-      05/17/2024,TSLA,XNAS,USD,2,700.50,Retirement Account,Tesla Inc. Purchase
+      2024-05-15,AAPL,XNAS,USD,10,150.00,Trading Account,Apple Inc. Purchase
+      2024-05-16,GOOGL,XNAS,USD,-5,2500.00,Investment Account,Alphabet Inc. Sale
+      2024-05-17,TSLA,XNAS,USD,2,700.50,Retirement Account,Tesla Inc. Purchase
     CSV
 
     csv = CSV.parse(template, headers: true)
