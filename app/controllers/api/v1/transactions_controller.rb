@@ -207,13 +207,19 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   private
 
     def set_readable_transaction
+      set_transaction_with_account_scope(readable_transaction_account_scope)
+    end
+
+    def set_writable_transaction
+      set_transaction_with_account_scope(writable_transaction_account_scope)
+    end
+
+    def set_transaction_with_account_scope(account_scope)
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
-      family = current_resource_owner.family
-      @transaction = family.transactions
+      @transaction = current_resource_owner.family.transactions
         .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .merge(Account.historical)
+        .merge(account_scope)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
@@ -223,21 +229,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       }, status: :not_found
     end
 
-    def set_writable_transaction
-      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+    def readable_transaction_account_scope
+      Account.accessible_by(current_resource_owner).merge(Account.historical)
+    end
 
-      family = current_resource_owner.family
-      @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.writable_by(current_resource_owner))
-        .merge(Account.visible)
-        .find(params[:id])
-      @entry = @transaction.entry
-    rescue ActiveRecord::RecordNotFound
-      render json: {
-        error: "not_found",
-        message: "Transaction not found"
-      }, status: :not_found
+    def writable_transaction_account_scope
+      Account.writable_by(current_resource_owner).merge(Account.visible)
     end
 
     def ensure_read_scope

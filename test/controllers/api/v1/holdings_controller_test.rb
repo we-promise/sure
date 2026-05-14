@@ -167,7 +167,7 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
           name: "Test No Scope Key",
           scopes: [ "read" ],
           source: "mobile",
-          display_key: "test_no_scope_#{SecureRandom.hex(8)}"
+          display_key: "no_scope_test_value"
         )
         api_key.update_column(:scopes, [])
         api_key

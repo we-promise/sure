@@ -117,26 +117,31 @@ class Api::V1::TradesController < Api::V1::BaseController
   private
 
     def set_readable_trade
+      load_trade_with_account_scope(readable_trade_account_scope)
+    end
+
+    def set_writable_trade
+      load_trade_with_account_scope(writable_trade_account_scope)
+    end
+
+    def load_trade_with_account_scope(account_scope)
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
-      @trade = trade_history_scope.find(params[:id])
+      @trade = current_resource_owner.family.trades
+        .joins(entry: :account)
+        .merge(account_scope)
+        .find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
     end
 
-    def set_writable_trade
-      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+    def readable_trade_account_scope
+      Account.accessible_by(current_resource_owner).merge(Account.historical)
+    end
 
-      family = current_resource_owner.family
-      @trade = family.trades
-        .joins(entry: :account)
-        .merge(Account.writable_by(current_resource_owner))
-        .merge(Account.visible)
-        .find(params[:id])
-      @entry = @trade.entry
-    rescue ActiveRecord::RecordNotFound
-      render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    def writable_trade_account_scope
+      Account.writable_by(current_resource_owner).merge(Account.visible)
     end
 
     def ensure_read_scope
