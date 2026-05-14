@@ -161,16 +161,7 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     end
 
     def no_scope_api_key
-      @no_scope_api_key ||= begin
-        api_key = ApiKey.create!(
-          user: @user,
-          name: "Test No Scope Key",
-          scopes: [ "read" ],
-          source: "mobile",
-          display_key: "no_scope_test_value"
-        )
-        api_key.update_column(:scopes, [])
-        api_key
-      end
+      @api_key.update_column(:scopes, [])
+      @api_key
     end
 end
