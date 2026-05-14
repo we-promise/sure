@@ -297,9 +297,12 @@ export default class extends Controller {
       const collidesWithTargetLabel = targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
 
       if (innerWidth >= 320 && !(willHit && collidesWithTargetLabel)) {
+        // Full Intl.NumberFormat (no K/M shorthand) so the chart annotation
+        // matches the rest of the page's monetary readouts ("$160,634
+        // short" reads cleanly next to "$26,621/mo to catch up").
         const labelText = willHit
-          ? this._fmtMoneyShort(projectionEnd, data.currency)
-          : `Short ${this._fmtMoneyShort(targetAmount - projectionEnd, data.currency)}`;
+          ? this._fmtMoney(projectionEnd, data.currency)
+          : `${this._fmtMoney(targetAmount - projectionEnd, data.currency)} short`;
         svg
           .append("text")
           .attr("x", x(target) - 8)
@@ -377,7 +380,10 @@ export default class extends Controller {
         .text("Today");
     }
 
-    const tickFmt = d3.timeFormat("%b '%y");
+    // Full 4-digit year so the terminal "Jan 2027" reads as the year, not
+    // as "Jan 27" (which scans as January 27th). Slightly wider per tick;
+    // the de-dupe logic below keeps the count sane.
+    const tickFmt = d3.timeFormat("%b %Y");
     const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 80)));
     const ticks = x.ticks(tickCount);
     const tickGroup = svg.append("g");
