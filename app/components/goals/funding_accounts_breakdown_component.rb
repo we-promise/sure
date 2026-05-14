@@ -29,6 +29,18 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
     ((balance.to_d / total) * 100).round
   end
 
+  # Shared Y-max across every account's sparkline so per-row amplitudes
+  # are comparable at a glance. Without this each row scaled to its own
+  # max and a $50 bump on an orange account rendered as tall as a $400
+  # weekly peak on a pink one — the eye reads them as equal contribution
+  # when the weight pills already say they aren't.
+  def shared_spark_max
+    @shared_spark_max ||= begin
+      points = rows.flat_map { |r| r[:sparkline_points] }
+      [ points.max.to_f, 1.0 ].max
+    end
+  end
+
   # Label shown beneath the account name. Prefers the depository subtype
   # ("Savings", "HSA"…) over the bare accountable_type ("Depository") so the
   # subline carries useful signal. Falls back to the accountable type's i18n

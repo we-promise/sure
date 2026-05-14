@@ -39,7 +39,7 @@
           <% account = row[:account] %>
           <% color = Goals::AvatarComponent.color_for(account.name) %>
           <% spark = row[:sparkline_points] %>
-          <% spark_max = [ spark.max, 1.0 ].max %>
+          <% spark_max = shared_spark_max %>
           <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1.5fr)_72px_minmax(60px,1fr)_96px] items-center gap-3">
             <%= render Goals::AvatarComponent.new(name: account.name, color: color, size: "sm") %>
 
@@ -57,10 +57,12 @@
             <% end %>
 
             <svg viewBox="0 0 <%= spark.size * 8 %> 28" preserveAspectRatio="none" class="w-full h-7" aria-hidden="true">
-              <% xs = spark.each_with_index.map { |_, i| 2 + (i / (spark.size - 1).to_f) * (spark.size * 8 - 4) } %>
-              <% ys = spark.map { |v| 24 - (v / spark_max) * 20 } %>
-              <% path = xs.zip(ys).each_with_index.map { |(x, y), i| "#{i.zero? ? "M" : "L"} #{x.round(2)} #{y.round(2)}" }.join(" ") %>
-              <path d="<%= path %>" fill="none" stroke="<%= color %>" stroke-width="1.5" stroke-linejoin="round" />
+              <% spark.each_with_index do |v, i| %>
+                <% next if v.to_f.zero? %>
+                <% raw_h = (v.to_f / spark_max) * 24 %>
+                <% bar_h = [ raw_h, 1.0 ].max %>
+                <rect x="<%= i * 8 + 1 %>" y="<%= (28 - bar_h).round(2) %>" width="6" height="<%= bar_h.round(2) %>" fill="<%= color %>" rx="0.5" />
+              <% end %>
             </svg>
 
             <div class="text-right">
