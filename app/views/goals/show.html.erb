@@ -175,9 +175,9 @@
     <% end %>
   <% end %>
 
-  <%# Top row: ring card + projection chart card %>
+  <%# Top row: ring panel (status, no elevation) + projection chart card %>
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
-    <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+    <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
       <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
       <% unless @goal.completed? %>

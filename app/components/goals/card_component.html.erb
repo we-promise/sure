@@ -6,7 +6,7 @@
     <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2 mb-0.5">
-        <p class="text-sm font-medium text-primary truncate">
+        <p class="text-base font-medium text-primary truncate">
           <a href="<%= goal_path(goal) %>"
              aria-label="<%= aria_label %>"
              class="before:absolute before:inset-0 before:rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100">
@@ -15,7 +15,7 @@
         </p>
         <%= render Goals::StatusPillComponent.new(goal: goal) %>
       </div>
-      <p class="text-[11px] text-subdued truncate"><%= secondary_line %></p>
+      <p class="text-xs text-subdued truncate"><%= secondary_line %></p>
     </div>
 
     <div class="shrink-0 relative" style="width: <%= Goals::CardComponent::RING_SIZE %>px; height: <%= Goals::CardComponent::RING_SIZE %>px;">
@@ -45,19 +45,19 @@
 
   <div class="mt-5">
     <div class="flex items-baseline gap-1.5">
-      <span class="text-lg font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format(precision: 0) %></span>
+      <span class="text-xl font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format(precision: 0) %></span>
       <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format(precision: 0) %></span>
     </div>
     <% if pace_line %>
-      <p class="text-[11px] text-subdued tabular-nums mt-1"><%= pace_line %></p>
+      <p class="text-xs text-subdued tabular-nums mt-1"><%= pace_line %></p>
     <% end %>
   </div>
 
   <div class="mt-4 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <%= render Goals::AccountStackComponent.new(accounts: linked_accounts) %>
-      <span class="text-[11px] text-subdued"><%= linked_accounts_count_label %></span>
+      <span class="text-xs text-subdued"><%= linked_accounts_count_label %></span>
     </div>
-    <span class="text-[11px] text-subdued tabular-nums"><%= footer_line %></span>
+    <span class="text-xs text-subdued tabular-nums"><%= footer_line %></span>
   </div>
 </div>

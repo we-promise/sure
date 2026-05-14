@@ -89,7 +89,14 @@ export default class extends Controller {
 
     const endDate = target || new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const rawSavedSeries = (data.saved_series || []).map((p) => ({ date: new Date(p.date), value: p.value }));
+    // Drop any same-day-or-later points from the balance series: we own the
+    // endpoint with `currentAmount` (live `linked_accounts.sum(:balance)`)
+    // so the saved line meets the projection's starting point with no gap.
+    // Without this, the snapshot in `balances` for today could differ from
+    // the live read (sync timing) and the chart showed a vertical jump.
+    const rawSavedSeries = (data.saved_series || [])
+      .map((p) => ({ date: new Date(p.date), value: p.value }))
+      .filter((p) => p.date < today);
     const firstContribDate = rawSavedSeries[0]?.date;
     const savedSeries = [];
     // Only seed a (start, 0) point when start_date predates the first
@@ -99,9 +106,10 @@ export default class extends Controller {
       savedSeries.push({ date: start, value: 0 });
     }
     savedSeries.push(...rawSavedSeries);
-    if (savedSeries.length && savedSeries[savedSeries.length - 1].date < today) {
-      savedSeries.push({ date: today, value: currentAmount });
-    }
+    // Always close the saved line at (today, currentAmount) — the projection
+    // line starts here too, guaranteeing visual continuity at the today
+    // marker.
+    savedSeries.push({ date: today, value: currentAmount });
 
     const projectionEnd = target
       ? Math.max(currentAmount, currentAmount + avgMonthly * Math.max(0, this._monthsBetween(today, target)))
@@ -179,7 +187,7 @@ export default class extends Controller {
           .attr("x", margin.left - 6)
           .attr("y", y(tickValue) + 3)
           .attr("text-anchor", "end")
-          .attr("font-size", 10)
+          .attr("font-size", 12)
           .attr("fill", textSecondary)
           .text(this._fmtMoneyShort(tickValue, data.currency));
       });
@@ -205,7 +213,7 @@ export default class extends Controller {
           .attr("x", margin.left - 6)
           .attr("y", targetY + 3)
           .attr("text-anchor", "end")
-          .attr("font-size", 10)
+          .attr("font-size", 12)
           .attr("fill", textPrimary)
           .text(`Target · ${this._fmtMoneyShort(targetAmount, data.currency)}`);
       } else {
@@ -215,7 +223,7 @@ export default class extends Controller {
           .attr("x", margin.left + innerWidth - 4)
           .attr("y", targetY - 6)
           .attr("text-anchor", "end")
-          .attr("font-size", 10)
+          .attr("font-size", 12)
           .attr("fill", textPrimary)
           .text(`Target · ${this._fmtMoney(targetAmount, data.currency)}`);
       }
@@ -308,7 +316,7 @@ export default class extends Controller {
           .attr("x", x(target) - 8)
           .attr("y", y(projectionEnd) - 8)
           .attr("text-anchor", "end")
-          .attr("font-size", 10)
+          .attr("font-size", 12)
           .attr("fill", textSecondary)
           .text(labelText);
       }
@@ -344,7 +352,7 @@ export default class extends Controller {
           .append("text")
           .attr("x", x(today) + 10)
           .attr("y", y(pendingTop) + 4)
-          .attr("font-size", 10)
+          .attr("font-size", 12)
           .attr("fill", textSecondary)
           .text(`+ pending ${this._fmtMoneyShort(pendingPledgeAmount, data.currency)}`);
       }
@@ -375,7 +383,7 @@ export default class extends Controller {
         .attr("x", x(today))
         .attr("y", margin.top - 4)
         .attr("text-anchor", "middle")
-        .attr("font-size", 10)
+        .attr("font-size", 12)
         .attr("fill", textSecondary)
         .text("Today");
     }
@@ -395,7 +403,7 @@ export default class extends Controller {
       .attr("x", (d) => x(d))
       .attr("y", height - 8)
       .attr("text-anchor", "middle")
-      .attr("font-size", 10)
+      .attr("font-size", 12)
       .attr("fill", textSecondary)
       .text((d) => tickFmt(d));
     // De-dupe adjacent equal tick labels (e.g. multiple "May '26" on a
@@ -439,7 +447,7 @@ export default class extends Controller {
 
     if (root.style.position !== "absolute") root.style.position = "relative";
     const tooltip = document.createElement("div");
-    tooltip.style.cssText = "position:absolute;pointer-events:none;display:none;background:var(--color-gray-900);color:var(--color-white);font-size:11px;line-height:1.35;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,0.15);";
+    tooltip.style.cssText = "position:absolute;pointer-events:none;display:none;background:var(--color-gray-900);color:var(--color-white);font-size:12px;line-height:1.35;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,0.15);";
     root.appendChild(tooltip);
 
     const overlay = svg

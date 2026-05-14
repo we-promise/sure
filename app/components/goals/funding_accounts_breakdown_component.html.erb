@@ -30,7 +30,7 @@
 
             <div class="min-w-0">
               <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
-              <p class="text-xs text-subdued tabular-nums privacy-sensitive">
+              <p class="text-sm text-subdued tabular-nums privacy-sensitive">
                 <%= accountable_label(account) %> · <%= row[:balance_money].format(precision: 0) %>
               </p>
             </div>
@@ -46,11 +46,11 @@
             <div class="text-right space-y-0.5">
               <div class="flex items-baseline justify-end gap-1.5">
                 <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= row[:last_30_money].format(precision: 0) %></p>
-                <p class="text-[10px] text-subdued"><%= t("goals.show.funding_last_30d") %></p>
+                <p class="text-xs text-subdued"><%= t("goals.show.funding_last_30d") %></p>
               </div>
               <div class="flex items-baseline justify-end gap-1.5">
                 <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= row[:last_90_money].format(precision: 0) %></p>
-                <p class="text-[10px] text-subdued"><%= t("goals.show.funding_last_90d") %></p>
+                <p class="text-xs text-subdued"><%= t("goals.show.funding_last_90d") %></p>
               </div>
             </div>
           </div>
