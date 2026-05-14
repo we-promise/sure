@@ -72,7 +72,7 @@ jobs:
       - name: Lint/Format js code
         run: npm run lint
 
-  test:
+  test_unit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -120,6 +120,52 @@ jobs:
 
       - name: Unit and integration tests
         run: bin/rails test
+
+  test_system:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      PLAID_CLIENT_ID: foo
+      PLAID_SECRET: bar
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432
+      REDIS_URL: redis://localhost:6379
+      RAILS_ENV: test
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y google-chrome-stable curl libvips postgresql-client libpq-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: DB setup and smoke test
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+          bin/rails db:seed
 
       - name: System tests
         run: DISABLE_PARALLELIZATION=true bin/rails test:system

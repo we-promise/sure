@@ -210,19 +210,19 @@ class Import < ApplicationRecord
     mapped_rows = csv_rows.map.with_index(1) do |row, index|
       {
         source_row_number: index,
-        account: row[account_col_label].to_s,
-        date: row[date_col_label].to_s,
-        qty: sanitize_number(row[qty_col_label]).to_s,
-        ticker: row[ticker_col_label].to_s,
-        exchange_operating_mic: row[exchange_operating_mic_col_label].to_s,
-        price: sanitize_number(row[price_col_label]).to_s,
-        amount: sanitize_number(row[amount_col_label]).to_s,
-        currency: (row[currency_col_label] || default_currency).to_s,
-        name: (row[name_col_label] || default_row_name).to_s,
-        category: row[category_col_label].to_s,
-        tags: row[tags_col_label].to_s,
-        entity_type: row[entity_type_col_label].to_s,
-        notes: row[notes_col_label].to_s
+        account: csv_value(row, account_col_label, "account", "account_name").to_s,
+        date: csv_value(row, date_col_label, "date").to_s,
+        qty: sanitize_number(csv_value(row, qty_col_label, "qty", "quantity")).to_s,
+        ticker: csv_value(row, ticker_col_label, "ticker").to_s,
+        exchange_operating_mic: csv_value(row, exchange_operating_mic_col_label, "exchange_operating_mic").to_s,
+        price: sanitize_number(csv_value(row, price_col_label, "price")).to_s,
+        amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
+        currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
+        name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
+        category: csv_value(row, category_col_label, "category").to_s,
+        tags: csv_value(row, tags_col_label, "tags").to_s,
+        entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
+        notes: csv_value(row, notes_col_label, "notes").to_s
       }
     end
 
@@ -379,6 +379,55 @@ class Import < ApplicationRecord
 
     def default_currency
       account&.currency || family.currency
+    end
+
+    def csv_value(row, label, *aliases)
+      return if label.blank?
+
+      [ label, *aliases ].each do |candidate|
+        header = header_for(candidate)
+        next if header.blank?
+
+        value = row[header]
+        return value if value.present?
+      end
+
+      nil
+    end
+
+    def header_for(candidate)
+      return if candidate.blank?
+
+      normalized_csv_headers[normalize_header(candidate)]
+    end
+
+    def normalized_csv_headers
+      @normalized_csv_headers ||= begin
+        grouped_headers = Array(csv_headers)
+          .filter_map do |header|
+            normalized = normalize_header(header)
+            next if normalized.blank?
+
+            [ normalized, header ]
+          end
+          .group_by(&:first)
+
+        duplicate_headers = grouped_headers.values.filter_map do |headers|
+          originals = headers.map(&:last).uniq
+          originals if originals.many?
+        end
+
+        if duplicate_headers.any?
+          errors.add(:base, "CSV headers normalize to duplicate columns: #{duplicate_headers.map { |headers| headers.join(', ') }.join('; ')}")
+          raise ActiveRecord::RecordInvalid, self
+        end
+
+        grouped_headers.transform_values { |headers| headers.first.last }
+      end
+    end
+
+    def normalize_header(header)
+      header.to_s.strip.downcase.gsub(/\*/, "").gsub(/[\s-]+/, "_")
     end
 
     def parsed_csv

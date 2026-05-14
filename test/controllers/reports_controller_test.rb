@@ -107,12 +107,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     )
 
     assert_response :ok
-    # Should show flash message about invalid date range
-    assert flash[:alert].present?, "Flash alert should be present"
-    assert_match /End date cannot be before start date/, flash[:alert]
-    # Verify the response body contains the swapped date range in the correct order
-    assert_includes @response.body, end_date.strftime("%b %-d, %Y")
-    assert_includes @response.body, start_date.strftime("%b %-d, %Y")
+    assert_equal I18n.t("reports.invalid_date_range"), flash[:alert]
+    assert_includes @response.body, end_date.strftime("%b %Y")
+    assert_includes @response.body, start_date.strftime("%b %Y")
   end
 
   test "spending patterns returns data when expense transactions exist" do
@@ -244,5 +241,100 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # Subcategories
     assert_select "tr[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
+  end
+
+  test "monthly period navigation shows previous month link" do
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    prev_start = Date.current.beginning_of_month - 1.month
+    prev_end = prev_start.end_of_month
+    assert_select "a[href=?]", reports_path(period_type: :monthly, start_date: prev_start, end_date: prev_end)
+  end
+
+  test "monthly period navigation disables next arrow on current month" do
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "button[disabled][aria-label=?]", I18n.t("reports.index.next_period")
+  end
+
+  test "monthly period navigation shows next month link on past month" do
+    past_start = Date.current.beginning_of_month - 2.months
+    past_end = past_start.end_of_month
+    get reports_path(period_type: :monthly, start_date: past_start, end_date: past_end)
+    assert_response :ok
+
+    next_start = past_start + 1.month
+    next_end = next_start.end_of_month
+    assert_select "a[href=?]", reports_path(period_type: :monthly, start_date: next_start, end_date: next_end)
+  end
+
+  test "last 6 months next window extends to current month end when crossing boundary" do
+    start_date = Date.current.beginning_of_month - 12.months
+    end_date = start_date + 6.months - 1.day
+
+    get reports_path(period_type: :last_6_months, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    candidate_start = start_date.beginning_of_month + 6.months
+    if candidate_start + 6.months >= Date.current.beginning_of_month
+      expected_next_end   = Date.current.end_of_month
+      expected_next_start = (expected_next_end + 1.day - 6.months).beginning_of_month
+    else
+      expected_next_start = candidate_start
+      expected_next_end   = expected_next_start + 6.months - 1.day
+    end
+
+    assert_select "a[href=?]",
+      reports_path(period_type: :last_6_months, start_date: expected_next_start, end_date: expected_next_end)
+  end
+
+  test "quarterly period navigation shows previous and next quarter links" do
+    get reports_path(period_type: :quarterly)
+    assert_response :ok
+
+    prev_start = (Date.current.beginning_of_quarter - 1.day).beginning_of_quarter
+    prev_end = prev_start.end_of_quarter
+    assert_select "a[href=?]", reports_path(period_type: :quarterly, start_date: prev_start, end_date: prev_end)
+
+    # Also verify a past quarter shows an enabled next-quarter link
+    get reports_path(period_type: :quarterly, start_date: prev_start, end_date: prev_end)
+    assert_response :ok
+
+    next_start = prev_start.next_quarter.beginning_of_quarter
+    next_end   = next_start.end_of_quarter
+    assert_select "a[href=?]", reports_path(period_type: :quarterly, start_date: next_start, end_date: next_end)
+  end
+
+  test "custom period hides period display" do
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.to_date,
+      end_date: Date.current
+    )
+    assert_response :ok
+
+    prev_start = 1.month.ago.to_date.beginning_of_month - 1.month
+    next_start = 1.month.ago.to_date.beginning_of_month + 1.month
+    assert_select "a[href*=?]", "start_date=#{prev_start}", count: 0
+    assert_select "a[href*=?]", "start_date=#{next_start}", count: 0
+  end
+
+  test "ytd period navigation shows previous year link" do
+    get reports_path(period_type: :ytd)
+    assert_response :ok
+
+    prev_year  = Date.current.year - 1
+    prev_start = Date.new(prev_year, 1, 1)
+    prev_end   = Date.new(prev_year, 12, 31)
+    assert_select "a[href=?]", reports_path(period_type: :ytd, start_date: prev_start, end_date: prev_end)
+  end
+
+  test "ytd period navigation disables next arrow on current year" do
+    get reports_path(period_type: :ytd)
+    assert_response :ok
+
+    assert_select "button[disabled][aria-label=?]", I18n.t("reports.index.next_period")
   end
 end

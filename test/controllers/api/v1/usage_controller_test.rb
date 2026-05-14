@@ -111,26 +111,28 @@ class Api::V1::UsageControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should work correctly when approaching rate limit" do
-    # Make 98 requests to get close to the limit
-    98.times do
+    travel_to Time.zone.local(2026, 1, 1, 12, 15, 0) do
+      # Make 98 requests to get close to the limit
+      98.times do
+        get "/api/v1/test", headers: { "X-Api-Key" => @api_key.display_key }
+        assert_response :success
+      end
+
+      # Check usage - this should be request 99
+      get "/api/v1/usage", headers: { "X-Api-Key" => @api_key.display_key }
+      assert_response :success
+
+      response_body = JSON.parse(response.body)
+      assert_equal 99, response_body["rate_limit"]["current_count"]
+      assert_equal 1, response_body["rate_limit"]["remaining"]
+
+      # One more request should hit the limit
       get "/api/v1/test", headers: { "X-Api-Key" => @api_key.display_key }
       assert_response :success
+
+      # Now we should be rate limited
+      get "/api/v1/usage", headers: { "X-Api-Key" => @api_key.display_key }
+      assert_response :too_many_requests
     end
-
-    # Check usage - this should be request 99
-    get "/api/v1/usage", headers: { "X-Api-Key" => @api_key.display_key }
-    assert_response :success
-
-    response_body = JSON.parse(response.body)
-    assert_equal 99, response_body["rate_limit"]["current_count"]
-    assert_equal 1, response_body["rate_limit"]["remaining"]
-
-    # One more request should hit the limit
-    get "/api/v1/test", headers: { "X-Api-Key" => @api_key.display_key }
-    assert_response :success
-
-    # Now we should be rate limited
-    get "/api/v1/usage", headers: { "X-Api-Key" => @api_key.display_key }
-    assert_response :too_many_requests
   end
 end

@@ -103,6 +103,90 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal [ -100, 200, -300 ], @import.entries.order(:date).map(&:amount)
   end
 
+  test "csv_template uses ISO dates" do
+    first_row = @import.csv_template.first
+
+    assert_equal "2024-05-15", first_row["date*"]
+  end
+
+  test "generates rows from legacy account_name header with template labels" do
+    import_csv = <<~CSV
+      date,account_name,amount,name
+      2024-05-15,Checking Account,42.50,Legacy Export Row
+    CSV
+
+    @import.update!(
+      raw_file_str: import_csv,
+      date_col_label: "date*",
+      amount_col_label: "amount*",
+      name_col_label: "name",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    row = @import.rows.reload.first
+
+    assert row.valid?
+    assert_equal "Checking Account", row.account
+    assert_equal "2024-05-15", row.date
+    assert_equal BigDecimal("42.50"), row.signed_amount
+  end
+
+  test "generates rows from alias column when configured column value is blank" do
+    import_csv = <<~CSV
+      date*,account,account_name,amount,name
+      2024-05-15,,Checking Account,42.50,Legacy Export Row
+    CSV
+
+    @import.update!(
+      raw_file_str: import_csv,
+      date_col_label: "date*",
+      amount_col_label: "amount*",
+      name_col_label: "name",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    row = @import.rows.reload.first
+
+    assert row.valid?
+    assert_equal "Checking Account", row.account
+  end
+
+  test "rejects duplicate normalized CSV headers" do
+    import_csv = <<~CSV
+      date,date*,amount,name
+      2024-05-15,2024-05-16,42.50,Duplicate Date Row
+    CSV
+
+    @import.update!(
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%Y-%m-%d",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { @import.generate_rows_from_csv }
+
+    assert_includes error.record.errors.full_messages.to_sentence, "date, date*"
+  end
+
+  test "parses legacy comma tags and escaped pipe tags" do
+    assert_equal [ "groceries", "essentials" ], Import::Row.new(tags: "groceries,essentials").tags_list
+    assert_equal [ "Food, Dining", "essentials" ], Import::Row.new(tags: "Food\\, Dining,essentials").tags_list
+    assert_equal [ "Food|Dining" ], Import::Row.new(tags: "Food\\|Dining").tags_list
+    assert_equal [ "Food|Dining", "essentials" ], Import::Row.new(tags: "Food\\|Dining|essentials").tags_list
+  end
+
   test "does not create duplicate when matching transaction exists with same name" do
     account = accounts(:depository)
 

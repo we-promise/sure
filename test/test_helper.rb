@@ -23,6 +23,8 @@ require "minitest/autorun"
 require "mocha/minitest"
 require "aasm/minitest"
 require "webmock/minitest"
+require "rack/test"
+require "tempfile"
 require "uri"
 
 VCR.configure do |config|
@@ -102,6 +104,27 @@ module ActiveSupport
 
     def user_password_test
       "maybetestpassword817983172"
+    end
+
+    def uploaded_file(filename:, content_type:, content: "date,amount\n2024-01-01,1\n")
+      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
+      tempfile.binmode
+      tempfile.write(content)
+      tempfile.rewind
+
+      Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
+    end
+
+    def family_guest
+      @family_guest ||= users(:family_admin).family.users.create!(
+        first_name: "Readonly",
+        last_name: "Guest",
+        email: "readonly-guest@example.com",
+        password: user_password_test,
+        role: "guest",
+        onboarded_at: Time.current,
+        ui_layout: "dashboard"
+      )
     end
 
     # Ensures the Investment Contributions category exists for a family

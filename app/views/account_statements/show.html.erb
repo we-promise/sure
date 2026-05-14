@@ -1,0 +1,180 @@
+<%= content_for :page_title, @statement.filename %>
+
+<%= settings_section title: t(".title") do %>
+  <div class="space-y-4">
+    <div class="rounded-xl bg-container-inset p-4">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <%= icon(account_statement_file_icon(@statement), size: "sm") %>
+            <h2 class="text-lg font-medium text-primary truncate"><%= @statement.filename %></h2>
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-secondary">
+            <%= account_statement_status_badge(@statement) %>
+            <span><%= number_to_human_size(@statement.byte_size) %></span>
+            <span><%= @statement.content_type %></span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <% if @statement.original_file.attached? %>
+            <%= link_to rails_blob_path(@statement.original_file, disposition: "attachment"),
+                        class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+              <%= icon("download", size: "sm") %>
+              <%= t(".download") %>
+            <% end %>
+          <% end %>
+          <% if @can_manage_statement %>
+            <%= button_to account_statement_path(@statement),
+                          method: :delete,
+                          class: "inline-flex items-center gap-2 text-sm font-medium text-destructive",
+                          data: { turbo_confirm: CustomConfirm.for_resource_deletion("statement") } do %>
+              <%= icon("trash-2", size: "sm", color: "destructive") %>
+              <%= t(".delete") %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[1fr_22rem]">
+      <div class="rounded-xl bg-container-inset p-4">
+        <h3 class="text-sm font-medium text-primary mb-3"><%= t(".metadata_title") %></h3>
+
+        <% if @can_manage_statement %>
+          <%= styled_form_with model: @statement, url: account_statement_path(@statement), method: :patch, class: "space-y-4" do |form| %>
+            <div class="grid gap-3 md:grid-cols-2">
+              <%= form.text_field :institution_name_hint, label: t(".institution_name_hint") %>
+              <%= form.text_field :account_name_hint, label: t(".account_name_hint") %>
+              <%= form.text_field :account_last4_hint, label: t(".account_last4_hint") %>
+              <%= form.select :currency,
+                              account_statement_currency_options(@statement),
+                              { label: t(".currency"), selected: @statement.statement_currency } %>
+              <%= form.date_field :period_start_on, label: t(".period_start_on") %>
+              <%= form.date_field :period_end_on, label: t(".period_end_on") %>
+              <%= form.number_field :opening_balance, label: t(".opening_balance"), step: "0.01" %>
+              <%= form.number_field :closing_balance, label: t(".closing_balance"), step: "0.01" %>
+            </div>
+
+            <%= form.submit t(".save") %>
+          <% end %>
+        <% else %>
+          <dl class="grid gap-3 md:grid-cols-2 text-sm">
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".account_label") %></dt>
+              <dd class="text-primary"><%= @statement.account&.name || t(".unmatched_account") %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".institution_name_hint") %></dt>
+              <dd class="text-primary"><%= @statement.institution_name_hint.presence || t(".unknown_value") %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".account_name_hint") %></dt>
+              <dd class="text-primary"><%= @statement.account_name_hint.presence || t(".unknown_value") %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".account_last4_hint") %></dt>
+              <dd class="text-primary"><%= @statement.account_last4_hint.presence || t(".unknown_value") %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".currency") %></dt>
+              <dd class="text-primary"><%= @statement.statement_currency %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t("account_statements.table.period") %></dt>
+              <dd class="text-primary"><%= account_statement_period(@statement) %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".opening_balance") %></dt>
+              <dd class="text-primary privacy-sensitive"><%= account_statement_balance_label(@statement, :opening_balance) %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-secondary"><%= t(".closing_balance") %></dt>
+              <dd class="text-primary privacy-sensitive"><%= account_statement_balance_label(@statement, :closing_balance) %></dd>
+            </div>
+          </dl>
+        <% end %>
+      </div>
+
+      <div class="space-y-4">
+        <div class="rounded-xl bg-container-inset p-4">
+          <h3 class="text-sm font-medium text-primary mb-3"><%= t(".linking_title") %></h3>
+
+          <% if @statement.account.present? %>
+            <p class="text-sm text-secondary mb-3">
+              <%= t(".linked_to", account: @statement.account.name) %>
+            </p>
+            <% if @can_manage_statement %>
+              <%= button_to unlink_account_statement_path(@statement),
+                            method: :patch,
+                            class: "inline-flex items-center gap-2 text-sm font-medium text-primary" do %>
+                <%= icon("unlink", size: "sm") %>
+                <%= t(".unlink") %>
+              <% end %>
+            <% end %>
+          <% elsif @statement.suggested_account.present? %>
+            <p class="text-sm text-secondary mb-3">
+              <%= t(".suggested_account", account: @statement.suggested_account.name, confidence: number_to_percentage(@statement.match_confidence.to_d * 100, precision: 0)) %>
+            </p>
+            <% if @can_manage_statement %>
+              <div class="flex items-center gap-3">
+                <%= button_to link_account_statement_path(@statement),
+                              method: :patch,
+                              params: { account_id: @statement.suggested_account_id },
+                              class: "inline-flex items-center gap-2 text-sm font-medium text-primary" do %>
+                  <%= icon("link", size: "sm") %>
+                  <%= t(".link_suggestion") %>
+                <% end %>
+                <%= button_to reject_account_statement_path(@statement),
+                              method: :patch,
+                              class: "inline-flex items-center gap-2 text-sm font-medium text-secondary" do %>
+                  <%= icon("x", size: "sm") %>
+                  <%= t(".reject") %>
+                <% end %>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-sm text-secondary"><%= t(".no_suggestion") %></p>
+          <% end %>
+        </div>
+
+        <div class="rounded-xl bg-container-inset p-4">
+          <h3 class="text-sm font-medium text-primary mb-3"><%= t(".reconciliation_title") %></h3>
+
+          <% if @reconciliation_checks.any? %>
+            <div class="space-y-3">
+              <% @reconciliation_checks.each do |check| %>
+                <div class="rounded-lg bg-container shadow-border-xs p-3">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-medium text-primary"><%= account_statement_reconciliation_label(check) %></p>
+                    <% if check[:status] == "matched" %>
+                      <%= render "shared/badge", color: "success" do %><%= t("account_statements.reconciliation.matched") %><% end %>
+                    <% else %>
+                      <%= render "shared/badge", color: "error" do %><%= t("account_statements.reconciliation.mismatched") %><% end %>
+                    <% end %>
+                  </div>
+                  <dl class="mt-3 space-y-1 text-xs text-secondary">
+                    <div class="flex justify-between gap-3">
+                      <dt><%= t(".statement_amount") %></dt>
+                      <dd class="privacy-sensitive"><%= Money.new(check[:statement_amount], @statement.statement_currency).format %></dd>
+                    </div>
+                    <div class="flex justify-between gap-3">
+                      <dt><%= t(".ledger_amount") %></dt>
+                      <dd class="privacy-sensitive"><%= Money.new(check[:ledger_amount], @statement.statement_currency).format %></dd>
+                    </div>
+                    <div class="flex justify-between gap-3">
+                      <dt><%= t(".difference") %></dt>
+                      <dd class="privacy-sensitive"><%= Money.new(check[:difference], @statement.statement_currency).format %></dd>
+                    </div>
+                  </dl>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-sm text-secondary"><%= t(".reconciliation_unavailable") %></p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

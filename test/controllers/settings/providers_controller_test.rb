@@ -32,6 +32,27 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "shows configured Brex connections in bank sync settings" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, "Brex"
+    assert_includes response.body, "Test Brex Connection"
+    assert_includes response.body, "brex-providers-panel"
+  end
+
+  test "shows Brex as available when family has no Brex connections" do
+    sign_in users(:empty)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, "Brex"
+    assert_includes response.body, I18n.t("settings.providers.taglines.brex")
+    assert_includes response.body, connect_form_settings_providers_path(provider_key: "brex")
+    refute_includes response.body, "Test Brex Connection"
+  end
+
   test "correctly identifies declared vs dynamic fields" do
     # All current provider fields are dynamic, but the logic should correctly
     # distinguish between declared and dynamic fields
@@ -346,6 +367,21 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_enqueued_jobs 1, only: SyncJob do
       post sync_provider_settings_providers_path(provider_key: "simplefin")
+    end
+
+    assert_redirected_to settings_providers_path
+
+    follow_redirect!
+    assert_response :success
+    assert_match(/Sync started/i, response.body)
+  end
+
+  test "POST sync for brex without an active Brex sync enqueues SyncJob" do
+    item = brex_items(:one)
+    Sync.where(syncable_type: "BrexItem", syncable_id: item.id).delete_all
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      post sync_provider_settings_providers_path(provider_key: "brex")
     end
 
     assert_redirected_to settings_providers_path

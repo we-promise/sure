@@ -6,6 +6,7 @@
     <% menu.with_item(variant: "link", text: "Edit", href: edit_account_path(account), icon: "pencil-line", data: { turbo_frame: :modal }) %>
   <% end %>
   <% menu.with_item(variant: "link", text: "Sharing", href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
+  <% menu.with_item(variant: "link", text: t(".statements"), href: account_path(account, tab: "statements"), icon: "archive") %>
 
   <% if permission.in?([ :owner, :full_control ]) %>
     <% if account.supports_trades? %>

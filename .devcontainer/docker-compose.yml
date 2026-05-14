@@ -70,6 +70,9 @@ services:
       - "7900:7900"
     shm_size: 2gb
     restart: unless-stopped
+    environment:
+      SE_NODE_MAX_SESSIONS: 4
+      SE_NODE_OVERRIDE_MAX_SESSIONS: "true"
 
 volumes:
   postgres-data:

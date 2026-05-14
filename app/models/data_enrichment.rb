@@ -11,6 +11,7 @@ class DataEnrichment < ApplicationRecord
     enable_banking: "enable_banking",
     coinstats: "coinstats",
     mercury: "mercury",
+    brex: "brex",
     indexa_capital: "indexa_capital",
     sophtron: "sophtron",
     ibkr: "ibkr"

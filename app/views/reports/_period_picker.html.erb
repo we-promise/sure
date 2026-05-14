@@ -1,0 +1,150 @@
+<%# locals: (period_type:, start_date:) %>
+
+<%= turbo_frame_tag "reports_picker" do %>
+  <div class="p-3 space-y-2">
+    <% case period_type %>
+    <% when :monthly %>
+      <div class="flex items-center gap-2 justify-between mb-2">
+        <%= render DS::Link.new(
+          variant: "icon",
+          icon: "chevron-left",
+          href: picker_reports_path(period_type: :monthly, start_date: start_date.beginning_of_year - 1.year),
+          aria: { label: t("reports.index.previous_year") },
+          frame: "reports_picker"
+        ) %>
+
+        <span class="w-40 text-center px-3 py-2">
+          <%= start_date.year %>
+        </span>
+
+        <% next_year_start = Date.new(start_date.year + 1, 1, 1) %>
+        <% if next_year_start <= Date.current %>
+          <%= render DS::Link.new(
+            variant: "icon",
+            icon: "chevron-right",
+            href: picker_reports_path(period_type: :monthly, start_date: next_year_start),
+            aria: { label: t("reports.index.next_year") },
+            frame: "reports_picker"
+          ) %>
+        <% else %>
+          <span class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg">
+            <%= icon "chevron-right", color: "current" %>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 text-sm text-center font-medium">
+        <% Date::ABBR_MONTHNAMES.compact.each_with_index do |month_name, i| %>
+          <% month = i + 1 %>
+          <% date = Date.new(start_date.year, month, 1) %>
+          <% if date <= Date.current %>
+            <%= render DS::Link.new(
+              variant: date.month == start_date.month ? "secondary" : "ghost",
+              text: month_name,
+              href: reports_path(period_type: :monthly, start_date: date, end_date: date.end_of_month),
+              full_width: true,
+              frame: :_top
+            ) %>
+          <% else %>
+            <span class="px-3 py-2 text-subdued rounded-md"><%= month_name %></span>
+          <% end %>
+        <% end %>
+      </div>
+
+    <% when :quarterly %>
+      <div class="flex items-center gap-2 justify-between mb-2">
+        <%= render DS::Link.new(
+          variant: "icon",
+          icon: "chevron-left",
+          href: picker_reports_path(period_type: :quarterly, start_date: Date.new(start_date.year - 1, 1, 1)),
+          aria: { label: t("reports.index.previous_year") },
+          frame: "reports_picker"
+        ) %>
+
+        <span class="w-40 text-center px-3 py-2">
+          <%= start_date.year %>
+        </span>
+
+        <% next_year_start = Date.new(start_date.year + 1, 1, 1) %>
+        <% if next_year_start <= Date.current %>
+          <%= render DS::Link.new(
+            variant: "icon",
+            icon: "chevron-right",
+            href: picker_reports_path(period_type: :quarterly, start_date: next_year_start),
+            aria: { label: t("reports.index.next_year") },
+            frame: "reports_picker"
+          ) %>
+        <% else %>
+          <span class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg">
+            <%= icon "chevron-right", color: "current" %>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-sm text-center font-medium">
+        <% (1..4).each do |q| %>
+          <% quarter_start = Date.new(start_date.year, (q - 1) * 3 + 1, 1) %>
+          <% quarter_end = quarter_start.end_of_quarter %>
+          <% if quarter_start <= Date.current %>
+            <%= render DS::Link.new(
+              variant: quarter_start.quarter == start_date.quarter && start_date.year == quarter_start.year ? "secondary" : "ghost",
+              text: t("reports.index.period_picker.quarter", quarter: q, year: start_date.year),
+              href: reports_path(period_type: :quarterly, start_date: quarter_start, end_date: quarter_end),
+              full_width: true,
+              frame: :_top
+            ) %>
+          <% else %>
+            <span class="px-3 py-2 text-subdued rounded-md"><%= t("reports.index.period_picker.quarter", quarter: q, year: start_date.year) %></span>
+          <% end %>
+        <% end %>
+      </div>
+
+    <% when :ytd %>
+      <% decade_start = (start_date.year / 10) * 10 %>
+      <% decade_end = decade_start + 9 %>
+
+      <div class="flex items-center gap-2 justify-between mb-2">
+        <%= render DS::Link.new(
+          variant: "icon",
+          icon: "chevron-left",
+          href: picker_reports_path(period_type: :ytd, start_date: Date.new(decade_start - 1, 1, 1)),
+          aria: { label: t("reports.index.previous_decade") },
+          frame: "reports_picker"
+        ) %>
+
+        <span class="w-40 text-center px-3 py-2">
+          <%= decade_start %>–<%= decade_end %>
+        </span>
+
+        <% if decade_start + 10 <= Date.current.year %>
+          <%= render DS::Link.new(
+            variant: "icon",
+            icon: "chevron-right",
+            href: picker_reports_path(period_type: :ytd, start_date: Date.new(decade_start + 10, 1, 1)),
+            aria: { label: t("reports.index.next_decade") },
+            frame: "reports_picker"
+          ) %>
+        <% else %>
+          <span class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg">
+            <%= icon "chevron-right", color: "current" %>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-sm text-center font-medium">
+        <% (decade_start..decade_end).each do |year| %>
+          <% next if year > Date.current.year %>
+          <% year_start = Date.new(year, 1, 1) %>
+          <% year_end = year == Date.current.year ? Date.current : Date.new(year, 12, 31) %>
+          <%= render DS::Link.new(
+            variant: year == start_date.year ? "secondary" : "ghost",
+            text: year == Date.current.year ? t("reports.index.period_picker.ytd", year: year) : year.to_s,
+            href: reports_path(period_type: :ytd, start_date: year_start, end_date: year_end),
+            full_width: true,
+            frame: :_top
+          ) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
