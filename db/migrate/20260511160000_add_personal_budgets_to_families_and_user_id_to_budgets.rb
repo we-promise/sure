@@ -3,9 +3,11 @@ class AddPersonalBudgetsToFamiliesAndUserIdToBudgets < ActiveRecord::Migration[7
     add_column :families, :personal_budgets, :boolean, default: false, null: false
 
     # :optional is not available in all Rails 7.2 versions / setups → use null: true instead
+    # on_delete: :nullify allows user deletion without breaking FK constraint
+    # (personal budgets become shared/family-level budgets when user is removed)
     add_reference :budgets, :user,
                   type: :uuid,
-                  foreign_key: true,
+                  foreign_key: { on_delete: :nullify },
                   null: true
 
     # Update index to include user_id

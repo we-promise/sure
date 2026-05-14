@@ -330,7 +330,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "user_id"
-    t.index ["family_id", "start_date", "end_date", "user_id"], name: "index_budgets_on_family_start_end_user", unique: true
+    t.index ["family_id", "start_date", "end_date"], name: "index_budgets_shared_unique", unique: true, where: "user_id IS NULL"
+    t.index ["family_id", "start_date", "end_date", "user_id"], name: "index_budgets_personal_unique", unique: true, where: "user_id IS NOT NULL"
     t.index ["family_id"], name: "index_budgets_on_family_id"
     t.index ["user_id"], name: "index_budgets_on_user_id"
   end
@@ -1871,7 +1872,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"
-  add_foreign_key "budgets", "users"
+  add_foreign_key "budgets", "users", on_delete: :nullify
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
