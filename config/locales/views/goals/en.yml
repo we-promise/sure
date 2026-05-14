@@ -121,6 +121,7 @@ en:
       header:
         target: "Target %{amount}"
         target_by: "Target %{amount} by %{date}"
+        target_by_past: "Target %{amount} · was due %{date}"
       ring:
         saved: Saved
         of: "of %{target}"

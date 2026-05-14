@@ -11,10 +11,13 @@
         <%
           primary_parts = []
           if @goal.target_date
-            primary_parts << t(".header.target_by", amount: @goal.target_amount_money.format(precision: 0), date: I18n.l(@goal.target_date, format: :long))
-            unless @goal.completed? || @goal.status == :reached
-              days = (@goal.target_date - Date.current).to_i
-              if days > 0
+            days = (@goal.target_date - Date.current).to_i
+            past_due = days < 0 && !(@goal.completed? || @goal.status == :reached)
+            if past_due
+              primary_parts << t(".header.target_by_past", amount: @goal.target_amount_money.format(precision: 0), date: I18n.l(@goal.target_date, format: :long))
+            else
+              primary_parts << t(".header.target_by", amount: @goal.target_amount_money.format(precision: 0), date: I18n.l(@goal.target_date, format: :long))
+              if days > 0 && !(@goal.completed? || @goal.status == :reached)
                 primary_parts << t("goals.goal_card.days_left", count: days, date: I18n.l(@goal.target_date, format: :long)).split(" · ").first
               end
             end
