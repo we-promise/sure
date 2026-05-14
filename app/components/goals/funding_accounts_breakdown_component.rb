@@ -1,6 +1,6 @@
 class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
-  WINDOW_DAYS = 30
-  TRAJECTORY_SAMPLES = WINDOW_DAYS + 1 # 31 points: 30 days ago … today
+  COLUMN_WINDOW_DAYS = 30
+  TREND_WINDOW_DAYS = 90
 
   def initialize(goal:)
     @goal = goal
@@ -10,13 +10,13 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
 
   def rows
     @rows ||= goal.linked_accounts.sort_by { |a| -a.balance.to_d }.map do |account|
-      cumulative = cumulative_inflow_for(account)
+      totals = inflow_totals_for(account)
       {
         account: account,
         balance: account.balance.to_d,
         balance_money: Money.new(account.balance.to_d, goal.currency),
-        last_30_money: Money.new(cumulative.last.to_d, goal.currency),
-        trajectory_points: cumulative
+        last_30_money: Money.new(totals[:last_30], goal.currency),
+        last_90_money: Money.new(totals[:last_90], goal.currency)
       }
     end
   end
@@ -45,48 +45,36 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   end
 
   private
-    # 31 daily points (30 days ago … today) of cumulative inflow into this
-    # account, scoped to the same 30-day window the right-hand "$X last 30d"
-    # column reports — the chart's rightmost point exactly equals that column
-    # by construction.
-    def cumulative_inflow_for(account)
-      cumulative_inflow_map[account.id] || Array.new(TRAJECTORY_SAMPLES, 0.0)
+    # Per-account net inflow for both windows in one pass over the 90-day
+    # entries set. Entry amount sign in Sure: inflow is negative; flip and
+    # clamp ≥ 0.
+    def inflow_totals_for(account)
+      inflow_totals_map[account.id] || { last_30: 0.to_d, last_90: 0.to_d }
     end
 
-    # Single grouped query: every (account_id, date) inflow row over the 30-day
-    # window. Then walk per-account to materialize a 31-point cumulative array.
-    # Entry amount sign in Sure: inflow is negative; flip and clamp ≥ 0 so the
-    # cumulative is monotonic non-decreasing.
-    def cumulative_inflow_map
-      @cumulative_inflow_map ||= begin
+    def inflow_totals_map
+      @inflow_totals_map ||= begin
         account_ids = goal.linked_accounts.map(&:id)
         return {} if account_ids.empty?
 
-        per_day = Entry
+        cutoff_30 = COLUMN_WINDOW_DAYS.days.ago.to_date
+
+        rows = Entry
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-          .where(account_id: account_ids, date: WINDOW_DAYS.days.ago.to_date..Date.current)
+          .where(account_id: account_ids, date: TREND_WINDOW_DAYS.days.ago.to_date..Date.current)
           .where(excluded: false)
-          .group(:account_id, :date)
-          .sum(:amount)
+          .pluck(:account_id, :date, :amount)
 
-        today = Date.current
-        result = {}
-
-        account_ids.each do |aid|
-          running = 0.0
-          result[aid] = (0..WINDOW_DAYS).map do |offset|
-            date = today - (WINDOW_DAYS - offset).days
-            raw = per_day[[ aid, date ]] || 0
-            inflow = (-raw.to_d).clamp(0, Float::INFINITY).to_f
-            running += inflow
-            running
-          end
+        result = Hash.new { |h, k| h[k] = { last_30: 0.to_d, last_90: 0.to_d } }
+        rows.each do |aid, date, amount|
+          inflow = (-amount.to_d).clamp(0, Float::INFINITY)
+          result[aid][:last_90] += inflow
+          result[aid][:last_30] += inflow if date >= cutoff_30
         end
-
         result
       end
     rescue StandardError => e
-      Rails.logger.error("Cumulative inflow map for goal #{goal.id} failed: #{e.class}: #{e.message}")
+      Rails.logger.error("Inflow totals map for goal #{goal.id} failed: #{e.class}: #{e.message}")
       Sentry.capture_exception(e) if defined?(Sentry)
       {}
     end

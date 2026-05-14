@@ -32,24 +32,13 @@
       </div>
     <% end %>
 
-    <%# Per-account detail — avatar / name+type / weight / sparkline / last-30d inflow %>
+    <%# Per-account detail — avatar / name+type / weight / last-30d + last-90d totals %>
     <div class="bg-container-inset rounded-xl p-1">
       <div class="rounded-lg bg-container">
         <% rows.each_with_index do |row, idx| %>
           <% account = row[:account] %>
           <% color = Goals::AvatarComponent.color_for(account.name) %>
-          <% traj = row[:trajectory_points] %>
-          <% traj_max = (traj.max || 0).to_f %>
-          <%# Cumulative inflow is monotonic ≥ 0 and the right column already
-              labels its magnitude — anchor the chart at 0 and let each row
-              scale to its own ceiling so shape is comparable across rows. %>
-          <% ceiling = [ traj_max * 1.05, 1.0 ].max %>
-          <% n = traj.size %>
-          <% xs = traj.each_with_index.map { |_, i| (i / (n - 1).to_f) * 100 } %>
-          <% ys = traj.map { |v| 26 - (v.to_f / ceiling) * 22 } %>
-          <% line_path = xs.zip(ys).each_with_index.map { |(x, y), i| "#{i.zero? ? "M" : "L"} #{x.round(2)} #{y.round(2)}" }.join(" ") %>
-          <% area_path = line_path + " L #{xs.last.round(2)} 28 L #{xs.first.round(2)} 28 Z" %>
-          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1.5fr)_72px_minmax(80px,1fr)_96px] items-center gap-3">
+          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1fr)_96px_120px] items-center gap-3">
             <%= render Goals::AvatarComponent.new(name: account.name, color: color, size: "sm") %>
 
             <div class="min-w-0">
@@ -65,16 +54,15 @@
               <span></span>
             <% end %>
 
-            <svg viewBox="0 0 100 28" preserveAspectRatio="none" class="w-full h-7" aria-hidden="true">
-              <path d="<%= area_path %>" fill="<%= color %>" opacity="0.18" />
-              <path d="<%= line_path %>" fill="none" stroke="<%= color %>" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-            </svg>
-
-            <div class="text-right">
-              <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive">
-                <%= row[:last_30_money].format(precision: 0) %>
-              </p>
-              <p class="text-[10px] text-subdued"><%= t("goals.show.funding_last_30d") %></p>
+            <div class="text-right space-y-0.5">
+              <div class="flex items-baseline justify-end gap-1.5">
+                <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= row[:last_30_money].format(precision: 0) %></p>
+                <p class="text-[10px] text-subdued"><%= t("goals.show.funding_last_30d") %></p>
+              </div>
+              <div class="flex items-baseline justify-end gap-1.5">
+                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= row[:last_90_money].format(precision: 0) %></p>
+                <p class="text-[10px] text-subdued"><%= t("goals.show.funding_last_90d") %></p>
+              </div>
             </div>
           </div>
           <% if idx < rows.size - 1 %>

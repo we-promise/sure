@@ -105,6 +105,7 @@ en:
           body: Edit the goal to link the depository accounts you save into.
       notes: Notes
       funding_last_30d: last 30d
+      funding_last_90d: last 90d
       pending_pledge:
         title: "Watching for %{amount} into %{account} · %{days_left} days left"
         body_transfer: Auto-confirms when Sure spots a matching deposit on the next sync.
