@@ -61,11 +61,22 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Balance is the live balance of every linked depository account.
-  # v1: single linked account in practice. v1.1+: minus other goals' allocations
-  # via the upcoming GoalBacking query.
+  # Balance is the live balance of every linked depository account that
+  # matches the goal's currency. The model validates this invariant at
+  # write time, but defensive filter + telemetry here guards against any
+  # drift caused by direct DB writes, account-currency edits outside
+  # goal validation, or future code that bypasses the validation chain.
+  # v1.1+: minus other goals' allocations via the upcoming GoalBacking
+  # query.
   def current_balance
-    @current_balance ||= linked_accounts.sum { |a| a.balance.to_d }
+    @current_balance ||= begin
+      matching = linked_accounts.select { |a| a.currency == currency }
+      if matching.size != linked_accounts.size
+        Rails.logger.warn("Goal##{id} linked-account currency drift: #{linked_accounts.size - matching.size} of #{linked_accounts.size} mismatched (expected #{currency})")
+        Sentry.capture_message("Goal linked-account currency drift", level: :warning, extra: { goal_id: id, expected_currency: currency }) if defined?(Sentry)
+      end
+      matching.sum { |a| a.balance.to_d }
+    end
   end
 
   def current_balance_money
