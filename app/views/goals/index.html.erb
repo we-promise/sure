@@ -66,10 +66,7 @@
     </section>
 
     <% if @any_pending_pledge %>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800">
-        <span class="text-yellow-700 dark:text-yellow-400"><%= icon("clock", size: "sm") %></span>
-        <p class="text-xs text-primary"><%= t(".pending_pledges_callout") %></p>
-      </div>
+      <%= render DS::Alert.new(variant: "warning", message: t(".pending_pledges_callout"), live: :polite) %>
     <% end %>
 
     <%# Goals section %>

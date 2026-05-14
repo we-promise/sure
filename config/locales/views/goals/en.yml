@@ -101,11 +101,14 @@ en:
       notes: Notes
       funding_last_30d: last 30d
       pending_pledge:
-        title: "Pending: %{amount} into %{account}"
-        body_transfer: "Looking for a matching deposit (±5 days, ±$0.50 or ±1%%). Auto-confirms when Sure spots it · %{days_left} days left."
-        body_manual: "Resolves on your next manual balance edit · %{days_left} days left."
+        title: "Watching for %{amount} into %{account} · %{days_left} days left"
+        body_transfer: Auto-confirms when Sure spots a matching deposit on the next sync.
+        body_manual: Confirms on your next manual balance edit.
         extend: Extend 7 days
         cancel: Cancel
+        confirm_cancel_title: Cancel this pledge?
+        confirm_cancel_body: "The %{amount} pledge will be removed. You can record a new one anytime."
+        confirm_cancel_cta: Cancel pledge
       header:
         target: "Target %{amount}"
         target_by: "Target %{amount} by %{date}"

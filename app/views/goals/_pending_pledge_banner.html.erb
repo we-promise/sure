@@ -3,27 +3,30 @@
   amount_money = pledge.amount_money
   days_left = pledge.days_left
   body_key = pledge.kind_transfer? ? "goals.show.pending_pledge.body_transfer" : "goals.show.pending_pledge.body_manual"
+  title = t("goals.show.pending_pledge.title", amount: amount_money.format, account: account.name, days_left: days_left)
 %>
-<div class="flex items-start gap-3 p-3 rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800">
-  <div class="w-7 h-7 rounded-full inline-flex items-center justify-center bg-yellow-500 text-inverse shrink-0">
-    <%= icon("clock", size: "sm", color: "current") %>
+<%= render DS::Alert.new(variant: "warning", title: title, live: :polite) do %>
+  <p class="text-secondary"><%= t(body_key) %></p>
+  <div class="mt-2 flex items-center gap-2 flex-wrap">
+    <%= render DS::Button.new(
+      text: t("goals.show.pending_pledge.extend"),
+      href: extend_goal_pledge_path(pledge.goal, pledge),
+      method: :patch,
+      variant: "outline",
+      size: "sm"
+    ) %>
+    <%= render DS::Button.new(
+      text: t("goals.show.pending_pledge.cancel"),
+      href: goal_pledge_path(pledge.goal, pledge),
+      method: :delete,
+      variant: "ghost",
+      size: "sm",
+      confirm: CustomConfirm.new(
+        destructive: true,
+        title: t("goals.show.pending_pledge.confirm_cancel_title"),
+        body: t("goals.show.pending_pledge.confirm_cancel_body", amount: amount_money.format),
+        btn_text: t("goals.show.pending_pledge.confirm_cancel_cta")
+      )
+    ) %>
   </div>
-  <div class="flex-1 min-w-0 text-sm">
-    <p class="font-medium text-primary tabular-nums">
-      <%= t("goals.show.pending_pledge.title", amount: amount_money.format, account: account.name) %>
-    </p>
-    <p class="text-xs text-secondary mt-0.5">
-      <%= t(body_key, days_left: days_left) %>
-    </p>
-  </div>
-  <%= button_to t("goals.show.pending_pledge.extend"),
-                extend_goal_pledge_path(pledge.goal, pledge),
-                method: :patch,
-                class: "text-xs font-medium text-primary px-2.5 py-1 rounded-md shadow-border-xs bg-container hover:bg-surface-inset",
-                form: { class: "inline-flex" } %>
-  <%= button_to t("goals.show.pending_pledge.cancel"),
-                goal_pledge_path(pledge.goal, pledge),
-                method: :delete,
-                class: "text-xs text-secondary hover:text-primary px-2",
-                form: { class: "inline-flex" } %>
-</div>
+<% end %>
