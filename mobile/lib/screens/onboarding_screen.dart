@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
 import '../services/preferences_service.dart';
+import 'login_screen.dart';
 import 'web_page_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -20,15 +21,6 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
-
-  // Screen 2 state
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _mfaController = TextEditingController();
-  bool _passwordVisible = false;
-  bool _isSignUp = false;
 
   // Screen 3 state
   bool _consentChecked = false;
@@ -76,11 +68,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _mfaController.dispose();
     super.dispose();
   }
 
@@ -198,215 +185,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ── Screen 2: Sign In / Sign Up ──
 
   Widget _buildSignInPage() {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
-        // Auto-advance when auth completes
         if (authProvider.isAuthenticated && _currentPage == 1) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _goToPage(2));
         }
-
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            children: [
-              const SizedBox(height: 48),
-              SvgPicture.asset(
-                'assets/images/logomark-color.svg',
-                width: 64,
-                height: 64,
-              ),
-              const SizedBox(height: 32),
-              Text(
-                _isSignUp ? 'Create your account' : 'Sign in to your Companion',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Access your ISA info, financial tools, and personalised guidance.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.5,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              // Sign In / Sign Up toggle
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: _isSignUp ? () => setState(() => _isSignUp = false) : null,
-                    child: Text(
-                      'Sign In',
-                      style: TextStyle(
-                        fontWeight: _isSignUp ? FontWeight.normal : FontWeight.bold,
-                        color: _isSignUp ? colorScheme.onSurfaceVariant : colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  Text('|', style: TextStyle(color: colorScheme.outlineVariant)),
-                  TextButton(
-                    onPressed: _isSignUp ? null : () => setState(() => _isSignUp = true),
-                    child: Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        fontWeight: _isSignUp ? FontWeight.bold : FontWeight.normal,
-                        color: _isSignUp ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Error banner
-              if (authProvider.errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          authProvider.errorMessage!,
-                          style: TextStyle(color: colorScheme.onErrorContainer),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              // MFA flow — shown instead of the normal form when required
-              if (authProvider.showMfaInput) ...[
-                Text(
-                  'Two-factor authentication',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Enter the code from your authenticator app.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _mfaController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'One-time code',
-                    prefixIcon: Icon(Icons.lock_clock_outlined),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: authProvider.isLoading
-                        ? null
-                        : () => authProvider.login(
-                              email: _emailController.text.trim(),
-                              password: _passwordController.text,
-                              otpCode: _mfaController.text.trim(),
-                            ),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 52),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: authProvider.isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Verify'),
-                  ),
-                ),
-              ] else ...[
-                // Sign Up extra fields
-                if (_isSignUp) ...[
-                  TextField(
-                    controller: _firstNameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'First name',
-                      prefixIcon: Icon(Icons.person_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _lastNameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Last name',
-                      prefixIcon: Icon(Icons.person_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                // Email field
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Password field
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_passwordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: authProvider.isLoading
-                        ? null
-                        : () {
-                            if (_isSignUp) {
-                              authProvider.signup(
-                                email: _emailController.text.trim(),
-                                password: _passwordController.text,
-                                firstName: _firstNameController.text.trim(),
-                                lastName: _lastNameController.text.trim(),
-                              );
-                            } else {
-                              authProvider.login(
-                                email: _emailController.text.trim(),
-                                password: _passwordController.text,
-                              );
-                            }
-                          },
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 52),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: authProvider.isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(_isSignUp ? 'Create Account' : 'Sign In'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 48),
-            ],
-          ),
+          child: const LoginFormBody(branded: true, allowSignUp: true),
         );
       },
     );
