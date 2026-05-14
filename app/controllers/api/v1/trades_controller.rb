@@ -318,7 +318,7 @@ if model.is_a?(Entry)
         price: price,
         fee: trade_params[:fee].to_d,
         currency: trade_params[:currency].presence || account.currency,
-        type: params.dig(:trade, :type),
+        type: trade_params[:type].to_s.downcase,
         ticker: ticker_value,
         manual_ticker: manual_ticker_value
       }.compact
