@@ -38,9 +38,7 @@ en:
         heading: Goals
         subtitle: Save toward what matters.
       ongoing_section:
-        heading: Ongoing
-      completed_section:
-        heading: Completed
+        heading: Goals
       archived_section:
         heading: Archived
       search:
@@ -58,6 +56,7 @@ en:
         behind: Behind
         no_target_date: Open
         paused: Paused
+        completed: Completed
     new:
       heading: New goal
       step1_subtitle: Step 1 of 2 · Goal details

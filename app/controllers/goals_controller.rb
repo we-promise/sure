@@ -17,13 +17,17 @@ class GoalsController < ApplicationController
                        .to_a
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
-    @completed_goals = all_goals.select { |g| g.state == "completed" }
+    @completed_goals = all_goals.select { |g| g.state == "completed" }.sort_by { |g| g.name.downcase }
     @archived_goals = all_goals.select { |g| g.state == "archived" }
+    # Completed goals join the chip-filterable grid below the active ones so
+    # the `completed` chip can isolate them. Archived stays in the separate
+    # collapsed-by-default section below.
+    @grid_goals = @active_goals + @completed_goals
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
-    @show_search = @active_goals.size > 6
+    @show_search = @grid_goals.size > 6
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("goals.index.title"), nil ]

@@ -102,7 +102,7 @@
             </div>
           </div>
           <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
-            <% %w[all on_track behind no_target_date paused].each do |status| %>
+            <% %w[all on_track behind no_target_date paused completed].each do |status| %>
               <% active = status == "all" %>
               <button type="button"
                       data-goals-filter-target="chip"
@@ -117,14 +117,14 @@
         </div>
       <% end %>
 
-      <% if @active_goals.any? %>
+      <% if @grid_goals.any? %>
         <div class="flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
           <span><%= t(".ongoing_section.heading") %></span>
           <span class="text-subdued">·</span>
-          <span class="tabular-nums" data-goals-filter-target="count"><%= @active_goals.size %></span>
+          <span class="tabular-nums" data-goals-filter-target="count"><%= @grid_goals.size %></span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5" data-goals-filter-target="grid">
-          <% @active_goals.each do |goal| %>
+          <% @grid_goals.each do |goal| %>
             <%= render Goals::CardComponent.new(goal: goal) %>
           <% end %>
         </div>
@@ -151,21 +151,6 @@
         </div>
       <% end %>
     </section>
-
-    <% if @completed_goals.any? %>
-      <section>
-        <div class="flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
-          <span><%= t(".completed_section.heading") %></span>
-          <span class="text-subdued">·</span>
-          <span class="tabular-nums"><%= @completed_goals.size %></span>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          <% @completed_goals.each do |goal| %>
-            <%= render Goals::CardComponent.new(goal: goal) %>
-          <% end %>
-        </div>
-      </section>
-    <% end %>
 
     <% if @archived_goals.any? %>
       <section>
