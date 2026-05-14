@@ -1,0 +1,59 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description") %>
+        </p>
+
+        <%= form_with url: link_existing_account_brex_items_path,
+                      method: :post,
+                      data: { turbo_frame: "_top" },
+                      class: "space-y-4" do %>
+          <%= hidden_field_tag :brex_item_id, @brex_item.id %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <% account_displays = @available_accounts.map { |account| brex_account_display(account) } %>
+          <% has_selectable = account_displays.any? { |account_display| !account_display.blank_name? } %>
+
+          <div class="space-y-2">
+            <% account_displays.each do |account_display| %>
+              <label class="flex items-start gap-3 p-3 border <%= account_display.blank_name? ? "border-destructive bg-destructive/10" : "border-primary" %> rounded-lg <%= account_display.blank_name? ? "cursor-not-allowed opacity-60" : "hover:bg-subtle cursor-pointer" %> transition-colors">
+                <%= radio_button_tag "brex_account_id", account_display.id, false, disabled: account_display.blank_name?, class: "mt-1" %>
+                <div class="flex-1">
+                  <div class="font-medium text-sm <%= account_display.blank_name? ? "text-destructive" : "text-primary" %>">
+                    <% if account_display.blank_name? %>
+                      <%= t(".no_name_placeholder") %>
+                    <% else %>
+                      <%= account_display.name %>
+                    <% end %>
+                  </div>
+                  <div class="text-xs text-secondary mt-1">
+                    <%= brex_account_metadata(account_display) %>
+                  </div>
+                  <% if account_display.blank_name? %>
+                    <div class="text-xs text-destructive mt-1">
+                      <%= t(".configure_name_in_brex") %>
+                    </div>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= link_to t(".cancel"), @return_to || accounts_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top" } %>
+            <%= submit_tag t(".link_account"),
+                disabled: !has_selectable,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled disabled:cursor-not-allowed" %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

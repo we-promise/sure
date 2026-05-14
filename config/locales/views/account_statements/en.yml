@@ -1,0 +1,116 @@
+---
+en:
+  account_statements:
+    account_tab:
+      coverage_title: Statement coverage
+      coverage_description: Historical months backed by uploaded statements and balance checks.
+      coverage_range: "%{start} - %{end}"
+      empty: No statements linked to this account yet.
+      open_inbox: Inbox
+      statements_title: Statements
+      year_label: Coverage year
+    balance:
+      unknown: Unknown
+    coverage:
+      status:
+        ambiguous: Ambiguous
+        covered: Covered
+        duplicate: Duplicate
+        mismatched: Mismatched
+        missing: Missing
+        not_expected: Not expected
+    create:
+      duplicates:
+        one: 1 duplicate statement was skipped.
+        other: "%{count} duplicate statements were skipped."
+      invalid_file_type: Upload a PDF, CSV, or XLSX statement under the size limit.
+      no_files: Select at least one statement file.
+      success:
+        one: 1 statement uploaded.
+        other: "%{count} statements uploaded."
+    destroy:
+      failure: Statement could not be deleted.
+      success: Statement deleted.
+    form:
+      account_upload: Upload statement
+      files_hint: PDF, CSV, or XLSX. %{max_size}MB max per file.
+      files_label: Statement files
+      inbox_upload: Upload
+    index:
+      account_label: Account
+      confidence: "%{confidence} match"
+      empty_linked: No linked statements yet.
+      empty_unmatched: The statement inbox is clear.
+      leave_unmatched: Leave unmatched
+      linked_title: Linked statements
+      no_suggestion: No suggestion
+      storage_used: Storage used
+      title: Statement Vault
+      unmatched_title: Unmatched inbox
+      upload_description: Upload statements to the inbox, or choose an account to link immediately.
+      upload_title: Upload statements
+    link:
+      no_account: Choose an account before linking this statement.
+      success: Linked statement to %{account}.
+    period:
+      unknown: Period unknown
+    reconciliation:
+      checks:
+        closing_balance: Closing balance
+        opening_balance: Opening balance
+        period_movement: Period movement
+        unknown_check: Unknown check
+      matched: Matched
+      mismatched: Mismatched
+      unavailable: Not checked
+    reject:
+      success: Statement match rejected.
+    show:
+      account_label: Account
+      account_last4_hint: Account last four
+      account_name_hint: Account name hint
+      closing_balance: Closing balance
+      currency: Currency
+      delete: Delete
+      difference: Difference
+      download: Download
+      institution_name_hint: Institution hint
+      ledger_amount: Sure ledger
+      linked_to: Linked to %{account}.
+      linking_title: Account link
+      link_suggestion: Link suggestion
+      metadata_title: Statement metadata
+      no_suggestion: No account suggestion yet.
+      opening_balance: Opening balance
+      period_end_on: Period end
+      period_start_on: Period start
+      reconciliation_title: Reconciliation
+      reconciliation_unavailable: Add a statement period and opening or closing balance, then make sure Sure has balance history for those dates.
+      reject: Reject
+      save: Save statement
+      statement_amount: Statement
+      suggested_account: Suggested account is %{account} (%{confidence} confidence).
+      title: Statement
+      unlink: Unlink
+      unmatched_account: Unmatched inbox
+      unknown_value: Unknown
+    status:
+      linked: Linked
+      rejected: Rejected
+      unmatched: Unmatched
+    table:
+      account: Account
+      actions: Actions
+      download: Download
+      file: File
+      link_suggestion: Link suggestion
+      period: Period
+      reconciliation: Reconciliation
+      reject: Reject suggestion
+      suggestion: Suggestion
+      unlink: Unlink
+      view: View
+    unlink:
+      success: Statement moved back to the unmatched inbox.
+    update:
+      success: Statement updated.

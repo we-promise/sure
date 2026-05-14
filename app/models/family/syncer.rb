@@ -17,6 +17,7 @@ class Family::Syncer
     coinbase_items
     coinstats_items
     mercury_items
+    brex_items
     binance_items
     snaptrade_items
     sophtron_items

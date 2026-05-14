@@ -2,6 +2,8 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  before_destroy :capture_account_statement_ids_to_move
+  after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -77,6 +79,8 @@ class Account < ApplicationRecord
   }
 
   has_one_attached :logo, dependent: :purge_later
+  # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
+  has_many :account_statements
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -256,22 +260,7 @@ class Account < ApplicationRecord
     end
 
     def create_from_binance_account(binance_account)
-      family = binance_account.binance_item.family
-
-      attributes = {
-        family: family,
-        name: binance_account.name,
-        balance: (binance_account.current_balance || 0).to_d,
-        cash_balance: 0,
-        currency: binance_account.currency.presence || family.currency,
-        accountable_type: "Crypto",
-        accountable_attributes: {
-          subtype: "exchange",
-          tax_treatment: "taxable"
-        }
-      }
-
-      create_and_sync(attributes, skip_initial_sync: true)
+      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
     end
 
     def create_from_ibkr_account(ibkr_account)
@@ -298,25 +287,27 @@ class Account < ApplicationRecord
     end
 
     def create_from_kraken_account(kraken_account)
-      family = kraken_account.kraken_item.family
-
-      attributes = {
-        family: family,
-        name: kraken_account.name,
-        balance: (kraken_account.current_balance || 0).to_d,
-        cash_balance: 0,
-        currency: kraken_account.currency.presence || family.currency,
-        accountable_type: "Crypto",
-        accountable_attributes: {
-          subtype: "exchange",
-          tax_treatment: "taxable"
-        }
-      }
-
-      create_and_sync(attributes, skip_initial_sync: true)
+      create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
     private
+
+      def create_from_crypto_exchange_account(provider_account, family:)
+        attributes = {
+          family: family,
+          name: provider_account.name,
+          balance: (provider_account.current_balance || 0).to_d,
+          cash_balance: 0,
+          currency: provider_account.currency.presence || family.currency,
+          accountable_type: "Crypto",
+          accountable_attributes: {
+            subtype: "exchange",
+            tax_treatment: "taxable"
+          }
+        }
+
+        create_and_sync(attributes, skip_initial_sync: true)
+      end
 
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
         attributes = {}
@@ -534,5 +525,22 @@ class Account < ApplicationRecord
     def owner_belongs_to_family
       return if User.where(id: owner_id, family_id: family_id).exists?
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def capture_account_statement_ids_to_move
+      @statement_ids_to_move = account_statements.ids
+    end
+
+    def move_account_statements_to_inbox
+      statement_ids = Array(@statement_ids_to_move).compact
+      return if statement_ids.empty?
+
+      # Bypass callbacks deliberately: the account was destroyed, so linked statements need a direct inbox move.
+      AccountStatement.where(id: statement_ids).update_all(
+        account_id: nil,
+        review_status: "unmatched",
+        match_confidence: nil,
+        updated_at: Time.current
+      )
     end
 end

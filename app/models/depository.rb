@@ -1,6 +1,8 @@
 class Depository < ApplicationRecord
   include Accountable
 
+  DEFAULT_SUBTYPE = "checking"
+
   SUBTYPES = {
     "checking" => { short: "Checking", long: "Checking" },
     "savings" => { short: "Savings", long: "Savings" },

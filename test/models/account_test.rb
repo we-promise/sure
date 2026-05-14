@@ -205,6 +205,42 @@ class AccountTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 
+  test "destroying account moves linked statements to inbox after commit" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.update!(match_confidence: 0.8)
+
+    @account.destroy!
+
+    statement.reload
+    assert_nil statement.account_id
+    assert_equal "unmatched", statement.review_status
+    assert_nil statement.match_confidence
+  end
+
+  test "rolled back account destroy keeps linked statements unchanged" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.update!(match_confidence: 0.8)
+
+    Account.transaction do
+      @account.destroy!
+      raise ActiveRecord::Rollback
+    end
+
+    statement.reload
+    assert Account.exists?(@account.id)
+    assert_equal @account.id, statement.account_id
+    assert_equal "linked", statement.review_status
+    assert_equal 0.8.to_d, statement.match_confidence
+  end
+
   # Account sharing tests
 
   test "owned_by? returns true for account owner" do

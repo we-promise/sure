@@ -19,6 +19,83 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show lazily loads statement tab data unless statements tab is active" do
+    AccountStatement::Coverage.expects(:for_year).never
+    AccountStatement.expects(:reconciliation_statuses_for).never
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "select[name='statement_year']", count: 0
+    statements_path = account_path(@account, tab: "statements")
+    assert_select "turbo-frame[src='#{statements_path}']"
+  end
+
+  test "statements tab shows coverage and upload for statement managers with account write access" do
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file][accept='.pdf,.csv,.xlsx']"
+    assert_select "select[name='statement_year']"
+    assert_select "p", text: I18n.l(Date.current.prev_month.beginning_of_month, format: "%b %Y")
+  end
+
+  test "statements tab lazy frame returns matching frame content" do
+    frame_id = dom_id(@account, :statements_tab)
+
+    get account_url(@account, tab: "statements"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "select[name='statement_year']"
+    assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
+  end
+
+  test "statements tab filters historical coverage by year" do
+    account = Account.create!(
+      family: @user.family,
+      owner: @user,
+      name: "Historical Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: account,
+      file: uploaded_file(filename: "historical.csv", content_type: "text/csv")
+    )
+    statement.update!(period_start_on: Date.new(2024, 2, 1), period_end_on: Date.new(2024, 2, 29))
+
+    travel_to Date.new(2026, 5, 6) do
+      get account_url(account, tab: "statements")
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2026"
+      assert_select "p", text: "May 2026"
+      assert_select "p", text: "Not expected"
+
+      get account_url(account, tab: "statements", statement_year: 2024)
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2024"
+      assert_select "p", text: "Jan 2024"
+      assert_select "p", text: "Feb 2024"
+      assert_select "p", text: "Covered"
+      assert_select "p", text: "Missing"
+      assert_select "p", text: "Not expected"
+    end
+  end
+
+  test "statements tab hides upload for read only account access" do
+    sign_in users(:family_member)
+
+    get account_url(accounts(:credit_card), tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file]", count: 0
+  end
+
   test "account activity marks trade amounts as privacy-sensitive" do
     trade_entry = entries(:trade)
     expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)

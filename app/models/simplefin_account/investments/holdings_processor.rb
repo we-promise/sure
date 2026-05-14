@@ -48,7 +48,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
-        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key)
+        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
@@ -124,19 +124,50 @@ class SimplefinAccount::Investments::HoldingsProcessor
       [ nil, nil ]
     end
 
-    # Sure stores holding cost_basis as per-share average cost. Some SimpleFIN
-    # providers expose total position basis via total_cost/value, so normalize only
-    # when the selected provider field is known to represent total position basis.
-    def normalize_cost_basis(raw_cost_basis, qty, source_key)
+    # Sure stores holding cost_basis as per-share average cost. SimpleFIN
+    # brokerages are inconsistent about which field carries which shape:
+    #
+    #   - total_cost / value: always a total position cost per the SimpleFIN
+    #     spec and observed payloads; divide by qty unconditionally.
+    #   - cost_basis / basis: the spec calls this per-share, and most
+    #     brokerages comply. Keep these values unchanged by default.
+    #
+    # Exception: a small allowlist of brokerages (Vanguard, Fidelity) is
+    # known to populate cost_basis with the total position cost in violation
+    # of the spec (#1718, #1182). For those connections only, divide by qty.
+    #
+    # An earlier revision of this fix used a magnitude heuristic
+    # (share_price × √qty midpoint). It was withdrawn because a legitimate
+    # per-share basis on a holding with a large unrealized loss
+    # (e.g. 100 shares with basis $100 now worth $5) trips the midpoint and
+    # gets mis-divided to $1/share — corrupting compliant providers. The
+    # allowlist trades some manual maintenance for that safety.
+    def normalize_cost_basis(raw_cost_basis, qty, source_key, total_basis_institution = false)
       return nil if raw_cost_basis.nil?
 
-      if %w[total_cost value].include?(source_key)
+      if %w[total_cost value].include?(source_key) ||
+         (total_basis_institution && %w[cost_basis basis].include?(source_key))
         return nil unless qty.to_d.positive?
-
-        raw_cost_basis / qty
-      else
-        raw_cost_basis
+        return raw_cost_basis / qty
       end
+
+      raw_cost_basis
+    end
+
+    # Institutions known to populate the SimpleFIN `cost_basis` / `basis`
+    # field with the total position cost rather than the per-share value the
+    # spec requires. Matched as case-insensitive substrings against the
+    # account's stored org name and domain.
+    TOTAL_BASIS_INSTITUTIONS = %w[vanguard fidelity].freeze
+
+    def institution_reports_total_basis?
+      org = simplefin_account.respond_to?(:org_data) ? simplefin_account.org_data : nil
+      return false if org.blank?
+
+      candidates = [ org["name"], org[:name], org["domain"], org[:domain] ].compact.map(&:to_s).map(&:downcase)
+      return false if candidates.empty?
+
+      TOTAL_BASIS_INSTITUTIONS.any? { |needle| candidates.any? { |c| c.include?(needle) } }
     end
 
     def resolve_security(symbol, description)

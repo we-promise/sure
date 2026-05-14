@@ -2,6 +2,8 @@ require "zip"
 require "csv"
 
 class Family::DataExporter
+  EXPORT_VERSION = 2
+
   def initialize(family)
     @family = family
   end
@@ -9,6 +11,10 @@ class Family::DataExporter
   def generate_export
     # Create a StringIO to hold the zip data in memory
     zip_data = Zip::OutputStream.write_buffer do |zipfile|
+      # Add export version marker for downstream tooling
+      zipfile.put_next_entry("version.txt")
+      zipfile.write generate_version_txt
+
       # Add accounts.csv
       zipfile.put_next_entry("accounts.csv")
       zipfile.write generate_accounts_csv
@@ -44,6 +50,11 @@ class Family::DataExporter
   end
 
   private
+    def generate_version_txt
+      <<~TEXT
+        export_version: #{EXPORT_VERSION}
+      TEXT
+    end
 
     def generate_accounts_csv
       CSV.generate do |csv|
@@ -74,17 +85,21 @@ class Family::DataExporter
           .includes(:category, :tags, entry: :account)
           .find_each do |transaction|
             csv << [
-              transaction.entry.date.iso8601,
+              transaction.entry.date&.iso8601,
               transaction.entry.account.name,
               transaction.entry.amount.to_s,
               transaction.entry.name,
               transaction.category&.name,
-              transaction.tags.pluck(:name).join(","),
+              transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
               transaction.entry.currency
             ]
           end
       end
+    end
+
+    def escape_legacy_tag_name(name)
+      name.to_s.gsub(/[\\,|]/) { |char| "\\#{char}" }
     end
 
     def generate_trades_csv
@@ -96,7 +111,7 @@ class Family::DataExporter
           .includes(:security, entry: :account)
           .find_each do |trade|
             csv << [
-              trade.entry.date.iso8601,
+              trade.entry.date&.iso8601,
               trade.entry.account.name,
               trade.security.ticker,
               trade.qty.to_s,

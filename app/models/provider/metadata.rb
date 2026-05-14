@@ -6,6 +6,7 @@ class Provider
       enable_banking: { region: "EU",      kind: "Bank",       maturity: :beta,   logo_text: "EB", logo_bg: "bg-purple-600" },
       coinstats:      { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "CS", logo_bg: "bg-pink-600" },
       mercury:        { region: "US",      kind: "Bank",       maturity: :beta,   logo_text: "ME", logo_bg: "bg-cyan-600" },
+      brex:           { region: "US",      kind: "Bank",       maturity: :beta,   logo_text: "BX", logo_bg: "bg-emerald-600" },
       coinbase:       { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "CB", logo_bg: "bg-blue-500" },
       binance:        { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "BI", logo_bg: "bg-yellow-600" },
       kraken:         { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "KR", logo_bg: "bg-violet-600" },

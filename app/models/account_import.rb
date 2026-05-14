@@ -59,11 +59,11 @@ class AccountImport < Import
   end
 
   def csv_template
-    template = <<-CSV
+    template = <<~CSV
       Account type*,Name*,Balance*,Currency,Balance Date
-      Checking,Main Checking Account,1000.00,USD,01/01/2024
-      Savings,Emergency Fund,5000.00,USD,01/15/2024
-      Credit Card,Rewards Card,-500.00,USD,02/01/2024
+      Checking,Main Checking Account,1000.00,USD,2024-01-01
+      Savings,Emergency Fund,5000.00,USD,2024-01-15
+      Credit Card,Rewards Card,-500.00,USD,2024-02-01
     CSV
 
     CSV.parse(template, headers: true)
