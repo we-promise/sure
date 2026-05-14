@@ -15,8 +15,8 @@ en:
         velocity_delta_zero_base: First 30 days of activity
         needs_this_month_label: Needs this month
         needs_this_month_sub:
-          one: across 1 goal behind pace
-          other: "across %{count} goals behind pace"
+          one: 1 goal behind pace
+          other: "%{count} goals behind pace"
         needs_this_month_zero_sub: No goals behind pace
         on_track_label: Goals on track
         on_track_value: "%{on_track} of %{total}"
@@ -28,8 +28,8 @@ en:
             one: 1 behind
             other: "%{count} behind"
           no_date:
-            one: 1 open
-            other: "%{count} open"
+            one: 1 without a deadline
+            other: "%{count} without a deadline"
           paused:
             one: 1 paused
             other: "%{count} paused"
@@ -96,8 +96,8 @@ en:
       unarchive: Restore
       delete: Delete permanently
       record_pledge_cta: Record pledge
-      pledge_just_transferred: I just transferred…
-      pledge_just_saved: I just saved…
+      pledge_just_transferred: Log a transfer you made
+      pledge_just_saved: Log money you set aside
       funding_accounts_heading: Funding accounts
       funding_accounts:
         empty:
@@ -170,7 +170,7 @@ en:
         body: Set a deadline to project a finish line and track required pace.
         cta: Set target date
       empty:
-        heading: Nothing's flowed in yet
+        heading: No deposits yet
         body: Make a transfer into your linked account — Sure will catch it on the next sync. Or update your manual account balance.
     errors:
       not_found: This goal couldn't be found. It may have been deleted.
@@ -230,8 +230,8 @@ en:
       submit: Create goal
       errors:
         name_required: Please give your goal a name.
-        amount_required: Set a target amount greater than zero.
-        accounts_required: Select at least one funding account.
+        amount_required: Please set a target amount above zero.
+        accounts_required: Please select at least one funding account.
       step1:
         label: Goal details
         heading: What are you saving for?
