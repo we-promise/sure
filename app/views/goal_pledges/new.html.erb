@@ -1,52 +1,49 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: t(@goal.pledge_action_label_key)) %>
   <% dialog.with_body do %>
-    <%= styled_form_with model: @pledge, url: goal_pledges_path(@goal), class: "form" do |form| %>
-      <% if @pledge.errors.any? %>
-        <div class="form-error mb-3">
-          <% @pledge.errors.full_messages.each do |msg| %>
-            <p class="text-sm text-destructive"><%= msg %></p>
-          <% end %>
-        </div>
-      <% end %>
+    <% if @pledge.errors.any? %>
+      <%= render "shared/form_errors", model: @pledge %>
+    <% end %>
 
-      <p class="text-sm text-secondary mb-4">
+    <%= styled_form_with model: @pledge,
+                         url: goal_pledges_path(@goal),
+                         class: "space-y-3",
+                         data: {
+                           controller: "goal-pledge-preview",
+                           goal_pledge_preview_current_balance_value: @goal.current_balance.to_f,
+                           goal_pledge_preview_target_amount_value: @goal.target_amount.to_f,
+                           goal_pledge_preview_currency_value: @goal.currency,
+                           goal_pledge_preview_template_zero_value: t(".preview_zero"),
+                           goal_pledge_preview_template_nonzero_value: t(".preview_nonzero"),
+                           goal_pledge_preview_template_reached_value: t(".preview_reached")
+                         } do |f| %>
+      <p class="text-sm text-secondary">
         <% if @goal.any_connected_account? %>
-          <%= t("goal_pledges.new.helper_transfer") %>
+          <%= t(".helper_transfer") %>
         <% else %>
-          <%= t("goal_pledges.new.helper_manual") %>
+          <%= t(".helper_manual") %>
         <% end %>
       </p>
 
-      <div class="space-y-3">
-        <%= form.money_field :amount,
-                             label: t("goal_pledges.new.amount_label"),
-                             hide_currency: true,
-                             required: true %>
+      <%= f.money_field :amount,
+                        label: t(".amount_label"),
+                        hide_currency: true,
+                        autofocus: true,
+                        required: true,
+                        amount_data: {
+                          goal_pledge_preview_target: "amountInput",
+                          action: "input->goal-pledge-preview#update"
+                        } %>
 
-        <div class="form-field">
-          <div class="form-field__body">
-            <%= form.label :account_id,
-                           t("goal_pledges.new.account_label"),
-                           class: "form-field__label" %>
-            <%= form.select :account_id,
-                            @goal.linked_accounts.map { |a| [ a.name, a.id ] },
-                            { include_blank: false },
-                            class: "form-field__input" %>
-          </div>
-        </div>
-      </div>
+      <p class="text-xs text-secondary tabular-nums -mt-1"
+         data-goal-pledge-preview-target="preview"></p>
 
-      <div class="flex items-center gap-2 mt-5">
-        <div class="flex-1"></div>
-        <%= render DS::Button.new(
-          text: t("goal_pledges.new.cancel"),
-          variant: "ghost",
-          data: { action: "click->dialog#close" }
-        ) %>
-        <%= form.submit t("goal_pledges.new.submit"),
-                       class: "btn btn--primary",
-                       data: { turbo_frame: "_top" } %>
+      <%= f.select :account_id,
+                   options_from_collection_for_select(@goal.linked_accounts, :id, :name, @pledge.account_id),
+                   { label: t(".account_label") } %>
+
+      <div class="flex justify-end pt-2">
+        <%= f.submit t(".submit") %>
       </div>
     <% end %>
   <% end %>

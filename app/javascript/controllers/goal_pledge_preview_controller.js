@@ -1,9 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
 
-// Live impact preview for the add-contribution modal. Reads current
-// balance + target amount from values and updates a preview sentence
-// each keystroke. Template strings come from ERB so the wording stays
-// localized.
+// Live impact preview for the record-pledge modal. Reads current balance +
+// target amount from values and updates a preview sentence each keystroke.
+// Template strings come from ERB so the wording stays localized.
 export default class extends Controller {
   static targets = ["amountInput", "preview"];
   static values = {

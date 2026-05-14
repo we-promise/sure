@@ -4,9 +4,11 @@ class GoalPledgesController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   def new
+    account = preselected_account
     @pledge = @goal.goal_pledges.new(
       currency: @goal.currency,
-      kind: default_kind_for(@goal),
+      account: account,
+      kind: kind_for_account(account),
       amount: params[:amount].presence
     )
   end
@@ -14,7 +16,7 @@ class GoalPledgesController < ApplicationController
   def create
     @pledge = @goal.goal_pledges.new(pledge_params)
     @pledge.account = lookup_account(params.dig(:goal_pledge, :account_id))
-    @pledge.kind = default_kind_for(@goal)
+    @pledge.kind = kind_for_account(@pledge.account)
     @pledge.currency = @goal.currency
 
     if @pledge.save
@@ -62,8 +64,20 @@ class GoalPledgesController < ApplicationController
       @goal.linked_accounts.find_by(id: id)
     end
 
-    def default_kind_for(goal)
-      goal.any_connected_account? ? "transfer" : "manual_save"
+    def preselected_account
+      requested = params[:account_id].presence && @goal.linked_accounts.find_by(id: params[:account_id])
+      requested || @goal.linked_accounts.first
+    end
+
+    # Per-account: manual accounts get a `manual_save` pledge (resolves on the
+    # user's next valuation), connected accounts get a `transfer` pledge
+    # (resolves when the synced deposit posts). Account-level avoids the
+    # mixed-funding goal bug where the goal-level toggle picked one kind for
+    # all pledges regardless of which account the user actually moved money
+    # into.
+    def kind_for_account(account)
+      return "transfer" if account.nil?
+      account.manual? ? "manual_save" : "transfer"
     end
 
     def record_not_found
