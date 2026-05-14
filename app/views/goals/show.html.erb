@@ -11,7 +11,7 @@
         <%
           primary_parts = []
           if @goal.target_date
-            primary_parts << t(".header.target_by", amount: @goal.target_amount_money.format, date: I18n.l(@goal.target_date, format: :long))
+            primary_parts << t(".header.target_by", amount: @goal.target_amount_money.format(precision: 0), date: I18n.l(@goal.target_date, format: :long))
             unless @goal.completed? || @goal.status == :reached
               days = (@goal.target_date - Date.current).to_i
               if days > 0
@@ -19,7 +19,7 @@
               end
             end
           else
-            primary_parts << t(".header.target", amount: @goal.target_amount_money.format)
+            primary_parts << t(".header.target", amount: @goal.target_amount_money.format(precision: 0))
           end
         %>
         <%= primary_parts.join(" · ") %>
@@ -41,9 +41,11 @@
         frame: :modal
       ) %>
       <% unless @goal.completed? || @goal.status == :reached %>
+        <%# Demote to outline when the catch-up alert below owns the primary
+            action. One primary per surface. %>
         <%= render DS::Link.new(
           text: t(".record_pledge_cta"),
-          variant: "primary",
+          variant: @goal.status == :behind ? "outline" : "primary",
           href: new_goal_pledge_path(@goal),
           icon: "plus",
           frame: :modal
@@ -135,21 +137,20 @@
       <% end %>
     <% end %>
   <% elsif @goal.status == :behind && @goal.monthly_target_amount %>
-    <% catch_up_money = Money.new(@goal.monthly_target_amount, @goal.currency) %>
-    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: catch_up_money.format)) do %>
+    <%# Title uses the *delta* — the amount the user must add to current pace
+        to make the date. The body carries the absolute numbers. Pre-fill the
+        pledge CTA with the delta too, so submitting once funds the gap
+        instead of double-counting on top of the existing pace. %>
+    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: @goal.catch_up_delta_money.format(precision: 0))) do %>
       <p class="text-secondary">
-        <% if @goal.target_date %>
-          <%= t("goals.show.catch_up.body_with_date", avg: @goal.pace_money.format, delta: @goal.catch_up_delta_money.format, date: I18n.l(@goal.target_date, format: :long)) %>
-        <% else %>
-          <%= t("goals.show.catch_up.body", avg: @goal.pace_money.format, delta: @goal.catch_up_delta_money.format) %>
-        <% end %>
+        <%= t("goals.show.catch_up.body", avg: @goal.pace_money.format(precision: 0), required: Money.new(@goal.monthly_target_amount, @goal.currency).format(precision: 0)) %>
       </p>
       <div class="mt-2 flex items-center gap-3 flex-wrap">
         <%= render DS::Link.new(
           text: t(".record_pledge_cta"),
           variant: "primary",
           size: "sm",
-          href: new_goal_pledge_path(@goal, amount: @goal.monthly_target_amount.to_f),
+          href: new_goal_pledge_path(@goal, amount: @goal.catch_up_delta_money.amount.to_f),
           icon: "plus",
           frame: :modal
         ) %>
@@ -165,11 +166,11 @@
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
     <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
-      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format %></p>
+      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
       <p class="text-xs text-subdued tabular-nums mt-0.5">
-        <%= t(".ring.of", target: @goal.target_amount_money.format) %>
+        <%= t(".ring.of", target: @goal.target_amount_money.format(precision: 0)) %>
         <% unless @goal.completed? %>
-          · <%= t(".ring.to_go", amount: @goal.remaining_amount_money.format) %>
+          · <%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %>
         <% end %>
       </p>
     </div>
@@ -183,7 +184,7 @@
           <%= t(@goal.archived? ? ".inactive.heading_archived" : ".inactive.heading_paused") %>
         </h2>
         <p class="text-sm text-secondary mt-1 max-w-md tabular-nums">
-          <%= t(".inactive.body", saved: @goal.current_balance_money.format, target: @goal.target_amount_money.format) %>
+          <%= t(".inactive.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %>
         </p>
       </div>
     <% elsif @goal.completed? || @goal.status == :reached %>
@@ -192,7 +193,7 @@
           <%= icon("party-popper", size: "2xl", color: "success") %>
         </div>
         <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
-        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @goal.target_amount_money.format) %></p>
+        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", amount: @goal.target_amount_money.format(precision: 0)) %></p>
         <% if @goal.may_archive? %>
           <div class="mt-4">
             <%= render DS::Button.new(

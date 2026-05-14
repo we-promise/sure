@@ -131,15 +131,14 @@ en:
         legend_required: Required
         reached: Goal reached. Nice work.
         no_target_date: No target date set. Set one to project a finish line.
-        no_pace: No inflow yet. Make a transfer or update the balance to start a projection.
-        behind: At %{current}/mo you'll miss your target date.
+        no_pace: No deposits yet. Add money to a linked account to start a projection.
+        behind: Falling short at current pace.
         on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
       catch_up:
-        title: "Save %{amount}/mo to stay on track"
-        body_with_date: "Your current pace is %{avg}/mo. You need an extra %{delta}/mo to finish by %{date}."
-        body: "Your current pace is %{avg}/mo. You need an extra %{delta}/mo to hit the required rate."
-        adjust_target_cta: Or adjust your target
+        title: "Save %{amount}/mo more to catch up"
+        body: "Current pace %{avg}/mo · required %{required}/mo to hit your target."
+        adjust_target_cta: Adjust target instead
       confirm_complete_title: Mark this goal complete?
       confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
       confirm_complete_cta: Mark complete
@@ -180,6 +179,7 @@ en:
       on_track: On track
       behind: Behind
       reached: Reached
+      completed: Completed
       no_target_date: Open
       paused: Paused
       archived: Archived

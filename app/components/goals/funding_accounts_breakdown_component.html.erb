@@ -5,40 +5,27 @@
   </div>
 <% else %>
   <div class="space-y-4">
-    <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
-      <%= t("goals.show.funding_accounts_heading") %>
-      <span class="text-secondary">·</span>
-      <span class="text-secondary font-medium text-lg privacy-sensitive tabular-nums"><%= Money.new(total, goal.currency).format(precision: 0) %></span>
-    </h2>
+    <h2 class="text-lg font-medium text-primary"><%= t("goals.show.funding_accounts_heading") %></h2>
 
-    <%# Distribution bar — proportional weight of each account in this goal %>
+    <%# Distribution bar — proportional weight of each account in this goal.
+        Color encoding is shared with the row avatar so the bar reads as a
+        legend by itself; no separate dot/name/% strip needed. %>
     <% if rows.size > 1 && total.positive? %>
       <div class="flex gap-1">
         <% rows.each do |row| %>
           <% next if row[:balance].to_d.zero? %>
-          <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:balance]) %>%; background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"></div>
-        <% end %>
-      </div>
-
-      <div class="flex flex-wrap gap-4">
-        <% rows.each do |row| %>
-          <% next if row[:balance].to_d.zero? %>
-          <div class="flex items-center gap-2 text-sm">
-            <div class="h-2.5 w-2.5 rounded-full" style="background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"></div>
-            <p class="text-secondary"><%= row[:account].name %></p>
-            <p class="text-primary font-mono privacy-sensitive tabular-nums"><%= percent_for(row[:balance]) %>%</p>
-          </div>
+          <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:balance]) %>%; background-color: <%= color_for(row[:account]) %>;"></div>
         <% end %>
       </div>
     <% end %>
 
-    <%# Per-account detail — avatar / name+type / weight / last-30d + last-90d totals %>
+    <%# Per-account detail — avatar / name+type / % / last-30d + last-90d %>
     <div class="bg-container-inset rounded-xl p-1">
       <div class="rounded-lg bg-container">
         <% rows.each_with_index do |row, idx| %>
           <% account = row[:account] %>
-          <% color = Goals::AvatarComponent.color_for(account.name) %>
-          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1fr)_96px_120px] items-center gap-3">
+          <% color = color_for(account) %>
+          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1fr)_48px_120px] items-center gap-3">
             <%= render Goals::AvatarComponent.new(name: account.name, color: color, size: "sm") %>
 
             <div class="min-w-0">
@@ -48,11 +35,9 @@
               </p>
             </div>
 
-            <% if rows.size > 1 %>
-              <%= render "pages/dashboard/group_weight", weight: percent_for(row[:balance]), color: color %>
-            <% else %>
-              <span></span>
-            <% end %>
+            <p class="text-sm text-secondary tabular-nums text-right privacy-sensitive">
+              <%= rows.size > 1 ? "#{percent_for(row[:balance])}%" : "" %>
+            </p>
 
             <div class="text-right space-y-0.5">
               <div class="flex items-baseline justify-end gap-1.5">

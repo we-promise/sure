@@ -10,6 +10,7 @@ class Goals::StatusPillComponent < ApplicationComponent
     on_track: { classes: "bg-green-500/10 text-green-700 theme-dark:text-green-300", icon: "circle-check" },
     behind: { classes: "bg-yellow-500/10 text-yellow-700 theme-dark:text-yellow-300", icon: "triangle-alert" },
     reached: { classes: "bg-green-500/10 text-green-700 theme-dark:text-green-300", icon: "star" },
+    completed: { classes: "bg-green-500/10 text-green-700 theme-dark:text-green-300", icon: "circle-check-big" },
     no_target_date: { classes: "bg-surface-inset text-gray-700 theme-dark:text-gray-200", icon: "infinity" },
     paused: { classes: "bg-surface-inset text-gray-700 theme-dark:text-gray-200", icon: "pause" },
     archived: { classes: "bg-surface-inset text-gray-700 theme-dark:text-gray-200", icon: "archive" }

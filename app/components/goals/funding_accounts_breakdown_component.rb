@@ -30,6 +30,13 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
     ((balance.to_d / total) * 100).round
   end
 
+  # Deterministic palette pick keyed on account.id (not name) so renaming an
+  # account doesn't recolor it retroactively across every goal view, and two
+  # accounts with colliding name-hashes don't end up sharing a color.
+  def color_for(account)
+    Goals::AvatarComponent.color_for(account.id.to_s)
+  end
+
   # Label shown beneath the account name. Prefers the depository subtype
   # ("Savings", "HSA"…) over the bare accountable_type ("Depository") so the
   # subline carries useful signal. Falls back to the accountable type's i18n

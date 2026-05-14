@@ -191,6 +191,8 @@ class Goal < ApplicationRecord
       :archived
     elsif paused?
       :paused
+    elsif completed?
+      :completed
     else
       status
     end
@@ -261,11 +263,7 @@ class Goal < ApplicationRecord
       elsif target_date.nil?
         I18n.t("goals.show.projection.no_target_date")
       elsif monthly_target_amount && pace.to_d < monthly_target_amount.to_d
-        I18n.t(
-          "goals.show.projection.behind",
-          current: Money.new(pace, currency).format,
-          required: Money.new(monthly_target_amount, currency).format
-        )
+        I18n.t("goals.show.projection.behind")
       elsif pace.positive?
         months = (remaining_amount.to_d / pace.to_d).ceil
         I18n.t(
