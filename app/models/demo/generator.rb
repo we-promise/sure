@@ -1285,102 +1285,57 @@ class Demo::Generator
       currency = depository_accounts.first.currency
       eligible = depository_accounts.select { |a| a.currency == currency }
       primary = eligible.first
-      secondary = eligible[1] || primary
 
-      # Build "Wedding fund" on_track contributions: target 12 months out,
-      # $200/mo required, demo contributes $220/mo for last 6 months → on
-      # pace.
-      wedding_contribs = (0..5).map do |i|
-        { amount: 220, source: i.zero? ? "initial" : "manual", days_ago: 30 * (6 - i), account: primary }
-      end
-
-      # "House downpayment" gets a fuller contribution history so the
-      # scrollable list has real density.
-      house_contribs = [
-        { amount: 5_000, source: "initial", days_ago: 365, account: primary },
-        { amount: 750, source: "manual", days_ago: 330, account: primary },
-        { amount: 750, source: "manual", days_ago: 300, account: secondary },
-        { amount: 750, source: "manual", days_ago: 270, account: primary },
-        { amount: 750, source: "manual", days_ago: 240, account: primary },
-        { amount: 750, source: "manual", days_ago: 210, account: secondary },
-        { amount: 750, source: "manual", days_ago: 180, account: primary },
-        { amount: 750, source: "manual", days_ago: 150, account: primary },
-        { amount: 750, source: "manual", days_ago: 120, account: secondary },
-        { amount: 750, source: "manual", days_ago: 90, account: primary },
-        { amount: 750, source: "manual", days_ago: 60, account: primary },
-        { amount: 750, source: "manual", days_ago: 30, account: secondary }
-      ]
-
+      # V2 goals derive balance + pace from the linked depository accounts
+      # directly; the demo's contribution arrays were V1 ledger seed data
+      # and have nothing to consume them now. Account-level transaction
+      # seeding (paychecks, etc.) elsewhere in this generator already
+      # populates the goal pace/balance.
       goals = [
         {
           name: "Vacation in Italy",
           target: 5_000,
           target_date: 4.months.from_now.to_date,
-          accounts: eligible.first(2),
-          contributions: [
-            { amount: 500, source: "initial", days_ago: 90, account: primary },
-            { amount: 250, source: "manual", days_ago: 60, account: primary },
-            { amount: 250, source: "manual", days_ago: 30, account: secondary }
-          ]
+          accounts: eligible.first(2)
         },
         {
           name: "Wedding fund",
           target: 2_400,
           target_date: 6.months.from_now.to_date,
-          accounts: eligible.first(2),
-          contributions: wedding_contribs
+          accounts: eligible.first(2)
         },
         {
           name: "Emergency fund",
           target: 10_000,
           target_date: nil,
-          accounts: [ primary ],
-          contributions: [
-            { amount: 1_000, source: "initial", days_ago: 180, account: primary },
-            { amount: 250, source: "manual", days_ago: 60, account: primary },
-            { amount: 250, source: "manual", days_ago: 30, account: primary }
-          ]
+          accounts: [ primary ]
         },
         {
           name: "House downpayment",
           target: 50_000,
           target_date: 24.months.from_now.to_date,
-          accounts: eligible.first(2),
-          contributions: house_contribs
+          accounts: eligible.first(2)
         },
         {
           name: "Sabbatical",
           target: 15_000,
           target_date: 18.months.from_now.to_date,
           state: "paused",
-          accounts: [ primary ],
-          contributions: [
-            { amount: 1_500, source: "initial", days_ago: 200, account: primary },
-            { amount: 500, source: "manual", days_ago: 150, account: primary }
-          ]
+          accounts: [ primary ]
         },
         {
           name: "Old laptop fund",
           target: 1_500,
           target_date: 12.months.ago.to_date,
           state: "archived",
-          accounts: [ primary ],
-          contributions: [
-            { amount: 400, source: "initial", days_ago: 540, account: primary }
-          ]
+          accounts: [ primary ]
         },
         {
           name: "Paid-off car",
           target: 8_000,
           target_date: 6.months.ago.to_date,
           state: "completed",
-          accounts: [ primary ],
-          contributions: [
-            { amount: 2_000, source: "initial", days_ago: 730, account: primary },
-            { amount: 2_000, source: "manual", days_ago: 600, account: primary },
-            { amount: 2_000, source: "manual", days_ago: 450, account: primary },
-            { amount: 2_000, source: "manual", days_ago: 300, account: primary }
-          ]
+          accounts: [ primary ]
         }
       ]
 

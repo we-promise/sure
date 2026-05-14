@@ -297,7 +297,10 @@ class Goal < ApplicationRecord
         period: Period.last_90_days
       ).balance_series.values
     rescue StandardError => e
-      Rails.logger.warn("Goal##{id} balance series failed: #{e.message}")
+      # Degrade gracefully (chart drops to target-line-only) but surface
+      # the failure — silent fallbacks here masked real Builder bugs.
+      Rails.logger.error("Goal##{id} balance series failed: #{e.class}: #{e.message}")
+      Sentry.capture_exception(e) if defined?(Sentry)
       []
     end
 

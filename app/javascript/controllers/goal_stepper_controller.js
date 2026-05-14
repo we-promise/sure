@@ -3,8 +3,8 @@ import { Controller } from "@hotwired/stimulus";
 // 2-step modal stepper for creating a goal.
 //
 // Single <form> with two panels. Step 1 collects identity (name, amount,
-// date, color, notes, linked accounts). Step 2 reviews + optional initial
-// contribution. All state lives in the DOM — no half-records, single POST.
+// date, color, notes, linked accounts). Step 2 reviews and submits. All
+// state lives in the DOM — no half-records, single POST.
 export default class extends Controller {
   static targets = [
     "step1Panel",
@@ -22,8 +22,6 @@ export default class extends Controller {
     "amountError",
     "accountsError",
     "linkedAccountCheckbox",
-    "initialContributionAmount",
-    "initialContributionAccountSelect",
     "reviewName",
     "reviewSummary",
     "reviewSuggested",
@@ -85,7 +83,6 @@ export default class extends Controller {
     this.step1PanelTarget.classList.add("hidden");
     this.step2PanelTarget.classList.remove("hidden");
     this.updateStepperState();
-    this.refreshAccountSelect();
     this.updateReview();
     this.updateFooter();
   }
@@ -99,7 +96,6 @@ export default class extends Controller {
   }
 
   linkedAccountChanged() {
-    this.refreshAccountSelect();
     this.refreshSubmitState();
     this.updateReview();
     if (this.linkedAccountCheckboxTargets.some((cb) => cb.checked) && this.hasAccountsErrorTarget) {
@@ -167,26 +163,6 @@ export default class extends Controller {
     const anyChecked = this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
     this.footerRightButtonTarget.disabled = false;
     this.footerRightButtonTarget.classList.toggle("opacity-50", !anyChecked && this.currentStep === 1);
-  }
-
-  refreshAccountSelect() {
-    if (!this.hasInitialContributionAccountSelectTarget) return;
-    const select = this.initialContributionAccountSelectTarget;
-    const previous = select.value;
-    while (select.options.length > 1) select.remove(1);
-
-    this.linkedAccountCheckboxTargets
-      .filter((cb) => cb.checked)
-      .forEach((cb) => {
-        const opt = document.createElement("option");
-        opt.value = cb.value;
-        opt.textContent = cb.dataset.accountName || cb.value;
-        select.appendChild(opt);
-      });
-
-    if ([...select.options].some((o) => o.value === previous)) {
-      select.value = previous;
-    }
   }
 
   updateStepperState() {

@@ -105,7 +105,8 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
         result
       end
     rescue StandardError => e
-      Rails.logger.warn("Sparkline map for goal #{goal.id} failed: #{e.message}")
+      Rails.logger.error("Sparkline map for goal #{goal.id} failed: #{e.class}: #{e.message}")
+      Sentry.capture_exception(e) if defined?(Sentry)
       {}
     end
 end
