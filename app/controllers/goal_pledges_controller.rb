@@ -4,6 +4,14 @@ class GoalPledgesController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   def new
+    # The form is dialog-only. A direct GET (F5, bookmark, deep-link
+    # gone stale) lands the user back on the goal show page with the
+    # modal auto-opened via the catch-up CTA params, rather than
+    # rendering a freestanding DS::Dialog over an empty page.
+    unless turbo_frame_request?
+      redirect_to goal_path(@goal) and return
+    end
+
     account = preselected_account
     @pledge = @goal.goal_pledges.new(
       currency: @goal.currency,
