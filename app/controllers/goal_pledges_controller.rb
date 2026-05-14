@@ -1,6 +1,6 @@
 class GoalPledgesController < ApplicationController
   before_action :set_goal
-  before_action :set_pledge, only: %i[extend destroy]
+  before_action :set_pledge, only: %i[renew destroy]
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   def new
@@ -32,7 +32,7 @@ class GoalPledgesController < ApplicationController
     end
   end
 
-  def extend
+  def renew
     @pledge.extend!
     redirect_to goal_path(@goal), notice: t(".success")
   rescue GoalPledge::NotOpenError

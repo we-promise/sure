@@ -40,14 +40,14 @@ class GoalPledgesControllerTest < ActionDispatch::IntegrationTest
 
   test "extend pushes expires_at forward" do
     before = @pledge.expires_at
-    patch extend_goal_pledge_url(@goal, @pledge)
+    patch renew_goal_pledge_url(@goal, @pledge)
     assert_redirected_to goal_path(@goal)
     assert @pledge.reload.expires_at > before
   end
 
   test "extend on non-open pledge flashes alert" do
     pledge = goal_pledges(:matched_transfer)
-    patch extend_goal_pledge_url(@goal, pledge)
+    patch renew_goal_pledge_url(@goal, pledge)
     assert_redirected_to goal_path(@goal)
     assert flash[:alert].present?
   end

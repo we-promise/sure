@@ -12,7 +12,7 @@ en:
       preview_reached: "Hits your {target} target — goal reached."
     create:
       success: Pledge recorded. Sure will confirm it on the next sync.
-    extend:
+    renew:
       success: Pledge window extended 7 days.
       not_open: Only open pledges can be extended.
     destroy:

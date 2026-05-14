@@ -10,7 +10,7 @@
   <div class="mt-2 flex items-center gap-2 flex-wrap">
     <%= render DS::Button.new(
       text: t("goals.show.pending_pledge.extend"),
-      href: extend_goal_pledge_path(pledge.goal, pledge),
+      href: renew_goal_pledge_path(pledge.goal, pledge),
       method: :patch,
       variant: "outline",
       size: "sm"

@@ -32,7 +32,13 @@ class GoalPledge::Reconciler
       end
     end
   rescue StandardError => e
+    # Don't let an unexpected reconcile failure break the importer pipeline
+    # we're hooked into (ProviderImportAdapter / ReconciliationManager).
+    # Surface to Sentry so the actual bug doesn't hide behind a warn-level
+    # log; the inner narrow rescue handles known races without coming
+    # through here.
     Rails.logger.error("GoalPledge::Reconciler failed for entry ##{entry&.id}: #{e.class}: #{e.message}")
+    Sentry.capture_exception(e) if defined?(Sentry)
   end
 
   private

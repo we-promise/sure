@@ -309,7 +309,7 @@ Rails.application.routes.draw do
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
       member do
-        patch :extend
+        patch :renew
       end
     end
   end
