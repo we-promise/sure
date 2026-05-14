@@ -146,6 +146,7 @@ en:
         adjust_target_cta: Adjust target instead
       confirm_complete_title: Mark this goal complete?
       confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
+      confirm_complete_body_short: "You're at %{progress}% — %{saved} of %{target}. Marking complete records this as your achievement instead of the original target. Continue, or close this and adjust the target instead?"
       confirm_complete_cta: Mark complete
       confirm_archive_title: Archive this goal?
       confirm_archive_body: Archived goals disappear from the main list. You can restore them later.

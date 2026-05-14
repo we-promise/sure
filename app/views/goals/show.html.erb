@@ -62,6 +62,14 @@
           <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
         <% end %>
         <% if @goal.may_complete? %>
+          <% complete_body = if @goal.progress_percent < 100
+                              t(".confirm_complete_body_short",
+                                progress: @goal.progress_percent,
+                                saved: @goal.current_balance_money.format(precision: 0),
+                                target: @goal.target_amount_money.format(precision: 0))
+                            else
+                              t(".confirm_complete_body")
+                            end %>
           <% menu.with_item(
                variant: "button",
                text: t(".complete"),
@@ -70,7 +78,7 @@
                method: :patch,
                confirm: CustomConfirm.new(
                  title: t(".confirm_complete_title"),
-                 body: t(".confirm_complete_body"),
+                 body: complete_body,
                  btn_text: t(".confirm_complete_cta")
                )
              ) %>
