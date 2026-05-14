@@ -1,6 +1,6 @@
 <%# locals:(name:, path:, icon:, icon_custom:, active:, mobile_only: false) %>
 
-<%= link_to path, class: "space-y-1 group block relative pb-1" do %>
+<%= link_to path, class: "space-y-1 group block relative pb-1", aria: { current: ("page" if active) } do %>
   <div class="grow flex flex-col lg:flex-row gap-1 items-center">
     <%= tag.div class: class_names("w-4 h-1 lg:w-1 lg:h-4 rounded-bl-sm rounded-br-sm lg:rounded-tr-sm lg:rounded-br-sm lg:rounded-bl-none", "bg-nav-indicator" => active) %>
 
