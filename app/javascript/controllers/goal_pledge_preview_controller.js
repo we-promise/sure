@@ -4,7 +4,13 @@ import { Controller } from "@hotwired/stimulus";
 // target amount from values and updates a preview sentence each keystroke.
 // Template strings come from ERB so the wording stays localized.
 export default class extends Controller {
-  static targets = ["amountInput", "preview"];
+  static targets = [
+    "amountInput",
+    "preview",
+    "accountSelect",
+    "helperConnected",
+    "helperManual",
+  ];
   static values = {
     currentBalance: Number,
     targetAmount: Number,
@@ -16,6 +22,22 @@ export default class extends Controller {
 
   connect() {
     this.update();
+    this.accountChanged();
+  }
+
+  // Helper text reacts to the currently-selected account, not the goal as a
+  // whole. A mixed-funding goal (one connected account + one manual) used to
+  // paint the "connected" helper even if the user then picked the manual
+  // account from the dropdown — the saved pledge would be `kind: manual_save`
+  // (correct, per `kind_for_account` in the controller) but the helper read
+  // "transfer-style" copy until submission.
+  accountChanged() {
+    if (!this.hasAccountSelectTarget) return;
+    if (!this.hasHelperConnectedTarget || !this.hasHelperManualTarget) return;
+    const opt = this.accountSelectTarget.selectedOptions[0];
+    const isManual = opt?.dataset.manual === "true";
+    this.helperConnectedTarget.hidden = isManual;
+    this.helperManualTarget.hidden = !isManual;
   }
 
   update() {

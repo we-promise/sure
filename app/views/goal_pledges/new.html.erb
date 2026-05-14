@@ -5,6 +5,12 @@
       <%= render "shared/form_errors", model: @pledge %>
     <% end %>
 
+    <%
+      account_options = @goal.linked_accounts.map do |a|
+        [ a.name, a.id, { data: { manual: a.manual?.to_s } } ]
+      end
+    %>
+
     <%= styled_form_with model: @pledge,
                          url: goal_pledges_path(@goal),
                          class: "space-y-3",
@@ -17,12 +23,15 @@
                            goal_pledge_preview_template_nonzero_value: t(".preview_nonzero"),
                            goal_pledge_preview_template_reached_value: t(".preview_reached")
                          } do |f| %>
-      <p class="text-sm text-secondary">
-        <% if @goal.any_connected_account? %>
-          <%= t(".helper_transfer") %>
-        <% else %>
-          <%= t(".helper_manual") %>
-        <% end %>
+      <p class="text-sm text-secondary"
+         data-goal-pledge-preview-target="helperConnected"
+         hidden>
+        <%= t(".helper_transfer") %>
+      </p>
+      <p class="text-sm text-secondary"
+         data-goal-pledge-preview-target="helperManual"
+         hidden>
+        <%= t(".helper_manual") %>
       </p>
 
       <%= f.money_field :amount,
@@ -39,8 +48,14 @@
          data-goal-pledge-preview-target="preview"></p>
 
       <%= f.select :account_id,
-                   options_from_collection_for_select(@goal.linked_accounts, :id, :name, @pledge.account_id),
-                   { label: t(".account_label") } %>
+                   options_for_select(account_options, @pledge.account_id),
+                   { label: t(".account_label") },
+                   {
+                     data: {
+                       goal_pledge_preview_target: "accountSelect",
+                       action: "change->goal-pledge-preview#accountChanged"
+                     }
+                   } %>
 
       <div class="flex justify-end pt-2">
         <%= f.submit t(".submit") %>
