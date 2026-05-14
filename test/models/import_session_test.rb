@@ -60,6 +60,77 @@ class ImportSessionTest < ActiveSupport::TestCase
     end
   end
 
+  test "republishing failed session skips complete chunks and retries failed chunks" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 2,
+      content: build_ndjson(transaction_records),
+      filename: "transactions.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    complete_chunk = session.imports.find_by!(sequence: 1)
+    failed_chunk = session.imports.find_by!(sequence: 2)
+    complete_chunk.update!(status: :complete, summary: { "accounts" => { "created" => 1 } }, error_details: {})
+    failed_chunk.update!(status: :failed, error: "transient failure", error_details: { "code" => "import_failed" })
+    session.update!(
+      status: :failed,
+      summary: complete_chunk.summary,
+      error_details: { "code" => "import_failed", "message" => "transient failure" }
+    )
+    processed_sequences = []
+
+    importer_factory = lambda do |_family, _content, import_session:, import:|
+      processed_sequences << import.sequence
+      flunk "completed chunk was reprocessed" if import.sequence == 1
+      assert_equal session, import_session
+
+      Object.new.tap do |importer|
+        importer.define_singleton_method(:import!) do
+          {
+            accounts: [],
+            entries: [],
+            summary: { "transactions" => { "created" => 1 } }
+          }
+        end
+      end
+    end
+
+    Family::DataImporter.stub(:new, importer_factory) do
+      session.publish
+    end
+
+    assert_equal [ 2 ], processed_sequences
+    assert complete_chunk.reload.complete?
+    assert failed_chunk.reload.complete?
+    assert session.reload.complete?
+    assert_equal 1, session.summary.dig("accounts", "created")
+    assert_equal 1, session.summary.dig("transactions", "created")
+  end
+
+  test "publish keeps session complete and records safe error when family sync enqueue fails" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "redis://secret.local/0")
+    session.publish
+
+    assert session.reload.complete?
+    assert_equal "family_sync_enqueue_failed", session.error_details["code"]
+    assert_equal "Family sync could not be queued after import completion.", session.error_details["message"]
+    assert_no_match(/secret/, session.error_details.to_json)
+  end
+
   test "publish later requires the exact expected chunk sequences" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(

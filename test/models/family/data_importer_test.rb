@@ -462,6 +462,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "#FF0000", tag.color
   end
 
+  test "imports tags with deterministic fallback color when source omits color" do
+    ndjson = build_ndjson([
+      {
+        type: "Tag",
+        data: {
+          id: "tag-1",
+          name: "Important"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    tag = @family.tags.find_by!(name: "Important")
+    assert_equal Tag::COLORS.first, tag.color
+  end
+
   test "imports merchants" do
     ndjson = build_ndjson([
       {

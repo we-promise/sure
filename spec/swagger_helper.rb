@@ -1179,7 +1179,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               sequence: { type: :integer, minimum: 1 },
               client_chunk_id: { type: :string, nullable: true },
-              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              status: { type: :string, enum: %w[pending importing complete failed] },
               rows_count: { type: :integer, minimum: 0 },
               summary: {
                 type: :object,

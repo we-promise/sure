@@ -177,17 +177,16 @@ class ImportSession < ApplicationRecord
   end
 
   def publish
-    return if complete?
+    return unless prepare_for_publish!
 
     Rails.logger.info("ImportSession publish started import_session_id=#{id}")
-    update!(status: :importing, error_details: {})
 
     imports.ordered_by_sequence.each do |import|
       process_chunk!(import)
     end
 
-    family.sync_later
     update!(status: :complete, summary: aggregate_chunk_summaries, error_details: {})
+    enqueue_family_sync
     Rails.logger.info("ImportSession publish completed import_session_id=#{id}")
   rescue => error
     update!(
@@ -205,6 +204,28 @@ class ImportSession < ApplicationRecord
   end
 
   private
+    def prepare_for_publish!
+      with_lock do
+        return false if complete?
+
+        raise Import::MaxRowCountExceededError if row_count_exceeded?
+        raise ConflictError, "import session has no chunks" unless imports.exists?
+        validate_expected_chunk_sequences!
+
+        update!(status: :importing, error_details: {}) unless importing?
+        true
+      end
+    end
+
+    def enqueue_family_sync
+      family.sync_later
+    rescue => error
+      update!(error_details: sync_enqueue_error_details)
+      Rails.logger.error(
+        "ImportSession family sync enqueue failed import_session_id=#{id} exception=#{error.class}"
+      )
+    end
+
     def existing_chunk_for!(sequence:, client_chunk_id:, checksum:)
       sequence_match = imports.find_by(sequence: sequence)
       client_chunk_match = imports.find_by(client_chunk_id: client_chunk_id) if client_chunk_id.present?
@@ -331,6 +352,13 @@ class ImportSession < ApplicationRecord
       {
         "code" => "import_enqueue_failed",
         "message" => "Import session could not be queued."
+      }
+    end
+
+    def sync_enqueue_error_details
+      {
+        "code" => "family_sync_enqueue_failed",
+        "message" => "Family sync could not be queued after import completion."
       }
     end
 

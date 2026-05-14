@@ -439,10 +439,13 @@ class Family::DataImporter
         tag = mapped_record(:tags, old_id, @family.tags, record_type: "Tag")
         created = tag.blank?
         tag ||= @family.tags.build
+        color = data["color"] || tag.color
+        # Keep replayed session imports deterministic when the source omits a color.
+        color ||= Tag::COLORS.first if created
 
         tag.assign_attributes(
           name: data["name"],
-          color: data["color"] || tag.color || Tag::COLORS.first
+          color: color
         )
         tag.save!
         map_source!(:tags, old_id, tag)
@@ -584,9 +587,6 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
-        if @import_session && transaction.respond_to?(:external_id=) && old_id.present?
-          transaction.external_id = old_id
-        end
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
