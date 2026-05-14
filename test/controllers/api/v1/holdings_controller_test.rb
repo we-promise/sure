@@ -31,6 +31,8 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
 
   test "lists holdings scoped to accessible historical accounts" do
     @account.disable!
+    active_account = create_investment_account(status: "active", name: "Active Holding")
+    active_holding = create_holding(active_account, ticker: "AH#{SecureRandom.hex(4).upcase}")
     pending_deletion_account = create_investment_account(status: "pending_deletion", name: "Pending Delete Holding")
     pending_deletion_holding = create_holding(pending_deletion_account, ticker: "PDH#{SecureRandom.hex(4).upcase}")
 
@@ -40,6 +42,7 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     holding_ids = response_data["holdings"].map { |holding| holding["id"] }
     assert_includes holding_ids, @holding.id
+    assert_includes holding_ids, active_holding.id
     assert_not_includes holding_ids, pending_deletion_holding.id
     assert_not_includes holding_ids, @other_holding.id
   end
