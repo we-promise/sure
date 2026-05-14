@@ -344,7 +344,13 @@ class Account < ApplicationRecord
   def manual_crypto_exchange?
     accountable_type == "Crypto" &&
       accountable&.subtype == "exchange" &&
-      account_providers.none? &&
+      manual?
+  end
+
+  # True when the account has no live sync provider attached. Mirrors the
+  # `Account.manual` scope so per-instance checks don't drift from the query.
+  def manual?
+    account_providers.none? &&
       plaid_account_id.blank? &&
       simplefin_account_id.blank?
   end

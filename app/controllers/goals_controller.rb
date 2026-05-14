@@ -11,7 +11,10 @@ class GoalsController < ApplicationController
       h[state] = state == "all" ? state_counts.values.sum : (state_counts[state] || 0)
     end
 
-    all_goals = Current.family.goals.alphabetically.includes(:linked_accounts, :open_pledges).to_a
+    all_goals = Current.family.goals
+                       .alphabetically
+                       .includes(:open_pledges, linked_accounts: :account_providers)
+                       .to_a
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
     @completed_goals = all_goals.select { |g| g.state == "completed" }
@@ -28,7 +31,7 @@ class GoalsController < ApplicationController
   end
 
   def show
-    @open_pledges = @goal.open_pledges.chronological.to_a
+    @open_pledges = @goal.open_pledges.reverse_chronological.to_a
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("goals.index.title"), goals_path ],
@@ -140,7 +143,7 @@ class GoalsController < ApplicationController
   private
     def set_goal
       @goal = Current.family.goals
-                             .includes(:linked_accounts, :open_pledges)
+                             .includes(:open_pledges, linked_accounts: :account_providers)
                              .find(params[:id])
     end
 

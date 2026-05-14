@@ -77,6 +77,35 @@ class GoalPledgeTest < ActiveSupport::TestCase
     assert @pledge.expires_at > before + 6.days
   end
 
+  test "matches? widens upper bound to expires_at after extend!" do
+    # Day 8 — past the default 5-day creation-anchored window but inside the
+    # extended expiry window. Without the widening this would be a regression
+    # of B7 (extend doesn't actually buy match runway).
+    @pledge.extend!
+    far_date = @pledge.created_at.to_date + 8.days
+    assert far_date <= @pledge.expires_at.to_date
+    entry = build_entry(account: @account, amount: -200, date: far_date)
+    assert @pledge.matches?(entry)
+  end
+
+  test "matches? rejects entries past extended expires_at" do
+    @pledge.extend!
+    far_date = @pledge.expires_at.to_date + 1.day
+    entry = build_entry(account: @account, amount: -200, date: far_date)
+    assert_not @pledge.matches?(entry)
+  end
+
+  test "duplicate open pledge for same goal+account+amount is rejected on create" do
+    dup = @goal.goal_pledges.new(account: @account, amount: @pledge.amount, currency: @goal.currency)
+    assert_not dup.valid?
+    assert dup.errors[:base].any? { |m| m.include?("open pledge") }
+  end
+
+  test "duplicate validation does not block different amounts" do
+    dup = @goal.goal_pledges.new(account: @account, amount: @pledge.amount.to_d + 1, currency: @goal.currency)
+    assert dup.valid?, dup.errors.full_messages.to_sentence
+  end
+
   test "extend! raises for non-open pledge" do
     pledge = goal_pledges(:matched_transfer)
     assert_raises(GoalPledge::NotOpenError) { pledge.extend! }

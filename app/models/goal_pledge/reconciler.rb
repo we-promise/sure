@@ -16,12 +16,19 @@ class GoalPledge::Reconciler
       next unless pledge.matches?(entry)
 
       begin
-        pledge.resolve_with!(entry.transaction) if entry.entryable.is_a?(Transaction)
-        pledge.update!(status: "matched") if entry.entryable.is_a?(Valuation)
+        if entry.entryable.is_a?(Transaction)
+          pledge.resolve_with!(entry.transaction)
+        elsif entry.entryable.is_a?(Valuation)
+          pledge.resolve_with_valuation!
+        end
         Rails.logger.info("GoalPledge ##{pledge.id} matched entry ##{entry.id}")
         return
-      rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.warn("GoalPledge ##{pledge.id} match failed: #{e.message}")
+      rescue GoalPledge::NotOpenError,
+             ActiveRecord::RecordInvalid,
+             ActiveRecord::RecordNotUnique => e
+        # Race vs another worker (this pledge got claimed, or this txn got
+        # stamped by another pledge). Fall through and try the next pledge.
+        Rails.logger.warn("GoalPledge ##{pledge.id} match failed: #{e.class}: #{e.message}")
       end
     end
   rescue StandardError => e

@@ -17,3 +17,4 @@ en:
               must_be_linked_to_goal: Pick one of the goal's linked accounts.
             currency:
               must_match_goal: Pledge currency must match the goal currency.
+          duplicate_open_pledge: You already have an open pledge for this amount on this account. Cancel or extend the existing one before recording another.

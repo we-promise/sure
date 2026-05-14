@@ -10,7 +10,9 @@ class Goal < ApplicationRecord
   has_many :goal_accounts, dependent: :destroy
   has_many :linked_accounts, through: :goal_accounts, source: :account
   has_many :goal_pledges, dependent: :destroy
-  has_many :open_pledges, -> { where(status: "open") }, class_name: "GoalPledge"
+  has_many :open_pledges,
+           -> { where(status: "open").where("expires_at >= ?", Time.current) },
+           class_name: "GoalPledge"
 
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
@@ -208,21 +210,34 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Days since the most recently matched pledge. Used by the show header to
-  # show "Last saved N days ago". Returns nil if no pledge has resolved yet.
+  # Date of the most-recently-matched pledge's underlying entry. Used by the
+  # show header to display "Last saved N days ago". Anchoring on the entry's
+  # date keeps the readout stable under sync re-runs (which would bump
+  # pledge#updated_at). Returns nil if no pledge has resolved yet.
   def last_matched_pledge_at
-    @last_matched_pledge_at ||= goal_pledges.where(status: "matched").maximum(:updated_at)
+    return @last_matched_pledge_at if defined?(@last_matched_pledge_at)
+
+    @last_matched_pledge_at = Entry
+      .where(entryable_type: "Transaction")
+      .joins("INNER JOIN goal_pledges ON goal_pledges.matched_transaction_id = entries.entryable_id")
+      .where(goal_pledges: { goal_id: id, status: "matched" })
+      .maximum(:date)
   end
 
   def last_matched_pledge_days_ago
     last = last_matched_pledge_at
     return nil if last.nil?
 
-    (Date.current - last.to_date).to_i
+    (Date.current - last).to_i
   end
 
+  # True when any linked account is wired to a live sync provider (Plaid,
+  # SimpleFIN, or any AccountProvider — Brex, Enable Banking, IBKR, Kraken,
+  # SnapTrade, Lunchflow). Drives the pledge-create copy: connected accounts
+  # get the "I just transferred…" path; manual-only accounts get "I just
+  # saved…" so users aren't told to wait for a sync that won't happen.
   def any_connected_account?
-    linked_accounts.any? { |a| a.respond_to?(:plaid_account) && a.plaid_account.present? }
+    linked_accounts.any? { |a| !a.manual? }
   end
 
   # "I just transferred" for bank-connected accounts, "I just saved" for manual-only.
