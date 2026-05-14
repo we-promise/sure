@@ -4,16 +4,13 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
-  # Virtual attributes used by the create-modal stepper to capture an
-  # optional initial contribution alongside the goal create payload.
-  attr_accessor :initial_contribution_amount, :initial_contribution_account_id
-
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
 
   belongs_to :family
   has_many :goal_accounts, dependent: :destroy
   has_many :linked_accounts, through: :goal_accounts, source: :account
-  has_many :goal_contributions, dependent: :destroy
+  has_many :goal_pledges, dependent: :destroy
+  has_many :open_pledges, -> { where(status: "open") }, class_name: "GoalPledge"
 
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
@@ -22,7 +19,7 @@ class Goal < ApplicationRecord
   validate :linked_accounts_must_be_depository
   validate :linked_accounts_must_match_goal_currency
   validate :linked_accounts_must_belong_to_family
-  validate :currency_locked_once_contributions_exist
+  validate :currency_locked_once_linked
 
   monetize :target_amount
 
@@ -30,14 +27,7 @@ class Goal < ApplicationRecord
   scope :active_first, lambda {
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
   }
-  scope :with_current_balance, lambda {
-    left_outer_joins(:goal_contributions)
-      .group(Arel.sql("goals.id"))
-      .select(Arel.sql("goals.*, COALESCE(SUM(goal_contributions.amount), 0) AS current_balance_total"))
-  }
 
-  # 63-bit Postgres advisory-lock key per family. Used by future auto-fund flows
-  # and any future per-family serialization of goal contributions.
   def self.advisory_lock_key_for(family_id)
     Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
   end
@@ -69,12 +59,11 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Balance is the live balance of every linked depository account.
+  # v1: single linked account in practice. v1.1+: minus other goals' allocations
+  # via the upcoming GoalBacking query.
   def current_balance
-    @current_balance ||= if attributes.key?("current_balance_total")
-      attributes["current_balance_total"] || 0
-    else
-      goal_contributions.sum(:amount)
-    end
+    @current_balance ||= linked_accounts.sum { |a| a.balance.to_d }
   end
 
   def current_balance_money
@@ -120,10 +109,37 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Segment array consumed by the shared `donut-chart` Stimulus controller
-  # (see app/javascript/controllers/donut_chart_controller.js). Same shape
-  # as Budget#to_donut_segments_json: filled portion in goal color, unused
-  # remainder as the system "unallocated" fill.
+  # 90-day rolling monthly pace: average net non-transfer inflow into linked
+  # accounts. Entry amount sign convention in Sure: inflow is negative.
+  def pace
+    return @pace if defined?(@pace)
+
+    @pace = if linked_accounts.empty?
+      0
+    else
+      account_ids = linked_accounts.map(&:id)
+      net = Entry
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
+        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        .where(excluded: false)
+        .sum(:amount)
+      (-net.to_d / 3).round(2)
+    end
+  end
+
+  def pace_money
+    @pace_money ||= Money.new(pace, currency)
+  end
+
+  # Months of cash on hand at current pace (open-ended goals).
+  def months_of_runway
+    return nil if target_date.present?
+    return nil if pace.zero? || pace.negative?
+
+    (current_balance.to_d / pace.to_d).round(1)
+  end
+
   def to_donut_segments_json
     filled = current_balance.to_d
     rem = remaining_amount.to_d
@@ -138,18 +154,14 @@ class Goal < ApplicationRecord
     segments
   end
 
-  # Cumulative contributions series for the projection chart, sorted by
-  # date ascending. Consumed by the
-  # `goal-projection-chart` Stimulus controller.
+  # 90-day balance trajectory of linked accounts. Used by the projection chart
+  # to render the saved-to-date line. Returns an empty series when the linked
+  # account lacks ≥30 days of history.
   def projection_payload
-    sorted = goal_contributions.sort_by(&:contributed_at)
-    running = 0
-    saved_series = sorted.map do |c|
-      running += c.amount.to_d
-      { date: c.contributed_at.to_s, value: running.to_f }
-    end
+    series_values = balance_series_values
+    saved_series = series_values.map { |v| { date: v.date.to_s, value: v.value.amount.to_f } }
 
-    earliest = [ created_at.to_date, sorted.first&.contributed_at ].compact.min
+    earliest = series_values.first&.date || created_at.to_date
 
     {
       saved_series: saved_series,
@@ -158,16 +170,14 @@ class Goal < ApplicationRecord
       target_date: target_date&.to_s,
       target_amount: target_amount.to_f,
       current_amount: current_balance.to_f,
-      avg_monthly: average_monthly_contribution.to_f,
+      avg_monthly: pace.to_f,
       required_monthly: monthly_target_amount.to_f,
       currency: currency,
-      status: status.to_s
+      status: status.to_s,
+      pending_pledge_amount: open_pledges.sum(:amount).to_f
     }
   end
 
-  # Display-layer status. Prefers AASM state for inactive goals so the UI
-  # doesn't compute a misleading "Behind / On track" verdict against a goal
-  # that isn't accepting contributions anymore.
   def display_status
     return @display_status if defined?(@display_status)
 
@@ -180,10 +190,10 @@ class Goal < ApplicationRecord
     end
   end
 
-  # :reached → progress_percent >= 100
-  # :on_track → has target_date and current pace >= required monthly pace
-  # :behind → has target_date and current pace < required monthly pace
-  # :no_target_date → progress < 100 and target_date is nil
+  # :reached         → progress_percent >= 100
+  # :on_track        → has target_date and pace >= required monthly
+  # :behind          → has target_date and pace < required monthly
+  # :no_target_date  → open-ended
   def status
     return @status if defined?(@status)
 
@@ -191,50 +201,49 @@ class Goal < ApplicationRecord
       :reached
     elsif target_date.nil?
       :no_target_date
-    elsif monthly_target_amount.to_d <= average_monthly_contribution.to_d
+    elsif monthly_target_amount.to_d <= pace.to_d
       :on_track
     else
       :behind
     end
   end
 
-  def average_monthly_contribution
-    return @average_monthly_contribution if defined?(@average_monthly_contribution)
-
-    @average_monthly_contribution = if goal_contributions.empty?
-      0
-    else
-      first_at = if goal_contributions.loaded?
-        goal_contributions.map(&:contributed_at).compact.min
-      else
-        goal_contributions.minimum(:contributed_at)
-      end
-      if first_at.blank?
-        current_balance
-      else
-        months = ((Date.current.year - first_at.year) * 12 + (Date.current.month - first_at.month)) + 1
-        months = 1 if months < 1
-        (current_balance.to_d / months).round(2)
-      end
-    end
+  # Days since the most recently matched pledge. Used by the show header to
+  # show "Last saved N days ago". Returns nil if no pledge has resolved yet.
+  def last_matched_pledge_at
+    @last_matched_pledge_at ||= goal_pledges.where(status: "matched").maximum(:updated_at)
   end
 
-  def last_contribution_at
-    @last_contribution_at ||= if goal_contributions.loaded?
-      goal_contributions.map(&:contributed_at).compact.max
-    else
-      goal_contributions.maximum(:contributed_at)
-    end
-  end
-
-  def last_contribution_days_ago
-    last = last_contribution_at
+  def last_matched_pledge_days_ago
+    last = last_matched_pledge_at
     return nil if last.nil?
 
-    (Date.current - last).to_i
+    (Date.current - last.to_date).to_i
+  end
+
+  def any_connected_account?
+    linked_accounts.any? { |a| a.respond_to?(:plaid_account) && a.plaid_account.present? }
+  end
+
+  # "I just transferred" for bank-connected accounts, "I just saved" for manual-only.
+  def pledge_action_label_key
+    any_connected_account? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
   end
 
   private
+    def balance_series_values
+      return [] if linked_accounts.empty?
+
+      Balance::ChartSeriesBuilder.new(
+        account_ids: linked_accounts.map(&:id),
+        currency: currency,
+        period: Period.last_90_days
+      ).balance_series.values
+    rescue StandardError => e
+      Rails.logger.warn("Goal##{id} balance series failed: #{e.message}")
+      []
+    end
+
     def must_have_at_least_one_linked_account
       return unless goal_accounts.reject(&:marked_for_destruction?).empty?
 
@@ -272,12 +281,10 @@ class Goal < ApplicationRecord
       errors.add(:linked_accounts, :must_belong_to_family)
     end
 
-    # Once a goal has contributions, changing currency would orphan amounts
-    # in the old currency. Lock it.
-    def currency_locked_once_contributions_exist
+    def currency_locked_once_linked
       return unless persisted? && currency_changed?
-      return unless goal_contributions.exists?
+      return unless goal_accounts.where.not(id: nil).exists?
 
-      errors.add(:currency, :locked_after_contributions)
+      errors.add(:currency, :locked_after_linked)
     end
 end

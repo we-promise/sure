@@ -1395,16 +1395,6 @@ class Demo::Generator
         )
         goal_spec[:accounts].uniq.each { |a| goal.goal_accounts.build(account: a) }
         goal.save!
-
-        goal_spec[:contributions].each do |c|
-          goal.goal_contributions.create!(
-            account: c[:account],
-            amount: c[:amount],
-            currency: currency,
-            source: c[:source],
-            contributed_at: c[:days_ago].days.ago.to_date
-          )
-        end
       end
 
       puts "   ✅ Seeded #{goals.size} goals"

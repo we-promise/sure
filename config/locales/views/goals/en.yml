@@ -6,12 +6,10 @@ en:
       subtitle: Save toward what matters.
       new_goal: New goal
       empty_filtered: No goals match.
+      pending_pledges_callout: One or more pending pledges. Sure is watching your linked accounts to confirm the transfer.
       kpi:
-        velocity_label: Contributed · last 30d
-        velocity_delta_up: "↑ %{percent}%% vs. prior 30d"
-        velocity_delta_down: "↓ %{percent}%% vs. prior 30d"
-        velocity_delta_flat: vs. prior 30d
-        velocity_delta_zero_base: First 30 days of activity
+        contributed_label: Contributed · last 30d
+        contributed_sub: Net inflow across linked accounts
         needs_this_month_label: Needs this month
         needs_this_month_sub:
           one: across 1 goal behind pace
@@ -19,16 +17,9 @@ en:
         needs_this_month_zero_sub: No goals behind pace
         on_track_label: Goals on track
         on_track_value: "%{on_track} of %{total}"
-        on_track_sub_parts:
-          behind:
-            one: 1 behind
-            other: "%{count} behind"
-          no_date:
-            one: 1 open
-            other: "%{count} open"
-          paused:
-            one: 1 paused
-            other: "%{count} paused"
+        on_track_sub_behind:
+          one: 1 behind pace
+          other: "%{count} behind pace"
         on_track_sub_all_good: All active goals on pace
       goals_section:
         heading: Goals
@@ -91,22 +82,17 @@ en:
       archive: Archive
       unarchive: Restore
       delete: Delete permanently
-      contributions_heading: Contributions
-      add_contribution: Add contribution
+      pledge_just_transferred: I just transferred…
+      pledge_just_saved: I just saved…
       funding_accounts_heading: Funding accounts
-      funding_table:
-        name: Name
-        weight: Weight
-        value: Value
-      no_contributions_yet: No contributions yet.
-      delete_contribution: Delete contribution
-      confirm_delete_contribution: Delete this contribution?
-      confirm_delete_contribution_title: Delete contribution?
-      confirm_delete_contribution_body: "Remove the %{amount} contribution from this goal's history. This can't be undone."
-      confirm_delete_contribution_cta: Delete contribution
-      funding_balance: "balance %{amount}"
-      of_saved: of saved
       notes: Notes
+      funding_last_30d: last 30d
+      pending_pledge:
+        title: "Pending: %{amount} into %{account}"
+        body_transfer: "Looking for a matching deposit (±5 days, ±$0.50 or ±1%%). Auto-confirms when Sure spots it · %{days_left} days left."
+        body_manual: "Resolves on your next manual balance edit · %{days_left} days left."
+        extend: Extend 7 days
+        cancel: Cancel
       header:
         target: "Target %{amount}"
         target_by: "Target %{amount} by %{date}"
@@ -122,7 +108,7 @@ en:
         legend_projection: Projection
         reached: Goal reached. Nice work.
         no_target_date: No target date set. Set one to project a finish line.
-        no_pace: No contributions yet. Add some to start a projection.
+        no_pace: No inflow yet. Make a transfer or update the balance to start a projection.
         behind: At %{current}/mo you'll miss your target date.
         on_track: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
@@ -130,7 +116,6 @@ en:
         title: "Save %{amount}/mo to stay on track"
         body_with_date: "Your current pace is %{avg}/mo. You need an extra %{delta}/mo to finish by %{date}."
         body: "Your current pace is %{avg}/mo. You need an extra %{delta}/mo to hit the required rate."
-        cta: "Add %{amount}"
         adjust_target_cta: Or adjust your target
       confirm_complete_title: Mark this goal complete?
       confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
@@ -159,25 +144,8 @@ en:
         body: Set a deadline to project a finish line and track required pace.
         cta: Set target date
       empty:
-        heading: No contributions yet
-        body: Track your progress by adding your first contribution.
-        cta: Add a contribution
-      source:
-        initial: Initial
-        manual: Manual
-      stats:
-        avg_monthly: Avg monthly
-        total_contributions: Total contributions
-        across_all_accounts: Across all accounts
-        target_pace: Target pace
-        target_date: Target date
-        no_target_date: Open
-        no_required_pace: No required pace
-        needs_per_month: "Needs %{amount}/mo"
-        above_target_pace: Above target pace
-        monthly_pace: Monthly pace
-        target_of: "target %{amount}/mo"
-        behind_by: "Behind by %{amount}/mo"
+        heading: Nothing's flowed in yet
+        body: Make a transfer into your linked account — Sure will catch it on the next sync. Or update your manual account balance.
     errors:
       not_found: This goal couldn't be found. It may have been deleted.
     states:
@@ -194,7 +162,7 @@ en:
       archived: Archived
     empty_state:
       heading: No goals yet
-      body: Set a target, link the accounts you save into, and watch your progress add up. Goals can pull from multiple accounts.
+      body: Set a target, link the accounts you save into, and watch your progress add up.
       subtitle: Set a target and start saving toward it.
       new_goal: Create your first goal
       no_depository_accounts: You need at least one Depository account (checking, savings, HSA, CD, money-market) before creating a goal.
@@ -223,11 +191,11 @@ en:
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: Open
-      footer_no_contributions: No contributions yet
-      footer_last_today: Last contribution today
+      footer_no_pledges: No pledges yet
+      footer_last_today: Last saved today
       footer_last_days:
-        one: Last contribution 1 day ago
-        other: "Last contribution %{count} days ago"
+        one: Last saved 1 day ago
+        other: "Last saved %{count} days ago"
     form_stepper:
       cancel: Cancel
       continue: Continue
@@ -251,7 +219,7 @@ en:
           notes_summary: Add notes (optional)
           notes_placeholder: A reminder for future you…
           funding_accounts: Funding accounts
-          funding_accounts_hint: Balances in these accounts will count toward the goal.
+          funding_accounts_hint: This goal's balance is the balance of these accounts.
         subtypes:
           checking: Checking
           savings: Savings
@@ -262,12 +230,7 @@ en:
       step2:
         label: Review & start
         heading: Looks good?
-        subheading: Review your goal and add an optional starting contribution.
-        add_initial_contribution: Add an initial contribution
-        add_initial_contribution_sub: Optional · jumpstart this goal with funds you've already set aside.
-        initial_amount: Amount
-        initial_account: From account
-        select_account: Select an account
+        subheading: Review your goal and confirm.
         review:
           summary_with_date: "{amount} by {date}"
           summary_no_date: "{amount}"

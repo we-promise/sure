@@ -35,21 +35,6 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     end
   end
 
-  test "creates a goal with initial contribution" do
-    assert_difference -> { GoalContribution.count } => 1 do
-      @fn.call(
-        "name" => "Laptop fund",
-        "target_amount" => 2000,
-        "linked_account_names" => [ @depository.name ],
-        "initial_contribution" => { "amount" => 200, "source_account_name" => @depository.name }
-      )
-    end
-
-    contribution = GoalContribution.order(created_at: :desc).first
-    assert_equal "initial", contribution.source
-    assert_equal 200, contribution.amount.to_i
-  end
-
   test "soft error when name is missing" do
     result = @fn.call("target_amount" => 100, "linked_account_names" => [ @depository.name ])
     assert_equal false, result[:success]

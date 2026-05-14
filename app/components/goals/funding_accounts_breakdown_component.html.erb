@@ -1,61 +1,44 @@
-<% if total.zero? %>
-  <p class="text-sm text-secondary"><%= t("goals.show.no_contributions_yet") %></p>
+<% if rows.empty? %>
+  <p class="text-sm text-secondary"><%= t("goals.show.funding_accounts_heading") %></p>
 <% else %>
   <div class="space-y-4">
-    <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
+    <h2 class="text-sm font-medium inline-flex items-center gap-1.5">
       <%= t("goals.show.funding_accounts_heading") %>
       <span class="text-secondary">·</span>
-      <span class="text-secondary font-medium text-lg privacy-sensitive tabular-nums"><%= Money.new(total, goal.currency).format(precision: 0) %></span>
+      <span class="text-secondary font-medium tabular-nums privacy-sensitive"><%= goal.current_balance_money.format %></span>
     </h2>
 
-    <div class="flex gap-1">
+    <div class="space-y-3">
       <% rows.each do |row| %>
-        <% next if row[:amount].to_d.zero? %>
-        <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:amount]) %>%; background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"></div>
-      <% end %>
-    </div>
-
-    <div class="flex flex-wrap gap-4">
-      <% rows.each do |row| %>
-        <% next if row[:amount].to_d.zero? %>
-        <div class="flex items-center gap-2 text-sm">
-          <div class="h-2.5 w-2.5 rounded-full" style="background-color: <%= Goals::AvatarComponent.color_for(row[:account].name) %>;"></div>
-          <p class="text-secondary"><%= row[:account].name %></p>
-          <p class="text-primary font-mono privacy-sensitive tabular-nums"><%= percent_for(row[:amount]) %>%</p>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
-      <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
-        <div class="flex-1 min-w-0"><%= t("goals.show.funding_table.name") %></div>
-        <div class="ml-auto text-right flex items-center gap-2">
-          <div class="w-20 shrink-0"><p><%= t("goals.show.funding_table.weight") %></p></div>
-          <div class="w-24 shrink-0"><p><%= t("goals.show.funding_table.value") %></p></div>
-        </div>
-      </div>
-
-      <div class="rounded-lg bg-container font-medium text-sm">
-        <% rows.each_with_index do |row, idx| %>
-          <div class="p-4 flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0 flex items-center gap-2">
-              <%= render Goals::AvatarComponent.new(name: row[:account].name, color: Goals::AvatarComponent.color_for(row[:account].name), size: "sm") %>
-              <p class="truncate"><%= row[:account].name %></p>
-            </div>
-            <div class="flex items-center justify-between text-right gap-2 shrink-0">
-              <div class="w-20 shrink-0 flex items-center justify-end gap-2">
-                <%= render "pages/dashboard/group_weight", weight: percent_for(row[:amount]), color: Goals::AvatarComponent.color_for(row[:account].name) %>
-              </div>
-              <div class="w-24 shrink-0">
-                <p class="privacy-sensitive tabular-nums"><%= row[:money].format(precision: 0) %></p>
-              </div>
-            </div>
+        <% account = row[:account] %>
+        <% spark = row[:sparkline_points] %>
+        <% spark_max = [ spark.max, 1.0 ].max %>
+        <div class="grid grid-cols-[40px_minmax(0,1.5fr)_minmax(0,1fr)_120px] gap-3 items-center">
+          <div class="w-10 h-10 rounded-full inline-flex items-center justify-center font-medium text-sm shrink-0"
+               style="background-color: <%= Goals::AvatarComponent.color_for(account.name) %>; color: white;">
+            <%= account.name[0]&.upcase %>
           </div>
-          <% if idx < rows.size - 1 %>
-            <%= render "shared/ruler", classes: "mx-4" %>
-          <% end %>
-        <% end %>
-      </div>
+
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
+            <p class="text-xs text-subdued tabular-nums"><%= account.accountable_type %> · <%= row[:balance_money].format %></p>
+          </div>
+
+          <svg viewBox="0 0 <%= spark.size * 8 %> 28" preserveAspectRatio="none" class="w-full h-7">
+            <% xs = spark.each_with_index.map { |_, i| 2 + (i / (spark.size - 1).to_f) * (spark.size * 8 - 4) } %>
+            <% ys = spark.map { |v| 24 - (v / spark_max) * 20 } %>
+            <% path = xs.zip(ys).each_with_index.map { |(x, y), i| "#{i.zero? ? "M" : "L"} #{x.round(2)} #{y.round(2)}" }.join(" ") %>
+            <path d="<%= path %>" fill="none" stroke="<%= Goals::AvatarComponent.color_for(account.name) %>" stroke-width="1.5" stroke-linejoin="round" />
+          </svg>
+
+          <div class="text-right">
+            <p class="text-sm font-medium text-primary font-mono tabular-nums privacy-sensitive">
+              <%= row[:last_30_money].format %>
+            </p>
+            <p class="text-[10px] text-subdued"><%= t("goals.show.funding_last_30d") %></p>
+          </div>
+        </div>
+      <% end %>
     </div>
   </div>
 <% end %>

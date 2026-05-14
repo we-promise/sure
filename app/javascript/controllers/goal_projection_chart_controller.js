@@ -113,7 +113,20 @@ export default class extends Controller {
         ]
       : [];
 
-    const yMax = Math.max(targetAmount * 1.05, projectionEnd, currentAmount, 1);
+    const requiredMonthly = data.required_monthly || 0;
+    const requiredEnd = target && requiredMonthly > 0
+      ? currentAmount + requiredMonthly * Math.max(0, this._monthsBetween(today, target))
+      : currentAmount;
+    const requiredSeries = target && requiredMonthly > 0 && requiredEnd > currentAmount
+      ? [
+          { date: today, value: currentAmount },
+          { date: target, value: requiredEnd },
+        ]
+      : [];
+
+    const pendingPledgeAmount = data.pending_pledge_amount || 0;
+
+    const yMax = Math.max(targetAmount * 1.05, projectionEnd, requiredEnd, currentAmount, 1);
 
     const x = d3.scaleTime().domain([start, endDate]).range([margin.left, margin.left + innerWidth]);
     const y = d3.scaleLinear().domain([0, yMax]).range([margin.top + innerHeight, margin.top]);
@@ -237,6 +250,21 @@ export default class extends Controller {
       .attr("stroke-linecap", "round")
       .attr("d", line);
 
+    if (requiredSeries.length) {
+      // Light dashed line: the path needed to hit the target. Sits behind
+      // the projection so the user sees both the goal and the ask.
+      svg
+        .append("path")
+        .datum(requiredSeries)
+        .attr("fill", "none")
+        .attr("stroke", "var(--color-green-600)")
+        .attr("stroke-width", 1.2)
+        .attr("stroke-linecap", "round")
+        .attr("stroke-dasharray", "2 4")
+        .attr("opacity", 0.45)
+        .attr("d", line);
+    }
+
     if (projectionSeries.length) {
       const willHit = projectionEnd >= targetAmount;
       const projColor = willHit ? "var(--color-green-600)" : "var(--color-yellow-600)";
@@ -278,6 +306,42 @@ export default class extends Controller {
           .attr("font-size", 10)
           .attr("fill", textSecondary)
           .text(labelText);
+      }
+    }
+
+    if (pendingPledgeAmount > 0 && target) {
+      const willHit = projectionEnd >= targetAmount;
+      const pendingColor = willHit ? "var(--color-green-600)" : "var(--color-yellow-600)";
+      const pendingTop = Math.min(yMax, currentAmount + pendingPledgeAmount);
+      svg
+        .append("line")
+        .attr("x1", x(today))
+        .attr("x2", x(today))
+        .attr("y1", y(currentAmount))
+        .attr("y2", y(pendingTop))
+        .attr("stroke", pendingColor)
+        .attr("stroke-width", 3)
+        .attr("stroke-linecap", "round")
+        .attr("opacity", 0.4);
+
+      svg
+        .append("circle")
+        .attr("cx", x(today))
+        .attr("cy", y(pendingTop))
+        .attr("r", 5)
+        .attr("fill", containerBg)
+        .attr("stroke", pendingColor)
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "2 2");
+
+      if (innerWidth >= 320) {
+        svg
+          .append("text")
+          .attr("x", x(today) + 10)
+          .attr("y", y(pendingTop) + 4)
+          .attr("font-size", 10)
+          .attr("fill", textSecondary)
+          .text(`+ pending ${this._fmtMoneyShort(pendingPledgeAmount, data.currency)}`);
       }
     }
 

@@ -121,35 +121,6 @@
 
         <p class="text-sm text-primary tabular-nums border-t border-subdued pt-3" data-goal-stepper-target="reviewSuggested">—</p>
       </div>
-
-      <details class="border border-subdued rounded-lg group" data-goal-stepper-target="initialContributionToggle">
-        <summary class="flex items-center gap-3 p-4 cursor-pointer list-none">
-          <%= render DS::FilledIcon.new(variant: :container, icon: "zap", size: "md", rounded: false) %>
-          <div class="flex-1">
-            <p class="text-sm font-medium text-primary"><%= t("goals.form_stepper.step2.add_initial_contribution") %></p>
-            <p class="text-xs text-secondary"><%= t("goals.form_stepper.step2.add_initial_contribution_sub") %></p>
-          </div>
-          <%= icon("chevron-down", size: "sm") %>
-        </summary>
-        <div class="px-4 pb-4 space-y-3">
-          <%= f.money_field :initial_contribution_amount,
-                            label: t("goals.form_stepper.step2.initial_amount"),
-                            hide_currency: true,
-                            amount_data: { goal_stepper_target: "initialContributionAmount" } %>
-          <div class="form-field">
-            <div class="form-field__body">
-              <%= label_tag "goal[initial_contribution_account_id]",
-                           t("goals.form_stepper.step2.initial_account"),
-                           class: "form-field__label" %>
-              <%= select_tag "goal[initial_contribution_account_id]",
-                             options_for_select([]),
-                             include_blank: t("goals.form_stepper.step2.select_account"),
-                             data: { goal_stepper_target: "initialContributionAccountSelect" },
-                             class: "form-field__input" %>
-            </div>
-          </div>
-        </div>
-      </details>
     </section>
 
     <div class="flex items-center pt-2">

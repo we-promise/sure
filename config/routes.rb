@@ -307,7 +307,11 @@ Rails.application.routes.draw do
       patch :unarchive
     end
 
-    resources :contributions, only: %i[new create destroy], controller: "goal_contributions"
+    resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
+      member do
+        patch :extend
+      end
+    end
   end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do

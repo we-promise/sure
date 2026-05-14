@@ -44,13 +44,26 @@ class Family < ApplicationRecord
   has_many :budget_categories, through: :budgets
 
   has_many :goals, dependent: :destroy
-  has_many :goal_contributions, through: :goals
 
-  # Sum of contribution amounts within the given date range, returned as
-  # a BigDecimal in the family's primary currency. Powers the savings
-  # goals "Contributed · last 30d" KPI.
-  def contribution_velocity(range:)
-    goal_contributions.where(contributed_at: range).sum(:amount).to_d
+  # Net non-transfer inflow into every depository account linked to any goal,
+  # over the trailing window. Entry amount convention in Sure: inflow is
+  # negative, so we flip the sign for the user-facing "contributed" value.
+  def savings_inflow_velocity(days: 30)
+    account_ids = Account
+      .joins(:goal_accounts)
+      .where(goal_accounts: { goal_id: goals.select(:id) })
+      .distinct
+      .pluck(:id)
+    return 0 if account_ids.empty?
+
+    net = Entry
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(account_id: account_ids, date: days.days.ago.to_date..Date.current)
+      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where(excluded: false)
+      .sum(:amount)
+
+    (-net.to_d).clamp(0, Float::INFINITY)
   end
 
   has_many :llm_usages, dependent: :destroy

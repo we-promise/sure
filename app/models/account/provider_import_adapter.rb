@@ -205,6 +205,11 @@ class Account::ProviderImportAdapter
       entry.save!
       entry.transaction.save! if entry.transaction.changed?
 
+      # Auto-resolve any open Goal pledges on this account whose tolerance
+      # window matches the posted transaction. Idempotent via the partial-unique
+      # index on transactions.extra->'goal'->>'pledge_id'.
+      GoalPledge::Reconciler.new(entry).run unless incoming_pending
+
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
       if is_new_posted

@@ -22,4 +22,4 @@ en:
               currency_mismatch: All linked accounts must share the same currency.
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
             currency:
-              locked_after_contributions: Can't change the currency after a goal has contributions.
+              locked_after_linked: Can't change the currency after the goal is linked to accounts.

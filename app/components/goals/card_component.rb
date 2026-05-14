@@ -71,7 +71,7 @@ class Goals::CardComponent < ApplicationComponent
   def pace_line
     return nil if goal.archived? || goal.paused? || goal.completed? || goal.status == :reached
 
-    avg = Money.new(goal.average_monthly_contribution, goal.currency).format
+    avg = goal.pace_money.format
     target = goal.monthly_target_amount ? Money.new(goal.monthly_target_amount, goal.currency).format : nil
     if target
       I18n.t("goals.goal_card.pace_with_target", avg: avg, target: target)
@@ -93,9 +93,9 @@ class Goals::CardComponent < ApplicationComponent
     elsif goal.status == :no_target_date
       I18n.t("goals.goal_card.footer_no_deadline")
     else
-      days = goal.last_contribution_days_ago
+      days = goal.last_matched_pledge_days_ago
       if days.nil?
-        I18n.t("goals.goal_card.footer_no_contributions")
+        I18n.t("goals.goal_card.footer_no_pledges")
       elsif days.zero?
         I18n.t("goals.goal_card.footer_last_today")
       else

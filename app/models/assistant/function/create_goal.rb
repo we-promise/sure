@@ -53,15 +53,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         linked_account_names: {
           type: "array",
           items: { type: "string" },
-          description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list."
-        },
-        initial_contribution: {
-          type: "object",
-          description: "Optional starting contribution at creation time.",
-          properties: {
-            amount: { type: "number" },
-            source_account_name: { type: "string", description: "Must be one of the linked_account_names." }
-          }
+          description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
         },
         notes: {
           type: "string",
@@ -76,7 +68,6 @@ class Assistant::Function::CreateGoal < Assistant::Function
     target_amount = parse_decimal(params["target_amount"])
     target_date = parse_date(params["target_date"])
     linked_account_names = Array(params["linked_account_names"]).map { |n| n.to_s.strip }.reject(&:blank?)
-    initial = params["initial_contribution"]
     notes = params["notes"].to_s.strip
 
     return error("name_required", "Please provide a name for the goal.") if name.blank?
@@ -122,8 +113,6 @@ class Assistant::Function::CreateGoal < Assistant::Function
       )
       matched.each { |a| goal.goal_accounts.build(account: a) }
       goal.save!
-
-      create_initial_contribution!(goal, matched, initial)
     end
 
     {
@@ -142,24 +131,6 @@ class Assistant::Function::CreateGoal < Assistant::Function
   end
 
   private
-    def create_initial_contribution!(goal, matched_accounts, initial)
-      return unless initial.is_a?(Hash)
-
-      amount = parse_decimal(initial["amount"])
-      return unless amount && amount > 0
-
-      source = matched_accounts.find { |a| a.name == initial["source_account_name"].to_s }
-      raise ActiveRecord::RecordInvalid.new(goal) unless source
-
-      goal.goal_contributions.create!(
-        account: source,
-        amount: amount,
-        currency: goal.currency,
-        source: "initial",
-        contributed_at: Date.current
-      )
-    end
-
     def parse_decimal(value)
       return nil if value.nil?
       BigDecimal(value.to_s)

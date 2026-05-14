@@ -49,25 +49,6 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to goal_path(goal)
   end
 
-  test "create with initial contribution writes the contribution" do
-    assert_difference -> { GoalContribution.count } => 1 do
-      post goals_url, params: {
-        goal: {
-          name: "Goal with initial",
-          target_amount: "1000",
-          color: "#4da568",
-          account_ids: [ @depository.id ],
-          initial_contribution_amount: "50",
-          initial_contribution_account_id: @depository.id
-        }
-      }
-    end
-
-    contribution = GoalContribution.order(created_at: :desc).first
-    assert_equal "initial", contribution.source
-    assert_equal 50, contribution.amount.to_i
-  end
-
   test "create rejects missing account_ids" do
     assert_no_difference "Goal.count" do
       post goals_url, params: {

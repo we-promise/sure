@@ -24,7 +24,7 @@
         %>
         <%= primary_parts.join(" · ") %>
       </p>
-      <% last_days = @goal.last_contribution_days_ago %>
+      <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
         <p class="text-xs text-subdued mt-0.5">
           <%= last_days.zero? ? t("goals.goal_card.footer_last_today") : t("goals.goal_card.footer_last_days", count: last_days) %>
@@ -42,10 +42,10 @@
       ) %>
       <% unless @goal.completed? || @goal.status == :reached %>
         <%= render DS::Link.new(
-          text: t(".add_contribution"),
+          text: t(@goal.pledge_action_label_key),
           variant: "primary",
-          href: new_goal_contribution_path(@goal),
-          icon: "plus",
+          href: new_goal_pledge_path(@goal),
+          icon: "arrow-up-right",
           frame: :modal
         ) %>
       <% end %>
@@ -102,8 +102,11 @@
     </div>
   </header>
 
+  <% @open_pledges.each do |pledge| %>
+    <%= render "pending_pledge_banner", pledge: pledge %>
+  <% end %>
+
   <% if @goal.paused? %>
-    <%# Paused banner %>
     <%= render DS::Alert.new(variant: "info", title: t("goals.show.paused_banner.title")) do %>
       <p class="text-secondary"><%= t("goals.show.paused_banner.body") %></p>
       <div class="mt-2">
@@ -117,7 +120,6 @@
       </div>
     <% end %>
   <% elsif @goal.archived? %>
-    <%# Archived banner %>
     <%= render DS::Alert.new(variant: "info", title: t("goals.show.archived_banner.title")) do %>
       <p class="text-secondary"><%= t("goals.show.archived_banner.body") %></p>
       <% if @goal.may_unarchive? %>
@@ -133,26 +135,24 @@
       <% end %>
     <% end %>
   <% elsif @goal.status == :behind && @goal.monthly_target_amount %>
-    <%# Catch-up callout %>
     <% catch_up_money = Money.new(@goal.monthly_target_amount, @goal.currency) %>
-    <% catch_up_delta = @goal.monthly_target_amount.to_d - @stats[:avg_monthly].to_d %>
-    <% catch_up_delta_money = Money.new(catch_up_delta, @goal.currency) %>
-    <% catch_up_avg_money = Money.new(@stats[:avg_monthly], @goal.currency) %>
+    <% catch_up_pace_money = @goal.pace_money %>
+    <% catch_up_delta_money = Money.new([ @goal.monthly_target_amount.to_d - @goal.pace.to_d, 0 ].max, @goal.currency) %>
     <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: catch_up_money.format)) do %>
       <p class="text-secondary">
         <% if @goal.target_date %>
-          <%= t("goals.show.catch_up.body_with_date", avg: catch_up_avg_money.format, delta: catch_up_delta_money.format, date: I18n.l(@goal.target_date, format: :long)) %>
+          <%= t("goals.show.catch_up.body_with_date", avg: catch_up_pace_money.format, delta: catch_up_delta_money.format, date: I18n.l(@goal.target_date, format: :long)) %>
         <% else %>
-          <%= t("goals.show.catch_up.body", avg: catch_up_avg_money.format, delta: catch_up_delta_money.format) %>
+          <%= t("goals.show.catch_up.body", avg: catch_up_pace_money.format, delta: catch_up_delta_money.format) %>
         <% end %>
       </p>
       <div class="mt-2 flex items-center gap-3 flex-wrap">
         <%= render DS::Link.new(
-          text: t("goals.show.catch_up.cta", amount: catch_up_money.format),
+          text: t(@goal.pledge_action_label_key),
           variant: "primary",
           size: "sm",
-          href: new_goal_contribution_path(@goal, amount: @goal.monthly_target_amount.to_f),
-          icon: "plus",
+          href: new_goal_pledge_path(@goal, amount: @goal.monthly_target_amount.to_f),
+          icon: "arrow-up-right",
           frame: :modal
         ) %>
         <%= link_to t("goals.show.catch_up.adjust_target_cta"),
@@ -176,8 +176,27 @@
       </p>
     </div>
 
+    <%
+      pace = @goal.pace
+      required = @goal.monthly_target_amount
+      projection_summary = if @goal.completed? || @goal.progress_percent >= 100
+        t("goals.show.projection.reached")
+      elsif @goal.target_date.nil?
+        t("goals.show.projection.no_target_date")
+      elsif required && pace.to_d < required.to_d
+        t("goals.show.projection.behind",
+          current: Money.new(pace, @goal.currency).format,
+          required: Money.new(required, @goal.currency).format)
+      elsif pace.positive?
+        months = (@goal.remaining_amount.to_d / pace.to_d).ceil
+        t("goals.show.projection.on_track",
+          date: (Date.current >> months.to_i).strftime("%b %Y"))
+      else
+        t("goals.show.projection.no_pace")
+      end
+    %>
+
     <% if @goal.archived? || @goal.paused? %>
-      <%# Paused / archived: pace + projection are misleading. Show a static recap card. %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
         <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
           <%= icon(@goal.archived? ? "archive" : "pause", size: "2xl") %>
@@ -190,7 +209,6 @@
         </p>
       </div>
     <% elsif @goal.completed? || @goal.status == :reached %>
-      <%# Reached celebration card %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
         <div class="w-16 h-16 rounded-full bg-green-500/10 inline-flex items-center justify-center text-success mb-3">
           <%= icon("party-popper", size: "2xl", color: "success") %>
@@ -209,9 +227,9 @@
           </div>
         <% end %>
       </div>
-    <% elsif @goal.goal_contributions.empty? %>
-      <%# No contributions yet: render an inline "add your first" CTA card
-          instead of a flat-at-$0 chart that looks broken. %>
+    <% elsif @goal.current_balance.to_d.zero? && @goal.pace.to_d.zero? %>
+      <%# No movement yet on the linked account: render an inline "make your first transfer"
+          CTA card instead of a flat-at-$0 chart that looks broken. %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
         <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
           <%= icon("piggy-bank", size: "2xl") %>
@@ -220,11 +238,11 @@
         <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".empty.body") %></p>
         <div class="mt-4">
           <%= render DS::Link.new(
-            text: t(".empty.cta"),
+            text: t(@goal.pledge_action_label_key),
             variant: "primary",
             size: "sm",
-            href: new_goal_contribution_path(@goal),
-            icon: "plus",
+            href: new_goal_pledge_path(@goal),
+            icon: "arrow-up-right",
             frame: :modal
           ) %>
         </div>
@@ -234,7 +252,7 @@
         <div class="flex items-start justify-between mb-2 gap-3">
           <div class="min-w-0">
             <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
-            <p class="text-xs text-secondary mt-0.5"><%= @stats[:projection_summary].html_safe %></p>
+            <p class="text-xs text-secondary mt-0.5"><%= projection_summary.html_safe %></p>
           </div>
           <% projection_color = @goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
           <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
@@ -254,7 +272,7 @@
              data-controller="goal-projection-chart"
              data-goal-projection-chart-data-value="<%= @goal.projection_payload.to_json %>"
              data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: @goal.name) %>"
-             data-goal-projection-chart-aria-description-value="<%= strip_tags(@stats[:projection_summary]) %>"></div>
+             data-goal-projection-chart-aria-description-value="<%= strip_tags(projection_summary) %>"></div>
         <% if @goal.target_date.nil? %>
           <div class="mt-3 flex items-center gap-2 text-xs text-secondary">
             <span class="text-subdued"><%= icon("calendar-plus", size: "sm") %></span>
@@ -269,22 +287,9 @@
     <% end %>
   </section>
 
-  <% unless @contributions.empty? %>
-    <%# Funding breakdown — balance-sheet-style widget (heading · total /
-        thin bar / dot legend / weight table). %>
+  <% if @goal.linked_accounts.any? %>
     <section class="bg-container rounded-xl shadow-border-xs p-5">
-      <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal, rows: @funding_breakdown) %>
-    </section>
-
-    <%# Contributions — chronological list, full width. %>
-    <section class="bg-container rounded-xl shadow-border-xs p-5">
-      <div class="flex items-center mb-4">
-        <h2 class="text-sm font-medium text-primary"><%= t(".contributions_heading") %></h2>
-        <span class="ml-2 text-xs text-subdued tabular-nums"><%= @contributions.size %></span>
-      </div>
-      <div class="max-h-[420px] overflow-y-auto overflow-x-hidden scrollbar">
-        <%= render "contributions_list", contributions: @contributions %>
-      </div>
+      <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal) %>
     </section>
   <% end %>
 
