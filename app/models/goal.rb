@@ -179,26 +179,48 @@ class Goal < ApplicationRecord
 
   # 90-day balance trajectory of linked accounts. Used by the projection chart
   # to render the saved-to-date line. Returns an empty series when the linked
-  # account lacks ≥30 days of history.
+  # account lacks ≥30 days of history. Ships pre-formatted labels for the
+  # static chart annotations (target line, projection-end / shortfall,
+  # pending-pledge badge) so the Stimulus controller only has to render
+  # strings server-side rather than build them with its own Intl calls.
   def projection_payload
     series_values = balance_series_values
     saved_series = series_values.map { |v| { date: v.date.to_s, value: v.value.amount.to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
+    pending = open_pledges.sum(:amount).to_d
+    target_amt = target_amount.to_d
+    proj_end = projection_end_amount
 
     {
       saved_series: saved_series,
       start_date: earliest.to_s,
       today: Date.current.to_s,
       target_date: target_date&.to_s,
-      target_amount: target_amount.to_f,
+      target_amount: target_amt.to_f,
+      target_amount_label: Money.new(target_amt, currency).format(precision: 0),
+      target_amount_short_label: short_money(target_amt, currency),
       current_amount: current_balance.to_f,
       avg_monthly: pace.to_f,
       required_monthly: monthly_target_amount.to_f,
       currency: currency,
       status: status.to_s,
-      pending_pledge_amount: open_pledges.sum(:amount).to_f
+      pending_pledge_amount: pending.to_f,
+      pending_pledge_label_short: short_money(pending, currency),
+      projection_end_value: proj_end.to_f,
+      projection_end_label: Money.new(proj_end, currency).format(precision: 0),
+      projection_shortfall_label: (target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
     }
+  end
+
+  # Projected balance at the target_date given the current pace. Mirrors
+  # the JS calculation so the server can pre-format the chart annotation
+  # without re-rendering after each Stimulus draw.
+  def projection_end_amount
+    return current_balance.to_d if target_date.nil?
+    months = ((target_date - Date.current).to_f / 30.44).clamp(0.0, Float::INFINITY)
+    projected = current_balance.to_d + (pace.to_d * months)
+    [ current_balance.to_d, projected ].max
   end
 
   def display_status
@@ -300,7 +322,7 @@ class Goal < ApplicationRecord
                         amount: target_amount_money.format(precision: 0),
                         date: I18n.l(target_date, format: :long))
         if days > 0 && !(completed? || status == :reached)
-          parts << I18n.t("goals.goal_card.days_left", count: days).split(" · ").first
+          parts << I18n.t("goals.goal_card.days_left", count: days)
         end
       end
     else
@@ -349,6 +371,24 @@ class Goal < ApplicationRecord
   end
 
   private
+    # K/M shorthand for narrow chart annotations (axis ticks, projection
+    # short-form, pending-pledge badge). Locale-aware currency symbol via
+    # Money so the chart matches the rest of the app for EUR/GBP families.
+    def short_money(amount, code)
+      amount_f = amount.to_f
+      symbol = Money.new(0, code).symbol
+      abs = amount_f.abs
+      if abs >= 1_000_000
+        short = (amount_f / 1_000_000.0).round(1)
+        "#{symbol}#{short == short.to_i ? short.to_i : short}M"
+      elsif abs >= 1_000
+        short = (amount_f / 1_000.0).round(1)
+        "#{symbol}#{short == short.to_i ? short.to_i : short}K"
+      else
+        "#{symbol}#{amount_f.round.to_i.to_s.reverse.gsub(/(\d{3})(?=\d)/, '\1,').reverse}"
+      end
+    end
+
     def balance_series_values
       return [] if linked_accounts.empty?
 

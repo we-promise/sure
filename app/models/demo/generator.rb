@@ -1279,7 +1279,14 @@ class Demo::Generator
     end
 
     def generate_goals!(family)
-      depository_accounts = family.accounts.where(accountable_type: "Depository").visible.to_a
+      # Order so primary/secondary picks stay stable across reseeds — the
+      # state-coverage matrix below routes goals to specific accounts to
+      # surface every status branch, so DB return order can't pick.
+      depository_accounts = family.accounts
+                                  .where(accountable_type: "Depository")
+                                  .visible
+                                  .order(:created_at, :id)
+                                  .to_a
       return if depository_accounts.empty?
 
       currency = depository_accounts.first.currency

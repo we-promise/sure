@@ -81,9 +81,18 @@ export default class extends Controller {
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
-    const start = new Date(data.start_date);
-    const today = new Date(data.today);
-    const target = data.target_date ? new Date(data.target_date) : null;
+    // Date-only payload strings ("YYYY-MM-DD") parse as UTC midnight in
+    // `new Date(str)`, which shifts displayed days back one for users west
+    // of Greenwich. Parse components so today/target/saved_series sit on
+    // local-midnight.
+    const parseLocalDate = (s) => {
+      if (!s) return null;
+      const [ y, m, d ] = s.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const start = parseLocalDate(data.start_date);
+    const today = parseLocalDate(data.today);
+    const target = parseLocalDate(data.target_date);
     const targetAmount = data.target_amount || 0;
     const currentAmount = data.current_amount || 0;
     const avgMonthly = data.avg_monthly || 0;
@@ -100,7 +109,7 @@ export default class extends Controller {
     // Without this, the snapshot in `balances` for today could differ from
     // the live read (sync timing) and the chart showed a vertical jump.
     const rawSavedSeries = (data.saved_series || [])
-      .map((p) => ({ date: new Date(p.date), value: p.value }))
+      .map((p) => ({ date: parseLocalDate(p.date), value: p.value }))
       .filter((p) => p.date < today);
     const firstContribDate = rawSavedSeries[0]?.date;
     const savedSeries = [];
@@ -219,7 +228,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
-          .text(`Target · ${this._fmtMoneyShort(targetAmount, data.currency)}`);
+          .text(`Target · ${data.target_amount_short_label}`);
       } else {
         // Plenty of room: keep the right-side full-format label.
         svg
@@ -229,7 +238,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
-          .text(`Target · ${this._fmtMoney(targetAmount, data.currency)}`);
+          .text(`Target · ${data.target_amount_label}`);
       }
     }
 
@@ -309,20 +318,22 @@ export default class extends Controller {
       const collidesWithTargetLabel = targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
 
       if (innerWidth >= 320 && !(willHit && collidesWithTargetLabel)) {
-        // Full Intl.NumberFormat (no K/M shorthand) so the chart annotation
-        // matches the rest of the page's monetary readouts ("$160,634
-        // short" reads cleanly next to "$26,621/mo to catch up").
+        // Server-rendered labels: projection_end_label is the full-format
+        // currency for the on-track endpoint, projection_shortfall_label
+        // is the "$X short" string when we fall short.
         const labelText = willHit
-          ? this._fmtMoney(projectionEnd, data.currency)
-          : `${this._fmtMoney(targetAmount - projectionEnd, data.currency)} short`;
-        svg
-          .append("text")
-          .attr("x", x(target) - 8)
-          .attr("y", y(projectionEnd) - 8)
-          .attr("text-anchor", "end")
-          .attr("font-size", 12)
-          .attr("fill", textSecondary)
-          .text(labelText);
+          ? data.projection_end_label
+          : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
+        if (labelText) {
+          svg
+            .append("text")
+            .attr("x", x(target) - 8)
+            .attr("y", y(projectionEnd) - 8)
+            .attr("text-anchor", "end")
+            .attr("font-size", 12)
+            .attr("fill", textSecondary)
+            .text(labelText);
+        }
       }
     }
 
@@ -358,7 +369,7 @@ export default class extends Controller {
           .attr("y", y(pendingTop) + 4)
           .attr("font-size", 12)
           .attr("fill", textSecondary)
-          .text(`+ pending ${this._fmtMoneyShort(pendingPledgeAmount, data.currency)}`);
+          .text(`+ pending ${data.pending_pledge_label_short}`);
       }
     }
 
