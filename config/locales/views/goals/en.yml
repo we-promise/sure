@@ -127,6 +127,7 @@ en:
         heading: Projection
         legend_saved: Saved
         legend_projection: Projection
+        legend_required: Required
         reached: Goal reached. Nice work.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No inflow yet. Make a transfer or update the balance to start a projection.

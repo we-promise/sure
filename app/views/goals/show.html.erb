@@ -243,6 +243,12 @@
                 <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="<%= projection_color %>" stroke-width="2" stroke-dasharray="3 3" /></svg>
                 <%= t(".projection.legend_projection") %>
               </span>
+              <% if @goal.monthly_target_amount.to_d.positive? && @goal.remaining_amount.to_d.positive? %>
+                <span class="inline-flex items-center gap-1.5">
+                  <svg width="18" height="6" class="text-secondary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="2 4" opacity="0.5" /></svg>
+                  <%= t(".projection.legend_required") %>
+                </span>
+              <% end %>
             <% end %>
           </div>
         </div>
