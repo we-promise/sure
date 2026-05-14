@@ -7,7 +7,7 @@
   <div class="space-y-4">
     <h2 class="text-lg font-medium text-primary"><%= t("goals.show.funding_accounts_heading") %></h2>
 
-    <%# Distribution bar — proportional weight of each account in this goal.
+    <%# Distribution bar. proportional weight of each account in this goal.
         Color encoding is shared with the row avatar so the bar reads as a
         legend by itself; no separate dot/name/% strip needed. %>
     <% if rows.size > 1 && total.positive? %>
@@ -19,7 +19,7 @@
       </div>
     <% end %>
 
-    <%# Per-account detail — avatar / name+type / % / last-30d + last-90d %>
+    <%# Per-account detail. avatar / name+type / % / last-30d + last-90d %>
     <div class="bg-container-inset rounded-xl p-1">
       <div class="rounded-lg bg-container">
         <% rows.each_with_index do |row, idx| %>

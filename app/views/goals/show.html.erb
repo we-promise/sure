@@ -148,10 +148,10 @@
       <% end %>
     <% end %>
   <% elsif @goal.status == :behind && @goal.monthly_target_amount && @goal.catch_up_delta_money.amount.positive? %>
-    <%# Title uses the *delta* — the amount the user must add to current pace
+    <%# Title uses the *delta*. the amount the user must add to current pace
         to make the date, *after* subtracting open pledges. When pending
         pledges already cover the gap, `catch_up_delta_money` returns zero
-        and this branch suppresses — no "Save $0/mo" demand. Pre-fill the
+        and this branch suppresses. no "Save $0/mo" demand. Pre-fill the
         pledge CTA with the delta too, so submitting once funds the gap
         instead of double-counting on top of pace and pending. %>
     <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: @goal.catch_up_delta_money.format(precision: 0))) do %>

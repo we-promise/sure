@@ -10,7 +10,7 @@ class Goals::AvatarComponent < ApplicationComponent
 
   # Deterministic color pick from the palette so the same string maps to
   # the same color across processes (Ruby's String#hash is randomized per
-  # boot for DoS protection — not stable enough for visual identity).
+  # boot for DoS protection. not stable enough for visual identity).
   def self.color_for(name)
     return PALETTE.first if name.blank?
     PALETTE[Digest::MD5.hexdigest(name).to_i(16) % PALETTE.size]
@@ -26,7 +26,7 @@ class Goals::AvatarComponent < ApplicationComponent
 
   attr_reader :color
 
-  # Don't expose @icon via attr_reader — `icon` collides with the global
+  # Don't expose @icon via attr_reader. `icon` collides with the global
   # icon helper used inside the template.
   def icon_name
     @icon

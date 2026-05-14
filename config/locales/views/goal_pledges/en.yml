@@ -8,8 +8,8 @@ en:
       account_label: Into account
       submit: Record pledge
       preview_zero: "Currently {current} of {target} saved."
-      preview_nonzero: "Reaches {percent}% — {newTotal} of {target}."
-      preview_reached: "Hits your {target} target — goal reached."
+      preview_nonzero: "Reaches {percent}%, {newTotal} of {target}."
+      preview_reached: "Hits your {target} target. Goal reached."
     create:
       success: Pledge recorded. Sure will confirm it on the next sync.
     renew:

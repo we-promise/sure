@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus";
 //
 // Single <form> with two panels. Step 1 collects identity (name, amount,
 // date, color, notes, linked accounts). Step 2 reviews and submits. All
-// state lives in the DOM — no half-records, single POST.
+// state lives in the DOM. No half-records, single POST.
 export default class extends Controller {
   static targets = [
     "step1Panel",
@@ -114,7 +114,7 @@ export default class extends Controller {
     }
     if (!this.hasAvatarPreviewTarget || !this.hasNameInputTarget) return;
 
-    // If the user has explicitly picked an icon, leave it alone — name
+    // If the user has explicitly picked an icon, leave it alone. Name
     // changes shouldn't undo an explicit choice.
     const iconPicked = this.element.querySelector('input[name="goal[icon]"]:checked');
     if (iconPicked) return;
@@ -123,7 +123,7 @@ export default class extends Controller {
     if (name) {
       this.avatarPreviewTarget.textContent = name.charAt(0).toUpperCase();
     } else if (this._defaultAvatarHTML) {
-      // Captured at connect — restore the default "target" icon from the
+      // Captured at connect. Restore the default "target" icon from the
       // server-rendered template, not a "?" character.
       this.avatarPreviewTarget.innerHTML = this._defaultAvatarHTML;
     }
@@ -229,7 +229,7 @@ export default class extends Controller {
   updateReview() {
     if (!this.hasReviewNameTarget) return;
 
-    const name = this.element.querySelector('input[name="goal[name]"]')?.value || "—";
+    const name = this.element.querySelector('input[name="goal[name]"]')?.value || "…";
     const amountInput = this.element.querySelector('input[name="goal[target_amount]"]');
     const amount = amountInput?.value ? Number.parseFloat(amountInput.value) : 0;
     const dateInput = this.element.querySelector('input[type="date"][name="goal[target_date]"]');
@@ -239,7 +239,7 @@ export default class extends Controller {
     this.reviewNameTarget.textContent = name;
 
     if (this.hasReviewSummaryTarget) {
-      const formattedAmount = amount > 0 ? this.#money(amount) : "—";
+      const formattedAmount = amount > 0 ? this.#money(amount) : "…";
       const template = dateValue ? this.summaryWithDateValue : this.summaryNoDateValue;
       this.reviewSummaryTarget.textContent = template
         .replace("{amount}", formattedAmount)
@@ -260,7 +260,7 @@ export default class extends Controller {
       } else if (amount > 0 && checked.length > 0) {
         this.reviewSuggestedTarget.textContent = this.suggestedNoDateValue;
       } else {
-        this.reviewSuggestedTarget.textContent = "—";
+        this.reviewSuggestedTarget.textContent = "…";
       }
     }
   }

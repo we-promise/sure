@@ -7,7 +7,7 @@
   <% if @counts["all"].zero? %>
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
-    <%# KPI strip — Contributed last 30d (with prior-30d comparison) / Needs / On track %>
+    <%# KPI strip. Contributed last 30d (with prior-30d comparison) / Needs / On track %>
     <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
         <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.contributed_label") %></p>

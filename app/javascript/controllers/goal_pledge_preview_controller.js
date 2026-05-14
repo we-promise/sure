@@ -28,7 +28,7 @@ export default class extends Controller {
   // Helper text reacts to the currently-selected account, not the goal as a
   // whole. A mixed-funding goal (one connected account + one manual) used to
   // paint the "connected" helper even if the user then picked the manual
-  // account from the dropdown — the saved pledge would be `kind: manual_save`
+  // account from the dropdown; the saved pledge would be `kind: manual_save`
   // (correct, per `kind_for_account` in the controller) but the helper read
   // "transfer-style" copy until submission.
   accountChanged() {

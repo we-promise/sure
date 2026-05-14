@@ -27,7 +27,7 @@ class GoalPledge < ApplicationRecord
   monetize :amount
 
   # Newest first. Used by the show page to render pending-pledge banners in
-  # "most-recent on top" order. Not actually chronological — kept for clarity.
+  # "most-recent on top" order. Not actually chronological; kept for clarity.
   scope :reverse_chronological, -> { order(created_at: :desc) }
   scope :open_and_expired_now, -> {
     where(status: "open").where("expires_at < ?", Time.current)

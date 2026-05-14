@@ -38,9 +38,9 @@ export default class extends Controller {
     }
     // After a Turbo render (eg. after saving the goal from the edit modal
     // and redirecting back to show), the chart container can be left empty
-    // — its children are wiped by the morph but connect() was already
-    // called and ResizeObserver doesn't fire because the size didn't
-    // change. Listen for the render event so we redraw when needed.
+    // its children may be wiped by the morph even though connect() was
+    // already called, and ResizeObserver doesn't fire because the size
+    // didn't change. Listen for the render event so we redraw when needed.
     this._onTurboRender = () => {
       if (!this.element.querySelector("svg")) this._draw();
     };
@@ -139,7 +139,7 @@ export default class extends Controller {
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("preserveAspectRatio", "none");
 
-    // Drop the <title> child — browsers render it as a native hover tooltip
+    // Drop the <title> child; browsers render it as a native hover tooltip
     // that fights with our own crosshair tooltip. aria-label gives the same
     // SR accessible name without the tooltip side-effect.
     const descId = `chart-desc-${this._id()}`;
@@ -209,7 +209,7 @@ export default class extends Controller {
           .attr("fill", textPrimary)
           .text(`Target · ${this._fmtMoneyShort(targetAmount, data.currency)}`);
       } else {
-        // Plenty of room — keep the right-side full-format label.
+        // Plenty of room: keep the right-side full-format label.
         svg
           .append("text")
           .attr("x", margin.left + innerWidth - 4)
@@ -252,7 +252,7 @@ export default class extends Controller {
 
     if (requiredSeries.length) {
       // Light dashed reference line: the path needed to hit the target.
-      // Neutral stroke (text-secondary) instead of green — both the
+      // Neutral stroke (text-secondary) instead of green: both the
       // projection and the required line are otherwise green when the
       // goal is on track, and the two would visually merge.
       svg
@@ -291,7 +291,7 @@ export default class extends Controller {
 
       // Suppress the projection-end label when it would visually collide
       // with the target label above. In a barely-on-track case the dot
-      // already conveys "you'll hit the target" — duplicating "$2.4K"
+      // already conveys "you'll hit the target". duplicating "$2.4K"
       // beside "Target · $2,400" adds noise.
       const projDotY = y(projectionEnd);
       const collidesWithTargetLabel = targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
@@ -407,7 +407,7 @@ export default class extends Controller {
       }
     }
 
-    // Hover interactivity — crosshair + dots + tooltip on pointermove.
+    // Hover interactivity: crosshair + dots + tooltip on pointermove.
     // Transparent rect catches pointer events across the plot area.
     const crosshair = svg
       .append("line")

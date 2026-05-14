@@ -128,11 +128,11 @@ class Goal < ApplicationRecord
   end
 
   # 90-day rolling monthly pace: net inflow into linked accounts divided by
-  # three months. Transfers between linked accounts net to zero — both sides
-  # land inside this account set. Transfers from outside (e.g. checking →
-  # linked savings) net positive, which is the behaviour we want: the user
-  # taps "I just transferred…", the transfer arrives, balance goes up,
-  # pace goes up, status flips off "behind". Excludes user-flagged-excluded
+  # three months. Transfers between linked accounts net to zero (both sides
+  # land inside this account set). Transfers from outside (e.g. checking
+  # into linked savings) net positive, which is the behaviour we want: the
+  # user records a pledge, the transfer arrives, balance goes up, pace
+  # goes up, status flips off "behind". Excludes user-flagged-excluded
   # entries. Entry amount sign convention in Sure: inflow is negative.
   def pace
     return @pace if defined?(@pace)
@@ -255,7 +255,7 @@ class Goal < ApplicationRecord
   end
 
   # True when any linked account is wired to a live sync provider (Plaid,
-  # SimpleFIN, or any AccountProvider — Brex, Enable Banking, IBKR, Kraken,
+  # SimpleFIN, or any AccountProvider. Brex, Enable Banking, IBKR, Kraken,
   # SnapTrade, Lunchflow). Drives the pledge-create copy: connected accounts
   # get the "I just transferred…" path; manual-only accounts get "I just
   # saved…" so users aren't told to wait for a sync that won't happen.
@@ -296,7 +296,7 @@ class Goal < ApplicationRecord
   # to hit the target on time. Pending pledges are approximate (one-off
   # amounts treated as this-month inflow) but excluding them produced the
   # bad case where the alert demanded $X/mo while the user had already
-  # pledged $X — telling them to act on top of the action they just took.
+  # pledged $X, telling them to act on top of the action they just took.
   # Clamps at zero so a fully-covered goal doesn't surface a $0 demand.
   def catch_up_delta_money
     return Money.new(0, currency) if monthly_target_amount.nil?
@@ -317,7 +317,7 @@ class Goal < ApplicationRecord
       ).balance_series.values
     rescue StandardError => e
       # Degrade gracefully (chart drops to target-line-only) but surface
-      # the failure — silent fallbacks here masked real Builder bugs.
+      # the failure; silent fallbacks here masked real Builder bugs.
       Rails.logger.error("Goal##{id} balance series failed: #{e.class}: #{e.message}")
       Sentry.capture_exception(e) if defined?(Sentry)
       []
