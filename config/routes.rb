@@ -288,6 +288,7 @@ Rails.application.routes.draw do
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
     get :print, on: :collection
+    get :picker, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
@@ -444,6 +445,14 @@ Rails.application.routes.draw do
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
+  end
+
+  resources :account_statements, only: %i[index show create update destroy] do
+    member do
+      patch :link
+      patch :unlink
+      patch :reject
+    end
   end
 
   # Convenience routes for polymorphic paths

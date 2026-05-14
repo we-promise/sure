@@ -50,6 +50,10 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+    if statement_tab_active?
+      build_statement_tab_data
+      return render_statement_tab_frame if statement_tab_frame_request?
+    end
 
     @pagy, @entries = pagy(
       entries,
@@ -235,6 +239,39 @@ class AccountsController < ApplicationController
         Current.user.admin? ||
           (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
+    end
+
+    def build_statement_tab_data
+      return unless statement_tab_active?
+
+      @statement_coverage = AccountStatement::Coverage.for_year(@account, params[:statement_year])
+      @account_statements = @account.account_statements.with_attached_original_file.ordered.to_a
+      @statement_reconciliation_statuses = AccountStatement.reconciliation_statuses_for(@account_statements, account: @account)
+      permission = @account.permission_for(Current.user)
+      @can_manage_statements = AccountStatement.statement_manager?(Current.user) &&
+        permission.in?([ :owner, :full_control ])
+    end
+
+    def statement_tab_frame_request?
+      turbo_frame_request? && request.headers["Turbo-Frame"] == helpers.dom_id(@account, :statements_tab)
+    end
+
+    def render_statement_tab_frame
+      render partial: "accounts/show/statements_frame", locals: statement_tab_locals, layout: false
+    end
+
+    def statement_tab_locals
+      {
+        account: @account,
+        coverage: @statement_coverage,
+        statements: @account_statements,
+        reconciliation_statuses: @statement_reconciliation_statuses,
+        can_manage_statements: @can_manage_statements
+      }
+    end
+
+    def statement_tab_active?
+      @tab == "statements"
     end
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views
