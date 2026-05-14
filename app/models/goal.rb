@@ -281,13 +281,17 @@ class Goal < ApplicationRecord
       end
   end
 
-  # Monthly extra needed beyond the current pace to hit the target on time.
-  # Clamps at zero — never asks the user to "make up" a deficit they're
-  # already ahead of.
+  # Monthly extra needed beyond the current pace + currently-open pledges
+  # to hit the target on time. Pending pledges are approximate (one-off
+  # amounts treated as this-month inflow) but excluding them produced the
+  # bad case where the alert demanded $X/mo while the user had already
+  # pledged $X — telling them to act on top of the action they just took.
+  # Clamps at zero so a fully-covered goal doesn't surface a $0 demand.
   def catch_up_delta_money
     return Money.new(0, currency) if monthly_target_amount.nil?
 
-    delta = [ monthly_target_amount.to_d - pace.to_d, 0 ].max
+    pending = open_pledges.to_a.sum { |p| p.amount.to_d }
+    delta = [ monthly_target_amount.to_d - pace.to_d - pending, 0 ].max
     Money.new(delta, currency)
   end
 
