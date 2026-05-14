@@ -2039,10 +2039,8 @@ components:
           type: string
           enum:
           - pending
-          - complete
           - importing
-          - reverting
-          - revert_failed
+          - complete
           - failed
         rows_count:
           type: integer
