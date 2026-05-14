@@ -67,6 +67,7 @@ RSpec.describe 'API V1 Holdings', type: :request do
     get 'List holdings' do
       tags 'Holdings'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns holding history for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
@@ -99,6 +100,14 @@ RSpec.describe 'API V1 Holdings', type: :request do
         schema '$ref' => '#/components/schemas/HoldingCollection'
 
         let(:account_id) { account.id }
+
+        run_test!
+      end
+
+      response '422', 'invalid account filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:account_id) { 'not-a-uuid' }
 
         run_test!
       end

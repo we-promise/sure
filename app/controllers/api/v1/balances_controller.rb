@@ -50,7 +50,10 @@ class Api::V1::BalancesController < Api::V1::BaseController
     end
 
     def accessible_account_ids
-      @accessible_account_ids ||= current_resource_owner.family.accounts.accessible_by(current_resource_owner).select(:id)
+      @accessible_account_ids ||= current_resource_owner.family.accounts
+                                        .accessible_by(current_resource_owner)
+                                        .historical
+                                        .select(:id)
     end
 
     def apply_filters(query)

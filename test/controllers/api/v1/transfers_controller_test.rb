@@ -57,6 +57,38 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response_data["transfers"].map { |transfer| transfer["id"] }, @other_transfer.id
   end
 
+  test "lists transfers for disabled accounts and excludes pending deletion accounts" do
+    @account.disable!
+
+    pending_deletion_account = @family.accounts.create!(
+      name: "Pending Delete Transfer",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD",
+      status: "pending_deletion"
+    )
+    pending_outflow = create_transaction(
+      pending_deletion_account,
+      amount: 15,
+      date: Date.parse("2024-01-15"),
+      name: "Pending delete outflow"
+    )
+    pending_inflow = create_transaction(
+      @destination_account,
+      amount: -15,
+      date: Date.parse("2024-01-15"),
+      name: "Pending delete inflow"
+    )
+    pending_transfer = Transfer.create!(outflow_transaction: pending_outflow, inflow_transaction: pending_inflow)
+
+    get api_v1_transfers_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    transfer_ids = JSON.parse(response.body)["transfers"].map { |transfer| transfer["id"] }
+    assert_includes transfer_ids, @transfer.id
+    assert_not_includes transfer_ids, pending_transfer.id
+  end
+
   test "permits read write scope" do
     read_write_key = ApiKey.create!(
       user: @user,

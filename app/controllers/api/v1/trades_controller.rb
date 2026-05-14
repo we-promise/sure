@@ -5,11 +5,11 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
-  before_action :set_trade, only: [ :show, :update, :destroy ]
+  before_action :set_readable_trade, only: :show
+  before_action :set_writable_trade, only: [ :update, :destroy ]
 
   def index
-    family = current_resource_owner.family
-    trades_query = family.trades.visible
+    trades_query = trade_history_scope
 
     trades_query = apply_filters(trades_query)
     trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
@@ -22,6 +22,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     @per_page = safe_per_page_param
 
     render :index
+  rescue InvalidFilterError => e
+    render_validation_error(e.message, [ e.message ])
   rescue ArgumentError => e
     render_validation_error(e.message, [ e.message ])
   rescue => e
@@ -107,7 +109,16 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
-    def set_trade
+    def set_readable_trade
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
+      @trade = trade_history_scope.find(params[:id])
+      @entry = @trade.entry
+    rescue ActiveRecord::RecordNotFound
+      render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    end
+
+    def set_writable_trade
       family = current_resource_owner.family
       @trade = family.trades.visible.find(params[:id])
       @entry = @trade.entry
@@ -123,16 +134,34 @@ class Api::V1::TradesController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
+    def trade_history_scope
+      account_ids = current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .historical
+        .select(:id)
+
+      current_resource_owner.family.trades
+        .joins(entry: :account)
+        .where(entries: { account_id: account_ids })
+    end
+
     def apply_filters(query)
       need_entry_join = params[:account_id].present? || params[:account_ids].present? ||
                         params[:start_date].present? || params[:end_date].present?
       query = query.joins(:entry) if need_entry_join
 
       if params[:account_id].present?
+        raise InvalidFilterError, "account_id must be a valid UUID" unless valid_uuid?(params[:account_id])
+
         query = query.where(entries: { account_id: params[:account_id] })
       end
       if params[:account_ids].present?
-        query = query.where(entries: { account_id: Array(params[:account_ids]) })
+        account_ids = Array(params[:account_ids])
+        unless account_ids.all? { |account_id| valid_uuid?(account_id) }
+          raise InvalidFilterError, "account_ids must contain valid UUIDs"
+        end
+
+        query = query.where(entries: { account_id: account_ids })
       end
       if params[:start_date].present?
         query = query.where("entries.date >= ?", parse_date!(params[:start_date], "start_date"))

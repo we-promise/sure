@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BalanceSheetTest < ActiveSupport::TestCase
+  include BalanceTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -44,6 +46,39 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 10000 - 1000, BalanceSheet.new(@family).net_worth
     assert_equal 10000, BalanceSheet.new(@family).assets.total
     assert_equal 1000, BalanceSheet.new(@family).liabilities.total
+  end
+
+  test "disabled accounts can be included in totals for API portability" do
+    create_account(balance: 1000, accountable: CreditCard.new)
+    create_account(balance: 10000, accountable: Depository.new)
+
+    other_liability = create_account(balance: 5000, accountable: OtherLiability.new)
+    other_liability.disable!
+
+    balance_sheet = BalanceSheet.new(@family, include_disabled: true)
+
+    assert_equal 10000 - 1000 - 5000, balance_sheet.net_worth
+    assert_equal 10000, balance_sheet.assets.total
+    assert_equal 1000 + 5000, balance_sheet.liabilities.total
+  end
+
+  test "net worth series includes disabled accounts to avoid false archive jumps" do
+    active_account = create_account(balance: 100, accountable: Depository.new)
+    disabled_account = create_account(balance: 0, accountable: Depository.new)
+    disabled_account.disable!
+
+    start_date = 1.day.ago.to_date
+    end_date = Date.current
+    create_balance(account: active_account, date: start_date, balance: 0)
+    create_balance(account: active_account, date: end_date, balance: 100)
+    create_balance(account: disabled_account, date: start_date, balance: 100)
+    create_balance(account: disabled_account, date: end_date, balance: 0)
+
+    series = BalanceSheet.new(@family).net_worth_series(
+      period: Period.custom(start_date: start_date, end_date: end_date)
+    )
+
+    assert_equal [ 100, 100 ], series.map { |value| value.value.amount }
   end
 
   test "calculates asset group totals" do

@@ -40,6 +40,9 @@ RSpec.describe 'API V1 Balance Sheet', type: :request do
                   'with amounts converted to the family\'s primary currency.'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
+      parameter name: :include_disabled, in: :query, required: false,
+                description: 'Include disabled account balances in current totals. Defaults to false.',
+                schema: { type: :boolean }
 
       response '200', 'balance sheet returned' do
         schema '$ref' => '#/components/schemas/BalanceSheet'

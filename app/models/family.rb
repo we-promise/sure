@@ -173,8 +173,8 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
-  def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+  def balance_sheet(user: Current.user, include_disabled: false)
+    BalanceSheet.new(self, user: user, include_disabled: include_disabled)
   end
 
   def income_statement(user: Current.user)

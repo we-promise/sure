@@ -1509,9 +1509,10 @@ RSpec.configure do |config|
           },
           BalanceSheet: {
             type: :object,
-            required: %w[currency net_worth assets liabilities],
+            required: %w[currency include_disabled net_worth assets liabilities],
             properties: {
               currency: { type: :string, description: 'Family primary currency' },
+              include_disabled: { type: :boolean, description: 'Whether disabled account totals are included in this response.' },
               net_worth: { '$ref' => '#/components/schemas/Money' },
               assets: { '$ref' => '#/components/schemas/Money' },
               liabilities: { '$ref' => '#/components/schemas/Money' }

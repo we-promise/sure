@@ -62,6 +62,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
     get 'List valuations' do
       tags 'Valuations'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns valuation history for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'

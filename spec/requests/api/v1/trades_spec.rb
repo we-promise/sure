@@ -81,6 +81,7 @@ RSpec.describe 'API V1 Trades', type: :request do
     get 'List trades' do
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns trade history for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
@@ -108,6 +109,14 @@ RSpec.describe 'API V1 Trades', type: :request do
         schema '$ref' => '#/components/schemas/TradeCollection'
 
         let(:account_id) { account.id }
+
+        run_test!
+      end
+
+      response '422', 'invalid account filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:account_id) { 'not-a-uuid' }
 
         run_test!
       end

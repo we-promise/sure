@@ -12,7 +12,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     family = current_resource_owner.family
     accessible_account_ids = family.accounts
       .accessible_by(current_resource_owner)
-      .where.not(status: "pending_deletion")
+      .historical
       .select(:id)
     transactions_query = family.transactions
       .joins(:entry).where(entries: { account_id: accessible_account_ids })
@@ -207,6 +207,7 @@ end
       @transaction = family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(current_resource_owner))
+        .merge(Account.historical)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound

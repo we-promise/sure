@@ -54,6 +54,21 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should list disabled account valuations and exclude pending deletion account valuations" do
+    disabled_valuation = create_valuation_for_account(status: "disabled", name: "Disabled Valuation")
+    pending_deletion_valuation = create_valuation_for_account(
+      status: "pending_deletion",
+      name: "Pending Delete Valuation"
+    )
+
+    get api_v1_valuations_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    valuation_ids = JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }
+    assert_includes valuation_ids, disabled_valuation.entry.id
+    assert_not_includes valuation_ids, pending_deletion_valuation.entry.id
+  end
+
   test "should filter index by account_id" do
     get api_v1_valuations_url,
         params: { account_id: @account.id },
@@ -367,6 +382,24 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def create_valuation_for_account(status:, name:)
+      account = @family.accounts.create!(
+        name: "#{status.titleize} Investment #{SecureRandom.hex(4)}",
+        balance: 0,
+        currency: "USD",
+        status: status,
+        accountable: Investment.new
+      )
+
+      account.entries.create!(
+        name: name,
+        amount: 1234.56,
+        currency: "USD",
+        date: Date.current,
+        entryable: Valuation.new
+      ).entryable
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }

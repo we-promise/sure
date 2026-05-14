@@ -1,8 +1,9 @@
 class BalanceSheet::AccountTotals
-  def initialize(family, user: nil, sync_status_monitor:)
+  def initialize(family, user: nil, sync_status_monitor:, include_disabled: false)
     @family = family
     @user = user
     @sync_status_monitor = sync_status_monitor
+    @include_disabled = include_disabled
   end
 
   def asset_accounts
@@ -27,7 +28,7 @@ class BalanceSheet::AccountTotals
 
     def visible_accounts
       @visible_accounts ||= begin
-        scope = family.accounts.visible.with_attached_logo
+        scope = account_scope.with_attached_logo
                   .includes(
                     :account_shares,
                     :accountable,
@@ -64,9 +65,17 @@ class BalanceSheet::AccountTotals
     def cache_key
       shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       family.build_cache_key(
-        [ "balance_sheet_account_ids", user&.id, shares_version ].compact.join("_"),
+        [ "balance_sheet_account_ids", include_disabled? ? "historical" : "visible", user&.id, shares_version ].compact.join("_"),
         invalidate_on_data_updates: true
       )
+    end
+
+    def account_scope
+      include_disabled? ? family.accounts.historical : family.accounts.visible
+    end
+
+    def include_disabled?
+      @include_disabled
     end
 
     # Loads visible accounts, caching their IDs to speed up subsequent requests.

@@ -222,6 +222,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal disabled_transaction.entry.account_id, response_data["account"]["id"]
   end
 
+  test "should not show pending deletion account transaction" do
+    pending_deletion_transaction = create_account_transaction(
+      status: "pending_deletion",
+      name: "Pending Delete Account Show"
+    )
+
+    get api_v1_transaction_url(pending_deletion_transaction), headers: api_headers(@api_key)
+
+    assert_response :not_found
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+  end
+
   test "should return 404 for valid missing transaction id" do
     get api_v1_transaction_url(SecureRandom.uuid), headers: api_headers(@api_key)
     assert_response :not_found

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_14_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1734,6 +1734,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.string "investment_activity_label"
     t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
     t.jsonb "extra", default: {}, null: false
+    t.uuid "category_id"
+    t.index ["category_id"], name: "index_trades_on_category_id"
     t.index ["extra"], name: "index_trades_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
     t.index ["security_id"], name: "index_trades_on_security_id"
@@ -1943,6 +1945,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
+  add_foreign_key "trades", "categories"
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"

@@ -82,6 +82,7 @@ RSpec.describe 'API V1 Securities', type: :request do
     get 'List securities referenced by family investment data' do
       tags 'Securities'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns securities referenced by accessible investment data, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'

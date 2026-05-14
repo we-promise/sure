@@ -7,7 +7,7 @@ class BalanceSheet::NetWorthSeriesBuilder
   def net_worth_series(period: Period.last_30_days)
     Rails.cache.fetch(cache_key(period)) do
       builder = Balance::ChartSeriesBuilder.new(
-        account_ids: visible_account_ids,
+        account_ids: historical_account_ids,
         currency: family.currency,
         period: period,
         favorable_direction: "up"
@@ -20,9 +20,9 @@ class BalanceSheet::NetWorthSeriesBuilder
   private
     attr_reader :family, :user
 
-    def visible_account_ids
-      @visible_account_ids ||= begin
-        scope = family.accounts.visible
+    def historical_account_ids
+      @historical_account_ids ||= begin
+        scope = family.accounts.historical
         scope = scope.included_in_finances_for(user) if user
         scope.pluck(:id)
       end
@@ -31,7 +31,7 @@ class BalanceSheet::NetWorthSeriesBuilder
     def cache_key(period)
       shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       key = [
-        "balance_sheet_net_worth_series",
+        "balance_sheet_net_worth_series_historical",
         user&.id,
         shares_version,
         period.start_date,
