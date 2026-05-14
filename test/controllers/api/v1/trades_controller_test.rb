@@ -579,6 +579,121 @@ assert_response :created
     assert_response :unauthorized
   end
 
+  # Non-numeric amount returns 422
+  test "create deposit with non-numeric amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "deposit",
+        date: Date.current,
+        amount: "abc",
+        currency: "USD"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create deposit with zero amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "deposit",
+        date: Date.current,
+        amount: 0,
+        currency: "USD"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create deposit with negative amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "deposit",
+        date: Date.current,
+        amount: -50.00,
+        currency: "USD"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create interest with non-numeric amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "interest",
+        date: Date.current,
+        amount: "abc",
+        currency: "USD"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create interest with zero amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "interest",
+        date: Date.current,
+        amount: 0,
+        currency: "USD"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create dividend with non-numeric amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "dividend",
+        date: Date.current,
+        amount: "abc",
+        currency: "USD",
+        ticker: "AAPL|XNAS"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create dividend with zero amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "dividend",
+        date: Date.current,
+        amount: 0,
+        currency: "USD",
+        ticker: "AAPL|XNAS"
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "Amount must be a valid number", body["message"]
+  end
+
   test "trade JSON should have expected structure" do
     security = Security.create!(ticker: "JSP", name: "JSON Structure Security", country_code: "US")
     post "/api/v1/trades",

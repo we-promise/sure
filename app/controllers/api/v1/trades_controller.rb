@@ -231,14 +231,14 @@ if model.is_a?(Entry)
           return nil
         end
 
-        {
-          account: account,
-          date: trade_params[:date],
-          amount: trade_params[:amount].to_d,
-          currency: trade_params[:currency].presence || account.currency,
-          type: type,
-          transfer_account_id: trade_params[:transfer_account_id]
-        }.compact
+{
+           account: account,
+           date: trade_params[:date],
+           amount: parse_positive_amount!(trade_params[:amount], context: "deposit/withdrawal"),
+           currency: trade_params[:currency].presence || account.currency,
+           type: type,
+           transfer_account_id: trade_params[:transfer_account_id]
+         }.compact
 
       when "interest"
         unless trade_params[:date].present?
@@ -259,15 +259,15 @@ if model.is_a?(Entry)
           manual_ticker_value = trade_params[:manual_ticker]
         end
 
-        {
-          account: account,
-          date: trade_params[:date],
-          amount: trade_params[:amount].to_d,
-          currency: trade_params[:currency].presence || account.currency,
-          type: type,
-          ticker: ticker_value,
-          manual_ticker: manual_ticker_value
-        }.compact
+{
+           account: account,
+           date: trade_params[:date],
+           amount: parse_positive_amount!(trade_params[:amount], context: "interest"),
+           currency: trade_params[:currency].presence || account.currency,
+           type: type,
+           ticker: ticker_value,
+           manual_ticker: manual_ticker_value
+         }.compact
 
       when "dividend"
         build_dividend_params(account)
@@ -350,15 +350,15 @@ if model.is_a?(Entry)
         return nil
       end
 
-      {
-        account: account,
-        date: trade_params[:date],
-        amount: trade_params[:amount].to_d,
-        currency: trade_params[:currency].presence || account.currency,
-        type: "dividend",
-        ticker: ticker_value,
-        manual_ticker: manual_ticker_value
-      }.compact
+{
+         account: account,
+         date: trade_params[:date],
+         amount: parse_positive_amount!(trade_params[:amount], context: "dividend"),
+         currency: trade_params[:currency].presence || account.currency,
+         type: "dividend",
+         ticker: ticker_value,
+         manual_ticker: manual_ticker_value
+       }.compact
     end
 
     def apply_trade_create_options!
@@ -405,7 +405,18 @@ if model.is_a?(Entry)
       }, status: :internal_server_error
     end
 
-def safe_page_param
+def parse_positive_amount!(raw, context:)
+       value_raw = raw.to_s.strip
+       return render_validation_error("Amount is required", [ "amount must be present for #{context}" ]) if value_raw.blank?
+
+       value = value_raw.to_d
+       non_numeric = value.zero? && value_raw !~ /\A0(\.0*)?\z/
+       return render_validation_error("Amount must be a valid number", [ "amount must be a valid positive number" ]) if non_numeric || value <= 0
+
+       value
+     end
+
+     def safe_page_param
       page = params[:page].to_i
       page > 0 ? page : 1
     end
