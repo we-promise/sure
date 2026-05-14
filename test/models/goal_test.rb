@@ -97,8 +97,20 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 0, @goal.remaining_amount
   end
 
-  test "pace is zero when no entries exist on linked accounts" do
-    fresh = goals(:emergency_fund)
+  test "pace is zero on a goal whose linked accounts have no non-transfer entries" do
+    fresh_account = Account.create!(
+      family: @family,
+      accountable: Depository.new,
+      name: "Empty Savings",
+      currency: "USD",
+      balance: 0
+    )
+    fresh = @family.goals.create!(
+      name: "Fresh goal",
+      target_amount: 100,
+      currency: "USD"
+    ) { |g| g.goal_accounts.build(account: fresh_account) }
+
     assert_equal 0, fresh.pace.to_d
   end
 

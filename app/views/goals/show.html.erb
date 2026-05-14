@@ -189,7 +189,7 @@
           required: Money.new(required, @goal.currency).format)
       elsif pace.positive?
         months = (@goal.remaining_amount.to_d / pace.to_d).ceil
-        t("goals.show.projection.on_track",
+        t("goals.show.projection.on_track_html",
           date: (Date.current >> months.to_i).strftime("%b %Y"))
       else
         t("goals.show.projection.no_pace")
@@ -252,7 +252,7 @@
         <div class="flex items-start justify-between mb-2 gap-3">
           <div class="min-w-0">
             <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
-            <p class="text-xs text-secondary mt-0.5"><%= projection_summary.html_safe %></p>
+            <p class="text-xs text-secondary mt-0.5"><%= projection_summary %></p>
           </div>
           <% projection_color = @goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
           <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">

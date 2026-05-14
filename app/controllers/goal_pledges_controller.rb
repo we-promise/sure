@@ -13,7 +13,8 @@ class GoalPledgesController < ApplicationController
 
   def create
     @pledge = @goal.goal_pledges.new(pledge_params)
-    @pledge.kind = default_kind_for(@goal) if @pledge.kind.blank?
+    @pledge.account = lookup_account(params.dig(:goal_pledge, :account_id))
+    @pledge.kind = default_kind_for(@goal)
     @pledge.currency = @goal.currency
 
     if @pledge.save
@@ -32,14 +33,14 @@ class GoalPledgesController < ApplicationController
   def extend
     @pledge.extend!
     redirect_to goal_path(@goal), notice: t(".success")
-  rescue ActiveRecord::RecordInvalid
+  rescue GoalPledge::NotOpenError
     redirect_to goal_path(@goal), alert: t(".not_open")
   end
 
   def destroy
     @pledge.cancel!
     redirect_to goal_path(@goal), notice: t(".success")
-  rescue ActiveRecord::RecordInvalid
+  rescue GoalPledge::NotOpenError
     redirect_to goal_path(@goal), alert: t(".not_open")
   end
 
@@ -53,7 +54,12 @@ class GoalPledgesController < ApplicationController
     end
 
     def pledge_params
-      params.require(:goal_pledge).permit(:amount, :account_id, :kind)
+      params.require(:goal_pledge).permit(:amount)
+    end
+
+    def lookup_account(id)
+      return nil if id.blank?
+      @goal.linked_accounts.find_by(id: id)
     end
 
     def default_kind_for(goal)

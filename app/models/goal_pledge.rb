@@ -63,14 +63,16 @@ class GoalPledge < ApplicationRecord
     end
   end
 
+  class NotOpenError < StandardError; end
+
   def extend!(days: EXTEND_DAYS)
-    raise ActiveRecord::RecordInvalid, "Only open pledges can be extended" unless status_open?
+    raise NotOpenError, "Only open pledges can be extended" unless status_open?
 
     update!(expires_at: expires_at + days.days)
   end
 
   def cancel!
-    raise ActiveRecord::RecordInvalid, "Only open pledges can be cancelled" unless status_open?
+    raise NotOpenError, "Only open pledges can be cancelled" unless status_open?
 
     update!(status: "cancelled")
   end

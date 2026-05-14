@@ -79,7 +79,7 @@ class GoalPledgeTest < ActiveSupport::TestCase
 
   test "extend! raises for non-open pledge" do
     pledge = goal_pledges(:matched_transfer)
-    assert_raises(ActiveRecord::RecordInvalid) { pledge.extend! }
+    assert_raises(GoalPledge::NotOpenError) { pledge.extend! }
   end
 
   test "cancel! transitions open to cancelled" do

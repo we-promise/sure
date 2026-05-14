@@ -1,50 +1,53 @@
-<%= modal_form_wrapper title: t(@goal.pledge_action_label_key) do %>
-  <%= styled_form_with model: @pledge, url: goal_pledges_path(@goal), class: "form" do |form| %>
-    <% if @pledge.errors.any? %>
-      <div class="form-error mb-3">
-        <% @pledge.errors.full_messages.each do |msg| %>
-          <p class="text-sm text-destructive"><%= msg %></p>
-        <% end %>
-      </div>
-    <% end %>
-
-    <p class="text-sm text-secondary mb-4">
-      <% if @goal.any_connected_account? %>
-        <%= t("goal_pledges.new.helper_transfer") %>
-      <% else %>
-        <%= t("goal_pledges.new.helper_manual") %>
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(@goal.pledge_action_label_key)) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with model: @pledge, url: goal_pledges_path(@goal), class: "form" do |form| %>
+      <% if @pledge.errors.any? %>
+        <div class="form-error mb-3">
+          <% @pledge.errors.full_messages.each do |msg| %>
+            <p class="text-sm text-destructive"><%= msg %></p>
+          <% end %>
+        </div>
       <% end %>
-    </p>
 
-    <div class="space-y-3">
-      <%= form.money_field :amount,
-                           label: t("goal_pledges.new.amount_label"),
-                           hide_currency: true,
-                           required: true %>
+      <p class="text-sm text-secondary mb-4">
+        <% if @goal.any_connected_account? %>
+          <%= t("goal_pledges.new.helper_transfer") %>
+        <% else %>
+          <%= t("goal_pledges.new.helper_manual") %>
+        <% end %>
+      </p>
 
-      <div class="form-field">
-        <div class="form-field__body">
-          <%= form.label :account_id,
-                         t("goal_pledges.new.account_label"),
-                         class: "form-field__label" %>
-          <%= form.select :account_id,
-                          @goal.linked_accounts.map { |a| [ a.name, a.id ] },
-                          { include_blank: false },
-                          class: "form-field__input" %>
+      <div class="space-y-3">
+        <%= form.money_field :amount,
+                             label: t("goal_pledges.new.amount_label"),
+                             hide_currency: true,
+                             required: true %>
+
+        <div class="form-field">
+          <div class="form-field__body">
+            <%= form.label :account_id,
+                           t("goal_pledges.new.account_label"),
+                           class: "form-field__label" %>
+            <%= form.select :account_id,
+                            @goal.linked_accounts.map { |a| [ a.name, a.id ] },
+                            { include_blank: false },
+                            class: "form-field__input" %>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="flex items-center gap-2 mt-5">
-      <div class="flex-1"></div>
-      <%= render DS::Button.new(
-        text: t("goal_pledges.new.cancel"),
-        variant: "ghost",
-        data: { action: "click->dialog#close" }
-      ) %>
-      <%= form.submit t("goal_pledges.new.submit"),
-                     class: "btn btn--primary",
-                     data: { turbo_frame: "_top" } %>
-    </div>
+      <div class="flex items-center gap-2 mt-5">
+        <div class="flex-1"></div>
+        <%= render DS::Button.new(
+          text: t("goal_pledges.new.cancel"),
+          variant: "ghost",
+          data: { action: "click->dialog#close" }
+        ) %>
+        <%= form.submit t("goal_pledges.new.submit"),
+                       class: "btn btn--primary",
+                       data: { turbo_frame: "_top" } %>
+      </div>
+    <% end %>
   <% end %>
 <% end %>
