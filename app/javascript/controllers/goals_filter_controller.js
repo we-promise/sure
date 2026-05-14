@@ -25,7 +25,11 @@ export default class extends Controller {
   };
 
   connect() {
+    this.#hydrateFromUrl();
     this.syncChipState();
+    if (this.statusValue !== "all" || (this.hasInputTarget && this.inputTarget.value)) {
+      this.filter();
+    }
   }
 
   filter() {
@@ -56,6 +60,37 @@ export default class extends Controller {
     }
 
     this.updateEmptyState(visible, query, active);
+    this.#syncUrl();
+  }
+
+  #hydrateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("filter");
+    if (status && this.chipTargets.some((c) => c.dataset.status === status)) {
+      this.statusValue = status;
+    }
+    const q = params.get("q");
+    if (q && this.hasInputTarget) {
+      this.inputTarget.value = q;
+    }
+  }
+
+  #syncUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (this.statusValue && this.statusValue !== "all") {
+      params.set("filter", this.statusValue);
+    } else {
+      params.delete("filter");
+    }
+    const q = this.hasInputTarget ? this.inputTarget.value.trim() : "";
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.delete("q");
+    }
+    const qs = params.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(window.history.state, "", url);
   }
 
   updateEmptyState(visible, query, active) {
