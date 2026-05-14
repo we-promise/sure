@@ -137,10 +137,25 @@ class Account::ProviderImportAdapter
       # Track if this is a new posted transaction (for fuzzy suggestion after save)
       is_new_posted = entry.new_record? && !incoming_pending
 
+      # Preserve the original pending date across all syncs:
+      # - First claim: pending_entry_date is captured from the pending match above
+      # - Subsequent syncs: entry already exists (no pending_match found), so check
+      #   auto_claimed_pending_ids which signals it was previously auto-claimed and
+      #   keep entry.date (the pending date stored on first claim) unchanged
+      effective_date = if pending_entry_date
+        pending_entry_date
+      elsif !entry.new_record? &&
+            entry.entryable.is_a?(Transaction) &&
+            entry.transaction.extra&.key?("auto_claimed_pending_ids")
+        entry.date
+      else
+        date
+      end
+
       entry.assign_attributes(
         amount: amount,
         currency: currency,
-        date: pending_entry_date || date
+        date: effective_date
       )
 
       # Use enrichment pattern to respect user overrides
