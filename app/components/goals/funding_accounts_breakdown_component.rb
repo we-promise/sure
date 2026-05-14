@@ -1,6 +1,7 @@
 class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   WINDOW_DAYS = 30
-  SPARK_WINDOW_DAYS = 90
+  TRAJECTORY_WINDOW_DAYS = 90
+  TRAJECTORY_SAMPLES = 24
 
   def initialize(goal:)
     @goal = goal
@@ -15,7 +16,7 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
         balance: account.balance.to_d,
         balance_money: Money.new(account.balance.to_d, goal.currency),
         last_30_money: Money.new(last_30_inflow_for(account), goal.currency),
-        sparkline_points: sparkline_points_for(account)
+        trajectory_points: trajectory_for(account)
       }
     end
   end
@@ -27,18 +28,6 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   def percent_for(balance)
     return 0 if total.zero?
     ((balance.to_d / total) * 100).round
-  end
-
-  # Shared Y-max across every account's sparkline so per-row amplitudes
-  # are comparable at a glance. Without this each row scaled to its own
-  # max and a $50 bump on an orange account rendered as tall as a $400
-  # weekly peak on a pink one — the eye reads them as equal contribution
-  # when the weight pills already say they aren't.
-  def shared_spark_max
-    @shared_spark_max ||= begin
-      points = rows.flat_map { |r| r[:sparkline_points] }
-      [ points.max.to_f, 1.0 ].max
-    end
   end
 
   # Label shown beneath the account name. Prefers the depository subtype
@@ -56,11 +45,8 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   end
 
   private
-    SPARK_BUCKETS = 12
-
-    # Single grouped query across every linked account for the last-30-day
-    # inflow column. The V2 implementation hit one query per account in
-    # the row loop; this collapses to one.
+    # Net 30-day inflow per account in one grouped query. Powers the right-hand
+    # "$X last 30d" column.
     def last_30_inflow_for(account)
       last_30_inflow_map[account.id] || 0
     end
@@ -80,45 +66,56 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
       end
     end
 
-    # 12-bucket weekly sparkline of net inflow over 90 days per account, all
-    # in one grouped query. Bucket index counts back from today
-    # (`(CURRENT_DATE - entries.date) / bucket_days`); bucket 0 is the
-    # newest 8-day window, bucket 11 is the oldest. Each row in the
-    # returned per-account array is in oldest → newest order so the SVG
-    # path reads left → right naturally. Uses the same transfer-inclusive
-    # semantics as Goal#pace.
-    def sparkline_points_for(account)
-      sparkline_map[account.id] || Array.new(SPARK_BUCKETS, 0.0)
+    # 24-sample balance trajectory per account over the last 90 days. Drives
+    # the per-row filled-area chart — same conceptual shape as the projection
+    # chart on goals#show, just per linked account. We pull every Balance row
+    # in the window in one query and, for each anchor date in the sample grid,
+    # carry-forward the most-recent balance at-or-before that anchor.
+    def trajectory_for(account)
+      trajectory_map[account.id] || Array.new(TRAJECTORY_SAMPLES, 0.0)
     end
 
-    def sparkline_map
-      @sparkline_map ||= begin
+    def trajectory_map
+      @trajectory_map ||= begin
         account_ids = goal.linked_accounts.map(&:id)
         return {} if account_ids.empty?
 
-        bucket_days = (SPARK_WINDOW_DAYS / SPARK_BUCKETS.to_f).ceil
+        rows = Balance
+          .where(account_id: account_ids, date: TRAJECTORY_WINDOW_DAYS.days.ago.to_date..Date.current)
+          .order(account_id: :asc, date: :asc)
+          .pluck(:account_id, :date, :balance)
 
-        bucket_expr = Arel.sql(
-          "LEAST(GREATEST((CURRENT_DATE - entries.date) / #{bucket_days.to_i}, 0), #{SPARK_BUCKETS - 1})"
-        )
-
-        rows = Entry
-          .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-          .where(account_id: account_ids, date: SPARK_WINDOW_DAYS.days.ago.to_date..Date.current)
-          .where(excluded: false)
-          .group(:account_id, bucket_expr)
-          .sum(:amount)
-
-        result = Hash.new { |h, k| h[k] = Array.new(SPARK_BUCKETS, 0.0) }
-        rows.each do |(account_id, sql_idx), net|
-          idx = (SPARK_BUCKETS - 1) - sql_idx.to_i
-          result[account_id][idx] = (-net.to_d).clamp(0, Float::INFINITY).to_f
+        grouped = rows.group_by(&:first)
+        account_ids.each_with_object({}) do |aid, h|
+          h[aid] = sample_trajectory(grouped[aid] || [])
         end
-        result
       end
     rescue StandardError => e
-      Rails.logger.error("Sparkline map for goal #{goal.id} failed: #{e.class}: #{e.message}")
+      Rails.logger.error("Trajectory map for goal #{goal.id} failed: #{e.class}: #{e.message}")
       Sentry.capture_exception(e) if defined?(Sentry)
       {}
+    end
+
+    # Walk forward through sorted rows once, advancing the cursor as the
+    # anchor date passes each row's date. O(rows + samples) instead of
+    # O(rows × samples) reverse-find.
+    def sample_trajectory(rows)
+      return Array.new(TRAJECTORY_SAMPLES, 0.0) if rows.empty?
+
+      sorted = rows.sort_by { |r| r[1] }
+      step = TRAJECTORY_WINDOW_DAYS / (TRAJECTORY_SAMPLES - 1).to_f
+      cursor = 0
+      last_balance = sorted.first[2].to_f
+
+      Array.new(TRAJECTORY_SAMPLES) do |i|
+        anchor = (TRAJECTORY_WINDOW_DAYS - (step * i)).days.ago.to_date
+
+        while cursor < sorted.length && sorted[cursor][1] <= anchor
+          last_balance = sorted[cursor][2].to_f
+          cursor += 1
+        end
+
+        last_balance
+      end
     end
 end
