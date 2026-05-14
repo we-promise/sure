@@ -1,7 +1,6 @@
 class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   WINDOW_DAYS = 30
-  TRAJECTORY_WINDOW_DAYS = 90
-  TRAJECTORY_SAMPLES = 24
+  TRAJECTORY_SAMPLES = WINDOW_DAYS + 1 # 31 points: 30 days ago … today
 
   def initialize(goal:)
     @goal = goal
@@ -11,12 +10,13 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
 
   def rows
     @rows ||= goal.linked_accounts.sort_by { |a| -a.balance.to_d }.map do |account|
+      cumulative = cumulative_inflow_for(account)
       {
         account: account,
         balance: account.balance.to_d,
         balance_money: Money.new(account.balance.to_d, goal.currency),
-        last_30_money: Money.new(last_30_inflow_for(account), goal.currency),
-        trajectory_points: trajectory_for(account)
+        last_30_money: Money.new(cumulative.last.to_d, goal.currency),
+        trajectory_points: cumulative
       }
     end
   end
@@ -45,77 +45,49 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   end
 
   private
-    # Net 30-day inflow per account in one grouped query. Powers the right-hand
-    # "$X last 30d" column.
-    def last_30_inflow_for(account)
-      last_30_inflow_map[account.id] || 0
+    # 31 daily points (30 days ago … today) of cumulative inflow into this
+    # account, scoped to the same 30-day window the right-hand "$X last 30d"
+    # column reports — the chart's rightmost point exactly equals that column
+    # by construction.
+    def cumulative_inflow_for(account)
+      cumulative_inflow_map[account.id] || Array.new(TRAJECTORY_SAMPLES, 0.0)
     end
 
-    def last_30_inflow_map
-      @last_30_inflow_map ||= begin
+    # Single grouped query: every (account_id, date) inflow row over the 30-day
+    # window. Then walk per-account to materialize a 31-point cumulative array.
+    # Entry amount sign in Sure: inflow is negative; flip and clamp ≥ 0 so the
+    # cumulative is monotonic non-decreasing.
+    def cumulative_inflow_map
+      @cumulative_inflow_map ||= begin
         account_ids = goal.linked_accounts.map(&:id)
         return {} if account_ids.empty?
 
-        Entry
+        per_day = Entry
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
           .where(account_id: account_ids, date: WINDOW_DAYS.days.ago.to_date..Date.current)
           .where(excluded: false)
-          .group(:account_id)
+          .group(:account_id, :date)
           .sum(:amount)
-          .transform_values { |v| (-v.to_d).clamp(0, Float::INFINITY) }
-      end
-    end
 
-    # 24-sample balance trajectory per account over the last 90 days. Drives
-    # the per-row filled-area chart — same conceptual shape as the projection
-    # chart on goals#show, just per linked account. We pull every Balance row
-    # in the window in one query and, for each anchor date in the sample grid,
-    # carry-forward the most-recent balance at-or-before that anchor.
-    def trajectory_for(account)
-      trajectory_map[account.id] || Array.new(TRAJECTORY_SAMPLES, 0.0)
-    end
+        today = Date.current
+        result = {}
 
-    def trajectory_map
-      @trajectory_map ||= begin
-        account_ids = goal.linked_accounts.map(&:id)
-        return {} if account_ids.empty?
-
-        rows = Balance
-          .where(account_id: account_ids, date: TRAJECTORY_WINDOW_DAYS.days.ago.to_date..Date.current)
-          .order(account_id: :asc, date: :asc)
-          .pluck(:account_id, :date, :balance)
-
-        grouped = rows.group_by(&:first)
-        account_ids.each_with_object({}) do |aid, h|
-          h[aid] = sample_trajectory(grouped[aid] || [])
+        account_ids.each do |aid|
+          running = 0.0
+          result[aid] = (0..WINDOW_DAYS).map do |offset|
+            date = today - (WINDOW_DAYS - offset).days
+            raw = per_day[[ aid, date ]] || 0
+            inflow = (-raw.to_d).clamp(0, Float::INFINITY).to_f
+            running += inflow
+            running
+          end
         end
+
+        result
       end
     rescue StandardError => e
-      Rails.logger.error("Trajectory map for goal #{goal.id} failed: #{e.class}: #{e.message}")
+      Rails.logger.error("Cumulative inflow map for goal #{goal.id} failed: #{e.class}: #{e.message}")
       Sentry.capture_exception(e) if defined?(Sentry)
       {}
-    end
-
-    # Walk forward through sorted rows once, advancing the cursor as the
-    # anchor date passes each row's date. O(rows + samples) instead of
-    # O(rows × samples) reverse-find.
-    def sample_trajectory(rows)
-      return Array.new(TRAJECTORY_SAMPLES, 0.0) if rows.empty?
-
-      sorted = rows.sort_by { |r| r[1] }
-      step = TRAJECTORY_WINDOW_DAYS / (TRAJECTORY_SAMPLES - 1).to_f
-      cursor = 0
-      last_balance = sorted.first[2].to_f
-
-      Array.new(TRAJECTORY_SAMPLES) do |i|
-        anchor = (TRAJECTORY_WINDOW_DAYS - (step * i)).days.ago.to_date
-
-        while cursor < sorted.length && sorted[cursor][1] <= anchor
-          last_balance = sorted[cursor][2].to_f
-          cursor += 1
-        end
-
-        last_balance
-      end
     end
 end
