@@ -1,3 +1,5 @@
+require Rails.root.join("lib/active_record_encryption_config").to_s
+
 # Configure Active Record encryption keys
 # Priority order:
 # 1. Environment variables (works for both managed and self-hosted modes)
@@ -9,8 +11,12 @@ primary_key = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"]
 deterministic_key = ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"]
 key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"]
 
+if ActiveRecordEncryptionConfig.partial_env?
+  raise ActiveRecordEncryptionConfig.partial_env_message
+end
+
 # If all environment variables are present, use them (works for both managed and self-hosted)
-if primary_key.present? && deterministic_key.present? && key_derivation_salt.present?
+if ActiveRecordEncryptionConfig.complete_env?
   Rails.application.config.active_record.encryption.primary_key = primary_key
   Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
   Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt

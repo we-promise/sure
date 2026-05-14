@@ -8,6 +8,8 @@ en:
         warning: Warning
         error: Error
         destructive: Error
+    dialog:
+      close: Close
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

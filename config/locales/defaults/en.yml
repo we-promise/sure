@@ -3,6 +3,8 @@ en:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+    common:
+      close: "Close"
   global:
     expand: "Expand"
   activerecord:
@@ -47,6 +49,8 @@ en:
       default: "%Y-%m-%d"
       long: "%B %d, %Y"
       short: "%b %d"
+      month_year: "%B %Y"
+      short_month_year: "%b %Y"
     month_names:
     -
     - January

@@ -1,0 +1,124 @@
+<%# locals: (account:, coverage:, statements:, reconciliation_statuses:, can_manage_statements:) %>
+
+<div class="space-y-4">
+  <div class="rounded-xl bg-container-inset p-1">
+    <div class="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <p class="text-sm font-medium text-primary"><%= t("account_statements.account_tab.coverage_title") %></p>
+        <p class="text-xs text-secondary"><%= t("account_statements.account_tab.coverage_description") %></p>
+        <p class="text-xs text-secondary"><%= account_statement_coverage_range(coverage) %></p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
+          <%= form.hidden_field :tab, value: "statements" %>
+          <%= form.select :statement_year,
+                          coverage.available_years.map { |year| [ year, year ] },
+                          { selected: coverage.selected_year },
+                          class: "bg-container border border-secondary rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0",
+                          data: { "auto-submit-form-target": "auto" },
+                          aria: { label: t("account_statements.account_tab.year_label") } %>
+        <% end %>
+        <%= link_to account_statements_path,
+                    class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+          <%= icon("inbox", size: "sm") %>
+          <%= t("account_statements.account_tab.open_inbox") %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-container rounded-lg shadow-border-xs p-3">
+      <% coverage.months.each do |month| %>
+        <div class="rounded-lg ring px-3 py-2 <%= account_statement_coverage_classes(month.status) %>">
+          <p class="text-xs font-medium"><%= account_statement_coverage_label(month) %></p>
+          <p class="text-xs capitalize"><%= t("account_statements.coverage.status.#{month.status}") %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if can_manage_statements %>
+    <div class="rounded-xl bg-container-inset p-4">
+      <%= styled_form_with url: account_statements_path, scope: :account_statement, multipart: true, class: "space-y-3" do |form| %>
+        <%= form.hidden_field :account_id, value: account.id %>
+        <div>
+          <%= form.label :files, t("account_statements.form.files_label"), class: "form-field__label" %>
+          <%= form.file_field :files,
+                              multiple: true,
+                              accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(","),
+                              class: "form-field__input" %>
+          <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
+        </div>
+        <%= form.submit t("account_statements.form.account_upload") %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="rounded-xl bg-container-inset p-1">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t("account_statements.account_tab.statements_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= statements.size %></p>
+    </div>
+
+    <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+      <% if statements.any? %>
+        <table class="w-full">
+          <thead>
+            <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+              <th class="px-3 py-3 text-left min-w-56"><%= t("account_statements.table.file") %></th>
+              <th class="px-3 py-3 text-left min-w-44"><%= t("account_statements.table.period") %></th>
+              <th class="px-3 py-3 text-left min-w-32"><%= t("account_statements.table.reconciliation") %></th>
+              <th class="px-3 py-3 text-right min-w-24"><%= t("account_statements.table.actions") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% statements.each do |statement| %>
+              <tr id="<%= dom_id(statement) %>" class="border-b border-subdued hover:bg-surface-hover">
+                <td class="px-3 py-3">
+                  <%= link_to account_statement_path(statement), class: "flex items-center gap-2 min-w-0 text-sm font-medium text-primary hover:underline" do %>
+                    <%= icon(account_statement_file_icon(statement), size: "sm") %>
+                    <span class="truncate"><%= statement.filename %></span>
+                  <% end %>
+                  <p class="text-xs text-secondary"><%= number_to_human_size(statement.byte_size) %></p>
+                </td>
+                <td class="px-3 py-3 text-sm text-secondary"><%= account_statement_period(statement) %></td>
+                <td class="px-3 py-3">
+                  <% case reconciliation_statuses[statement.id] %>
+                  <% when "matched" %>
+                    <%= render "shared/badge", color: "success" do %><%= t("account_statements.reconciliation.matched") %><% end %>
+                  <% when "mismatched" %>
+                    <%= render "shared/badge", color: "error" do %><%= t("account_statements.reconciliation.mismatched") %><% end %>
+                  <% else %>
+                    <%= render "shared/badge" do %><%= t("account_statements.reconciliation.unavailable") %><% end %>
+                  <% end %>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex items-center justify-end gap-3">
+                    <%= link_to account_statement_path(statement), aria: { label: t("account_statements.table.view") } do %>
+                      <%= icon("eye", class: "w-5 h-5 text-primary") %>
+                    <% end %>
+                    <% if statement.original_file.attached? %>
+                      <%= link_to rails_blob_path(statement.original_file, disposition: "attachment"), aria: { label: t("account_statements.table.download") } do %>
+                        <%= icon("download", class: "w-5 h-5 text-primary") %>
+                      <% end %>
+                    <% end %>
+                    <% if can_manage_statements %>
+                      <%= button_to unlink_account_statement_path(statement),
+                                    method: :patch,
+                                    class: "flex items-center",
+                                    aria: { label: t("account_statements.table.unlink") } do %>
+                        <%= icon("unlink", class: "w-5 h-5 text-secondary") %>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="text-sm text-secondary text-center py-8 font-medium"><%= t("account_statements.account_tab.empty") %></p>
+      <% end %>
+    </div>
+  </div>
+</div>
