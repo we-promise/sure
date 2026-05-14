@@ -33,6 +33,7 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
 
     assert response_body.key?("currency")
     assert response_body.key?("include_disabled")
+    assert_equal false, response_body["include_disabled"]
     assert response_body.key?("net_worth")
     assert response_body.key?("assets")
     assert response_body.key?("liabilities")

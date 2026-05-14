@@ -30,6 +30,6 @@ class Api::V1::BalanceSheetController < Api::V1::BaseController
     end
 
     def include_disabled_accounts?
-      ActiveModel::Type::Boolean.new.cast(params[:include_disabled])
+      ActiveModel::Type::Boolean.new.cast(params[:include_disabled]) || false
     end
 end

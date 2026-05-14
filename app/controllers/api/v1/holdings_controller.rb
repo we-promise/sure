@@ -122,7 +122,7 @@ class Api::V1::HoldingsController < Api::V1::BaseController
       Rails.logger.error exception.backtrace.join("\n")
       render json: {
         error: "internal_server_error",
-        message: "An unexpected error occurred"
+        message: "Error: #{exception.message}"
       }, status: :internal_server_error
     end
 end

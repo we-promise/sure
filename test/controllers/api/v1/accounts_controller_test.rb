@@ -81,6 +81,17 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should return project-standard internal index errors" do
+    Api::V1::AccountsController.any_instance.stubs(:accounts_scope).raises(StandardError, "boom")
+
+    get "/api/v1/accounts", headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_body = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_body["error"]
+    assert_equal "Error: boom", response_body["message"]
+  end
+
   test "should only return active accounts" do
     # Make one account inactive
     inactive_account = accounts(:depository)
@@ -164,6 +175,18 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal "not_found", response_body["error"]
     assert_equal "Account not found", response_body["message"]
+  end
+
+  test "should return project-standard internal show errors" do
+    account = accounts(:depository)
+    Api::V1::AccountsController.any_instance.stubs(:accounts_scope).raises(StandardError, "boom")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_body = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_body["error"]
+    assert_equal "Error: boom", response_body["message"]
   end
 
   test "should require authentication on show" do

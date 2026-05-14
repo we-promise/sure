@@ -74,6 +74,49 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "not_found", response_data["error"]
   end
 
+  test "requires authentication for index" do
+    get api_v1_holdings_url
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "unauthorized", response_data["error"]
+  end
+
+  test "requires authentication for show" do
+    get api_v1_holding_url(@holding)
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "unauthorized", response_data["error"]
+  end
+
+  test "requires read scope for index" do
+    get api_v1_holdings_url, headers: api_headers(no_scope_api_key)
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal "insufficient_scope", response_data["error"]
+  end
+
+  test "requires read scope for show" do
+    get api_v1_holding_url(@holding), headers: api_headers(no_scope_api_key)
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal "insufficient_scope", response_data["error"]
+  end
+
+  test "returns project-standard internal index errors" do
+    Api::V1::HoldingsController.any_instance.stubs(:holding_history_scope).raises(StandardError, "boom")
+
+    get api_v1_holdings_url, headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "Error: boom", response_data["message"]
+  end
+
   test "rejects malformed account_id filter" do
     get api_v1_holdings_url, params: { account_id: "not-a-uuid" }, headers: api_headers(@api_key)
 
@@ -115,5 +158,19 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
+    end
+
+    def no_scope_api_key
+      @no_scope_api_key ||= begin
+        api_key = ApiKey.create!(
+          user: @user,
+          name: "Test No Scope Key",
+          scopes: [ "read" ],
+          source: "mobile",
+          display_key: "test_no_scope_#{SecureRandom.hex(8)}"
+        )
+        api_key.update_column(:scopes, [])
+        api_key
+      end
     end
 end

@@ -22,7 +22,7 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
   end
 
@@ -49,7 +49,7 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
   end
 
@@ -67,6 +67,6 @@ class Api::V1::AccountsController < Api::V1::BaseController
     end
 
     def include_disabled_accounts?
-      ActiveModel::Type::Boolean.new.cast(params[:include_disabled])
+      ActiveModel::Type::Boolean.new.cast(params[:include_disabled]) || false
     end
 end

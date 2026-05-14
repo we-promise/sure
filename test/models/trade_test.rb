@@ -52,6 +52,28 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal 0, trade.fee
   end
 
+  test "category deletion nullifies trade category reference" do
+    category = Category.create!(
+      family: families(:dylan_family),
+      name: "Trade Category #{SecureRandom.hex(4)}",
+      color: "#2196F3",
+      lucide_icon: "trending-up"
+    )
+    security = Security.create!(ticker: "CATNULL", exchange_operating_mic: "XNAS")
+    trade = Trade.create!(
+      security: security,
+      category: category,
+      price: 100,
+      qty: 1,
+      currency: "USD",
+      investment_activity_label: "Buy"
+    )
+
+    category.destroy!
+
+    assert_nil trade.reload.category_id
+  end
+
   test "exchange_rate setter stores normalized numeric value in extra" do
     trade = Trade.new
     trade.exchange_rate = "0.91"

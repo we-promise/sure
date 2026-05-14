@@ -4368,6 +4368,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -4376,6 +4377,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: date
         in: query
         required: false
@@ -4411,7 +4413,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/HoldingCollection"
         '422':
-          description: invalid date filter
+          description: invalid filter
           content:
             application/json:
               schema:
@@ -6286,6 +6288,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -6294,6 +6297,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: start_date
         in: query
         required: false
@@ -6316,7 +6320,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/TradeCollection"
         '422':
-          description: invalid date filter
+          description: invalid filter
           content:
             application/json:
               schema:

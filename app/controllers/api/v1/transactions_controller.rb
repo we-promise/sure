@@ -6,7 +6,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
-  before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :set_readable_transaction, only: [ :show ]
+  before_action :set_writable_transaction, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
@@ -50,7 +51,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
   end
 
@@ -64,7 +65,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
   end
 
@@ -90,7 +91,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
+    account = family.accounts.writable_by(current_resource_owner).visible.find(account_id_param)
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
       return render_existing_idempotent_entry(existing_entry)
@@ -113,6 +114,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       }, status: :unprocessable_entity
     end
 
+  rescue ActiveRecord::RecordNotFound
+    render json: {
+      error: "not_found",
+      message: "Account not found"
+    }, status: :not_found
   rescue ActiveRecord::RecordNotUnique
     if idempotency_key_requested? && account && (existing_entry = existing_idempotent_entry(account))
       render_existing_idempotent_entry(existing_entry)
@@ -125,9 +131,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
-end
+  end
 
   def update
     if @entry.split_child?
@@ -171,7 +177,7 @@ end
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
   end
 
@@ -194,13 +200,13 @@ end
 
     render json: {
       error: "internal_server_error",
-      message: "An unexpected error occurred"
+      message: "Error: #{e.message}"
     }, status: :internal_server_error
   end
 
   private
 
-    def set_transaction
+    def set_readable_transaction
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
       family = current_resource_owner.family
@@ -208,6 +214,23 @@ end
         .joins(entry: :account)
         .merge(Account.accessible_by(current_resource_owner))
         .merge(Account.historical)
+        .find(params[:id])
+      @entry = @transaction.entry
+    rescue ActiveRecord::RecordNotFound
+      render json: {
+        error: "not_found",
+        message: "Transaction not found"
+      }, status: :not_found
+    end
+
+    def set_writable_transaction
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
+      family = current_resource_owner.family
+      @transaction = family.transactions
+        .joins(entry: :account)
+        .merge(Account.writable_by(current_resource_owner))
+        .merge(Account.visible)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound

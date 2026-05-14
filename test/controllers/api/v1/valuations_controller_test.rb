@@ -118,16 +118,15 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account_id must be a valid UUID", response_data["message"]
   end
 
-  test "should not expose internal index errors" do
-    Api::V1::ValuationsController.any_instance.stubs(:safe_page_param).raises(StandardError, "database password leaked")
+  test "should return project-standard internal index errors" do
+    Api::V1::ValuationsController.any_instance.stubs(:safe_page_param).raises(StandardError, "boom")
 
     get api_v1_valuations_url, headers: api_headers(@api_key)
     assert_response :internal_server_error
 
     response_data = JSON.parse(response.body)
     assert_equal "internal_server_error", response_data["error"]
-    assert_equal "An unexpected error occurred", response_data["message"]
-    assert_not_includes response.body, "database password leaked"
+    assert_equal "Error: boom", response_data["message"]
   end
 
   test "should reject index without API key" do
@@ -282,6 +281,25 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should return project-standard internal create errors" do
+    Account.any_instance.stubs(:create_reconciliation).raises(StandardError, "boom")
+
+    post api_v1_valuations_url,
+         params: {
+           valuation: {
+             account_id: @account.id,
+             amount: 10000.00,
+             date: Date.current
+           }
+         },
+         headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "Error: boom", response_data["message"]
+  end
+
   # UPDATE action tests
   test "should update valuation with valid parameters" do
     entry = @valuation.entry
@@ -343,6 +361,20 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     entry = @valuation.entry
     put api_v1_valuation_url(entry), params: { valuation: { amount: 15000.00 } }
     assert_response :unauthorized
+  end
+
+  test "should return project-standard internal update errors" do
+    entry = @valuation.entry
+    Account.any_instance.stubs(:update_reconciliation).raises(StandardError, "boom")
+
+    put api_v1_valuation_url(entry),
+        params: { valuation: { amount: 15000.00, date: Date.current } },
+        headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "Error: boom", response_data["message"]
   end
 
   # JSON structure tests

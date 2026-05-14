@@ -41,7 +41,10 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts
+      .writable_by(current_resource_owner)
+      .visible
+      .find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -77,6 +80,8 @@ class Api::V1::TradesController < Api::V1::BaseController
   rescue ActiveRecord::RecordNotFound => e
     message = (e.model == "Account") ? "Account not found" : "Security not found"
     render json: { error: "not_found", message: message }, status: :not_found
+  rescue ArgumentError => e
+    render_validation_error(e.message, [ e.message ])
   rescue => e
     log_and_render_error("create", e)
   end
@@ -93,6 +98,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     else
       render_validation_error("Trade could not be updated", @entry.errors.full_messages)
     end
+  rescue ArgumentError => e
+    render_validation_error(e.message, [ e.message ])
   rescue => e
     log_and_render_error("update", e)
   end
@@ -119,8 +126,14 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     def set_writable_trade
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
       family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+      @trade = family.trades
+        .joins(entry: :account)
+        .merge(Account.writable_by(current_resource_owner))
+        .merge(Account.visible)
+        .find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
@@ -190,7 +203,6 @@ class Api::V1::TradesController < Api::V1::BaseController
       flat = trade_update_params.to_h
       entry_params = {
         name: flat[:name],
-        date: flat[:date],
         amount: flat[:amount],
         currency: flat[:currency],
         notes: flat[:notes],
@@ -201,6 +213,7 @@ class Api::V1::TradesController < Api::V1::BaseController
           category_id: flat[:category_id]
         }.compact_blank
       }.compact
+      entry_params[:date] = parse_date!(flat[:date], "date") if flat[:date].present?
 
       original_qty = flat[:qty]
       original_price = flat[:price]
@@ -212,6 +225,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
         signed_qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
         entry_params[:entryable_attributes][:qty] = signed_qty
+        entry_params[:entryable_attributes][:price] = price.to_d if original_price.present?
         entry_params[:amount] = signed_qty * price.to_d
         ticker = @trade.security&.ticker
         entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
@@ -271,7 +285,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       {
         account: account,
-        date: trade_params[:date],
+        date: parse_date!(trade_params[:date], "date"),
         qty: qty,
         price: price,
         currency: trade_params[:currency].presence || account.currency,
@@ -321,7 +335,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       Rails.logger.error exception.backtrace.join("\n")
       render json: {
         error: "internal_server_error",
-        message: "An unexpected error occurred"
+        message: "Error: #{exception.message}"
       }, status: :internal_server_error
     end
 

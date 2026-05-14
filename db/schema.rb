@@ -1945,7 +1945,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_14_090000) do
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
-  add_foreign_key "trades", "categories"
+  add_foreign_key "trades", "categories", on_delete: :nullify
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
