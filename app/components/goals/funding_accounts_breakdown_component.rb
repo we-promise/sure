@@ -15,7 +15,7 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
         balance: account.balance.to_d,
         balance_money: Money.new(account.balance.to_d, goal.currency),
         last_30_money: Money.new(last_30_inflow_for(account), goal.currency),
-        sparkline_points: sparkline_for(account)
+        sparkline_points: sparkline_points_for(account)
       }
     end
   end
@@ -44,37 +44,68 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   end
 
   private
+    SPARK_BUCKETS = 12
+
+    # Single grouped query across every linked account for the last-30-day
+    # inflow column. The V2 implementation hit one query per account in
+    # the row loop; this collapses to one.
     def last_30_inflow_for(account)
-      @inflow_cache ||= {}
-      @inflow_cache[account.id] ||= begin
-        net = Entry
+      last_30_inflow_map[account.id] || 0
+    end
+
+    def last_30_inflow_map
+      @last_30_inflow_map ||= begin
+        account_ids = goal.linked_accounts.map(&:id)
+        return {} if account_ids.empty?
+
+        Entry
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-          .where(account_id: account.id, date: WINDOW_DAYS.days.ago.to_date..Date.current)
+          .where(account_id: account_ids, date: WINDOW_DAYS.days.ago.to_date..Date.current)
           .where(excluded: false)
+          .group(:account_id)
           .sum(:amount)
-        (-net.to_d).clamp(0, Float::INFINITY)
+          .transform_values { |v| (-v.to_d).clamp(0, Float::INFINITY) }
       end
     end
 
-    # 12-bucket weekly sparkline of net inflow over 90 days. Uses the same
-    # transfer-inclusive semantics as Goal#pace — transfers between linked
-    # accounts wash out across the goal but show on each account's sparkline.
-    def sparkline_for(account)
-      buckets = 12
-      bucket_days = (SPARK_WINDOW_DAYS / buckets.to_f).ceil
+    # 12-bucket weekly sparkline of net inflow over 90 days per account, all
+    # in one grouped query. Bucket index counts back from today
+    # (`(CURRENT_DATE - entries.date) / bucket_days`); bucket 0 is the
+    # newest 8-day window, bucket 11 is the oldest. Each row in the
+    # returned per-account array is in oldest → newest order so the SVG
+    # path reads left → right naturally. Uses the same transfer-inclusive
+    # semantics as Goal#pace.
+    def sparkline_points_for(account)
+      sparkline_map[account.id] || Array.new(SPARK_BUCKETS, 0.0)
+    end
 
-      buckets.times.map do |i|
-        start_at = (SPARK_WINDOW_DAYS - (i + 1) * bucket_days).days.ago.to_date
-        end_at = (SPARK_WINDOW_DAYS - i * bucket_days).days.ago.to_date
-        net = Entry
+    def sparkline_map
+      @sparkline_map ||= begin
+        account_ids = goal.linked_accounts.map(&:id)
+        return {} if account_ids.empty?
+
+        bucket_days = (SPARK_WINDOW_DAYS / SPARK_BUCKETS.to_f).ceil
+
+        bucket_expr = Arel.sql(
+          "LEAST(GREATEST((CURRENT_DATE - entries.date) / #{bucket_days.to_i}, 0), #{SPARK_BUCKETS - 1})"
+        )
+
+        rows = Entry
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-          .where(account_id: account.id, date: start_at..end_at)
+          .where(account_id: account_ids, date: SPARK_WINDOW_DAYS.days.ago.to_date..Date.current)
           .where(excluded: false)
+          .group(:account_id, bucket_expr)
           .sum(:amount)
-        (-net.to_d).clamp(0, Float::INFINITY).to_f
+
+        result = Hash.new { |h, k| h[k] = Array.new(SPARK_BUCKETS, 0.0) }
+        rows.each do |(account_id, sql_idx), net|
+          idx = (SPARK_BUCKETS - 1) - sql_idx.to_i
+          result[account_id][idx] = (-net.to_d).clamp(0, Float::INFINITY).to_f
+        end
+        result
       end
     rescue StandardError => e
-      Rails.logger.warn("Sparkline for account #{account.id} failed: #{e.message}")
-      Array.new(buckets, 0.0)
+      Rails.logger.warn("Sparkline map for goal #{goal.id} failed: #{e.message}")
+      {}
     end
 end
