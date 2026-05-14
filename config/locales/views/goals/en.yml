@@ -98,6 +98,10 @@ en:
       pledge_just_transferred: I just transferred…
       pledge_just_saved: I just saved…
       funding_accounts_heading: Funding accounts
+      funding_accounts:
+        empty:
+          heading: No funding accounts linked yet
+          body: Edit the goal to link the depository accounts you save into.
       notes: Notes
       funding_last_30d: last 30d
       pending_pledge:
