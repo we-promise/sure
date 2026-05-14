@@ -40,7 +40,7 @@ class RuleJob < ApplicationJob
         status = "pending"
       elsif result.is_a?(Integer)
         # Only synchronous actions were executed
-        transactions_processed = result
+        transactions_processed = transactions_queued
         transactions_modified = result
         status = "success"
       else
