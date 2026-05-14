@@ -21,6 +21,9 @@ en:
         on_track_label: Goals on track
         on_track_value: "%{on_track} of %{total}"
         on_track_sub_parts:
+          reached:
+            one: 1 reached
+            other: "%{count} reached"
           behind:
             one: 1 behind
             other: "%{count} behind"

@@ -97,7 +97,7 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 0, @goal.remaining_amount
   end
 
-  test "pace is zero on a goal whose linked accounts have no non-transfer entries" do
+  test "pace is zero on a goal whose linked accounts have no transactions" do
     fresh_account = Account.create!(
       family: @family,
       accountable: Depository.new,

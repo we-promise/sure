@@ -111,8 +111,13 @@ class Goal < ApplicationRecord
     end
   end
 
-  # 90-day rolling monthly pace: average net non-transfer inflow into linked
-  # accounts. Entry amount sign convention in Sure: inflow is negative.
+  # 90-day rolling monthly pace: net inflow into linked accounts divided by
+  # three months. Transfers between linked accounts net to zero — both sides
+  # land inside this account set. Transfers from outside (e.g. checking →
+  # linked savings) net positive, which is the behaviour we want: the user
+  # taps "I just transferred…", the transfer arrives, balance goes up,
+  # pace goes up, status flips off "behind". Excludes user-flagged-excluded
+  # entries. Entry amount sign convention in Sure: inflow is negative.
   def pace
     return @pace if defined?(@pace)
 
@@ -123,7 +128,6 @@ class Goal < ApplicationRecord
       net = Entry
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
-        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
         .where(excluded: false)
         .sum(:amount)
       (-net.to_d / 3).round(2)

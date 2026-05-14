@@ -51,6 +51,7 @@
         <p class="text-xs text-secondary mt-1">
           <%
             parts = []
+            parts << t(".kpi.on_track_sub_parts.reached", count: @kpi[:reached_count]) if @kpi[:reached_count].positive?
             parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
             parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
             parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?

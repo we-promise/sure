@@ -190,8 +190,15 @@ class GoalsController < ApplicationController
       velocity_30d = family.savings_inflow_velocity(range: (today - 30)..today)
       velocity_prior_30d = family.savings_inflow_velocity(range: (today - 60)..(today - 31))
       delta_amount = velocity_30d - velocity_prior_30d
-      delta_percent = velocity_prior_30d.zero? ? nil : ((delta_amount / velocity_prior_30d) * 100).round(1)
-      velocity_direction = if delta_amount.positive? then :up
+      delta_percent = velocity_prior_30d.zero? ? nil : ((delta_amount / velocity_prior_30d.abs) * 100).round(1)
+
+      # Sign decoupling: the headline-amount sign reflects this month's
+      # direction ("−$200 last 30d" = net outflow); the delta direction
+      # (↑/↓ vs prior 30d) goes on the subline. Conflating them produced the
+      # "−$1234" + "↓ 27%" tile where the minus looked like a loss but the
+      # $1234 was actually the (positive) amount contributed.
+      headline_sign = velocity_30d.negative? ? "−" : ""
+      delta_direction = if delta_amount.positive? then :up
       elsif delta_amount.negative? then :down
       else :flat
       end
@@ -200,19 +207,21 @@ class GoalsController < ApplicationController
         .select { |g| g.status == :behind }
         .sum { |g| g.monthly_target_amount.to_d }
       behind = active_goals.count { |g| g.status == :behind }
-      on_track = active_goals.count { |g| g.status == :on_track || g.status == :reached }
+      on_track = active_goals.count { |g| g.status == :on_track }
+      reached = active_goals.count { |g| g.status == :reached }
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
 
       {
         currency: currency,
         velocity_30d_money: Money.new(velocity_30d.abs, currency),
-        velocity_prior_30d_money: Money.new(velocity_prior_30d, currency),
-        velocity_30d_sign: velocity_direction == :down ? "−" : (velocity_direction == :up ? "+" : ""),
+        velocity_prior_30d_money: Money.new(velocity_prior_30d.abs, currency),
+        velocity_30d_sign: headline_sign,
         velocity_delta_percent: delta_percent,
-        velocity_direction: velocity_direction,
+        velocity_direction: delta_direction,
         needs_this_month_money: Money.new(needs, currency),
         on_track_count: on_track,
+        reached_count: reached,
         behind_count: behind,
         no_date_count: no_date,
         paused_count: paused,

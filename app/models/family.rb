@@ -45,13 +45,24 @@ class Family < ApplicationRecord
 
   has_many :goals, dependent: :destroy
 
-  # Net non-transfer inflow into every depository account linked to any goal,
-  # over the given window. Entry amount convention in Sure: inflow is negative,
-  # so we flip the sign for the user-facing "contributed" value.
+  # Net inflow into every depository account linked to any primary-currency
+  # goal, over the given window. Transfers between linked accounts net to zero
+  # because both sides of an internal move land inside the same account set;
+  # external transfers (e.g. checking → linked savings) net positive.
+  #
+  # Scoped to the family's primary currency: mixed-currency families would
+  # otherwise sum raw EUR + USD numbers and surface the result as primary.
+  # Foreign-currency goals are excluded from this KPI until FX conversion is
+  # added.
+  #
+  # Entry amount convention in Sure: inflow is negative, so flip the sign.
+  # Result is allowed to go negative (net outflow last 30d) so the headline
+  # reflects reality; the controller decides how to render.
   def savings_inflow_velocity(range: 30.days.ago.to_date..Date.current)
     account_ids = Account
       .joins(:goal_accounts)
       .where(goal_accounts: { goal_id: goals.select(:id) })
+      .where(currency: primary_currency_code)
       .distinct
       .pluck(:id)
     return 0 if account_ids.empty?
@@ -59,11 +70,10 @@ class Family < ApplicationRecord
     net = Entry
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(account_id: account_ids, date: range)
-      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
       .where(excluded: false)
       .sum(:amount)
 
-    (-net.to_d).clamp(0, Float::INFINITY)
+    -net.to_d
   end
 
   has_many :llm_usages, dependent: :destroy
