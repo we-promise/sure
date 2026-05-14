@@ -3,11 +3,14 @@
   <div class="w-fit relative">
     <span class="goal-avatar inline-flex items-center justify-center w-11 h-11 rounded-xl font-semibold text-base"
           style="--avatar-color: <%= form.object.color %>;"
-          data-color-icon-picker-target="avatar">
+          data-color-icon-picker-target="avatar"
+          data-goal-stepper-target="avatarPreview">
       <% if form.object.icon.present? %>
         <%= icon(form.object.icon, color: "current", size: "md") %>
+      <% elsif form.object.name.present? %>
+        <%= form.object.name.strip.first&.upcase %>
       <% else %>
-        <%= form.object.name.to_s.strip.first&.upcase || "?" %>
+        <%= icon("target", color: "current", size: "md") %>
       <% end %>
     </span>
 

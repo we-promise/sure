@@ -51,6 +51,11 @@ export default class extends Controller {
   connect() {
     this.currentStep = 1;
     this.refreshSubmitState();
+    // Capture the default avatar contents (the "target" icon SVG) so we
+    // can restore it when the user clears the name field after typing.
+    if (this.hasAvatarPreviewTarget) {
+      this._defaultAvatarHTML = this.avatarPreviewTarget.innerHTML;
+    }
   }
 
   blockEnter(event) {
@@ -108,10 +113,20 @@ export default class extends Controller {
       this.clearFieldError(this.nameInputTarget, this.hasNameErrorTarget ? this.nameErrorTarget : null);
     }
     if (!this.hasAvatarPreviewTarget || !this.hasNameInputTarget) return;
+
+    // If the user has explicitly picked an icon, leave it alone — name
+    // changes shouldn't undo an explicit choice.
+    const iconPicked = this.element.querySelector('input[name="goal[icon]"]:checked');
+    if (iconPicked) return;
+
     const name = this.nameInputTarget.value.trim();
-    const initial = name ? name.charAt(0).toUpperCase() : "?";
-    const inner = this.avatarPreviewTarget.querySelector('[data-testid="goal-avatar"]');
-    if (inner) inner.textContent = initial;
+    if (name) {
+      this.avatarPreviewTarget.textContent = name.charAt(0).toUpperCase();
+    } else if (this._defaultAvatarHTML) {
+      // Captured at connect — restore the default "target" icon from the
+      // server-rendered template, not a "?" character.
+      this.avatarPreviewTarget.innerHTML = this._defaultAvatarHTML;
+    }
   }
 
   validateStep1() {
