@@ -563,7 +563,7 @@ export default class extends Controller {
       }).format(amount);
     } catch {
       // Same server-shipped symbol path as `_fmtMoneyShort`.
-      const symbol = (this.dataValue && this.dataValue.currency_symbol) || "$";
+      const symbol = this.dataValue?.currency_symbol || "$";
       return `${symbol}${Math.round(amount).toLocaleString()}`;
     }
   }
@@ -573,7 +573,7 @@ export default class extends Controller {
     // through Money.new(0, code).symbol so EUR/GBP/JPY/etc. render with
     // the family-locale-correct glyph). Fall back to "$" if a stale
     // payload reaches us mid-deploy.
-    const symbol = (this.dataValue && this.dataValue.currency_symbol) || "$";
+    const symbol = this.dataValue?.currency_symbol || "$";
     const abs = Math.abs(amount);
     if (abs >= 1_000_000) {
       return `${symbol}${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
