@@ -98,21 +98,23 @@ export class RailsContainer extends Container {
     });
   }
 
-  override async onStop(params: { exitCode: number; reason: string }): Promise<void> {
+  override async onStop(stopParams: { exitCode?: number; reason?: string }): Promise<void> {
     await this.recordDiagnostic({
       event: "stop",
       at: new Date().toISOString(),
-      exitCode: params.exitCode,
-      reason: params.reason,
+      exitCode: stopParams.exitCode,
+      reason: stopParams.reason,
     });
   }
 
   override async onError(error: unknown): Promise<void> {
+    console.error("Rails container error:", error);
     await this.recordDiagnostic({
       event: "error",
       at: new Date().toISOString(),
       message: error instanceof Error ? error.message : String(error),
     });
+    throw error;
   }
 }
 
