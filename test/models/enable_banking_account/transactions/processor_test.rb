@@ -186,6 +186,89 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
 
     assert_equal 0, result[:failed]
+  end
+
+  test "does not re-import a pending transaction whose external_id was auto-claimed" do
+    # When a pending entry is automatically matched to a booked transaction by the
+    # amount/date heuristic (find_pending_transaction), the old pending external_id
+    # is stored in auto_claimed_pending_ids so subsequent syncs don't recreate it.
+    pending_ext_id = "enable_banking_PDNG_AUTO_CLAIMED"
+
+    booked_entry = create_transaction(
+      account:     @account,
+      name:        "Grocery Store",
+      date:        1.day.ago.to_date,
+      amount:      55,
+      currency:    "EUR",
+      external_id: "enable_banking_BOOK_SETTLED",
+      source:      "enable_banking"
+    )
+    booked_entry.transaction.update!(
+      extra: {
+        "auto_claimed_pending_ids" => [ pending_ext_id ]
+      }
+    )
+
+    @enable_banking_account.update!(
+      raw_transactions_payload: [
+        raw_pending_transaction(transaction_id: "PDNG_AUTO_CLAIMED")
+      ]
+    )
+
+    assert_no_difference "@account.entries.count" do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+  end
+
+  test "does not re-import when both manual_merge and auto_claimed_pending_ids exclusions are present" do
+    manually_merged_ext_id  = "enable_banking_PDNG_MANUAL"
+    auto_claimed_ext_id     = "enable_banking_PDNG_AUTO"
+
+    manual_entry = create_transaction(
+      account:     @account,
+      name:        "Manual Merge Entry",
+      date:        2.days.ago.to_date,
+      amount:      20,
+      currency:    "EUR",
+      external_id: "enable_banking_BOOK_MANUAL",
+      source:      "enable_banking"
+    )
+    manual_entry.transaction.update!(
+      extra: {
+        "manual_merge" => {
+          "merged_from_external_id" => manually_merged_ext_id,
+          "merged_at"               => Time.current.iso8601,
+          "source"                  => "enable_banking"
+        }
+      }
+    )
+
+    auto_entry = create_transaction(
+      account:     @account,
+      name:        "Auto Claimed Entry",
+      date:        1.day.ago.to_date,
+      amount:      30,
+      currency:    "EUR",
+      external_id: "enable_banking_BOOK_AUTO",
+      source:      "enable_banking"
+    )
+    auto_entry.transaction.update!(
+      extra: { "auto_claimed_pending_ids" => [ auto_claimed_ext_id ] }
+    )
+
+    @enable_banking_account.update!(
+      raw_transactions_payload: [
+        raw_pending_transaction(transaction_id: "PDNG_MANUAL"),         # excluded via manual_merge
+        raw_pending_transaction(transaction_id: "PDNG_AUTO"),           # excluded via auto_claimed_pending_ids
+        raw_pending_transaction(transaction_id: "PDNG_BRAND_NEW_XXXX")  # new — should import
+      ]
+    )
+
+    result = nil
+    assert_difference "@account.entries.count", 1 do
+      result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    assert_equal 2, result[:skipped]
     assert_equal 1, result[:imported]
   end
 

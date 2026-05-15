@@ -62,6 +62,11 @@ en:
       title: What would you like to add?
     show:
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
+      tabs:
+        activity: Activity
+        holdings: Holdings
+        overview: Overview
+        statements: Statements
       activity:
         amount: Amount
         balance: Balance
@@ -98,6 +103,7 @@ en:
         import_trades: Import trades
         import_transactions: Import transactions
         manage: Manage accounts
+        statements: Statements
     update:
       success: "%{type} account updated"
     sidebar:

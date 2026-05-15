@@ -321,6 +321,42 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
+  /// Delete multiple chats
+  Future<bool> deleteMultipleChats({
+    required String accessToken,
+    required List<String> chatIds,
+  }) async {
+    try {
+      final result = await _chatService.deleteMultipleChats(
+        accessToken: accessToken,
+        chatIds: chatIds,
+      );
+
+      final deletedCount = (result['deletedCount'] as int?) ?? 0;
+      if (result['success'] == true || deletedCount > 0) {
+        final failedIds = ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
+        final deleted = chatIds.toSet().difference(failedIds);
+        _chats.removeWhere((c) => deleted.contains(c.id));
+
+        if (_currentChat != null && deleted.contains(_currentChat!.id)) {
+          _currentChat = null;
+        }
+
+        notifyListeners();
+        return true;
+      }
+
+      _errorMessage = 'Failed to delete chats';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('deleteMultipleChats error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
     _pollingTimer?.cancel();

@@ -1,0 +1,152 @@
+<div id="ibkr-providers-panel" class="space-y-4">
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3"),
+               t(".steps.step_4"),
+               t(".steps.step_5")
+             ] %>
+
+  <details class="group bg-surface-inset rounded-xl p-4">
+    <summary class="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2"><%= t(".flex_query_details.eyebrow") %></p>
+          <p class="text-sm font-medium text-primary"><%= t(".flex_query_details.title") %></p>
+          <p class="text-xs text-secondary mt-1"><%= t(".flex_query_details.summary") %></p>
+        </div>
+        <%= icon "chevron-down", class: "mt-0.5 text-secondary transition-transform group-open:rotate-180" %>
+      </div>
+    </summary>
+
+    <div class="mt-4 space-y-4 text-sm text-secondary">
+      <div class="space-y-2">
+        <p class="font-medium text-primary"><%= t(".flex_query_details.sections_heading") %></p>
+        <ul class="list-disc list-inside space-y-2">
+          <li>
+            <span class="text-primary"><%= t(".sections.account_information") %></span>
+          </li>
+          <li>
+            <span class="text-primary"><%= t(".sections.cash_report") %></span>
+            <ul class="list-disc list-inside mt-1 ml-4 space-y-1">
+              <li><%= t(".sections.cash_report_options") %></li>
+              <li><%= t(".sections.cash_report_fields") %></li>
+            </ul>
+          </li>
+          <li>
+            <span class="text-primary"><%= t(".sections.cash_transactions") %></span>
+            <ul class="list-disc list-inside mt-1 ml-4 space-y-1">
+              <li><%= t(".sections.cash_transactions_options") %></li>
+              <li><%= t(".sections.cash_transactions_fields") %></li>
+            </ul>
+          </li>
+          <li>
+            <span class="text-primary"><%= t(".sections.change_in_position_value_summary") %></span>
+          </li>
+          <li>
+            <span class="text-primary"><%= t(".sections.net_asset_value") %></span>
+            <ul class="list-disc list-inside mt-1 ml-4 space-y-1">
+              <li><%= t(".sections.net_asset_value_options") %></li>
+              <li><%= t(".sections.net_asset_value_fields") %></li>
+            </ul>
+          </li>
+          <li>
+            <span class="text-primary"><%= t(".sections.open_positions") %></span>
+            <ul class="list-disc list-inside mt-1 ml-4 space-y-1">
+              <li><%= t(".sections.open_positions_options") %></li>
+              <li><%= t(".sections.open_positions_fields") %></li>
+            </ul>
+          </li>
+          <li>
+            <span class="text-primary"><%= t(".sections.trades") %></span>
+            <ul class="list-disc list-inside mt-1 ml-4 space-y-1">
+              <li><%= t(".sections.trades_options") %></li>
+              <li><%= t(".sections.trades_fields") %></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="space-y-2">
+        <p class="font-medium text-primary"><%= t(".flex_query_details.configuration_heading") %></p>
+        <ul class="list-disc list-inside space-y-1">
+          <li><%= t(".configuration.models") %></li>
+          <li><%= t(".configuration.format") %></li>
+          <li><%= t(".configuration.period") %></li>
+          <li><%= t(".configuration.date_format") %></li>
+          <li><%= t(".configuration.time_format") %></li>
+          <li><%= t(".configuration.date_time_separator") %></li>
+          <li><%= t(".configuration.profit_and_loss") %></li>
+          <li><%= t(".configuration.all_other_options") %></li>
+        </ul>
+      </div>
+
+      <p class="text-xs text-secondary"><%= t(".report_window_note") %></p>
+    </div>
+  </details>
+
+  <%
+    ibkr_item = Current.family.ibkr_items.first_or_initialize(name: "Interactive Brokers")
+    is_new_record = ibkr_item.new_record?
+  %>
+
+  <% if ibkr_item.persisted? %>
+    <div class="flex flex-wrap justify-end gap-2">
+      <%= button_to sync_ibkr_item_path(ibkr_item),
+                    method: :post,
+                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                    disabled: ibkr_item.syncing? do %>
+        <%= icon "refresh-cw", size: "sm" %>
+        <%= t(".sync") %>
+      <% end %>
+
+      <%= button_to ibkr_item_path(ibkr_item),
+                    method: :delete,
+                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                    data: { turbo_confirm: t(".disconnect_confirm") } do %>
+        <%= icon "trash-2", size: "sm" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= styled_form_with model: ibkr_item,
+                       url: is_new_record ? ibkr_items_path : ibkr_item_path(ibkr_item),
+                       scope: :ibkr_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :query_id,
+                        label: t(".query_id_label"),
+                        placeholder: is_new_record ? t(".query_id_placeholder_new") : t(".query_id_placeholder_existing"),
+                        type: :password %>
+
+    <%= form.text_field :token,
+                        label: t(".token_label"),
+                        placeholder: is_new_record ? t(".token_placeholder_new") : t(".token_placeholder_existing"),
+                        type: :password %>
+
+    <div class="flex flex-wrap justify-end gap-2">
+      <%= form.submit(is_new_record ? t(".save_configuration") : t(".update_configuration"), class: "btn btn--primary") %>
+    </div>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if ibkr_item.persisted? && ibkr_item.credentials_configured? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">
+        <%= t(".status_configured_prefix", summary: ibkr_item.sync_status_summary) %>
+        <%= link_to t(".accounts_tab"), accounts_path, class: "link" %>
+        <%= t(".status_configured_suffix") %>
+      </p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t(".not_configured") %></p>
+    <% end %>
+  </div>
+</div>
