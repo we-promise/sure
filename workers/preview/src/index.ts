@@ -10,7 +10,23 @@ const DIAGNOSTICS_HISTORY_KEY = "preview-diagnostics-history";
 export class RailsContainer extends Container {
   defaultPort = 3000;
   pingEndpoint = "container/up";
+  entrypoint = ["/rails/bin/preview-entrypoint", "bundle", "exec", "puma", "-C", "config/puma.rb"];
+  envVars = {
+    RAILS_ENV: "production",
+    RAILS_LOG_TO_STDOUT: "true",
+    RAILS_SERVE_STATIC_FILES: "true",
+    SECRET_KEY_BASE: "preview-secret-key-base-for-pr-880",
+    APP_DOMAIN: "sure-preview-880.sure-finances.workers.dev",
+    APP_URL: "https://sure-preview-880.sure-finances.workers.dev",
+    RAILS_FORCE_SSL: "false",
+    RAILS_ASSUME_SSL: "false",
+    ACTIVE_STORAGE_SERVICE: "local",
+    DISABLE_BOOTSNAP: "1",
+    BINDING: "::",
+    PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
+  };
   sleepAfter = "30m";
+  enableInternet = true;
 
   get runtimeContainer() {
     return this.ctx.container!;
@@ -46,6 +62,16 @@ export class RailsContainer extends Container {
         diagnostics: (await this.ctx.storage.get(DIAGNOSTICS_KEY)) ?? null,
         diagnosticsHistory: (await this.ctx.storage.get(DIAGNOSTICS_HISTORY_KEY)) ?? [],
       });
+    }
+
+    if (url.pathname === "/_container_event" && request.method === "POST") {
+      const payload = await request.json();
+      await this.recordDiagnostic({
+        event: "entrypoint",
+        at: new Date().toISOString(),
+        payload,
+      });
+      return new Response("ok");
     }
 
     try {
