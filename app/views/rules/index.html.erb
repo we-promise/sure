@@ -128,6 +128,7 @@
                 <div><%= t("rules.recent_runs.columns.transactions_counts.queued") %></div>
                 <div><%= t("rules.recent_runs.columns.transactions_counts.processed") %></div>
                 <div><%= t("rules.recent_runs.columns.transactions_counts.modified") %></div>
+                <div><%= t("rules.recent_runs.columns.transactions_counts.blocked", default: "Blocked") %></div>
               </div>
             </th>
           </tr>
@@ -169,7 +170,7 @@
                 <%= run.rule_name.presence || run.rule&.name.presence || t("rules.recent_runs.unnamed_rule") %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center tabular-nums">
-                <%= "#{number_with_delimiter(run.transactions_queued)} / #{number_with_delimiter(run.transactions_processed)} / #{number_with_delimiter(run.transactions_modified)}" %>
+                <%= "#{number_with_delimiter(run.transactions_queued)} / #{number_with_delimiter(run.transactions_processed)} / #{number_with_delimiter(run.transactions_modified)} / #{number_with_delimiter(run.transactions_blocked)}" %>
               </td>
             </tr>
           <% end %>
