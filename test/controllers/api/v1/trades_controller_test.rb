@@ -112,34 +112,34 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create deposit returns 201" do
-    post "/api/v1/trades",
-      params: { trade: {
-        account_id: @investment_account.id,
-        type: "deposit",
-        date: Date.current,
-        amount: 175.25,
-        currency: "USD"
-      } },
-      headers: api_headers(read_write_api_key)
+     post "/api/v1/trades",
+       params: { trade: {
+         account_id: @investment_account.id,
+         type: "deposit",
+         date: Date.current,
+         amount: 175.25,
+         currency: "USD"
+       } },
+       headers: api_headers(read_write_api_key)
 
-assert_response :created
+     assert_response :created
      body = JSON.parse(response.body)
      assert body["id"].present?
      assert_match(/Deposit to/, body["name"])
    end
 
   test "create withdrawal returns 201" do
-    post "/api/v1/trades",
-      params: { trade: {
-        account_id: @investment_account.id,
-        type: "withdrawal",
-        date: Date.current,
-        amount: 100.00,
-        currency: "USD"
-      } },
-      headers: api_headers(read_write_api_key)
+     post "/api/v1/trades",
+       params: { trade: {
+         account_id: @investment_account.id,
+         type: "withdrawal",
+         date: Date.current,
+         amount: 100.00,
+         currency: "USD"
+       } },
+       headers: api_headers(read_write_api_key)
 
-assert_response :created
+     assert_response :created
      body = JSON.parse(response.body)
      assert body["id"].present?
      assert_match(/Withdrawal/, body["name"])
@@ -173,11 +173,11 @@ assert_response :created
         headers: api_headers(read_write_api_key)
     end
 
-assert_response :created
-     body = JSON.parse(response.body)
-     assert body["id"].present?
-     assert body["inflow_transaction"]["account"]["id"].present?
-     assert body["inflow_transaction"]["account"]["account_type"].present?
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert body["id"].present?
+    assert body["inflow_transaction"]["account"]["id"].present?
+    assert body["inflow_transaction"]["account"]["account_type"].present?
 
     transfer = Transfer.joins(inflow_transaction: :entry)
                        .where(entries: { account_id: @investment_account.id })
