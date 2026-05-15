@@ -163,6 +163,18 @@ emit_status db-prepare "running rails db:prepare"
 /rails/bin/rails db:prepare
 emit_status db-prepare-done "rails db:prepare finished"
 
+# Ensure a default demo dataset exists so reviewers can log in immediately
+echo "Checking demo dataset..."
+emit_status demo-data-check "checking for default demo user"
+if /rails/bin/rails runner 'exit(User.exists?(email: ENV.fetch("DEMO_USER_EMAIL", "user@example.com")) ? 0 : 1)'; then
+  emit_status demo-data-skip "default demo user already exists"
+else
+  DEMO_SEED="${DEMO_DATA_SEED:-880}"
+  emit_status demo-data-load "loading default demo dataset (seed=${DEMO_SEED})"
+  DEMO_DATA_SEED="$DEMO_SEED" SEED="$DEMO_SEED" SKIP_CLEAR=0 /rails/bin/rake demo_data:default
+  emit_status demo-data-ready "default demo dataset loaded"
+fi
+
 # Execute the main command with an internal readiness probe
 echo "Starting Rails server..."
 emit_status rails-start "starting rails server"

@@ -23,6 +23,7 @@ export class RailsContainer extends Container {
     ACTIVE_STORAGE_SERVICE: "local",
     DISABLE_BOOTSNAP: "1",
     BINDING: "::",
+    DEMO_DATA_SEED: "880",
     PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
   };
   sleepAfter = "30m";
