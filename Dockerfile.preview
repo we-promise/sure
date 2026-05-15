@@ -170,8 +170,8 @@ if /rails/bin/rails runner 'exit(User.exists?(email: ENV.fetch("DEMO_USER_EMAIL"
   emit_status demo-data-skip "default demo user already exists"
 else
   DEMO_SEED="${DEMO_DATA_SEED:-880}"
-  emit_status demo-data-load "loading default demo dataset (seed=${DEMO_SEED})"
-  DEMO_DATA_SEED="$DEMO_SEED" SEED="$DEMO_SEED" SKIP_CLEAR=0 /rails/bin/rake demo_data:default
+  emit_status demo-data-load "loading default demo dataset (seed=${DEMO_SEED}, preserve-existing=true)"
+  DEMO_DATA_SEED="$DEMO_SEED" SEED="$DEMO_SEED" SKIP_CLEAR=1 /rails/bin/rake demo_data:default
   emit_status demo-data-ready "default demo dataset loaded"
 fi
 
