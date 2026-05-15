@@ -1,7 +1,9 @@
 <div class="space-y-4 pb-6 lg:pb-12">
   <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
     <div class="flex items-start gap-3 min-w-0 flex-1">
-      <%= render Goals::AvatarComponent.new(goal: @goal, size: "xl") %>
+      <div class="hidden sm:block">
+        <%= render Goals::AvatarComponent.new(goal: @goal, size: "xl") %>
+      </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
           <h1 class="text-2xl font-semibold text-primary min-w-0 break-words"><%= @goal.name %></h1>
@@ -16,7 +18,7 @@
       <% end %>
       </div>
     </div>
-    <div class="flex items-center gap-2 flex-wrap sm:shrink-0">
+    <div class="flex items-center gap-2 flex-wrap justify-end sm:shrink-0">
       <% unless @goal.completed? || @goal.status == :reached %>
         <%# Demote to outline when the catch-up alert below owns the primary
             action. One primary per surface. %>
@@ -217,13 +219,13 @@
       </div>
     <% else %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
-        <div class="flex items-start justify-between mb-2 gap-3">
+        <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           <div class="min-w-0">
             <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
-            <p class="text-xs text-secondary mt-0.5"><%= @goal.projection_summary %></p>
+            <p class="text-xs text-secondary mt-0.5"><%= sanitize @goal.projection_summary %></p>
           </div>
           <% projection_color = @goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
-          <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
+          <div class="flex items-center flex-wrap gap-x-5 gap-y-1 text-[11px] text-secondary sm:gap-x-3 sm:shrink-0">
             <span class="inline-flex items-center gap-1.5">
               <svg width="18" height="6" class="text-primary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" /></svg>
               <%= t(".projection.legend_saved") %>

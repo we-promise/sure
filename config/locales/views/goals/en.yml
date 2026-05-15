@@ -137,7 +137,7 @@ en:
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
         behind: Falling short at current pace.
-        on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
+        on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
       catch_up:
         title: "Save %{amount}/mo more to catch up"

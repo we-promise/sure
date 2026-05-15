@@ -168,12 +168,12 @@ class Goal < ApplicationRecord
     rem = remaining_amount.to_d
 
     if filled.zero? && rem.zero?
-      return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: "unused" } ]
+      return [ { color: "var(--budget-unused-fill)", amount: 1, id: "unused" } ]
     end
 
     segments = []
     segments << { color: color.presence || "var(--color-blue-500)", amount: filled, id: "saved" } if filled.positive?
-    segments << { color: "var(--budget-unallocated-fill)", amount: rem, id: "unused" } if rem.positive?
+    segments << { color: "var(--budget-unused-fill)", amount: rem, id: "unused" } if rem.positive?
     segments
   end
 
@@ -200,7 +200,7 @@ class Goal < ApplicationRecord
       target_amount: target_amt.to_f,
       target_amount_label: Money.new(target_amt, currency).format(precision: 0),
       target_amount_short_label: short_money(target_amt, currency),
-      currency_symbol: Money.new(0, currency).symbol,
+      currency_symbol: Money.new(0, currency).currency.symbol,
       current_amount: current_balance.to_f,
       avg_monthly: pace.to_f,
       required_monthly: monthly_target_amount.to_f,
@@ -377,7 +377,7 @@ class Goal < ApplicationRecord
     # Money so the chart matches the rest of the app for EUR/GBP families.
     def short_money(amount, code)
       amount_f = amount.to_f
-      symbol = Money.new(0, code).symbol
+      symbol = Money.new(0, code).currency.symbol
       abs = amount_f.abs
       if abs >= 1_000_000
         short = (amount_f / 1_000_000.0).round(1)

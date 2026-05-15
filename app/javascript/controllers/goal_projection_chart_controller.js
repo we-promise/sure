@@ -570,8 +570,8 @@ export default class extends Controller {
 
   _fmtMoneyShort(amount, _currency) {
     // The server ships `currency_symbol` via projection_payload (resolved
-    // through Money.new(0, code).symbol so EUR/GBP/JPY/etc. render with
-    // the family-locale-correct glyph). Fall back to "$" if a stale
+    // through Money.new(0, code).currency.symbol so EUR/GBP/JPY/etc. render
+    // with the family-locale-correct glyph). Fall back to "$" if a stale
     // payload reaches us mid-deploy.
     const symbol = this.dataValue?.currency_symbol || "$";
     const abs = Math.abs(amount);
