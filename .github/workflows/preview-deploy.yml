@@ -2,7 +2,7 @@ name: Deploy PR Preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths-ignore:
       - 'charts/**'
       - 'docs/**'
@@ -10,9 +10,11 @@ on:
 
 jobs:
   ci:
+    if: contains(github.event.pull_request.labels.*.name, 'preview-cf')
     uses: ./.github/workflows/ci.yml
 
   deploy-preview:
+    if: contains(github.event.pull_request.labels.*.name, 'preview-cf')
     name: Deploy to Cloudflare Containers
     needs: ci
     runs-on: ubuntu-latest

@@ -7,7 +7,7 @@ on:
 
   # Immediately cleanup when PR is closed
   pull_request:
-    types: [closed]
+    types: [closed, unlabeled]
 
   # Allow manual trigger
   workflow_dispatch:
@@ -24,7 +24,7 @@ permissions:
 jobs:
   cleanup-on-close:
     name: Cleanup closed PR preview
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && (github.event.action == 'closed' || (github.event.action == 'unlabeled' && github.event.label.name == 'preview-cf'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -56,6 +56,9 @@ jobs:
         with:
           script: |
             const environment = `preview-pr-${{ github.event.pull_request.number }}`;
+            const description = context.payload.action === 'closed'
+              ? 'PR closed - preview deleted'
+              : 'preview-cf label removed - preview deleted';
 
             try {
               // Get deployments for this environment
@@ -72,7 +75,7 @@ jobs:
                   repo: context.repo.repo,
                   deployment_id: deployment.id,
                   state: 'inactive',
-                  description: 'PR closed - preview deleted'
+                  description
                 });
               }
 
