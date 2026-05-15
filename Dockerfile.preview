@@ -170,7 +170,9 @@ emit_status db-prepare-done "rails db:prepare finished"
 # Ensure a default demo dataset exists so reviewers can log in immediately
 echo "Checking demo dataset..."
 emit_status demo-data-check "checking for default demo user"
-if /rails/bin/rails runner 'exit(User.exists?(email: ENV.fetch("DEMO_USER_EMAIL", "user@example.com")) ? 0 : 1)'; then
+DEMO_EMAIL="${DEMO_USER_EMAIL:-user@example.com}"
+DEMO_EMAIL_SQL=${DEMO_EMAIL//\'/\'\'}
+if psql "$DATABASE_URL" -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   emit_status demo-data-skip "default demo user already exists"
 else
   DEMO_SEED="${DEMO_DATA_SEED:-880}"
