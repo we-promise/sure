@@ -3,6 +3,7 @@ hu:
   layouts:
     application:
       privacy_mode: Adatvédelmi mód váltása
+      skip_to_main: Ugrás a fő tartalomhoz
       nav:
         assistant: Asszisztens
         budgets: Költségvetések
