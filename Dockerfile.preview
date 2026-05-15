@@ -167,7 +167,7 @@ emit_status db-prepare "running rails db:prepare"
 /rails/bin/rails db:prepare
 emit_status db-prepare-done "rails db:prepare finished"
 
-# Ensure a default demo login exists quickly, then backfill the heavy dataset after Rails is up
+# Defer all demo-data creation until after Rails is up so preview can boot first
 echo "Checking demo dataset..."
 emit_status demo-data-check "checking for default demo user"
 DEMO_EMAIL="${DEMO_USER_EMAIL:-user@example.com}"
@@ -179,18 +179,13 @@ DEMO_HAS_DATA=0
 if psql "$DATABASE_URL" -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   DEMO_HAS_USER=1
   emit_status demo-data-user-present "default demo user already exists"
-else
-  emit_status demo-data-user-create "creating default demo login"
-  DEMO_DATA_SEED="$DEMO_SEED" SKIP_CLEAR=1 /rails/bin/rake demo_data:empty
-  DEMO_HAS_USER=1
-  emit_status demo-data-user-ready "default demo login created"
 fi
 
 if psql "$DATABASE_URL" -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_id = a.family_id WHERE u.email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   DEMO_HAS_DATA=1
   emit_status demo-data-skip "demo financial data already exists"
 else
-  emit_status demo-data-deferred "deferring full demo dataset load until after rails boot"
+  emit_status demo-data-deferred "deferring demo data creation until after rails boot"
 fi
 
 # Execute the main command with an internal readiness probe
@@ -203,13 +198,22 @@ for i in {1..180}; do
   if curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
     emit_status rails-up-ready "rails responded on localhost:3000/up"
 
-    if [ "$DEMO_HAS_USER" -eq 1 ] && [ "$DEMO_HAS_DATA" -ne 1 ]; then
-      emit_status demo-data-load "backfilling full demo dataset in background (seed=${DEMO_SEED})"
+    if [ "$DEMO_HAS_USER" -ne 1 ] || [ "$DEMO_HAS_DATA" -ne 1 ]; then
+      emit_status demo-data-load "creating/backfilling demo dataset in background (seed=${DEMO_SEED})"
       (
         (
           DEMO_USER_EMAIL="$DEMO_EMAIL" DEMO_DATA_SEED="$DEMO_SEED" /rails/bin/rails runner '
-            user = User.find_by!(email: ENV.fetch("DEMO_USER_EMAIL"))
-            Demo::Generator.new(seed: ENV.fetch("DEMO_DATA_SEED")).generate_new_user_data_for!(user.family, email: user.email)
+            email = ENV.fetch("DEMO_USER_EMAIL")
+            generator = Demo::Generator.new(seed: ENV.fetch("DEMO_DATA_SEED"))
+            user = User.find_by(email: email)
+
+            unless user
+              generator.generate_empty_data!(skip_clear: true)
+              user = User.find_by!(email: email)
+            end
+
+            has_accounts = user.family.accounts.exists?
+            generator.generate_new_user_data_for!(user.family, email: user.email) unless has_accounts
           '
         ) > /tmp/demo-data.log 2>&1 && \
           emit_status demo-data-ready "default demo dataset loaded in background" || \
