@@ -89,7 +89,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     response_body = JSON.parse(response.body)
     assert_equal "internal_server_error", response_body["error"]
-    assert_equal "Error: boom", response_body["message"]
+    assert_equal "An unexpected error occurred", response_body["message"]
   end
 
   test "should only return active accounts" do
@@ -186,7 +186,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     response_body = JSON.parse(response.body)
     assert_equal "internal_server_error", response_body["error"]
-    assert_equal "Error: boom", response_body["message"]
+    assert_equal "An unexpected error occurred", response_body["message"]
   end
 
   test "should require authentication on show" do

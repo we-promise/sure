@@ -126,7 +126,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal "internal_server_error", response_data["error"]
-    assert_equal "Error: boom", response_data["message"]
+    assert_equal "An unexpected error occurred", response_data["message"]
   end
 
   test "should reject index without API key" do
@@ -297,7 +297,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     response_data = JSON.parse(response.body)
     assert_equal "internal_server_error", response_data["error"]
-    assert_equal "Error: boom", response_data["message"]
+    assert_equal "An unexpected error occurred", response_data["message"]
   end
 
   # UPDATE action tests
@@ -374,7 +374,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     response_data = JSON.parse(response.body)
     assert_equal "internal_server_error", response_data["error"]
-    assert_equal "Error: boom", response_data["message"]
+    assert_equal "An unexpected error occurred", response_data["message"]
   end
 
   # JSON structure tests

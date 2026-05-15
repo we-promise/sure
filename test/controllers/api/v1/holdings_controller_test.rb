@@ -117,7 +117,7 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     response_data = JSON.parse(response.body)
     assert_equal "internal_server_error", response_data["error"]
-    assert_equal "Error: boom", response_data["message"]
+    assert_equal "An unexpected error occurred", response_data["message"]
   end
 
   test "rejects malformed account_id filter" do

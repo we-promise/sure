@@ -51,7 +51,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -65,7 +65,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -131,7 +131,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -177,7 +177,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -200,7 +200,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
