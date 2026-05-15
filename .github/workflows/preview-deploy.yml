@@ -1,0 +1,182 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths-ignore:
+      - 'charts/**'
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  deploy-preview:
+    if: contains(github.event.pull_request.labels.*.name, 'preview-cf')
+    name: Deploy to Cloudflare Containers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      deployments: write
+
+    steps:
+      - name: Wait for PR CI to pass
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const headSha = context.payload.pull_request.head.sha;
+            const timeoutMs = 10 * 60 * 1000;
+            const pollMs = 15 * 1000;
+            const startedAt = Date.now();
+            let lastState = 'not found';
+
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            while (Date.now() - startedAt < timeoutMs) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                event: 'pull_request',
+                head_sha: headSha,
+                per_page: 20,
+              });
+
+              const prRun = data.workflow_runs.find((run) => run.name === 'Pull Request' && run.head_sha === headSha);
+
+              if (prRun) {
+                lastState = `${prRun.status}/${prRun.conclusion ?? 'pending'}`;
+                core.info(`Pull Request workflow ${prRun.id}: ${lastState}`);
+
+                if (prRun.status === 'completed') {
+                  if (prRun.conclusion === 'success') {
+                    return;
+                  }
+
+                  core.setFailed(`Pull Request workflow concluded with ${prRun.conclusion}`);
+                  return;
+                }
+              }
+
+              await sleep(pollMs);
+            }
+
+            core.setFailed(`Timed out waiting for Pull Request workflow for ${headSha}. Last state: ${lastState}`);
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Install Wrangler dependencies
+        working-directory: workers/preview
+        run: npm install
+
+      - name: Configure preview files for this PR
+        working-directory: workers/preview
+        run: |
+          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" wrangler.toml
+          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" src/index.ts
+          cat wrangler.toml
+
+      - name: Create GitHub Deployment
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.sha,
+              environment: `preview-pr-${{ github.event.pull_request.number }}`,
+              auto_merge: false,
+              required_contexts: [],
+              description: 'PR Preview Deployment'
+            });
+            return deployment.data.id;
+          result-encoding: string
+
+      - name: Deploy to Cloudflare Containers
+        id: deploy
+        working-directory: workers/preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler deploy --var "PR_NUMBER:${{ github.event.pull_request.number }}"
+
+          # Get the deployment URL
+          PREVIEW_URL="https://sure-preview-${{ github.event.pull_request.number }}.${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev"
+          echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Deployment Status
+        if: always() && steps.deployment.outputs.result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.deployment.outputs.result }},
+              state: state,
+              environment_url: state === 'success' ? '${{ steps.deploy.outputs.preview_url }}' : undefined,
+              description: state === 'success' ? 'Preview deployed successfully' : 'Preview deployment failed'
+            });
+
+      - name: Comment on PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const commentBody = `## 🚀 Preview Deployment Ready
+
+            Your preview environment has been deployed to Cloudflare Containers.
+
+            **Preview URL:** ${previewUrl}
+
+            > ⏰ This preview is intended to be cleaned up after **24 hours** of the last deployment once the cleanup workflow is live on the default branch.
+            > 💤 The container will sleep after 30 minutes of inactivity and wake on the next request.
+
+            ---
+            <sub>Deployed from commit ${{ github.event.pull_request.head.sha }}</sub>`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }}
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview Deployment Ready')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ github.event.pull_request.number }},
+                body: commentBody
+              });
+            }
+      - name: Store cleanup metadata
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-cleanup-pr-${{ github.event.pull_request.number }}
+          path: |
+            workers/preview/wrangler.toml
+          retention-days: 2

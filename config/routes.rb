@@ -1,5 +1,7 @@
-require "sidekiq/web"
-require "sidekiq/cron/web"
+unless Rails.env.production?
+  require "sidekiq/web"
+  require "sidekiq/cron/web"
+end
 
 Rails.application.routes.draw do
   resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
@@ -168,7 +170,7 @@ Rails.application.routes.draw do
     delete :disable
   end
 
-  mount Lookbook::Engine, at: "/design-system"
+  mount Lookbook::Engine, at: "/design-system" unless Rails.env.production?
 
   if Rails.env.development?
     mount Rswag::Api::Engine => "/api-docs"
@@ -176,7 +178,7 @@ Rails.application.routes.draw do
   end
 
   # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq"
+  mount Sidekiq::Web => "/sidekiq" unless Rails.env.production?
 
   # AI chats
   resources :chats do
