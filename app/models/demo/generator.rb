@@ -1425,7 +1425,7 @@ class Demo::Generator
         .where("entries.amount < 0")
         .where("entries.date >= ?", 30.days.ago.to_date)
         .where("(transactions.extra -> 'goal' ->> 'pledge_id') IS NULL")
-        .order("entries.date DESC")
+        .order("entries.date DESC", "entries.id DESC")
         .first
 
       return unless recent_inflow_entry

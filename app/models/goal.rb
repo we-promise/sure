@@ -200,6 +200,7 @@ class Goal < ApplicationRecord
       target_amount: target_amt.to_f,
       target_amount_label: Money.new(target_amt, currency).format(precision: 0),
       target_amount_short_label: short_money(target_amt, currency),
+      currency_symbol: Money.new(0, currency).symbol,
       current_amount: current_balance.to_f,
       avg_monthly: pace.to_f,
       required_monthly: monthly_target_amount.to_f,
