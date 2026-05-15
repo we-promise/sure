@@ -3,6 +3,7 @@ en:
   layouts:
     application:
       privacy_mode: Toggle privacy mode
+      skip_to_main: Skip to main content
       nav:
         assistant: Assistant
         budgets: Budgets
