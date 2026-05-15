@@ -188,7 +188,6 @@ class Goal < ApplicationRecord
     saved_series = series_values.map { |v| { date: v.date.to_s, value: v.value.amount.to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
-    pending = open_pledges.sum(:amount).to_d
     target_amt = target_amount.to_d
     proj_end = projection_end_amount
 
@@ -206,8 +205,6 @@ class Goal < ApplicationRecord
       required_monthly: monthly_target_amount.to_f,
       currency: currency,
       status: status.to_s,
-      pending_pledge_amount: pending.to_f,
-      pending_pledge_label_short: short_money(pending, currency),
       projection_end_value: proj_end.to_f,
       projection_end_label: Money.new(proj_end, currency).format(precision: 0),
       projection_shortfall_label: (target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
@@ -303,6 +300,34 @@ class Goal < ApplicationRecord
       linked_accounts.sort_by(&:id).each_with_index.to_h do |account, i|
         [ account.id, palette[i % palette.size] ]
       end
+    end
+  end
+
+  # Single-line state summary rendered between the header and the ring on
+  # the show page. Replaces the stacked catch-up alert + inline status pill;
+  # carries the same actionable copy without owning a CTA. Returns nil when
+  # the projection-side cards already convey state (paused / archived /
+  # completed / reached) so the callout doesn't double up.
+  def status_callout_context
+    return nil if paused? || archived? || completed? || status == :reached
+
+    case status
+    when :behind
+      delta = catch_up_delta_money.amount
+      if delta.positive?
+        I18n.t("goals.show.status_callout.behind",
+               amount: catch_up_delta_money.format(precision: 0))
+      else
+        I18n.t("goals.show.status_callout.behind_covered")
+      end
+    when :on_track
+      if target_date && pace.to_d.positive?
+        months = (remaining_amount.to_d / pace.to_d).ceil
+        I18n.t("goals.show.status_callout.on_track",
+               date: I18n.l(Date.current >> months.to_i, format: "%b %Y"))
+      end
+    when :no_target_date
+      I18n.t("goals.show.status_callout.no_target_date")
     end
   end
 

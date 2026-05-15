@@ -105,6 +105,11 @@ en:
       notes: Notes
       funding_last_30d: last 30d
       funding_last_90d: last 90d
+      status_callout:
+        behind: "save %{amount}/mo more to catch up"
+        behind_covered: "pending pledges close the gap"
+        on_track: "reaches goal around %{date}"
+        no_target_date: "set a target date to project a finish line"
       pending_pledge:
         title:
           zero: "Pending: %{amount} into %{account} · expires today"
