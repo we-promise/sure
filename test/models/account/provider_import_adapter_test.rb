@@ -926,6 +926,53 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "preserves pending date on subsequent syncs after auto-claim" do
+    # On the first sync the pending date is captured from the pending match.
+    # On subsequent syncs the entry already exists (found by booked external_id),
+    # so pending_match is nil. auto_claimed_pending_ids signals the prior claim
+    # and the stored date must not be overwritten with the booked date.
+    pending_date = Date.today - 3.days
+    booked_date  = Date.today
+
+    @adapter.import_transaction(
+      external_id: "eb_pending_subseq",
+      amount: 75.00,
+      currency: "EUR",
+      date: pending_date,
+      name: "Coffee Shop",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    # First sync: claim the pending entry
+    @adapter.import_transaction(
+      external_id: "eb_booked_subseq",
+      amount: 75.00,
+      currency: "EUR",
+      date: booked_date,
+      name: "Coffee Shop Posted",
+      source: "enable_banking",
+      extra: nil
+    )
+
+    # Simulate a subsequent sync: same booked transaction arrives again
+    assert_no_difference "@account.entries.count" do
+      re_synced = @adapter.import_transaction(
+        external_id: "eb_booked_subseq",
+        amount: 75.00,
+        currency: "EUR",
+        date: booked_date,
+        name: "Coffee Shop Posted",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      re_synced.reload
+      assert_equal pending_date, re_synced.date,
+        "pending date must be preserved on subsequent syncs, not overwritten with booked date"
+    end
+  end
+
   test "does not reconcile when posted transaction has same external_id as pending" do
     # When external_id matches, normal dedup should handle it
     pending_entry = @adapter.import_transaction(

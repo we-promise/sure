@@ -4,6 +4,7 @@ zh-CN:
   layouts:
     application:
       privacy_mode: 切换隐私模式
+      skip_to_main: 跳到主要内容
       nav:
         assistant: 智能助手
         budgets: 预算管理
