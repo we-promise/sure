@@ -75,10 +75,11 @@ jobs:
         working-directory: workers/preview
         run: npm install
 
-      - name: Configure wrangler.toml for this PR
+      - name: Configure preview files for this PR
         working-directory: workers/preview
         run: |
           sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" wrangler.toml
+          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" src/index.ts
           cat wrangler.toml
 
       - name: Create GitHub Deployment

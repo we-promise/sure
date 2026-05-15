@@ -15,16 +15,16 @@ export class RailsContainer extends Container {
     RAILS_ENV: "production",
     RAILS_LOG_TO_STDOUT: "true",
     RAILS_SERVE_STATIC_FILES: "true",
-    SECRET_KEY_BASE: "preview-secret-key-base-for-pr-880",
-    APP_DOMAIN: "sure-preview-880.sure-finances.workers.dev",
-    APP_URL: "https://sure-preview-880.sure-finances.workers.dev",
+    SECRET_KEY_BASE: "preview-secret-key-base-for-pr-${PR_NUMBER}",
+    APP_DOMAIN: "sure-preview-${PR_NUMBER}.sure-finances.workers.dev",
+    APP_URL: "https://sure-preview-${PR_NUMBER}.sure-finances.workers.dev",
     RAILS_FORCE_SSL: "false",
     RAILS_ASSUME_SSL: "false",
     ACTIVE_STORAGE_SERVICE: "local",
     DISABLE_BOOTSNAP: "1",
     BINDING: "::",
-    DEMO_DATA_SEED: "880",
-    PREVIEW_ORIGIN: "https://sure-preview-880.sure-finances.workers.dev",
+    DEMO_DATA_SEED: "${PR_NUMBER}",
+    PREVIEW_ORIGIN: "https://sure-preview-${PR_NUMBER}.sure-finances.workers.dev",
   };
   sleepAfter = "30m";
   enableInternet = true;
