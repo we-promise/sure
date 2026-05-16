@@ -15,7 +15,23 @@
         data-controller="sankey-chart"
         data-sankey-chart-data-value="<%= sankey_data.to_json %>"
         data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-        class="w-full h-full privacy-sensitive"></div>
+        class="w-full h-full privacy-sensitive flex flex-col gap-2">
+        <div class="flex justify-start">
+          <%= render DS::Button.new(
+            variant: :icon,
+            icon: "arrow-left",
+            type: "button",
+            title: t("pages.dashboard.cashflow_sankey.zoom_out"),
+            aria: { label: t("pages.dashboard.cashflow_sankey.zoom_out") },
+            hidden: true,
+            data: {
+              sankey_chart_target: "zoomOutButton",
+              action: "sankey-chart#zoomOut"
+            }
+          ) %>
+        </div>
+        <div data-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
+      </div>
     </div>
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
       <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
@@ -25,7 +41,23 @@
             data-controller="sankey-chart"
             data-sankey-chart-data-value="<%= sankey_data.to_json %>"
             data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-            class="w-full h-full privacy-sensitive"></div>
+            class="w-full h-full privacy-sensitive flex flex-col gap-2">
+            <div class="flex justify-start">
+              <%= render DS::Button.new(
+                variant: :icon,
+                icon: "arrow-left",
+                type: "button",
+                title: t("pages.dashboard.cashflow_sankey.zoom_out"),
+                aria: { label: t("pages.dashboard.cashflow_sankey.zoom_out") },
+                hidden: true,
+                data: {
+                  sankey_chart_target: "zoomOutButton",
+                  action: "sankey-chart#zoomOut"
+                }
+              ) %>
+            </div>
+            <div data-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
+          </div>
         </div>
       <% end %>
     <% end %>
