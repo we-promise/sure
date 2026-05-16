@@ -112,44 +112,12 @@ jobs:
           PREVIEW_URL="https://sure-preview-${{ github.event.pull_request.number }}.${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev"
           echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for preview readiness
+      - name: Warm preview container
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         run: |
-          set -euo pipefail
-
           echo "Triggering preview wake-up..."
           curl -fsS "$PREVIEW_URL/" >/dev/null || true
-
-          timeout_seconds=600
-          elapsed=0
-          sleep_seconds=5
-
-          while [ "$elapsed" -lt "$timeout_seconds" ]; do
-            STATUS_JSON=$(curl -fsS "$PREVIEW_URL/_container_status")
-            PREVIEW_READY=$(echo "$STATUS_JSON" | jq -r '.previewReady')
-            PREVIEW_FAILED=$(echo "$STATUS_JSON" | jq -r '.previewFailed')
-            PROGRESS_MESSAGE=$(echo "$STATUS_JSON" | jq -r '.progress.message // empty')
-            PROGRESS_DETAIL=$(echo "$STATUS_JSON" | jq -r '.progress.detail // empty')
-
-            echo "[$elapsed s] ${PROGRESS_MESSAGE}${PROGRESS_DETAIL:+ - ${PROGRESS_DETAIL}}"
-
-            if [ "$PREVIEW_READY" = "true" ]; then
-              echo "Preview is ready and sample data is loaded."
-              exit 0
-            fi
-
-            if [ "$PREVIEW_FAILED" = "true" ]; then
-              echo "::error::Preview reported a startup failure before becoming ready."
-              exit 1
-            fi
-
-            sleep "$sleep_seconds"
-            elapsed=$((elapsed + sleep_seconds))
-          done
-
-          echo "::error::Timed out waiting for preview readiness and sample data load."
-          exit 1
 
       - name: Update Deployment Status
         if: always() && steps.deployment.outputs.result
@@ -174,7 +142,7 @@ jobs:
             const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
             const commentBody = `## 🚀 Preview Deployment Ready
 
-            Your preview environment has been deployed to Cloudflare Containers, warmed up, and loaded sample data.
+            Your preview environment has been deployed to Cloudflare Containers with the PR's Docker image.
 
             **Preview URL:** ${previewUrl}
 
