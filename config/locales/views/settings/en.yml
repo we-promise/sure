@@ -231,6 +231,7 @@ en:
       sync_provider_in_progress: Sync started.
       recently_synced: Synced recently. Try again in a moment.
       taglines:
+        akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
@@ -322,6 +323,10 @@ en:
         step_1_html: "Go to %{link} and create an API key."
         step_2: "Paste your key below and connect."
         step_3: "Then head to Accounts to link your synced accounts."
+      akahu_panel:
+        step_1_html: "Go to %{link} and create a personal app."
+        step_2: "Copy your app token and user token."
+        step_3: "Paste the tokens below, save, then link your synced accounts."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."

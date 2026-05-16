@@ -173,6 +173,52 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
   end
 
+  create_table "akahu_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "akahu_item_id", null: false
+    t.string "name"
+    t.string "account_id"
+    t.string "formatted_account"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.decimal "balance_limit", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_akahu_accounts_on_account_id"
+    t.index ["akahu_item_id", "account_id"], name: "index_akahu_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
+    t.index ["akahu_item_id"], name: "index_akahu_accounts_on_akahu_item_id"
+  end
+
+  create_table "akahu_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.date "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "app_token"
+    t.text "user_token"
+    t.string "base_url", default: "https://api.akahu.io/v1"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_akahu_items_on_family_id"
+    t.index ["status"], name: "index_akahu_items_on_status"
+  end
+
   create_table "api_keys", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name"
     t.uuid "user_id", null: false
@@ -1859,6 +1905,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "accounts", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "akahu_accounts", "akahu_items"
+  add_foreign_key "akahu_items", "families"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"

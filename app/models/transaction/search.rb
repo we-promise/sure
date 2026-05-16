@@ -200,12 +200,16 @@ class Transaction::Search
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
 
       confirmed_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
         AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
         AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
+        AND (transactions.extra -> 'enable_banking' ->> 'pending')::boolean IS DISTINCT FROM true
+        AND (transactions.extra -> 'akahu' ->> 'pending')::boolean IS DISTINCT FROM true
       SQL
 
       case statuses.sort

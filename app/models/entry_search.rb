@@ -71,6 +71,8 @@ class EntrySearch
             (t.extra -> 'simplefin' ->> 'pending')::boolean = true
             OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
             OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
+            OR (t.extra -> 'enable_banking' ->> 'pending')::boolean = true
+            OR (t.extra -> 'akahu' ->> 'pending')::boolean = true
           )
         )
       SQL
@@ -84,6 +86,8 @@ class EntrySearch
             (t.extra -> 'simplefin' ->> 'pending')::boolean = true
             OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
             OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
+            OR (t.extra -> 'enable_banking' ->> 'pending')::boolean = true
+            OR (t.extra -> 'akahu' ->> 'pending')::boolean = true
           )
         )
       SQL
