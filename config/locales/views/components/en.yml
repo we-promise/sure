@@ -2,6 +2,8 @@
 en:
   UI:
     account:
+      activity_feed:
+        toggle_selection_checkboxes: Toggle selection
       chart:
         no_data_available: "No data available"
       activity_date:
