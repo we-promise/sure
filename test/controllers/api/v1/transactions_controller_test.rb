@@ -766,6 +766,33 @@ end
     assert_response :forbidden
   end
 
+  test "batch_create requires authentication" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [ { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" } ] },
+      as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "batch_create returns per-item validation errors for invalid date" do
+    assert_no_difference("@account.entries.count") do
+      post batch_api_v1_transactions_url,
+        params: {
+          transactions: [
+            { account_id: @account.id, date: "not-a-date", amount: 1, nature: "expense", name: "x" }
+          ]
+        },
+        as: :json,
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+    assert body["results"][0]["errors"].any? { |error| error.match?(/Date/) }
+  end
+
   test "batch_create rejects empty array" do
     post batch_api_v1_transactions_url,
       params: { transactions: [] },
@@ -826,6 +853,8 @@ end
     body = JSON.parse(response.body)
     assert_equal "created", body["results"][0]["status"]
     assert_equal "Coffee", body["results"][0]["transaction"]["name"]
+    assert body["results"][0]["transaction"].key?("external_id")
+    assert body["results"][0]["transaction"].key?("source")
   end
 
   test "batch_create returns created when sync enqueue fails after persist" do
@@ -927,6 +956,27 @@ end
     assert_response :forbidden
   end
 
+  test "batch_update requires authentication" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, notes: "x" } ] },
+      as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "batch_update returns per-item validation errors for invalid date" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, date: "not-a-date" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+    assert body["results"][0]["errors"].any? { |error| error.match?(/Date/) }
+  end
+
   test "batch_update applies per-item changes and returns 207" do
     ordered = @family.transactions.joins(:entry).order("entries.id").to_a
     t1 = ordered[0]
@@ -968,6 +1018,8 @@ end
     body = JSON.parse(response.body)
     assert_equal "updated", body["results"][0]["status"]
     assert_equal "render-free", body["results"][0]["transaction"]["notes"]
+    assert body["results"][0]["transaction"].key?("external_id")
+    assert body["results"][0]["transaction"].key?("source")
   end
 
   test "batch_update returns updated when sync enqueue fails after persist" do
@@ -1009,9 +1061,23 @@ end
   end
 
   test "batch_update returns not_found for id outside family" do
-    other_family_txn_id = "00000000-0000-0000-0000-000000000000"
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(
+      name: "Other Family Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    other_family_txn = other_account.entries.create!(
+      name: "Other Family Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    ).transaction
+
     patch batch_api_v1_transactions_url,
-      params: { transactions: [ { id: other_family_txn_id, notes: "x" } ] },
+      params: { transactions: [ { id: other_family_txn.id, notes: "x" } ] },
       as: :json,
       headers: api_headers(@api_key)
     assert_response :multi_status

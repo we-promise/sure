@@ -208,7 +208,8 @@ end
 
     results = items.each_with_index.map { |raw, idx| process_create_item(raw, idx) }
     log_batch_summary(:batch_create, results)
-    render json: build_batch_response(results), status: :multi_status
+    @batch_response = build_batch_response(results)
+    render :batch, status: batch_response_status(results)
 
   rescue => e
     Rails.logger.error "TransactionsController#batch_create error: #{e.message}"
@@ -224,7 +225,8 @@ end
 
     results = items.each_with_index.map { |raw, idx| process_update_item(raw, idx) }
     log_batch_summary(:batch_update, results)
-    render json: build_batch_response(results), status: :multi_status
+    @batch_response = build_batch_response(results)
+    render :batch, status: batch_response_status(results)
 
   rescue => e
     Rails.logger.error "TransactionsController#batch_update error: #{e.message}"
@@ -353,10 +355,6 @@ end
       )
     end
 
-    def account_id_param
-      params.dig(:transaction, :account_id).presence
-    end
-
     def entry_params_for_create(attrs = transaction_params)
       entry_params = {
         name: attrs[:name] || attrs[:description],
@@ -371,12 +369,17 @@ end
           tag_ids: attrs[:tag_ids] || []
         }
       }
+
       if idempotency_key_requested?
         entry_params[:external_id] = idempotency_external_id
         entry_params[:source] = idempotency_source
       end
 
       entry_params.compact
+    end
+
+    def account_id_param
+      params.dig(:transaction, :account_id).presence
     end
 
     def entry_params_for_update(attrs = transaction_params, entry = @entry)
@@ -416,6 +419,18 @@ end
       params.dig(:transaction, :amount).present? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
+    end
+
+    def signed_amount_for(amount, nature)
+      amt = amount.to_f
+      case nature.to_s.downcase
+      when "income", "inflow"
+        -amt.abs
+      when "expense", "outflow"
+        amt.abs
+      else
+        amt
+      end
     end
 
     def idempotency_key_requested?
@@ -459,22 +474,6 @@ end
       @entry = entry
       @transaction = entry.transaction
       render :show, status: :ok
-    end
-
-    def calculate_signed_amount
-      signed_amount_for(transaction_params[:amount], transaction_params[:nature])
-    end
-
-    def signed_amount_for(amount, nature)
-      amt = amount.to_f
-      case nature.to_s.downcase
-      when "income", "inflow"
-        -amt.abs
-      when "expense", "outflow"
-        amt.abs
-      else
-        amt
-      end
     end
 
     def safe_page_param
@@ -544,7 +543,7 @@ end
 
       sync_account_later_after_batch(entry, :batch_create, idx)
 
-      result.merge(status: "created", transaction: transaction_response_hash(entry.transaction))
+      result.merge(status: "created", transaction: entry.transaction)
 
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn "batch_create item #{idx} invalid: #{e.message}"
@@ -604,7 +603,7 @@ end
 
       sync_account_later_after_batch(entry, :batch_update, idx)
 
-      result.merge(status: "updated", transaction: transaction_response_hash(entry.transaction))
+      result.merge(status: "updated", transaction: entry.transaction)
 
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn "batch_update item #{idx} invalid: #{e.message}"
@@ -643,6 +642,17 @@ end
       }
     end
 
+    def batch_response_status(results)
+      return :unprocessable_entity if date_validation_batch_error?(results)
+
+      :multi_status
+    end
+
+    def date_validation_batch_error?(results)
+      results.none? { |r| %w[created updated].include?(r[:status]) } &&
+        results.any? { |r| r[:error] == "validation_failed" && Array(r[:errors]).any? { |error| error.match?(/Date/) } }
+    end
+
     def log_batch_summary(action, results)
       succeeded = results.count { |r| %w[created updated].include?(r[:status]) }
       failed = results.size - succeeded
@@ -653,87 +663,5 @@ end
       return if Array.wrap(tag_ids).reject(&:blank?).empty?
 
       transaction.lock_attr!(:tag_ids)
-    end
-
-    def transaction_response_hash(transaction)
-      entry = transaction.entry
-      amount_money = entry.amount_money
-      conversion_factor = amount_money.currency.minor_unit_conversion
-      amount_cents = (amount_money.amount * conversion_factor).round(0).to_i.abs
-
-      {
-        id: transaction.id,
-        date: entry.date,
-        amount: amount_money.format,
-        amount_cents: amount_cents,
-        signed_amount_cents: entry.classification == "income" ? amount_cents : -amount_cents,
-        currency: entry.currency,
-        name: entry.name,
-        notes: entry.notes,
-        classification: entry.classification,
-        account: account_response_hash(entry.account),
-        category: category_response_hash(transaction.category),
-        merchant: merchant_response_hash(transaction.merchant),
-        tags: transaction.tags.map { |tag| tag_response_hash(tag) },
-        transfer: transfer_response_hash(transaction),
-        created_at: transaction.created_at.iso8601,
-        updated_at: transaction.updated_at.iso8601
-      }
-    end
-
-    def account_response_hash(account)
-      {
-        id: account.id,
-        name: account.name,
-        account_type: account.accountable_type.underscore
-      }
-    end
-
-    def category_response_hash(category)
-      return nil unless category
-
-      {
-        id: category.id,
-        name: category.name,
-        color: category.color,
-        icon: category.lucide_icon
-      }
-    end
-
-    def merchant_response_hash(merchant)
-      return nil unless merchant
-
-      {
-        id: merchant.id,
-        name: merchant.name
-      }
-    end
-
-    def tag_response_hash(tag)
-      {
-        id: tag.id,
-        name: tag.name,
-        color: tag.color
-      }
-    end
-
-    def transfer_response_hash(transaction)
-      transfer = transaction.transfer
-      return nil unless transfer
-
-      other_transaction = if transfer.inflow_transaction == transaction
-        transfer.outflow_transaction
-      else
-        transfer.inflow_transaction
-      end
-
-      response = {
-        id: transfer.id,
-        amount: transfer.amount_abs.format,
-        currency: transfer.inflow_transaction.entry.currency
-      }
-
-      response[:other_account] = account_response_hash(other_transaction.entry.account) if other_transaction
-      response
     end
 end
