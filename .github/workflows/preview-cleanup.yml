@@ -173,24 +173,29 @@ jobs:
               continue
             fi
 
-            MODIFIED_TS=$(date -d "$MODIFIED_ON" +%s 2>/dev/null || echo "0")
+            if ! MODIFIED_TS=$(date -d "$MODIFIED_ON" +%s 2>/dev/null); then
+              echo "Invalid modified_on timestamp for $WORKER ($MODIFIED_ON); skipping"
+              continue
+            fi
 
             if [ "$MODIFIED_TS" -lt "$CUTOFF_TIME" ]; then
               echo "Worker $WORKER is older than 24 hours, deleting..."
-              wrangler delete --name "$WORKER" --force || echo "Failed to delete $WORKER"
-
-              # Extract PR number and cleanup GitHub deployment
-              PR_NUM=$(echo "$WORKER" | sed 's/sure-preview-//')
-              if [ -n "$PR_NUM" ]; then
-                echo "Cleaning up GitHub deployment for PR #$PR_NUM"
-                gh api \
-                  -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
-                  --jq '.[].id' | while read -r DEPLOY_ID; do
-                    gh api \
-                      -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
-                      -f state=inactive \
-                      -f description="Preview expired after 24 hours" || true
-                  done
+              if wrangler delete --name "$WORKER" --force; then
+                # Extract PR number and cleanup GitHub deployment
+                PR_NUM=$(echo "$WORKER" | sed 's/sure-preview-//')
+                if [ -n "$PR_NUM" ]; then
+                  echo "Cleaning up GitHub deployment for PR #$PR_NUM"
+                  gh api \
+                    -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
+                    --jq '.[].id' | while read -r DEPLOY_ID; do
+                      gh api \
+                        -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
+                        -f state=inactive \
+                        -f description="Preview expired after 24 hours" || true
+                    done
+                fi
+              else
+                echo "Failed to delete $WORKER; skipping deployment status update"
               fi
             else
               echo "Worker $WORKER is still within 24-hour window, keeping..."
