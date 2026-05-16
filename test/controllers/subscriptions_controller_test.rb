@@ -61,6 +61,36 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "test-customer-id", @family.reload.stripe_customer_id
   end
 
+  test "upgrade shows one-time contribution link when available" do
+    @mock_stripe.expects(:one_time_contribution_url)
+      .returns("https://buy.stripe.com/test_payment_link")
+
+    get upgrade_subscription_path
+
+    assert_response :success
+    assert_select(
+      "a[href=?]",
+      "https://buy.stripe.com/test_payment_link",
+      text: I18n.t("settings.payments.show.one_time_contribution_link_text")
+    )
+    assert_select "button", text: I18n.t("subscriptions.upgrade.contribute_and_support_sure")
+  end
+
+  test "upgrade shows default stripe payment text when contribution link unavailable" do
+    @mock_stripe.expects(:one_time_contribution_url).returns(nil)
+
+    get upgrade_subscription_path
+
+    assert_response :success
+    assert_select(
+      "a",
+      text: I18n.t("settings.payments.show.one_time_contribution_link_text"),
+      count: 0
+    )
+    assert_select "p.text-sm.text-secondary", text: I18n.t("settings.payments.show.payment_via_stripe")
+    assert_select "button", text: I18n.t("subscriptions.upgrade.contribute_and_support_sure")
+  end
+
   test "creates active subscription on checkout success" do
     @mock_stripe.expects(:get_checkout_result).with("test-session-id").returns(
       OpenStruct.new(

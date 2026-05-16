@@ -42,4 +42,68 @@ class Provider::StripeTest < ActiveSupport::TestCase
       assert_match /sub_.*/, result.subscription_id
     end
   end
+
+  test "retrieves payment link url from stripe" do
+    payment_links = mock
+    payment_links.expects(:retrieve)
+      .with("plink_test123")
+      .returns(OpenStruct.new(url: "https://buy.stripe.com/test_payment_link"))
+
+    client = mock
+    client.stubs(:v1).returns(OpenStruct.new(payment_links: payment_links))
+
+    Stripe::StripeClient.stubs(:new).returns(client)
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+
+    assert_equal(
+      "https://buy.stripe.com/test_payment_link",
+      stripe.payment_link_url(payment_link_id: "plink_test123")
+    )
+  end
+
+  test "retrieves one-time contribution url from configured payment link" do
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+    stripe.expects(:payment_link_url)
+      .with(payment_link_id: "plink_test123")
+      .returns("https://buy.stripe.com/test_payment_link")
+
+    with_env_overrides("STRIPE_PAYMENT_LINK_ID" => "plink_test123") do
+      assert_equal "https://buy.stripe.com/test_payment_link", stripe.one_time_contribution_url
+    end
+  end
+
+  test "returns nil for one-time contribution url when payment link id is missing" do
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+    stripe.expects(:payment_link_url).with(payment_link_id: nil).returns(nil)
+
+    with_env_overrides("STRIPE_PAYMENT_LINK_ID" => nil) do
+      assert_nil stripe.one_time_contribution_url
+    end
+  end
+
+  test "returns nil when payment link retrieval fails" do
+    payment_links = mock
+    payment_links.expects(:retrieve)
+      .with("plink_test123")
+      .raises(Stripe::StripeError, "not found")
+
+    client = mock
+    client.stubs(:v1).returns(OpenStruct.new(payment_links: payment_links))
+
+    captured_message = nil
+    logger = Object.new
+    logger.define_singleton_method(:debug) do |&block|
+      captured_message = block.call
+    end
+
+    Stripe::StripeClient.stubs(:new).returns(client)
+    Rails.stubs(:logger).returns(logger)
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+
+    assert_nil stripe.payment_link_url(payment_link_id: "plink_test123")
+    assert_equal(
+      "Unable to fetch optional Stripe payment link plink_test123: not found",
+      captured_message
+    )
+  end
 end

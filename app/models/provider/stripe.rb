@@ -67,6 +67,19 @@ class Provider::Stripe
     client.v1.customers.update(customer_id, metadata: metadata)
   end
 
+  def one_time_contribution_url
+    payment_link_url(payment_link_id: ENV["STRIPE_PAYMENT_LINK_ID"])
+  end
+
+  def payment_link_url(payment_link_id:)
+    return nil if payment_link_id.blank?
+
+    client.v1.payment_links.retrieve(payment_link_id).url
+  rescue Stripe::StripeError => e
+    Rails.logger.debug { "Unable to fetch optional Stripe payment link #{payment_link_id}: #{e.message}" }
+    nil
+  end
+
   private
     attr_reader :client, :webhook_secret
 
