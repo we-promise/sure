@@ -144,7 +144,16 @@ jobs:
           WORKERS_RESPONSE=$(curl -fsS -X GET \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json")
+            -H "Content-Type: application/json") || {
+              echo "Failed to fetch preview worker list from Cloudflare"
+              exit 1
+            }
+
+          if ! echo "$WORKERS_RESPONSE" | jq -e '.success == true and (.result | type == "array")' >/dev/null 2>&1; then
+            echo "Cloudflare API returned an invalid worker list response"
+            echo "$WORKERS_RESPONSE" | jq -c '.errors // .'
+            exit 1
+          fi
 
           WORKERS=$(echo "$WORKERS_RESPONSE" | jq -r '
             .result[]
@@ -183,16 +192,18 @@ jobs:
               if wrangler delete --name "$WORKER" --force; then
                 # Extract PR number and cleanup GitHub deployment
                 PR_NUM=$(echo "$WORKER" | sed 's/sure-preview-//')
-                if [ -n "$PR_NUM" ]; then
+                if [[ "$PR_NUM" =~ ^[1-9][0-9]*$ ]]; then
                   echo "Cleaning up GitHub deployment for PR #$PR_NUM"
                   gh api \
                     -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
-                    --jq '.[].id' | while read -r DEPLOY_ID; do
+                    --jq '.[].id' 2>/dev/null | while read -r DEPLOY_ID; do
                       gh api \
                         -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
                         -f state=inactive \
                         -f description="Preview expired after 24 hours" || true
-                    done
+                    done || echo "No deployments to cleanup or error occurred"
+                else
+                  echo "Could not extract a valid PR number from $WORKER; skipping deployment cleanup"
                 fi
               else
                 echo "Failed to delete $WORKER; skipping deployment status update"
