@@ -112,6 +112,13 @@ jobs:
           PREVIEW_URL="https://sure-preview-${{ github.event.pull_request.number }}.${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev"
           echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
 
+      - name: Warm preview container
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          echo "Triggering preview wake-up..."
+          curl -fsS "$PREVIEW_URL/" >/dev/null || true
+
       - name: Update Deployment Status
         if: always() && steps.deployment.outputs.result
         uses: actions/github-script@v7
@@ -135,7 +142,7 @@ jobs:
             const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
             const commentBody = `## 🚀 Preview Deployment Ready
 
-            Your preview environment has been deployed to Cloudflare Containers.
+            Your preview environment has been deployed to Cloudflare Containers with the PR's Docker image.
 
             **Preview URL:** ${previewUrl}
 
