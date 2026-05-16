@@ -2,6 +2,8 @@ class EnableBankingItem::Importer
   # Maximum number of pagination requests to prevent infinite loops
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
+  MAX_SYNC_LOOKBACK_DAYS = 120
+  INCREMENTAL_SYNC_BUFFER_DAYS = 7
 
   NETWORK_ERRORS = [
     ::SocketError,
@@ -512,17 +514,21 @@ class EnableBankingItem::Importer
 
       # Use user-configured sync_start_date if set, otherwise default
       user_start_date = enable_banking_item.sync_start_date
+      minimum_allowed_start_date = MAX_SYNC_LOOKBACK_DAYS.days.ago.to_date
 
-      if has_stored_transactions
-        # For incremental syncs, get transactions from 7 days before last sync
+      start_date = if has_stored_transactions
+        # For incremental syncs, get transactions from a small buffer before the
+        # last successful sync to catch late-settling transactions.
         if enable_banking_item.last_synced_at
-          enable_banking_item.last_synced_at.to_date - 7.days
+          enable_banking_item.last_synced_at.to_date - INCREMENTAL_SYNC_BUFFER_DAYS.days
         else
           30.days.ago.to_date
         end
       else
-        # Initial sync: use user's configured date or default to 3 months
+        # Initial sync: use user's configured date or default to 3 months.
         user_start_date || 3.months.ago.to_date
       end
+
+      [ start_date, minimum_allowed_start_date ].compact.max
     end
 end
