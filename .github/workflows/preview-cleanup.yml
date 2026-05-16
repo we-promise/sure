@@ -139,11 +139,28 @@ jobs:
           # Get list of all preview workers
           echo "Fetching list of preview workers..."
 
-          # Use Cloudflare API to list workers
-          WORKERS=$(curl -s -X GET \
+          # Use Cloudflare API to list workers and read modified_on from the list response.
+          # The per-script endpoint returns raw script content, not JSON metadata.
+          WORKERS_RESPONSE=$(curl -fsS -X GET \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" | jq -r '.result[] | select(.id | startswith("sure-preview-")) | .id')
+            -H "Content-Type: application/json") || {
+              echo "Failed to fetch preview worker list from Cloudflare"
+              exit 1
+            }
+
+          if ! echo "$WORKERS_RESPONSE" | jq -e '.success == true and (.result | type == "array")' >/dev/null 2>&1; then
+            echo "Cloudflare API returned an invalid worker list response"
+            echo "$WORKERS_RESPONSE" | jq -c '.errors // .'
+            exit 1
+          fi
+
+          WORKERS=$(echo "$WORKERS_RESPONSE" | jq -r '
+            .result[]
+            | select(.id | startswith("sure-preview-"))
+            | [.id, (.modified_on // "")]
+            | @tsv
+          ')
 
           if [ -z "$WORKERS" ]; then
             echo "No preview workers found"
@@ -151,46 +168,49 @@ jobs:
           fi
 
           echo "Found preview workers:"
-          echo "$WORKERS"
+          echo "$WORKERS" | cut -f1
 
           # Check each worker's deployment time
           CUTOFF_TIME=$(date -d '24 hours ago' +%s)
 
-          for WORKER in $WORKERS; do
+          while IFS=$'\t' read -r WORKER MODIFIED_ON; do
+            [ -n "$WORKER" ] || continue
             echo "Checking $WORKER..."
 
-            # Get worker details to find last deployment time
-            WORKER_INFO=$(curl -s -X GET \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER" \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              -H "Content-Type: application/json")
+            if [ -z "$MODIFIED_ON" ]; then
+              echo "No modified_on timestamp for $WORKER; skipping"
+              continue
+            fi
 
-            MODIFIED_ON=$(echo "$WORKER_INFO" | jq -r '.result.modified_on // empty')
+            if ! MODIFIED_TS=$(date -d "$MODIFIED_ON" +%s 2>/dev/null); then
+              echo "Invalid modified_on timestamp for $WORKER ($MODIFIED_ON); skipping"
+              continue
+            fi
 
-            if [ -n "$MODIFIED_ON" ]; then
-              MODIFIED_TS=$(date -d "$MODIFIED_ON" +%s 2>/dev/null || echo "0")
-
-              if [ "$MODIFIED_TS" -lt "$CUTOFF_TIME" ]; then
-                echo "Worker $WORKER is older than 24 hours, deleting..."
-                wrangler delete --name "$WORKER" --force || echo "Failed to delete $WORKER"
-
+            if [ "$MODIFIED_TS" -lt "$CUTOFF_TIME" ]; then
+              echo "Worker $WORKER is older than 24 hours, deleting..."
+              if wrangler delete --name "$WORKER" --force; then
                 # Extract PR number and cleanup GitHub deployment
                 PR_NUM=$(echo "$WORKER" | sed 's/sure-preview-//')
-                if [ -n "$PR_NUM" ]; then
+                if [[ "$PR_NUM" =~ ^[1-9][0-9]*$ ]]; then
                   echo "Cleaning up GitHub deployment for PR #$PR_NUM"
                   gh api \
                     -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
-                    --jq '.[].id' | while read -r DEPLOY_ID; do
+                    --jq '.[].id' 2>/dev/null | while read -r DEPLOY_ID; do
                       gh api \
                         -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
                         -f state=inactive \
                         -f description="Preview expired after 24 hours" || true
-                    done
+                    done || echo "No deployments to cleanup or error occurred"
+                else
+                  echo "Could not extract a valid PR number from $WORKER; skipping deployment cleanup"
                 fi
               else
-                echo "Worker $WORKER is still within 24-hour window, keeping..."
+                echo "Failed to delete $WORKER; skipping deployment status update"
               fi
+            else
+              echo "Worker $WORKER is still within 24-hour window, keeping..."
             fi
-          done
+          done <<< "$WORKERS"
 
           echo "Cleanup complete"
