@@ -121,12 +121,21 @@ export class RailsContainer extends Container {
     };
   }
 
-  private buildPreviewStatus(base: {
+  private async probeRailsUp(): Promise<boolean> {
+    try {
+      const response = await this.containerFetch(new Request("https://container.internal/up"), this.defaultPort);
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private async buildPreviewStatus(base: {
     state: unknown;
     containerRunning: boolean;
     diagnostics: DiagnosticRecord | null;
     diagnosticsHistory: DiagnosticRecord[];
-  }): PreviewStatusPayload {
+  }, options?: { probe?: boolean }): Promise<PreviewStatusPayload> {
     const allDiagnostics = [...base.diagnosticsHistory, ...(base.diagnostics ? [base.diagnostics] : [])];
     const entrypointDiagnostics = allDiagnostics.filter(
       (item) => item.event === "entrypoint" && typeof item.payload?.stage === "string"
@@ -135,11 +144,14 @@ export class RailsContainer extends Container {
     const latestStage = latestEntrypoint?.payload?.stage ?? null;
     const latestDetail = latestEntrypoint?.payload?.detail ?? base.diagnostics?.message ?? "";
     const sampleDataReady = entrypointDiagnostics.some((item) => READY_STAGES.has(item.payload?.stage ?? ""));
+    const liveProbeReady = options?.probe ? await this.probeRailsUp() : false;
     const railsResponding =
+      liveProbeReady ||
       (typeof base.state === "object" && base.state !== null && "status" in base.state
         ? (base.state as { status?: string }).status === "healthy"
-        : false) || entrypointDiagnostics.some((item) => item.payload?.stage === "rails-up-ready");
-    const previewReady = sampleDataReady && railsResponding;
+        : false) ||
+      entrypointDiagnostics.some((item) => item.payload?.stage === "rails-up-ready");
+    const previewReady = liveProbeReady || (sampleDataReady && railsResponding);
     const previewFailed =
       entrypointDiagnostics.some((item) => FAILED_STAGES.has(item.payload?.stage ?? "")) ||
       base.diagnostics?.event === "error";
@@ -278,7 +290,7 @@ export class RailsContainer extends Container {
     const url = new URL(request.url);
 
     if (url.pathname === "/_container_status") {
-      return Response.json(this.buildPreviewStatus(await this.getDiagnostics()));
+      return Response.json(await this.buildPreviewStatus(await this.getDiagnostics(), { probe: true }));
     }
 
     if (url.pathname === "/_container_event" && request.method === "POST") {
@@ -292,12 +304,7 @@ export class RailsContainer extends Container {
     }
 
     try {
-      const response = await this.containerFetch(request, this.defaultPort);
-      const status = this.buildPreviewStatus(await this.getDiagnostics());
-      if (this.wantsHtml(request) && !status.previewReady) {
-        return this.renderWaitPage(request, status);
-      }
-      return response;
+      return await this.containerFetch(request, this.defaultPort);
     } catch (error) {
       await this.recordDiagnostic({
         event: "container-fetch-error",
@@ -305,7 +312,7 @@ export class RailsContainer extends Container {
         message: error instanceof Error ? error.message : String(error),
       });
 
-      const status = this.buildPreviewStatus(await this.getDiagnostics());
+      const status = await this.buildPreviewStatus(await this.getDiagnostics());
       if (this.wantsHtml(request) && !status.previewReady) {
         return this.renderWaitPage(
           request,
