@@ -1,5 +1,12 @@
 ---
 en:
+  UI:
+    account:
+      chart:
+        no_data_available: "No data available"
+      activity_date:
+        balance_tooltip: "The end of day balance, after all transactions and adjustments"
+        no_balance_data: "No balance data available for this date"
   ds:
     alert:
       variants:
