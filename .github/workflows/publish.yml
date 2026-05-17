@@ -73,15 +73,15 @@ jobs:
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4.2.0
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to the container registry
-        uses: docker/login-action@v3.3.0
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -119,7 +119,7 @@ jobs:
 
       - name: Extract metadata for Docker
         id: meta
-        uses: docker/metadata-action@v5.6.0
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: latest=false
@@ -133,7 +133,7 @@ jobs:
             org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
 
       - name: Publish 'linux/${{ matrix.platform }}' image by digest
-        uses: docker/build-push-action@v6.16.0
+        uses: docker/build-push-action@v7
         id: build
         with:
           context: .
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload the Docker image digest
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v6
         with:
           name: digest-${{ matrix.platform }}
           path: ${{ runner.temp }}/digests/*
@@ -179,17 +179,17 @@ jobs:
 
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
+        uses: docker/setup-buildx-action@v4
 
       - name: Download Docker image digests
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
           pattern: digest-*
           merge-multiple: true
 
       - name: Log in to the container registry
-        uses: docker/login-action@v3.3.0
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -276,19 +276,19 @@ jobs:
 
     steps:
       - name: Download Android APK artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: app-release-apk
           path: ${{ runner.temp }}/mobile-artifacts
 
       - name: Download iOS build artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: ios-build-unsigned
           path: ${{ runner.temp }}/ios-build
 
       - name: Download Helm chart artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: helm-chart-package
           path: ${{ runner.temp }}/helm-artifacts
@@ -339,7 +339,7 @@ jobs:
           ls -la "${{ runner.temp }}/release-assets/"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
@@ -426,7 +426,7 @@ jobs:
           echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
 
       - name: Check out source branch
-        uses: actions/checkout@v4.2.0
+        uses: actions/checkout@v5
         with:
           ref: ${{ steps.source_branch.outputs.branch }}
           token: ${{ github.token }}
