@@ -6,6 +6,42 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Debug event log"
+        subtitle: "Meaningful operational events for super admins. Newest first."
+        empty: "No debug events found."
+        missing_value: "-"
+        filters:
+          all: "All"
+          category: "Category"
+          level: "Level"
+          source: "Source"
+          provider: "Provider"
+          start_date: "From"
+          end_date: "To"
+          family_id: "Family ID"
+          account_id: "Account ID"
+          user_id: "User ID"
+          account_provider_id: "Account provider ID"
+          submit: "Filter"
+          reset: "Reset"
+        table:
+          time: "Time"
+          level: "Level"
+          category: "Category"
+          source: "Source"
+          message: "Message"
+          context: "Context"
+          metadata: "Metadata"
+          view_metadata: "View"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
     llm_usages:
       show:
         page_title: "LLM Usage & Costs"
@@ -219,6 +255,7 @@ en:
       api_keys_label: API Key
       appearance_label: Appearance
       bank_sync_label: Bank sync
+      debug_label: Debug
     settings_nav_link_large:
       next: Next
       previous: Back
