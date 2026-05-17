@@ -49,7 +49,7 @@
            tabindex="-1">
         <% tags.each do |tag| %>
           <% selected = selected_ids.include?(tag.id.to_s) %>
-          <%= render partial: "tag_select_component/option", locals: { tag: tag, selected: selected, view_helpers: helpers } %>
+          <%= render partial: "DS/tag_select/option", locals: { tag: tag, selected: selected, view_helpers: helpers } %>
         <% end %>
 
         <button type="button"

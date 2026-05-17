@@ -1,4 +1,4 @@
-class TagSelectComponent < ApplicationComponent
+class DS::TagSelect < DesignSystemComponent
   attr_reader :form, :tags, :selected_ids, :disabled, :auto_submit, :update_url
 
   def initialize(form:, tags:, selected_ids:, disabled: false, auto_submit: false, update_url: nil)
