@@ -139,6 +139,9 @@ en:
         behind: Falling short at current pace.
         on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
+        today_marker: Today
+        tooltip_projected: "Projected: %{amount}"
+        tooltip_saved: "Saved: %{amount}"
       catch_up:
         title: "Save %{amount}/mo more to catch up"
         body: "Current pace %{avg}/mo · required %{required}/mo to hit your target."

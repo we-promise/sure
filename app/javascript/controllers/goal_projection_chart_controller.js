@@ -11,7 +11,14 @@ import * as d3 from "d3";
 // Data shape passed via `data-goal-projection-chart-data-value`
 // matches Goal#projection_payload.
 export default class extends Controller {
-  static values = { data: Object, ariaLabel: String, ariaDescription: String };
+  static values = {
+    data: Object,
+    ariaLabel: String,
+    ariaDescription: String,
+    todayLabel: { type: String, default: "Today" },
+    projectedTemplate: { type: String, default: "Projected: {amount}" },
+    savedTemplate: { type: String, default: "Saved: {amount}" },
+  };
 
   connect() {
     this._resize = this._draw.bind(this);
@@ -400,7 +407,7 @@ export default class extends Controller {
         .attr("text-anchor", "middle")
         .attr("font-size", 12)
         .attr("fill", textSecondary)
-        .text("Today");
+        .text(this.todayLabelValue);
     }
 
     // Full 4-digit year so the terminal "Jan 2027" reads as the year, not
@@ -515,7 +522,7 @@ export default class extends Controller {
         const projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
         hoverProjDot.attr("cx", hoverX).attr("cy", y(projValue)).style("display", null);
         hoverSavedDot.style("display", "none");
-        lines.push(`Projected: ${this._fmtMoney(projValue, data.currency)}`);
+        lines.push(this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency)));
       } else {
         // Saved segment: hoverDate is already snapped to nearest savedSeries
         // entry above, so reuse that entry directly instead of running
@@ -523,7 +530,7 @@ export default class extends Controller {
         const savedPoint = savedSeries.find((p) => p.date.getTime() === hoverDate.getTime()) || savedSeries[savedSeries.length - 1];
         hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
         hoverProjDot.style("display", "none");
-        lines.push(`Saved: ${this._fmtMoney(savedPoint.value, data.currency)}`);
+        lines.push(this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency)));
       }
 
       tooltip.textContent = lines.join("\n");

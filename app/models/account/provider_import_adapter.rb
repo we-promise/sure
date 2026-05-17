@@ -223,7 +223,15 @@ class Account::ProviderImportAdapter
       # Auto-resolve any open Goal pledges on this account whose tolerance
       # window matches the posted transaction. Idempotent via the partial-unique
       # index on transactions.extra->'goal'->>'pledge_id'.
-      GoalPledge::Reconciler.new(entry).run unless incoming_pending
+      #
+      # Short-circuit when the account isn't linked to any goal: a 2k-row
+      # historical Plaid import on an unlinked account otherwise pays one
+      # SELECT per row. goal_accounts membership is stable across a sync
+      # batch, so memoize once per adapter instance (one query per account
+      # synced, not per transaction).
+      if !incoming_pending && account_linked_to_any_goal?
+        GoalPledge::Reconciler.new(entry).run
+      end
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
@@ -967,5 +975,13 @@ class Account::ProviderImportAdapter
       external_id: entry.external_id,
       account_name: entry.account.name
     }
+  end
+
+  # Memoized per adapter instance (which is per-account). Membership in
+  # goal_accounts is stable across a sync batch.
+  def account_linked_to_any_goal?
+    return @account_linked_to_any_goal if defined?(@account_linked_to_any_goal)
+
+    @account_linked_to_any_goal = account.goal_accounts.exists?
   end
 end
