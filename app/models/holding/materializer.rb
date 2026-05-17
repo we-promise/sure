@@ -217,7 +217,6 @@ class Holding::Materializer
       @provider_cost_basis_snapshots ||= account.holdings
         .where.not(account_provider_id: nil)
         .where.not(cost_basis: nil)
-        .where("cost_basis > 0")
         .order(:date)
         .pluck(:security_id, :currency, :date, :cost_basis)
         .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|
