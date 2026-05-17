@@ -4,4 +4,4 @@ en:
     errors:
       models:
         plaid_account:
-          no_balance: "must have either current or available balance"
+          no_balance: "Plaid account must have either current or available balance"

@@ -4,4 +4,4 @@ en:
     errors:
       models:
         sophtron_account:
-          requires_balance: "Sophtron account must have either current or available balance"
+          no_balance: "Sophtron account must have either current or available balance"

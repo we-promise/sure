@@ -12,7 +12,6 @@ en:
         add_provider: "Add Provider"
         no_providers_title: "No SSO Providers"
         no_providers_message: "No SSO providers configured yet."
-        no_providers_full_message: "Get started by adding your first SSO provider."
         note: "Changes to SSO providers require a server restart to take effect. Alternatively, enable the AUTH_PROVIDERS_SOURCE=db feature flag to load providers from the database dynamically."
         enabled: "Enabled"
         disabled: "Disabled"

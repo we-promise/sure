@@ -158,7 +158,7 @@ class SophtronAccount < ApplicationRecord
     end
     def has_balance
       return if balance.present? || available_balance.present?
-      errors.add(:base, :requires_balance)
+      errors.add(:base, :no_balance)
     end
 
     def first_present(hash, *keys)
