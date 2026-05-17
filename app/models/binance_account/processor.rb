@@ -326,16 +326,23 @@ class BinanceAccount::Processor
 
       trades.each do |trade|
         external_id = "binance_p2p_#{trade["orderNumber"]}"
-        if account.entries.exists?(external_id: external_id)
+        funding_external_id = "#{external_id}_funding"
+
+        # Deduplicate by checking for either the Trade or Funding leg in a single query
+        if account.entries.where(external_id: [ external_id, funding_external_id ]).exists?
           Rails.logger.info "BinanceAccount::Processor - skipping P2P trade #{trade["orderNumber"]}: already exists in DB"
           next
         end
 
         date = Time.zone.at(trade["createTime"].to_i / 1000).to_date
         trade_type = trade["tradeType"] # BUY or SELL
+
         begin
-          # 1. Grab the exact Crypto values from the payload
+          # Grab the exact Fiat and Crypto truth straight from the payload
           fiat_currency = trade["fiat"]
+          fiat_amount   = trade["totalPrice"].to_d
+          fiat_price    = trade["unitPrice"].to_d
+
           crypto_asset  = trade["asset"]
           gross_crypto  = trade["amount"].to_d
           net_crypto    = (trade["takerAmount"] || gross_crypto).to_d
@@ -349,78 +356,69 @@ class BinanceAccount::Processor
             next
           end
 
-          # 2. Calculate USD values
-          gross_usd_raw = quote_to_usd(gross_crypto, crypto_asset, date: date)
-          if gross_usd_raw.nil?
-            Rails.logger.warn "BinanceAccount::Processor - skipping P2P trade #{trade["orderNumber"]}: could not convert #{crypto_asset} to USD"
-            next
-          end
+          # Convert the crypto fee (if any) to its fiat equivalent using the trade's exact unit price
+          fiat_fee = (crypto_fee * fiat_price).round(2)
 
-          fee_usd   = quote_to_usd(crypto_fee, crypto_asset, date: date)&.round(2) || 0.0
-          price_usd = gross_crypto > 0 ? (gross_usd_raw / gross_crypto).round(2) : 0
-
-          # 3. FORCE the total amount to perfectly match the strict database validation: Amount = (Qty * Price) + Fee
-          exact_trade_amount = ((net_crypto * price_usd) + fee_usd).round(2)
-          acc_curr = account.currency
-
-          if trade_type == "BUY"
-            account.entries.create!(
-              date:        date,
-              name:        "Deposit from P2P (#{fiat_currency})",
-              amount:      -exact_trade_amount,
-              currency:    acc_curr,
-              external_id: "#{external_id}_funding",
-              source:      "binance",
-              entryable:   Transaction.new
-            )
-
-            account.entries.create!(
-              date:        date,
-              name:        "P2P Buy #{gross_crypto.round(8)} #{crypto_asset}",
-              amount:      exact_trade_amount,
-              currency:    acc_curr,
-              external_id: external_id,
-              source:      "binance",
-              entryable:   Trade.new(
-                security:                  security,
-                qty:                       net_crypto,
-                price:                     price_usd,
-                currency:                  acc_curr,
-                fee:                       fee_usd,
-                investment_activity_label: "Buy"
+          # 3. AI Fix: Wrap the double-entry in a transaction block to guarantee ledger integrity
+          account.transaction do
+            if trade_type == "BUY"
+              # BUY LOGIC: User sent Fiat from their bank, received Crypto
+              account.entries.create!(
+                date:        date,
+                name:        "P2P Payment (#{fiat_currency})",
+                amount:      -fiat_amount, # Fiat leaving the system
+                currency:    fiat_currency,
+                external_id: funding_external_id,
+                source:      "binance",
+                entryable:   Transaction.new
               )
-            )
-          else
-            # SELL LOGIC
-            account.entries.create!(
-              date:        date,
-              name:        "P2P Sell #{gross_crypto.round(8)} #{crypto_asset}",
-              amount:      -exact_trade_amount,
-              currency:    acc_curr,
-              external_id: external_id,
-              source:      "binance",
-              entryable:   Trade.new(
-                security:                  security,
-                qty:                       -net_crypto,
-                price:                     price_usd,
-                currency:                  acc_curr,
-                fee:                       fee_usd,
-                investment_activity_label: "Sell"
+
+              account.entries.create!(
+                date:        date,
+                name:        "P2P Buy #{gross_crypto.round(8)} #{crypto_asset}",
+                amount:      fiat_amount, # Fiat value entering as Crypto (Cost Basis)
+                currency:    fiat_currency,
+                external_id: external_id,
+                source:      "binance",
+                entryable:   Trade.new(
+                  security:                  security,
+                  qty:                       net_crypto,
+                  price:                     fiat_price,
+                  currency:                  fiat_currency,
+                  fee:                       fiat_fee,
+                  investment_activity_label: "Buy"
+                )
               )
-            )
+            else
+              # SELL LOGIC: User liquidated Crypto, received Fiat to their bank
+              account.entries.create!(
+                date:        date,
+                name:        "P2P Sell #{gross_crypto.round(8)} #{crypto_asset}",
+                amount:      -fiat_amount, # Fiat value of Crypto leaving
+                currency:    fiat_currency,
+                external_id: external_id,
+                source:      "binance",
+                entryable:   Trade.new(
+                  security:                  security,
+                  qty:                       -net_crypto,
+                  price:                     fiat_price,
+                  currency:                  fiat_currency,
+                  fee:                       fiat_fee,
+                  investment_activity_label: "Sell"
+                )
+              )
 
-            account.entries.create!(
-              date:        date,
-              name:        "Withdrawal to P2P (#{fiat_currency})",
-              amount:      exact_trade_amount,
-              currency:    acc_curr,
-              external_id: "#{external_id}_funding",
-              source:      "binance",
-              entryable:   Transaction.new
-            )
+              account.entries.create!(
+                date:        date,
+                name:        "P2P Receipt (#{fiat_currency})",
+                amount:      fiat_amount, # Fiat entering the system
+                currency:    fiat_currency,
+                external_id: funding_external_id,
+                source:      "binance",
+                entryable:   Transaction.new
+              )
+            end
           end
-
-        # If it fails, this will print exactly why to the terminal
         rescue => e
           Rails.logger.error "🚨 BINANCE P2P SYNC CRASHED for Order #{trade["orderNumber"]}: #{e.message}"
         end

@@ -111,14 +111,28 @@ class Provider::Binance
 
   # Internal helper to handle both buy and sell types since API requires specific tradeType or gets default BUY
   def get_all_p2p_trades(start_timestamp: nil, end_timestamp: nil)
-    buys = signed_get("/sapi/v1/c2c/orderMatch/listUserOrderHistory", extra_params: { "tradeType" => "BUY", "startTimestamp" => start_timestamp&.to_s, "endTimestamp" => end_timestamp&.to_s }.compact)
-    sells = signed_get("/sapi/v1/c2c/orderMatch/listUserOrderHistory", extra_params: { "tradeType" => "SELL", "startTimestamp" => start_timestamp&.to_s, "endTimestamp" => end_timestamp&.to_s }.compact)
-
-    # Extract data arrays and combine, defaulting to empty arrays if response fails
-    buy_data = buys.is_a?(Hash) ? buys["data"] || [] : []
-    sell_data = sells.is_a?(Hash) ? sells["data"] || [] : []
-
-    buy_data + sell_data
+    %w[BUY SELL].flat_map do |trade_type|
+      page = 1
+      rows = 100
+      data = []
+      loop do
+        result = signed_get(
+          "/sapi/v1/c2c/orderMatch/listUserOrderHistory",
+          extra_params: {
+            "tradeType" => trade_type,
+            "startTimestamp" => start_timestamp&.to_s,
+            "endTimestamp" => end_timestamp&.to_s,
+            "page" => page.to_s,
+            "rows" => rows.to_s
+          }.compact
+        )
+        batch = result.is_a?(Hash) ? Array(result["data"]) : []
+        data.concat(batch)
+        break if batch.size < rows
+        page += 1
+      end
+      data
+    end
   end
 
   private
