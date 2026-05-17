@@ -516,6 +516,8 @@ Rails.application.routes.draw do
         post :preflight, on: :collection
         get :rows, on: :member
       end
+      post "bankdata/imports/preview", to: "bankdata_imports#preview"
+      post "bankdata/imports", to: "bankdata_imports#create"
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resource :family_settings, only: [ :show ], controller: :family_settings

@@ -119,6 +119,83 @@ RSpec.configure do |config|
               }
             }
           },
+          BankdataImportRequest: {
+            type: :object,
+            required: %w[source account_mappings transactions],
+            properties: {
+              source: { type: :string, enum: %w[bankdata_pipeline] },
+              allow_uncategorized: {
+                type: :boolean,
+                description: 'When true, imports rows without category_name so Sure Rules can categorize them later. Defaults to false.'
+              },
+              account_mappings: {
+                type: :array,
+                minItems: 1,
+                items: {
+                  type: :object,
+                  required: %w[source_account_key sure_account_id],
+                  properties: {
+                    source_account_key: { type: :string, example: 'Betaal' },
+                    sure_account_id: { type: :string, format: :uuid }
+                  }
+                }
+              },
+              transactions: {
+                type: :array,
+                minItems: 1,
+                items: {
+                  type: :object,
+                  required: %w[external_id source_transaction_id source_account_key date amount currency name income_expense extra],
+                  properties: {
+                    external_id: { type: :string, example: 'bankdata_pipeline:Betaal:5035K4308043014S0AD' },
+                    source_transaction_id: { type: :string, example: '5035K4308043014S0AD' },
+                    source_account_key: { type: :string, example: 'Betaal' },
+                    date: { type: :string, format: :date },
+                    amount: { type: :string, description: 'Sure sign convention: expense positive, income negative.' },
+                    currency: { type: :string, minLength: 3, maxLength: 3, example: 'EUR' },
+                    name: { type: :string },
+                    income_expense: { type: :string, enum: %w[Income Expense] },
+                    category_parent_name: { type: :string, nullable: true },
+                    category_name: { type: :string, nullable: true },
+                    merchant_name: { type: :string, nullable: true },
+                    excluded: { type: :boolean, default: false },
+                    extra: { type: :object, additionalProperties: true }
+                  }
+                }
+              }
+            }
+          },
+          BankdataImportSummary: {
+            type: :object,
+            required: %w[total created already_imported uncategorized invalid failed items],
+            properties: {
+              total: { type: :integer },
+              created: { type: :integer },
+              already_imported: { type: :integer },
+              uncategorized: { type: :integer, minimum: 0 },
+              invalid: { type: :integer },
+              failed: { type: :integer },
+              skipped: { type: :integer },
+              income_total: { type: :string },
+              expense_total: { type: :string },
+              items: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/BankdataImportItemResult' }
+              }
+            }
+          },
+          BankdataImportItemResult: {
+            type: :object,
+            required: %w[source_transaction_id external_id status],
+            properties: {
+              source_transaction_id: { type: :string },
+              external_id: { type: :string },
+              status: { type: :string, enum: %w[created already_imported uncategorized invalid failed skipped] },
+              category_name: { type: :string, nullable: true },
+              entry_id: { type: :string, format: :uuid, nullable: true },
+              reason: { type: :string, nullable: true }
+            }
+          },
           MfaRequiredResponse: {
             type: :object,
             required: %w[error mfa_required],

@@ -1,0 +1,36 @@
+{
+  "source": "bankdata_pipeline",
+  "allow_uncategorized": true,
+  "account_mappings": [
+    {
+      "source_account_key": "Betaal",
+      "sure_account_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "transactions": [
+    {
+      "external_id": "bankdata_pipeline:Betaal:SQL-1",
+      "source_transaction_id": "SQL-1",
+      "source_account_key": "Betaal",
+      "date": "2025-01-21",
+      "amount": "5.95",
+      "currency": "EUR",
+      "name": "NS GROEP IZ NS REIZIGERS",
+      "income_expense": "Expense",
+      "category_parent_name": null,
+      "category_name": null,
+      "merchant_name": "NS GROEP IZ NS REIZIGERS",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "SQL-1",
+          "excel_columns": {
+            "merge_key": "2025-01-21_-5.95_1955.34",
+            "remittanceInformationUnstructuredArray": "['SEPA Incasso algemeen doorlopend']",
+            "Omschrijving": "Factuur: 433000909 981"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "source": "bankdata_pipeline",
+  "account_mappings": [
+    {
+      "source_account_key": "Betaal",
+      "sure_account_id": "11111111-1111-1111-1111-111111111111"
+    }
+  ],
+  "transactions": [
+    {
+      "external_id": "bankdata_pipeline:Betaal:5035K4308043014S0AD",
+      "source_transaction_id": "5035K4308043014S0AD",
+      "source_account_key": "Betaal",
+      "date": "2025-02-05",
+      "amount": "100.91",
+      "currency": "EUR",
+      "name": "Kuwait Petroleum (Nederl",
+      "income_expense": "Expense",
+      "category_parent_name": "Auto",
+      "category_name": "Benzine",
+      "merchant_name": "Kuwait Petroleum (Nederl",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "5035K4308043014S0AD",
+          "matched_keyword": "Tango",
+          "matched_rule_priority": 1,
+          "excel_columns": {
+            "Recommended": "Benzine",
+            "Rec 2": "0",
+            "Dupe": "",
+            "Column2": "1",
+            "Key": "2025-02-05|-101|1.831",
+            "mONTHkEY": "2025-02"
+          }
+        }
+      }
+    },
+    {
+      "external_id": "bankdata_pipeline:Betaal:5062G5843143090S0AD",
+      "source_transaction_id": "5062G5843143090S0AD",
+      "source_account_key": "Betaal",
+      "date": "2025-03-04",
+      "amount": "17.06",
+      "currency": "EUR",
+      "name": "Kuwait Petroleum (Nederl",
+      "income_expense": "Expense",
+      "category_parent_name": null,
+      "category_name": "Parkeren",
+      "merchant_name": "Kuwait Petroleum (Nederl",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "5062G5843143090S0AD",
+          "matched_keyword": "Tango",
+          "matched_rule_priority": 1,
+          "excel_columns": {
+            "Recommended": "Benzine",
+            "Rec 2": "0",
+            "Dupe": "",
+            "Column2": "1",
+            "Key": "2025-03-04|-017|575",
+            "mONTHkEY": "2025-03"
+          }
+        }
+      }
+    },
+    {
+      "external_id": "bankdata_pipeline:Betaal:5125G4327382550S0AD",
+      "source_transaction_id": "5125G4327382550S0AD",
+      "source_account_key": "Betaal",
+      "date": "2025-05-06",
+      "amount": "17.47",
+      "currency": "EUR",
+      "name": "Kuwait Petroleum (Nederl",
+      "income_expense": "Expense",
+      "category_parent_name": null,
+      "category_name": "Parkeren",
+      "merchant_name": "Kuwait Petroleum (Nederl",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "5125G4327382550S0AD",
+          "matched_keyword": "Tango",
+          "matched_rule_priority": 1,
+          "excel_columns": {
+            "Recommended": "Benzine",
+            "Rec 2": "0",
+            "Dupe": "",
+            "Column2": "1",
+            "Key": "2025-05-06|-017|1.003",
+            "mONTHkEY": "2025-05"
+          }
+        }
+      }
+    },
+    {
+      "external_id": "bankdata_pipeline:Betaal:5153G2937010971S0AD",
+      "source_transaction_id": "5153G2937010971S0AD",
+      "source_account_key": "Betaal",
+      "date": "2025-06-03",
+      "amount": "15.51",
+      "currency": "EUR",
+      "name": "Kuwait Petroleum (Nederl",
+      "income_expense": "Expense",
+      "category_parent_name": null,
+      "category_name": "Parkeren",
+      "merchant_name": "Kuwait Petroleum (Nederl",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "5153G2937010971S0AD",
+          "matched_keyword": "Tango",
+          "matched_rule_priority": 1,
+          "excel_columns": {
+            "Recommended": "Benzine",
+            "Rec 2": "0",
+            "Dupe": "",
+            "Column2": "1",
+            "Key": "2025-06-03|-016|848",
+            "mONTHkEY": "2025-06"
+          }
+        }
+      }
+    },
+    {
+      "external_id": "bankdata_pipeline:Betaal:5183G2807882164S0AD",
+      "source_transaction_id": "5183G2807882164S0AD",
+      "source_account_key": "Betaal",
+      "date": "2025-07-03",
+      "amount": "10.85",
+      "currency": "EUR",
+      "name": "Kuwait Petroleum (Nederl",
+      "income_expense": "Expense",
+      "category_parent_name": null,
+      "category_name": "Parkeren",
+      "merchant_name": "Kuwait Petroleum (Nederl",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "5183G2807882164S0AD",
+          "matched_keyword": "Tango",
+          "matched_rule_priority": 1,
+          "excel_columns": {
+            "Recommended": "Benzine",
+            "Rec 2": "0",
+            "Dupe": "",
+            "Column2": "1",
+            "Key": "2025-07-03|-011|2.961",
+            "mONTHkEY": "2025-07"
+          }
+        }
+      }
+    },
+    {
+      "external_id": "bankdata_pipeline:Betaal:5216G5814603605S0AD",
+      "source_transaction_id": "5216G5814603605S0AD",
+      "source_account_key": "Betaal",
+      "date": "2025-08-05",
+      "amount": "30.30",
+      "currency": "EUR",
+      "name": "Kuwait Petroleum (Nederl",
+      "income_expense": "Expense",
+      "category_parent_name": null,
+      "category_name": "Parkeren",
+      "merchant_name": "Kuwait Petroleum (Nederl",
+      "excluded": false,
+      "extra": {
+        "bankdata_pipeline": {
+          "source_transaction_id": "5216G5814603605S0AD",
+          "matched_keyword": "Tango",
+          "matched_rule_priority": 1,
+          "excel_columns": {
+            "Recommended": "Benzine",
+            "Rec 2": "0",
+            "Dupe": "",
+            "Column2": "1",
+            "Key": "2025-08-05|-030|1.551",
+            "mONTHkEY": "2025-08"
+          }
+        }
+      }
+    }
+  ]
+}
