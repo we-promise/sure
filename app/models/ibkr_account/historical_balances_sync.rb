@@ -115,23 +115,23 @@ class IbkrAccount::HistoricalBalancesSync
         start_non_cash_balance = previous_row ? previous_row[:non_cash] : row[:non_cash]
 
         {
-          account_id:             account.id,
-          date:                   row[:date],
-          balance:                row[:total],
-          cash_balance:           row[:cash],
-          currency:               account.currency,
-          start_cash_balance:     start_cash_balance,
+          account_id: account.id,
+          date: row[:date],
+          balance: row[:total],
+          cash_balance: row[:cash],
+          currency: account.currency,
+          start_cash_balance: start_cash_balance,
           start_non_cash_balance: start_non_cash_balance,
-          cash_inflows:           0,
-          cash_outflows:          0,
-          non_cash_inflows:       0,
-          non_cash_outflows:      0,
-          net_market_flows:       0,
-          cash_adjustments:       row[:cash]     - start_cash_balance,
-          non_cash_adjustments:   row[:non_cash] - start_non_cash_balance,
-          flows_factor:           1,
-          created_at:             current_time,
-          updated_at:             current_time
+          cash_inflows: 0,
+          cash_outflows: 0,
+          non_cash_inflows: 0,
+          non_cash_outflows: 0,
+          net_market_flows: 0,
+          cash_adjustments: row[:cash] - start_cash_balance,
+          non_cash_adjustments: row[:non_cash] - start_non_cash_balance,
+          flows_factor: 1,
+          created_at: current_time,
+          updated_at: current_time
         }
       end
     end
