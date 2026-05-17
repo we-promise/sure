@@ -211,6 +211,10 @@ class BinanceItemsController < ApplicationController
   end
 
   def complete_account_setup
+    if params[:sync_start_date].present?
+      @binance_item.update(sync_start_date: params[:sync_start_date])
+    end
+
     selected_accounts = Array(params[:selected_accounts]).reject(&:blank?)
     created_accounts = []
 

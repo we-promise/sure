@@ -61,39 +61,64 @@ class BinanceAccount::Processor
       provider = binance_account.binance_item&.binance_provider
       return unless provider
 
+      # 1. Initialize data from existing payload
+      existing_spot    = binance_account.raw_transactions_payload&.dig("spot") || {}
+      existing_futures = binance_account.raw_transactions_payload&.dig("futures") || {}
+      existing_p2p     = binance_account.raw_transactions_payload&.dig("p2p") || []
+
+      # 2. Fetch P2P Trades (This now runs even if you have no spot assets)
+      new_p2p = fetch_new_p2p_trades(provider, existing_p2p)
+
+      # 3. Handle Spot & Futures symbols
       symbols = extract_trade_symbols
-      return if symbols.empty?
-
-      existing_spot = binance_account.raw_transactions_payload&.dig("spot") || {}
       new_trades_by_symbol = {}
+      new_futures_by_symbol = {}
 
-      symbols.each do |symbol|
-        TRADE_QUOTE_CURRENCIES.each do |quote|
-          pair = "#{symbol}#{quote}"
-          begin
-            new_trades = fetch_new_trades(provider, pair, existing_spot[pair])
-            new_trades_by_symbol[pair] = new_trades if new_trades.present?
-          rescue Provider::Binance::InvalidSymbolError => e
-            # Pair doesn't exist on Binance for this quote currency — expected, skip silently
-            Rails.logger.debug "BinanceAccount::Processor - skipping #{pair}: #{e.message}"
+      # Only attempt to loop if we actually have symbols (e.g., BTC, ETH)
+      if symbols.any?
+        symbols.each do |symbol|
+          TRADE_QUOTE_CURRENCIES.each do |quote|
+            pair = "#{symbol}#{quote}"
+            begin
+              new_trades = fetch_new_trades(provider, pair, existing_spot[pair], :spot)
+              new_trades_by_symbol[pair] = new_trades if new_trades.present?
+            rescue Provider::Binance::InvalidSymbolError => e
+              Rails.logger.debug "BinanceAccount::Processor - skipping spot #{pair}: #{e.message}"
+            end
+
+            begin
+              new_futures = fetch_new_trades(provider, pair, existing_futures[pair], :futures)
+              new_futures_by_symbol[pair] = new_futures if new_futures.present?
+            rescue Provider::Binance::InvalidSymbolError => e
+              Rails.logger.debug "BinanceAccount::Processor - skipping futures #{pair}: #{e.message}"
+            end
           end
-          # ApiError, AuthenticationError and RateLimitError propagate so the sync is marked failed
         end
       end
 
-      merged_spot = existing_spot.merge(new_trades_by_symbol) { |_pair, old, new_t| old + new_t }
+      # 4. Merge Results
+      merged_spot    = existing_spot.merge(new_trades_by_symbol) { |_pair, old, new_t| old + new_t }
+      merged_futures = existing_futures.merge(new_futures_by_symbol) { |_pair, old, new_t| old + new_t }
+      merged_p2p     = existing_p2p + new_p2p
+
+      # 5. Update the Account Payload (Always updates fetched_at and P2P)
       binance_account.update!(raw_transactions_payload: {
         "spot"       => merged_spot,
+        "futures"    => merged_futures,
+        "p2p"        => merged_p2p,
         "fetched_at" => Time.current.iso8601
       })
 
-      process_trades(new_trades_by_symbol)
+      # 6. Process New Records into Database Entries
+      process_trades(new_trades_by_symbol, :spot) if new_trades_by_symbol.any?
+      process_trades(new_futures_by_symbol, :futures) if new_futures_by_symbol.any?
+      process_p2p_trades(new_p2p) if new_p2p.any?
     end
 
     # Fetches only trades newer than what is already cached for the given pair.
     # On the first sync (no cached trades) fetches the most recent page.
     # On subsequent syncs starts from max_cached_id + 1 and paginates forward.
-    def fetch_new_trades(provider, pair, cached_trades)
+    def fetch_new_trades(provider, pair, cached_trades, market_type)
       limit = 1000
       max_cached_id = cached_trades&.map { |t| t["id"].to_i }&.max
 
@@ -101,13 +126,58 @@ class BinanceAccount::Processor
       all_new = []
 
       loop do
-        page = provider.get_spot_trades(pair, limit: limit, from_id: from_id)
+        page = if market_type == :spot
+          provider.get_spot_trades(pair, limit: limit, from_id: from_id)
+        else
+          provider.get_futures_trades(pair, limit: limit, from_id: from_id)
+        end
         break if page.blank?
 
         all_new.concat(page)
         break if page.size < limit
 
         from_id = page.map { |t| t["id"].to_i }.max + 1
+      end
+
+      all_new
+    end
+
+    def fetch_new_p2p_trades(provider, cached_p2p)
+      # Binance P2P history endpoint only supports max 30-day windows.
+      # If no cache exists, we fetch back to sync_start_date (or default 30 days).
+      # If cache exists, we fetch from the last cached trade timestamp.
+      max_cached_timestamp = cached_p2p&.map { |t| t["createTime"].to_i }&.max
+
+      start_time = if max_cached_timestamp
+        max_cached_timestamp
+      elsif binance_account.binance_item&.sync_start_date
+        binance_account.binance_item.sync_start_date.to_time.to_i * 1000
+      else
+        (Time.current - 30.days).to_i * 1000
+      end
+
+      all_new = []
+      current_start = start_time
+
+      loop do
+        current_end = [ current_start + 30.days.to_i * 1000, Time.current.to_i * 1000 ].min
+
+        page = provider.get_all_p2p_trades(start_timestamp: current_start, end_timestamp: current_end)
+
+        # We might fetch overlapping trades if they share the exact timestamp, filter by unique orderNumber
+        if page.present?
+          cached_order_numbers = cached_p2p&.map { |t| t["orderNumber"] } || []
+          new_order_numbers = all_new.map { |t| t["orderNumber"] }
+
+          unique_page = page.reject do |t|
+            cached_order_numbers.include?(t["orderNumber"]) || new_order_numbers.include?(t["orderNumber"])
+          end
+
+          all_new.concat(unique_page)
+        end
+
+        break if current_end >= Time.current.to_i * 1000
+        current_start = current_end + 1
       end
 
       all_new
@@ -128,15 +198,15 @@ class BinanceAccount::Processor
       (current + previous).uniq.compact.reject { |s| s.blank? || stablecoins.include?(s) }
     end
 
-    def process_trades(trades_by_symbol)
+    def process_trades(trades_by_symbol, market_type)
       trades_by_symbol.each do |pair, trades|
-        trades.each { |trade| process_spot_trade(trade, pair) }
+        trades.each { |trade| process_trade(trade, pair, market_type) }
       end
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - trade processing failed: #{e.message}"
     end
 
-    def process_spot_trade(trade, pair)
+    def process_trade(trade, pair, market_type)
       account = binance_account.current_account
       return unless account
 
@@ -149,7 +219,8 @@ class BinanceAccount::Processor
 
       return unless security
 
-      external_id = "binance_spot_#{pair}_#{trade["id"]}"
+      prefix = market_type == :spot ? "spot" : "futures"
+      external_id = "binance_#{prefix}_#{pair}_#{trade["id"]}"
       return if account.entries.exists?(external_id: external_id)
 
       date       = Time.zone.at(trade["time"].to_i / 1000).to_date
@@ -170,7 +241,7 @@ class BinanceAccount::Processor
 
       amount_usd  = amount_usd_raw.round(2)
       commission  = commission_in_usd(trade, base_symbol, price_usd, date: date)
-      is_buyer     = trade["isBuyer"]
+      is_buyer     = trade.key?("isBuyer") ? trade["isBuyer"] : trade["buyer"]
 
       if is_buyer
         account.entries.create!(
@@ -212,20 +283,34 @@ class BinanceAccount::Processor
     end
 
     # Converts an amount denominated in quote_symbol to USD.
-    # Stablecoins are treated as 1:1; others use historical price when date is given,
-    # falling back to current USDT spot price.
+    # Stablecoins are treated as 1:1.
+    # For fiat/crypto assets, tries Binance historical price first, falls back to internal ExchangeRate.
     def quote_to_usd(amount, quote_symbol, date: nil)
       return amount if BinanceAccount::STABLECOINS.include?(quote_symbol)
+      return amount if quote_symbol.to_s.upcase == "USD"
 
       provider = binance_account.binance_item&.binance_provider
-      return nil unless provider
 
-      spot = nil
-      spot = provider.get_historical_price("#{quote_symbol}USDT", date) if date.present? && provider.respond_to?(:get_historical_price)
-      spot ||= provider.get_spot_price("#{quote_symbol}USDT")
-      return nil if spot.nil?
+      if provider
+        spot = nil
+        begin
+          spot = provider.get_historical_price("#{quote_symbol}USDT", date) if date.present? && provider.respond_to?(:get_historical_price)
+          spot ||= provider.get_spot_price("#{quote_symbol}USDT")
+        rescue Provider::Binance::InvalidSymbolError
+          # Fall through to ExchangeRate lookup
+        end
+        return (amount * spot.to_d).round(8) if spot.present?
+      end
 
-      (amount * spot.to_d).round(8)
+      # Fallback to internal app ExchangeRate provider (crucial for P2P fiat currencies like TZS, NGN)
+      fallback_rate = ExchangeRate.find_or_fetch_rate(from: quote_symbol, to: "USD", date: date || Date.current, cache: true)
+      if fallback_rate.present?
+        # Extract the numeric rate from the returned object (or use it directly if it's already a number)
+        rate_val = fallback_rate.respond_to?(:rate) ? fallback_rate.rate : fallback_rate
+        return (amount * rate_val.to_d).round(8)
+      end
+
+      nil
     rescue StandardError => e
       Rails.logger.warn "BinanceAccount::Processor - could not convert #{quote_symbol} to USD: #{e.message}"
       nil
@@ -233,6 +318,117 @@ class BinanceAccount::Processor
 
     # Converts the trade commission to USD.
     # commissionAsset can be: a stablecoin (≈ 1 USD), the base asset, or something else (e.g. BNB).
+    def process_p2p_trades(trades)
+      account = binance_account.current_account
+      return unless account
+
+      Rails.logger.info "BinanceAccount::Processor - found #{trades.size} P2P trades to process"
+
+      trades.each do |trade|
+        external_id = "binance_p2p_#{trade["orderNumber"]}"
+        if account.entries.exists?(external_id: external_id)
+          Rails.logger.info "BinanceAccount::Processor - skipping P2P trade #{trade["orderNumber"]}: already exists in DB"
+          next
+        end
+
+        date = Time.zone.at(trade["createTime"].to_i / 1000).to_date
+        trade_type = trade["tradeType"] # BUY or SELL
+        begin
+          # 1. Grab the exact Crypto values from the payload
+          fiat_currency = trade["fiat"]
+          crypto_asset  = trade["asset"]
+          gross_crypto  = trade["amount"].to_d
+          net_crypto    = (trade["takerAmount"] || gross_crypto).to_d
+          crypto_fee    = (trade["takerCommission"] || 0).to_d
+
+          ticker   = "CRYPTO:#{crypto_asset}"
+          security = BinanceAccount::SecurityResolver.resolve(ticker, crypto_asset)
+
+          unless security
+            Rails.logger.warn "BinanceAccount::Processor - skipping P2P trade #{trade["orderNumber"]}: could not resolve security for #{crypto_asset}"
+            next
+          end
+
+          # 2. Calculate USD values
+          gross_usd_raw = quote_to_usd(gross_crypto, crypto_asset, date: date)
+          if gross_usd_raw.nil?
+            Rails.logger.warn "BinanceAccount::Processor - skipping P2P trade #{trade["orderNumber"]}: could not convert #{crypto_asset} to USD"
+            next
+          end
+
+          fee_usd   = quote_to_usd(crypto_fee, crypto_asset, date: date)&.round(2) || 0.0
+          price_usd = gross_crypto > 0 ? (gross_usd_raw / gross_crypto).round(2) : 0
+
+          # 3. FORCE the total amount to perfectly match the strict database validation: Amount = (Qty * Price) + Fee
+          exact_trade_amount = ((net_crypto * price_usd) + fee_usd).round(2)
+          acc_curr = account.currency
+
+          if trade_type == "BUY"
+            account.entries.create!(
+              date:        date,
+              name:        "Deposit from P2P (#{fiat_currency})",
+              amount:      -exact_trade_amount,
+              currency:    acc_curr,
+              external_id: "#{external_id}_funding",
+              source:      "binance",
+              entryable:   Transaction.new
+            )
+
+            account.entries.create!(
+              date:        date,
+              name:        "P2P Buy #{gross_crypto.round(8)} #{crypto_asset}",
+              amount:      exact_trade_amount,
+              currency:    acc_curr,
+              external_id: external_id,
+              source:      "binance",
+              entryable:   Trade.new(
+                security:                  security,
+                qty:                       net_crypto,
+                price:                     price_usd,
+                currency:                  acc_curr,
+                fee:                       fee_usd,
+                investment_activity_label: "Buy"
+              )
+            )
+          else
+            # SELL LOGIC
+            account.entries.create!(
+              date:        date,
+              name:        "P2P Sell #{gross_crypto.round(8)} #{crypto_asset}",
+              amount:      -exact_trade_amount,
+              currency:    acc_curr,
+              external_id: external_id,
+              source:      "binance",
+              entryable:   Trade.new(
+                security:                  security,
+                qty:                       -net_crypto,
+                price:                     price_usd,
+                currency:                  acc_curr,
+                fee:                       fee_usd,
+                investment_activity_label: "Sell"
+              )
+            )
+
+            account.entries.create!(
+              date:        date,
+              name:        "Withdrawal to P2P (#{fiat_currency})",
+              amount:      exact_trade_amount,
+              currency:    acc_curr,
+              external_id: "#{external_id}_funding",
+              source:      "binance",
+              entryable:   Transaction.new
+            )
+          end
+
+        # If it fails, this will print exactly why to the terminal
+        rescue => e
+          Rails.logger.error "🚨 BINANCE P2P SYNC CRASHED for Order #{trade["orderNumber"]}: #{e.message}"
+        end
+      end
+    rescue StandardError => e
+      Rails.logger.error "BinanceAccount::Processor - P2P trade processing failed: #{e.message}"
+    end
+
     def commission_in_usd(trade, base_symbol, trade_price, date: nil)
       raw            = trade["commission"].to_d
       commission_asset = trade["commissionAsset"].to_s.upcase

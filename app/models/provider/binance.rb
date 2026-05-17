@@ -13,6 +13,7 @@ class Provider::Binance
   # Pipelock incorrectly interprets the '@' in Ruby instance variables as a password delimiter
   # in an URL (e.g. https://user:password@host).
   SPOT_BASE_URL = "https://api.binance.com".freeze
+  FUTURES_BASE_URL = "https://fapi.binance.com".freeze
 
   base_uri SPOT_BASE_URL
   default_options.merge!({ timeout: 30 }.merge(httparty_ssl_options))
@@ -87,14 +88,49 @@ class Provider::Binance
     signed_get("/api/v3/myTrades", extra_params: params)
   end
 
+  # USDⓈ-M Futures account — requires signed request
+  def get_futures_account
+    signed_get("/fapi/v2/account", base_url: FUTURES_BASE_URL)
+  end
+
+  # Futures trade history for a single symbol
+  def get_futures_trades(symbol, limit: 1000, from_id: nil)
+    params = { "symbol" => symbol, "limit" => limit.to_s }
+    params["fromId"] = from_id.to_s if from_id
+    signed_get("/fapi/v1/userTrades", extra_params: params, base_url: FUTURES_BASE_URL)
+  end
+
+  # P2P trade history — requires signed request
+  # Pass start_timestamp to fetch only recent trades (max 30 days window)
+  def get_p2p_trades(start_timestamp: nil, end_timestamp: nil)
+    params = { "tradeType" => "BUY" } # default to BUY, will loop in processor for SELL
+    params["startTimestamp"] = start_timestamp.to_s if start_timestamp
+    params["endTimestamp"] = end_timestamp.to_s if end_timestamp
+    signed_get("/sapi/v1/c2c/orderMatch/listUserOrderHistory", extra_params: params)
+  end
+
+  # Internal helper to handle both buy and sell types since API requires specific tradeType or gets default BUY
+  def get_all_p2p_trades(start_timestamp: nil, end_timestamp: nil)
+    buys = signed_get("/sapi/v1/c2c/orderMatch/listUserOrderHistory", extra_params: { "tradeType" => "BUY", "startTimestamp" => start_timestamp&.to_s, "endTimestamp" => end_timestamp&.to_s }.compact)
+    sells = signed_get("/sapi/v1/c2c/orderMatch/listUserOrderHistory", extra_params: { "tradeType" => "SELL", "startTimestamp" => start_timestamp&.to_s, "endTimestamp" => end_timestamp&.to_s }.compact)
+
+    # Extract data arrays and combine, defaulting to empty arrays if response fails
+    buy_data = buys.is_a?(Hash) ? buys["data"] || [] : []
+    sell_data = sells.is_a?(Hash) ? sells["data"] || [] : []
+
+    buy_data + sell_data
+  end
+
   private
 
-    def signed_get(path, extra_params: {})
+    def signed_get(path, extra_params: {}, base_url: SPOT_BASE_URL)
       params = timestamp_params.merge(extra_params)
       query_string = URI.encode_www_form(params.sort)
 
+      full_url = "#{base_url}#{path}"
+
       response = self.class.get(
-        path,
+        full_url,
         query: "#{query_string}&signature=#{sign(query_string)}",
         headers: auth_headers
       )
@@ -103,7 +139,7 @@ class Provider::Binance
     end
 
     def timestamp_params
-      { "timestamp" => (Time.current.to_f * 1000).to_i.to_s, "recvWindow" => "5000" }
+      { "timestamp" => (Time.current.to_f * 1000).to_i.to_s, "recvWindow" => "60000" }
     end
 
     # HMAC-SHA256 of the query string.

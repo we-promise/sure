@@ -86,4 +86,115 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "USD", @account.currency
     assert_in_delta 1000.0, @account.balance, 0.01
   end
+
+  test "processes futures trades correctly" do
+    @family.update!(currency: "USD")
+    @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] })
+
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_spot_price).returns("50000.0")
+    provider.stubs(:get_all_p2p_trades).returns([]) # Skip P2P
+
+    # Mock futures trades
+    provider.stubs(:get_futures_trades).returns([])
+    provider.stubs(:get_futures_trades).with("BTCUSDT", limit: 1000, from_id: nil).returns([
+      { "id" => 1, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true }
+    ])
+
+    Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
+
+    assert_difference "Entry.count", 1 do
+      BinanceAccount::Processor.new(@ba).process
+    end
+
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
+  end
+
+  test "processes P2P BUY trades with double-entry logic and exact fees" do
+    @family.update!(currency: "USD")
+    @account.update!(currency: "USD") # Ensure the mock account matches
+
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+
+    # Silence other importers
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_futures_trades).returns([])
+
+    # Mock the exact TZS/USDT payload we negotiated
+    provider.stubs(:get_all_p2p_trades).returns([
+      {
+        "orderNumber" => "22883918231657005056",
+        "createTime" => 1777736533166,
+        "tradeType" => "BUY",
+        "asset" => "USDT",
+        "fiat" => "TZS",
+        "amount" => "11.47",          # Gross
+        "takerAmount" => "11.41",     # Net
+        "takerCommission" => "0.06"   # Fee
+      }
+    ])
+
+    Security.create!(ticker: "CRYPTO:USDT", name: "Tether", price_provider: "binance_public")
+
+    # It MUST create 2 entries: 1 Deposit (Transaction) and 1 Purchase (Trade)
+    assert_difference "Entry.count", 2 do
+      BinanceAccount::Processor.new(@ba).process
+    end
+
+    # 1. Verify the Deposit (Transaction)
+    deposit = @account.entries.find_by(external_id: "binance_p2p_22883918231657005056_funding")
+    assert_not_nil deposit
+    assert_equal "Transaction", deposit.entryable_type
+    assert_equal -11.47, deposit.amount.to_f # Negative = Cash INFLOW
+    assert_equal "USD", deposit.currency
+
+    # 2. Verify the Buy (Trade)
+    trade = @account.entries.find_by(external_id: "binance_p2p_22883918231657005056")
+    assert_not_nil trade
+    assert_equal "Trade", trade.entryable_type
+    assert_equal 11.47, trade.amount.to_f # Positive = Cash OUTFLOW
+    assert_equal "Buy", trade.entryable.investment_activity_label
+
+    # Verify the specific crypto math
+    assert_equal 11.41, trade.entryable.qty.to_f
+    assert_equal 0.06, trade.entryable.fee.to_f
+  end
+
+  test "skips processing if P2P external_id already exists" do
+    @family.update!(currency: "USD")
+    @account.update!(currency: "USD")
+
+    # Pre-create the trade in the database
+    @account.entries.create!(
+      date: Date.current,
+      name: "Existing P2P",
+      amount: 10,
+      currency: "USD",
+      external_id: "binance_p2p_existing_123",
+      entryable: Transaction.new
+    )
+
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_futures_trades).returns([])
+
+    # Mock a payload with the SAME orderNumber
+    provider.stubs(:get_all_p2p_trades).returns([
+      { "orderNumber" => "existing_123", "tradeType" => "BUY", "asset" => "USDT", "amount" => "10.0" }
+    ])
+
+    Security.create!(ticker: "CRYPTO:USDT", name: "Tether", price_provider: "binance_public")
+
+    # Assert that NO new entries are created
+    assert_no_difference "Entry.count" do
+      BinanceAccount::Processor.new(@ba).process
+    end
+  end
 end

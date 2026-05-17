@@ -21,7 +21,7 @@ class Provider::BinanceTest < ActiveSupport::TestCase
     params = @provider.send(:timestamp_params)
     assert params["timestamp"].present?
     assert_in_delta Time.current.to_i * 1000, params["timestamp"].to_i, 5000
-    assert_equal "5000", params["recvWindow"]
+    assert_equal "60000", params["recvWindow"]
   end
 
   test "handle_response raises AuthenticationError on 401" do

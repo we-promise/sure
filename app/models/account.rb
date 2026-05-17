@@ -263,7 +263,14 @@ class Account < ApplicationRecord
         }
       }
 
-      create_and_sync(attributes, skip_initial_sync: true)
+      # Capture the created account in a variable
+      account = create_and_sync(attributes, skip_initial_sync: true)
+
+      # Force the opening balance to zero so the ledger builds cleanly from trade history
+      account.set_opening_anchor_balance(balance: 0)
+
+      # Return the account
+      account
     end
 
 
