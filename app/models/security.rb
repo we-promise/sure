@@ -58,6 +58,18 @@ class Security < ApplicationRecord
     end
   end
 
+  # Lazily finds or creates a global synthetic cash security for a currency.
+  # Used to represent non-primary-currency cash positions from brokerage providers
+  # as holdings (e.g. CASH-USD, CASH-CAD).
+  def self.cash_for_currency(currency_code)
+    code = currency_code.to_s.upcase
+    ticker = "CASH-#{code}"
+    find_or_create_by!(ticker: ticker, kind: "cash") do |s|
+      s.name = "Cash (#{code})"
+      s.offline = true
+    end
+  end
+
   def cash?
     kind == "cash"
   end
