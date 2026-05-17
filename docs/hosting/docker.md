@@ -316,3 +316,33 @@ docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # Th
 ### Slow `.csv` import (processing rows taking longer than expected)
 
 Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.
+
+## Reverse-proxy authentication
+
+Sure can be configured to trust a request header set by an upstream reverse proxy and use it to log a user in automatically (passwordless). This is intended to be used in conjunction with separate authorization software running in front of Sure. Self-hosted only — managed deployments ignore the configuration.
+
+For more information and examples, see https://doc.traefik.io/traefik/middlewares/http/forwardauth/ or similar documentation for your HTTP proxy and authentication software.
+
+Configure the Sure environment with the name of the header that carries the authenticated user's email:
+```txt
+REMOTE_USER_HEADER_EMAIL="Remote-Email"
+```
+
+ !! NOTE!! this allows unchallenged (passwordless) login via simple HTTP headers. Only use this method if you have a proxy in front of Sure that is applying the authentication challenge, *AND THE SURE HTTP SERVER IS NOT ACCESSIBLE DIRECTLY*.
+
+### Source-IP allowlist
+
+Sure honors the header only when the immediate peer (`REMOTE_ADDR`) is in this list. The default is loopback (`127.0.0.0/8,::1/128`) — fail-closed by design, so a misconfigured deployment surfaces a broken login at first test rather than silently default-opening. If your proxy lives on a different host or container, override it:
+```txt
+REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
+```
+Setting the variable replaces the default. A set-but-empty or unparseable value resolves to an empty allowlist — every request is treated as outside it and the header is ignored.
+
+### Shared-secret header (optional)
+
+Useful when the IP allowlist alone isn't sufficient — e.g. multi-tenant Docker bridge where many containers share an IP range, or a topology where the immediate peer isn't fully trusted. When `REMOTE_USER_SHARED_SECRET` is set, the proxy must echo the same value in a sibling header on every request; mismatches and missing headers are rejected with a constant-time compare:
+```txt
+REMOTE_USER_SHARED_SECRET="long-random-string-from-openssl-rand-hex-32"
+REMOTE_USER_SHARED_SECRET_HEADER="X-Remote-User-Secret"
+```
+`REMOTE_USER_SHARED_SECRET_HEADER` defaults to `X-Remote-User-Secret` and only needs setting if your proxy can't use that name. Leave `REMOTE_USER_SHARED_SECRET` unset to disable the check (the IP allowlist remains the only gate).

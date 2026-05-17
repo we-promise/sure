@@ -169,10 +169,12 @@ class User < ApplicationRecord
     layout.in?(%w[intro dashboard]) ? layout : "dashboard"
   end
 
-  # SSO-only users have OIDC identities but no local password.
-  # They cannot use password reset or local login.
+  # Users without a local password — provisioned via OIDC SSO or via a
+  # trusted upstream proxy header. They cannot use password reset or
+  # local login; the only path back in is through the same external
+  # auth that provisioned them.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil?
   end
 
   # Check if user has a local password set (can authenticate locally)

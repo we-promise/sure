@@ -24,8 +24,10 @@ jobs:
           test-vectors: 'false'
           exclude-paths: |
             .env.example
+            app/models/provider/binance.rb
             compose.example.yml
             compose.example.ai.yml
             config/locales/views/reports/
             docs/hosting/ai.md
-            app/models/provider/binance.rb
+            docs/hosting/docker.md
+            test/
