@@ -180,7 +180,10 @@ class SnaptradeAccount < ApplicationRecord
         next if entry.equal?(primary_cash_entry)
 
         code = entry.dig(:currency, :code).to_s.upcase
-        next if code.blank?
+        unless code.match?(/\A[A-Z]{3}\z/)
+          Rails.logger.warn "SnaptradeAccount##{id} upsert_balances! - skipping non-ISO currency code #{code.inspect}" if code.present?
+          next
+        end
 
         amount = parse_decimal(entry[:cash])
         next if amount.nil? || amount <= 0

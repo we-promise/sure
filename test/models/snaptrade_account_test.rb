@@ -140,6 +140,20 @@ class SnaptradeAccountTest < ActiveSupport::TestCase
       assert_equal BigDecimal("100.00"), @snaptrade_account.reload.cash_balance
     end
 
+    test "skips currency entries whose code is not a 3-letter ISO code" do
+      balances = [
+        { cash: 100.00, currency: { code: "USD" } },
+        { cash: 5.00,   currency: { code: "USDC" } },
+        { cash: 7.00,   currency: { code: "us" } }
+      ]
+
+      assert_no_difference -> { @account.holdings.count } do
+        @snaptrade_account.upsert_balances!(balances)
+      end
+
+      refute Security.exists?(ticker: "CASH-USDC")
+    end
+
     test "removes stale synthetic cash holdings when a currency drops to zero" do
       @snaptrade_account.upsert_balances!([
         { cash: 100.00, currency: { code: "USD" } },
