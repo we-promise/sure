@@ -274,6 +274,84 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       "Forward strategy with no provider rows should compute cost_basis from trades normally"
   end
 
+  test "does not overwrite a zero-valued manual cost_basis with provider carry-forward" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account, security: @aapl,
+      qty: 10, price: 200, amount: 2000, currency: "USD",
+      date: 2.days.ago.to_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("125.50"), cost_basis_source: "provider"
+    )
+
+    # Free shares: legitimate zero-cost basis recorded manually
+    Holding.create!(
+      account: @account, security: @aapl,
+      qty: 10, price: 200, amount: 2000, currency: "USD",
+      date: Date.current,
+      cost_basis: BigDecimal("0"), cost_basis_source: "manual"
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_equal BigDecimal("0"), today_holding.cost_basis,
+      "Zero-valued manual cost_basis (e.g., free shares) must not be overwritten by provider carry-forward"
+    assert_equal "manual", today_holding.cost_basis_source
+  end
+
+  test "carry-forward converts provider cost_basis currency when provider and calculated currencies differ" do
+    snap_date = 2.days.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: snap_date, rate: 1.2)
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "EUR")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account, security: @aapl,
+      qty: 10, price: 200, amount: 2000, currency: "EUR",
+      date: snap_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_in_delta BigDecimal("120.00"), today_holding.cost_basis, BigDecimal("0.01"),
+      "Provider cost_basis in EUR should be converted to USD at the snapshot-date exchange rate"
+    assert_equal "provider", today_holding.cost_basis_source
+  end
+
+  test "carry-forward skips provider cost_basis when FX conversion raises Money::ConversionError" do
+    snap_date = 2.days.ago.to_date
+    # No ExchangeRate created — EUR→USD conversion will raise Money::ConversionError
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "EUR")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account, security: @aapl,
+      qty: 10, price: 200, amount: 2000, currency: "EUR",
+      date: snap_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
+    )
+
+    assert_nothing_raised do
+      Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+    end
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_nil today_holding.cost_basis,
+      "Carry-forward should be skipped gracefully when currency conversion fails"
+  end
+
   test "preserves same-day non-provider holdings for securities absent from the provider snapshot" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 

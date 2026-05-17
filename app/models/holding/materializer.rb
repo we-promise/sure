@@ -92,8 +92,7 @@ class Holding::Materializer
           # cost_basis for this security on or before the holding date.
           # Calculated/manual values outrank a provider carry-forward.
           existing_source = existing&.cost_basis_source
-          existing_basis_usable = existing&.cost_basis.present? && existing&.cost_basis&.positive?
-          preserve_existing = existing_basis_usable && %w[calculated manual].include?(existing_source)
+          preserve_existing = existing&.cost_basis.present? && %w[calculated manual].include?(existing_source)
 
           if preserve_existing
             holdings_to_upsert_without_cost << base_attrs
