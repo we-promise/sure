@@ -48,7 +48,7 @@ export default class extends Controller {
     this.isOpen ? this.close() : this.open();
   }
 
-  open() {
+  open(focusOption = false) {
     this.isOpen = true;
     this.buttonTarget.setAttribute("aria-expanded", "true");
     this.menuTarget.classList.remove("hidden");
@@ -64,7 +64,11 @@ export default class extends Controller {
       );
       this.menuTarget.classList.add("opacity-100", "translate-y-0");
       this.updatePosition();
-      this.searchTarget.focus({ preventScroll: true });
+      if (focusOption) {
+        this.focusActiveOption();
+      } else {
+        this.searchTarget.focus({ preventScroll: true });
+      }
     });
   }
 
@@ -118,6 +122,7 @@ export default class extends Controller {
     this.createFormTarget.classList.toggle("hidden", !canCreate);
     this.createFormTarget.classList.toggle("flex", canCreate);
     this.createNameElement.textContent = this.searchTarget.value.trim();
+    this.syncActiveOption();
   }
 
   handleSearchKeydown(event) {
@@ -257,11 +262,113 @@ export default class extends Controller {
   }
 
   handleKeydown(event) {
+    if (!this.isOpen && event.target === this.buttonTarget) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        this.open(true);
+      }
+      return;
+    }
+
+    if (!this.isOpen) return;
+
     if (event.key === "Escape" && this.isOpen) {
       event.preventDefault();
       this.close();
       this.buttonTarget.focus();
+      return;
     }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      this.moveActiveOption(1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      this.moveActiveOption(-1);
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      this.focusOption(this.visibleOptions[0]);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      this.focusOption(this.visibleOptions.at(-1));
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      event.target.getAttribute("role") === "option"
+    ) {
+      event.preventDefault();
+      event.target.click();
+    }
+  }
+
+  syncActiveOption() {
+    const options = this.visibleOptions;
+    const current = this.activeOption;
+    const selected = options.find((option) =>
+      this.selectedIds.has(option.dataset.tagId),
+    );
+
+    this.setActiveOption(
+      options.includes(current) ? current : selected || options[0],
+      false,
+    );
+  }
+
+  moveActiveOption(delta) {
+    const options = this.visibleOptions;
+    if (options.length === 0) return;
+
+    const currentIndex = options.indexOf(this.activeOption);
+    const nextIndex =
+      currentIndex === -1
+        ? delta > 0
+          ? 0
+          : options.length - 1
+        : (currentIndex + delta + options.length) % options.length;
+
+    this.focusOption(options[nextIndex]);
+  }
+
+  focusActiveOption() {
+    this.focusOption(this.activeOption || this.visibleOptions[0]);
+  }
+
+  focusOption(option) {
+    this.setActiveOption(option, true);
+  }
+
+  setActiveOption(option, focus) {
+    this.optionTargets.forEach((target) => {
+      target.tabIndex = target === option ? 0 : -1;
+    });
+
+    if (!option) return;
+
+    if (focus) {
+      option.focus({ preventScroll: true });
+      option.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  get activeOption() {
+    return this.optionTargets.find((option) => option.tabIndex === 0);
+  }
+
+  get visibleOptions() {
+    return this.optionTargets.filter(
+      (option) => !option.classList.contains("hidden"),
+    );
   }
 
   startAutoUpdate() {
