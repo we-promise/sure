@@ -194,11 +194,10 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     assert_equal BigDecimal("900.50"),  sunday.end_cash_balance
   end
 
-  test "skips rows with zero or missing total" do
+  test "skips rows with missing or unparseable total" do
     @ibkr_account.update!(
       raw_equity_summary_payload: [
-        { report_date: "2026-05-07", total: "0"   },
-        { report_date: "2026-05-07", total: nil   },
+        { report_date: "2026-05-07", total: nil },
         { report_date: "2026-05-08", total: "3351.00" }
       ]
     )
@@ -207,5 +206,19 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
 
     assert_nil @account.balances.find_by(date: Date.new(2026, 5, 7), currency: "CHF")
     assert_not_nil @account.balances.find_by(date: Date.new(2026, 5, 8), currency: "CHF")
+  end
+
+  test "writes balance row with zero total for fully liquidated dates" do
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "0"      },
+        { report_date: "2026-05-08", total: "3351.00" }
+      ]
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("0"), balance.end_balance
   end
 end

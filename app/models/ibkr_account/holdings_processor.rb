@@ -30,7 +30,7 @@ class IbkrAccount::HoldingsProcessor
 
         # conid is guaranteed present by supported_position?, so no fallbacks needed
         currency = extract_currency(data, fallback: @ibkr_account.currency)
-        report_date = normalize_to_last_trading_day(parse_date(data[:report_date]) || @ibkr_account.report_date || Date.current)
+        report_date = parse_date(data[:report_date]) || @ibkr_account.report_date || Date.current
         key = [ data[:conid], currency, report_date ]
         groups[key] ||= []
         groups[key] << data

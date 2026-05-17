@@ -54,9 +54,9 @@ class IbkrAccount::HistoricalBalancesSync
             next unless date
 
             total = parse_decimal(data[:total])
-            unless total&.positive?
+            if total.nil?
               Rails.logger.warn(
-                "IbkrAccount::HistoricalBalancesSync - Skipping equity summary row with zero or missing total " \
+                "IbkrAccount::HistoricalBalancesSync - Skipping equity summary row with missing or unparseable total " \
                 "for date=#{data[:report_date].inspect} account=#{account.id}"
               )
               next
