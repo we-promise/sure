@@ -93,7 +93,7 @@
                   variant: :logo,
                   searchable: true,
                   menu_placement: :auto } %>
-      <%= render TagSelectComponent.new(
+      <%= render DS::TagSelect.new(
             form: ef,
             tags: Current.family.tags.alphabetically,
             selected_ids: ef.object.tag_ids

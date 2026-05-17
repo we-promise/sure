@@ -117,7 +117,7 @@
                     label: t(".merchant_label"),
                     variant: :logo, searchable: true, menu_placement: :auto, disabled: @entry.split_child? || !can_annotate_entry? },
                   "data-auto-submit-form-target": "auto" %>
-            <%= render TagSelectComponent.new(
+            <%= render DS::TagSelect.new(
                   form: ef,
                   tags: Current.family.tags.alphabetically,
                   selected_ids: ef.object.tag_ids,
