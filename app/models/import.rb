@@ -418,7 +418,7 @@ class Import < ApplicationRecord
         end
 
         if duplicate_headers.any?
-          errors.add(:base, "CSV headers normalize to duplicate columns: #{duplicate_headers.map { |headers| headers.join(', ') }.join('; ')}")
+          errors.add(:base, :duplicate_headers, columns: duplicate_headers.map { |headers| headers.join(", ") }.join("; "))
           raise ActiveRecord::RecordInvalid, self
         end
 

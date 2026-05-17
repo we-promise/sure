@@ -155,6 +155,7 @@ en:
       no_institution_connected: Please connect a bank institution with Sophtron first.
       no_name_placeholder: "(No name)"
       title: "Link %{account_name} with Sophtron"
+      unexpected_error: "An unexpected error occurred"
     link_existing_account:
       account_already_linked: This account is already linked to a provider
       api_error: "API connection error"
@@ -289,3 +290,24 @@ en:
     sophtron_entry:
       processor:
         unknown_transaction: "Unknown transaction"
+    render_connection_timeout:
+      timeout: "Connection timed out. Please try again."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "Cannot link %{count} account with blank name"
+        other: "Cannot link %{count} accounts with blank names"
+      partial_invalid: "Linked %{created_count} account(s). %{already_linked_count} already linked, %{invalid_count} had invalid names."
+      partial_success: "Linked %{created_count} account(s). %{already_linked_count} account(s) were already linked."
+      success:
+        one: "Successfully linked %{count} account."
+        other: "Successfully linked %{count} accounts."
+      all_already_linked:
+        one: "The selected account is already linked"
+        other: "All %{count} selected accounts are already linked"
+      link_failed: "Failed to link accounts"
+    start_manual_sync:
+      already_running: "A sync is already in progress."
+      no_linked_accounts: "No linked accounts available to sync."
+      api_error: "API error: %{message}"
+    start_manual_sync_for_account:
+      failed: "Failed to sync account"

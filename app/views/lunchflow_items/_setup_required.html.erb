@@ -1,21 +1,21 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Lunch Flow Setup Required") %>
+    <% dialog.with_header(title: t(".title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
         <%= render DS::Alert.new(
-          title: "API Key Not Configured",
-          message: "Before you can link Lunch Flow accounts, you need to configure your Lunch Flow API key.",
+          title: t(".api_key_not_configured"),
+          message: t(".api_key_description"),
           variant: :warning
         ) %>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary">Setup Steps:</p>
+          <p class="font-medium text-primary"><%= t(".setup_steps_title") %></p>
           <ol class="list-decimal list-inside space-y-1 text-secondary">
-            <li>Go to <strong>Settings → Providers</strong></li>
-            <li>Find the <strong>Lunch Flow</strong> section</li>
-            <li>Enter your Lunch Flow API key</li>
-            <li>Return here to link your accounts</li>
+            <li><%= t(".setup_step_1_html") %></li>
+            <li><%= t(".setup_step_2_html") %></li>
+            <li><%= t(".setup_step_3") %></li>
+            <li><%= t(".setup_step_4") %></li>
           </ol>
         </div>
 
@@ -23,7 +23,7 @@
           <%= link_to settings_providers_path,
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-gray-900 theme-dark:focus:ring-white focus:ring-offset-2 transition-colors",
                       data: { turbo: false } do %>
-            Go to Provider Settings
+            <%= t(".go_to_provider_settings") %>
           <% end %>
         </div>
       </div>

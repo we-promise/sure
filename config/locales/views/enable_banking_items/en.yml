@@ -39,8 +39,65 @@ en:
       errors:
         only_manual: Only manual accounts can be linked
         invalid_enable_banking_account: Invalid Enable Banking account selected
+    enable_banking_item:
+      deletion_in_progress: Deletion in progress
+      provider_name: Enable Banking
+      syncing: Syncing...
+      reconnect: Reconnect
+      last_synced: Last synced %{time} ago
+      never_synced: Never synced
+      update: Update
+      delete: Delete
+      setup_needed: Setup needed
+      setup_needed_description:
+        one: 1 account imported from Enable Banking needs to be set up
+        other: "%{count} accounts imported from Enable Banking need to be set up"
+      set_up_accounts: Set up accounts
+      no_accounts_found: No accounts found
+      no_accounts_found_description: No accounts were found from Enable Banking. Try syncing again.
+    select_existing_account:
+      title: Link Enable Banking account
+      all_linked: All Enable Banking accounts appear to be linked already.
+      try_after_sync: If you just connected or synced, try again after the sync completes.
+      unlink_to_move: To link a different account, first unlink it from the account's actions menu.
+      balance: Balance
+      link: Link
+      cancel: Cancel
+    setup_accounts:
+      title: Set Up Your Enable Banking Accounts
+      header_subtitle: Choose the correct account types for your imported accounts
+      choose_account_type: "Choose the correct account type for each Enable Banking account:"
+      historical_data_range: "Historical Data Range:"
+      sync_start_date_label: "Start syncing transactions from:"
+      sync_start_date_help: Select how far back you want to sync transaction history. Maximum 2 years of history available.
+      account_type_label: "Account Type:"
+      balance: Balance
+      create_accounts: Create Accounts
+      creating_accounts: Creating Accounts...
+      cancel: Cancel
     new:
       link_enable_banking_title: Link Enable Banking
+      session_expired: Session expired - re-authorization required
+      connected_bank: Connected Bank
+      session_expires: "Session expires"
+      unknown: Unknown
+      connection: Connection
+      configured: Configured
+      ready_to_connect: Ready to connect a bank
+      sync: Sync
+      reconnect: Reconnect
+      connect_bank: Connect Bank
+      remove_confirm: Are you sure you want to remove this connection?
+      remove: Remove
+      add_connection: Add Connection
+      not_configured: Enable Banking connection not configured
+      not_configured_description: Before you can link Enable Banking accounts, you need to configure your Enable Banking connection.
+      setup_steps_title: "Setup Steps:"
+      setup_step_1_html: "Go to <strong>Settings → Providers</strong>"
+      setup_step_2_html: "Find the <strong>Enable Banking</strong> section"
+      setup_step_3: Enter your Enable Banking credentials
+      setup_step_4: Return here to link your accounts
+      go_to_provider_settings: Go to Provider Settings
     reauthorize:
       invalid_redirect: The authorization URL received is invalid. Please try again.
       reauthorization_failed: Reauthorization failed
@@ -55,7 +112,5 @@ en:
       search_label: Search for your bank
       search_placeholder: Search for your bank...
       title: Select Your Bank
-    setup_accounts:
-      psd2_savings_notice: "Note: Some regulated French savings accounts (Livret A, PEL, LEP, LDDS) may have limited or no access via Open Banking (PSD2). If a savings account is missing, you can add it manually."
     update:
       success: Enable Banking configuration updated.
