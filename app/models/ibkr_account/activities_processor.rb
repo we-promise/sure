@@ -140,7 +140,7 @@ class IbkrAccount::ActivitiesProcessor
         }
       )
 
-      result ? true : false
+      !!result
     end
 
     def build_trade_name(ticker, signed_quantity)
