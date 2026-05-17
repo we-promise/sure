@@ -30,7 +30,7 @@
             <% end %>
           </div>
           <% if account.long_subtype_label %>
-            <p class="text-sm text-secondary truncate"><%= account.long_subtype_label %></p>
+            <p class="text-sm text-secondary truncate"><%= account.long_subtype_label.singularize %></p>
           <% end %>
           <% if account.supports_default? && is_default %>
             <p class="text-xs text-secondary opacity-50"><%= t("accounts.account.default_label") %></p>
