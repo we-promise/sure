@@ -144,6 +144,23 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
   end
 
+  test "tag-only endpoint returns forbidden json for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: {
+      tag_ids: [ tags(:one).id ]
+    }, headers: {
+      "Accept" => "application/json"
+    }
+
+    assert_response :forbidden
+    assert_equal "application/json", response.media_type
+    assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
