@@ -29,3 +29,4 @@ jobs:
             config/locales/views/reports/
             docs/hosting/ai.md
             app/models/provider/binance.rb
+            workers/preview/package-lock.json
