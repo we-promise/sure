@@ -1,0 +1,91 @@
+<%# Shared fieldsets for retirement setup and edit forms %>
+
+<%# Personal Info %>
+<fieldset class="space-y-4">
+  <legend class="text-lg font-medium text-primary"><%= t(".personal_section") %></legend>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label for="retirement_config_birth_year" class="block text-sm font-medium text-secondary mb-1"><%= t(".birth_year") %></label>
+      <%= f.number_field :birth_year, min: 1901, max: Date.current.year, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
+    </div>
+    <div>
+      <label for="retirement_config_retirement_age" class="block text-sm font-medium text-secondary mb-1"><%= t(".retirement_age") %></label>
+      <%= f.number_field :retirement_age, min: 50, max: 80, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
+    </div>
+  </div>
+</fieldset>
+
+<%# Financial Targets %>
+<fieldset class="space-y-4">
+  <legend class="text-lg font-medium text-primary"><%= t(".financial_section") %></legend>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label for="retirement_config_target_monthly_income" class="block text-sm font-medium text-secondary mb-1"><%= t(".target_monthly_income") %></label>
+      <%= f.number_field :target_monthly_income, step: 100, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
+    </div>
+    <div>
+      <label for="retirement_config_current_monthly_savings" class="block text-sm font-medium text-secondary mb-1"><%= t(".current_monthly_savings") %></label>
+      <%= f.number_field :current_monthly_savings, step: 50, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+  </div>
+
+  <div>
+    <label for="retirement_config_currency" class="block text-sm font-medium text-secondary mb-1"><%= t(".currency") %></label>
+    <%= f.select :currency, Money::Currency.as_options.map { |c| ["#{c.name} (#{c.iso_code})", c.iso_code] }, {}, class: "form-select w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+  </div>
+</fieldset>
+
+<%# Pension System %>
+<fieldset class="space-y-4">
+  <legend class="text-lg font-medium text-primary"><%= t(".pension_section") %></legend>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label for="retirement_config_pension_system" class="block text-sm font-medium text-secondary mb-1"><%= t(".pension_system") %></label>
+      <%= f.select :pension_system, RetirementConfig::PENSION_SYSTEMS.map { |s| [t("retirement.pension_systems.#{s}", default: s.humanize), s] }, {}, class: "form-select w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+    <div>
+      <label for="retirement_config_country" class="block text-sm font-medium text-secondary mb-1"><%= t(".country") %></label>
+      <%= f.text_field :country, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <label for="retirement_config_expected_annual_points" class="block text-sm font-medium text-secondary mb-1"><%= t(".expected_annual_points") %></label>
+      <%= f.number_field :expected_annual_points, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+      <p class="text-xs text-secondary mt-1"><%= t(".expected_annual_points_hint") %></p>
+    </div>
+    <div>
+      <label for="retirement_config_rentenwert" class="block text-sm font-medium text-secondary mb-1"><%= t(".rentenwert") %></label>
+      <%= f.number_field :rentenwert, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+      <p class="text-xs text-secondary mt-1"><%= t(".rentenwert_hint") %></p>
+    </div>
+    <div>
+      <label for="retirement_config_contribution_start_year" class="block text-sm font-medium text-secondary mb-1"><%= t(".contribution_start_year") %></label>
+      <%= f.number_field :contribution_start_year, min: 1960, max: Date.current.year, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+  </div>
+</fieldset>
+
+<%# Assumptions %>
+<fieldset class="space-y-4">
+  <legend class="text-lg font-medium text-primary"><%= t(".assumptions_section") %></legend>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <label for="retirement_config_expected_return_pct" class="block text-sm font-medium text-secondary mb-1"><%= t(".expected_return") %></label>
+      <%= f.number_field :expected_return_pct, step: 0.1, min: 0, max: 30, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+    <div>
+      <label for="retirement_config_inflation_pct" class="block text-sm font-medium text-secondary mb-1"><%= t(".inflation") %></label>
+      <%= f.number_field :inflation_pct, step: 0.1, min: 0, max: 20, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+    <div>
+      <label for="retirement_config_tax_rate_pct" class="block text-sm font-medium text-secondary mb-1"><%= t(".tax_rate") %></label>
+      <%= f.number_field :tax_rate_pct, step: 0.01, min: 0, max: 100, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+    </div>
+  </div>
+</fieldset>
