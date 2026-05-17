@@ -192,18 +192,23 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("3351.00"), sunday.end_balance
     assert_equal BigDecimal("900.50"),  sunday.end_cash_balance
+    assert_equal BigDecimal("2450.50"), sunday.end_non_cash_balance
   end
 
   test "skips rows with missing or unparseable total" do
     @ibkr_account.update!(
       raw_equity_summary_payload: [
-        { report_date: "2026-05-07", total: nil },
-        { report_date: "2026-05-08", total: "3351.00" }
+        { report_date: "2026-05-06", total: "N/A" },   # unparseable string — before first valid date
+        { report_date: "2026-05-07", total: nil },      # nil total
+        { report_date: "2026-05-08", total: "3351.00" } # valid
       ]
     )
 
     IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
 
+    # Gap-fill starts at the first valid trading day (May 8), so pre-range
+    # dates with bad totals must not produce any balance row.
+    assert_nil @account.balances.find_by(date: Date.new(2026, 5, 6), currency: "CHF")
     assert_nil @account.balances.find_by(date: Date.new(2026, 5, 7), currency: "CHF")
     assert_not_nil @account.balances.find_by(date: Date.new(2026, 5, 8), currency: "CHF")
   end
