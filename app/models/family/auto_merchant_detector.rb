@@ -19,7 +19,8 @@ class Family::AutoMerchantDetector
     result = llm_provider.auto_detect_merchants(
       transactions: transactions_input,
       user_merchants: user_merchants_input,
-      family: family
+      family: family,
+      model: Provider::Openai.effective_background_model
     )
 
     unless result.success?

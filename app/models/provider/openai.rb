@@ -14,6 +14,17 @@ class Provider::Openai < Provider
     ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
   end
 
+  # Returns the model to use for interactive chat. Falls back to effective_model.
+  def self.effective_chat_model
+    ENV.fetch("OPENAI_CHAT_MODEL") { Setting.openai_chat_model }.presence || effective_model
+  end
+
+  # Returns the model to use for background tasks (auto-categorization, merchant detection).
+  # Falls back to effective_model.
+  def self.effective_background_model
+    ENV.fetch("OPENAI_BACKGROUND_MODEL") { Setting.openai_background_model }.presence || effective_model
+  end
+
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
