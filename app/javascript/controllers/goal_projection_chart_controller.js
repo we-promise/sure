@@ -153,8 +153,6 @@ export default class extends Controller {
         ]
       : [];
 
-    const pendingPledgeAmount = data.pending_pledge_amount || 0;
-
     const yMax = Math.max(targetAmount * 1.05, projectionEnd, requiredEnd, currentAmount, 1);
 
     const x = d3.scaleTime().domain([start, endDate]).range([margin.left, margin.left + innerWidth]);
@@ -339,44 +337,12 @@ export default class extends Controller {
             .attr("text-anchor", "end")
             .attr("font-size", 12)
             .attr("fill", textSecondary)
+            .attr("paint-order", "stroke")
+            .attr("stroke", containerBg)
+            .attr("stroke-width", 4)
+            .attr("stroke-linejoin", "round")
             .text(labelText);
         }
-      }
-    }
-
-    if (pendingPledgeAmount > 0 && target) {
-      const willHit = projectionEnd >= targetAmount;
-      const pendingColor = willHit ? "var(--color-green-600)" : "var(--color-yellow-600)";
-      const pendingTop = Math.min(yMax, currentAmount + pendingPledgeAmount);
-      svg
-        .append("line")
-        .attr("x1", x(today))
-        .attr("x2", x(today))
-        .attr("y1", y(currentAmount))
-        .attr("y2", y(pendingTop))
-        .attr("stroke", pendingColor)
-        .attr("stroke-width", 3)
-        .attr("stroke-linecap", "round")
-        .attr("opacity", 0.4);
-
-      svg
-        .append("circle")
-        .attr("cx", x(today))
-        .attr("cy", y(pendingTop))
-        .attr("r", 5)
-        .attr("fill", containerBg)
-        .attr("stroke", pendingColor)
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "2 2");
-
-      if (innerWidth >= 320) {
-        svg
-          .append("text")
-          .attr("x", x(today) + 10)
-          .attr("y", y(pendingTop) + 4)
-          .attr("font-size", 12)
-          .attr("fill", textSecondary)
-          .text(`+ pending ${data.pending_pledge_label_short}`);
       }
     }
 
@@ -577,8 +543,8 @@ export default class extends Controller {
 
   _fmtMoneyShort(amount, _currency) {
     // The server ships `currency_symbol` via projection_payload (resolved
-    // through Money.new(0, code).symbol so EUR/GBP/JPY/etc. render with
-    // the family-locale-correct glyph). Fall back to "$" if a stale
+    // through Money.new(0, code).currency.symbol so EUR/GBP/JPY/etc. render
+    // with the family-locale-correct glyph). Fall back to "$" if a stale
     // payload reaches us mid-deploy.
     const symbol = this.dataValue?.currency_symbol || "$";
     const abs = Math.abs(amount);

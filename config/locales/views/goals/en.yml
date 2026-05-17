@@ -105,6 +105,11 @@ en:
       notes: Notes
       funding_last_30d: last 30d
       funding_last_90d: last 90d
+      status_callout:
+        behind: "save %{amount}/mo more to catch up"
+        behind_covered: "pending pledges close the gap"
+        on_track: "reaches goal around %{date}"
+        no_target_date: "set a target date to project a finish line"
       pending_pledge:
         title:
           zero: "Pending: %{amount} into %{account} · expires today"
@@ -137,7 +142,7 @@ en:
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
         behind: Falling short at current pace.
-        on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary">%{date}</strong>.
+        on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
         today_marker: Today
         tooltip_projected: "Projected: %{amount}"

@@ -1,33 +1,19 @@
 <div class="space-y-4 pb-6 lg:pb-12">
-  <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-    <div class="flex items-start gap-3 min-w-0 flex-1">
+  <header class="flex items-start gap-3 sm:gap-4">
+    <div class="hidden sm:block">
       <%= render Goals::AvatarComponent.new(goal: @goal, size: "xl") %>
-      <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2 mb-1 flex-wrap">
-          <h1 class="text-2xl font-semibold text-primary min-w-0 break-words"><%= @goal.name %></h1>
-          <%= render Goals::StatusPillComponent.new(goal: @goal) %>
-        </div>
-      <p class="text-sm text-secondary"><%= @goal.header_summary %></p>
+    </div>
+    <div class="min-w-0 flex-1">
+      <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
+      <p class="text-sm text-secondary mt-1"><%= @goal.header_summary %></p>
       <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
         <p class="text-xs text-subdued mt-0.5">
           <%= last_days.zero? ? t("goals.goal_card.footer_last_today") : t("goals.goal_card.footer_last_days", count: last_days) %>
         </p>
       <% end %>
-      </div>
     </div>
-    <div class="flex items-center gap-2 flex-wrap sm:shrink-0">
-      <% unless @goal.completed? || @goal.status == :reached %>
-        <%# Demote to outline when the catch-up alert below owns the primary
-            action. One primary per surface. %>
-        <%= render DS::Link.new(
-          text: t(".record_pledge_cta"),
-          variant: @goal.status == :behind ? "outline" : "primary",
-          href: new_goal_pledge_path(@goal),
-          icon: "plus",
-          frame: :modal
-        ) %>
-      <% end %>
+    <div class="shrink-0">
       <%= render DS::Menu.new do |menu| %>
         <%# Edit lives in the kebab, matching the rest of Sure (accounts,
             categories, rules, family_merchants, chats, transactions all
@@ -94,6 +80,8 @@
     </div>
   </header>
 
+  <%= render "status_callout", goal: @goal %>
+
   <% @open_pledges.each do |pledge| %>
     <%= render "pending_pledge_banner", pledge: pledge %>
   <% end %>
@@ -126,32 +114,6 @@
         </div>
       <% end %>
     <% end %>
-  <% elsif @goal.status == :behind && @goal.monthly_target_amount && @goal.catch_up_delta_money.amount.positive? %>
-    <%# Title uses the *delta*. the amount the user must add to current pace
-        to make the date, *after* subtracting open pledges. When pending
-        pledges already cover the gap, `catch_up_delta_money` returns zero
-        and this branch suppresses. no "Save $0/mo" demand. Pre-fill the
-        pledge CTA with the delta too, so submitting once funds the gap
-        instead of double-counting on top of pace and pending. %>
-    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.catch_up.title", amount: @goal.catch_up_delta_money.format(precision: 0))) do %>
-      <p class="text-secondary">
-        <%= t("goals.show.catch_up.body", avg: @goal.pace_money.format(precision: 0), required: Money.new(@goal.monthly_target_amount, @goal.currency).format(precision: 0)) %>
-      </p>
-      <div class="mt-2 flex items-center gap-3 flex-wrap">
-        <%= render DS::Link.new(
-          text: t(".record_pledge_cta"),
-          variant: "primary",
-          size: "sm",
-          href: new_goal_pledge_path(@goal, amount: @goal.catch_up_delta_money.amount.to_f),
-          icon: "plus",
-          frame: :modal
-        ) %>
-        <%= link_to t("goals.show.catch_up.adjust_target_cta"),
-                    edit_goal_path(@goal),
-                    data: { turbo_frame: :modal },
-                    class: "text-xs text-secondary hover:text-primary underline-offset-2 hover:underline" %>
-      </div>
-    <% end %>
   <% end %>
 
   <%# Top row: ring panel (status, no elevation) + projection chart card %>
@@ -161,6 +123,21 @@
       <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
       <% unless @goal.completed? %>
         <p class="text-xs text-subdued tabular-nums mt-0.5"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
+      <% end %>
+      <% unless @goal.completed? || @goal.status == :reached || @goal.paused? || @goal.archived? %>
+        <%# Single Record pledge entry point on the page. Pre-filled with the
+            catch-up delta when behind so accepting once funds the gap. %>
+        <% prefill_amount = @goal.status == :behind && @goal.catch_up_delta_money.amount.positive? ? @goal.catch_up_delta_money.amount.to_f : nil %>
+        <div class="mt-4">
+          <%= render DS::Link.new(
+            text: t(".record_pledge_cta"),
+            variant: "primary",
+            size: "sm",
+            href: new_goal_pledge_path(@goal, amount: prefill_amount),
+            icon: "plus",
+            frame: :modal
+          ) %>
+        </div>
       <% end %>
     </div>
 
@@ -217,13 +194,18 @@
       </div>
     <% else %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
-        <div class="flex items-start justify-between mb-2 gap-3">
+        <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           <div class="min-w-0">
             <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
-            <p class="text-xs text-secondary mt-0.5"><%= @goal.projection_summary %></p>
+            <p class="text-xs text-secondary mt-0.5"><%= sanitize @goal.projection_summary %></p>
+            <% if @goal.status == :behind && @goal.monthly_target_amount %>
+              <p class="text-xs text-secondary mt-0.5 tabular-nums">
+                <%= t("goals.show.catch_up.body", avg: @goal.pace_money.format(precision: 0), required: Money.new(@goal.monthly_target_amount, @goal.currency).format(precision: 0)) %>
+              </p>
+            <% end %>
           </div>
           <% projection_color = @goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
-          <div class="flex items-center gap-3 text-[11px] text-secondary shrink-0">
+          <div class="flex items-center flex-wrap gap-x-5 gap-y-1 text-[11px] text-secondary sm:gap-x-3 sm:shrink-0">
             <span class="inline-flex items-center gap-1.5">
               <svg width="18" height="6" class="text-primary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" /></svg>
               <%= t(".projection.legend_saved") %>

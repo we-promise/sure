@@ -168,12 +168,12 @@ class Goal < ApplicationRecord
     rem = remaining_amount.to_d
 
     if filled.zero? && rem.zero?
-      return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: "unused" } ]
+      return [ { color: "var(--budget-unused-fill)", amount: 1, id: "unused" } ]
     end
 
     segments = []
     segments << { color: color.presence || "var(--color-blue-500)", amount: filled, id: "saved" } if filled.positive?
-    segments << { color: "var(--budget-unallocated-fill)", amount: rem, id: "unused" } if rem.positive?
+    segments << { color: "var(--budget-unused-fill)", amount: rem, id: "unused" } if rem.positive?
     segments
   end
 
@@ -188,7 +188,6 @@ class Goal < ApplicationRecord
     saved_series = series_values.map { |v| { date: v.date.to_s, value: v.value.amount.to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
-    pending = open_pledges.sum(:amount).to_d
     target_amt = target_amount.to_d
     proj_end = projection_end_amount
 
@@ -200,14 +199,12 @@ class Goal < ApplicationRecord
       target_amount: target_amt.to_f,
       target_amount_label: Money.new(target_amt, currency).format(precision: 0),
       target_amount_short_label: short_money(target_amt, currency),
-      currency_symbol: Money.new(0, currency).symbol,
+      currency_symbol: Money.new(0, currency).currency.symbol,
       current_amount: current_balance.to_f,
       avg_monthly: pace.to_f,
       required_monthly: monthly_target_amount.to_f,
       currency: currency,
       status: status.to_s,
-      pending_pledge_amount: pending.to_f,
-      pending_pledge_label_short: short_money(pending, currency),
       projection_end_value: proj_end.to_f,
       projection_end_label: Money.new(proj_end, currency).format(precision: 0),
       projection_shortfall_label: (target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
@@ -306,6 +303,34 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Single-line state summary rendered between the header and the ring on
+  # the show page. Replaces the stacked catch-up alert + inline status pill;
+  # carries the same actionable copy without owning a CTA. Returns nil when
+  # the projection-side cards already convey state (paused / archived /
+  # completed / reached) so the callout doesn't double up.
+  def status_callout_context
+    return nil if paused? || archived? || completed? || status == :reached
+
+    case status
+    when :behind
+      delta = catch_up_delta_money.amount
+      if delta.positive?
+        I18n.t("goals.show.status_callout.behind",
+               amount: catch_up_delta_money.format(precision: 0))
+      else
+        I18n.t("goals.show.status_callout.behind_covered")
+      end
+    when :on_track
+      if target_date && pace.to_d.positive?
+        months = (remaining_amount.to_d / pace.to_d).ceil
+        I18n.t("goals.show.status_callout.on_track",
+               date: I18n.l(Date.current >> months.to_i, format: "%b %Y"))
+      end
+    when :no_target_date
+      I18n.t("goals.show.status_callout.no_target_date")
+    end
+  end
+
   # Header copy under the goal title on show. Used to live as a multi-line
   # if/elsif block in show.html.erb. Keeps the view template free of date
   # math + i18n key picking.
@@ -377,7 +402,7 @@ class Goal < ApplicationRecord
     # Money so the chart matches the rest of the app for EUR/GBP families.
     def short_money(amount, code)
       amount_f = amount.to_f
-      symbol = Money.new(0, code).symbol
+      symbol = Money.new(0, code).currency.symbol
       abs = amount_f.abs
       if abs >= 1_000_000
         short = (amount_f / 1_000_000.0).round(1)
