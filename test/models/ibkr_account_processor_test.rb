@@ -1,7 +1,14 @@
 require "test_helper"
 
 class IbkrAccountProcessorTest < ActiveSupport::TestCase
+  include IbkrAccount::DataHelpers
+
   fixtures :families, :ibkr_items, :ibkr_accounts, :accounts, :securities
+
+  # Fix 12: delegate to production helper instead of duplicating the logic
+  def trading_day
+    normalize_to_last_trading_day(Date.current)
+  end
 
   setup do
     @family = families(:dylan_family)
@@ -28,7 +35,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
           "currency" => "USD",
           "fx_rate_to_base" => "0.90",
           "cost_basis_price" => "125.50",
-          "report_date" => Date.current.to_s,
+          "report_date" => trading_day.to_s,
           "side" => "Long"
         }
       ],
@@ -100,7 +107,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1000.50"), @account.cash_balance
     assert_equal "CHF", @account.currency
 
-    holding = @account.holdings.find_by(security: securities(:aapl), date: Date.current)
+    holding = @account.holdings.find_by(security: securities(:aapl), date: trading_day)
     assert_not_nil holding
     assert_equal BigDecimal("10"), holding.qty
     assert_equal BigDecimal("150.00"), holding.price
@@ -163,7 +170,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
           "currency" => "USD",
           "fx_rate_to_base" => "0.90",
           "cost_basis_price" => "125.50",
-          "report_date" => Date.current.to_s,
+          "report_date" => trading_day.to_s,
           "side" => "Long"
         },
         {
@@ -177,7 +184,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
           "currency" => "USD",
           "fx_rate_to_base" => "0.90",
           "cost_basis_price" => "122.00",
-          "report_date" => Date.current.to_s,
+          "report_date" => trading_day.to_s,
           "side" => "Long"
         }
       ]
@@ -185,11 +192,12 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
 
     IbkrAccount::Processor.new(@ibkr_account).process
 
-    holding = @account.holdings.find_by(security: securities(:aapl), date: Date.current)
+    holding = @account.holdings.find_by(security: securities(:aapl), date: trading_day)
 
     assert_not_nil holding
     assert_equal BigDecimal("30"), holding.qty
-    assert_equal BigDecimal("123.1667"), holding.cost_basis
+    # Fix 13: 3695/30 = 123.1666̄; assert_in_delta decouples the assertion from DB column precision
+    assert_in_delta BigDecimal("123.1667"), holding.cost_basis, BigDecimal("0.0001")
   end
 
   test "processor repairs default opening anchor after importing activity entries" do

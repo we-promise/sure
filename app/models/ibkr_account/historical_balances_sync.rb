@@ -23,28 +23,53 @@ class IbkrAccount::HistoricalBalancesSync
     end
 
     def normalized_rows
-      @normalized_rows ||= Array(ibkr_account.raw_equity_summary_payload)
-        .filter_map do |row|
-          next unless row.is_a?(Hash)
+      @normalized_rows ||= begin
+        trading_day_rows = Array(ibkr_account.raw_equity_summary_payload)
+          .filter_map do |row|
+            next unless row.is_a?(Hash)
 
-          data = row.with_indifferent_access
-          currency = data[:currency].presence&.upcase
-          account_currency = ibkr_account.currency.to_s.upcase
-          next if currency.present? && currency != account_currency
+            data = row.with_indifferent_access
+            currency = data[:currency].presence&.upcase
+            account_currency = ibkr_account.currency.to_s.upcase
+            next unless currency == account_currency
 
-          date = parse_date(data[:report_date])
-          total = parse_decimal(data[:total])
-          cash = parse_decimal(data[:cash]) || BigDecimal("0")
-          next unless date && total
+            date = parse_date(data[:report_date])
+            next unless date
+            next if date.saturday? || date.sunday?
 
-          {
-            date: date,
-            total: total,
-            cash: cash,
-            non_cash: total - cash
-          }
-        end
-        .sort_by { |row| row[:date] }
+            total = parse_decimal(data[:total])
+            cash = parse_decimal(data[:cash]) || BigDecimal("0")
+            next unless total
+
+            {
+              date: date,
+              total: total,
+              cash: cash,
+              non_cash: total - cash
+            }
+          end
+          .sort_by { |row| row[:date] }
+
+        fill_gaps(trading_day_rows)
+      end
+    end
+
+    # Carry the most recent known value forward to every calendar day that has
+    # no IBKR row (weekends, exchange holidays, or any other gap). This gives
+    # the historical sync ownership of the full date range so the balance
+    # materializer cannot leave stale values from an earlier pass.
+    def fill_gaps(rows)
+      return rows if rows.size < 2
+
+      by_date = rows.index_by { |r| r[:date] }
+      first_date = rows.first[:date]
+      last_date  = rows.last[:date]
+
+      last_row = nil
+      (first_date..last_date).filter_map do |date|
+        last_row = by_date[date] if by_date[date]
+        last_row.merge(date: date)
+      end
     end
 
     def balance_rows
