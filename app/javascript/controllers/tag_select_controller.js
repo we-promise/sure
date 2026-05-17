@@ -1,3 +1,4 @@
+import { autoUpdate } from "@floating-ui/dom";
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
@@ -18,6 +19,8 @@ export default class extends Controller {
     disabled: Boolean,
     autoSubmit: Boolean,
     updateUrl: String,
+    menuPlacement: { type: String, default: "auto" },
+    offset: { type: Number, default: 6 },
   };
 
   connect() {
@@ -29,10 +32,13 @@ export default class extends Controller {
         .map((option) => option.dataset.tagId),
     );
     this.renderSelection();
+    this.observeMenuResize();
   }
 
   disconnect() {
     if (this.submitAbortController) this.submitAbortController.abort();
+    this.stopAutoUpdate();
+    if (this.resizeObserver) this.resizeObserver.disconnect();
   }
 
   toggle(event) {
@@ -48,6 +54,7 @@ export default class extends Controller {
     this.menuTarget.classList.remove("hidden");
     this.searchTarget.value = "";
     this.filter();
+    this.startAutoUpdate();
 
     requestAnimationFrame(() => {
       this.menuTarget.classList.remove(
@@ -56,12 +63,14 @@ export default class extends Controller {
         "pointer-events-none",
       );
       this.menuTarget.classList.add("opacity-100", "translate-y-0");
+      this.updatePosition();
       this.searchTarget.focus({ preventScroll: true });
     });
   }
 
   close() {
     this.isOpen = false;
+    this.stopAutoUpdate();
     this.buttonTarget.setAttribute("aria-expanded", "false");
     this.menuTarget.classList.remove("opacity-100", "translate-y-0");
     this.menuTarget.classList.add(
@@ -252,6 +261,76 @@ export default class extends Controller {
       event.preventDefault();
       this.close();
       this.buttonTarget.focus();
+    }
+  }
+
+  startAutoUpdate() {
+    if (!this._cleanup && this.hasButtonTarget && this.hasMenuTarget) {
+      this._cleanup = autoUpdate(this.buttonTarget, this.menuTarget, () =>
+        this.updatePosition(),
+      );
+    }
+  }
+
+  stopAutoUpdate() {
+    if (!this._cleanup) return;
+
+    this._cleanup();
+    this._cleanup = null;
+  }
+
+  observeMenuResize() {
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.isOpen) requestAnimationFrame(() => this.updatePosition());
+    });
+    this.resizeObserver.observe(this.menuTarget);
+  }
+
+  getScrollParent(element) {
+    let parent = element.parentElement;
+    while (parent) {
+      const style = getComputedStyle(parent);
+      const overflowY = style.overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") return parent;
+      parent = parent.parentElement;
+    }
+    return document.documentElement;
+  }
+
+  placementMode() {
+    const mode = (this.menuPlacementValue || "auto").toLowerCase();
+    return ["auto", "down", "up"].includes(mode) ? mode : "auto";
+  }
+
+  updatePosition() {
+    if (!this.hasButtonTarget || !this.hasMenuTarget || !this.isOpen) return;
+
+    const container = this.getScrollParent(this.element);
+    const containerRect = container.getBoundingClientRect();
+    const buttonRect = this.buttonTarget.getBoundingClientRect();
+    const menuHeight = this.menuTarget.scrollHeight;
+
+    const spaceBelow = containerRect.bottom - buttonRect.bottom;
+    const spaceAbove = buttonRect.top - containerRect.top;
+    const placement = this.placementMode();
+    const shouldOpenUp =
+      placement === "up" ||
+      (placement === "auto" &&
+        spaceBelow < menuHeight &&
+        spaceAbove > spaceBelow);
+
+    this.menuTarget.style.left = "0";
+    this.menuTarget.style.width = "100%";
+    this.menuTarget.style.top = "";
+    this.menuTarget.style.bottom = "";
+    this.menuTarget.style.overflowY = "auto";
+
+    if (shouldOpenUp) {
+      this.menuTarget.style.bottom = "100%";
+      this.menuTarget.style.maxHeight = `${Math.max(0, spaceAbove - this.offsetValue)}px`;
+    } else {
+      this.menuTarget.style.top = "100%";
+      this.menuTarget.style.maxHeight = `${Math.max(0, spaceBelow - this.offsetValue)}px`;
     }
   }
 
