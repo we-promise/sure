@@ -21,7 +21,13 @@ class _WebPageScreenState extends State<WebPageScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) => setState(() => _loading = false),
+        onPageFinished: (_) async {
+          await _controller.runJavaScript(
+            "document.documentElement.style.overflow='auto';"
+            "document.body.style.overflow='auto';",
+          );
+          setState(() => _loading = false);
+        },
       ))
       ..loadRequest(Uri.parse(widget.url));
   }
@@ -32,7 +38,7 @@ class _WebPageScreenState extends State<WebPageScreen> {
       appBar: AppBar(title: Text(widget.title)),
       body: Stack(
         children: [
-          WebViewWidget(controller: _controller),
+          Positioned.fill(child: WebViewWidget(controller: _controller)),
           if (_loading) const Center(child: CircularProgressIndicator()),
         ],
       ),
