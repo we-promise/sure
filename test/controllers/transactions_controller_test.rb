@@ -144,6 +144,18 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
   end
 
+  test "tag-only endpoint locks tags when clearing all tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: []
+    }, as: :json
+
+    assert_response :success
+    assert_empty @entry.reload.entryable.tag_ids
+    assert @entry.entryable.locked?(:tag_ids)
+  end
+
   test "tag-only endpoint returns forbidden json for read-only users" do
     sign_in users(:family_member)
     read_only_entry = entries(:transfer_in)
