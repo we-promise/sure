@@ -1,0 +1,9 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: "Unsupported resource type: %{resource_type}"
+          invalid_json: "Invalid JSON in conditions or actions: %{message}"
+          min_actions: "Rule must have at least one action"
