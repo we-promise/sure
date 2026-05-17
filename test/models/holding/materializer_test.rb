@@ -224,6 +224,56 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal "calculated", today_holding.cost_basis_source
   end
 
+  test "refreshes stale provider carry-forward when a newer provider snapshot arrives" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    # With no entries, start_date = yesterday, so materializer only descends to
+    # yesterday. Use an older date so the second snapshot doesn't land on a date
+    # the materializer already owns.
+    Holding.create!(
+      account: @account, security: @aapl, qty: 10, price: 200, amount: 2000,
+      currency: "USD", date: 5.days.ago.to_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_equal BigDecimal("100.00"), today_holding.cost_basis
+
+    # Provider publishes a newer snapshot with an updated cost_basis on a date
+    # that falls outside the materializer's window (older than start_date).
+    Holding.create!(
+      account: @account, security: @aapl, qty: 10, price: 210, amount: 2100,
+      currency: "USD", date: 3.days.ago.to_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("150.00"), cost_basis_source: "provider"
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding.reload
+    assert_equal BigDecimal("150.00"), today_holding.cost_basis,
+      "Carry-forward should update to the newer provider snapshot value"
+    assert_equal "provider", today_holding.cost_basis_source
+  end
+
+  test "carry-forward is a no-op for forward-strategy accounts without provider holdings" do
+    create_trade(@aapl, account: @account, qty: 5, price: 200, date: Date.current)
+
+    assert_nothing_raised do
+      Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+    end
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_equal "calculated", today_holding.cost_basis_source
+    assert_equal BigDecimal("200.00"), today_holding.cost_basis,
+      "Forward strategy with no provider rows should compute cost_basis from trades normally"
+  end
+
   test "preserves same-day non-provider holdings for securities absent from the provider snapshot" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 

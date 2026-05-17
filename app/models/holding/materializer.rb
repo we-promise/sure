@@ -88,18 +88,11 @@ class Holding::Materializer
             "cost_basis_source" => reconciled[:cost_basis_source]
           )
         else
-          # Reconciler had no new value to write. If the row would otherwise have
-          # no usable cost_basis, fall back to the most recent provider snapshot
-          # for this (security, currency) on or before the holding date.
-          # Providers like IBKR Flex only emit holdings on report_date and only
-          # include trades within the query window, so the reverse calculator (and
-          # the gap-fill that pads dates without a known price) produces rows past
-          # report_date with nil cost_basis even though the provider knows the basis.
-          #
-          # Calculated/manual values that already exist are higher priority than a
-          # provider carry-forward and must not be overwritten.
+          # No new calculated value — fall back to the most recent provider
+          # cost_basis for this security on or before the holding date.
+          # Calculated/manual values outrank a provider carry-forward.
           existing_source = existing&.cost_basis_source
-          existing_basis_usable = existing&.cost_basis.present? && existing.cost_basis.positive?
+          existing_basis_usable = existing&.cost_basis.present? && existing&.cost_basis&.positive?
           preserve_existing = existing_basis_usable && %w[calculated manual].include?(existing_source)
 
           if preserve_existing
@@ -193,18 +186,32 @@ class Holding::Materializer
     end
 
     # Returns the most recent provider-supplied cost_basis for the given holding's
-    # (security, currency) on or before its date. Used to backfill calculated
-    # rows past the provider's last snapshot so reports keep showing trend data.
+    # security on or before its date, converted to the holding's currency.
+    # Used to backfill calculated rows past the provider's last snapshot so
+    # reports keep showing trend data.
+    #
+    # Provider and calculated rows can be denominated in different currencies
+    # (e.g., IBKR reports USD holdings while the reverse calculator converts to
+    # the account's base currency). When they differ, the cost_basis is converted
+    # at the snapshot date — the same convention ReverseCalculator uses for trade
+    # prices — so the result is consistent with trade-derived cost_basis values.
     def carry_forward_provider_cost_basis(holding)
-      snapshots = provider_cost_basis_snapshots[[ holding.security_id, holding.currency ]]
+      snapshots = provider_cost_basis_snapshots[holding.security_id]
       return nil if snapshots.blank?
 
       result = nil
-      snapshots.each do |snap_date, cost_basis|
+      snapshots.each do |snap_date, cost_basis, snap_currency|
         break if snap_date > holding.date
-        result = cost_basis
+        result = [ cost_basis, snap_currency, snap_date ]
       end
-      result
+      return nil unless result
+
+      cost_basis, snap_currency, snap_date = result
+      return cost_basis if snap_currency == holding.currency
+
+      Money.new(cost_basis, snap_currency).exchange_to(holding.currency, date: snap_date).amount
+    rescue Money::ConversionError
+      nil
     end
 
     def provider_cost_basis_snapshots
@@ -215,7 +222,7 @@ class Holding::Materializer
         .order(:date)
         .pluck(:security_id, :currency, :date, :cost_basis)
         .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|
-          memo[[ security_id, currency ]] << [ date, cost_basis ]
+          memo[security_id] << [ date, cost_basis, currency ]
         end
     end
 
