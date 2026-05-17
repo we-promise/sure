@@ -185,7 +185,7 @@ class TransactionsController < ApplicationController
     @entry.transaction.tag_ids = tag_ids
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
-    @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+    @entry.transaction.lock_attr!(:tag_ids)
     @entry.sync_account_later
 
     render json: { tag_ids: @entry.transaction.tag_ids }
