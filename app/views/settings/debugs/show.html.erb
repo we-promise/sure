@@ -1,0 +1,113 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<div class="space-y-6">
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h1 class="text-lg font-semibold text-primary"><%= t(".title") %></h1>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <%= form_with url: settings_debug_path, method: :get, class: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end" do |f| %>
+      <div>
+        <%= f.label :category, t(".filters.category"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.select :category, options_for_select([[t(".filters.all"), ""]] + @categories.map { |value| [value, value] }, params[:category]), {}, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div>
+        <%= f.label :level, t(".filters.level"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.select :level, options_for_select([[t(".filters.all"), ""]] + @levels.map { |value| [value, value] }, params[:level]), {}, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div>
+        <%= f.label :source, t(".filters.source"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.select :source, options_for_select([[t(".filters.all"), ""]] + @sources.map { |value| [value, value] }, params[:source]), {}, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div>
+        <%= f.label :provider_key, t(".filters.provider"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.select :provider_key, options_for_select([[t(".filters.all"), ""]] + @provider_keys.map { |value| [value, value] }, params[:provider_key]), {}, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div>
+        <%= f.label :start_date, t(".filters.start_date"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.date_field :start_date, value: @start_date || params[:start_date], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div>
+        <%= f.label :end_date, t(".filters.end_date"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.date_field :end_date, value: @end_date || params[:end_date], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div>
+        <%= f.label :family_id, t(".filters.family_id"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.text_field :family_id, value: params[:family_id], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full font-mono" %>
+      </div>
+      <div>
+        <%= f.label :account_id, t(".filters.account_id"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.text_field :account_id, value: params[:account_id], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full font-mono" %>
+      </div>
+      <div>
+        <%= f.label :user_id, t(".filters.user_id"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.text_field :user_id, value: params[:user_id], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full font-mono" %>
+      </div>
+      <div>
+        <%= f.label :account_provider_id, t(".filters.account_provider_id"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.text_field :account_provider_id, value: params[:account_provider_id], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full font-mono" %>
+      </div>
+      <div class="flex gap-2 xl:col-span-2">
+        <%= render DS::Button.new(variant: :primary, size: :md, type: "submit", text: t(".filters.submit"), class: "justify-center") %>
+        <%= render DS::Link.new(text: t(".filters.reset"), href: settings_debug_path, variant: "ghost") %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
+    <% if @debug_log_entries.any? %>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-surface-default border-b border-primary">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.time") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.level") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.category") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.source") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.message") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.context") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.metadata") %></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <% @debug_log_entries.each do |entry| %>
+              <tr>
+                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= l(entry.created_at, format: :long) %></td>
+                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= entry.level %></td>
+                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= entry.category %></td>
+                <td class="px-4 py-3 text-sm text-primary font-mono"><%= entry.source %></td>
+                <td class="px-4 py-3 text-sm text-primary"><%= entry.message %></td>
+                <td class="px-4 py-3 text-xs text-secondary font-mono whitespace-nowrap align-top">
+                  <div><%= t(".context.provider", value: entry.provider_key.presence || t(".missing_value")) %></div>
+                  <div><%= t(".context.family", value: entry.family_id || t(".missing_value")) %></div>
+                  <div><%= t(".context.account", value: entry.account_id || t(".missing_value")) %></div>
+                  <div><%= t(".context.user", value: entry.user_id || t(".missing_value")) %></div>
+                  <div><%= t(".context.account_provider", value: entry.account_provider_id || t(".missing_value")) %></div>
+                </td>
+                <td class="px-4 py-3 text-xs text-secondary align-top">
+                  <% if entry.metadata.present? %>
+                    <details>
+                      <summary class="cursor-pointer"><%= t(".table.view_metadata") %></summary>
+                      <pre class="mt-2 whitespace-pre-wrap break-words"><%= JSON.pretty_generate(entry.metadata) %></pre>
+                    </details>
+                  <% else %>
+                    <%= t(".missing_value") %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="p-8 text-center text-secondary"><%= t(".empty") %></div>
+    <% end %>
+  </div>
+
+  <% if @pagy.pages > 1 %>
+    <div>
+      <%= render "shared/pagination", pagy: @pagy %>
+    </div>
+  <% end %>
+</div>

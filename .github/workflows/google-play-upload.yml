@@ -56,7 +56,7 @@ jobs:
 
       - name: Download Android AAB artifact
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: app-release-aab
           path: ${{ runner.temp }}/android-aab

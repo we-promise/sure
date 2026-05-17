@@ -1,6 +1,34 @@
 ---
 en:
   budgets:
+    budget_donut:
+      spent: "Spent"
+      new_budget: "New budget"
+      of_budget: "of %{amount}"
+      unused: "Unused"
+    budget_header:
+      today: "Today"
+    over_allocation_warning:
+      over_allocated_message: "You have over-allocated your budget. Please fix your allocations."
+      fix_allocations: "Fix allocations"
+    actuals_summary:
+      income: "Income"
+      expenses: "Expenses"
+    budgeted_summary:
+      expected_income: "Expected income"
+      budgeted: "Budgeted"
+      earned: "%{amount} earned"
+      over: "%{amount} over"
+      left: "%{amount} left"
+      spent: "%{amount} spent"
+    edit:
+      setup_title: "Setup your budget"
+      setup_description: "Enter your monthly earnings and planned spending below to setup your budget."
+      budgeted_spending: "Budgeted spending"
+      expected_income: "Expected income"
+      autosuggest_title: "Autosuggest income & spending budget"
+      autosuggest_description: "This will be based on transaction history. AI can make mistakes, verify before continuing."
+      continue: "Continue"
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
@@ -31,3 +59,27 @@ en:
       success: "Budget copied from %{source_name}"
       no_source: "No previous budget found to copy from"
       already_initialized: "This budget has already been set up"
+  budget_categories:
+    confirm_button:
+      confirm: "Confirm"
+    no_categories:
+      oops: "Oops!"
+      no_categories_message: "You have not created or assigned any expense categories to your transactions yet."
+      use_defaults: "Use defaults (recommended)"
+      new_category: "New category"
+    index:
+      title: "Edit your category budgets"
+      description: "Adjust category budgets to set spending limits. Unallocated funds will be automatically assigned as uncategorized."
+    show:
+      category: "Category"
+      overview: "Overview"
+      spending: "%{date} spending"
+      status: "Status"
+      overspent: "overspent"
+      left: "left"
+      budgeted: "Budgeted"
+      monthly_average_spending: "Monthly average spending"
+      monthly_median_spending: "Monthly median spending"
+      recent_transactions: "Recent Transactions"
+      view_all_transactions: "View all category transactions"
+      no_transactions: "No transactions found for this budget period."

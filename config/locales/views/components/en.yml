@@ -1,5 +1,24 @@
 ---
 en:
+  UI:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Toggle selection
+      chart:
+        no_data_available: "No data available"
+      activity_date:
+        balance_tooltip: "The end of day balance, after all transactions and adjustments"
+        no_balance_data: "No balance data available for this date"
+  ds:
+    alert:
+      variants:
+        info: Info
+        success: Success
+        warning: Warning
+        error: Error
+        destructive: Error
+    dialog:
+      close: Close
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

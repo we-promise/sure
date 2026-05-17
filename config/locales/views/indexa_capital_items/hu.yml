@@ -37,8 +37,6 @@ hu:
       alternative_auth: "Vagy használj felhasználónév/jelszó hitelesítést helyette..."
       save_button: "Konfiguráció mentése"
       update_button: "Konfiguráció frissítése"
-      status_configured_html: "Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a <a href=\"%{accounts_path}\" class=\"link\">Számlák</a> lapra."
-      status_not_configured: "Nincs beállítva"
       fields:
         api_token:
           label: "API token"

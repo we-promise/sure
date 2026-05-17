@@ -41,8 +41,6 @@ es:
       configure: Configurar
       update_configuration: Reconfigurar
       default_name: Conexión de CoinStats
-      status_configured_html: Listo para usar
-      status_not_configured: No configurado
     coinstats_item:
       deletion_in_progress: Los datos de la cartera de criptomonedas se están eliminando…
       provider_name: CoinStats

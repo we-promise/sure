@@ -40,8 +40,6 @@ fr:
       alternative_auth: "Ou utilisez plutôt l'authentification par nom d'utilisateur / mot de passe…"
       save_button: "Enregistrer la configuration"
       update_button: "Mettre à jour la configuration"
-      status_configured_html: "Configuré et prêt à l'emploi. Rendez-vous sur l'onglet <a href=\"%{accounts_path}\" class=\"link\">Comptes</a> pour gérer et configurer les comptes."
-      status_not_configured: "Non configuré"
       fields:
         api_token:
           label: "Jeton API"

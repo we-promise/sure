@@ -23,29 +23,51 @@ class EnableBankingAccount::Transactions::Processor
       Account::ProviderImportAdapter.new(enable_banking_account.current_account)
     end
 
-    # Pre-fetch external_ids that were manually merged and must not be re-imported.
-    # One query per sync; O(1) Set lookup per transaction — avoids N+1.
-    # Uses a lateral jsonb_array_elements join to extract only the ID strings in SQL,
-    # avoiding loading full extra blobs into Ruby. Handles both Array (current) and
-    # Hash (legacy) formats via jsonb_typeof.
+    # Pre-fetch external_ids that must not be re-imported.
+    # One query per category per sync; O(1) Set lookup per transaction — avoids N+1.
     excluded_ids = if enable_banking_account.current_account
-      Transaction.joins(:entry)
-                 .where(entries: { account_id: enable_banking_account.current_account.id })
-                 .where("transactions.extra ? 'manual_merge'")
-                 .joins(
-                   Arel.sql(<<~SQL.squish)
-                     CROSS JOIN LATERAL jsonb_array_elements(
-                       CASE jsonb_typeof(transactions.extra->'manual_merge')
-                       WHEN 'array'  THEN transactions.extra->'manual_merge'
-                       WHEN 'object' THEN jsonb_build_array(transactions.extra->'manual_merge')
-                       ELSE '[]'::jsonb
-                       END
-                     ) AS merge_elem
-                   SQL
-                 )
-                 .pluck(Arel.sql("merge_elem->>'merged_from_external_id'"))
-                 .compact
-                 .to_set
+      account_id = enable_banking_account.current_account.id
+
+      # 1. Manually merged: pending entries the user explicitly merged into a posted transaction.
+      #    Uses a lateral join to extract merged_from_external_id from the manual_merge JSON
+      #    (handles both Array current format and legacy Hash format via jsonb_typeof).
+      manually_merged_ids = Transaction.joins(:entry)
+                                       .where(entries: { account_id: account_id })
+                                       .where("transactions.extra ? 'manual_merge'")
+                                       .joins(
+                                         Arel.sql(<<~SQL.squish)
+                                           CROSS JOIN LATERAL jsonb_array_elements(
+                                             CASE jsonb_typeof(transactions.extra->'manual_merge')
+                                             WHEN 'array'  THEN transactions.extra->'manual_merge'
+                                             WHEN 'object' THEN jsonb_build_array(transactions.extra->'manual_merge')
+                                             ELSE '[]'::jsonb
+                                             END
+                                           ) AS merge_elem
+                                         SQL
+                                       )
+                                       .pluck(Arel.sql("merge_elem->>'merged_from_external_id'"))
+                                       .compact
+                                       .to_set
+
+      # 2. Auto-claimed: pending entries that were automatically matched to a booked transaction
+      #    by the amount/date heuristic. Their old external_ids are stored in
+      #    extra["auto_claimed_pending_ids"] so they are not re-imported as new pending entries
+      #    on subsequent syncs (the stored raw payload still contains the old pending data).
+      auto_claimed_ids = Transaction.joins(:entry)
+                                    .where(entries: { account_id: account_id })
+                                    .where("transactions.extra ? 'auto_claimed_pending_ids'")
+                                    .joins(
+                                      Arel.sql(<<~SQL.squish)
+                                        CROSS JOIN LATERAL jsonb_array_elements_text(
+                                          transactions.extra->'auto_claimed_pending_ids'
+                                        ) AS claimed_id
+                                      SQL
+                                    )
+                                    .pluck(Arel.sql("claimed_id"))
+                                    .compact
+                                    .to_set
+
+      manually_merged_ids | auto_claimed_ids
     else
       Set.new
     end

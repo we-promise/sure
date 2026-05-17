@@ -2,6 +2,7 @@
 en:
   oidc_accounts:
     link:
+      no_pending_oidc: No pending OIDC authentication found
       title_link: Link OIDC Account
       title_create: Create Account
       verify_heading: Verify Your Identity
@@ -21,7 +22,10 @@ en:
       submit_accept_invitation: Accept Invitation
       account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
       cancel: Cancel
+    create_link:
+      no_pending_oidc: No pending OIDC authentication found
     new_user:
+      no_pending_oidc: No pending OIDC authentication found
       title: Complete Your Account
       heading: Create Your Account
       description: Please confirm your details to complete account creation with your %{provider} identity.
@@ -32,3 +36,7 @@ en:
       last_name_placeholder: Enter your last name
       submit: Create Account
       cancel: Cancel
+    create_user:
+      no_pending_oidc: No pending OIDC authentication found
+      account_creation_disabled: SSO account creation is disabled. Please contact an administrator.
+      account_created: "Welcome! Your account has been created."

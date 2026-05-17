@@ -52,6 +52,30 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal 0, trade.fee
   end
 
+  test "exchange_rate setter stores normalized numeric value in extra" do
+    trade = Trade.new
+    trade.exchange_rate = "0.91"
+
+    assert_equal 0.91, trade.exchange_rate
+    assert_equal 0.91, trade.extra["exchange_rate"]
+  end
+
+  test "exchange_rate validation rejects invalid values" do
+    trade = Trade.new
+    trade.exchange_rate = "invalid"
+
+    assert_not trade.valid?
+    assert_includes trade.errors[:exchange_rate], "must be a number"
+  end
+
+  test "exchange_rate validation rejects non-finite values" do
+    trade = Trade.new
+    trade.exchange_rate = "NaN"
+
+    assert_not trade.valid?
+    assert_includes trade.errors[:exchange_rate], "must be a number"
+  end
+
   test "price is rounded to 10 decimal places" do
     security = Security.create!(ticker: "TEST", exchange_operating_mic: "XNAS")
 

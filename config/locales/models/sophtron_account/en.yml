@@ -1,0 +1,7 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: "Sophtron account must have either current or available balance"

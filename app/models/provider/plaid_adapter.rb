@@ -80,13 +80,6 @@ class Provider::PlaidAdapter < Provider::Base
 
   # Configuration for Plaid US
   configure do
-    description <<~DESC
-      Setup instructions:
-      1. Visit the [Plaid Dashboard](https://dashboard.plaid.com/team/keys) to get your API credentials
-      2. Your Client ID and Secret Key are required to enable Plaid bank sync for US/CA banks
-      3. For production use, set environment to 'production', for testing use 'sandbox'
-    DESC
-
     field :client_id,
           label: "Client ID",
           required: false,

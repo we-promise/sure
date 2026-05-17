@@ -1,6 +1,7 @@
 <%# locals: (entry:, balance_trend: nil, **) %>
 
 <% trade = entry.entryable %>
+<% trade_logo_url = trade.security&.display_logo_url %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(trade) do %>
@@ -17,14 +18,20 @@
                         } %>
 
         <div class="max-w-full">
-          <%= tag.div class: ["flex items-center gap-2 min-w-0"] do %>
+          <%= tag.div class: ["flex items-center gap-3 lg:gap-4 min-w-0"] do %>
             <div class="hidden lg:flex">
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "sm",
-                rounded: true
-              ) %>
+              <% if trade_logo_url.present? %>
+                <%= image_tag Setting.transform_brand_fetch_url(trade_logo_url),
+                    class: "w-9 h-9 rounded-full border border-secondary",
+                    loading: "lazy" %>
+              <% else %>
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: trade.security&.ticker || entry.name,
+                  size: "lg",
+                  rounded: true
+                ) %>
+              <% end %>
             </div>
 
             <div class="flex lg:hidden">

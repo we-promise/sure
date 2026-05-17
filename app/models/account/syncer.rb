@@ -9,6 +9,7 @@ class Account::Syncer
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
+    apply_provider_balance_overrides
   end
 
   def perform_post_sync
@@ -32,6 +33,18 @@ class Account::Syncer
       Account::MarketDataImporter.new(account).import_all
     rescue => e
       Rails.logger.error("Error syncing market data for account #{account.id}: #{e.message}")
+      Sentry.capture_exception(e)
+    end
+
+    def apply_provider_balance_overrides
+      return unless account.linked_to?("IbkrAccount")
+
+      ibkr_account = account.account_providers.find_by(provider_type: "IbkrAccount")&.provider
+      return unless ibkr_account
+
+      IbkrAccount::HistoricalBalancesSync.new(ibkr_account).sync!
+    rescue => e
+      Rails.logger.error("Error syncing IBKR historical balances for account #{account.id}: #{e.class} - #{e.message}")
       Sentry.capture_exception(e)
     end
 end

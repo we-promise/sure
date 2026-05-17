@@ -1,0 +1,26 @@
+<%# locals: (steps:, help: nil, eyebrow: nil) %>
+<%# steps: array of strings (or html_safe strings; caller is responsible for safety).
+    help:  optional hash { url:, text: } rendered under the steps with a small divider + book icon.
+    eyebrow: optional override for the localized "SETUP" eyebrow label. %>
+<div class="bg-surface-inset rounded-xl p-4">
+  <p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">
+    <%= eyebrow.presence || t("settings.providers.setup_steps.eyebrow") %>
+  </p>
+  <ol class="list-none p-0 m-0 space-y-2">
+    <% steps.each_with_index do |step, i| %>
+      <li class="relative pl-6 text-sm leading-relaxed text-primary">
+        <span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued"><%= i + 1 %></span>
+        <%= step %>
+      </li>
+    <% end %>
+  </ol>
+  <% if help %>
+    <div class="mt-2.5 pt-2.5 border-t border-alpha-black-100 text-xs text-secondary flex items-center gap-1.5">
+      <%= icon "book-open", size: "sm", class: "!w-3 !h-3" %>
+      <span>
+        <%= t("settings.providers.setup_steps.need_help") %>
+        <%= link_to help[:text], help[:url], class: "text-primary font-medium", target: "_blank", rel: "noopener noreferrer" %>
+      </span>
+    </div>
+  <% end %>
+</div>

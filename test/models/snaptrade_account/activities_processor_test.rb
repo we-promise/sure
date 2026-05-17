@@ -70,7 +70,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Sell", trade.investment_activity_label
   end
 
-  test "processes dividend cash activity" do
+  test "processes dividend cash activity as negative inflow" do
     @snaptrade_account.update!(raw_activities_payload: [
       build_cash_activity(
         id: "div_001",
@@ -89,10 +89,11 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.entryable.is_a?(Transaction), "Entry should be a Transaction"
 
     transaction = entry.entryable
+    assert_equal(-25.50, entry.amount.to_f)
     assert_equal "Dividend", transaction.investment_activity_label
   end
 
-  test "processes contribution with positive amount" do
+  test "processes contribution with negative inflow amount" do
     @snaptrade_account.update!(raw_activities_payload: [
       build_cash_activity(
         id: "contrib_001",
@@ -107,12 +108,11 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "contrib_001", source: "snaptrade")
     assert_not_nil entry
-    # Amount is on entry, not transaction
-    assert_equal 500.00, entry.amount.to_f  # Positive for contributions
+    assert_equal(-500.00, entry.amount.to_f)
     assert_equal "Contribution", entry.entryable.investment_activity_label
   end
 
-  test "processes withdrawal with negative amount" do
+  test "processes withdrawal with positive outflow amount" do
     @snaptrade_account.update!(raw_activities_payload: [
       build_cash_activity(
         id: "withdraw_001",
@@ -127,8 +127,38 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "withdraw_001", source: "snaptrade")
     assert_not_nil entry
-    assert_equal(-200.00, entry.amount.to_f)  # Negative for withdrawals
+    assert_equal 200.00, entry.amount.to_f
     assert_equal "Withdrawal", entry.entryable.investment_activity_label
+  end
+
+  test "processes transfers with Sure sign convention" do
+    @snaptrade_account.update!(raw_activities_payload: [
+      build_cash_activity(
+        id: "transfer_in_001",
+        type: "TRANSFER_IN",
+        amount: 300.00,
+        settlement_date: Date.current.to_s
+      ),
+      build_cash_activity(
+        id: "transfer_out_001",
+        type: "TRANSFER_OUT",
+        amount: 125.00,
+        settlement_date: Date.current.to_s
+      )
+    ])
+
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+    processor.process
+
+    transfer_in = @account.entries.find_by(external_id: "transfer_in_001", source: "snaptrade")
+    transfer_out = @account.entries.find_by(external_id: "transfer_out_001", source: "snaptrade")
+
+    assert_not_nil transfer_in
+    assert_not_nil transfer_out
+    assert_equal(-300.00, transfer_in.amount.to_f)
+    assert_equal 125.00, transfer_out.amount.to_f
+    assert_equal "Transfer", transfer_in.entryable.investment_activity_label
+    assert_equal "Transfer", transfer_out.entryable.investment_activity_label
   end
 
   test "maps all known activity types correctly" do

@@ -202,8 +202,6 @@ hu:
         syncing: Szinkronizálás...
         sync: Szinkronizálás
         disconnect_confirm: Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális számlákká válnak.
-        status_connected: A Coinbase csatlakoztatva van, és szinkronizálja a kriptovaluta-állományodat.
-        status_not_connected: Nincs csatlakoztatva. Az induláshoz add meg az API-hitelesítő adataidat fent.
       binance_panel:
         setup_instructions: "A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal rendelkező API-kulcsot:"
         step1_html: 'Nyisd meg a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API-kezelőjét</a>'
@@ -221,8 +219,6 @@ hu:
         syncing: Szinkronizálás...
         sync: Szinkronizálás
         disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"
-        status_connected: A Binance csatlakoztatva van
-        status_not_connected: A Binance nincs csatlakoztatva
       enable_banking_panel:
         callback_url_instruction: "A visszahívási URL-hez használd a következőt: %{callback_url}."
         connection_error: Kapcsolódási hiba

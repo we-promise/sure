@@ -3,6 +3,7 @@ nb:
   layouts:
     application:
       privacy_mode: Veksle personvernmodus
+      skip_to_main: Hopp til hovedinnhold
       nav:
         assistant: Assistent
         budgets: Budsjett

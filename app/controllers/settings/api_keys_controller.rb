@@ -31,7 +31,7 @@ class Settings::ApiKeysController < ApplicationController
     existing_keys.each { |key| key.update_column(:revoked_at, Time.current) }
 
     if @api_key.save
-      flash[:notice] = "Your API key has been created successfully"
+      flash[:notice] = t(".success")
       redirect_to settings_api_key_path
     else
       # Restore existing keys if new key creation failed
@@ -42,13 +42,13 @@ class Settings::ApiKeysController < ApplicationController
 
   def destroy
     if @api_key.nil?
-      flash[:alert] = "API key not found"
+      flash[:alert] = t(".not_found")
     elsif @api_key.demo_monitoring_key?
-      flash[:alert] = "This API key cannot be revoked"
+      flash[:alert] = t(".cannot_revoke")
     elsif @api_key.revoke!
-      flash[:notice] = "API key has been revoked successfully"
+      flash[:notice] = t(".revoked_successfully")
     else
-      flash[:alert] = "Failed to revoke API key"
+      flash[:alert] = t(".revoke_failed")
     end
     redirect_to settings_api_key_path
   end

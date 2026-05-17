@@ -1,4 +1,4 @@
-<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true, auto_open_param: nil) %>
+<%# locals: (title:, subtitle: nil, content:, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil) %>
 <% if collapsible %>
   <details <%= "open" if open %>
            class="group bg-container shadow-border-xs rounded-xl p-4"
@@ -7,12 +7,24 @@
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "text-secondary group-open:transform group-open:rotate-90 transition-transform" %>
         <div>
-          <h2 class="text-lg font-medium text-primary"><%= title %></h2>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-lg font-medium text-primary"><%= title %></h2>
+            <%= badge if badge.present? %>
+          </div>
           <% if subtitle.present? %>
             <p class="text-secondary text-sm"><%= subtitle %></p>
           <% end %>
         </div>
       </div>
+      <% if status.present? %>
+        <div class="flex items-center gap-2 shrink-0 group-open:hidden">
+          <% if meta.present? %>
+            <span class="text-xs text-subdued"><%= meta %></span>
+          <% end %>
+          <%= status %>
+          <%= actions if actions.present? %>
+        </div>
+      <% end %>
     </summary>
     <div class="space-y-4 mt-4">
       <%= content %>

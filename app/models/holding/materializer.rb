@@ -22,10 +22,10 @@ class Holding::Materializer
     # securities are still needed to derive sane balance charts between sync snapshots.
     cleanup_shadowed_calculated_holdings
 
-    # Also remove calculated rows on the provider's latest snapshot date when those
-    # securities are no longer present in the provider payload. This keeps "current"
-    # holdings/balance composition aligned with the provider snapshot while preserving
-    # older calculated history.
+    # Also remove non-provider rows on the provider's latest snapshot date for securities
+    # that appear in the provider snapshot. The provider snapshot is authoritative for
+    # those securities on that day, even when it is denominated in a different currency
+    # than the account or the reverse-calculated holdings.
     cleanup_stale_calculated_rows_on_latest_provider_snapshot
 
     # Reload holdings association to clear any cached stale data
@@ -152,17 +152,12 @@ class Holding::Materializer
         .where(date: provider_snapshot_date)
         .distinct
         .pluck(:security_id)
+      return if provider_security_ids.empty?
 
-      scope = account.holdings
-        .where(account_provider_id: nil, date: provider_snapshot_date)
+      deleted_count = account.holdings
+        .where(account_provider_id: nil, date: provider_snapshot_date, security_id: provider_security_ids)
+        .delete_all
 
-      scope = if provider_security_ids.any?
-        scope.where.not(security_id: provider_security_ids)
-      else
-        scope
-      end
-
-      deleted_count = scope.delete_all
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings on latest provider snapshot date") if deleted_count > 0
     end
 

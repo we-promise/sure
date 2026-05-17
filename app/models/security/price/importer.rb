@@ -196,10 +196,20 @@ class Security::Price::Importer
             )
           end
 
-          Sentry.capture_exception(MissingSecurityPriceError.new("Could not fetch prices for ticker"), level: :warning) do |scope|
-            scope.set_tags(security_id: security.id)
-            scope.set_context("security", { id: security.id, start_date: start_date, end_date: end_date })
-          end
+          DebugLogEntry.capture(
+            category: "security_price_fetch",
+            level: "warn",
+            message: "Could not fetch prices for ticker",
+            source: self.class.name,
+            provider: security_provider,
+            metadata: {
+              security_id: security.id,
+              ticker: security.ticker,
+              start_date: start_date,
+              end_date: end_date,
+              provider_error: error_message
+            }
+          )
 
           @provider_error = error_message
           {}

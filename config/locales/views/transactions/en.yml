@@ -10,10 +10,12 @@ en:
       duplicate: Duplicate
       edit: Edit
     form:
+      details: Details
       account: Account
       account_prompt: Select an Account
       amount: Amount
       category: Category
+      category_label: Category
       category_prompt: Select a Category
       date: Date
       description: Description
@@ -27,9 +29,22 @@ en:
       submit: Add transaction
       tags_label: Tags
       transfer: Transfer
+    create:
+      created: Transaction created
+    update:
+      updated: Transaction updated
     new:
       new_transaction: New transaction
     show:
+      keep_both: No, keep both
+      loan_payment: Loan Payment
+      mark_recurring: Mark as Recurring
+      mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
+      mark_recurring_title: Recurring Transaction
+      merge_duplicate: Yes, merge them
+      potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
+      potential_duplicate_title: Possible duplicate detected
+      transfer: Transfer
       account_label: Account
       amount: Amount
       category_label: Category
@@ -65,6 +80,14 @@ en:
       tab_transactions: Transactions
       tab_upcoming: Upcoming
       uncategorized: "(uncategorized)"
+      additional_details: "Additional details"
+      payee: "Payee"
+      description: "Description"
+      memo: "Memo"
+      provider_extras: "Provider extras"
+      transfer_or_debt_payment: "Transfer or Debt Payment?"
+      open_matcher: "Open matcher"
+      convert: "Convert"
     activity_labels:
       buy: Buy
       sell: Sell
@@ -126,9 +149,17 @@ en:
       edit_tags: Edit tags
       import: Import
     index:
+      title: "Transactions"
       transaction: transaction
       transactions: transactions
       import: Import
+      new_rule: "New rule"
+      edit_rules: "Edit rules"
+      edit_categories: "Edit categories"
+      edit_tags: "Edit tags"
+      edit_merchants: "Edit merchants"
+      edit_imports: "Edit imports"
+      new_transaction: "New transaction"
       categorize_button:
         one: "Categorize (1)"
         other: "Categorize (%{count})"
@@ -225,6 +256,9 @@ en:
         unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
+        date_filter:
+          start_date: "Start date"
+          end_date: "End date"
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than
@@ -263,6 +297,8 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+        search_placeholder: "Search transactions ..."
+        filter: "Filter"
     attachments:
       cannot_exceed: "Cannot exceed %{count} attachments per transaction"
       uploaded_one: "Attachment uploaded successfully"

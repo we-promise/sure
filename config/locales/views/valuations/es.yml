@@ -1,6 +1,8 @@
 ---
 es:
   valuations:
+    errors:
+      amount_required: El importe es obligatorio
     form:
       amount: Importe
       submit: Añadir actualización de saldo
@@ -28,3 +30,4 @@ es:
       note_placeholder: Añade cualquier detalle adicional sobre esta entrada
       overview: Resumen
       settings: Configuración
+      opening_balance: Saldo inicial

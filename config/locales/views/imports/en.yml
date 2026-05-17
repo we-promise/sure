@@ -2,6 +2,8 @@
 en:
   import:
     qif_category_selections:
+      update:
+        success: "Categories and tags saved."
       show:
         title: "Configure & select"
         description: "Review the detected date format, then choose which categories and tags from your QIF file to bring into %{product_name}."
@@ -27,15 +29,82 @@ en:
         submit: Continue to review
     cleans:
       show:
+        not_configured: "Please configure your import before proceeding."
         description: Edit your data in the table below.  Red cells are invalid.
         errors_notice: You have errors in your data.  Hover over the error to see
           details.
         errors_notice_mobile: You have errors in your data.  Tap over the error tooltip to see
           details.
         title: Clean your data
+        data_cleaned: Your data has been cleaned
+        next_step: Next step
+        all_rows: All rows
+        error_rows: Error rows
     configurations:
       update:
         success: Import configured successfully.
+      account_import:
+        leave_empty: Leave empty
+        default: Default
+        entity_type: Entity Type
+        name: Name
+        balance: Balance
+        currency: Currency
+        balance_date: Balance Date
+        date_format: Date Format
+        select_format: Select format
+        apply_configuration: Apply configuration
+      transaction_import:
+        date_label: Date
+        select_column: Select column
+        select_format: Select format
+        amount_label: Amount
+        default: Default
+        currency_label: Currency
+        format_label: Format
+        amount_type_strategy_label: Amount type strategy
+        select_strategy: Select strategy
+        set: Set
+        as_amount_type_column: as amount type column
+        select_value: Select value
+        as_identifier_value: as identifier value
+        treat_as_html: "Treat \"<span class=\"font-medium\">%{value}</span>\" as"
+        income_inflow: Income (inflow)
+        expense_outflow: Expense (outflow)
+        select_type: Select type
+        leave_empty: Leave empty
+        account_label: Account
+        name_label: Name
+        category_label: Category
+        tags_label: Tags
+        notes_label: Notes
+        apply_configuration: Apply configuration
+        incomes_are_positive: Incomes are positive
+        incomes_are_negative: Incomes are negative
+        amount_type_label: Amount type
+        select_convention: Select convention
+        date_format_label: Date format
+        rows_to_skip_label: Skip first n rows
+      trade_import:
+        select_column: Select column
+        date_label: Date
+        quantity_label: Quantity
+        buys_are_positive: Buys are positive qty
+        buys_are_negative: Buys are negative qty
+        default: Default
+        currency_label: Currency
+        format_label: Format
+        select_format: Select format
+        ticker_label: Ticker
+        leave_empty: Leave empty
+        stock_exchange_code_label: Stock exchange code
+        price_label: Price
+        account_label: Account
+        name_label: Name
+        note_label: Note
+        no_security_provider_warning: The security prices provider is not configured.  Your trade imports will work, but Sure will not backfill price history.  Please go to your settings to configure this.
+        date_format_label: Date format
+        apply_configuration: Apply configuration
       category_import:
         button_label: Continue
         description: Upload a simple CSV file (like the one we generate when you
@@ -51,11 +120,6 @@ en:
       show:
         description: Select the columns that correspond to each field in your CSV.
         title: Configure your import
-      trade_import:
-        date_format_label: Date format
-      transaction_import:
-        date_format_label: Date format
-        rows_to_skip_label: Skip first n rows
     confirms:
       sure_import:
         title: Confirm your import
@@ -73,7 +137,9 @@ en:
           and provide an account name we can use.
         rows_label: Rows
         unassigned_account: Need to create a new account for unassigned rows?
+        next: Next
       show:
+        invalid_data: "You have invalid data, please edit until all errors are resolved"
         account_mapping_description: Assign all of your imported file's accounts to
           Maybe's existing accounts.  You can also add new accounts or leave them
           uncategorized.
@@ -89,7 +155,20 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      update:
+        qif_uploaded: "QIF file uploaded successfully."
       show:
+        csv_invalid: "Must be valid CSV with headers and at least one row of data"
+        drop_csv_title: Drop CSV to upload
+        drop_csv_subtitle: Your file will be uploaded automatically
+        upload_csv_tab: Upload CSV
+        copy_paste_tab: Copy & Paste
+        account_optional_label: Account (optional)
+        multi_account_import: Multi-account import
+        upload_csv_button: Upload CSV
+        paste_csv_placeholder: Paste your CSV file contents here
+        download_sample_csv: Download a sample CSV
+        to_see_format: to see the required CSV format
         qif_title: Upload QIF file
         qif_description: Select the account this QIF file belongs to, then upload your .qif export from Quicken.
         qif_account_label: Account
@@ -119,6 +198,58 @@ en:
         hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
+    mapping_labels:
+      account_type: "Account Type"
+      account: "Account"
+      category: "Category"
+      tag: "Tag"
+    column_labels:
+      date: "Date"
+      amount: "Amount"
+      name: "Name"
+      currency: "Currency"
+      category: "Category"
+      tags: "Tags"
+      account: "Account"
+      notes: "Notes"
+      qty: "Quantity"
+      ticker: "Ticker"
+      exchange: "Exchange"
+      price: "Price"
+      entity_type: "Type"
+      category_parent: "Parent category"
+      category_color: "Color"
+      category_icon: "Lucide icon"
+    update:
+      account_saved: "Account saved."
+      invalid_account: "Account not found."
+    publish:
+      started: "Your import has started in the background."
+      max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
+    revert:
+      started: "Import is reverting in the background."
+    apply_template:
+      template_applied: "Template applied."
+      no_template_found: "No template found, please manually configure your import."
+    destroy:
+      deleted: "Your import has been deleted."
+    failure:
+      title: Import failed
+      description: Please check that your file format, for any errors and that all required fields are filled, then come back and try again.
+      try_again: Try again
+    success:
+      title: Import successful
+      description: Your imported data has been successfully added to the app and is now ready for use.
+      back_to_dashboard: Back to dashboard
+    importing:
+      title: Import in progress
+      description: "Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app."
+      check_status: Check status
+      back_to_dashboard: Back to dashboard
+    revert_failure:
+      title: Reverting import failed
+      description: Please try again
+      try_again: Try again
     date_format:
       heading: Date format
       description: "The date format was auto-detected from your file. Change it if dates look incorrect."
@@ -143,6 +274,9 @@ en:
       map: Map
       confirm: Confirm
       select: Select
+      progress: "Step %{step} of %{total}"
+    empty:
+      message: No imports found.
     index:
       title: Imports
       new: New Import
@@ -255,3 +389,21 @@ en:
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
+      ready_for_review_title: Ready for Review
+      ready_for_review_description: "We extracted %{count} transactions from your statement. Review and publish them to add to your account."
+      transactions_extracted: Transactions Extracted
+      transactions_extracted_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      select_account: Import to Account
+      select_account_placeholder: Select an account...
+      select_account_hint: Choose which account to import these transactions into.
+      no_accounts: No accounts available. Please create an account first.
+      create_account: Create Account
+      save_account: Save
+      publish_transactions:
+        one: "Publish %{count} Transaction"
+        other: "Publish %{count} Transactions"
+      review_transactions: Review Transactions
+      select_account_to_continue: Please select an account above to continue.
+      unknown_document_type: Unknown

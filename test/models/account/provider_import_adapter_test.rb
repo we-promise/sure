@@ -280,6 +280,25 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "imports trade with provider exchange rate" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    entry = adapter.import_trade(
+      security: security,
+      quantity: 5,
+      price: 150.00,
+      amount: 750.00,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid",
+      exchange_rate: 0.91
+    )
+
+    assert_equal 0.91, entry.entryable.exchange_rate
+  end
+
   test "raises error when security is missing for trade import" do
     exception = assert_raises(ArgumentError) do
       @adapter.import_trade(
@@ -489,7 +508,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         amount: 2000.00,
         currency: "USD",
         date: Date.today,
-        source: "plaid"
+        source: "plaid",
+        exchange_rate: 0.95
       )
 
       assert_equal entry.id, updated_entry.id
@@ -498,8 +518,43 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal 10, updated_entry.entryable.qty
       assert_equal 200.00, updated_entry.entryable.price
       assert_equal "USD", updated_entry.entryable.currency
+      assert_equal 0.95, updated_entry.entryable.exchange_rate
       # Entry attributes should also be updated
       assert_equal 2000.00, updated_entry.amount
+    end
+  end
+
+  test "preserves existing exchange rate when reimport omits it" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    aapl = securities(:aapl)
+
+    entry = adapter.import_trade(
+      external_id: "plaid_trade_exchange_rate_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 750.00,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid",
+      exchange_rate: 0.95
+    )
+
+    assert_no_difference "investment_account.entries.count" do
+      updated_entry = adapter.import_trade(
+        external_id: "plaid_trade_exchange_rate_preserved",
+        security: aapl,
+        quantity: 10,
+        price: 200.00,
+        amount: 2000.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid"
+      )
+
+      assert_equal entry.id, updated_entry.id
+      assert_equal 0.95, updated_entry.entryable.exchange_rate
     end
   end
 
@@ -823,6 +878,98 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal original_id, posted_entry.id
       assert_equal "simplefin_posted_xyz", posted_entry.external_id
       assert_not posted_entry.transaction.pending?, "Entry should no longer be pending"
+    end
+  end
+
+  test "clears pending flag, preserves pending date, and records old external_id when claiming pending entry with nil extra" do
+    # Enable Banking booked transactions often have nil extra (no FX, no MCC).
+    # The deep_merge path is skipped, so we must clear the pending flag explicitly.
+    pending_date = Date.today - 2.days
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_pending_nil_extra",
+      amount: 42.00,
+      currency: "EUR",
+      date: pending_date,
+      name: "Supermarket",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    assert pending_entry.transaction.pending?, "should be pending before claim"
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "eb_booked_nil_extra",
+        amount: 42.00,
+        currency: "EUR",
+        date: Date.today,   # booked date is later than pending date
+        name: "Supermarket Posted",
+        source: "enable_banking",
+        extra: nil  # typical for simple Enable Banking booked transactions
+      )
+
+      assert_equal pending_entry.id, posted_entry.id, "should claim the pending entry"
+      assert_equal "eb_booked_nil_extra", posted_entry.external_id
+
+      posted_entry.reload
+
+      # Pending flag must be cleared so the entry no longer shows a pending badge
+      assert_not posted_entry.transaction.pending?, "pending flag should be cleared after claim"
+
+      # Date must be the original pending date, not the later booked date
+      assert_equal pending_date, posted_entry.date, "pending date should be preserved, not overwritten with booked date"
+
+      # Old pending external_id must be stored so the sync engine can skip re-importing it
+      claimed_ids = posted_entry.transaction.extra&.dig("auto_claimed_pending_ids") || []
+      assert_includes claimed_ids, "eb_pending_nil_extra",
+        "auto_claimed_pending_ids should record the old pending external_id"
+    end
+  end
+
+  test "preserves pending date on subsequent syncs after auto-claim" do
+    # On the first sync the pending date is captured from the pending match.
+    # On subsequent syncs the entry already exists (found by booked external_id),
+    # so pending_match is nil. auto_claimed_pending_ids signals the prior claim
+    # and the stored date must not be overwritten with the booked date.
+    pending_date = Date.today - 3.days
+    booked_date  = Date.today
+
+    @adapter.import_transaction(
+      external_id: "eb_pending_subseq",
+      amount: 75.00,
+      currency: "EUR",
+      date: pending_date,
+      name: "Coffee Shop",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    # First sync: claim the pending entry
+    @adapter.import_transaction(
+      external_id: "eb_booked_subseq",
+      amount: 75.00,
+      currency: "EUR",
+      date: booked_date,
+      name: "Coffee Shop Posted",
+      source: "enable_banking",
+      extra: nil
+    )
+
+    # Simulate a subsequent sync: same booked transaction arrives again
+    assert_no_difference "@account.entries.count" do
+      re_synced = @adapter.import_transaction(
+        external_id: "eb_booked_subseq",
+        amount: 75.00,
+        currency: "EUR",
+        date: booked_date,
+        name: "Coffee Shop Posted",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      re_synced.reload
+      assert_equal pending_date, re_synced.date,
+        "pending date must be preserved on subsequent syncs, not overwritten with booked date"
     end
   end
 

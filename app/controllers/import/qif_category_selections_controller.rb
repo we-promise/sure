@@ -54,7 +54,7 @@ class Import::QifCategorySelectionsController < ApplicationController
       @import.sync_mappings unless format_changed
     end
 
-    redirect_to import_clean_path(@import), notice: "Categories and tags saved."
+    redirect_to import_clean_path(@import), notice: t(".success")
   end
 
   private

@@ -1,6 +1,13 @@
 ---
 en:
   pending_duplicate_merges:
+    create:
+      no_posted_selected: Please select a posted transaction to merge with
+      invalid_transaction: Invalid transaction selected for merge
+      merge_success: Pending transaction merged with posted transaction
+      merge_failed: Could not merge transactions
+    set_transaction:
+      pending_only: This feature is only available for pending transactions
     new:
       title: Merge with Posted Transaction
       warning_title: Manual Duplicate Merging

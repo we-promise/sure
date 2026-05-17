@@ -31,6 +31,12 @@ clean_data:
   queue: "scheduled"
   description: "Cleans up old data (e.g., expired merchant associations, expired archived exports)"
 
+clean_debug_log_entries:
+  cron: "30 3 * * *" # daily at 3:30 AM
+  class: "DebugLogCleanupJob"
+  queue: "scheduled"
+  description: "Deletes debug log entries older than 90 days"
+
 clean_inactive_families:
   cron: "0 4 * * *" # daily at 4:00 AM
   class: "InactiveFamilyCleanerJob"

@@ -105,11 +105,11 @@ class TransactionImport < Import
   end
 
   def csv_template
-    template = <<-CSV
+    template = <<~CSV
       date*,amount*,name,currency,category,tags,account,notes
-      05/15/2024,-45.99,Grocery Store,USD,Food,groceries|essentials,Checking Account,Monthly grocery run
-      05/16/2024,1500.00,Salary,,Income,,Main Account,
-      05/17/2024,-12.50,Coffee Shop,,,coffee,,
+      2024-05-15,-45.99,Grocery Store,USD,Food,groceries|essentials,Checking Account,Monthly grocery run
+      2024-05-16,1500.00,Salary,,Income,,Main Account,
+      2024-05-17,-12.50,Coffee Shop,,,coffee,,
     CSV
 
     csv = CSV.parse(template, headers: true)

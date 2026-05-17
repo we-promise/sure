@@ -80,6 +80,11 @@ en:
           body: This will remove the saved URL, token, and agent ID, and switch to the builtin assistant. You can reconnect later by entering new credentials.
       brand_fetch_settings:
         description: Enter the Client ID provided by Brand Fetch
+        env_configured_message: You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
+        show_details: "(show details)"
+        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brand Fetch Developer account.'
+        setup_step_2_html: 'Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> page.'
+        setup_step_3: 'Tap the eye icon under the "Your Client ID" section to reveal your Client ID and paste it below.'
         label: Client ID
         placeholder: Enter your Client ID here
         title: Brand Fetch Settings
@@ -176,6 +181,10 @@ en:
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action
+      ensure_super_admin_for_onboarding:
+        not_authorized: You are not authorized to perform this action
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       sync_settings:
         auto_sync_label: Enable automatic sync
         auto_sync_description: When enabled, all accounts will be automatically synced daily at the specified time.

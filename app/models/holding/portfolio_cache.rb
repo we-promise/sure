@@ -40,7 +40,7 @@ class Holding::PortfolioCache
     price_money = Money.new(price.price, price.currency)
 
     begin
-      converted_amount = price_money.exchange_to(account.currency).amount
+      converted_amount = price_money.exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
       converted_amount = price.price
     end

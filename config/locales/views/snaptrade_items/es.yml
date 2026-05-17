@@ -134,8 +134,6 @@ es:
         one: "%{count} necesita configuración"
         other: "%{count} necesitan configuración"
       status_ready: "Listo para conectar brókers"
-      status_needs_registration: "Credenciales guardadas. Ve a la página de Cuentas para conectar brókers."
-      status_not_configured: "No configurado"
       setup_accounts_button: "Configurar cuentas"
       connect_button: "Conectar bróker"
       connected_brokerages: "Conectados:"

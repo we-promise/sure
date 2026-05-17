@@ -1,0 +1,12 @@
+<%# locals: (title:, count: nil, description: nil, anchor: nil) %>
+<%= tag.div id: anchor.presence, class: "flex items-baseline justify-between gap-3 mt-6 mb-1.5 px-1" do %>
+  <h2 class="text-xs font-medium text-secondary uppercase flex items-baseline gap-2">
+    <%= title %>
+    <% if count %>
+      <span class="text-subdued font-normal normal-case tabular-nums">· <%= count %></span>
+    <% end %>
+  </h2>
+  <% if description.present? %>
+    <p class="text-xs text-secondary"><%= description %></p>
+  <% end %>
+<% end %>

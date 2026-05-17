@@ -70,6 +70,6 @@ class PlaidAccount < ApplicationRecord
     # Plaid guarantees at least one of these.  This validation is a sanity check for that guarantee.
     def has_balance
       return if current_balance.present? || available_balance.present?
-      errors.add(:base, "Plaid account must have either current or available balance")
+      errors.add(:base, :no_balance)
     end
 end

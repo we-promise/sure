@@ -89,6 +89,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
     get 'List transactions' do
       tags 'Transactions'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns global ledger history for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
@@ -173,6 +174,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid, description: 'Category ID' },
               merchant_id: { type: :string, format: :uuid, description: 'Merchant ID' },
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
+              external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
+              source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
             },
             required: %w[account_id date amount name]
@@ -197,6 +200,38 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '201', 'transaction created' do
         schema '$ref' => '#/components/schemas/Transaction'
+
+        run_test!
+      end
+
+      response '200', 'transaction already exists for external idempotency key' do
+        schema '$ref' => '#/components/schemas/Transaction'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase',
+              nature: 'expense',
+              external_id: 'docs-import-transaction-1',
+              source: 'external_import'
+            }
+          }
+        end
+
+        before do
+          account.entries.create!(
+            name: 'Test purchase',
+            date: Date.current,
+            amount: 50.00,
+            currency: 'USD',
+            external_id: 'docs-import-transaction-1',
+            source: 'external_import',
+            entryable: Transaction.new
+          )
+        end
 
         run_test!
       end
@@ -234,7 +269,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
   end
 
   path '/api/v1/transactions/{id}' do
-    parameter name: :id, in: :path, type: :string, required: true, description: 'Transaction ID'
+    parameter name: :id, in: :path, schema: { type: :string, format: :uuid }, required: true, description: 'Transaction ID'
 
     get 'Retrieve a transaction' do
       tags 'Transactions'

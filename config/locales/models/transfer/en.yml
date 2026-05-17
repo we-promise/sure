@@ -17,6 +17,10 @@ en:
               must_have_single_currency: Transfer must have a single currency
               outflow_cannot_be_in_multiple_transfers: Outflow transaction cannot
                 be part of multiple transfers
+          different_accounts: "Must be from different accounts"
+          same_family: "Must be from same family"
+          opposite_amounts: "Must have opposite amounts"
+          within_days: "Must be within %{count} days"
   transfer:
     name: Transfer to %{to_account}
     payment_name: Payment to %{to_account}

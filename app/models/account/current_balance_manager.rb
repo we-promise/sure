@@ -92,22 +92,55 @@ class Account::CurrentBalanceManager
     # Linked accounts manage "current balance" via the special `current_anchor` valuation.
     # This is NOT a user-facing feature, and is primarily used in "processors" while syncing
     # linked account data (e.g. via Plaid)
+    #
+    # Before overwriting a stale (previous-day) current_anchor, we convert it to a
+    # reconciliation valuation. This preserves the API-reported balance as a historical
+    # waypoint that the ReverseCalculator uses for more accurate balance history.
     def set_current_balance_for_linked_account(balance)
-      if current_anchor_valuation
-        changes_made = update_current_anchor(balance)
-        Result.new(success?: true, changes_made?: changes_made, error: nil)
-      else
-        create_current_anchor(balance)
-        Result.new(success?: true, changes_made?: true, error: nil)
+      changes_made = false
+
+      ActiveRecord::Base.transaction do
+        # If an anchor exists from a previous day, preserve it as a reconciliation
+        # before replacing it with today's fresh anchor.
+        preserve_anchor_as_reconciliation_if_stale if current_anchor_valuation
+
+        # Re-check: the memoized value was cleared if the anchor was converted
+        if current_anchor_valuation
+          changes_made = update_current_anchor(balance)
+        else
+          create_current_anchor(balance)
+          changes_made = true
+        end
       end
+
+      Result.new(success?: true, changes_made?: changes_made, error: nil)
     end
 
     def current_anchor_valuation
       @current_anchor_valuation ||= account.valuations.current_anchor.includes(:entry).first
     end
 
+    # If the existing current_anchor is from a previous day, convert it to a
+    # reconciliation before overwriting. This accumulates a chain of API-reported
+    # balance waypoints over time without creating extra entries per sync.
+    #
+    # Same-day updates are left in place (no extra reconciliations on repeated syncs).
+    def preserve_anchor_as_reconciliation_if_stale
+      entry = current_anchor_valuation.entry
+      return if entry.date == Date.current # Same-day update — nothing to preserve
+
+      current_anchor_valuation.update!(kind: "reconciliation")
+      entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
+      Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, entry_id=#{entry.id}")
+
+      # Clear memoized value so the next check creates a fresh current_anchor.
+      # The chained scope (.current_anchor.first) always issues a fresh SQL query,
+      # so we don't need to reload the full association.
+      @current_anchor_valuation = nil
+    end
+
     def create_current_anchor(balance)
-      entry = account.entries.create!(
+      account.entries.create!(
         date: Date.current,
         name: Valuation.build_current_anchor_name(account.accountable_type),
         amount: balance,
@@ -115,30 +148,27 @@ class Account::CurrentBalanceManager
         entryable: Valuation.new(kind: "current_anchor")
       )
 
-      # Reload associations and clear memoized value so it gets the new anchor
-      account.valuations.reload
+      # Clear memoized value so it picks up the new anchor on next access.
       @current_anchor_valuation = nil
     end
 
     def update_current_anchor(balance)
       changes_made = false
 
-      ActiveRecord::Base.transaction do
-        # Update associated entry attributes
-        entry = current_anchor_valuation.entry
+      # Update associated entry attributes
+      entry = current_anchor_valuation.entry
 
-        if entry.amount != balance
-          entry.amount = balance
-          changes_made = true
-        end
-
-        if entry.date != Date.current
-          entry.date = Date.current
-          changes_made = true
-        end
-
-        entry.save! if entry.changed?
+      if entry.amount != balance
+        entry.amount = balance
+        changes_made = true
       end
+
+      if entry.date != Date.current
+        entry.date = Date.current
+        changes_made = true
+      end
+
+      entry.save! if entry.changed?
 
       changes_made
     end

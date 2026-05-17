@@ -134,8 +134,6 @@ fr:
         one: "%{count} à configurer"
         other: "%{count} à configurer"
       status_ready: "Prêt à connecter des courtiers"
-      status_needs_registration: "Identifiants enregistrés. Rendez-vous sur la page Comptes pour connecter des courtiers."
-      status_not_configured: "Non configuré"
       setup_accounts_button: "Configurer les comptes"
       connect_button: "Connecter un courtier"
       connected_brokerages: "Connectés :"

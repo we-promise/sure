@@ -4,7 +4,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   include Pagy::Backend
 
   # Ensure proper scope authorization
-  before_action :ensure_read_scope, only: [ :index, :show, :rows ]
+  before_action :ensure_read_scope, only: [ :index, :show, :rows, :preflight ]
   before_action :ensure_write_scope, only: [ :create ]
   before_action :set_import_with_rows, only: [ :show ]
   before_action :set_import, only: [ :rows ]
@@ -77,10 +77,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
     if params[:file].present?
       file = params[:file]
 
-      if file.size > Import::MAX_CSV_SIZE
+      if file.size > Import.max_csv_size
         return render json: {
           error: "file_too_large",
-          message: "File is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+          message: "File is too large. Maximum size is #{Import.max_csv_size / 1.megabyte}MB."
         }, status: :unprocessable_entity
       end
 
@@ -93,10 +93,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
       @import.raw_file_str = file.read
     elsif params[:raw_file_content].present?
-      if params[:raw_file_content].bytesize > Import::MAX_CSV_SIZE
+      if params[:raw_file_content].bytesize > Import.max_csv_size
         return render json: {
           error: "content_too_large",
-          message: "Content is too large. Maximum size is #{Import::MAX_CSV_SIZE / 1.megabyte}MB."
+          message: "Content is too large. Maximum size is #{Import.max_csv_size / 1.megabyte}MB."
         }, status: :unprocessable_entity
       end
 
@@ -134,6 +134,30 @@ class Api::V1::ImportsController < Api::V1::BaseController
   rescue StandardError => e
     Rails.logger.error "ImportsController#create error: #{e.message}"
     render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
+  end
+
+  def preflight
+    preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params).call
+    render json: preflight_result.payload, status: preflight_result.status
+  rescue ActiveRecord::RecordNotFound
+    render json: {
+      error: "record_not_found",
+      message: "The requested resource was not found"
+    }, status: :not_found
+  rescue CSV::MalformedCSVError => e
+    render json: {
+      error: "invalid_csv",
+      message: "CSV content could not be parsed",
+      errors: [ e.message ]
+    }, status: :unprocessable_entity
+  rescue StandardError => e
+    Rails.logger.error "ImportsController#preflight error: #{e.message}"
+    e.backtrace&.each { |line| Rails.logger.error line }
+
+    render json: {
+      error: "internal_server_error",
+      message: "Error: #{e.message}"
+    }, status: :internal_server_error
   end
 
   private
@@ -186,8 +210,13 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :signage_convention,
         :col_sep,
         :amount_type_strategy,
-        :amount_type_inflow_value
+        :amount_type_inflow_value,
+        :rows_to_skip
       )
+    end
+
+    def preflight_params
+      params.permit(*Import::Preflight::PARAM_KEYS)
     end
 
     def create_sure_import(family)
@@ -282,10 +311,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     def sure_import_file_upload_attributes(file)
-      if file.size > SureImport::MAX_NDJSON_SIZE
+      if file.size > SureImport.max_ndjson_size
         render json: {
           error: "file_too_large",
-          message: "File is too large. Maximum size is #{SureImport::MAX_NDJSON_SIZE / 1.megabyte}MB."
+          message: "File is too large. Maximum size is #{SureImport.max_ndjson_size / 1.megabyte}MB."
         }, status: :unprocessable_entity
         return
       end
@@ -308,10 +337,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     def sure_import_raw_content_attributes(content)
-      if content.bytesize > SureImport::MAX_NDJSON_SIZE
+      if content.bytesize > SureImport.max_ndjson_size
         render json: {
           error: "content_too_large",
-          message: "Content is too large. Maximum size is #{SureImport::MAX_NDJSON_SIZE / 1.megabyte}MB."
+          message: "Content is too large. Maximum size is #{SureImport.max_ndjson_size / 1.megabyte}MB."
         }, status: :unprocessable_entity
         return
       end

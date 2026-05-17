@@ -1,18 +1,14 @@
 <div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("coinstats_items.new.setup_instructions") %></p>
-    <ol>
-      <li><%= t("coinstats_items.new.step1_html").html_safe %></li>
-      <li><%= t("coinstats_items.new.step2") %></li>
-      <li><%= t("coinstats_items.new.step3_html", accounts_url: accounts_path).html_safe %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("coinstats_items.new.step1_html").html_safe,
+               t("coinstats_items.new.step2"),
+               t("coinstats_items.new.step3_html", accounts_url: accounts_path).html_safe
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
-    </div>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <%
@@ -41,14 +37,4 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:coinstats_items] || @coinstats_items || Current.family.coinstats_items.where.not(api_key: [nil, ""]) %>
-  <div class="flex items-center gap-2">
-    <% if items&.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("coinstats_items.new.status_configured_html", accounts_url: accounts_path).html_safe %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("coinstats_items.new.status_not_configured") %></p>
-    <% end %>
-  </div>
 </div>

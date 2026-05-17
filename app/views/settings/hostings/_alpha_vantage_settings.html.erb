@@ -34,13 +34,8 @@
                         data: { "auto-submit-form-target": "auto" } %>
   <% end %>
 
-  <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-    <div class="flex items-start gap-2">
-      <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5") %>
-      <div class="text-sm text-amber-700">
-        <p><%= t(".rate_limit_warning") %></p>
-        <p class="mt-1"><%= t(".no_health_check_note") %></p>
-      </div>
-    </div>
-  </div>
+  <%= render DS::Alert.new(variant: :warning) do %>
+    <p><%= t(".rate_limit_warning") %></p>
+    <p><%= t(".no_health_check_note") %></p>
+  <% end %>
 </div>

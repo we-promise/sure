@@ -1,0 +1,15 @@
+<%# locals: (provider_key:, last_synced_at: nil) %>
+<% recently_synced = last_synced_at.present? && last_synced_at > 60.seconds.ago %>
+<% button_label = recently_synced ? t("settings.providers.recently_synced") : t("settings.providers.sync_provider") %>
+<%= render DS::Button.new(
+      variant: "icon",
+      size: "sm",
+      icon: "refresh-cw",
+      href: sync_provider_settings_providers_path(provider_key: provider_key),
+      method: :post,
+      disabled: recently_synced,
+      title: button_label,
+      aria: { label: button_label },
+      class: "disabled:opacity-40 disabled:cursor-not-allowed",
+      form: { onclick: "event.stopPropagation()", class: "inline-flex" }
+    ) %>

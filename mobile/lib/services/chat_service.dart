@@ -331,6 +331,34 @@ class ChatService {
     }
   }
 
+  /// Delete multiple chats in parallel
+  Future<Map<String, dynamic>> deleteMultipleChats({
+    required String accessToken,
+    required List<String> chatIds,
+  }) async {
+    final results = await Future.wait(
+      chatIds.map((id) async {
+        try {
+          return await deleteChat(accessToken: accessToken, chatId: id);
+        } catch (_) {
+          return {'success': false};
+        }
+      }),
+      eagerError: false,
+    );
+    final failedIds = chatIds
+        .asMap()
+        .entries
+        .where((e) => results[e.key]['success'] != true)
+        .map((e) => e.value)
+        .toList();
+    return {
+      'success': failedIds.isEmpty,
+      'deletedCount': chatIds.length - failedIds.length,
+      'failedIds': failedIds,
+    };
+  }
+
   /// Retry the last assistant response in a chat
   Future<Map<String, dynamic>> retryMessage({
     required String accessToken,

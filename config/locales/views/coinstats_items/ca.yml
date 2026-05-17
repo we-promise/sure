@@ -50,8 +50,6 @@ ca:
       not_configured_step3_html: Segueix les <strong>instruccions de configuració</strong> proporcionades per completar la configuració del proveïdor
       not_configured_title: La connexió amb el proveïdor CoinStats no està configurada
       setup_instructions: "Instruccions de configuració:"
-      status_configured_html: Llest per utilitzar
-      status_not_configured: No configurat
       step1_html: Ves al <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Panell de l'API Pública de CoinStats</a> per obtenir una clau API.
       step2: Introdueix la teva clau API a continuació i fes clic a Configura.
       step3_html: Després d'una connexió reeixida, ves a la pestanya <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Comptes</a> per configurar les carteres de criptomonedes.

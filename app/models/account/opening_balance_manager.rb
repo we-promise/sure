@@ -51,7 +51,11 @@ class Account::OpeningBalanceManager
     end
 
     def oldest_entry_date
-      @oldest_entry_date ||= account.entries.minimum(:date)
+      if opening_anchor_valuation&.entry
+        account.entries.where.not(id: opening_anchor_valuation.entry.id).minimum(:date)
+      else
+        account.entries.minimum(:date)
+      end
     end
 
     def default_date

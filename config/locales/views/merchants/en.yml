@@ -34,6 +34,9 @@ en:
         merchant: Merchant
         actions: Actions
         source: Source
+    family_merchant:
+      edit: Edit
+      delete: Delete
     merchant:
       confirm_accept: Delete merchant
       confirm_body: Are you sure you want to delete this merchant? Removing this merchant

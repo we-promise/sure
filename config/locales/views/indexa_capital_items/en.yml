@@ -40,8 +40,6 @@ en:
       alternative_auth: "Or use username/password authentication instead..."
       save_button: "Save Configuration"
       update_button: "Update Configuration"
-      status_configured_html: "Configured and ready to use. Visit the <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
-      status_not_configured: "Not configured"
       fields:
         api_token:
           label: "API Token"

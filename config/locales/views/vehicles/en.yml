@@ -23,3 +23,13 @@ en:
       trend: Trend
       unknown: Unknown
       year: Year
+    tabs:
+      overview:
+        current_price: Current Price
+        make_model: Make & Model
+        mileage: Mileage
+        purchase_price: Purchase Price
+        trend: Trend
+        unknown: Unknown
+        year: Year
+        edit_account_details: "Edit account details"

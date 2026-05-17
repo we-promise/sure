@@ -38,14 +38,14 @@ class CustomConfirm
     end
 
     def default_title
-      "Are you sure?"
+      I18n.t("shared.custom_confirm.default_title")
     end
 
     def default_body
-      "This is not reversible."
+      I18n.t("shared.custom_confirm.default_body")
     end
 
     def default_btn_text
-      "Confirm"
+      I18n.t("shared.custom_confirm.default_btn_text")
     end
 end

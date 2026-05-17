@@ -134,8 +134,6 @@ hu:
         one: "%{count} beállítást igényel"
         other: "%{count} beállítást igényel"
       status_ready: "Készen áll brókercégek csatlakoztatásához"
-      status_needs_registration: "Hitelesítő adatok mentve. Menj a Számlák oldalra brókercégek csatlakoztatásához."
-      status_not_configured: "Nincs beállítva"
       setup_accounts_button: "Számlák beállítása"
       connect_button: "Brókercég csatlakoztatása"
       connected_brokerages: "Csatlakoztatva:"

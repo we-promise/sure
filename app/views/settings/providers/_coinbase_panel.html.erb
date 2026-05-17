@@ -1,20 +1,16 @@
 <div id="coinbase-providers-panel" class="space-y-4">
   <% items = local_assigns[:coinbase_items] || @coinbase_items || Current.family.coinbase_items.active.ordered %>
 
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("settings.providers.coinbase_panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("settings.providers.coinbase_panel.step1_html").html_safe %></li>
-      <li><%= t("settings.providers.coinbase_panel.step2") %></li>
-      <li><%= t("settings.providers.coinbase_panel.step3") %></li>
-    </ol>
-  </div>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.coinbase_panel.step1_html").html_safe,
+               t("settings.providers.coinbase_panel.step2"),
+               t("settings.providers.coinbase_panel.step3")
+             ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
-    </div>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <% if items.any? %>
@@ -82,13 +78,4 @@
     <% end %>
   <% end %>
 
-  <div class="flex items-center gap-2">
-    <% if items.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("settings.providers.coinbase_panel.status_connected") %></p>
-    <% else %>
-      <div class="w-2 h-2 bg-tertiary rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("settings.providers.coinbase_panel.status_not_connected") %></p>
-    <% end %>
-  </div>
 </div>

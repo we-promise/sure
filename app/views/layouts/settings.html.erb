@@ -1,12 +1,15 @@
 <%= render "layouts/shared/htmldoc" do %>
   <div class="flex flex-col md:flex-row h-full bg-surface pt-[env(safe-area-inset-top)]">
+    <%= link_to t("layouts.application.skip_to_main"), "#main",
+        class: "sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-lg focus:bg-container focus:text-primary focus:shadow-border-xs" %>
+
     <div class="w-full md:w-auto md:min-w-64 shrink-0 md:h-full md:overflow-y-auto border-divider md:border-r">
       <div class="p-4">
         <%= render "settings/settings_nav" %>
       </div>
     </div>
 
-    <main class="grow flex h-full">
+    <main id="main" class="grow flex h-full">
       <div class="relative max-w-4xl mx-auto flex flex-col w-full h-full">
         <div class="grow flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch]">
           <div class="sticky top-0 z-10 px-3 md:px-10 pt-1.5 md:pt-3 pb-3 bg-surface border-b border-tertiary shrink-0">

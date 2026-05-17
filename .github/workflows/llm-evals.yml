@@ -101,7 +101,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -204,7 +204,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -320,7 +320,7 @@ jobs:
           echo "status=$(jq -r '.status' "$JSON_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Upload eval artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: llm-evals-${{ steps.dataset_slug.outputs.slug }}-${{ steps.dataset_slug.outputs.model_slug }}
           path: |
@@ -346,7 +346,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: eval-artifacts
           pattern: llm-evals-*

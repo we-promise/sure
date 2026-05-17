@@ -1,31 +1,31 @@
 module ImportsHelper
   def mapping_label(mapping_class)
     {
-      "Import::AccountTypeMapping" => "Account Type",
-      "Import::AccountMapping" => "Account",
-      "Import::CategoryMapping" => "Category",
-      "Import::TagMapping" => "Tag"
+      "Import::AccountTypeMapping" => I18n.t("imports.mapping_labels.account_type"),
+      "Import::AccountMapping" => I18n.t("imports.mapping_labels.account"),
+      "Import::CategoryMapping" => I18n.t("imports.mapping_labels.category"),
+      "Import::TagMapping" => I18n.t("imports.mapping_labels.tag")
     }.fetch(mapping_class.name)
   end
 
   def import_col_label(key)
     {
-      date: "Date",
-      amount: "Amount",
-      name: "Name",
-      currency: "Currency",
-      category: "Category",
-      tags: "Tags",
-      account: "Account",
-      notes: "Notes",
-      qty: "Quantity",
-      ticker: "Ticker",
-      exchange: "Exchange",
-      price: "Price",
-      entity_type: "Type",
-      category_parent: "Parent category",
-      category_color: "Color",
-      category_icon: "Lucide icon"
+      date: I18n.t("imports.column_labels.date"),
+      amount: I18n.t("imports.column_labels.amount"),
+      name: I18n.t("imports.column_labels.name"),
+      currency: I18n.t("imports.column_labels.currency"),
+      category: I18n.t("imports.column_labels.category"),
+      tags: I18n.t("imports.column_labels.tags"),
+      account: I18n.t("imports.column_labels.account"),
+      notes: I18n.t("imports.column_labels.notes"),
+      qty: I18n.t("imports.column_labels.qty"),
+      ticker: I18n.t("imports.column_labels.ticker"),
+      exchange: I18n.t("imports.column_labels.exchange"),
+      price: I18n.t("imports.column_labels.price"),
+      entity_type: I18n.t("imports.column_labels.entity_type"),
+      category_parent: I18n.t("imports.column_labels.category_parent"),
+      category_color: I18n.t("imports.column_labels.category_color"),
+      category_icon: I18n.t("imports.column_labels.category_icon")
     }[key]
   end
 
