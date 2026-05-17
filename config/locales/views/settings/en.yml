@@ -6,6 +6,32 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    llm_usages:
+      show:
+        page_title: "LLM Usage & Costs"
+        subtitle: "Track your AI usage and estimated costs"
+        start_date: "Start Date"
+        end_date: "End Date"
+        filter: "Filter"
+        total_requests: "Total Requests"
+        total_tokens: "Total Tokens"
+        prompt: "prompt"
+        completion: "completion"
+        total_cost: "Total Cost"
+        avg_cost_per_request: "Avg Cost/Request"
+        based_on_requests: "Based on %{with_cost} of %{total} requests with cost data"
+        cost_by_operation: "Cost by Operation"
+        cost_by_model: "Cost by Model"
+        recent_usage: "Recent Usage"
+        col_date: "Date"
+        col_operation: "Operation"
+        col_model: "Model"
+        col_tokens: "Tokens"
+        col_cost: "Cost"
+        failed: "Failed"
+        no_usage_data: "No usage data found for the selected period"
+        cost_estimates_title: "About Cost Estimates"
+        cost_estimates_description: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
       show:
         page_title: AI Prompts
@@ -26,6 +52,17 @@ en:
         page_title: Payments
         subscription_subtitle: Update your credit card details
         subscription_title: Manage contributions
+        currently_on_plan: "Currently on the"
+        trialing: "Currently using the open demo of %{product_name}"
+        trial_days_left:
+          one: "Data will be deleted in %{count} day"
+          other: "Data will be deleted in %{count} days"
+        not_contributing_prefix: "You are currently"
+        not_contributing_emphasis: "not contributing"
+        contributions_note: "Contributions to %{product_name} will show here."
+        manage: "Manage"
+        choose_level: "Choose level"
+        payment_via_stripe: "Payment via Stripe"
     appearances:
       show:
         page_title: Appearance
@@ -173,9 +210,11 @@ en:
       rules_label: Rules
       security_label: Security
       self_hosting_label: Self-Hosting
+      sso_providers_label: SSO Providers
       statement_vault_label: Statement Vault
       tags_label: Tags
       transactions_section_title: Transactions
+      users_label: Users
       whats_new_label: What's new
       api_keys_label: API Key
       appearance_label: Appearance
@@ -189,6 +228,9 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
+      update:
+        updated_successfully: Provider settings updated successfully
+        no_changes: No changes were made
       not_authorized: Not authorized
       bank_sync:
         page_title: Bank sync
@@ -318,14 +360,48 @@ en:
         step_1_html: "Go to %{link} and grab your developer credentials."
         step_2: "Pick your country and paste the Application ID + Client Certificate below."
         step_3: "Save, then use Add Connection to link your bank."
+        config_locked_title: "Configuration locked"
+        config_locked_message: "Disconnect all linked banks before changing these credentials."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Enter application ID"
+        application_id_placeholder_update: "Enter new ID to update"
+        client_certificate_label: "Client Certificate (with Private Key)"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+        connected_bank: "Connected Bank"
+        session_expires: "Session expires: %{date}"
+        unknown: "Unknown"
+        connection: "Connection"
+        session_expired_reconnect: "Session expired - reconnect"
+        configured: "Configured"
+        ready_to_link: "Ready to link accounts"
+        sync: "Sync"
+        reconnect: "Reconnect"
+        connect_bank: "Connect bank"
+        remove: "Remove"
+        remove_confirm: "Are you sure you want to remove this connection?"
+        add_connection: "Add Connection"
+        syncing: "Syncing"
+        select_country: "Select country..."
+        country_label: "Country"
       lunchflow_panel:
         step_1_html: "Go to %{link} and create an API key."
         step_2: "Paste your key below and connect."
         step_3: "Then head to Accounts to link your synced accounts."
+        api_key_label: "API Key"
+        api_key_placeholder_new: "Paste API key here"
+        api_key_placeholder_update: "Enter new API key to update"
+        base_url_label: "Base URL (Optional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
         step_3: "Then head to Accounts to link your synced accounts."
+        setup_token_label: "Setup Token"
+        setup_token_placeholder: "Paste SimpleFIN setup token"
+        save_and_connect: "Save and connect"
       plaid_panel:
         step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
         step_2: "Pick an environment. Use sandbox for testing and production for real accounts."

@@ -1,8 +1,13 @@
 ---
 en:
+  account:
+    entries:
+      destroy:
+        success: "Entry deleted successfully."
   accounts:
     not_authorized: "You don't have permission to manage this account"
     account:
+      complete_setup: Complete setup
       edit: Edit
       link_lunchflow: Link with Lunch Flow
       link_provider: Link with provider
@@ -52,6 +57,10 @@ en:
       syncing: "Syncing accounts..."
     new:
       import_accounts: Import accounts
+      container:
+        select: Select
+        navigate: Navigate
+        close: Close
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account
@@ -85,11 +94,14 @@ en:
         pending: Pending
         search:
           placeholder: Search entries by name
+        search_placeholder: Search entries by name
         status: Status
         title: Activity
       chart:
         balance: Balance
         owed: Amount owed
+      header:
+        complete_setup: Complete setup
       menu:
         confirm_accept: Delete "%{name}"
         confirm_body_html: "<p>By deleting this account, you will erase its value
@@ -98,11 +110,13 @@ en:
           graphs.</p><br /> <p>After deletion, there is no way you'll be able to restore
           the account information because you'll need to add it as a new account.</p>"
         confirm_title: Delete account?
+        delete_account: Delete account
         edit: Edit
         import: Import transactions
         import_trades: Import trades
         import_transactions: Import transactions
         manage: Manage accounts
+        sharing: Sharing
         statements: Statements
     update:
       success: "%{type} account updated"

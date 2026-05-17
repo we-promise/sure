@@ -7,11 +7,11 @@
   </div>
 
   <div class="bg-surface-inset rounded-lg p-4">
-    <p class="text-xs text-secondary mb-2">Authorization Code:</p>
+    <p class="text-xs text-secondary mb-2"><%= t(".authorization_code_label") %></p>
     <code id="authorization_code" class="block text-sm font-mono text-primary break-all"><%= params[:code] %></code>
   </div>
 
   <p class="text-sm text-secondary text-center">
-    Copy this code and paste it into the application.
+    <%= t(".copy_instructions") %>
   </p>
 </div>

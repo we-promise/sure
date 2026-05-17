@@ -107,7 +107,7 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
-      flash[:notice] = "Transaction created"
+      flash[:notice] = t(".created")
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account) }
@@ -141,7 +141,7 @@ class TransactionsController < ApplicationController
       @entry.reload
 
       respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
+        format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
           in_split_group = helpers.in_split_group?(@entry, params[:grouped])
           render turbo_stream: [
