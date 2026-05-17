@@ -1,8 +1,13 @@
 ---
 hu:
+  account:
+    entries:
+      destroy:
+        success: "Tétel sikeresen törölve."
   accounts:
     not_authorized: "Nincs jogosultságod ennek a számlának a kezeléséhez"
     account:
+      complete_setup: Beállítás befejezése
       edit: Szerkesztés
       link_lunchflow: Összekapcsolás a Lunch Flow-val
       link_provider: Összekapcsolás szolgáltatóval
@@ -52,6 +57,10 @@ hu:
       syncing: "Számlák szinkronizálása..."
     new:
       import_accounts: Számlák importálása
+      container:
+        select: Kiválasztás
+        navigate: Navigálás
+        close: Bezárás
       method_selector:
         connected_entry: Számla összekapcsolása
         connected_entry_eu: EU-s számla összekapcsolása
@@ -62,6 +71,11 @@ hu:
       title: Mit szeretnél hozzáadni?
     show:
       limited_fx_history_warning: "Az árfolyam-előzmények csak %{date} dátumtól érhetők el. Az ezt megelőző tranzakciókhoz közelítő árfolyamok kerülnek alkalmazásra – ez akkor fordulhat elő, ha a devizaárfolyam-szolgáltató csak korlátozott előzményadatokat kínál."
+      tabs:
+        activity: Tevékenység
+        holdings: Portfólió
+        overview: Áttekintés
+        statements: Kimutatások
       activity:
         amount: Összeg
         balance: Egyenleg
@@ -80,20 +94,26 @@ hu:
         pending: Függőben lévő
         search:
           placeholder: Tételek keresése név alapján
+        search_placeholder: Tételek keresése név alapján
         status: Állapot
         title: Tevékenység
       chart:
         balance: Egyenleg
         owed: Tartozás összege
+      header:
+        complete_setup: Beállítás befejezése
       menu:
         confirm_accept: '"%{name}" törlése'
         confirm_body_html: "<p>A számla törlésével törlöd az értéktörténetét is, ami hatással van az összesített fiókodra. Ez közvetlenül befolyásolja a nettó vagyonszámítást és a számlagrafikonokat.</p><br /> <p>A törlés után a számla adatait nem lehet visszaállítani – ha szükséges, új számlaként kell hozzáadni.</p>"
         confirm_title: Törlöd a számlát?
+        delete_account: Számla törlése
         edit: Szerkesztés
         import: Tranzakciók importálása
         import_trades: Ügyletek importálása
         import_transactions: Tranzakciók importálása
         manage: Számlák kezelése
+        sharing: Megosztás
+        statements: Kimutatások
     update:
       success: "%{type} számla frissítve"
     sidebar:
@@ -102,9 +122,9 @@ hu:
       configure_providers: Konfiguráld itt a szolgáltatóidat.
       tabs:
         all: Összes
-        assets: Eszközök
+        assets: Vagyon
         debts: Kötelezettségek
-      new_asset: Új eszköz
+      new_asset: Új vagyonelem
       new_debt: Új kötelezettség
       new_account: Új számla
       new_account_group: "Új %{account_group}"
@@ -114,7 +134,7 @@ hu:
       crypto: Kripto
       property: Ingatlan
       vehicle: Jármű
-      other_asset: Egyéb eszköz
+      other_asset: Egyéb vagyon
       credit_card: Hitelkártya
       loan: Hitel
       other_liability: Egyéb kötelezettség
@@ -134,6 +154,7 @@ hu:
       ca: Kanada
       au: Ausztrália
       eu: Európa
+      in: India
       generic: Általános
     confirm_unlink:
       title: Leválasztod a számlát a szolgáltatóról?

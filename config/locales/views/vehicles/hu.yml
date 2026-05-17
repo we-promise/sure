@@ -23,3 +23,13 @@ hu:
       trend: Tendencia
       unknown: Ismeretlen
       year: Évjárat
+    tabs:
+      overview:
+        current_price: Jelenlegi ár
+        make_model: Márka és modell
+        mileage: Kilométeróra-állás
+        purchase_price: Vételár
+        trend: Tendencia
+        unknown: Ismeretlen
+        year: Évjárat
+        edit_account_details: "Számlaadatok szerkesztése"

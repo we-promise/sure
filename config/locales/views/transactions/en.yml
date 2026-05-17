@@ -3,12 +3,27 @@ en:
   transactions:
     bulk_updates:
       new:
+        cancel: Cancel
+        category_label: Category
+        category_prompt: Select a category
+        date_label: Date
+        header_title: Edit transactions
+        merchant_label: Merchant
+        merchant_prompt: Select a merchant
         name_label: Name
         name_placeholder: Enter a name that will be applied to selected transactions
+        none: "(none)"
+        notes_label: Notes
+        notes_placeholder: Enter a note that will be applied to selected transactions
+        overview: Overview
+        save: Save
+        tags_label: Tags
+        transactions_section: Transactions
     unknown_name: Unknown transaction
     selection_bar:
       duplicate: Duplicate
       edit: Edit
+      selected: selected
     form:
       details: Details
       account: Account

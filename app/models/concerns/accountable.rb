@@ -59,7 +59,7 @@ module Accountable
     end
 
     def display_name
-      self.name.pluralize.titleize
+      I18n.t("accounts.types.#{name.underscore}", default: name.pluralize.titleize)
     end
 
     # Sums the balances of all active accounts of this type, converting foreign currencies to the family's currency.
