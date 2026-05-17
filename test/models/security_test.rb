@@ -60,6 +60,24 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal first.id, second.id
   end
 
+  test "cash_for_currency creates a CASH-XXX security and is idempotent" do
+    first  = Security.cash_for_currency("cad")
+    second = Security.cash_for_currency("CAD")
+
+    assert_equal first.id, second.id
+    assert_equal "CASH-CAD", first.ticker
+    assert_equal "Cash (CAD)", first.name
+    assert first.cash?
+    assert first.offline?
+  end
+
+  test "cash_for_currency rejects codes that are not 3 uppercase letters" do
+    assert_raises(ArgumentError) { Security.cash_for_currency("USDC") }
+    assert_raises(ArgumentError) { Security.cash_for_currency("US") }
+    assert_raises(ArgumentError) { Security.cash_for_currency("") }
+    assert_raises(ArgumentError) { Security.cash_for_currency(nil) }
+  end
+
   test "standard scope excludes cash securities" do
     account = accounts(:investment)
     Security.cash_for(account)
