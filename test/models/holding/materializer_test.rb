@@ -155,6 +155,75 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal [ account_provider.id ], today_holdings.pluck(:account_provider_id)
   end
 
+  test "carries forward provider cost_basis to calculated rows past the provider snapshot date" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    # Provider snapshot two days ago with known cost basis, but no trades.
+    # This mirrors IBKR Flex where the export ends on Friday but today is Sunday.
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: 2.days.ago.to_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("125.50"),
+      cost_basis_source: "provider"
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_nil today_holding.account_provider_id,
+      "Today's row is calculated, not a provider snapshot"
+    assert_equal BigDecimal("125.50"), today_holding.cost_basis,
+      "Today's calculated row should inherit the provider's cost_basis so trend/return calcs work"
+    assert_equal "provider", today_holding.cost_basis_source
+  end
+
+  test "does not overwrite an existing calculated cost_basis with provider carry-forward" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: 2.days.ago.to_date,
+      account_provider: account_provider,
+      cost_basis: BigDecimal("125.50"),
+      cost_basis_source: "provider"
+    )
+
+    # Pre-existing calculated row for today (e.g., from a prior trade-derived run)
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: Date.current,
+      cost_basis: BigDecimal("180.00"),
+      cost_basis_source: "calculated"
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    assert_equal BigDecimal("180.00"), today_holding.cost_basis,
+      "Existing calculated cost_basis must beat provider carry-forward"
+    assert_equal "calculated", today_holding.cost_basis_source
+  end
+
   test "preserves same-day non-provider holdings for securities absent from the provider snapshot" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 

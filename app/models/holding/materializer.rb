@@ -88,8 +88,35 @@ class Holding::Materializer
             "cost_basis_source" => reconciled[:cost_basis_source]
           )
         else
-          # No cost_basis to set, or existing is better - don't touch cost_basis fields
-          holdings_to_upsert_without_cost << base_attrs
+          # Reconciler had no new value to write. If the row would otherwise have
+          # no usable cost_basis, fall back to the most recent provider snapshot
+          # for this (security, currency) on or before the holding date.
+          # Providers like IBKR Flex only emit holdings on report_date and only
+          # include trades within the query window, so the reverse calculator (and
+          # the gap-fill that pads dates without a known price) produces rows past
+          # report_date with nil cost_basis even though the provider knows the basis.
+          #
+          # Calculated/manual values that already exist are higher priority than a
+          # provider carry-forward and must not be overwritten.
+          existing_source = existing&.cost_basis_source
+          existing_basis_usable = existing&.cost_basis.present? && existing.cost_basis.positive?
+          preserve_existing = existing_basis_usable && %w[calculated manual].include?(existing_source)
+
+          if preserve_existing
+            holdings_to_upsert_without_cost << base_attrs
+          else
+            carried = carry_forward_provider_cost_basis(holding)
+
+            if carried && (existing&.cost_basis != carried || existing_source != "provider")
+              holdings_to_upsert_with_cost << base_attrs.merge(
+                "cost_basis" => carried,
+                "cost_basis_source" => "provider"
+              )
+            else
+              # No cost_basis to set, or existing is better - don't touch cost_basis fields
+              holdings_to_upsert_without_cost << base_attrs
+            end
+          end
         end
       end
 
@@ -163,6 +190,33 @@ class Holding::Materializer
 
     def holding_key(holding)
       [ holding.account_id || account.id, holding.security_id, holding.date, holding.currency ]
+    end
+
+    # Returns the most recent provider-supplied cost_basis for the given holding's
+    # (security, currency) on or before its date. Used to backfill calculated
+    # rows past the provider's last snapshot so reports keep showing trend data.
+    def carry_forward_provider_cost_basis(holding)
+      snapshots = provider_cost_basis_snapshots[[ holding.security_id, holding.currency ]]
+      return nil if snapshots.blank?
+
+      result = nil
+      snapshots.each do |snap_date, cost_basis|
+        break if snap_date > holding.date
+        result = cost_basis
+      end
+      result
+    end
+
+    def provider_cost_basis_snapshots
+      @provider_cost_basis_snapshots ||= account.holdings
+        .where.not(account_provider_id: nil)
+        .where.not(cost_basis: nil)
+        .where("cost_basis > 0")
+        .order(:date)
+        .pluck(:security_id, :currency, :date, :cost_basis)
+        .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|
+          memo[[ security_id, currency ]] << [ date, cost_basis ]
+        end
     end
 
     def purge_stale_holdings
