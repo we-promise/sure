@@ -74,47 +74,49 @@ namespace :security do
     updated = 0
     failed = []
 
-    model_class.order(:id).in_batches(of: batch_size) do |batch|
-      batch.each do |record|
-        processed += 1
+    # Only select the columns we need to avoid loading huge payload blobs
+    columns_needed = [ :id ] + fields
+    scope = model_class.select(*columns_needed)
 
-        # Skip if filter block returns false
-        next if block_given? && !filter_block.call(record)
+    scope.find_each(batch_size: batch_size) do |record|
+      processed += 1
 
-        # Check if any field has data (use safe read to handle plaintext)
-        next unless fields.any? { |f| safe_read_field(record, f).present? }
+      # Skip if filter block returns false
+      next if block_given? && !filter_block.call(record)
 
-        next if dry_run
+      # Check if any field has data (use safe read to handle plaintext)
+      next unless fields.any? { |f| safe_read_field(record, f).present? }
 
-        begin
-          # Read plaintext values safely
-          plaintext_values = {}
-          fields.each do |field|
-            value = safe_read_field(record, field)
-            plaintext_values[field] = value if value.present?
-          end
+      next if dry_run
 
-          next if plaintext_values.empty?
-
-          # Use a temporary instance to encrypt values (avoids triggering
-          # validations/callbacks that might read other encrypted fields)
-          encryptor = model_class.new
-          plaintext_values.each do |field, value|
-            encryptor.send("#{field}=", value)
-          end
-
-          # Extract the encrypted values from the temporary instance
-          encrypted_attrs = {}
-          plaintext_values.keys.each do |field|
-            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
-          end
-
-          # Write directly to database, bypassing callbacks/validations
-          record.update_columns(encrypted_attrs)
-          updated += 1
-        rescue => e
-          failed << { id: record.id, error: e.class.name, message: e.message }
+      begin
+        # Read plaintext values safely
+        plaintext_values = {}
+        fields.each do |field|
+          value = safe_read_field(record, field)
+          plaintext_values[field] = value if value.present?
         end
+
+        next if plaintext_values.empty?
+
+        # Use a temporary instance to encrypt values (avoids triggering
+        # validations/callbacks that might read other encrypted fields)
+        encryptor = model_class.new
+        plaintext_values.each do |field, value|
+          encryptor.send("#{field}=", value)
+        end
+
+        # Extract the encrypted values from the temporary instance
+        encrypted_attrs = {}
+        plaintext_values.keys.each do |field|
+          encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+        end
+
+        # Write directly to database, bypassing callbacks/validations
+        record.update_columns(encrypted_attrs)
+        updated += 1
+      rescue => e
+        failed << { id: record.id, error: e.class.name, message: e.message }
       end
     end
 
@@ -141,35 +143,33 @@ namespace :security do
     updated = 0
     failed = []
 
-    Session.order(:id).in_batches(of: batch_size) do |batch|
-      batch.each do |session|
-        processed += 1
-        next if dry_run
+    Session.select(:id, :user_agent, :ip_address, :ip_address_digest).find_each(batch_size: batch_size) do |session|
+      processed += 1
+      next if dry_run
 
-        begin
-          changes = {}
+      begin
+        changes = {}
 
-          # Re-save user_agent to trigger encryption (use safe read for plaintext)
-          user_agent_value = safe_read_field(session, :user_agent)
-          if user_agent_value.present?
-            # Use temporary instance to encrypt
-            encryptor = Session.new
-            encryptor.user_agent = user_agent_value
-            changes[:user_agent] = encryptor.read_attribute_before_type_cast(:user_agent)
-          end
-
-          # Hash IP address into ip_address_digest if not already done
-          if session.ip_address.present? && session.ip_address_digest.blank?
-            changes[:ip_address_digest] = Digest::SHA256.hexdigest(session.ip_address.to_s)
-          end
-
-          if changes.present?
-            session.update_columns(changes)
-            updated += 1
-          end
-        rescue => e
-          failed << { id: session.id, error: e.class.name, message: e.message }
+        # Re-save user_agent to trigger encryption (use safe read for plaintext)
+        user_agent_value = safe_read_field(session, :user_agent)
+        if user_agent_value.present?
+          # Use temporary instance to encrypt
+          encryptor = Session.new
+          encryptor.user_agent = user_agent_value
+          changes[:user_agent] = encryptor.read_attribute_before_type_cast(:user_agent)
         end
+
+        # Hash IP address into ip_address_digest if not already done
+        if session.ip_address.present? && session.ip_address_digest.blank?
+          changes[:ip_address_digest] = Digest::SHA256.hexdigest(session.ip_address.to_s)
+        end
+
+        if changes.present?
+          session.update_columns(changes)
+          updated += 1
+        end
+      rescue => e
+        failed << { id: session.id, error: e.class.name, message: e.message }
       end
     end
 
