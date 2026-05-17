@@ -498,6 +498,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
     t.index ["provider_key"], name: "index_debug_log_entries_on_provider_key"
     t.index ["source"], name: "index_debug_log_entries_on_source"
     t.index ["user_id"], name: "index_debug_log_entries_on_user_id"
+    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying, 'info'::character varying, 'warn'::character varying, 'error'::character varying]::text[])", name: "chk_debug_log_entries_level"
   end
 
   create_table "depositories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1900,10 +1901,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
   add_foreign_key "coinbase_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
-  add_foreign_key "debug_log_entries", "account_providers"
-  add_foreign_key "debug_log_entries", "accounts"
-  add_foreign_key "debug_log_entries", "families"
-  add_foreign_key "debug_log_entries", "users"
+  add_foreign_key "debug_log_entries", "account_providers", on_delete: :nullify
+  add_foreign_key "debug_log_entries", "accounts", on_delete: :nullify
+  add_foreign_key "debug_log_entries", "families", on_delete: :nullify
+  add_foreign_key "debug_log_entries", "users", on_delete: :nullify
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts", on_delete: :cascade

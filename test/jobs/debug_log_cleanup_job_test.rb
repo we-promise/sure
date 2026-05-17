@@ -2,26 +2,37 @@ require "test_helper"
 
 class DebugLogCleanupJobTest < ActiveJob::TestCase
   test "deletes entries older than 90 days" do
-    old_entry = DebugLogEntry.create!(
-      category: "old_event",
-      level: "info",
-      message: "old",
-      source: "Test",
-      created_at: 91.days.ago,
-      updated_at: 91.days.ago
-    )
-    recent_entry = DebugLogEntry.create!(
-      category: "recent_event",
-      level: "info",
-      message: "recent",
-      source: "Test"
-    )
+    travel_to Time.zone.parse("2026-05-17 12:00:00") do
+      old_entry = DebugLogEntry.create!(
+        category: "old_event",
+        level: "info",
+        message: "old",
+        source: "Test",
+        created_at: 91.days.ago,
+        updated_at: 91.days.ago
+      )
+      boundary_entry = DebugLogEntry.create!(
+        category: "boundary_event",
+        level: "info",
+        message: "boundary",
+        source: "Test",
+        created_at: 90.days.ago,
+        updated_at: 90.days.ago
+      )
+      recent_entry = DebugLogEntry.create!(
+        category: "recent_event",
+        level: "info",
+        message: "recent",
+        source: "Test"
+      )
 
-    assert_difference "DebugLogEntry.count", -1 do
-      DebugLogCleanupJob.perform_now
+      assert_difference "DebugLogEntry.count", -1 do
+        DebugLogCleanupJob.perform_now
+      end
+
+      assert_not DebugLogEntry.exists?(old_entry.id)
+      assert DebugLogEntry.exists?(boundary_entry.id)
+      assert DebugLogEntry.exists?(recent_entry.id)
     end
-
-    assert_not DebugLogEntry.exists?(old_entry.id)
-    assert DebugLogEntry.exists?(recent_entry.id)
   end
 end
