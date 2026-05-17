@@ -18,7 +18,6 @@ class IbkrAccount::Processor
 
   private
 
-    # Fix 11: memoize to avoid repeated DB queries across update_account_balance!, repair_*, and process
     def account
       @account ||= ibkr_account.current_account
     end
@@ -53,11 +52,12 @@ class IbkrAccount::Processor
         date: opening_anchor_entry.date
       )
 
-      # Fix 10: log instead of raise so broadcast_sync_complete still runs
+      # Don't raise — broadcast_sync_complete must still run after a repair failure.
       if result.error
         Rails.logger.error(
           "IbkrAccount::Processor - Failed to repair opening anchor for account #{account.id}: #{result.error}"
         )
+        Sentry.capture_message(result.error) if defined?(Sentry)
       end
     end
 end

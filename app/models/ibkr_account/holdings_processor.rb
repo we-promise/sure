@@ -28,7 +28,7 @@ class IbkrAccount::HoldingsProcessor
         data = position.with_indifferent_access
         next unless supported_position?(data)
 
-        # Fix 6: conid is guaranteed present by supported_position?, so no fallbacks needed
+        # conid is guaranteed present by supported_position?, so no fallbacks needed
         currency = extract_currency(data, fallback: @ibkr_account.currency)
         report_date = normalize_to_last_trading_day(parse_date(data[:report_date]) || @ibkr_account.report_date || Date.current)
         key = [ data[:conid], currency, report_date ]
@@ -37,7 +37,6 @@ class IbkrAccount::HoldingsProcessor
       end
     end
 
-    # Fix 5: report_date passed in from grouping key — computed only once per group
     def process_group(rows, report_date)
       sample = rows.first
       security = resolve_security(sample)
@@ -62,7 +61,7 @@ class IbkrAccount::HoldingsProcessor
         amount: amount,
         currency: currency,
         date: report_date,
-        price: price, # Fix 1: price is always non-nil here; removed dead `|| BigDecimal("0")`
+        price: price,
         cost_basis: cost_basis,
         external_id: external_id,
         source: "ibkr",

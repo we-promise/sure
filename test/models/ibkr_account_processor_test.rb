@@ -5,7 +5,6 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
 
   fixtures :families, :ibkr_items, :ibkr_accounts, :accounts, :securities
 
-  # Fix 12: delegate to production helper instead of duplicating the logic
   def trading_day
     normalize_to_last_trading_day(Date.current)
   end

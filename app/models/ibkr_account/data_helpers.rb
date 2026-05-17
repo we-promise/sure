@@ -79,6 +79,9 @@ module IbkrAccount::DataHelpers
       Security.create!(ticker: ticker, name: ticker)
     end
 
+    # Adjusts weekend dates to the preceding Friday. Market holidays are not adjusted
+    # because there is no exchange-holiday calendar available here — gap-fill in
+    # HistoricalBalancesSync handles arbitrary missing dates instead.
     def normalize_to_last_trading_day(date)
       return date unless date
       date -= 2 if date.sunday?

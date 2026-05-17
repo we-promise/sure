@@ -7,7 +7,6 @@ class IbkrAccount::ActivitiesProcessor
     @ibkr_account = ibkr_account
   end
 
-  # Fix 8: accumulate fee count locally via process_trade return value instead of @fee_transactions_count
   def process
     return { trades: 0, transactions: 0 } unless account.present?
 
@@ -171,7 +170,7 @@ class IbkrAccount::ActivitiesProcessor
       type != "DIVIDENDS" || row[:conid].present?
     end
 
-    # Fix 9: removed dead else branch — supported_cash_transaction? ensures only known types reach here
+    # supported_cash_transaction? ensures only known types reach here; no else branch needed
     def classify_cash_transaction(row, amount)
       type = row[:type].to_s.upcase.strip
 
@@ -197,7 +196,6 @@ class IbkrAccount::ActivitiesProcessor
       resolve_security({ symbol: symbol })
     end
 
-    # Fix 7: use with_indifferent_access on the activities payload to avoid string/symbol key fragility
     def security_symbol_for_conid(conid)
       return nil if conid.blank?
 

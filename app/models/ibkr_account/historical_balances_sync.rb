@@ -54,7 +54,13 @@ class IbkrAccount::HistoricalBalancesSync
             next unless date
 
             total = parse_decimal(data[:total])
-            next unless total&.positive?
+            unless total&.positive?
+              Rails.logger.warn(
+                "IbkrAccount::HistoricalBalancesSync - Skipping equity summary row with zero or missing total " \
+                "for date=#{data[:report_date].inspect} account=#{account.id}"
+              )
+              next
+            end
 
             # Use the materializer's cash_balance as ground truth for the cash split.
             # This is consistent with how the reverse calculator handles present-day
