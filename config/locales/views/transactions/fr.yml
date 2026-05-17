@@ -20,7 +20,9 @@ fr:
       none: (aucun)
       note_label: Notes
       note_placeholder: Entrez une note
+      create_tag: Créer
       submit: Ajouter la transaction
+      tag_search_placeholder: Rechercher ou créer une étiquette
       tags_label: Étiquettes
       transfer: Virement
     new:

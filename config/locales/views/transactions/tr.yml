@@ -15,7 +15,9 @@ tr:
       none: (yok)
       note_label: Notlar
       note_placeholder: Not girin
+      create_tag: Oluştur
       submit: İşlem ekle
+      tag_search_placeholder: Etiket ara veya oluştur
       tags_label: Etiketler
       transfer: Transfer
     new:
