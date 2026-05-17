@@ -71,6 +71,8 @@ coverage
 
 # Ignore node related files
 node_modules
+dist/
+build/
 
 compose.yml
 
@@ -101,6 +103,9 @@ node_modules/
 *.sw?
 *.roo*
 # OS specific
+Thumbs.db
+*.tmp
+*.swp
 # Task files
 .taskmaster/
 tasks.json

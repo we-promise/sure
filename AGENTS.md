@@ -92,3 +92,9 @@ If you need to add a new securities price provider (Tiingo, EODHD, Binance-style
 - Plaid investments: investment transactions currently do not store pending metadata.
 - Lunchflow: supports pending via `include_pending` query parameter; stored under `extra["lunchflow"]`.
 - Manual/CSV imports: no pending concept.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan:
+`specs/001-excel-sure-sync/plan.md`
+<!-- SPECKIT END -->

@@ -1,0 +1,23 @@
+# Git
+.git/
+.gitignore
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Secrets and local config
+*.secret.yaml
+secrets/
+.kube/
+kubeconfig*
+*.key
+*.crt
+
+# Build/runtime artifacts
+*.log
+coverage/
