@@ -12,7 +12,7 @@
       <%= form.label :tag_ids, helpers.t("transactions.form.tags_label"), class: "form-field__label" %>
 
       <button type="button"
-              class="form-field__input min-h-7 !whitespace-normal !overflow-visible flex items-center gap-2 pr-8 <%= "cursor-not-allowed text-subdued" if disabled %>"
+              class="form-field__input form-field__input--multiselect-trigger min-h-7 flex items-center gap-2 pr-8 <%= "cursor-not-allowed text-subdued" if disabled %>"
               data-tag-select-target="button"
               data-action="click->tag-select#toggle"
               aria-haspopup="listbox"
