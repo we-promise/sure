@@ -58,6 +58,8 @@ fr:
         month_start_day: Le mois budgétaire commence le
         month_start_day_hint: Définissez le jour de début de votre mois budgétaire (ex. jour de paie)
         month_start_day_warning: Vos budgets et vos calculs MTD utiliseront ce jour de début personnalisé au lieu du 1er de chaque mois.
+        personal_budgets: Budgets personnels
+        personal_budgets_hint: Activer les budgets individuels pour chaque membre de la famille.
         currencies_title: "Devises de %{moniker}"
         currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
         base_currency_label: Devise de base

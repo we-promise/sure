@@ -52,6 +52,7 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :personal_budgets, inclusion: { in: [ true, false ] }
 
   before_validation :normalize_enabled_currencies!
 

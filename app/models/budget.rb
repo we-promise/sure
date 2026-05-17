@@ -6,11 +6,12 @@ class Budget < ApplicationRecord
   attr_accessor :current_user
 
   belongs_to :family
+  belongs_to :user, optional: true
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
 
   validates :start_date, :end_date, presence: true
-  validates :start_date, :end_date, uniqueness: { scope: :family_id }
+  validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
@@ -56,7 +57,8 @@ class Budget < ApplicationRecord
         budget = Budget.find_or_create_by!(
           family: family,
           start_date: budget_start,
-          end_date: budget_end
+          end_date: budget_end,
+          user: family.personal_budgets? ? user : nil
         ) do |b|
           b.currency = family.currency
         end
