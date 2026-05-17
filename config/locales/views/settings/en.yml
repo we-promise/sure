@@ -6,6 +6,12 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Debug event log"
+        subtitle: "Meaningful operational events for super admins. Newest first."
+        empty: "No debug events found."
     llm_usages:
       show:
         page_title: "LLM Usage & Costs"
@@ -219,6 +225,7 @@ en:
       api_keys_label: API Key
       appearance_label: Appearance
       bank_sync_label: Bank sync
+      debug_label: Debug
     settings_nav_link_large:
       next: Next
       previous: Back
