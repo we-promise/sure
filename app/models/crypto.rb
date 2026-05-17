@@ -34,6 +34,5 @@ class Crypto < ApplicationRecord
     def icon
       "bitcoin"
     end
-
   end
 end
