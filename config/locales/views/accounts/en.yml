@@ -134,14 +134,14 @@ en:
       new_account_group: "New %{account_group}"
     types:
       depository: Cash
-      investment: Investments
+      investment: Investment
       crypto: Crypto
-      property: Properties
-      vehicle: Vehicles
-      other_asset: Other Assets
-      credit_card: Credit Cards
-      loan: Loans
-      other_liability: Other Liabilities
+      property: Property
+      vehicle: Vehicle
+      other_asset: Other Asset
+      credit_card: Credit Card
+      loan: Loan
+      other_liability: Other Liability
     tax_treatments:
       taxable: Taxable
       tax_deferred: Tax-Deferred
