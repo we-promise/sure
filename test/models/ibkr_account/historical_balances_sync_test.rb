@@ -21,33 +21,23 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
       current_balance: 3351,
       cash_balance: 1000.5,
       raw_equity_summary_payload: [
-        {
-          currency: "CHF",
-          report_date: "2026-05-07",
-          cash: "900.50",
-          stock: "2300.50",
-          total: "3201.00"
-        },
-        {
-          currency: "CHF",
-          report_date: "2026-05-08",
-          cash: "1000.50",
-          stock: "2350.50",
-          total: "3351.00"
-        }
+        { report_date: "2026-05-07", total: "3201.00" },
+        { report_date: "2026-05-08", total: "3351.00" }
       ]
     )
     @ibkr_account.ensure_account_provider!(@account)
   end
 
-  test "upserts historical balances without creating activity entries" do
+  # Seed an existing balance row as if the materializer already ran.
+  def seed_balance(date:, balance:, cash_balance:)
+    non_cash = balance - cash_balance
     @account.balances.create!(
-      date: Date.new(2026, 5, 7),
-      balance: 0,
-      cash_balance: 0,
+      date: date,
+      balance: balance,
+      cash_balance: cash_balance,
       currency: "CHF",
-      start_cash_balance: 0,
-      start_non_cash_balance: 0,
+      start_cash_balance: cash_balance,
+      start_non_cash_balance: non_cash,
       cash_inflows: 0,
       cash_outflows: 0,
       non_cash_inflows: 0,
@@ -57,145 +47,165 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
       non_cash_adjustments: 0,
       flows_factor: 1
     )
+  end
+
+  test "overrides total from IBKR equity summary while preserving materializer cash split" do
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 900.50)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 3100.00, cash_balance: 1000.50)
 
     assert_no_difference "@account.entries.count" do
       IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
     end
 
-    first_balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
-    second_balance = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
+    first  = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    second = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
 
-    assert_equal BigDecimal("3201.0"), first_balance.end_balance
-    assert_equal BigDecimal("900.5"), first_balance.end_cash_balance
-    assert_equal BigDecimal("2300.5"), first_balance.end_non_cash_balance
+    # Total overridden with IBKR's reported figure
+    assert_equal BigDecimal("3201.00"), first.end_balance
+    assert_equal BigDecimal("3351.00"), second.end_balance
 
-    assert_equal BigDecimal("3351.0"), second_balance.end_balance
-    assert_equal BigDecimal("1000.5"), second_balance.end_cash_balance
-    assert_equal BigDecimal("2350.5"), second_balance.end_non_cash_balance
-    assert_equal BigDecimal("900.5"), second_balance.start_cash_balance
-    assert_equal BigDecimal("2300.5"), second_balance.start_non_cash_balance
+    # Cash preserved from the materializer, not read from equity summary
+    assert_equal BigDecimal("900.50"),  first.end_cash_balance
+    assert_equal BigDecimal("1000.50"), second.end_cash_balance
+
+    # Non-cash = IBKR total - materializer cash
+    assert_equal BigDecimal("2300.50"), first.end_non_cash_balance
+    assert_equal BigDecimal("2350.50"), second.end_non_cash_balance
   end
 
-  test "accepts equity summary rows when stored account currency casing differs" do
-    @ibkr_account.update!(currency: "chf")
+  test "uses zero cash when no prior materializer balance exists for a date" do
+    # No existing balance rows — first-ever sync
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("3201.00"), balance.end_balance
+    assert_equal BigDecimal("0"),       balance.end_cash_balance
+    assert_equal BigDecimal("3201.00"), balance.end_non_cash_balance
+  end
+
+  test "accepts rows without a currency field (Flex configs that omit the attribute)" do
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "3201.00" }   # no currency key
+      ]
+    )
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 900.50)
 
     IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
 
-    first_balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
-    second_balance = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
-
-    assert_equal BigDecimal("3201.0"), first_balance.end_balance
-    assert_equal BigDecimal("3351.0"), second_balance.end_balance
+    balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("3201.00"), balance.end_balance
+    assert_equal BigDecimal("900.50"),  balance.end_cash_balance
   end
 
-  test "skips malformed equity summary rows and still imports valid rows" do
+  test "accepts rows when account currency casing differs from payload" do
+    @ibkr_account.update!(currency: "chf")
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 900.50)
+
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { currency: "CHF", report_date: "2026-05-07", total: "3201.00" }
+      ]
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("3201.00"), balance.end_balance
+  end
+
+  test "skips BASE_SUMMARY rows" do
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { currency: "BASE_SUMMARY", report_date: "2026-05-07", total: "9999.00" },
+        { currency: "CHF",          report_date: "2026-05-07", total: "3201.00" }
+      ]
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("3201.00"), balance.end_balance
+  end
+
+  test "skips rows with a mismatched explicit currency" do
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { currency: "USD", report_date: "2026-05-07", total: "9999.00" },
+        { currency: "CHF", report_date: "2026-05-07", total: "3201.00" }
+      ]
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    balance = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("3201.00"), balance.end_balance
+  end
+
+  test "skips malformed rows and still imports valid ones" do
     @ibkr_account.update!(
       raw_equity_summary_payload: [
         nil,
         "bad-row",
         [],
-        {
-          currency: "CHF",
-          report_date: "2026-05-11",
-          cash: "1100.50",
-          total: "3400.00"
-        }
+        { report_date: "2026-05-11", total: "3400.00" }
       ]
     )
+    seed_balance(date: Date.new(2026, 5, 11), balance: 3300.00, cash_balance: 1100.50)
 
     assert_nothing_raised do
       IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
     end
 
     balance = @account.balances.find_by!(date: Date.new(2026, 5, 11), currency: "CHF")
-
-    assert_equal BigDecimal("3400.0"), balance.end_balance
-    assert_equal BigDecimal("1100.5"), balance.end_cash_balance
-    assert_equal BigDecimal("2299.5"), balance.end_non_cash_balance
+    assert_equal BigDecimal("3400.00"), balance.end_balance
+    assert_equal BigDecimal("1100.50"), balance.end_cash_balance
   end
 
-  test "ignores anomalous IBKR weekend rows and fills weekends from the preceding Friday instead" do
+  test "fills weekend and holiday gaps by carrying forward the last IBKR total with materializer cash" do
+    # Simulate the real-world situation: IBKR has no weekend rows, and historical
+    # holdings only cover the current snapshot so the materializer writes total=cash
+    # for gap dates. HistoricalBalancesSync must write the correct total for those days.
     @ibkr_account.update!(
       raw_equity_summary_payload: [
-        {
-          currency: "CHF",
-          report_date: "2026-05-08",
-          cash: "1000.50",
-          stock: "2350.50",
-          total: "3351.00"
-        },
-        {
-          currency: "CHF",
-          report_date: "2026-05-09",
-          cash: "3351.00",
-          stock: "0.00",
-          total: "3351.00"
-        },
-        {
-          currency: "CHF",
-          report_date: "2026-05-10",
-          cash: "3351.00",
-          stock: "0.00",
-          total: "3351.00"
-        },
-        {
-          currency: "CHF",
-          report_date: "2026-05-11",
-          cash: "1050.00",
-          stock: "2400.00",
-          total: "3450.00"
-        }
+        { report_date: "2026-05-08", total: "3351.00" },  # Friday
+        # Saturday May 9 and Sunday May 10 absent — IBKR never sends them
+        { report_date: "2026-05-11", total: "3400.00" }   # Monday
       ]
     )
 
+    # Materializer computed correct cash for all dates; wrong total for the weekend
+    seed_balance(date: Date.new(2026, 5, 8),  balance: 3351.00, cash_balance: 900.50)
+    seed_balance(date: Date.new(2026, 5, 9),  balance: 900.50,  cash_balance: 900.50)  # wrong total
+    seed_balance(date: Date.new(2026, 5, 10), balance: 900.50,  cash_balance: 900.50)  # wrong total
+    seed_balance(date: Date.new(2026, 5, 11), balance: 3400.00, cash_balance: 910.00)
+
     IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
 
-    friday   = @account.balances.find_by!(date: Date.new(2026, 5, 8),  currency: "CHF")
     saturday = @account.balances.find_by!(date: Date.new(2026, 5, 9),  currency: "CHF")
     sunday   = @account.balances.find_by!(date: Date.new(2026, 5, 10), currency: "CHF")
-    monday   = @account.balances.find_by!(date: Date.new(2026, 5, 11), currency: "CHF")
 
-    assert_equal BigDecimal("1000.5"), friday.end_cash_balance
-    assert_equal BigDecimal("2350.5"), friday.end_non_cash_balance
+    # Total corrected to Friday's IBKR total; cash preserved from materializer
+    assert_equal BigDecimal("3351.00"), saturday.end_balance
+    assert_equal BigDecimal("900.50"),  saturday.end_cash_balance
+    assert_equal BigDecimal("2450.50"), saturday.end_non_cash_balance
 
-    assert_equal BigDecimal("3351.0"), saturday.end_balance,
-                 "Saturday carries Friday's total, not IBKR's anomalous all-cash value"
-    assert_equal BigDecimal("1000.5"), saturday.end_cash_balance
-    assert_equal BigDecimal("2350.5"), saturday.end_non_cash_balance
-
-    assert_equal BigDecimal("3351.0"), sunday.end_balance
-    assert_equal BigDecimal("1000.5"), sunday.end_cash_balance
-
-    assert_equal BigDecimal("1050.0"), monday.end_cash_balance
-    assert_equal BigDecimal("2400.0"), monday.end_non_cash_balance
-    assert_equal BigDecimal("1000.5"), monday.start_cash_balance,
-                 "Monday start values should carry from Friday, not from the anomalous Sunday"
-    assert_equal BigDecimal("2350.5"), monday.start_non_cash_balance
+    assert_equal BigDecimal("3351.00"), sunday.end_balance
+    assert_equal BigDecimal("900.50"),  sunday.end_cash_balance
   end
 
-  test "fills weekends and exchange holidays by carrying forward the last known value" do
+  test "skips rows with zero or missing total" do
     @ibkr_account.update!(
       raw_equity_summary_payload: [
-        { currency: "CHF", report_date: "2026-05-07", cash: "900.50",  total: "3201.00" },
-        { currency: "CHF", report_date: "2026-05-08", cash: "1000.50", total: "3351.00" },
-        # gap: May 9 (Sat), May 10 (Sun), May 11 (Mon holiday) all missing
-        { currency: "CHF", report_date: "2026-05-12", cash: "1050.00", total: "3450.00" }
+        { report_date: "2026-05-07", total: "0"   },
+        { report_date: "2026-05-07", total: nil   },
+        { report_date: "2026-05-08", total: "3351.00" }
       ]
     )
 
     IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
 
-    [ Date.new(2026, 5, 9), Date.new(2026, 5, 10), Date.new(2026, 5, 11) ].each do |gap_date|
-      gap_balance = @account.balances.find_by!(date: gap_date, currency: "CHF")
-      assert_equal BigDecimal("3351.0"), gap_balance.end_balance,
-                   "#{gap_date} (gap) should carry Friday May 8 balance"
-      assert_equal BigDecimal("1000.5"), gap_balance.end_cash_balance
-      assert_equal BigDecimal("2350.5"), gap_balance.end_non_cash_balance
-    end
-
-    tuesday = @account.balances.find_by!(date: Date.new(2026, 5, 12), currency: "CHF")
-    assert_equal BigDecimal("1000.5"), tuesday.start_cash_balance,
-                 "Next trading day start should reflect Friday's values, not a stale anchor"
-    assert_equal BigDecimal("2350.5"), tuesday.start_non_cash_balance
+    assert_nil @account.balances.find_by(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_not_nil @account.balances.find_by(date: Date.new(2026, 5, 8), currency: "CHF")
   end
 end
