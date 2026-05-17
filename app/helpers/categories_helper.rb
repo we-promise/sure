@@ -22,4 +22,12 @@ module CategoriesHelper
   def family_categories
     [ Category.uncategorized ].concat(Current.family.categories.alphabetically)
   end
+
+  # Like `family_categories`, but ordered so each parent is immediately
+  # followed by its subcategories. Intended for the transaction filter
+  # sidebar, which renders a flat checkbox list and uses visual indentation
+  # + a down-arrow icon to convey the parent→child relationship.
+  def family_categories_with_hierarchy
+    [ Category.uncategorized ].concat(Current.family.categories.alphabetically_by_hierarchy)
+  end
 end
