@@ -1,0 +1,247 @@
+# syntax = docker/dockerfile:1
+
+# Preview Dockerfile for Cloudflare Containers
+# Includes PostgreSQL and Redis for self-contained development testing
+
+ARG RUBY_VERSION=3.4.7
+FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
+
+WORKDIR /rails
+
+# Install base packages including PostgreSQL and Redis servers
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y \
+       curl libvips postgresql postgresql-client redis-server libyaml-0-2 procps sudo openssl strace \
+    && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Set development environment
+ARG BUILD_COMMIT_SHA
+ENV RAILS_ENV="development" \
+    BUNDLE_PATH="/usr/local/bundle" \
+    BUILD_COMMIT_SHA=${BUILD_COMMIT_SHA}
+
+# Build stage
+FROM base AS build
+
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y build-essential libpq-dev git pkg-config libyaml-dev \
+    && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+COPY .ruby-version Gemfile Gemfile.lock ./
+RUN bundle install \
+    && rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git \
+    && bundle exec bootsnap precompile --gemfile -j 0
+
+COPY . .
+
+RUN bundle exec bootsnap precompile -j 0 app/ lib/
+
+# Precompile assets
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+
+# Final stage
+FROM base
+
+# Create rails user and configure PostgreSQL/Redis permissions
+RUN groupadd --system --gid 1000 rails && \
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" > /etc/sudoers.d/rails && \
+    chmod 0440 /etc/sudoers.d/rails
+
+# Configure PostgreSQL to allow local connections
+RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
+    if [ -n "$PG_HBA" ]; then \
+      echo "local all all trust" > "$PG_HBA" && \
+      echo "host all all 127.0.0.1/32 trust" >> "$PG_HBA" && \
+      echo "host all all ::1/128 trust" >> "$PG_HBA"; \
+    fi
+
+# Create database directory with correct permissions
+RUN mkdir -p /var/run/postgresql && \
+    chown -R postgres:postgres /var/run/postgresql && \
+    chmod 2775 /var/run/postgresql
+
+# Copy built artifacts
+COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
+COPY --chown=rails:rails --from=build /rails /rails
+
+# Create preview entrypoint script inline
+RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
+#!/bin/bash
+set -e
+
+cd /rails
+
+emit_status() {
+  if [ -n "$PREVIEW_ORIGIN" ]; then
+    local stage="$1"
+    local detail="$2"
+    local payload
+    payload=$(STAGE="$stage" DETAIL="$detail" ruby -rjson -e 'print JSON.generate({stage: ENV.fetch("STAGE"), detail: ENV.fetch("DETAIL", "")})' 2>/dev/null) || return 0
+    curl -fsS -X POST "$PREVIEW_ORIGIN/_container_event" \
+      -H 'content-type: application/json' \
+      --data "$payload" >/dev/null || true
+  fi
+}
+
+trap 'emit_status failed "preview-entrypoint failed on line ${LINENO}"' ERR
+emit_status boot "preview-entrypoint started"
+
+REDIS_READY=0
+POSTGRES_READY=0
+
+# Start Redis
+echo "Starting Redis..."
+emit_status redis-start "starting redis"
+sudo redis-server --daemonize yes --bind 127.0.0.1
+
+# Wait for Redis to be ready
+echo "Waiting for Redis to be ready..."
+for i in {1..10}; do
+  if redis-cli ping > /dev/null 2>&1; then
+    echo "Redis is ready"
+    emit_status redis-ready "redis is ready"
+    REDIS_READY=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$REDIS_READY" -ne 1 ]; then
+  echo "Redis did not become ready in time"
+  exit 1
+fi
+
+# Start PostgreSQL
+echo "Starting PostgreSQL..."
+emit_status postgres-start "starting postgres"
+PG_VERSION=$(ls /etc/postgresql/ | sort -V | tail -1)
+if [ -z "$PG_VERSION" ]; then
+  echo "Could not determine installed PostgreSQL version"
+  exit 1
+fi
+if sudo pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" main status > /dev/null 2>&1; then
+  emit_status postgres-already-running "postgres cluster already running"
+else
+  sudo pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" main start
+fi
+
+# Wait for PostgreSQL to be ready
+echo "Waiting for PostgreSQL to be ready..."
+for i in {1..30}; do
+  if pg_isready -h localhost -U postgres > /dev/null 2>&1; then
+    echo "PostgreSQL is ready"
+    emit_status postgres-ready "postgres is ready"
+    POSTGRES_READY=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$POSTGRES_READY" -ne 1 ]; then
+  echo "PostgreSQL did not become ready in time"
+  exit 1
+fi
+
+# Create database user and database if they don't exist
+echo "Setting up database..."
+emit_status db-setup "setting up database"
+psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'" | grep -q 1 || \
+  psql -h localhost -U postgres -c "CREATE USER rails WITH SUPERUSER PASSWORD 'rails';"
+
+psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
+  psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
+
+# Set DATABASE_URL if not already set
+export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
+
+# Set REDIS_URL if not already set
+export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
+
+# Generate SECRET_KEY_BASE if not set
+export SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -hex 64)}"
+
+# Run database migrations
+echo "Running database migrations..."
+emit_status db-prepare "running rails db:prepare"
+/rails/bin/rails db:prepare
+emit_status db-prepare-done "rails db:prepare finished"
+
+# Defer all demo-data creation until after Rails is up so preview can boot first
+echo "Checking demo dataset..."
+emit_status demo-data-check "checking for default demo user"
+DEMO_EMAIL="${DEMO_USER_EMAIL:-user@example.com}"
+DEMO_EMAIL_SQL=${DEMO_EMAIL//\'/\'\'}
+DEMO_SEED="${DEMO_DATA_SEED:-880}"
+DEMO_HAS_USER=0
+DEMO_HAS_DATA=0
+
+if psql "$DATABASE_URL" -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
+  DEMO_HAS_USER=1
+  emit_status demo-data-user-present "default demo user already exists"
+fi
+
+if psql "$DATABASE_URL" -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_id = a.family_id WHERE u.email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
+  DEMO_HAS_DATA=1
+  emit_status demo-data-skip "demo financial data already exists"
+else
+  emit_status demo-data-deferred "deferring demo data creation until after rails boot"
+fi
+
+# Execute the main command with an internal readiness probe
+echo "Starting Rails server..."
+emit_status rails-start "starting rails server"
+"$@" > /tmp/rails.log 2>&1 &
+RAILS_PID=$!
+
+for i in {1..180}; do
+  if curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
+    emit_status rails-up-ready "rails responded on localhost:3000/up"
+
+    if [ "$DEMO_HAS_USER" -ne 1 ] || [ "$DEMO_HAS_DATA" -ne 1 ]; then
+      emit_status demo-data-load "creating/backfilling demo dataset in background (seed=${DEMO_SEED})"
+      (
+        (
+          DEMO_USER_EMAIL="$DEMO_EMAIL" DEMO_DATA_SEED="$DEMO_SEED" /rails/bin/rails runner '
+            email = ENV.fetch("DEMO_USER_EMAIL")
+            generator = Demo::Generator.new(seed: ENV.fetch("DEMO_DATA_SEED"))
+            user = User.find_by(email: email)
+
+            unless user
+              generator.generate_empty_data!(skip_clear: true)
+              user = User.find_by!(email: email)
+            end
+
+            has_accounts = user.family.accounts.exists?
+            generator.generate_new_user_data_for!(user.family, email: user.email) unless has_accounts
+          '
+        ) > /tmp/demo-data.log 2>&1 && \
+          emit_status demo-data-ready "default demo dataset loaded in background" || \
+          emit_status demo-data-failed "background demo dataset load failed"
+      ) &
+    fi
+
+    break
+  fi
+  sleep 1
+done
+
+if ! curl -fsS http://127.0.0.1:3000/up > /dev/null 2>&1; then
+  emit_status rails-up-timeout "rails did not answer localhost:3000/up in time"
+  emit_status rails-process-status "$(ps -o pid=,ppid=,stat=,comm=,args= -p "$RAILS_PID" 2>/dev/null | tr -s ' ' | sed 's/^ //')"
+  emit_status rails-process-wchan "$(cat /proc/$RAILS_PID/wchan 2>/dev/null | tr '\n' ' ' | cut -c 1-200)"
+  emit_status rails-process-children "$(ps -o pid=,ppid=,stat=,comm=,args= --ppid "$RAILS_PID" 2>/dev/null | tail -n +2 | tr '\n' '|' | cut -c 1-600)"
+  emit_status rails-socket-state "$(ruby -e 'hex="0BB8"; rows=File.readlines("/proc/net/tcp")+File.readlines("/proc/net/tcp6"); hits=rows.select{|l| l.include?(":#{hex} ")}.map{|l| l.strip.split[3] rescue nil}.compact; puts(hits.empty? ? "no-listener" : hits.join(","))' 2>&1 | tr '\n' ' ' | cut -c 1-400)"
+  emit_status rails-log-tail "$(tail -n 40 /tmp/rails.log 2>&1 | sed 's/"/'"'"'/g' | tr '\n' ' ' | cut -c 1-1200)"
+fi
+
+wait "$RAILS_PID"
+ENTRYPOINT_EOF
+RUN chmod 755 /rails/bin/preview-entrypoint && chown rails:rails /rails/bin/preview-entrypoint
+
+USER 1000:1000
+
+ENTRYPOINT ["/rails/bin/preview-entrypoint"]
+
+EXPOSE 3000
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
