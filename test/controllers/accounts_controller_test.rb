@@ -96,6 +96,25 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=file]", count: 0
   end
 
+  test "account menu hides statement link without statement management permission" do
+    account = accounts(:credit_card)
+    sign_in users(:family_member)
+
+    get account_url(account)
+
+    assert_response :success
+    statements_path = account_path(account, tab: "statements")
+    assert_select "[data-testid='account-menu'] a[href='#{statements_path}']", count: 0
+  end
+
+  test "account menu shows statement link for statement managers with write access" do
+    get account_url(@account)
+
+    assert_response :success
+    statements_path = account_path(@account, tab: "statements")
+    assert_select "[data-testid='account-menu'] a[href='#{statements_path}']", count: 1
+  end
+
   test "account activity marks trade amounts as privacy-sensitive" do
     trade_entry = entries(:trade)
     expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)

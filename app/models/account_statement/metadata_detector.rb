@@ -115,7 +115,6 @@ class AccountStatement::MetadataDetector
 
       if (meaningful_hint = meaningful_filename_hint(hint))
         statement.institution_name_hint ||= meaningful_hint
-        statement.account_name_hint ||= meaningful_hint
         detected = true
       end
 

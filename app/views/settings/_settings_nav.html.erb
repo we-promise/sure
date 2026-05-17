@@ -61,7 +61,7 @@ nav_sections = [
       <kbd>esc</kbd>
     <% end %>
   </div>
-  <nav class="space-y-4 hidden md:block">
+  <nav class="space-y-4 hidden md:block" data-testid="settings-nav">
     <% nav_sections.compact.each do |section| %>
       <section class="space-y-2">
         <div class="flex items-center gap-2 px-3">
@@ -85,7 +85,7 @@ nav_sections = [
       <% end %>
     </section>
   </nav>
-  <nav class="space-y-4 overflow-x-auto md:hidden no-scrollbar overscroll-none" id="mobile-settings-nav" data-controller="preserve-scroll scroll-on-connect">
+  <nav class="space-y-4 overflow-x-auto md:hidden no-scrollbar overscroll-none" id="mobile-settings-nav" data-testid="settings-nav" data-controller="preserve-scroll scroll-on-connect">
     <ul class="flex flex-nowrap space-x-1">
       <li>
         <%= render DS::Link.new(

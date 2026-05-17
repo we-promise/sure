@@ -27,7 +27,7 @@ class SettingsTest < ApplicationSystemTestCase
     # Add admin settings if user is admin
     if @user.admin?
       merchants_index = @settings_links.index([ "Merchants", family_merchants_path ])
-      @settings_links.insert(merchants_index + 1, [ "Statement Vault", account_statements_path ])
+      @settings_links.insert(merchants_index + 1, [ I18n.t("settings.settings_nav.statement_vault_label"), account_statements_path ])
       @settings_links += [
         [ "AI Prompts", settings_ai_prompts_path ],
         [ "API Key", settings_api_key_path ]
@@ -42,7 +42,9 @@ class SettingsTest < ApplicationSystemTestCase
       assert_current_path accounts_path, ignore_query: true
 
       @settings_links.each do |name, path|
-        click_link name, match: :first
+        within settings_navigation do
+          click_link name
+        end
         assert_selector "h1", text: name
         assert_current_path path
       end
@@ -95,7 +97,7 @@ class SettingsTest < ApplicationSystemTestCase
       assert_no_selector "li", text: "AI Prompts"
       assert_no_selector "li", text: "API Key"
       assert_no_selector "li", text: "Bank sync"
-      assert_no_selector "li", text: "Statement Vault"
+      assert_no_selector "li", text: I18n.t("settings.settings_nav.statement_vault_label")
     end
   end
 
@@ -107,5 +109,9 @@ class SettingsTest < ApplicationSystemTestCase
         find("[data-DS--menu-target='button']", match: :first).click
         click_link "Settings", match: :first
       end
+    end
+
+    def settings_navigation
+      find("[data-testid='settings-nav']", match: :first, visible: :visible)
     end
 end

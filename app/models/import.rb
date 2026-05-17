@@ -29,10 +29,15 @@ class Import < ApplicationRecord
     MAX_CSV_SIZE
   end
 
+  def assign_account!(account)
+    update!(account: account)
+  end
+
   AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column].freeze
 
   belongs_to :family
   belongs_to :account, optional: true
+  belongs_to :account_statement, optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding

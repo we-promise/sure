@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class AccountStatementsController < ApplicationController
-  before_action :set_statement, only: %i[show update destroy link unlink reject]
-  before_action :ensure_statement_manager!, only: %i[index create update destroy link unlink reject]
+  before_action :set_statement, only: %i[show update destroy extract link unlink reject]
+  before_action :ensure_statement_manager!, only: %i[index create update destroy extract link unlink reject]
 
   def index
     accessible_account_ids = Current.user.accessible_accounts.select(:id)
@@ -30,6 +30,7 @@ class AccountStatementsController < ApplicationController
     @accounts = Current.user.accessible_accounts.visible.alphabetically
     @can_manage_statement = @statement.manageable_by?(Current.user)
     @reconciliation_checks = @statement.reconciliation_checks
+    @latest_pdf_import = @statement.latest_reusable_pdf_import if @statement.pdf?
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("account_statements.index.title"), account_statements_path ],
@@ -41,6 +42,7 @@ class AccountStatementsController < ApplicationController
   def create
     files = Array(statement_upload_params[:files]).reject(&:blank?).select { |file| file.respond_to?(:read) }
     account = target_account
+    return if performed?
 
     if files.empty?
       redirect_back_or_to account_statements_path, alert: t("account_statements.create.no_files")
@@ -56,22 +58,24 @@ class AccountStatementsController < ApplicationController
     files.each do |file|
       prepared_upload = AccountStatement.prepare_upload!(file)
       created << AccountStatement.create_from_prepared_upload!(family: Current.family, account: account, prepared_upload: prepared_upload)
-    rescue AccountStatement::InvalidUploadError
-      validation_errors << t("account_statements.create.invalid_file_type")
+    rescue AccountStatement::InvalidUploadError => e
+      validation_errors << invalid_upload_message(e)
     rescue AccountStatement::DuplicateUploadError => e
       duplicates << e.statement
     rescue ActiveRecord::RecordInvalid => e
       validation_errors << e.record.errors.full_messages.to_sentence
     end
 
-    redirect_to redirect_after_create(account, created.first || duplicates.first),
+    redirect_statement = created.first || duplicates.find { |statement| statement.viewable_by?(Current.user) }
+    redirect_to redirect_after_create(account, redirect_statement),
                 flash_for_upload(created:, duplicates:, validation_errors:)
   end
 
   def update
     return if @statement.account && !require_account_permission!(@statement.account)
 
-    target = statement_account_id.present? ? Current.user.accessible_accounts.find(statement_account_id) : nil
+    target = statement_account_id.present? ? target_account : nil
+    return if performed?
     return if target && !require_account_permission!(target)
 
     attrs = statement_params.to_h
@@ -100,7 +104,11 @@ class AccountStatementsController < ApplicationController
       return
     end
 
-    account = Current.user.accessible_accounts.find(account_id)
+    account = Current.user.accessible_accounts.find_by(id: account_id)
+    unless account
+      redirect_to account_statement_path(@statement), alert: t("accounts.not_authorized")
+      return
+    end
     return unless require_account_permission!(account)
 
     @statement.link_to_account!(account)
@@ -116,6 +124,7 @@ class AccountStatementsController < ApplicationController
 
   def reject
     return if @statement.account && !require_account_permission!(@statement.account)
+    return redirect_to(account_statement_path(@statement), alert: t("account_statements.reject.linked")) if @statement.account.present?
 
     @statement.reject_match!
     redirect_to account_statements_path, notice: t("account_statements.reject.success")
@@ -132,6 +141,23 @@ class AccountStatementsController < ApplicationController
     end
   end
 
+  def extract
+    unless @statement.manageable_by?(Current.user)
+      redirect_to account_statement_path(@statement), alert: t("accounts.not_authorized")
+      return
+    end
+
+    unless @statement.pdf?
+      redirect_to account_statement_path(@statement), alert: t("account_statements.extract.not_pdf")
+      return
+    end
+
+    pdf_import = PdfImport.create_from_statement!(statement: @statement)
+    pdf_import.process_with_ai_later
+
+    redirect_to import_path(pdf_import), notice: t("account_statements.extract.started")
+  end
+
   private
 
     def set_statement
@@ -146,7 +172,7 @@ class AccountStatementsController < ApplicationController
     def ensure_statement_manager!
       return if AccountStatement.statement_manager?(Current.user)
 
-      redirect_to accounts_path, alert: t("accounts.not_authorized")
+      redirect_back_or_to accounts_path, alert: t("accounts.not_authorized")
     end
 
     def statement_upload_params
@@ -170,7 +196,11 @@ class AccountStatementsController < ApplicationController
       account_id = statement_account_id.presence
       return nil if account_id.blank?
 
-      Current.user.accessible_accounts.find(account_id)
+      account = Current.user.accessible_accounts.find_by(id: account_id)
+      return account if account
+
+      redirect_back_or_to account_statements_path, alert: t("accounts.not_authorized")
+      nil
     end
 
     def statement_account_id
@@ -189,6 +219,14 @@ class AccountStatementsController < ApplicationController
       else
         account_statements_path
       end
+    end
+
+    def invalid_upload_message(error)
+      reason = error.respond_to?(:reason) ? error.reason : nil
+      key = reason.in?(%i[oversize unsupported_type empty invalid_pdf_header]) ? reason : :invalid_file_type
+
+      t("account_statements.create.upload_errors.#{key}",
+        default: t("account_statements.create.invalid_file_type"))
     end
 
     def post_link_path(statement)

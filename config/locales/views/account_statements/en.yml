@@ -28,9 +28,22 @@ en:
       success:
         one: 1 statement uploaded.
         other: "%{count} statements uploaded."
+      upload_errors:
+        empty: The statement file is empty.
+        invalid_file_type: Upload a PDF, CSV, or XLSX statement under the size limit.
+        invalid_pdf_header: The PDF file does not look valid.
+        oversize: The statement file is too large.
+        unsupported_type: Upload a PDF, CSV, or XLSX statement under the size limit.
     destroy:
       failure: Statement could not be deleted.
       success: Statement deleted.
+    extract:
+      latest_import: Latest import
+      not_pdf: Transaction extraction is only available for PDF statements.
+      start: Extract transactions
+      started: Statement extraction started.
+      title: Transaction extraction
+      unavailable: Transaction extraction is available for PDF statements.
     form:
       account_upload: Upload statement
       files_hint: PDF, CSV, or XLSX. %{max_size}MB max per file.
@@ -64,6 +77,7 @@ en:
       mismatched: Mismatched
       unavailable: Not checked
     reject:
+      linked: Unlink the statement before rejecting a suggested match.
       success: Statement match rejected.
     show:
       account_label: Account

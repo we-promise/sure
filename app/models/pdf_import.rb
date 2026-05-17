@@ -2,6 +2,46 @@ class PdfImport < Import
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validate :account_statement_belongs_to_family
+  validate :account_statement_is_pdf
+
+  class << self
+    def create_from_upload!(family:, file:, user:)
+      prepared_upload = AccountStatement.prepare_upload!(file)
+      statement = AccountStatement.create_from_prepared_upload!(
+        family: family,
+        account: nil,
+        prepared_upload: prepared_upload
+      )
+
+      create_from_statement!(statement: statement)
+    rescue AccountStatement::DuplicateUploadError => e
+      raise unless e.statement.viewable_by?(user)
+
+      create_from_statement!(statement: e.statement)
+    end
+
+    def create_from_statement!(statement:)
+      reusable_import = statement.latest_reusable_pdf_import
+      return reusable_import if reusable_pdf_import_current?(reusable_import, statement)
+
+      create!(
+        family: statement.family,
+        account: statement.account,
+        account_statement: statement,
+        date_format: statement.family.date_format,
+        status: :pending
+      )
+    end
+
+    private
+
+      def reusable_pdf_import_current?(pdf_import, statement)
+        pdf_import.present? &&
+          pdf_import.account_id == statement.account_id &&
+          pdf_import.date_format == statement.family.date_format
+      end
+  end
 
   def import!
     raise "Account required for PDF import" unless account.present?
@@ -31,8 +71,19 @@ class PdfImport < Import
     end
   end
 
+  def assign_account!(account)
+    transaction do
+      update!(account: account)
+      statement = account_statement
+      if statement.present? && account.present?
+        statement.lock!
+        statement.link_to_account!(account) if statement.account_id != account.id
+      end
+    end
+  end
+
   def pdf_uploaded?
-    pdf_file.attached?
+    source_pdf_attached?
   end
 
   def ai_processed?
@@ -40,7 +91,25 @@ class PdfImport < Import
   end
 
   def process_with_ai_later
-    ProcessPdfJob.perform_later(self)
+    should_enqueue = with_lock do
+      if pending? && !ai_processed? && rows_count.zero?
+        update!(status: :importing)
+        true
+      else
+        false
+      end
+    end
+
+    return false unless should_enqueue
+
+    begin
+      ProcessPdfJob.perform_later(self)
+      true
+    rescue StandardError => e
+      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
+      reload.with_lock { update!(status: :pending) }
+      false
+    end
   end
 
   def process_with_ai
@@ -172,9 +241,29 @@ class PdfImport < Import
   end
 
   def pdf_file_content
-    return nil unless pdf_file.attached?
+    return @pdf_file_content if defined?(@pdf_file_content)
 
-    pdf_file.download
+    @pdf_file_content = if statement_backed?
+      account_statement.original_file.download
+    elsif pdf_file.attached?
+      pdf_file.download
+    end
+  end
+
+  def pdf_filename
+    if statement_backed?
+      account_statement.filename
+    elsif pdf_file.attached?
+      pdf_file.filename.to_s
+    end
+  end
+
+  def statement_backed?
+    account_statement&.original_file&.attached?
+  end
+
+  def legacy_pdf_file?
+    pdf_file.attached?
   end
 
   def required_column_keys
@@ -198,5 +287,23 @@ class PdfImport < Import
       Date.parse(date_str).strftime(date_format)
     rescue ArgumentError
       date_str.to_s
+    end
+
+    def source_pdf_attached?
+      statement_backed? || legacy_pdf_file?
+    end
+
+    def account_statement_belongs_to_family
+      return if account_statement.blank?
+      return if account_statement.family_id == family_id
+
+      errors.add(:account_statement, :invalid)
+    end
+
+    def account_statement_is_pdf
+      return if account_statement.blank?
+      return if account_statement.pdf?
+
+      errors.add(:account_statement, :invalid)
     end
 end
