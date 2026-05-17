@@ -8,7 +8,7 @@ class Import::ConfirmsController < ApplicationController
       return redirect_to import_path(@import)
     end
 
-    redirect_to import_clean_path(@import), alert: "You have invalid data, please edit until all errors are resolved" unless @import.cleaned?
+    redirect_to import_clean_path(@import), alert: t(".invalid_data") unless @import.cleaned?
   end
 
   private

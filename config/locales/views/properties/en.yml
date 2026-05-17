@@ -22,7 +22,39 @@ en:
       year_built: Year built
       year_built_placeholder: '2000'
     new:
-      title: Enter property details
+      title: Enter property manually
+      next: "Next"
+    address:
+      title: "Enter property manually"
+      address_line1_label: "Address Line 1"
+      address_line1_placeholder: "123 Main Street"
+      city_label: "City"
+      city_placeholder: "San Francisco"
+      state_region_label: "State/Region"
+      state_region_placeholder: "CA"
+      postal_code_label: "Postal Code"
+      postal_code_placeholder: "12345"
+      country_label: "Country"
+      country_placeholder: "USA"
+      save: "Save"
+    balances:
+      title: "Enter property manually"
+      market_value_label: "Estimated market value"
+      market_value_tooltip: "The estimated market value of your property. This number can often be found on sites like Zillow or Redfin, and is never an exact number."
+      save: "Save"
+      next: "Next"
+    overview_fields:
+      name_label: "Name"
+      name_placeholder: "Vacation home"
+      subtype_prompt: "Select type"
+      property_type_label: "Property type"
+      year_built_label: "Year Built (optional)"
+      year_built_placeholder: "1990"
+      area_label: "Area (optional)"
+      area_placeholder: "1200"
+      square_feet: "Square Feet"
+      square_meters: "Square Meters"
+      area_unit_label: "Area Unit"
     overview:
       living_area: Living Area
       market_value: Market Value
@@ -30,6 +62,15 @@ en:
       trend: Trend
       unknown: Unknown
       year_built: Year Built
+    tabs:
+      overview:
+        living_area: Living Area
+        market_value: Market Value
+        purchase_price: Purchase Price
+        trend: Trend
+        unknown: Unknown
+        year_built: Year Built
+        edit_account_details: "Edit account details"
     subtypes:
       apartment:
         short: Apartment

@@ -13,3 +13,13 @@ en:
       success: Left session
     reject:
       success: Request rejected
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Jobs
+      impersonating: Impersonating
+      leave: Leave
+      terminate: Terminate
+      join_a_session: Join a session
+      join: Join
+      uuid_placeholder: UUID
+      request_impersonation: Request Impersonation

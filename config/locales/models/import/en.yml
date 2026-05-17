@@ -8,6 +8,7 @@ en:
     errors:
       models:
         import:
+          duplicate_headers: "CSV headers normalize to duplicate columns: %{columns}"
           attributes:
             raw_file_str:
               invalid_csv_format: is not a valid CSV format

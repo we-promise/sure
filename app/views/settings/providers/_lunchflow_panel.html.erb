@@ -27,17 +27,17 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :api_key,
-                        label: "API Key",
-                        placeholder: is_new_record ? "Paste API key here" : "Enter new API key to update",
+                        label: t("settings.providers.lunchflow_panel.api_key_label"),
+                        placeholder: is_new_record ? t("settings.providers.lunchflow_panel.api_key_placeholder_new") : t("settings.providers.lunchflow_panel.api_key_placeholder_update"),
                         type: :password %>
 
     <%= form.text_field :base_url,
-                        label: "Base URL (Optional)",
-                        placeholder: "https://lunchflow.app/api/v1 (default)",
+                        label: t("settings.providers.lunchflow_panel.base_url_label"),
+                        placeholder: t("settings.providers.lunchflow_panel.base_url_placeholder"),
                         value: lunchflow_item.base_url %>
 
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? "Save and connect" : "Update connection",
+      <%= form.submit is_new_record ? t("settings.providers.lunchflow_panel.save_and_connect") : t("settings.providers.lunchflow_panel.update_connection"),
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-gray-900 theme-dark:focus:ring-white focus:ring-offset-2 transition-colors" %>
     </div>
   <% end %>
