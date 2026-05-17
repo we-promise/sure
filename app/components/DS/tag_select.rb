@@ -20,6 +20,10 @@ class DS::TagSelect < DesignSystemComponent
     "#{form.object_name}[tag_ids][]"
   end
 
+  def menu_id
+    @menu_id ||= "tag_select_#{field_name.gsub(/\W+/, "_")}_#{object_id}"
+  end
+
   private
 
     def normalize_menu_placement(value)

@@ -19,6 +19,7 @@
               data-action="click->tag-select#toggle"
               aria-haspopup="listbox"
               aria-expanded="false"
+              aria-controls="<%= menu_id %>"
               <%= "disabled" if disabled %>>
         <span class="flex flex-wrap gap-1"
               data-tag-select-target="selectionContainer"
@@ -47,7 +48,9 @@
       </div>
 
       <div class="flex flex-col gap-0.5 max-h-64 overflow-auto"
+           id="<%= menu_id %>"
            role="listbox"
+           aria-multiselectable="true"
            tabindex="-1">
         <% tags.each do |tag| %>
           <% selected = selected_ids.include?(tag.id.to_s) %>
