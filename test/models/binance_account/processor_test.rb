@@ -113,9 +113,9 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
   end
 
-  test "processes P2P BUY trades with double-entry logic and exact fees" do
+  test "processes P2P BUY trades with double-entry logic and exact native fiat" do
     @family.update!(currency: "USD")
-    @account.update!(currency: "USD") # Ensure the mock account matches
+    @account.update!(currency: "USD")
 
     provider = mock
     @item.stubs(:binance_provider).returns(provider)
@@ -125,7 +125,7 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     provider.stubs(:get_spot_trades).returns([])
     provider.stubs(:get_futures_trades).returns([])
 
-    # Mock the exact TZS/USDT payload we negotiated
+    # Mock the exact TZS/USDT payload with actual fiat transfer amounts
     provider.stubs(:get_all_p2p_trades).returns([
       {
         "orderNumber" => "22883918231657005056",
@@ -133,9 +133,11 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
         "tradeType" => "BUY",
         "asset" => "USDT",
         "fiat" => "TZS",
-        "amount" => "11.47",          # Gross
-        "takerAmount" => "11.41",     # Net
-        "takerCommission" => "0.06"   # Fee
+        "totalPrice" => "31500.00",
+        "unitPrice" => "2746.29",
+        "amount" => "11.47",          # Gross crypto
+        "takerAmount" => "11.41",     # Net crypto
+        "takerCommission" => "0.06"   # Crypto fee
       }
     ])
 
@@ -146,23 +148,26 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
       BinanceAccount::Processor.new(@ba).process
     end
 
-    # 1. Verify the Deposit (Transaction)
+    # Verify the Deposit (Transaction) - Should be native fiat
     deposit = @account.entries.find_by(external_id: "binance_p2p_22883918231657005056_funding")
     assert_not_nil deposit
     assert_equal "Transaction", deposit.entryable_type
-    assert_equal -11.47, deposit.amount.to_f # Negative = Cash INFLOW
-    assert_equal "USD", deposit.currency
+    assert_equal (-31500.00), deposit.amount.to_f # Negative = Fiat Cash INFLOW
+    assert_equal "TZS", deposit.currency!
 
-    # 2. Verify the Buy (Trade)
+    # Verify the Buy (Trade) - Should reflect the fiat cost basis
     trade = @account.entries.find_by(external_id: "binance_p2p_22883918231657005056")
     assert_not_nil trade
     assert_equal "Trade", trade.entryable_type
-    assert_equal 11.47, trade.amount.to_f # Positive = Cash OUTFLOW
+    assert_equal 31500.00, trade.amount.to_f    # Positive = Fiat Cash OUTFLOW
+    assert_equal "TZS", trade.currency
     assert_equal "Buy", trade.entryable.investment_activity_label
 
-    # Verify the specific crypto math
+    # Verify the specific crypto math and fiat fee conversion
     assert_equal 11.41, trade.entryable.qty.to_f
-    assert_equal 0.06, trade.entryable.fee.to_f
+
+    # Fiat Fee = Crypto Fee (0.06) * Unit Price (2746.29) = 164.7774 (rounds to 164.78)
+    assert_equal 164.78, trade.entryable.fee.to_f
   end
 
   test "skips processing if P2P external_id already exists" do
