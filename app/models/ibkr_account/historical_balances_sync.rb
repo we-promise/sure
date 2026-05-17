@@ -75,12 +75,17 @@ class IbkrAccount::HistoricalBalancesSync
     # non-cash value for historical gap dates. We carry the most recent
     # IBKR total forward to every missing calendar day and pair it with the
     # materializer's already-correct cash for that date.
+    #
+    # The range is extended to the account's current anchor date so that days
+    # after the last equity summary row (e.g. a Saturday sync where the payload
+    # ends on Friday) are also covered and not left with the materializer's
+    # stale total=cash value.
     def fill_gaps(rows, existing_balances)
-      return rows if rows.size < 2
+      return [] if rows.empty?
 
       by_date    = rows.index_by { |r| r[:date] }
       first_date = rows.first[:date]
-      last_date  = rows.last[:date]
+      last_date  = [ rows.last[:date], account.current_anchor_date || Date.current ].max
 
       last_total = nil
       (first_date..last_date).filter_map do |date|
@@ -89,7 +94,7 @@ class IbkrAccount::HistoricalBalancesSync
           by_date[date]
         else
           next unless last_total
-          cash     = existing_balances[date]&.cash_balance || BigDecimal("0")
+          cash = existing_balances[date]&.cash_balance || BigDecimal("0")
           { date: date, total: last_total, cash: cash, non_cash: last_total - cash }
         end
       end
