@@ -1,0 +1,18 @@
+<div data-controller="donut-chart"
+     data-donut-chart-segments-value="<%= goal.to_donut_segments_json.to_json %>"
+     data-donut-chart-segment-height-value="6"
+     role="progressbar"
+     aria-valuenow="<%= percent %>"
+     aria-valuemin="0"
+     aria-valuemax="100"
+     aria-label="<%= t("goals.show.ring.aria_label", percent: percent, amount: amount_label, target: target_label) %>"
+     class="relative mx-auto"
+     style="width: <%= size %>px; height: <%= size %>px;">
+  <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
+  <div data-donut-chart-target="contentContainer" class="flex items-center justify-center h-full">
+    <div data-donut-chart-target="defaultContent" class="flex flex-col items-center text-center">
+      <span class="text-secondary text-xs mb-1"><%= t("goals.show.ring.saved") %></span>
+      <span class="text-3xl font-medium tabular-nums privacy-sensitive <%= percent_text_class %>"><%= percent %>%</span>
+    </div>
+  </div>
+</div>

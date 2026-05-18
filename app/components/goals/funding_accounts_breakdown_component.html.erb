@@ -1,0 +1,64 @@
+<% if rows.empty? %>
+  <div class="text-center py-6">
+    <p class="text-sm text-secondary"><%= t("goals.show.funding_accounts.empty.heading") %></p>
+    <p class="text-xs text-subdued mt-1"><%= t("goals.show.funding_accounts.empty.body") %></p>
+  </div>
+<% else %>
+  <div class="space-y-4">
+    <h2 class="text-lg font-medium text-primary"><%= t("goals.show.funding_accounts_heading") %></h2>
+
+    <%# Distribution bar. proportional weight of each account in this goal.
+        Color encoding is shared with the row avatar so the bar reads as a
+        legend by itself; no separate dot/name/% strip needed. %>
+    <% if rows.size > 1 && total.positive? %>
+      <div class="flex gap-1">
+        <% rows.each do |row| %>
+          <% next if row[:balance].to_d.zero? %>
+          <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:balance]) %>%; background-color: <%= color_for(row[:account]) %>;"></div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Per-account detail. avatar / name+type / % / last-30d + last-90d %>
+    <div class="bg-container-inset rounded-xl p-1">
+      <div class="rounded-lg bg-container">
+        <% rows.each_with_index do |row, idx| %>
+          <% account = row[:account] %>
+          <% color = color_for(account) %>
+          <div class="px-4 py-3 grid grid-cols-[24px_minmax(0,1fr)_auto] sm:grid-cols-[24px_minmax(0,1fr)_48px_120px] items-center gap-3">
+            <%= render Goals::AvatarComponent.new(name: account.name, color: color, size: "sm") %>
+
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
+              <p class="text-sm text-subdued tabular-nums privacy-sensitive">
+                <%= accountable_label(account) %> · <%= row[:balance_money].format(precision: 0) %>
+              </p>
+            </div>
+
+            <% if rows.size > 1 %>
+              <p class="hidden sm:block text-sm text-secondary tabular-nums text-right privacy-sensitive">
+                <%= percent_for(row[:balance]) %>%
+              </p>
+            <% else %>
+              <span class="hidden sm:block"></span>
+            <% end %>
+
+            <div class="text-right space-y-0.5">
+              <div class="flex items-baseline justify-end gap-1.5">
+                <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= row[:last_30_money].format(precision: 0) %></p>
+                <p class="text-xs text-subdued"><%= t("goals.show.funding_last_30d") %></p>
+              </div>
+              <div class="flex items-baseline justify-end gap-1.5">
+                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= row[:last_90_money].format(precision: 0) %></p>
+                <p class="text-xs text-subdued"><%= t("goals.show.funding_last_90d") %></p>
+              </div>
+            </div>
+          </div>
+          <% if idx < rows.size - 1 %>
+            <%= render "shared/ruler", classes: "mx-4" %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

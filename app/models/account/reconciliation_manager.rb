@@ -12,6 +12,7 @@ class Account::ReconciliationManager
 
     unless dry_run
       prepared_valuation.save!
+      GoalPledge::Reconciler.new(prepared_valuation).run
     end
 
     ReconciliationResult.new(

@@ -1,0 +1,26 @@
+open_transfer:
+  goal: vacation_italy
+  account: depository
+  amount: 200
+  currency: USD
+  kind: transfer
+  status: open
+  expires_at: <%= 7.days.from_now %>
+
+matched_transfer:
+  goal: vacation_italy
+  account: connected
+  amount: 300
+  currency: USD
+  kind: transfer
+  status: matched
+  expires_at: <%= 6.days.ago %>
+
+expired_transfer:
+  goal: emergency_fund
+  account: depository
+  amount: 100
+  currency: USD
+  kind: transfer
+  status: expired
+  expires_at: <%= 8.days.ago %>
