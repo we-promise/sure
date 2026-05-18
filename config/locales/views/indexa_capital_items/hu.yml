@@ -180,7 +180,7 @@ hu:
         investment: "Befektetési számla"
         crypto: "Kriptovaluta számla"
         loan: "Hitel vagy jelzálog"
-        other_asset: "Egyéb eszköz"
+        other_asset: "Egyéb vagyon"
       subtype_labels:
         depository: "Számla altípusa:"
         credit_card: ""
@@ -190,7 +190,7 @@ hu:
         other_asset: ""
       subtype_messages:
         credit_card: "A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva."
-        other_asset: "Az egyéb eszközökhöz nincs szükség további beállításokra."
+        other_asset: "Az egyéb vagyonelemekhez nincs szükség további beállításokra."
         crypto: "A kriptovaluta számlák pozíciók és tranzakciók nyomon követésére lesznek beállítva."
       subtypes:
         depository:

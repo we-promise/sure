@@ -34,6 +34,9 @@ hu:
         merchant: Kereskedő
         actions: Műveletek
         source: Forrás
+    family_merchant:
+      edit: Szerkesztés
+      delete: Törlés
     merchant:
       confirm_accept: Kereskedő törlése
       confirm_body: Biztosan törlöd ezt a kereskedőt? A törlés megszünteti az összes kapcsolódó tranzakció hozzárendelését, ami hatással lehet a jelentéseidre.

@@ -59,6 +59,42 @@ hu:
       no_accounts_found: Nem találhatók számlák. Kérlek ellenőrizd az API-kulcs konfigurációdat.
       no_access_key: A Sophtron hozzáférési kulcs nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_user_id: A Sophtron felhasználói azonosító nincs beállítva. Kérlek állítsd be a Beállításokban.
+      no_institution_connected: Kérlek először csatlakoztass egy banki intézményt a Sophtron-nal.
+    connect:
+      cancel: Mégse
+      captcha: Captcha
+      connect: Csatlakozás
+      institution_search_label: Intézmény
+      institution_search_placeholder: Keresés banknév szerint
+      no_institutions: Nem találhatók egyező intézmények.
+      password: Jelszó
+      search: Keresés
+      search_too_short: Legalább két karaktert adj meg a kereséshez.
+      title: Sophtron intézmény csatlakoztatása
+      username: Felhasználónév
+    connect_institution:
+      api_error: "Sophtron kapcsolódás sikertelen: %{message}"
+      missing_parameters: Válassz intézményt és add meg a banki bejelentkezési adataidat.
+    connection_status:
+      api_error: "API kapcsolódási hiba: %{message}"
+      attempt: "%{attempt}. kísérlet a(z) %{max}-ból"
+      check_again: Ellenőrzés újra
+      failed: A Sophtron nem tudta befejezni ezt az intézményi kapcsolatot.
+      failed_timeout: A Sophtron túllépte az időkorlátot, miközben az intézmény befejezi a bejelentkezést.
+      timeout: A Sophtron nem fejezte be a kapcsolódást a várt időn belül. Ellenőrizheted újra, vagy próbálkozz meg a kapcsolódással később.
+      title: Sophtron csatlakoztatása
+      waiting: A Sophtron még kapcsolódik az intézményedhez.
+    mfa:
+      captcha: Captcha szöveg
+      captcha_alt: Sophtron captcha
+      phone_confirmed: Telefonon megerősítettem
+      submit: Elküldés
+      title: Sophtron ellenőrzés
+      token: Ellenőrző kód
+    submit_mfa:
+      api_error: "Ellenőrzés sikertelen: %{message}"
+      invalid_security_answers: A biztonsági válaszok hiányoznak vagy túl hosszúak.
+      unknown_challenge: Ismeretlen Sophtron ellenőrzési lépés.
     sophtron_item:
       accounts_need_setup: Számlák beállítást igényelnek
       automatic_sync: Automatikus szinkronizálás használata
@@ -102,6 +138,7 @@ hu:
       no_user_id: A Sophtron felhasználói azonosító nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_credentials_configured: "Kérlek előbb állítsd be a Sophtron API felhasználói azonosítódat és hozzáférési kulcsodat a Szolgáltatói beállításokban."
       no_name_placeholder: "(Nincs név)"
+      no_institution_connected: Kérlek először csatlakoztass egy banki intézményt a Sophtron-nal.
       title: Sophtron számlák kiválasztása
     select_existing_account:
       account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
@@ -116,7 +153,9 @@ hu:
       no_access_key: A Sophtron hozzáférési kulcs nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_user_id: A Sophtron felhasználói azonosító nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_name_placeholder: "(Nincs név)"
+      no_institution_connected: Kérlek először csatlakoztass egy banki intézményt a Sophtron-nal.
       title: "%{account_name} összekapcsolása a Sophtron-nal"
+      unexpected_error: "Váratlan hiba történt"
     link_existing_account:
       account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
       api_error: "API kapcsolódási hiba"
@@ -125,6 +164,7 @@ hu:
       sophtron_account_already_linked: Ez a Sophtron számla már össze van kapcsolva egy másik számlával
       sophtron_account_not_found: Sophtron számla nem található
       missing_parameters: Hiányzó kötelező paraméterek
+      no_institution_connected: Kérlek először csatlakoztass egy banki intézményt a Sophtron-nal.
       success: "%{account_name} sikeresen összekapcsolva a Sophtron-nal"
     setup_accounts:
       account_type_label: "Számla típusa:"
@@ -135,13 +175,14 @@ hu:
       no_accounts_to_setup: "Nincs beállítandó számla"
       no_access_key: "A Sophtron hozzáférési kulcs nincs beállítva. Kérlek ellenőrizd a kapcsolati beállításaidat."
       no_user_id: "A Sophtron felhasználói azonosító nincs beállítva. Kérlek ellenőrizd a kapcsolati beállításaidat."
+      no_institution_connected: "A Sophtron intézmény még nincs csatlakoztatva."
       account_types:
         skip: Számla kihagyása
         depository: Folyó- vagy megtakarítási számla
         credit_card: Hitelkártya
         investment: Befektetési számla
         loan: Hitel vagy jelzálog
-        other_asset: Egyéb eszköz
+        other_asset: Egyéb vagyon
       subtype_labels:
         depository: "Számla altípusa:"
         credit_card: ""
@@ -150,7 +191,7 @@ hu:
         other_asset: ""
       subtype_messages:
         credit_card: "A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva."
-        other_asset: "Az egyéb eszközökhöz nincs szükség további beállításokra."
+        other_asset: "Az egyéb vagyonelemekhez nincs szükség további beállításokra."
       balance: Egyenleg
       cancel: Mégse
       choose_account_type: "Válaszd ki a megfelelő számlatípust minden Sophtron számlához:"
@@ -198,13 +239,19 @@ hu:
     api_error:
       title: "Sophtron kapcsolódási hiba"
       unable_to_connect: "Nem sikerült csatlakozni a Sophtron-hoz"
+      institution_unable_to_connect: "Nem sikerült csatlakozni az intézményhez"
       common_issues_title: "Gyakori problémák:"
       incorrect_user_id: "Helytelen felhasználói azonosító: Ellenőrizd a felhasználói azonosítódat a Szolgáltatói beállításokban"
       invalid_access_key: "Érvénytelen hozzáférési kulcs: Ellenőrizd a hozzáférési kulcsodat a Szolgáltatói beállításokban"
       expired_credentials: "Lejárt hitelesítő adatok: Hozz létre új felhasználói azonosítót és hozzáférési kulcsot a Sophtron-ban"
       network_issue: "Hálózati probléma: Ellenőrizd az internetkapcsolatodat"
       service_down: "Szolgáltatás leállása: A Sophtron API ideiglenesen nem érhető el"
+      bad_credentials: "Banki bejelentkezési adatok: Ellenőrizd, hogy a felhasználónév és jelszó helyes-e"
+      verification_code: "Ellenőrző kód: Győződj meg róla, hogy a legújabb kódot adtad meg, mielőtt lejárt"
+      institution_timeout: "Intézményi időtúllépés: A bank bejelentkezési oldala nem fejezte be a folyamatot időben"
+      unsupported_mfa: "MFA-támogatás: A Sophtron esetleg nem támogatja az intézmény jelenlegi ellenőrzési folyamatát"
       check_provider_settings: "Szolgáltatói beállítások ellenőrzése"
+      try_again: "Próbálkozz újra a csatlakozással"
     select_option: "%{type} kiválasztása"
     subtype: "altípus"
     type: "típus"
@@ -243,3 +290,24 @@ hu:
     sophtron_entry:
       processor:
         unknown_transaction: "Ismeretlen tranzakció"
+    render_connection_timeout:
+      timeout: "A kapcsolat túllépte az időkorlátot. Kérlek próbáld újra."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "%{count} számlát nem lehet összekapcsolni üres névvel"
+        other: "%{count} számlát nem lehet összekapcsolni üres névvel"
+      partial_invalid: "%{created_count} számla összekapcsolva. %{already_linked_count} már össze volt kapcsolva, %{invalid_count} érvénytelen névvel rendelkezik."
+      partial_success: "%{created_count} számla összekapcsolva. %{already_linked_count} számla már össze volt kapcsolva."
+      success:
+        one: "%{count} számla sikeresen összekapcsolva."
+        other: "%{count} számla sikeresen összekapcsolva."
+      all_already_linked:
+        one: "A kiválasztott számla már össze van kapcsolva"
+        other: "Mind a(z) %{count} kiválasztott számla már össze van kapcsolva"
+      link_failed: "Nem sikerült összekapcsolni a számlákat"
+    start_manual_sync:
+      already_running: "Már folyamatban van egy szinkronizálás."
+      no_linked_accounts: "Nincs elérhető összekapcsolt számla a szinkronizáláshoz."
+      api_error: "API hiba: %{message}"
+    start_manual_sync_for_account:
+      failed: "Nem sikerült szinkronizálni a számlát"
