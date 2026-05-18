@@ -61,17 +61,23 @@ hu:
       no_user_id: A Sophtron felhasználói azonosító nincs beállítva. Kérlek állítsd be a Beállításokban.
     sophtron_item:
       accounts_need_setup: Számlák beállítást igényelnek
+      automatic_sync: Automatikus szinkronizálás használata
       delete: Kapcsolat törlése
       deletion_in_progress: törlés folyamatban...
       error: Hiba
       no_accounts_description: Ehhez a kapcsolathoz még nincsenek összekapcsolt számlák.
       no_accounts_title: Nincsenek számlák
+      manual_sync: Kézi szinkronizálás
+      manual_sync_action: Kézi szinkronizálás megkövetelése
+      manual_sync_action_for: "Kézi szinkronizálás megkövetelése ehhez: %{institution}"
+      automatic_sync_for: "Automatikus szinkronizálás használata ehhez: %{institution}"
       setup_action: Új számlák beállítása
       setup_description: "%{linked} / %{total} számla összekapcsolva. Válaszd ki az újonnan importált Sophtron számlák típusait."
       setup_needed: Új számlák beállításra várnak
       status: "Szinkronizálva %{timestamp} ezelőtt"
       status_never: Még nem szinkronizált
       status_with_summary: "Utolsó szinkronizálás %{timestamp} ezelőtt • %{summary}"
+      sync_now: Szinkronizálás most
       syncing: Szinkronizálás...
       total: Összesen
       unlinked: Nincs összekapcsolva
@@ -163,7 +169,20 @@ hu:
       no_accounts: "Nincs beállítandó számla."
       success: "%{count} számla sikeresen létrehozva."
     sync:
+      already_running: A Sophtron kézi szinkronizálása már folyamatban van.
+      api_error: "A Sophtron kézi szinkronizálása sikertelen: %{message}"
+      failed: A Sophtron kézi szinkronizálása sikertelen
+      no_linked_accounts: Ehhez a Sophtron intézményhez nincs szinkronizálható összekapcsolt számla.
+      processing_failed: A Sophtron kézi szinkronizálása nem tudta feldolgozni a frissített tranzakciókat.
       success: Szinkronizálás elindítva
+    toggle_manual_sync:
+      success_disabled: A Sophtron intézmény automatikusan fog szinkronizálni.
+      success_enabled: A Sophtron intézmény mostantól kézi szinkronizálást igényel.
+    manual_sync_complete:
+      close: Bezárás
+      description: A számlaegyenlegek frissítése a háttérben fejeződik be.
+      message: A tranzakciók letöltése elindult a Sophtron ellenőrzés után.
+      title: Sophtron szinkronizálás elindítva
     sophtron_setup_required:
       title: Sophtron beállítás szükséges
       message: >
@@ -214,10 +233,8 @@ hu:
           placeholder: "https://api.sophtron.com/v2"
       save: "Konfiguráció mentése"
       update: "Konfiguráció frissítése"
-      status:
-        configured_html: "Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a <a href=\"%{accounts_path}\" class=\"link\">Számlák</a> lapra."
-        not_configured: "Nincs beállítva"
     syncer:
+      manual_sync_required: "A kézi Sophtron szinkronizálás engedélyezve van; automatikus szinkronizálás kihagyva."
       importing_accounts: "Számlák importálása a Sophtron-ból..."
       checking_account_configuration: "Számlakonfiguráció ellenőrzése..."
       accounts_need_setup: "%{count} számla beállítást igényel"

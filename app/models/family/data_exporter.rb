@@ -2,6 +2,8 @@ require "zip"
 require "csv"
 
 class Family::DataExporter
+  EXPORT_VERSION = 2
+
   def initialize(family)
     @family = family
   end
@@ -9,6 +11,10 @@ class Family::DataExporter
   def generate_export
     # Create a StringIO to hold the zip data in memory
     zip_data = Zip::OutputStream.write_buffer do |zipfile|
+      # Add export version marker for downstream tooling
+      zipfile.put_next_entry("version.txt")
+      zipfile.write generate_version_txt
+
       # Add accounts.csv
       zipfile.put_next_entry("accounts.csv")
       zipfile.write generate_accounts_csv
@@ -29,6 +35,10 @@ class Family::DataExporter
       zipfile.put_next_entry("rules.csv")
       zipfile.write generate_rules_csv
 
+      # Add attachment manifest metadata. Binary file payloads are not included.
+      zipfile.put_next_entry("attachments.json")
+      zipfile.write generate_attachments_manifest
+
       # Add all.ndjson
       zipfile.put_next_entry("all.ndjson")
       zipfile.write generate_ndjson
@@ -40,6 +50,11 @@ class Family::DataExporter
   end
 
   private
+    def generate_version_txt
+      <<~TEXT
+        export_version: #{EXPORT_VERSION}
+      TEXT
+    end
 
     def generate_accounts_csv
       CSV.generate do |csv|
@@ -70,17 +85,21 @@ class Family::DataExporter
           .includes(:category, :tags, entry: :account)
           .find_each do |transaction|
             csv << [
-              transaction.entry.date.iso8601,
+              transaction.entry.date&.iso8601,
               transaction.entry.account.name,
               transaction.entry.amount.to_s,
               transaction.entry.name,
               transaction.category&.name,
-              transaction.tags.pluck(:name).join(","),
+              transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
               transaction.entry.currency
             ]
           end
       end
+    end
+
+    def escape_legacy_tag_name(name)
+      name.to_s.gsub(/[\\,|]/) { |char| "\\#{char}" }
     end
 
     def generate_trades_csv
@@ -92,7 +111,7 @@ class Family::DataExporter
           .includes(:security, entry: :account)
           .find_each do |trade|
             csv << [
-              trade.entry.date.iso8601,
+              trade.entry.date&.iso8601,
               trade.entry.account.name,
               trade.security.ticker,
               trade.qty.to_s,
@@ -136,6 +155,69 @@ class Family::DataExporter
           ]
         end
       end
+    end
+
+    def generate_attachments_manifest
+      {
+        version: 1,
+        binary_included: false,
+        attachments: attachment_manifest_items
+      }.to_json
+    end
+
+    def attachment_manifest_items
+      (transaction_attachment_manifest_items + family_document_attachment_manifest_items)
+        .sort_by { |item| [ item[:record_type], item[:record_id].to_s, item[:filename].to_s, item[:id].to_s ] }
+    end
+
+    def transaction_attachment_manifest_items
+      @family.transactions
+        .with_attached_attachments
+        .includes(:attachments_attachments, entry: :account)
+        .flat_map do |transaction|
+          transaction.attachments.map do |attachment|
+            attachment_manifest_item(
+              attachment,
+              record_type: "Transaction",
+              record_id: transaction.id,
+              extra: {
+                entry_id: transaction.entry.id,
+                account_id: transaction.entry.account_id
+              }
+            )
+          end
+        end
+    end
+
+    def family_document_attachment_manifest_items
+      @family.family_documents.with_attached_file.filter_map do |document|
+        next unless document.file.attached?
+
+        attachment_manifest_item(
+          document.file.attachment,
+          record_type: "FamilyDocument",
+          record_id: document.id,
+          extra: {
+            status: document.status
+          }
+        )
+      end
+    end
+
+    def attachment_manifest_item(attachment, record_type:, record_id:, extra: {})
+      blob = attachment.blob
+      {
+        id: attachment.id,
+        record_type: record_type,
+        record_id: record_id,
+        name: attachment.name,
+        filename: blob.filename.to_s,
+        content_type: blob.content_type,
+        byte_size: blob.byte_size,
+        checksum: blob.checksum,
+        binary_included: false,
+        created_at: attachment.created_at
+      }.merge(extra)
     end
 
     def generate_ndjson
@@ -426,11 +508,14 @@ class Family::DataExporter
     end
 
     def serialize_condition(condition)
+      operand = resolve_condition_operand(condition)
       data = {
         condition_type: condition.condition_type,
         operator: condition.operator,
-        value: resolve_condition_value(condition)
+        value: operand[:value]
       }
+      value_ref = operand[:value_ref]
+      data[:value_ref] = value_ref if value_ref.present?
 
       if condition.compound? && condition.sub_conditions.any?
         data[:sub_conditions] = condition.sub_conditions.map { |sub| serialize_condition(sub) }
@@ -440,52 +525,79 @@ class Family::DataExporter
     end
 
     def serialize_action(action)
-      {
+      operand = resolve_action_operand(action)
+      data = {
         action_type: action.action_type,
-        value: resolve_action_value(action)
+        value: operand[:value]
       }
+      value_ref = operand[:value_ref]
+      data[:value_ref] = value_ref if value_ref.present?
+
+      data
     end
 
-    def resolve_condition_value(condition)
-      return condition.value unless condition.value.present?
+    def resolve_condition_operand(condition)
+      return rule_operand(condition.value) unless condition.value.present?
 
       # Map category UUIDs to names for portability
-      if condition.condition_type == "transaction_category" && condition.value.present?
-        category = @family.categories.find_by(id: condition.value)
-        return category&.name || condition.value
+      if condition.condition_type == "transaction_category"
+        return rule_operand(condition.value, type: "Category", relation: @family.categories)
       end
 
       # Map merchant UUIDs to names for portability
-      if condition.condition_type == "transaction_merchant" && condition.value.present?
-        merchant = @family.merchants.find_by(id: condition.value)
-        return merchant&.name || condition.value
+      if condition.condition_type == "transaction_merchant"
+        return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
       end
 
-      condition.value
+      rule_operand(condition.value)
     end
 
-    def resolve_action_value(action)
-      return action.value unless action.value.present?
+    def resolve_action_operand(action)
+      return rule_operand(action.value) unless action.value.present?
 
       # Map category UUIDs to names for portability
-      if action.action_type == "set_transaction_category" && action.value.present?
-        category = @family.categories.find_by(id: action.value) || @family.categories.find_by(name: action.value)
-        return category&.name || action.value
+      if action.action_type == "set_transaction_category"
+        return rule_operand(action.value, type: "Category", relation: @family.categories, fallback_to_name: true)
       end
 
       # Map merchant UUIDs to names for portability
-      if action.action_type == "set_transaction_merchant" && action.value.present?
-        merchant = @family.merchants.find_by(id: action.value) || @family.merchants.find_by(name: action.value)
-        return merchant&.name || action.value
+      if action.action_type == "set_transaction_merchant"
+        return rule_operand(action.value, type: "Merchant", relation: @family.merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability
-      if action.action_type == "set_transaction_tags" && action.value.present?
-        tag = @family.tags.find_by(id: action.value) || @family.tags.find_by(name: action.value)
-        return tag&.name || action.value
+      if action.action_type == "set_transaction_tags"
+        return rule_operand(action.value, type: "Tag", relation: @family.tags, fallback_to_name: true)
       end
 
-      action.value
+      rule_operand(action.value)
+    end
+
+    def rule_operand(value, type: nil, relation: nil, fallback_to_name: false)
+      record = relation && resolve_rule_operand_record(relation, value, fallback_to_name: fallback_to_name)
+
+      {
+        value: record&.name || value,
+        value_ref: record ? rule_value_ref(type, record) : nil
+      }
+    end
+
+    def resolve_rule_operand_record(relation, value, fallback_to_name:)
+      return relation.find_by(id: value) if uuid_like?(value)
+
+      relation.find_by(name: value) if fallback_to_name
+    end
+
+    def rule_value_ref(type, record)
+      {
+        type: type,
+        id: record.id,
+        name: record.name
+      }
+    end
+
+    def uuid_like?(value)
+      UuidFormat.valid?(value)
     end
 
     def serialize_conditions_for_csv(conditions)

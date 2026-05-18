@@ -85,7 +85,7 @@ class Import::UploadsController < ApplicationController
         @import.sync_mappings
       end
 
-      redirect_to import_qif_category_selection_path(@import), notice: "QIF file uploaded successfully."
+      redirect_to import_qif_category_selection_path(@import), notice: t(".qif_uploaded")
     end
 
     def csv_str

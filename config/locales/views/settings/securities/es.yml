@@ -8,3 +8,20 @@ es:
         enable_mfa: Habilitar 2FA
         mfa_description: Agrega una capa adicional de seguridad a tu cuenta al requerir un código de tu aplicación de autenticación al iniciar sesión
         mfa_title: Autenticación de 2FA
+        webauthn_add: Añadir passkey o llave de seguridad
+        webauthn_added: Añadida el %{date}
+        webauthn_description: Usa una passkey, Touch ID, Windows Hello o una llave de seguridad física como segundo factor al iniciar sesión.
+        webauthn_empty: Aún no hay passkeys ni llaves de seguridad registradas.
+        webauthn_last_used: Último uso hace %{time_ago}
+        webauthn_name_label: Nombre de la llave
+        webauthn_name_placeholder: Touch ID del MacBook, YubiKey, etc.
+        webauthn_remove: Eliminar
+        webauthn_remove_confirm: ¿Seguro que quieres eliminar esta passkey o llave de seguridad?
+        webauthn_remove_confirm_body: Tendrás que volver a registrar esta passkey o llave de seguridad antes de poder usarla para verificar el inicio de sesión.
+        webauthn_title: Passkeys y llaves de seguridad
+        webauthn_unsupported: Este navegador no admite passkeys ni llaves de seguridad.
+  webauthn_credentials:
+    default_name: Llave de seguridad
+    failure: No se pudo guardar esa passkey o llave de seguridad. Inténtalo de nuevo.
+    mfa_required: Activa la autenticación de dos factores antes de añadir una passkey o llave de seguridad.
+    success: Se eliminó la passkey o llave de seguridad.

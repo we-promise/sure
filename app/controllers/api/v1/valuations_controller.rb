@@ -269,10 +269,6 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       raise InvalidFilterError, "#{key} must be an ISO 8601 date"
     end
 
-    def valid_uuid?(value)
-      value.to_s.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i)
-    end
-
     def safe_page_param
       page = params[:page].to_i
       page > 0 ? page : 1

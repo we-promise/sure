@@ -1,0 +1,8 @@
+one:
+  kraken_item: one
+  name: Kraken
+  account_id: combined
+  account_type: combined
+  currency: USD
+  current_balance: 1234.50
+  extra: {}

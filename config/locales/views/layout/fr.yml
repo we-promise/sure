@@ -3,6 +3,7 @@ fr:
   layouts:
     application:
       privacy_mode: Activer/désactiver le mode confidentialité
+      skip_to_main: Aller au contenu principal
       nav:
         assistant: Assistant
         budgets: Budgets

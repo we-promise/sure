@@ -20,15 +20,11 @@
           <%= t(".status_inactive") %>
         </p>
       </div>
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-        <div class="flex items-start gap-2">
-          <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5 shrink-0") %>
-          <div>
-            <h3 class="text-sm font-medium text-amber-700"><%= t(".connection_failed") %></h3>
-            <p class="text-sm text-amber-700 mt-1"><%= t(".troubleshooting") %></p>
-          </div>
-        </div>
-      </div>
+      <%= render DS::Alert.new(
+        title: t(".connection_failed"),
+        message: t(".troubleshooting"),
+        variant: :warning
+      ) %>
     </div>
   <% end %>
 </div>

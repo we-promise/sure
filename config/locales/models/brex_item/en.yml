@@ -1,0 +1,14 @@
+---
+en:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: Base URL
+        name: Connection name
+        token: Token
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: must be blank, https://api.brex.com, or https://api-staging.brex.com

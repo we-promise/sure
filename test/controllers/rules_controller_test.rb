@@ -210,6 +210,26 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "index shows blocked count in recent runs summary" do
+    rule = rules(:one)
+    RuleRun.create!(
+      rule: rule,
+      execution_type: "manual",
+      status: "success",
+      transactions_queued: 10,
+      transactions_processed: 7,
+      transactions_modified: 4,
+      pending_jobs_count: 0,
+      executed_at: Time.current
+    )
+
+    get rules_url
+
+    assert_response :success
+    assert_select "th", text: /Queued\s+Processed\s+Modified\s+Blocked/
+    assert_select "td", text: "10 / 7 / 4 / 3"
+  end
+
   test "should get confirm_all" do
     get confirm_all_rules_url
     assert_response :success
