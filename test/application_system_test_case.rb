@@ -36,7 +36,40 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
     driven_by :selenium_remote_chrome, screen_size: [ 1400, 1400 ]
   else
-    driven_by :selenium, using: ENV["CI"].present? ? :headless_chrome : ENV.fetch("E2E_BROWSER", :chrome).to_sym, screen_size: [ 1400, 1400 ]
+    requested_browser = ENV["E2E_BROWSER"].presence&.to_sym
+    local_browser = case requested_browser
+    when :headless_chrome then :chrome
+    when :headless_firefox then :firefox
+    else requested_browser || :chrome
+    end
+
+    headless = ENV["CI"].present? || requested_browser.in?([ :headless_chrome, :headless_firefox ]) || ENV["DISPLAY"].blank?
+
+    Capybara.register_driver :selenium_local_chrome do |app|
+      options = case local_browser
+      when :firefox
+        Selenium::WebDriver::Firefox::Options.new.tap do |firefox_options|
+          firefox_options.add_argument("--width=1400")
+          firefox_options.add_argument("--height=1400")
+          firefox_options.add_argument("-headless") if headless
+        end
+      else
+        Selenium::WebDriver::Chrome::Options.new.tap do |chrome_options|
+          chrome_options.add_argument("--window-size=1400,1400")
+          chrome_options.add_argument("--headless=new") if headless
+          chrome_options.add_argument("--no-sandbox")
+          chrome_options.add_argument("--disable-dev-shm-usage")
+        end
+      end
+
+      Capybara::Selenium::Driver.new(
+        app,
+        browser: local_browser,
+        options: options
+      )
+    end
+
+    driven_by :selenium_local_chrome, screen_size: [ 1400, 1400 ]
   end
 
   def teardown
