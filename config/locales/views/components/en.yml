@@ -17,8 +17,9 @@ en:
         warning: Warning
         error: Error
         destructive: Error
-    beta_pill:
+    pill:
       aria_label: "%{label}"
+      default_label: Beta
     dialog:
       close: Close
   provider_sync_summary:

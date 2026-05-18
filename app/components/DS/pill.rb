@@ -1,19 +1,21 @@
-class DS::BetaPill < DesignSystemComponent
+class DS::Pill < DesignSystemComponent
   TONES = %i[violet indigo fuchsia amber gray].freeze
   STYLES = %i[soft filled outline].freeze
   SIZES = %i[sm md].freeze
 
   attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title
 
-  # Inline pill for marking features as Beta / Canary.
+  # Generic inline pill primitive. Currently the home of Beta / Canary
+  # markers; can be reused for future tags (NEW, PRO, EXPERIMENTAL, etc.)
+  # without forking the component.
   #
   # - `dot_only: true` renders only the colored dot (no label, no border).
   #   Use on the collapsed sidebar nav, where there's no room for the label.
   # - Sure has full violet / indigo / fuchsia / amber / gray ramps in the
   #   design system; this component picks named tokens at render time. No
   #   raw hex.
-  def initialize(label: "Beta", tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil)
-    @label = label
+  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil)
+    @label = label || I18n.t("ds.pill.default_label", default: "Beta")
     @tone = TONES.include?(tone.to_sym) ? tone.to_sym : :violet
     @style = STYLES.include?(style.to_sym) ? style.to_sym : :soft
     @size = SIZES.include?(size.to_sym) ? size.to_sym : :sm
@@ -70,7 +72,11 @@ class DS::BetaPill < DesignSystemComponent
       "border rounded-md",
       "leading-none"
     ]
-    base << (size == :md ? "px-2 py-[3px] text-[11px] tracking-[0.03em] gap-[5px]" : "px-1.5 py-[2px] text-[10px] tracking-[0.04em] gap-1")
+    # text-[10/11px] stays as arbitrary values: the pill is intentionally
+    # sub-12px (Sure's smallest scale token is text-xs / 12px) to read as
+    # a marker, not a label. Padding / gap / tracking snap to Tailwind's
+    # scale to satisfy the design-system "no arbitrary values" rule.
+    base << (size == :md ? "px-2 py-0.5 text-[11px] tracking-wide gap-1" : "px-1.5 py-0.5 text-[10px] tracking-wider gap-1")
     class_names(*base)
   end
 end

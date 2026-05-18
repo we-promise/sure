@@ -215,7 +215,10 @@
 <section class="bg-container shadow-border-xs rounded-xl p-4">
   <%= form_with url: settings_preferences_path, method: :patch,
         data: { controller: "auto-submit-form" } do |f| %>
-    <div class="flex cursor-pointer items-center gap-4 justify-between">
+    <%# Wrapping the row in <label for=…> makes the title + description
+        themselves a click target for the toggle, so the cursor-pointer
+        affordance on the container is honest. %>
+    <label for="user_beta_features_enabled" class="flex cursor-pointer items-center gap-4 justify-between">
       <div class="text-sm space-y-1">
         <h4 class="text-primary"><%= t(".beta.title") %></h4>
         <p class="text-secondary"><%= t(".beta.description") %></p>
@@ -226,6 +229,6 @@
             checked: @user.beta_features_enabled?,
             data: { auto_submit_form_target: "auto" }
       ) %>
-    </div>
+    </label>
   <% end %>
 </section>
