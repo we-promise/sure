@@ -287,6 +287,17 @@ hu:
       accounts_need_setup: "%{count} számla beállítást igényel"
       processing_transactions: "Tranzakciók feldolgozása az összekapcsolt számlákhoz..."
       calculating_balances: "Egyenlegek kiszámítása az összekapcsolt számlákhoz..."
+      accounts_failed:
+        one: "%{count} számla importálása sikertelen"
+        other: "%{count} számla importálása sikertelen"
+      transactions_failed:
+        one: "%{count} tranzakció importálása sikertelen"
+        other: "%{count} tranzakció importálása sikertelen"
+      import_failed: "A Sophtron importálás sikertelen"
+    errors:
+      refresh_failed: "A Sophtron frissítés sikertelen"
+      refresh_timeout: "A Sophtron frissítés nem fejeződött be a lekérdezési időkorláton belül"
+      refresh_requires_mfa: "A Sophtron frissítéshez többtényezős hitelesítés szükséges"
     sophtron_entry:
       processor:
         unknown_transaction: "Ismeretlen tranzakció"

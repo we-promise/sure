@@ -15,7 +15,6 @@
 
           <div class="space-y-2">
             <% @available_accounts.each do |account| %>
-              <% Rails.logger.debug "Sophtron account data: #{account.inspect}" %>
               <% has_blank_name = account[:account_name].blank? %>
               <label class="flex items-start gap-3 rounded-lg border <%= has_blank_name ? "border-destructive bg-container-inset opacity-60" : "border-primary bg-container-inset hover:bg-container-inset-hover" %> p-3 <%= has_blank_name ? "cursor-not-allowed" : "cursor-pointer" %> transition-colors">
                 <%= check_box_tag "account_ids[]", account[:id], false, disabled: has_blank_name, class: "mt-1" %>

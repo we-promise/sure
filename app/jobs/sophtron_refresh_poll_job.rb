@@ -15,7 +15,7 @@ class SophtronRefreshPollJob < ApplicationJob
     if Provider::Sophtron.job_requires_input?(job)
       mark_requires_update!(sophtron_item, job_id)
     elsif Provider::Sophtron.job_failed?(job)
-      sophtron_item.update!(last_connection_error: "Sophtron refresh failed")
+      sophtron_item.update!(last_connection_error: I18n.t("sophtron_items.errors.refresh_failed"))
     elsif Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
       import_transactions!(sophtron_account, provider, sync)
     elsif attempts_remaining.to_i > 1
@@ -26,7 +26,7 @@ class SophtronRefreshPollJob < ApplicationJob
         sync: sync
       )
     else
-      sophtron_item.update!(last_connection_error: "Sophtron refresh did not finish before the polling timeout")
+      sophtron_item.update!(last_connection_error: I18n.t("sophtron_items.errors.refresh_timeout"))
     end
   rescue Provider::Sophtron::Error => e
     handle_provider_error!(sophtron_account.sophtron_item, e)
@@ -62,7 +62,7 @@ class SophtronRefreshPollJob < ApplicationJob
       sophtron_item.update!(
         status: :requires_update,
         current_job_id: job_id,
-        last_connection_error: "Sophtron refresh requires MFA"
+        last_connection_error: I18n.t("sophtron_items.errors.refresh_requires_mfa")
       )
     end
 
