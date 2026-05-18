@@ -2751,6 +2751,7 @@ components:
       type: object
       required:
       - currency
+      - include_disabled
       - net_worth
       - assets
       - liabilities
@@ -2758,6 +2759,9 @@ components:
         currency:
           type: string
           description: Family primary currency
+        include_disabled:
+          type: boolean
+          description: Whether disabled account totals are included in this response.
         net_worth:
           "$ref": "#/components/schemas/Money"
         assets:
@@ -2874,7 +2878,8 @@ paths:
       - name: include_disabled
         in: query
         required: false
-        description: Include disabled accounts in the response. Defaults to false.
+        description: Include disabled accounts in the response while still excluding
+          accounts pending deletion. Defaults to false.
         schema:
           type: boolean
       responses:
@@ -2903,7 +2908,8 @@ paths:
       - name: include_disabled
         in: query
         required: false
-        description: Allow retrieving a disabled account. Defaults to false.
+        description: Allow retrieving a disabled account while still excluding accounts
+          pending deletion. Defaults to false.
         schema:
           type: boolean
       responses:
@@ -3480,6 +3486,14 @@ paths:
         and total liabilities with amounts converted to the family's primary currency.
       security:
       - apiKeyAuth: []
+      parameters:
+      - name: include_disabled
+        in: query
+        required: false
+        description: Include disabled account balances in current totals. Defaults
+          to false.
+        schema:
+          type: boolean
       responses:
         '200':
           description: balance sheet returned
@@ -3500,6 +3514,8 @@ paths:
       - Balances
       security:
       - apiKeyAuth: []
+      description: Returns balance history for accessible accounts, including disabled
+        accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -4334,6 +4350,8 @@ paths:
       - Holdings
       security:
       - apiKeyAuth: []
+      description: Returns holding history for accessible accounts, including disabled
+        accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -4353,6 +4371,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -4361,6 +4380,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: date
         in: query
         required: false
@@ -4395,14 +4415,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/HoldingCollection"
-        '401':
-          description: unauthorized
+        '422':
+          description: invalid filter
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: invalid date filter
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
@@ -5454,6 +5474,8 @@ paths:
       - Rejected Transfers
       security:
       - apiKeyAuth: []
+      description: Returns rejected transfer decisions for accessible accounts, including
+        disabled accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -5784,6 +5806,8 @@ paths:
       - Securities
       security:
       - apiKeyAuth: []
+      description: Returns securities referenced by accessible investment data, including
+        disabled accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -6251,6 +6275,8 @@ paths:
       - Trades
       security:
       - apiKeyAuth: []
+      description: Returns trade history for accessible accounts, including disabled
+        accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -6270,6 +6296,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -6278,6 +6305,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: start_date
         in: query
         required: false
@@ -6299,14 +6327,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TradeCollection"
-        '401':
-          description: unauthorized
+        '422':
+          description: invalid filter
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: invalid date filter
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
@@ -6841,6 +6869,8 @@ paths:
       - Transfers
       security:
       - apiKeyAuth: []
+      description: Returns transfer decisions for accessible accounts, including disabled
+        accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query
@@ -7047,6 +7077,8 @@ paths:
       - Valuations
       security:
       - apiKeyAuth: []
+      description: Returns valuation history for accessible accounts, including disabled
+        accounts but excluding accounts pending deletion.
       parameters:
       - name: page
         in: query

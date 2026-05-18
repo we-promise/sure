@@ -12,7 +12,10 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
   def index
     family = current_resource_owner.family
-    accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
+    accessible_account_ids = family.accounts
+      .accessible_by(current_resource_owner)
+      .historical
+      .select(:id)
     valuations_query = family.entries
       .where(entryable_type: "Valuation", account_id: accessible_account_ids)
       .includes(:account, :entryable)

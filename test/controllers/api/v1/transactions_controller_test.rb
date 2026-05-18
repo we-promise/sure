@@ -192,6 +192,17 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should return project-standard internal index errors" do
+    Api::V1::TransactionsController.any_instance.stubs(:safe_page_param).raises(StandardError, "boom")
+
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
+  end
+
   # SHOW action tests
   test "should show transaction with valid API key" do
     get api_v1_transaction_url(@transaction), headers: api_headers(@api_key)
@@ -220,6 +231,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal disabled_transaction.id, response_data["id"]
     assert_equal disabled_transaction.entry.account_id, response_data["account"]["id"]
+  end
+
+  test "should not show pending deletion account transaction" do
+    pending_deletion_transaction = create_account_transaction(
+      status: "pending_deletion",
+      name: "Pending Delete Account Show"
+    )
+
+    get api_v1_transaction_url(pending_deletion_transaction), headers: api_headers(@api_key)
+
+    assert_response :not_found
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
   end
 
   test "should return 404 for valid missing transaction id" do
@@ -514,6 +538,30 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "should reject create for disabled account" do
+    disabled_account = create_account(status: "disabled")
+
+    assert_no_difference("Entry.count") do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: disabled_account.id,
+               name: "Closed Account Write",
+               amount: 25.00,
+               date: Date.current,
+               currency: "USD",
+               nature: "expense"
+             }
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :not_found
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Account not found", response_data["message"]
+  end
+
   test "should reject invalid date on create" do
     transaction_params = {
       transaction: {
@@ -542,6 +590,28 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   test "should reject create without API key" do
     post api_v1_transactions_url, params: { transaction: { name: "Test" } }
     assert_response :unauthorized
+  end
+
+  test "should return project-standard internal create errors" do
+    Entry.any_instance.stubs(:save).raises(StandardError, "boom")
+
+    post api_v1_transactions_url,
+         params: {
+           transaction: {
+             account_id: @account.id,
+             name: "Boom Transaction",
+             amount: 25.00,
+             date: Date.current,
+             currency: "USD",
+             nature: "expense"
+           }
+         },
+         headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
   end
 
   # UPDATE action tests
@@ -580,6 +650,20 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
         params: { transaction: { name: "Test" } },
         headers: api_headers(@api_key)
     assert_response :not_found
+  end
+
+  test "should reject update for disabled account transaction" do
+    disabled_transaction = create_disabled_account_transaction(name: "Closed Account Update")
+
+    put api_v1_transaction_url(disabled_transaction),
+        params: { transaction: { name: "Should Not Update" } },
+        headers: api_headers(@api_key)
+
+    assert_response :not_found
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Transaction not found", response_data["message"]
+    assert_equal "Closed Account Update", disabled_transaction.entry.reload.name
   end
 
   test "should reject update without API key" do
@@ -656,6 +740,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal new_tags.map(&:id), @transaction.tag_ids
   end
 
+  test "should return project-standard internal update errors" do
+    Entry.any_instance.stubs(:update).raises(StandardError, "boom")
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Boom Update" } },
+        headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
+  end
+
   # DESTROY action tests
   test "should destroy transaction" do
   entry_to_delete = @account.entries.create!(
@@ -686,9 +783,34 @@ end
     assert_response :not_found
   end
 
+  test "should reject destroy for disabled account transaction" do
+    disabled_transaction = create_disabled_account_transaction(name: "Closed Account Delete")
+
+    assert_no_difference("Entry.count") do
+      delete api_v1_transaction_url(disabled_transaction), headers: api_headers(@api_key)
+    end
+
+    assert_response :not_found
+    response_data = JSON.parse(response.body)
+    assert_equal "not_found", response_data["error"]
+    assert_equal "Transaction not found", response_data["message"]
+    assert Entry.exists?(disabled_transaction.entry.id)
+  end
+
   test "should reject destroy without API key" do
     delete api_v1_transaction_url(@transaction)
     assert_response :unauthorized
+  end
+
+  test "should return project-standard internal destroy errors" do
+    Entry.any_instance.stubs(:destroy!).raises(StandardError, "boom")
+
+    delete api_v1_transaction_url(@transaction), headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
   end
 
   # JSON structure tests
@@ -786,13 +908,7 @@ end
     end
 
     def create_account_transaction(status:, name:, date: Date.current)
-      account = @family.accounts.create!(
-        name: "#{status.titleize} Checking #{SecureRandom.hex(4)}",
-        balance: 0,
-        currency: "USD",
-        status: status,
-        accountable: Depository.new
-      )
+      account = create_account(status: status)
 
       entry = account.entries.create!(
         name: name,
@@ -803,5 +919,15 @@ end
       )
 
       entry.transaction
+    end
+
+    def create_account(status:)
+      @family.accounts.create!(
+        name: "#{status.titleize} Checking #{SecureRandom.hex(4)}",
+        balance: 0,
+        currency: "USD",
+        status: status,
+        accountable: Depository.new
+      )
     end
 end

@@ -5,11 +5,11 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
-  before_action :set_trade, only: [ :show, :update, :destroy ]
+  before_action :set_readable_trade, only: :show
+  before_action :set_writable_trade, only: [ :update, :destroy ]
 
   def index
-    family = current_resource_owner.family
-    trades_query = family.trades.visible
+    trades_query = trade_history_scope
 
     trades_query = apply_filters(trades_query)
     trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
@@ -22,6 +22,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     @per_page = safe_per_page_param
 
     render :index
+  rescue InvalidFilterError => e
+    render_validation_error(e.message, [ e.message ])
   rescue ArgumentError => e
     render_validation_error(e.message, [ e.message ])
   rescue => e
@@ -39,7 +41,10 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts
+      .writable_by(current_resource_owner)
+      .visible
+      .find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -75,6 +80,8 @@ class Api::V1::TradesController < Api::V1::BaseController
   rescue ActiveRecord::RecordNotFound => e
     message = (e.model == "Account") ? "Account not found" : "Security not found"
     render json: { error: "not_found", message: message }, status: :not_found
+  rescue ArgumentError => e
+    render_validation_error(e.message, [ e.message ])
   rescue => e
     log_and_render_error("create", e)
   end
@@ -91,6 +98,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     else
       render_validation_error("Trade could not be updated", @entry.errors.full_messages)
     end
+  rescue ArgumentError => e
+    render_validation_error(e.message, [ e.message ])
   rescue => e
     log_and_render_error("update", e)
   end
@@ -107,12 +116,32 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
-    def set_trade
-      family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+    def set_readable_trade
+      load_trade_with_account_scope(readable_trade_account_scope)
+    end
+
+    def set_writable_trade
+      load_trade_with_account_scope(writable_trade_account_scope)
+    end
+
+    def load_trade_with_account_scope(account_scope)
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
+      @trade = current_resource_owner.family.trades
+        .joins(entry: :account)
+        .merge(account_scope)
+        .find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    end
+
+    def readable_trade_account_scope
+      Account.accessible_by(current_resource_owner).merge(Account.historical)
+    end
+
+    def writable_trade_account_scope
+      Account.writable_by(current_resource_owner).merge(Account.visible)
     end
 
     def ensure_read_scope
@@ -123,16 +152,34 @@ class Api::V1::TradesController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
+    def trade_history_scope
+      account_ids = current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .historical
+        .select(:id)
+
+      current_resource_owner.family.trades
+        .joins(entry: :account)
+        .where(entries: { account_id: account_ids })
+    end
+
     def apply_filters(query)
       need_entry_join = params[:account_id].present? || params[:account_ids].present? ||
                         params[:start_date].present? || params[:end_date].present?
       query = query.joins(:entry) if need_entry_join
 
       if params[:account_id].present?
+        raise InvalidFilterError, "account_id must be a valid UUID" unless valid_uuid?(params[:account_id])
+
         query = query.where(entries: { account_id: params[:account_id] })
       end
       if params[:account_ids].present?
-        query = query.where(entries: { account_id: Array(params[:account_ids]) })
+        account_ids = Array(params[:account_ids])
+        unless account_ids.all? { |account_id| valid_uuid?(account_id) }
+          raise InvalidFilterError, "account_ids must contain valid UUIDs"
+        end
+
+        query = query.where(entries: { account_id: account_ids })
       end
       if params[:start_date].present?
         query = query.where("entries.date >= ?", parse_date!(params[:start_date], "start_date"))
@@ -161,7 +208,6 @@ class Api::V1::TradesController < Api::V1::BaseController
       flat = trade_update_params.to_h
       entry_params = {
         name: flat[:name],
-        date: flat[:date],
         amount: flat[:amount],
         currency: flat[:currency],
         notes: flat[:notes],
@@ -172,6 +218,7 @@ class Api::V1::TradesController < Api::V1::BaseController
           category_id: flat[:category_id]
         }.compact_blank
       }.compact
+      entry_params[:date] = parse_date!(flat[:date], "date") if flat[:date].present?
 
       original_qty = flat[:qty]
       original_price = flat[:price]
@@ -183,6 +230,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
         signed_qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
         entry_params[:entryable_attributes][:qty] = signed_qty
+        entry_params[:entryable_attributes][:price] = price.to_d if original_price.present?
         entry_params[:amount] = signed_qty * price.to_d
         ticker = @trade.security&.ticker
         entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
@@ -242,7 +290,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       {
         account: account,
-        date: trade_params[:date],
+        date: parse_date!(trade_params[:date], "date"),
         qty: qty,
         price: price,
         currency: trade_params[:currency].presence || account.currency,

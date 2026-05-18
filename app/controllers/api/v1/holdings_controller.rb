@@ -7,8 +7,7 @@ class Api::V1::HoldingsController < Api::V1::BaseController
   before_action :set_holding, only: [ :show ]
 
   def index
-    family = current_resource_owner.family
-    holdings_query = family.holdings.joins(:account).where(accounts: { status: [ "draft", "active" ] })
+    holdings_query = holding_history_scope
 
     holdings_query = apply_filters(holdings_query)
     holdings_query = holdings_query.includes(:account, :security).chronological
@@ -21,6 +20,8 @@ class Api::V1::HoldingsController < Api::V1::BaseController
     @per_page = safe_per_page_param
 
     render :index
+  rescue InvalidFilterError => e
+    render_validation_error(e.message, [ e.message ])
   rescue ArgumentError => e
     render_validation_error(e.message, [ e.message ])
   rescue => e
@@ -36,8 +37,9 @@ class Api::V1::HoldingsController < Api::V1::BaseController
   private
 
     def set_holding
-      family = current_resource_owner.family
-      @holding = family.holdings.joins(:account).where(accounts: { status: %w[draft active] }).find(params[:id])
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
+      @holding = holding_history_scope.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Holding not found" }, status: :not_found
     end
@@ -46,12 +48,30 @@ class Api::V1::HoldingsController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
+    def holding_history_scope
+      account_ids = current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .historical
+        .select(:id)
+
+      current_resource_owner.family.holdings
+        .joins(:account)
+        .where(accounts: { id: account_ids })
+    end
+
     def apply_filters(query)
       if params[:account_id].present?
+        raise InvalidFilterError, "account_id must be a valid UUID" unless valid_uuid?(params[:account_id])
+
         query = query.where(account_id: params[:account_id])
       end
       if params[:account_ids].present?
-        query = query.where(account_id: Array(params[:account_ids]))
+        account_ids = Array(params[:account_ids])
+        unless account_ids.all? { |account_id| valid_uuid?(account_id) }
+          raise InvalidFilterError, "account_ids must contain valid UUIDs"
+        end
+
+        query = query.where(account_id: account_ids)
       end
       if params[:date].present?
         query = query.where(date: parse_date!(params[:date], "date"))

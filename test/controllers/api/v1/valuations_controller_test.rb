@@ -54,6 +54,21 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should list disabled account valuations and exclude pending deletion account valuations" do
+    disabled_valuation = create_valuation_for_account(status: "disabled", name: "Disabled Valuation")
+    pending_deletion_valuation = create_valuation_for_account(
+      status: "pending_deletion",
+      name: "Pending Delete Valuation"
+    )
+
+    get api_v1_valuations_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    valuation_ids = JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }
+    assert_includes valuation_ids, disabled_valuation.entry.id
+    assert_not_includes valuation_ids, pending_deletion_valuation.entry.id
+  end
+
   test "should filter index by account_id" do
     get api_v1_valuations_url,
         params: { account_id: @account.id },
@@ -103,8 +118,8 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account_id must be a valid UUID", response_data["message"]
   end
 
-  test "should not expose internal index errors" do
-    Api::V1::ValuationsController.any_instance.stubs(:safe_page_param).raises(StandardError, "database password leaked")
+  test "should return project-standard internal index errors" do
+    Api::V1::ValuationsController.any_instance.stubs(:safe_page_param).raises(StandardError, "boom")
 
     get api_v1_valuations_url, headers: api_headers(@api_key)
     assert_response :internal_server_error
@@ -112,7 +127,6 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal "internal_server_error", response_data["error"]
     assert_equal "An unexpected error occurred", response_data["message"]
-    assert_not_includes response.body, "database password leaked"
   end
 
   test "should reject index without API key" do
@@ -267,6 +281,25 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should return project-standard internal create errors" do
+    Account.any_instance.stubs(:create_reconciliation).raises(StandardError, "boom")
+
+    post api_v1_valuations_url,
+         params: {
+           valuation: {
+             account_id: @account.id,
+             amount: 10000.00,
+             date: Date.current
+           }
+         },
+         headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
+  end
+
   # UPDATE action tests
   test "should update valuation with valid parameters" do
     entry = @valuation.entry
@@ -330,6 +363,20 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should return project-standard internal update errors" do
+    entry = @valuation.entry
+    Account.any_instance.stubs(:update_reconciliation).raises(StandardError, "boom")
+
+    put api_v1_valuation_url(entry),
+        params: { valuation: { amount: 15000.00, date: Date.current } },
+        headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
+  end
+
   # JSON structure tests
   test "valuation JSON should have expected structure" do
     # Create a new valuation to test the structure
@@ -367,6 +414,24 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def create_valuation_for_account(status:, name:)
+      account = @family.accounts.create!(
+        name: "#{status.titleize} Investment #{SecureRandom.hex(4)}",
+        balance: 0,
+        currency: "USD",
+        status: status,
+        accountable: Investment.new
+      )
+
+      account.entries.create!(
+        name: name,
+        amount: 1234.56,
+        currency: "USD",
+        date: Date.current,
+        entryable: Valuation.new
+      ).entryable
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }

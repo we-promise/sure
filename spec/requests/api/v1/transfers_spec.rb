@@ -76,6 +76,7 @@ RSpec.describe 'API V1 Transfers', type: :request do
     get 'List transfers' do
       tags 'Transfers'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns transfer decisions for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'

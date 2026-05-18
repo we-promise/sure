@@ -63,10 +63,10 @@ class Api::V1::AccountsController < Api::V1::BaseController
       scope = current_resource_owner.family.accounts
                                     .accessible_by(current_resource_owner)
                                     .includes(:accountable, account_providers: :provider)
-      include_disabled_accounts? ? scope : scope.visible
+      include_disabled_accounts? ? scope.historical : scope.visible
     end
 
     def include_disabled_accounts?
-      ActiveModel::Type::Boolean.new.cast(params[:include_disabled])
+      ActiveModel::Type::Boolean.new.cast(params[:include_disabled]) || false
     end
 end

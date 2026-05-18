@@ -5,9 +5,10 @@ class BalanceSheet
 
   attr_reader :family, :user
 
-  def initialize(family, user: nil)
+  def initialize(family, user: nil, include_disabled: false)
     @family = family
     @user = user || Current.user
+    @include_disabled = include_disabled
   end
 
   def assets
@@ -56,11 +57,20 @@ class BalanceSheet
     end
 
     def account_totals
-      @account_totals ||= AccountTotals.new(family, user: user, sync_status_monitor: sync_status_monitor)
+      @account_totals ||= AccountTotals.new(
+        family,
+        user: user,
+        sync_status_monitor: sync_status_monitor,
+        include_disabled: include_disabled?
+      )
     end
 
     def net_worth_series_builder
       @net_worth_series_builder ||= NetWorthSeriesBuilder.new(family, user: user)
+    end
+
+    def include_disabled?
+      @include_disabled
     end
 
     def sorted(accounts)

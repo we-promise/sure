@@ -71,6 +71,7 @@ RSpec.describe 'API V1 Balances', type: :request do
     get 'List balance history records' do
       tags 'Balances'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns balance history for accessible accounts, including disabled accounts but excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'

@@ -6,13 +6,14 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
-  before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :set_readable_transaction, only: [ :show ]
+  before_action :set_writable_transaction, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
     accessible_account_ids = family.accounts
       .accessible_by(current_resource_owner)
-      .where.not(status: "pending_deletion")
+      .historical
       .select(:id)
     transactions_query = family.transactions
       .joins(:entry).where(entries: { account_id: accessible_account_ids })
@@ -90,7 +91,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
+    account = family.accounts.writable_by(current_resource_owner).visible.find(account_id_param)
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
       return render_existing_idempotent_entry(existing_entry)
@@ -113,6 +114,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       }, status: :unprocessable_entity
     end
 
+  rescue ActiveRecord::RecordNotFound
+    render json: {
+      error: "not_found",
+      message: "Account not found"
+    }, status: :not_found
   rescue ActiveRecord::RecordNotUnique
     if idempotency_key_requested? && account && (existing_entry = existing_idempotent_entry(account))
       render_existing_idempotent_entry(existing_entry)
@@ -127,7 +133,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       error: "internal_server_error",
       message: "An unexpected error occurred"
     }, status: :internal_server_error
-end
+  end
 
   def update
     if @entry.split_child?
@@ -200,13 +206,20 @@ end
 
   private
 
-    def set_transaction
+    def set_readable_transaction
+      set_transaction_with_account_scope(readable_transaction_account_scope)
+    end
+
+    def set_writable_transaction
+      set_transaction_with_account_scope(writable_transaction_account_scope)
+    end
+
+    def set_transaction_with_account_scope(account_scope)
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
-      family = current_resource_owner.family
-      @transaction = family.transactions
+      @transaction = current_resource_owner.family.transactions
         .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
+        .merge(account_scope)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
@@ -214,6 +227,14 @@ end
         error: "not_found",
         message: "Transaction not found"
       }, status: :not_found
+    end
+
+    def readable_transaction_account_scope
+      Account.accessible_by(current_resource_owner).merge(Account.historical)
+    end
+
+    def writable_transaction_account_scope
+      Account.writable_by(current_resource_owner).merge(Account.visible)
     end
 
     def ensure_read_scope

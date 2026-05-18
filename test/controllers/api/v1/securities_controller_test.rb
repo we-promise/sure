@@ -73,6 +73,40 @@ class Api::V1::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert response_data.key?("pagination")
   end
 
+  test "lists securities referenced by disabled accounts and excludes pending deletion accounts" do
+    @account.disable!
+
+    pending_deletion_account = @family.accounts.create!(
+      name: "Pending Delete Investment #{SecureRandom.hex(4)}",
+      accountable: Investment.new,
+      balance: 0,
+      currency: "USD",
+      status: "pending_deletion"
+    )
+    pending_deletion_security = Security.create!(
+      ticker: "PD#{SecureRandom.hex(4).upcase}",
+      name: "Pending Delete Security",
+      country_code: "US",
+      exchange_operating_mic: "XNAS"
+    )
+    pending_deletion_account.holdings.create!(
+      security: pending_deletion_security,
+      date: Date.parse("2024-01-15"),
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "USD"
+    )
+
+    get api_v1_securities_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    security_ids = JSON.parse(response.body)["securities"].map { |security| security["id"] }
+    assert_includes security_ids, @holding_security.id
+    assert_includes security_ids, @trade_security.id
+    assert_not_includes security_ids, pending_deletion_security.id
+  end
+
   test "shows a scoped security" do
     get api_v1_security_url(@holding_security), headers: api_headers(@api_key)
 

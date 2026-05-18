@@ -59,6 +59,30 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response_data["balances"].map { |balance| balance["id"] }, @other_balance.id
   end
 
+  test "lists balances for disabled accounts and excludes pending deletion accounts" do
+    @account.disable!
+    pending_deletion_account = @family.accounts.create!(
+      name: "Pending Delete Balance",
+      accountable: Depository.new,
+      balance: 500,
+      currency: "USD",
+      status: "pending_deletion"
+    )
+    pending_deletion_balance = pending_deletion_account.balances.create!(
+      date: Date.parse("2024-01-15"),
+      balance: 500,
+      cash_balance: 500,
+      currency: "USD"
+    )
+
+    get api_v1_balances_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    balance_ids = JSON.parse(response.body)["balances"].map { |balance| balance["id"] }
+    assert_includes balance_ids, @balance.id
+    assert_not_includes balance_ids, pending_deletion_balance.id
+  end
+
   test "shows a balance" do
     get api_v1_balance_url(@balance), headers: api_headers(@api_key)
 
@@ -69,6 +93,17 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, response_data.dig("account", "id")
     assert_kind_of Integer, response_data["balance_cents"]
     assert_kind_of Integer, response_data["end_balance_cents"]
+  end
+
+  test "shows a disabled account balance" do
+    @account.disable!
+
+    get api_v1_balance_url(@balance), headers: api_headers(@api_key)
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_equal @balance.id, response_data["id"]
+    assert_equal @account.id, response_data.dig("account", "id")
   end
 
   test "renders nullable cash balance fields" do

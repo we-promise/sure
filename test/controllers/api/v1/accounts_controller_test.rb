@@ -81,6 +81,17 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should return project-standard internal index errors" do
+    Api::V1::AccountsController.any_instance.stubs(:accounts_scope).raises(StandardError, "boom")
+
+    get "/api/v1/accounts", headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_body = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_body["error"]
+    assert_equal "An unexpected error occurred", response_body["message"]
+  end
+
   test "should only return active accounts" do
     # Make one account inactive
     inactive_account = accounts(:depository)
@@ -108,6 +119,23 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     account = response_body["accounts"].find { |account_data| account_data["id"] == inactive_account.id }
     assert_not_nil account
     assert_equal "disabled", account["status"]
+  end
+
+  test "should exclude pending deletion accounts when disabled accounts are requested" do
+    pending_deletion_account = @user.family.accounts.create!(
+      name: "Pending Delete Checking #{SecureRandom.hex(4)}",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD",
+      status: "pending_deletion"
+    )
+
+    get "/api/v1/accounts", params: { include_disabled: true }, headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    account_ids = response_body["accounts"].map { |account| account["id"] }
+    assert_not_includes account_ids, pending_deletion_account.id
   end
 
   test "should show active account" do
@@ -147,6 +175,18 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal "not_found", response_body["error"]
     assert_equal "Account not found", response_body["message"]
+  end
+
+  test "should return project-standard internal show errors" do
+    account = accounts(:depository)
+    Api::V1::AccountsController.any_instance.stubs(:accounts_scope).raises(StandardError, "boom")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    response_body = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_body["error"]
+    assert_equal "An unexpected error occurred", response_body["message"]
   end
 
   test "should require authentication on show" do
@@ -202,6 +242,22 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal inactive_account.id, response_body["id"]
     assert_equal "disabled", response_body["status"]
+  end
+
+  test "should hide pending deletion account even when disabled accounts are requested" do
+    pending_deletion_account = @user.family.accounts.create!(
+      name: "Pending Delete Show #{SecureRandom.hex(4)}",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD",
+      status: "pending_deletion"
+    )
+
+    get "/api/v1/accounts/#{pending_deletion_account.id}",
+        params: { include_disabled: true },
+        headers: api_headers(@api_key)
+
+    assert_response :not_found
   end
 
   test "should expose subtype across account types" do

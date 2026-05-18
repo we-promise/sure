@@ -32,6 +32,8 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
 
     assert response_body.key?("currency")
+    assert response_body.key?("include_disabled")
+    assert_equal false, response_body["include_disabled"]
     assert response_body.key?("net_worth")
     assert response_body.key?("assets")
     assert response_body.key?("liabilities")
@@ -41,6 +43,27 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
       assert response_body[field].key?("currency"), "#{field} should have currency"
       assert response_body[field].key?("formatted"), "#{field} should have formatted"
     end
+  end
+
+  test "should include disabled account totals when requested" do
+    disabled_account = @family.accounts.create!(
+      name: "Disabled Savings",
+      accountable: Depository.new,
+      balance: 500,
+      currency: "USD"
+    )
+    disabled_account.disable!
+
+    get "/api/v1/balance_sheet", headers: api_headers(@auth)
+    assert_response :success
+    default_assets = JSON.parse(response.body).dig("assets", "amount").to_d
+
+    get "/api/v1/balance_sheet", params: { include_disabled: true }, headers: api_headers(@auth)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal true, response_body["include_disabled"]
+    assert_equal BigDecimal("500"), response_body.dig("assets", "amount").to_d - default_assets
   end
 
   private

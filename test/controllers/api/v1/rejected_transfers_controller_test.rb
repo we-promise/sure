@@ -55,6 +55,41 @@ class Api::V1::RejectedTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response_data["rejected_transfers"].map { |transfer| transfer["id"] }, @other_rejected_transfer.id
   end
 
+  test "lists rejected transfers for disabled accounts and excludes pending deletion accounts" do
+    @account.disable!
+
+    pending_deletion_account = @family.accounts.create!(
+      name: "Pending Delete Rejected Transfer",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD",
+      status: "pending_deletion"
+    )
+    pending_outflow = create_transaction(
+      pending_deletion_account,
+      amount: 15,
+      date: Date.parse("2024-01-15"),
+      name: "Pending delete rejected outflow"
+    )
+    pending_inflow = create_transaction(
+      @destination_account,
+      amount: -15,
+      date: Date.parse("2024-01-15"),
+      name: "Pending delete rejected inflow"
+    )
+    pending_rejected_transfer = RejectedTransfer.create!(
+      outflow_transaction: pending_outflow,
+      inflow_transaction: pending_inflow
+    )
+
+    get api_v1_rejected_transfers_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    transfer_ids = JSON.parse(response.body)["rejected_transfers"].map { |transfer| transfer["id"] }
+    assert_includes transfer_ids, @rejected_transfer.id
+    assert_not_includes transfer_ids, pending_rejected_transfer.id
+  end
+
   test "permits read write scope" do
     read_write_key = ApiKey.create!(
       user: @user,

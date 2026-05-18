@@ -86,7 +86,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
       parameter name: :include_disabled, in: :query, type: :boolean, required: false,
-                description: 'Include disabled accounts in the response. Defaults to false.'
+                description: 'Include disabled accounts in the response while still excluding accounts pending deletion. Defaults to false.'
 
       response '200', 'accounts listed' do
         schema '$ref' => '#/components/schemas/AccountCollection'
@@ -114,7 +114,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
       parameter name: :include_disabled, in: :query, type: :boolean, required: false,
-                description: 'Allow retrieving a disabled account. Defaults to false.'
+                description: 'Allow retrieving a disabled account while still excluding accounts pending deletion. Defaults to false.'
 
       let(:id) { checking_account.id }
 
