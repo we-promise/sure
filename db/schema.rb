@@ -12,6 +12,7 @@
 
 ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
@@ -587,6 +588,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
     t.boolean "import_locked", default: false, null: false
     t.uuid "parent_entry_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
+    t.index "lower(regexp_replace(TRIM(BOTH FROM name), ' +'::text, ' '::text, 'g'::text)) gin_trgm_ops", name: "index_entries_on_normalized_name_for_transaction_suggestions", where: "(((entryable_type)::text = 'Transaction'::text) AND (parent_entry_id IS NULL) AND (name IS NOT NULL) AND ((name)::text <> ''::text))", using: :gin
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
@@ -1605,9 +1607,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
     t.jsonb "raw_transactions_payload"
     t.string "customer_id"
     t.string "member_id"
-    t.string "account_number_mask"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "account_number_mask"
     t.boolean "manual_sync", default: false, null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
@@ -1631,6 +1633,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
     t.string "user_id", null: false
     t.string "access_key", null: false
     t.string "base_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.string "customer_id"
     t.string "customer_name"
     t.jsonb "raw_customer_payload"
@@ -1639,8 +1643,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
     t.string "job_status"
     t.jsonb "raw_job_payload"
     t.text "last_connection_error"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.boolean "manual_sync", default: false, null: false
     t.uuid "current_job_sophtron_account_id"
     t.index ["current_job_sophtron_account_id"], name: "index_sophtron_items_on_current_job_sophtron_account_id"
