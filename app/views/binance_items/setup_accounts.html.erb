@@ -33,6 +33,18 @@
           </div>
         </div>
 
+        <div class="bg-surface border border-primary p-4 rounded-lg space-y-3">
+          <p class="text-sm font-medium text-primary"><%= t(".historical_import", default: "Historical Import Settings") %></p>
+          <div class="field">
+            <%= form.label :sync_start_date, t("settings.providers.binance_panel.sync_start_date_label", default: "Import data from"), class: "label" %>
+            <%= form.date_field :sync_start_date,
+                                value: @binance_item.sync_start_date || (Date.current - 1.year),
+                                max: Date.current,
+                                class: "input" %>
+            <p class="help-text mt-1 text-xs text-secondary"><%= t("settings.providers.binance_panel.sync_start_date_help", default: "Select how far back to fetch historical trades.") %></p>
+          </div>
+        </div>
+
         <% if @binance_accounts.empty? %>
           <div class="text-center py-8">
             <p class="text-secondary"><%= t(".no_accounts") %></p>

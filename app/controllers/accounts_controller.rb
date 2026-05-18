@@ -24,6 +24,7 @@ class AccountsController < ApplicationController
     @ibkr_items = visible_provider_items(family.ibkr_items.ordered.includes(:syncs, :ibkr_accounts))
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
+    @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -396,6 +397,21 @@ class AccountsController < ApplicationController
       @indexa_capital_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Binance sync stats
+      @binance_sync_stats_map = {}
+      @binance_unlinked_count_map = {}
+      @binance_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @binance_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+
+        # Count unlinked accounts
+        count = item.binance_accounts
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
+          .count
+        @binance_unlinked_count_map[item.id] = count
       end
     end
 end

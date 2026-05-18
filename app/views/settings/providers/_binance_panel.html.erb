@@ -54,6 +54,15 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
+            <% if item.unlinked_accounts_count > 0 %>
+              <%= render DS::Link.new(
+                text: t("binance_items.binance_item.setup_action"),
+                icon: "plus",
+                variant: "primary",
+                href: setup_accounts_binance_item_path(item),
+                frame: :modal
+              ) %>
+            <% end %>
             <%= button_to sync_binance_item_path(item),
                           method: :post,
                           class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
