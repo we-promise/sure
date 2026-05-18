@@ -214,14 +214,18 @@ class Holding::Materializer
     end
 
     def provider_cost_basis_snapshots
-      @provider_cost_basis_snapshots ||= account.holdings
-        .where.not(account_provider_id: nil)
-        .where.not(cost_basis: nil)
-        .order(:date)
-        .pluck(:security_id, :currency, :date, :cost_basis)
-        .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|
-          memo[security_id] << [ date, cost_basis, currency ]
-        end
+      @provider_cost_basis_snapshots ||= begin
+        ids = @holdings.map(&:security_id).uniq
+        account.holdings
+          .where.not(account_provider_id: nil)
+          .where.not(cost_basis: nil)
+          .where(security_id: ids)
+          .order(:date) # ascending required: carry_forward_provider_cost_basis scans and breaks on snap_date > holding.date
+          .pluck(:security_id, :currency, :date, :cost_basis)
+          .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|
+            memo[security_id] << [ date, cost_basis, currency ]
+          end
+      end
     end
 
     def purge_stale_holdings
