@@ -1,6 +1,11 @@
 ---
 en:
   goals:
+    color_picker:
+      color_heading: Color
+      icon_heading: Icon
+      poor_contrast: Poor contrast, choose darker color or
+      auto_adjust: auto-adjust.
     index:
       title: Goals
       subtitle: Save toward what matters.
