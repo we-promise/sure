@@ -15,7 +15,9 @@ pt-BR:
       none: (nenhum)
       note_label: Notas
       note_placeholder: Digite uma nota
+      create_tag: Criar
       submit: Adicionar transação
+      tag_search_placeholder: Pesquisar ou criar tag
       tags_label: Tags
       transfer: Transferência
     new:

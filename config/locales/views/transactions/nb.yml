@@ -15,7 +15,9 @@ nb:
       none: (ingen)
       note_label: Notater
       note_placeholder: Skriv et notat
+      create_tag: Opprett
       submit: Legg til transaksjon
+      tag_search_placeholder: Søk etter eller opprett tagg
       tags_label: Tagger
       transfer: Overføring
     new:

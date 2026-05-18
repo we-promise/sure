@@ -67,6 +67,11 @@
     text-overflow: clip;
   }
 
+  .form-field__input--multiselect-trigger {
+    @apply whitespace-normal overflow-visible;
+    text-overflow: clip;
+  }
+
   select.form-field__input,
   button.form-field__input  {
     @apply pr-10 appearance-none;
