@@ -14,7 +14,6 @@
 @import "./date-picker-dark-mode.css";
 @import "./print-report.css";
 @import "./privacy-mode.css";
-@import "./goals.css";
 
 @layer components {
   .pcr-app{
@@ -187,6 +186,20 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width:none
+}
+
+/* Tinted-bg + colored-content avatar used by Goals::AvatarComponent and
+   the goals color/icon picker. Theme-aware text color: light mode darkens
+   the letter/icon so pale palette entries (cyan-300, green-300, etc.) keep
+   ~4.5:1 contrast against the 10%-mix tint over white. Dark mode reverts
+   to the full color so the letter doesn't disappear against the near-black
+   surface. */
+.goal-avatar {
+  background-color: color-mix(in oklab, var(--avatar-color) 10%, transparent);
+  color: color-mix(in oklab, var(--avatar-color) 55%, black);
+}
+[data-theme="dark"] .goal-avatar {
+  color: var(--avatar-color);
 }
 
 .invite_code [data-clipboard-target="iconDefault"],
