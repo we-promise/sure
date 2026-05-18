@@ -57,6 +57,23 @@ Wrap the relevant fragment in the helper:
 
 Same pattern works for dashboard widgets, scoreboard cards, anything that surfaces beta data alongside non-beta data. The helper resolves on every request and reflects the current user's preference.
 
+## Gating the main nav
+
+The desktop sidebar rail and the mobile bottom nav both render from `app/views/layouts/shared/_nav_item.html.erb`. The partial accepts an optional `beta:` local — when true, it overlays a violet dot-only pill on the icon so opted-in users can tell at a glance that the rail entry leads to a beta surface.
+
+Build the nav-item hash conditionally inside the `beta_features_enabled?` branch and set `beta: true` on it. The compact form using `Array#compact` keeps the array clean:
+
+```erb
+<% mobile_nav_items = [
+  { name: t(".nav.home"), path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
+  { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
+  (beta_features_enabled? ? { name: t(".nav.goals"), path: goals_path, icon: "piggy-bank", icon_custom: false, active: page_active?(goals_path), beta: true } : nil),
+  { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
+].compact %>
+```
+
+Two things happen from this single change: non-beta users never see the entry (the `nil` gets compacted out) and beta users see the entry with the dot marker (the partial reads `beta:` and renders the pill). You don't need to touch `_nav_item.html.erb` itself.
+
 ## Marking the feature in the UI
 
 When a beta surface renders for an opted-in user, mark it. The pill component lives in the design system:
@@ -114,7 +131,7 @@ When a feature moves from beta to general availability, removing the gate is a s
 
 1. Drop the `before_action :require_beta_features!` line from the controller.
 2. Unwrap the `if beta_features_enabled?` blocks in views.
-3. Drop the `DS::Pill` markers from headers, nav, and section titles.
+3. Drop the `DS::Pill` markers from headers and section titles, and drop the `beta: true` flag from the nav-item hash.
 4. Delete the controller / view tests that exercise the redirect.
 
 Grep for `require_beta_features!` and `beta_features_enabled?` near your feature to confirm nothing's left behind.
