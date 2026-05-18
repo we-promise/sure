@@ -62,7 +62,7 @@ const WAITING_MESSAGES: Record<string, string> = {
 
 export class RailsContainer extends Container {
   defaultPort = 3000;
-  pingEndpoint = "container/up";
+  pingEndpoint = "localhost/up";
   entrypoint = ["/rails/bin/preview-entrypoint", "bundle", "exec", "puma", "-C", "config/puma.rb"];
   envVars = {
     RAILS_ENV: "development",
