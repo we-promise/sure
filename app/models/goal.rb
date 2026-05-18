@@ -36,6 +36,8 @@ class Goal < ApplicationRecord
   end
 
   aasm column: :state do
+    after_all_transitions :reset_state_dependent_caches!
+
     state :active, initial: true
     state :paused
     state :completed
@@ -398,6 +400,16 @@ class Goal < ApplicationRecord
   end
 
   private
+    # Cleared after every AASM transition. The state column drives the
+    # display_status / projection_summary memos; without this the same
+    # instance keeps returning the pre-transition value if a controller
+    # calls archive! / pause! and then renders without reload.
+    def reset_state_dependent_caches!
+      %i[@display_status @projection_summary].each do |ivar|
+        remove_instance_variable(ivar) if instance_variable_defined?(ivar)
+      end
+    end
+
     # K/M shorthand for narrow chart annotations (axis ticks, projection
     # short-form, pending-pledge badge). Locale-aware currency symbol via
     # Money so the chart matches the rest of the app for EUR/GBP families.
