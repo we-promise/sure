@@ -2,7 +2,10 @@ require "test_helper"
 
 class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
   setup do
-    @processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    @processor = SimplefinAccount::Investments::HoldingsProcessor.new(
+      OpenStruct.new(raw_holdings_payload: nil, current_account: nil)
+    )
+
   end
 
   test "cost_basis source is used unchanged as per share basis" do
@@ -158,15 +161,15 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
   end
 
   test "aggregation_key returns upcased symbol" do
-    assert_equal "AAPL", @processor.send(:aggregation_key, { "symbol" => "aapl", "id" => "x" })
+    assert_equal "AAPL-USD", @processor.send(:aggregation_key, { "symbol" => "aapl", "id" => "x", "currency" => "usd" })
   end
 
   test "aggregation_key returns __nosym_ key when symbol is nil" do
-    assert_equal "__nosym_cash-1", @processor.send(:aggregation_key, { "symbol" => nil, "id" => "cash-1" })
+    assert_equal "__nosym_cash-1", @processor.send(:aggregation_key, { "symbol" => nil, "id" => "cash-1", "currency" => "USD" })
   end
 
   test "aggregation_key returns __nosym_ key when symbol is blank" do
-    assert_equal "__nosym_cash-2", @processor.send(:aggregation_key, { "symbol" => "", "id" => "cash-2" })
+    assert_equal "__nosym_cash-2", @processor.send(:aggregation_key, { "symbol" => "", "id" => "cash-2", "currency" => "USD" })
   end
 
   test "weighted_average_cost_basis returns nil when no lot has a basis" do
@@ -207,39 +210,53 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
   end
 
   test "holdings_data returns empty array when payload is nil" do
-    account = Struct.new(:raw_holdings_payload).new(nil)
+    account = OpenStruct.new(raw_holdings_payload: nil, current_account: nil)
     processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
     assert_equal [], processor.send(:holdings_data)
   end
 
   test "holdings_data aggregates multiple lots for the same symbol into one record" do
     raw = [
-      { "id" => "lot-a", "symbol" => "VOO", "shares" => "3", "market_value" => "900" },
-      { "id" => "lot-b", "symbol" => "VOO", "shares" => "7", "market_value" => "2100" }
+      { "id" => "lot-a", "symbol" => "VOO", "currency" => "USD", "shares" => "3", "market_value" => "900" },
+      { "id" => "lot-b", "symbol" => "VOO", "currency" => "USD", "shares" => "7", "market_value" => "2100" }
     ]
-    account = Struct.new(:raw_holdings_payload).new(raw)
+    account = OpenStruct.new(raw_holdings_payload: raw, current_account: nil)
     processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
 
     result = processor.send(:holdings_data)
 
     assert_equal 1, result.size
-    assert_equal "HOL-VOO", result.first["id"]
+    assert_equal "HOL-VOO-USD", result.first["id"]
     assert_in_delta 10.0, result.first["shares"].to_f, 0.0001
     assert_in_delta 3000.0, result.first["market_value"].to_f, 0.0001
   end
 
   test "holdings_data keeps distinct symbols as separate records" do
     raw = [
-      { "id" => "a", "symbol" => "AAPL", "shares" => "1", "market_value" => "150" },
-      { "id" => "b", "symbol" => "GOOG", "shares" => "2", "market_value" => "300" }
+      { "id" => "a", "symbol" => "AAPL", "currency" => "USD", "shares" => "1", "market_value" => "150" },
+      { "id" => "b", "symbol" => "GOOG", "currency" => "USD", "shares" => "2", "market_value" => "300" }
     ]
-    account = Struct.new(:raw_holdings_payload).new(raw)
+    account = OpenStruct.new(raw_holdings_payload: raw, current_account: nil)
     processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
 
     result = processor.send(:holdings_data)
 
     assert_equal 2, result.size
-    assert_equal %w[HOL-AAPL HOL-GOOG], result.map { |h| h["id"] }.sort
+    assert_equal %w[HOL-AAPL-USD HOL-GOOG-USD], result.map { |h| h["id"] }.sort
+  end
+
+  test "holdings_data keeps same-symbol different-currency lots as separate records" do
+    raw = [
+      { "id" => "a", "symbol" => "AAPL", "currency" => "USD", "shares" => "1", "market_value" => "150" },
+      { "id" => "b", "symbol" => "AAPL", "currency" => "GBP", "shares" => "2", "market_value" => "240" }
+    ]
+    account = OpenStruct.new(raw_holdings_payload: raw, current_account: nil)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
+
+    result = processor.send(:holdings_data)
+
+    assert_equal 2, result.size
+    assert_equal %w[HOL-AAPL-GBP HOL-AAPL-USD], result.map { |h| h["id"] }.sort
   end
 
   test "holdings_data does not aggregate symbolless lots" do
@@ -247,7 +264,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       { "id" => "cash-1", "symbol" => nil, "shares" => "1", "market_value" => "100" },
       { "id" => "cash-2", "symbol" => nil, "shares" => "1", "market_value" => "200" }
     ]
-    account = Struct.new(:raw_holdings_payload).new(raw)
+    account = OpenStruct.new(raw_holdings_payload: raw, current_account: nil)
     processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
 
     result = processor.send(:holdings_data)
@@ -255,17 +272,17 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal 2, result.size
   end
 
-  test "normalize_to_aggregate sets id to HOL-{SYMBOL}" do
-    lots = [ { "id" => "lot-1", "symbol" => "msft", "shares" => "5", "market_value" => "500" } ]
-    assert_equal "HOL-MSFT", @processor.send(:normalize_to_aggregate, lots)["id"]
+  test "normalize_to_aggregate sets id to HOL-{SYMBOL:CURRENCY}" do
+    lots = [ { "id" => "lot-1", "symbol" => "msft", "currency" => "USD", "shares" => "5", "market_value" => "500" } ]
+    assert_equal "HOL-MSFT-USD", @processor.send(:normalize_to_aggregate, "MSFT-USD", lots)["id"]
   end
 
   test "normalize_to_aggregate removes qty alias keys after merge" do
     lots = [
-      { "id" => "a", "symbol" => "QQQ", "shares" => "2", "quantity" => "2", "qty" => "2", "units" => "2", "market_value" => "200" },
-      { "id" => "b", "symbol" => "QQQ", "shares" => "3", "quantity" => "3", "qty" => "3", "units" => "3", "market_value" => "300" }
+      { "id" => "a", "symbol" => "QQQ", "currency" => "USD", "shares" => "2", "quantity" => "2", "qty" => "2", "units" => "2", "market_value" => "200" },
+      { "id" => "b", "symbol" => "QQQ", "currency" => "USD", "shares" => "3", "quantity" => "3", "qty" => "3", "units" => "3", "market_value" => "300" }
     ]
-    result = @processor.send(:normalize_to_aggregate, lots)
+    result = @processor.send(:normalize_to_aggregate, "QQQ-USD", lots)
 
     assert_nil result["quantity"]
     assert_nil result["qty"]
@@ -274,8 +291,8 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
   end
 
   test "normalize_to_aggregate removes legacy cost basis alias keys" do
-    lots = [ { "id" => "a", "symbol" => "F", "shares" => "10", "market_value" => "100", "basis" => "80", "total_cost" => "80", "value" => "80" } ]
-    result = @processor.send(:normalize_to_aggregate, lots)
+    lots = [ { "id" => "a", "symbol" => "F", "currency" => "USD", "shares" => "10", "market_value" => "100", "basis" => "80", "total_cost" => "80", "value" => "80" } ]
+    result = @processor.send(:normalize_to_aggregate, "F-USD", lots)
 
     assert_nil result["basis"]
     assert_nil result["total_cost"]
@@ -283,7 +300,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
   end
 
   test "normalize_to_aggregate omits cost_basis key when no basis data is present" do
-    lots = [ { "id" => "a", "symbol" => "F", "shares" => "5", "market_value" => "50" } ]
-    assert_not @processor.send(:normalize_to_aggregate, lots).key?("cost_basis")
+    lots = [ { "id" => "a", "symbol" => "F", "currency" => "USD", "shares" => "5", "market_value" => "50" } ]
+    assert_not @processor.send(:normalize_to_aggregate, "F-USD", lots).key?("cost_basis")
   end
 end

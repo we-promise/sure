@@ -119,7 +119,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
       grouped.flat_map do |key, lots|
         next lots if key.start_with?("__nosym_")
-        [ normalize_to_aggregate(lots) ]
+        [ normalize_to_aggregate(key, lots) ]
       end
     end
 
@@ -133,16 +133,16 @@ class SimplefinAccount::Investments::HoldingsProcessor
       return "__nosym_#{holding['id']}" unless sym
 
       currency = holding["currency"].to_s.upcase.presence || "UNKNOWN"
-      "#{sym}:#{currency}"
+      "#{sym}-#{currency}"
     end
 
     # Merges one or more lots for the same symbol into a single canonical holding
     # hash. Quantities and market values are summed; cost basis is computed as a
     # weighted average via +weighted_average_cost_basis+. The merged record is
-    # assigned a stable synthetic id of the form "HOL-{SYMBOL}", and all
+    # assigned a stable synthetic id of the form "HOL-{SYMBOL-CURRENCY}", and all
     # quantity/value field aliases are removed in favour of the canonical
     # +shares+ and +market_value+ keys.
-    def normalize_to_aggregate(lots)
+    def normalize_to_aggregate(key, lots)
       first = lots.first
       symbol = first["symbol"].to_s.strip.upcase
 
@@ -154,7 +154,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
       cost_basis  = weighted_average_cost_basis(lots, qty_keys)
 
       merged = first.dup
-      merged["id"] = "HOL-#{symbol}"
+      merged["id"] = "HOL-#{key}"
       merged["symbol"] = symbol
 
       qty_keys.each   { |k| merged.delete(k) }
@@ -168,19 +168,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         merged["cost_basis"] = stored_basis.to_s
       end
 
-      if lots.size > 1
-        Rails.logger.debug(
-          "SimpleFIN: aggregated #{lots.size} lots for #{symbol} " \
-          "qty=#{total_qty} value=#{total_value}" \
-          "#{cost_basis ? " cost_basis=#{cost_basis}" : ''} " \
-          "lot_ids=#{lots.map { |l| l['id'] }.compact.inspect}"
-        )
-      else
-        Rails.logger.debug(
-          "SimpleFIN: normalized single lot for #{symbol} " \
-          "external_id=HOL-#{symbol} (was #{first['id']})"
-        )
-      end
+      Rails.logger.debug("SimpleFIN: normalized #{lots.size} lot for #{symbol}")
 
       merged
     end
