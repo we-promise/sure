@@ -5,6 +5,7 @@ class Goal < ApplicationRecord
   ICONS = Category.icon_codes
 
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
+  validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
   belongs_to :family
   has_many :goal_accounts, dependent: :destroy
