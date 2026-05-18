@@ -152,7 +152,7 @@ class PagesController < ApplicationController
 
       add_node = ->(unique_key, display_name, value, percentage, color) {
         node_indices[unique_key] ||= begin
-          nodes << { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << { id: unique_key, name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
           nodes.size - 1
         end
       }

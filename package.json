@@ -4,6 +4,7 @@
 	},
 	"name": "sure",
 	"version": "1.0.0",
+	"type": "module",
 	"description": "The personal finance app for everyone",
 	"scripts": {
 		"style:check": "biome check",
