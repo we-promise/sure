@@ -219,6 +219,15 @@ class GoalsController < ApplicationController
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
 
+      # Denominator of the "Goals on track" tile. Goals that hit their
+      # target are no longer being tracked toward pace, so they don't
+      # belong in the fraction; paused goals stop the pace clock on
+      # purpose, so they don't either. When this hits zero the tile
+      # swaps to a celebration / empty state in the view.
+      tracked_total = active_goals.count do |g|
+        !g.paused? && g.status != :reached
+      end
+
       {
         currency: currency,
         velocity_30d_money: Money.new(velocity_30d.abs, currency),
@@ -232,6 +241,7 @@ class GoalsController < ApplicationController
         behind_count: behind,
         no_date_count: no_date,
         paused_count: paused,
+        tracked_total: tracked_total,
         active_total: active_goals.size
       }
     end

@@ -34,6 +34,7 @@ en:
             one: 1 paused
             other: "%{count} paused"
         on_track_sub_all_good: All active goals on pace
+        on_track_all_caught_up: All caught up
       goals_section:
         heading: Goals
         subtitle: Save toward what matters.

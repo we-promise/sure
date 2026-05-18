@@ -151,6 +151,28 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to goals_path
   end
 
+  test "index KPI swaps to 'All caught up' when every tracked goal is reached" do
+    family = users(:family_admin).family
+    family.goals.destroy_all
+    build_goal(family, "Wedding", target_amount: 1, target_date: 1.year.from_now)
+    Goal.any_instance.stubs(:status).returns(:reached)
+
+    get goals_url
+    assert_response :success
+    assert_match(/All caught up/i, response.body)
+    assert_match(/1\s*reached/i, response.body)
+  end
+
+  private
+    def build_goal(family, name, target_amount: 1_000_000, target_date: nil)
+      g = family.goals.new(name: name, target_amount: target_amount, target_date: target_date, currency: "USD")
+      g.goal_accounts.build(account: @depository)
+      g.save!
+      g
+    end
+
+  public
+
   test "another family's goal returns 404" do
     other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
     other_account = Account.create!(family: other_family, accountable: Depository.new, name: "Foreign", currency: "USD", balance: 100)

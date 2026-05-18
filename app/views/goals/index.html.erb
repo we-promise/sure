@@ -45,23 +45,39 @@
 
       <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
         <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.on_track_label") %></p>
-        <p class="text-3xl font-medium text-primary tabular-nums mt-2">
-          <%= t(".kpi.on_track_value", on_track: @kpi[:on_track_count], total: @kpi[:active_total]) %>
-        </p>
-        <p class="text-xs text-secondary mt-1">
-          <%
-            parts = []
-            parts << t(".kpi.on_track_sub_parts.reached", count: @kpi[:reached_count]) if @kpi[:reached_count].positive?
-            parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
-            parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
-            parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?
-          %>
-          <% if parts.any? %>
-            <%= parts.join(" · ") %>
-          <% else %>
-            <%= t(".kpi.on_track_sub_all_good") %>
-          <% end %>
-        </p>
+        <% if @kpi[:tracked_total].zero? && @kpi[:reached_count].positive? %>
+          <%# All active goals already hit their target — fraction would
+              read "0 of 0" or paper over success. Swap to a celebratory
+              empty state instead. %>
+          <p class="text-3xl font-medium text-primary mt-2">
+            <%= t(".kpi.on_track_all_caught_up") %>
+          </p>
+          <p class="text-xs text-secondary mt-1">
+            <%= t(".kpi.on_track_sub_parts.reached", count: @kpi[:reached_count]) %>
+          </p>
+        <% else %>
+          <p class="text-3xl font-medium text-primary tabular-nums mt-2">
+            <%= t(".kpi.on_track_value", on_track: @kpi[:on_track_count], total: @kpi[:tracked_total]) %>
+          </p>
+          <p class="text-xs text-secondary mt-1">
+            <%
+              # Reached goals are intentionally absent from the subline when
+              # the fraction is calculable. They no longer count toward pace
+              # tracking, and surfacing "N reached" next to "X of Y" muddied
+              # the message (the fraction is a needle, "N reached" is a
+              # trophy. different signals).
+              parts = []
+              parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
+              parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
+              parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?
+            %>
+            <% if parts.any? %>
+              <%= parts.join(" · ") %>
+            <% else %>
+              <%= t(".kpi.on_track_sub_all_good") %>
+            <% end %>
+          </p>
+        <% end %>
       </div>
     </section>
 
