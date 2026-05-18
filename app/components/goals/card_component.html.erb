@@ -3,14 +3,7 @@
      data-goal-name="<%= goal.name %>"
      data-goal-status="<%= goal.display_status %>">
   <div class="flex items-start gap-3">
-    <div class="relative shrink-0">
-      <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
-      <% if has_pending_pledge? %>
-        <span class="absolute -top-0.5 -right-0.5">
-          <%= render DS::Pill.new(tone: :amber, size: :md, dot_only: true, title: t("goals.goal_card.pending_pledge")) %>
-        </span>
-      <% end %>
-    </div>
+    <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2 mb-0.5">
         <p class="text-base font-medium text-primary truncate">
@@ -20,6 +13,14 @@
             <%= goal.name %>
           </a>
         </p>
+        <% if has_pending_pledge? %>
+          <span class="text-subdued shrink-0"
+                role="img"
+                aria-label="<%= t("goals.goal_card.pending_pledge") %>"
+                title="<%= t("goals.goal_card.pending_pledge") %>">
+            <%= helpers.icon("clock", size: "xs") %>
+          </span>
+        <% end %>
         <%= render Goals::StatusPillComponent.new(goal: goal) %>
       </div>
       <p class="text-xs text-subdued truncate"><%= secondary_line %></p>
