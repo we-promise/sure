@@ -370,6 +370,10 @@ class User < ApplicationRecord
     preferences&.dig("preview_features_enabled") == true
   end
 
+  def insight_digest_disabled?
+    preferences&.dig("insight_digest_disabled") == true
+  end
+
   def update_transactions_preferences(prefs)
     transaction do
       lock!
@@ -431,7 +435,7 @@ class User < ApplicationRecord
     end
 
     def default_dashboard_section_order
-      %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+      %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
     def default_reports_section_order

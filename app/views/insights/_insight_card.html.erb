@@ -1,0 +1,36 @@
+<%= tag.div id: dom_id(insight),
+    class: class_names(
+      "bg-container rounded-xl shadow-border-xs p-4 flex items-start gap-3",
+      "opacity-70" => insight.status_read?
+    ) do %>
+  <div class="<%= insight_priority_classes(insight) %> rounded-lg p-2 shrink-0">
+    <%= icon(insight_icon(insight), size: "sm") %>
+  </div>
+
+  <div class="flex-1 min-w-0 space-y-1">
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-medium text-primary truncate"><%= insight.title %></h3>
+      <% if insight.high_priority? %>
+        <%= render DS::Pill.new(label: t("insights.priority.high"), tone: :amber, size: :sm, show_dot: false) %>
+      <% end %>
+    </div>
+
+    <p class="text-sm text-secondary"><%= insight.body %></p>
+
+    <div class="flex items-center gap-3 text-xs text-subdued pt-1">
+      <span><%= insight_type_label(insight) %></span>
+      <span aria-hidden="true">&middot;</span>
+      <time datetime="<%= insight.generated_at.iso8601 %>">
+        <%= time_ago_in_words(insight.generated_at) %> <%= t("insights.ago") %>
+      </time>
+    </div>
+  </div>
+
+  <%= button_to dismiss_insight_path(insight),
+        method: :patch,
+        class: "text-secondary hover:text-primary transition-colors p-1 shrink-0",
+        aria: { label: t("insights.dismiss") },
+        form: { data: { turbo_stream: true } } do %>
+    <%= icon("x", size: "sm") %>
+  <% end %>
+<% end %>

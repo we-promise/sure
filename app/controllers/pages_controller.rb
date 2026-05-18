@@ -86,6 +86,14 @@ class PagesController < ApplicationController
     def build_dashboard_sections
       all_sections = [
         {
+          key: "insights_feed",
+          title: "pages.dashboard.insights_feed.title",
+          partial: "pages/dashboard/insights_feed",
+          locals: {},
+          visible: Current.family.insights.visible.any?,
+          collapsible: true
+        },
+        {
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",

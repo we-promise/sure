@@ -1,0 +1,14 @@
+<div class="px-4 space-y-3">
+  <% insights = Current.family.insights.status_active.by_priority.limit(3) %>
+
+  <% if insights.any? %>
+    <%= render partial: "insights/insight_card", collection: insights, as: :insight %>
+
+    <%= link_to insights_path, class: "flex items-center justify-center gap-1 text-sm text-secondary hover:text-primary transition-colors py-1" do %>
+      <span><%= t("insights.feed.view_all") %></span>
+      <%= icon("arrow-right", size: "sm") %>
+    <% end %>
+  <% else %>
+    <p class="text-sm text-secondary text-center py-4"><%= t("insights.feed.empty") %></p>
+  <% end %>
+</div>

@@ -1,0 +1,39 @@
+---
+en:
+  insights:
+    ago: ago
+    dismiss: Dismiss insight
+    dismissed: Insight dismissed
+    refresh_enqueued: We're refreshing your insights. Check back in a moment.
+    index:
+      title: Insights
+      subtitle: Proactive intelligence about what's happening with your money
+      refresh: Refresh
+      empty_title: No insights yet
+      empty_body: We'll analyze your finances and surface anything that needs your attention here.
+    feed:
+      view_all: View all insights
+      empty: No new insights right now.
+    priority:
+      high: Important
+      medium: Medium
+      low: Low
+    types:
+      spending_anomaly: Spending
+      cash_flow_warning: Cash flow
+      net_worth_milestone: Milestone
+      subscription_audit: Subscriptions
+      savings_rate_change: Savings rate
+      idle_cash: Idle cash
+      budget_at_risk: Budget
+      budget_on_track: Budget
+  insight_digest_mailer:
+    weekly:
+      subject:
+        one: "Your weekly financial insight"
+        other: "Your %{count} weekly financial insights"
+      greeting: "Hi %{name},"
+      intro:
+        one: "Here is the insight we surfaced for you this week:"
+        other: "Here are the %{count} insights we surfaced for you this week:"
+      footer: "You can manage these in your dashboard at any time."
