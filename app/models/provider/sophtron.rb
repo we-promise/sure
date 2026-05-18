@@ -354,7 +354,7 @@ class Provider::Sophtron < Provider
 
         parse_json ? JSON.parse(body, symbolize_names: true) : parse_optional_json(body)
       when 400
-        raise Error.new("Bad request to Sophtron API: #{body}", :bad_request, details: body)
+        raise Error.new("Bad request to Sophtron API", :bad_request, details: body)
       when 401
         raise Error.new("Invalid Sophtron User ID or Access Key", :unauthorized, details: body)
       when 403
@@ -365,7 +365,7 @@ class Provider::Sophtron < Provider
         raise Error.new("Sophtron rate limit exceeded. Please try again later.", :rate_limited, details: body)
       else
         raise Error.new(
-          "Sophtron API request failed: #{response.code} #{response.message} - #{body}",
+          "Sophtron API request failed: #{response.code} #{response.message}",
           :fetch_failed,
           details: body
         )
@@ -387,8 +387,8 @@ class Provider::Sophtron < Provider
 
       parsed = URI.parse(url)
       parsed.path.to_s.end_with?("/api") ? url : "#{url}/api"
-    rescue URI::InvalidURIError
-      DEFAULT_BASE_URL
+    rescue URI::InvalidURIError => e
+      raise Error.new("Invalid Sophtron base URL: #{e.message}", :configuration_error)
     end
 
     def normalize_account(account, user_institution_id:)

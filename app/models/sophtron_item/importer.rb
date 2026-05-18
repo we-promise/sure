@@ -340,7 +340,7 @@ class SophtronItem::Importer
         { success: true, transactions_count: transactions_count }
       rescue Provider::Sophtron::Error => e
         requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-        sophtron_item.update!(status: :requires_update) if requires_update
+        sophtron_item.update(status: :requires_update) if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
       rescue JSON::ParserError => e
@@ -365,13 +365,13 @@ class SophtronItem::Importer
         sophtron_item.update!(
           status: :requires_update,
           current_job_id: job_id,
-          last_connection_error: "Sophtron refresh requires MFA"
+          last_connection_error: I18n.t("sophtron_items.errors.refresh_requires_mfa")
         )
-        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA", requires_update: true }
+        return { success: false, transactions_count: 0, error: I18n.t("sophtron_items.errors.refresh_requires_mfa"), requires_update: true }
       end
 
       if Provider::Sophtron.job_failed?(job)
-        return { success: false, transactions_count: 0, error: "Sophtron refresh failed" }
+        return { success: false, transactions_count: 0, error: I18n.t("sophtron_items.errors.refresh_failed") }
       end
 
       unless Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
@@ -387,7 +387,7 @@ class SophtronItem::Importer
       nil
     rescue Provider::Sophtron::Error => e
       requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-      sophtron_item.update!(status: :requires_update) if requires_update
+      sophtron_item.update(status: :requires_update) if requires_update
       Rails.logger.error "SophtronItem::Importer - Sophtron API error refreshing account #{sophtron_account.id}: #{e.message}"
       { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
     end
