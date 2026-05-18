@@ -138,6 +138,16 @@ hu:
       credit_card: Hitelkártya
       loan: Hitel
       other_liability: Egyéb kötelezettség
+    types_plural:
+      depository: Készpénz
+      investment: Befektetések
+      crypto: Kripto
+      property: Ingatlanok
+      vehicle: Járművek
+      other_asset: Egyéb vagyon
+      credit_card: Hitelkártyák
+      loan: Hitelek
+      other_liability: Egyéb kötelezettségek
     tax_treatments:
       taxable: Adóköteles
       tax_deferred: Halasztott adózású

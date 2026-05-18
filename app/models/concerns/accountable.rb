@@ -63,6 +63,10 @@ module Accountable
     end
 
     def display_name
+      I18n.t("accounts.types_plural.#{name.underscore}", default: -> { legacy_display_name })
+    end
+
+    def legacy_display_name
       return singular_display_name if name.in?([ "Depository", "Crypto" ])
 
       singular_display_name.pluralize
