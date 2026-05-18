@@ -641,8 +641,8 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Render dynamic PWA files from app/views/pwa/*
-  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker" => "pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
+  get "manifest" => "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 
