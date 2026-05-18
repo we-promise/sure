@@ -221,13 +221,18 @@ class GoalsController < ApplicationController
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
 
-      # Denominator of the "Goals on track" tile. Goals that hit their
-      # target are no longer being tracked toward pace, so they don't
-      # belong in the fraction; paused goals stop the pace clock on
-      # purpose, so they don't either. When this hits zero the tile
-      # swaps to a celebration / empty state in the view.
+      # Denominator of the "Goals on track" tile. A goal only belongs in
+      # the fraction if there is a benchmark to compare against:
+      # - reached  → target already hit, no longer tracked toward pace
+      # - paused   → user stopped the pace clock on purpose
+      # - no_target_date → open-ended saving (emergency fund, sabbatical
+      #   fund, etc.) has no required monthly pace, so "on track" is
+      #   undefined. Counting it would penalise the user for having
+      #   open-ended goals — they'd never improve the ratio.
+      # When this hits zero the tile swaps to a celebration / empty
+      # state in the view.
       tracked_total = active_goals.count do |g|
-        !g.paused? && g.status != :reached
+        !g.paused? && g.status != :reached && g.status != :no_target_date
       end
 
       {

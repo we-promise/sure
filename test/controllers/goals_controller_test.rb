@@ -176,6 +176,23 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/1\s*reached/i, response.body)
   end
 
+  test "index KPI 'on track' denominator excludes no-target-date goals" do
+    family = users(:family_admin).family
+    family.goals.destroy_all
+    # One trackable goal (has target_date) + one open-ended (no target_date).
+    # The trackable one should be the only thing in the denominator;
+    # open-ended goals can't be off pace because they have no required pace.
+    build_goal(family, "House", target_amount: 1_000_000, target_date: 1.year.from_now)
+    build_goal(family, "Emergency", target_amount: 1_000_000, target_date: nil)
+
+    get goals_url
+    assert_response :success
+    # Expect "0 of 1" — the open-ended goal stays out of the fraction
+    # even though it's active.
+    assert_match(/0\s*of\s*1/i, response.body)
+    assert_match(/without a deadline/i, response.body)
+  end
+
   private
     def build_goal(family, name, target_amount: 1_000_000, target_date: nil)
       g = family.goals.new(name: name, target_amount: target_amount, target_date: target_date, currency: "USD")
