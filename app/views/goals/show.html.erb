@@ -4,10 +4,7 @@
       <%= render Goals::AvatarComponent.new(goal: @goal, size: "xl") %>
     </div>
     <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-2 flex-wrap">
-        <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
-        <%= render DS::Pill.new(label: "Beta", size: :md) %>
-      </div>
+      <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
       <p class="text-sm text-secondary mt-1"><%= @goal.header_summary %></p>
       <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
