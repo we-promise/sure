@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
@@ -46,7 +47,7 @@ class _LoginFormBodyState extends State<LoginFormBody> {
   void initState() {
     super.initState();
     _signUpTapRecognizer = TapGestureRecognizer()..onTap = _openSignUpPage;
-    if (!widget.branded) {
+    if (kDebugMode && !widget.branded) {
       _emailController.text = _emailPlaceholder;
       _passwordController.text = _passwordPlaceholder;
       _emailFocus.addListener(() => _clearPlaceholderOnFocus(
@@ -157,26 +158,36 @@ class _LoginFormBodyState extends State<LoginFormBody> {
               height: 80,
             ),
             const SizedBox(height: 24),
-            Text.rich(
-              TextSpan(
+            if (kDebugMode) ...[
+              Text.rich(
+                TextSpan(
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                  children: [
+                    const TextSpan(text: 'Demo account or '),
+                    TextSpan(
+                      text: 'Sign Up',
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: _signUpTapRecognizer,
+                    ),
+                    const TextSpan(text: '!'),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ] else ...[
+              Text(
+                'Welcome back',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
-                children: [
-                  const TextSpan(text: 'Demo account or '),
-                  TextSpan(
-                    text: 'Sign Up',
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    recognizer: _signUpTapRecognizer,
-                  ),
-                  const TextSpan(text: '!'),
-                ],
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
+            ],
             const SizedBox(height: 48),
           ],
 
@@ -555,62 +566,64 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const LoginFormBody(branded: false, allowSignUp: false),
 
-                  // Backend URL info
-                  InkWell(
-                    onTap: () => widget._openSettings(context),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Sure server URL:',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            ApiConfig.baseUrl,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontFamily: 'monospace',
-                                ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                  if (kDebugMode) ...[
+                    // Backend URL info
+                    InkWell(
+                      onTap: () => widget._openSettings(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Sure server URL:',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              ApiConfig.baseUrl,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontFamily: 'monospace',
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  // API Key Login Button
-                  TextButton.icon(
-                    onPressed: _showApiKeyDialog,
-                    icon: const Icon(Icons.vpn_key_outlined, size: 18),
-                    label: const Text('API-Key Login'),
-                  ),
+                    // API Key Login Button
+                    TextButton.icon(
+                      onPressed: _showApiKeyDialog,
+                      icon: const Icon(Icons.vpn_key_outlined, size: 18),
+                      label: const Text('API-Key Login'),
+                    ),
+                  ],
                 ],
               ),
             ),
 
-            // Settings gear
-            Positioned(
-              right: 8,
-              top: 8,
-              child: IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Backend Settings',
-                onPressed: () => widget._openSettings(context),
+            if (kDebugMode)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Backend Settings',
+                  onPressed: () => widget._openSettings(context),
+                ),
               ),
-            ),
           ],
         ),
       ),
