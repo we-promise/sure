@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -76,15 +76,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.index ["family_id"], name: "index_account_statements_on_family_id"
     t.index ["suggested_account_id", "review_status"], name: "index_account_statements_on_suggested_account_review"
     t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
-    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
-    t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
     t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
+    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
+    t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     t.check_constraint "char_length(checksum::text) <= 64", name: "chk_account_statements_checksum_length"
     t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"
+    t.check_constraint "char_length(filename::text) <= 255", name: "chk_account_statements_filename_length"
     t.check_constraint "content_sha256 IS NULL OR content_sha256::text ~ '^[0-9a-f]{64}$'::text", name: "chk_account_statements_content_sha256"
     t.check_constraint "currency IS NULL OR char_length(currency::text) <= 3", name: "chk_account_statements_currency_length"
-    t.check_constraint "char_length(filename::text) <= 255", name: "chk_account_statements_filename_length"
     t.check_constraint "institution_name_hint IS NULL OR char_length(institution_name_hint::text) <= 200", name: "chk_account_statements_institution_hint_length"
     t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
     t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
@@ -472,6 +472,33 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
     t.datetime "updated_at", null: false
     t.index ["enrichable_id", "enrichable_type", "source", "attribute_name"], name: "idx_on_enrichable_id_enrichable_type_source_attribu_5be5f63e08", unique: true
     t.index ["enrichable_type", "enrichable_id"], name: "index_data_enrichments_on_enrichable"
+  end
+
+  create_table "debug_log_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "category", null: false
+    t.string "level", null: false
+    t.text "message", null: false
+    t.string "source", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.uuid "family_id"
+    t.uuid "account_id"
+    t.uuid "user_id"
+    t.uuid "account_provider_id"
+    t.string "provider_key"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_debug_log_entries_on_account_id"
+    t.index ["account_provider_id"], name: "index_debug_log_entries_on_account_provider_id"
+    t.index ["category", "created_at"], name: "index_debug_log_entries_on_category_and_created_at"
+    t.index ["category"], name: "index_debug_log_entries_on_category"
+    t.index ["created_at"], name: "index_debug_log_entries_on_created_at"
+    t.index ["family_id"], name: "index_debug_log_entries_on_family_id"
+    t.index ["level"], name: "index_debug_log_entries_on_level"
+    t.index ["provider_key", "created_at"], name: "index_debug_log_entries_on_provider_key_and_created_at"
+    t.index ["provider_key"], name: "index_debug_log_entries_on_provider_key"
+    t.index ["source"], name: "index_debug_log_entries_on_source"
+    t.index ["user_id"], name: "index_debug_log_entries_on_user_id"
+    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying, 'info'::character varying, 'warn'::character varying, 'error'::character varying]::text[])", name: "chk_debug_log_entries_level"
   end
 
   create_table "depositories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1874,6 +1901,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_12_211200) do
   add_foreign_key "coinbase_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
+  add_foreign_key "debug_log_entries", "account_providers", on_delete: :nullify
+  add_foreign_key "debug_log_entries", "accounts", on_delete: :nullify
+  add_foreign_key "debug_log_entries", "families", on_delete: :nullify
+  add_foreign_key "debug_log_entries", "users", on_delete: :nullify
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "accounts", on_delete: :cascade
