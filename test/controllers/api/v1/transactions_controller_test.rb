@@ -757,6 +757,388 @@ end
     assert transaction_data["transfer"].key?("other_account")
   end
 
+  # BATCH CREATE action tests
+  test "batch_create requires write scope" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [ { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" } ] },
+      as: :json,
+      headers: api_headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "batch_create requires authentication" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [ { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" } ] },
+      as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "batch_create returns per-item validation errors for invalid date" do
+    assert_no_difference("@account.entries.count") do
+      post batch_api_v1_transactions_url,
+        params: {
+          transactions: [
+            { account_id: @account.id, date: "not-a-date", amount: 1, nature: "expense", name: "x" }
+          ]
+        },
+        as: :json,
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+    assert body["results"][0]["errors"].any? { |error| error.match?(/Date/) }
+  end
+
+  test "batch_create rejects empty array" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "validation_failed", body["error"]
+  end
+
+  test "batch_create rejects more than MAX_BATCH_SIZE items" do
+    oversized = Array.new(101) {
+      { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" }
+    }
+    post batch_api_v1_transactions_url,
+      params: { transactions: oversized },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :bad_request
+    body = JSON.parse(response.body)
+    assert_equal "batch_too_large", body["error"]
+  end
+
+  test "batch_create persists all valid items and returns 207" do
+    payload = {
+      transactions: [
+        { account_id: @account.id, date: "2026-05-09", amount: 12.34, nature: "expense", name: "Coffee", client_ref: "a1" },
+        { account_id: @account.id, date: "2026-05-09", amount: 50.00, nature: "expense", name: "Lunch",  client_ref: "a2" }
+      ]
+    }
+    assert_difference -> { @family.transactions.count }, 2 do
+      post batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    end
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal 2, body["summary"]["total"]
+    assert_equal 2, body["summary"]["succeeded"]
+    assert_equal 0, body["summary"]["failed"]
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal "a1",       body["results"][0]["client_ref"]
+    assert_equal 0,          body["results"][0]["index"]
+    assert body["results"][0]["transaction"].present?
+  end
+
+  test "batch_create serializes transactions without per-item controller rendering" do
+    Api::V1::TransactionsController.any_instance.stubs(:render_to_string).raises("unexpected render")
+
+    post batch_api_v1_transactions_url,
+      params: {
+        transactions: [
+          { account_id: @account.id, date: "2026-05-09", amount: 12.34, nature: "expense", name: "Coffee" }
+        ]
+      },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal "Coffee", body["results"][0]["transaction"]["name"]
+    assert body["results"][0]["transaction"].key?("external_id")
+    assert body["results"][0]["transaction"].key?("source")
+  end
+
+  test "batch_create returns created when sync enqueue fails after persist" do
+    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "enqueue failed")
+
+    assert_difference -> { @family.transactions.count }, 1 do
+      post batch_api_v1_transactions_url,
+        params: {
+          transactions: [
+            { account_id: @account.id, date: "2026-05-09", amount: 12.34, nature: "expense", name: "Coffee" }
+          ]
+        },
+        as: :json,
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal 1, body["summary"]["succeeded"]
+    assert_equal 0, body["summary"]["failed"]
+  end
+
+  test "batch_create returns per-item errors and continues processing" do
+    payload = {
+      transactions: [
+        { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "Good" },
+        { date: "2026-05-09", amount: 1, nature: "expense", name: "BadNoAccount" },
+        { account_id: @account.id, date: "2026-05-09", amount: 2, nature: "expense", name: "Good2" }
+      ]
+    }
+    assert_difference -> { @family.transactions.count }, 2 do
+      post batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    end
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "created", body["results"][0]["status"]
+    assert_equal "error",   body["results"][1]["status"]
+    assert_equal "validation_failed", body["results"][1]["error"]
+    assert_equal "created", body["results"][2]["status"]
+    assert_equal 2, body["summary"]["succeeded"]
+    assert_equal 1, body["summary"]["failed"]
+  end
+
+  test "batch_create returns error for account not writable by caller" do
+    other_family = families(:empty)
+    other_account = Account.create!(
+      family: other_family, name: "Other", balance: 0, currency: "USD",
+      accountable: Depository.new
+    )
+    payload = {
+      transactions: [
+        { account_id: other_account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" }
+      ]
+    }
+    post batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "not_found", body["results"][0]["error"]
+  end
+
+  test "batch_create rejects scalar items with validation_failed" do
+    post batch_api_v1_transactions_url,
+      params: { transactions: [ "not-an-object" ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
+  test "batch_create renders error message on top-level failure" do
+    Api::V1::TransactionsController.any_instance.stubs(:process_create_item).raises(StandardError, "boom")
+
+    post batch_api_v1_transactions_url,
+      params: {
+        transactions: [
+          { account_id: @account.id, date: "2026-05-09", amount: 1, nature: "expense", name: "x" }
+        ]
+      },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    body = JSON.parse(response.body)
+    assert_equal "internal_server_error", body["error"]
+    assert_equal "Error: boom", body["message"]
+  end
+
+  # BATCH UPDATE action tests
+  test "batch_update requires write scope" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "batch_update requires authentication" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, notes: "x" } ] },
+      as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "batch_update returns per-item validation errors for invalid date" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, date: "not-a-date" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+    assert body["results"][0]["errors"].any? { |error| error.match?(/Date/) }
+  end
+
+  test "batch_update applies per-item changes and returns 207" do
+    ordered = @family.transactions.joins(:entry).order("entries.id").to_a
+    t1 = ordered[0]
+    t2 = ordered[1]
+    category = @family.categories.first
+    tag = @family.tags.first
+
+    payload = {
+      transactions: [
+        { id: t1.id, category_id: category.id, tag_ids: [ tag.id ], client_ref: "u1" },
+        { id: t2.id, notes: "client lunch" }
+      ]
+    }
+    patch batch_api_v1_transactions_url, params: payload, as: :json, headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "updated", body["results"][0]["status"]
+    assert_equal "u1",      body["results"][0]["client_ref"]
+    assert_equal "updated", body["results"][1]["status"]
+
+    t1.reload
+    assert_equal category.id, t1.category_id
+    assert_includes t1.tag_ids, tag.id
+
+    t2.reload.entry.reload
+    assert_equal "client lunch", t2.entry.notes
+  end
+
+  test "batch_update serializes transactions without per-item controller rendering" do
+    target = @family.transactions.joins(:entry).order("entries.id").first
+    Api::V1::TransactionsController.any_instance.stubs(:render_to_string).raises("unexpected render")
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: target.id, notes: "render-free" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "updated", body["results"][0]["status"]
+    assert_equal "render-free", body["results"][0]["transaction"]["notes"]
+    assert body["results"][0]["transaction"].key?("external_id")
+    assert body["results"][0]["transaction"].key?("source")
+  end
+
+  test "batch_update returns updated when sync enqueue fails after persist" do
+    target = @family.transactions.joins(:entry).order("entries.id").first
+    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "enqueue failed")
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: target.id, notes: "persisted despite enqueue failure" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "updated", body["results"][0]["status"]
+    assert_equal 1, body["summary"]["succeeded"]
+    assert_equal 0, body["summary"]["failed"]
+    assert_equal "persisted despite enqueue failure", target.reload.entry.notes
+  end
+
+  test "batch_update tag_ids: [] clears tags; omitted tag_ids preserves them" do
+    t1 = @family.transactions.first
+    tag = @family.tags.first
+    t1.update!(tag_ids: [ tag.id ])
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: t1.id, tag_ids: [] } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    assert_empty t1.reload.tag_ids
+
+    t1.update!(tag_ids: [ tag.id ])
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: t1.id, notes: "n" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    assert_equal [ tag.id ], t1.reload.tag_ids
+  end
+
+  test "batch_update returns not_found for id outside family" do
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(
+      name: "Other Family Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    other_family_txn = other_account.entries.create!(
+      name: "Other Family Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    ).transaction
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: other_family_txn.id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "not_found", body["results"][0]["error"]
+  end
+
+  test "batch_update returns error for missing id" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
+  test "batch_update rejects scalar items with validation_failed" do
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ 123 ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+  end
+
+  test "batch_update renders error message on top-level failure" do
+    Api::V1::TransactionsController.any_instance.stubs(:process_update_item).raises(StandardError, "boom")
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: @transaction.id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    body = JSON.parse(response.body)
+    assert_equal "internal_server_error", body["error"]
+    assert_equal "Error: boom", body["message"]
+  end
+
+  test "batch_update rejects split-child edits with validation_failed" do
+    target_txn = @family.transactions.joins(:entry).order("entries.id").first
+    Entry.any_instance.stubs(:split_child?).returns(true)
+
+    patch batch_api_v1_transactions_url,
+      params: { transactions: [ { id: target_txn.id, notes: "x" } ] },
+      as: :json,
+      headers: api_headers(@api_key)
+
+    assert_response :multi_status
+    body = JSON.parse(response.body)
+    assert_equal "error", body["results"][0]["status"]
+    assert_equal "validation_failed", body["results"][0]["error"]
+    assert_match(/Split child/i, body["results"][0]["errors"].first)
+  end
+
   private
 
     def api_headers(api_key)

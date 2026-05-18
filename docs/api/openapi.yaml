@@ -1406,6 +1406,150 @@ components:
             "$ref": "#/components/schemas/RecurringTransaction"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    BatchTransactionCreateRequest:
+      type: object
+      required:
+      - transactions
+      properties:
+        transactions:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required:
+            - account_id
+            - date
+            - amount
+            properties:
+              account_id:
+                type: string
+              date:
+                type: string
+                format: date
+              amount:
+                type: number
+              nature:
+                type: string
+                enum:
+                - income
+                - expense
+                - inflow
+                - outflow
+              name:
+                type: string
+              description:
+                type: string
+              notes:
+                type: string
+              currency:
+                type: string
+              category_id:
+                type: string
+                nullable: true
+              merchant_id:
+                type: string
+                nullable: true
+              tag_ids:
+                type: array
+                items:
+                  type: string
+              client_ref:
+                type: string
+                description: Optional opaque client correlation id (echoed in response)
+    BatchTransactionUpdateRequest:
+      type: object
+      required:
+      - transactions
+      properties:
+        transactions:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required:
+            - id
+            properties:
+              id:
+                type: string
+              date:
+                type: string
+                format: date
+              amount:
+                type: number
+              nature:
+                type: string
+                enum:
+                - income
+                - expense
+                - inflow
+                - outflow
+              name:
+                type: string
+              description:
+                type: string
+              notes:
+                type: string
+              currency:
+                type: string
+              category_id:
+                type: string
+                nullable: true
+              merchant_id:
+                type: string
+                nullable: true
+              tag_ids:
+                type: array
+                items:
+                  type: string
+                description: Omit to leave unchanged; [] clears all tags
+              client_ref:
+                type: string
+    BatchTransactionResultItem:
+      type: object
+      required:
+      - index
+      - status
+      properties:
+        index:
+          type: integer
+        client_ref:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - created
+          - updated
+          - error
+        transaction:
+          "$ref": "#/components/schemas/Transaction"
+        error:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+    BatchTransactionResponse:
+      type: object
+      required:
+      - results
+      - summary
+      properties:
+        results:
+          type: array
+          items:
+            "$ref": "#/components/schemas/BatchTransactionResultItem"
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
     Transaction:
       type: object
       required:
@@ -6834,6 +6978,57 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions/batch":
+    post:
+      summary: Batch create transactions
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '207':
+          description: batch processed (per-item statuses in body)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BatchTransactionResponse"
+        '400':
+          description: batch too large (> 100 items)
+        '422':
+          description: empty or missing transactions array
+        '403':
+          description: insufficient scope
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/BatchTransactionCreateRequest"
+    patch:
+      summary: Batch update transactions
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '207':
+          description: batch processed (per-item statuses in body)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BatchTransactionResponse"
+        '400':
+          description: batch too large (> 100 items)
+        '422':
+          description: empty or missing transactions array
+        '403':
+          description: insufficient scope
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/BatchTransactionUpdateRequest"
   "/api/v1/transfers":
     get:
       summary: List transfers
