@@ -164,6 +164,10 @@ class User < ApplicationRecord
     ai_enabled && ai_available?
   end
 
+  def insights_enabled?
+    Setting.insights_enabled
+  end
+
   def self.default_ui_layout
     layout = Rails.application.config.x.ui&.default_layout || "dashboard"
     layout.in?(%w[intro dashboard]) ? layout : "dashboard"

@@ -1,0 +1,41 @@
+---
+en:
+  insights:
+    index:
+      title: Insights
+      subtitle: Personalized observations about your finances, updated daily
+      refresh: Refresh
+    view_all: View all insights
+    empty_dashboard: Your first insights will appear here after your accounts sync
+    empty:
+      title: No new insights
+      body: We'll analyze your data overnight and surface anything worth your attention
+    refresh_queued: Generating fresh insights — check back in a minute
+    generated_at: Generated %{time} ago
+    dismiss: Dismiss
+    priority:
+      high: High
+      medium: Medium
+      low: Low
+    spending_anomaly:
+      title: "%{category} spending %{direction} %{pct}"
+    cash_flow_warning:
+      title: Low cash projected around %{date}
+    net_worth_milestone:
+      title_30d_high: New 30-day high net worth
+      title_milestone: Net worth crossed %{milestone}
+      title_both: Net worth crossed %{milestone} — new 30-day high
+    subscription_audit:
+      title: Is %{name} still active?
+    savings_rate_change:
+      title: Savings rate %{direction} this month
+    idle_cash:
+      title: Idle cash in %{account}
+    budget_on_track:
+      title: Budget on track this month
+    budget_at_risk:
+      title: Budget at risk — spending ahead of pace
+  pages:
+    dashboard:
+      insights_feed:
+        title: Insights
