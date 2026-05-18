@@ -10,17 +10,17 @@ fr:
       account_prompt: Sélectionnez un compte
       amount: Montant
       category: Catégorie
-      category_prompt: Sélectionnez une catégorie
+      category_prompt: Sélectionner une catégorie
       date: Date
-      description: Libellé
-      description_placeholder: Libellé de la transaction
+      description: Description
+      description_placeholder: Décrivez la transaction
       expense: Dépense
       income: Revenu
       merchant_label: Marchand
       none: (aucun)
       note_label: Notes
-      note_placeholder: Entrez une note
-      submit: Ajouter la transaction
+      note_placeholder: Saisissez une note
+      submit: Ajouter une transaction
       tags_label: Étiquettes
       transfer: Virement
     new:
@@ -31,7 +31,7 @@ fr:
       category_label: Catégorie
       date_label: Date
       delete: Supprimer
-      delete_subtitle: Cette action supprime définitivement la transaction, affecte vos soldes historiques et ne peut pas être annulée.
+      delete_subtitle: Cette opération supprime définitivement la transaction, a une incidence sur l'historique de vos soldes et ne peut pas être annulée.
       delete_title: Supprimer la transaction
       details: Détails
       attachments: Pièces jointes
@@ -48,11 +48,11 @@ fr:
       pending_duplicate_merger_description: Fusionnez manuellement cette transaction en attente avec sa version validée.
       pending_duplicate_merger_button: Ouvrir la fusion
       merchant_label: Marchand
-      name_label: Nom
+      name_label: Name
       nature: Type
-      none: "(aucun)"
+      none: "(Aucun)"
       note_label: Notes
-      note_placeholder: Entrez une note
+      note_placeholder: Saisissez une note
       overview: Aperçu
       settings: Paramètres
       tags_label: Étiquettes
@@ -116,7 +116,7 @@ fr:
     header:
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
-      edit_merchants: Modifier les marchands
+      edit_merchants: Modifier les marchants
       edit_tags: Modifier les étiquettes
       import: Importer
     index:
@@ -219,11 +219,63 @@ fr:
         unexpected_error: "Erreur inattendue lors de la conversion : %{error}"
     searches:
       filters:
-        amount_filter:
-          equal_to: Égal à
-          greater_than: Supérieur à
-          less_than: Inférieur à
-          placeholder: '0'
+        account: Compte
+        date: Date
+        type: Type
+        status: Status
+        amount: Montant
+        category: Catégorie
+        tag: Étiquette
+        merchant: Marchand
+    convert_to_trade:
+      title: Convertir en opération sur titres
+      description: Convertissez cette transaction en opération avec les détails du titre
+      date_label: "Date :"
+      account_label: "Compte :"
+      amount_label: "Montant :"
+      security_label: Titre
+      security_prompt: Sélectionnez un titre...
+      security_custom: "+ Saisir un symbole personnalisé"
+      security_not_listed_hint: Vous ne trouvez pas votre titre ? Sélectionnez « Saisir un symbole personnalisé » en bas de la liste.
+      ticker_placeholder: AAPL
+      ticker_hint: Saisissez le symbole boursier de l'action ou de l'ETF (par exemple, AAPL, MSFT)
+      ticker_search_placeholder: Rechercher un symbole boursier...
+      ticker_search_hint: Recherchez par symbole boursier ou nom de société, ou saisissez un symbole personnalisé
+      price_mismatch_title: Le prix peut ne pas correspondre
+      price_mismatch_message: "Le prix que vous avez indiqué (%{entered_price}/action) diffère considérablement du cours actuel de %{ticker} (%{market_price}). Si cela vous semble incorrect, vous avez peut-être sélectionné le mauvais titre — essayez d'utiliser « Saisir un symbole boursier personnalisé » pour indiquer le bon."
+      quantity_label: Quantité (actions)
+      quantity_placeholder: ex. 20
+      quantity_hint: Nombre d'actions échangées
+      price_label: Prix par action
+      price_placeholder: ex. 52.15
+      price_hint: Prix par action (%{currency})
+      qty_or_price_hint: Indiquez au moins la quantité OU le prix. L'autre sera calculé à partir du montant de la transaction (%{amount}).
+      trade_type_label: Type d’opération
+      trade_type_hint: Acheter ou vendre des actions d'un titre
+      exchange_label: Échange (facultatif)
+      exchange_placeholder: XNAS
+      exchange_hint: Laisser vide pour une détection automatique
+      cancel: Annuler
+      submit: Convertir en opération
+      success: Transaction convertie en opération
+      conversion_note: "Convertie depuis la transaction : %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Seules les opérations effectuées sur des comptes d'investissement peuvent être converties en transactions
+        already_converted: Cette transaction a déjà été convertie ou exclue
+        enter_ticker: Veuillez saisir un symbole boursier
+        security_not_found: Le titre sélectionné n'existe plus. Veuillez en choisir un autre.
+        select_security: Veuillez sélectionner ou saisir un titre
+        enter_qty_or_price: Veuillez saisir soit la quantité, soit le prix par action. L'autre valeur sera calculée à partir du montant de la transaction.
+        invalid_qty_or_price: Quantité ou prix incorrect(e). Veuillez saisir des valeurs positives valides.
+        conversion_failed: "Échec de la conversion de la transaction : %{error}"
+        unexpected_error: "Erreur inattendue lors de la conversion: %{error}"
+      searches:
+        filters:
+          amount_filter:
+            equal_to: Égal à
+            greater_than: Supérieur à
+            less_than: Inférieur à
+            placeholder: '0'
         badge:
           expense: Dépense
           income: Revenu

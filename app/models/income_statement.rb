@@ -7,9 +7,10 @@ class IncomeStatement
 
   attr_reader :family, :user
 
-  def initialize(family, user: nil)
+  def initialize(family, user: nil, account_ids: nil)
     @family = family
     @user = user || Current.user
+    @forced_account_ids = account_ids
   end
 
   def totals(transactions_scope: nil, date_range:)
@@ -188,7 +189,11 @@ class IncomeStatement
     end
 
     def included_account_ids
-      @included_account_ids ||= user ? user.finance_accounts.pluck(:id) : nil
+      @included_account_ids ||= if @forced_account_ids
+        @forced_account_ids
+      elsif user
+        user.finance_accounts.pluck(:id)
+      end
     end
 
     def included_account_ids_hash
