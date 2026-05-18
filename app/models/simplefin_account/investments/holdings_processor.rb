@@ -209,7 +209,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
       total_basis / total_qty_with_basis
     end
 
-
+    # Extracts the first available cost basis value from a SimpleFIN holding payload.
+    # For each key, blank or empty values are ignored. The first non-empty
+    # value found is parsed into a decimal using `parse_decimal` and returned
+    # along with the matching source key.
     def cost_basis_from(simplefin_holding)
       %w[cost_basis basis total_cost value].each do |key|
         raw = simplefin_holding[key]
