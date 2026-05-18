@@ -49,10 +49,26 @@ en:
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
     index:
       accounts: Accounts
+      bulk_domains: Bulk domains
       manual_accounts:
         other_accounts: Other accounts
       new_account: New account
       sync: Sync all
+    bulk_domains:
+      title: Bulk update institution domains
+      description: Select reviewed accounts and apply one institution domain to all of them.
+      domain_label: Institution domain
+      domain_placeholder: mercury.com
+      accounts_label: Accounts to update
+      accounts_hint: Only accounts you can manage are listed.
+      submit: Update selected accounts
+    bulk_update_domains:
+      success:
+        one: Updated institution domain for %{count} account
+        other: Updated institution domains for %{count} accounts
+      invalid_selection: Select at least one account and enter a valid institution domain.
+      invalid_domain: Enter a valid institution domain.
+      failure: "Could not update institution domains: %{error}"
     sync_all:
       syncing: "Syncing accounts..."
     new:

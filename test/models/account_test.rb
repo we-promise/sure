@@ -16,6 +16,52 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalizes institution domain before saving" do
+    @account.update!(institution_domain: "https://www.Example.com/checking")
+
+    assert_equal "example.com", @account.reload.read_attribute(:institution_domain)
+  end
+
+  test "normalizes trimmed institution domain with uppercase scheme and www" do
+    @account.update!(institution_domain: "  HTTPS://WWW.Example.com/checking  ")
+
+    assert_equal "example.com", @account.reload.read_attribute(:institution_domain)
+  end
+
+  test "normalizes malformed institution domain to host only" do
+    @account.update!(institution_domain: "https://www.Example.com/%")
+
+    assert_equal "example.com", @account.reload.read_attribute(:institution_domain)
+  end
+
+  test "rejects malformed institution domain without a host" do
+    @account.update!(institution_domain: "https://bad host")
+
+    assert_nil @account.reload.read_attribute(:institution_domain)
+  end
+
+  test "rejects localhost and bare IP institution domains" do
+    @account.update!(institution_domain: "localhost")
+    assert_nil @account.reload.read_attribute(:institution_domain)
+
+    @account.update!(institution_domain: "127.0.0.1")
+    assert_nil @account.reload.read_attribute(:institution_domain)
+
+    @account.update!(institution_domain: "http://[::1]:3000")
+    assert_nil @account.reload.read_attribute(:institution_domain)
+  end
+
+  test "logo_url delegates normalized institution domain to merchant brandfetch helper" do
+    @account.update!(institution_domain: "https://www.Example.com/checking")
+    Setting.stubs(:brand_fetch_logo_size).returns(128)
+    Setting.stubs(:brand_fetch_client_id).returns("test-client")
+    Merchant.expects(:brandfetch_logo_url_for)
+      .with("example.com", logo_size: 128, client_id: "test-client")
+      .returns("https://cdn.brandfetch.io/example.com/icon")
+
+    assert_equal "https://cdn.brandfetch.io/example.com/icon", @account.logo_url
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 

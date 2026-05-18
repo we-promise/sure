@@ -9,6 +9,13 @@
         frame: :_top
       ) %>
   <%= render DS::Link.new(
+    text: t(".bulk_domains"),
+    href: bulk_domains_accounts_path,
+    variant: "outline",
+    icon: "building-2",
+    frame: :modal
+  ) %>
+  <%= render DS::Link.new(
     text: t(".new_account"),
     href: new_account_path(return_to: accounts_path),
     variant: "primary",

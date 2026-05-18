@@ -1,4 +1,8 @@
 class FamilyMerchantsController < ApplicationController
+  InvalidMerchantWebsite = Class.new(StandardError)
+  MergeTargetNotFound = Class.new(StandardError)
+  EmptyMerchantMerge = Class.new(StandardError)
+
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -100,35 +104,69 @@ class FamilyMerchantsController < ApplicationController
 
   def merge
     @merchants = all_family_merchants
+    @default_merchant_color = FamilyMerchant.default_color
+
+    render layout: turbo_frame_request? ? false : "settings"
+  end
+
+  def bulk_websites
+    @merchants = all_family_merchants
+  end
+
+  def bulk_update_websites
+    permitted_params = bulk_website_params
+    merchants = all_family_merchants.where(id: permitted_params[:merchant_ids])
+    website_url = Merchant.extract_domain(permitted_params[:website_url])
+
+    if permitted_params[:website_url].present? && website_url.blank?
+      return redirect_to bulk_websites_family_merchants_path, alert: t(".invalid_domain")
+    end
+
+    unless merchants.any? && website_url.present?
+      return redirect_to bulk_websites_family_merchants_path, alert: t(".invalid_selection")
+    end
+
+    Merchant.transaction do
+      merchants.each do |merchant|
+        merchant.update!(website_url: website_url)
+        merchant.generate_logo_url_from_website! if merchant.is_a?(ProviderMerchant)
+      end
+    end
+
+    redirect_to family_merchants_path, notice: t(".success", count: merchants.count)
+  rescue ActiveRecord::RecordInvalid => e
+    error_message = e.record.errors.full_messages.to_sentence.presence || e.message
+    redirect_to bulk_websites_family_merchants_path, alert: t(".failure", error: error_message)
   end
 
   def perform_merge
+    permitted_params = merchant_merge_params
+
+    if conflicting_merge_target?(permitted_params)
+      return redirect_to merge_family_merchants_path, alert: t(".conflicting_target")
+    end
+
     # Scope lookups to merchants valid for this family (FamilyMerchants + assigned ProviderMerchants)
     valid_merchants = all_family_merchants
 
-    target = valid_merchants.find_by(id: params[:target_id])
-    unless target
-      return redirect_to merge_family_merchants_path, alert: t(".target_not_found")
-    end
-
-    sources = valid_merchants.where(id: params[:source_ids])
+    sources = valid_merchants.where(id: permitted_params[:source_ids])
     unless sources.any?
       return redirect_to merge_family_merchants_path, alert: t(".invalid_merchants")
     end
 
-    merger = Merchant::Merger.new(
-      family: Current.family,
-      target_merchant: target,
-      source_merchants: sources
-    )
+    merger = merge_merchants!(valid_merchants, permitted_params, sources)
 
-    if merger.merge!
-      redirect_to family_merchants_path, notice: t(".success", count: merger.merged_count)
-    else
-      redirect_to merge_family_merchants_path, alert: t(".no_merchants_selected")
-    end
+    redirect_to family_merchants_path, notice: t(".success", count: merger.merged_count)
+  rescue MergeTargetNotFound
+    redirect_to merge_family_merchants_path, alert: t(".target_not_found")
+  rescue EmptyMerchantMerge
+    redirect_to merge_family_merchants_path, alert: t(".no_merchants_selected")
   rescue Merchant::Merger::UnauthorizedMerchantError => e
     redirect_to merge_family_merchants_path, alert: e.message
+  rescue InvalidMerchantWebsite
+    redirect_to merge_family_merchants_path, alert: t(".invalid_website")
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to merge_family_merchants_path, alert: record_error_message(e)
   end
 
   private
@@ -145,6 +183,19 @@ class FamilyMerchantsController < ApplicationController
       params.require(key).permit(:name, :color, :website_url)
     end
 
+    def bulk_website_params
+      params.permit(:website_url, merchant_ids: [])
+    end
+
+    def merchant_merge_params
+      params.permit(:target_id, :new_target_name, :new_target_color, :new_target_website_url, source_ids: [])
+    end
+
+    def conflicting_merge_target?(permitted_params)
+      permitted_params[:target_id].present? &&
+        permitted_params.to_h.any? { |key, value| key.to_s.start_with?("new_target_") && value.present? }
+    end
+
     def all_family_merchants
       family_merchant_ids = Current.family.merchants.pluck(:id)
       provider_merchant_ids = Current.family.assigned_merchants.where(type: "ProviderMerchant").pluck(:id)
@@ -152,5 +203,45 @@ class FamilyMerchantsController < ApplicationController
 
       Merchant.where(id: combined_ids)
               .order(Arel.sql("LOWER(COALESCE(name, ''))"))
+    end
+
+    def merge_target_merchant(valid_merchants, permitted_params)
+      if permitted_params[:new_target_name].present?
+        website_url = normalized_new_target_website_url(permitted_params)
+
+        Current.family.merchants.create!(
+          name: permitted_params[:new_target_name],
+          color: permitted_params[:new_target_color].presence || FamilyMerchant.default_color,
+          website_url: website_url
+        )
+      else
+        valid_merchants.find_by(id: permitted_params[:target_id])
+      end
+    end
+
+    def normalized_new_target_website_url(permitted_params)
+      return if permitted_params[:new_target_website_url].blank?
+
+      Merchant.extract_domain(permitted_params[:new_target_website_url]).presence || raise(InvalidMerchantWebsite)
+    end
+
+    def merge_merchants!(valid_merchants, permitted_params, sources)
+      Merchant.transaction do
+        target = merge_target_merchant(valid_merchants, permitted_params) || raise(MergeTargetNotFound)
+        merger = Merchant::Merger.new(
+          family: Current.family,
+          target_merchant: target,
+          source_merchants: sources
+        )
+
+        raise EmptyMerchantMerge unless merger.merge!
+
+        merger
+      end
+    end
+
+    def record_error_message(error)
+      record = error.respond_to?(:record) ? error.record : nil
+      record&.errors&.full_messages&.to_sentence.presence || error.message
     end
 end

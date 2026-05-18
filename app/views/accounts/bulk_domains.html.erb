@@ -1,0 +1,33 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with url: bulk_update_domains_accounts_path, method: :post, class: "space-y-4 max-h-[70vh] overflow-y-auto pr-1" do |f| %>
+      <%= f.text_field :institution_domain,
+            name: :institution_domain,
+            required: true,
+            label: t(".domain_label"),
+            placeholder: t(".domain_placeholder") %>
+
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-primary"><%= t(".accounts_label") %></p>
+        <div class="max-h-64 overflow-y-auto space-y-1 border border-secondary rounded-lg p-2">
+          <% @accounts.each do |account| %>
+            <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+              <%= check_box_tag "account_ids[]", account.id, false, class: "rounded border-secondary" %>
+              <span class="text-sm text-primary"><%= account.name %></span>
+              <% if account.institution_domain.present? %>
+                <span class="text-xs text-subdued">(<%= account.institution_domain %>)</span>
+              <% end %>
+            </label>
+          <% end %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".accounts_hint") %></p>
+      </div>
+
+      <%= render DS::Button.new(
+        text: t(".submit"),
+        full_width: true
+      ) %>
+    <% end %>
+  <% end %>
+<% end %>

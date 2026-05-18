@@ -40,6 +40,34 @@ class AccountsController < ApplicationController
     end
   end
 
+  def bulk_domains
+    @accounts = bulk_domain_accounts
+    render layout: false
+  end
+
+  def bulk_update_domains
+    permitted_params = bulk_domain_params
+    domain = Account.normalize_institution_domain(permitted_params[:institution_domain])
+    accounts = bulk_domain_accounts.where(id: permitted_params[:account_ids])
+
+    if permitted_params[:institution_domain].present? && domain.blank?
+      return redirect_to bulk_domains_accounts_path, alert: t(".invalid_domain")
+    end
+
+    unless accounts.any? && domain.present?
+      return redirect_to bulk_domains_accounts_path, alert: t(".invalid_selection")
+    end
+
+    Account.transaction do
+      accounts.each { |account| account.update!(institution_domain: domain) }
+    end
+
+    redirect_to accounts_path, notice: t(".success", count: accounts.count)
+  rescue ActiveRecord::RecordInvalid => e
+    error_message = e.record.errors.full_messages.to_sentence.presence || e.message
+    redirect_to bulk_domains_accounts_path, alert: t(".failure", error: error_message)
+  end
+
   def sync_all
     family.sync_later
     redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
@@ -222,6 +250,10 @@ class AccountsController < ApplicationController
       @account = Current.user.accessible_accounts.find(params[:id])
     end
 
+    def bulk_domain_params
+      params.permit(:institution_domain, account_ids: [])
+    end
+
     def set_manageable_account
       @account = Current.user.accessible_accounts.find(params[:id])
       permission = @account.permission_for(Current.user)
@@ -397,5 +429,9 @@ class AccountsController < ApplicationController
         latest_sync = item.syncs.ordered.first
         @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
+    end
+
+    def bulk_domain_accounts
+      Current.family.accounts.writable_by(Current.user).order(:name)
     end
 end
