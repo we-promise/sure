@@ -2,11 +2,22 @@ require "test_helper"
 
 class GoalsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in users(:family_admin)
+    @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("beta_features_enabled" => true))
+    sign_in @user
     @goal = goals(:vacation_italy)
     @depository = accounts(:depository)
     @connected = accounts(:connected)
     ensure_tailwind_build
+  end
+
+  test "redirects users without beta access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("beta_features_enabled" => false))
+
+    get goals_url
+
+    assert_redirected_to root_path
+    assert_match(/beta/i, flash[:alert])
   end
 
   test "index renders with active filter by default" do

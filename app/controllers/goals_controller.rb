@@ -1,4 +1,5 @@
 class GoalsController < ApplicationController
+  before_action :require_beta_features!
   before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
