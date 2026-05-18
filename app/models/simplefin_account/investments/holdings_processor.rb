@@ -115,7 +115,9 @@ class SimplefinAccount::Investments::HoldingsProcessor
       raw = simplefin_account.raw_holdings_payload || []
       return raw if raw.empty?
 
-      grouped = raw.group_by { |h| aggregation_key(h) }
+      grouped = raw
+        .select { |h| h.is_a?(Hash) }
+        .group_by { |h| aggregation_key(h) }
 
       grouped.flat_map do |key, lots|
         next lots if key.start_with?("__nosym_")

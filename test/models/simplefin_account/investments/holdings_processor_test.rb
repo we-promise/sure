@@ -5,7 +5,6 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     @processor = SimplefinAccount::Investments::HoldingsProcessor.new(
       OpenStruct.new(raw_holdings_payload: nil, current_account: nil)
     )
-
   end
 
   test "cost_basis source is used unchanged as per share basis" do
@@ -270,6 +269,21 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     result = processor.send(:holdings_data)
 
     assert_equal 2, result.size
+  end
+
+  test "holdings_data skips malformed records that are not hashes" do
+    raw = [
+      nil,
+      "unexpected string",
+      { "id" => "a", "symbol" => "AAPL", "currency" => "USD", "shares" => "1", "market_value" => "150" }
+    ]
+    account = OpenStruct.new(raw_holdings_payload: raw, current_account: nil)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(account)
+
+    result = processor.send(:holdings_data)
+
+    assert_equal 1, result.size
+    assert_equal "HOL-AAPL-USD", result.first["id"]
   end
 
   test "normalize_to_aggregate sets id to HOL-{SYMBOL:CURRENCY}" do
