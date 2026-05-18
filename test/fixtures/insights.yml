@@ -1,0 +1,30 @@
+spending_anomaly_dining:
+  family: dylan_family
+  insight_type: spending_anomaly
+  priority: medium
+  status: active
+  title: Dining spending is above average
+  body: Your projected dining spending this month is well above your 3-month average.
+  metadata:
+    category_name: Dining
+    deviation_pct: 32
+  currency: USD
+  period_start: <%= Date.current.beginning_of_month %>
+  period_end: <%= Date.current.end_of_month %>
+  generated_at: <%= 1.day.ago %>
+  dedup_key: "spending_anomaly:dining:<%= Date.current.strftime('%Y-%m') %>"
+
+cash_flow_warning:
+  family: dylan_family
+  insight_type: cash_flow_warning
+  priority: high
+  status: active
+  title: Low cash projected in the next 30 days
+  body: Your cash balance is projected to drop below $500 in the coming weeks.
+  metadata:
+    projected_low: 120.0
+  currency: USD
+  period_start: <%= Date.current %>
+  period_end: <%= Date.current + 30.days %>
+  generated_at: <%= 2.hours.ago %>
+  dedup_key: "cash_flow_warning:<%= Date.current.strftime('%Y-%m-%d') %>"

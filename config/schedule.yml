@@ -48,3 +48,15 @@ refresh_demo_family:
   class: "DemoFamilyRefreshJob"
   queue: "scheduled"
   description: "Refreshes demo family data and emails super admins with daily usage summary"
+
+generate_insights:
+  cron: "0 6 * * *" # daily at 6:00 AM UTC, after the data cleanup jobs
+  class: "GenerateInsightsJob"
+  queue: "scheduled"
+  description: "Generates proactive financial insights for all families"
+
+send_insight_digest:
+  cron: "0 8 * * 1" # Monday 8:00 AM UTC - weekly digest email
+  class: "SendInsightDigestJob"
+  queue: "scheduled"
+  description: "Sends weekly insight digest emails"
