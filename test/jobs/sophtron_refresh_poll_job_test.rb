@@ -53,5 +53,9 @@ class SophtronRefreshPollJobTest < ActiveJob::TestCase
     SophtronRefreshPollJob.perform_now(@sophtron_account, job_id: "refresh-job", attempts_remaining: 1)
 
     assert_equal I18n.t("sophtron_items.errors.refresh_timeout"), @item.reload.last_connection_error
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "sophtron_transaction_sync", entry.category
+    assert_equal "Sophtron refresh poll timed out", entry.message
   end
 end

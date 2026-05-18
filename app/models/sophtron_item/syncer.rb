@@ -34,6 +34,13 @@ class SophtronItem::Syncer
   # @return [void]
   # @raise [StandardError] if any phase of the sync fails
   def perform_sync(sync)
+    sophtron_item.debug_log_event(
+      category: "sophtron_transaction_sync",
+      message: "Sophtron syncer started",
+      source: self.class.name,
+      metadata: { sync_id: sync&.id }
+    )
+
     # Phase 1: Import data from Sophtron API
     sync.update!(status_text: t("sophtron_items.syncer.importing_accounts")) if sync.respond_to?(:status_text)
     import_result = sophtron_item.import_latest_sophtron_data(sync: sync)
@@ -84,12 +91,32 @@ class SophtronItem::Syncer
     # Mark sync health
     if import_errors.present?
       collect_health_stats(sync, errors: import_errors)
+      sophtron_item.debug_log_event(
+        category: "sophtron_transaction_sync",
+        level: "warn",
+        message: "Sophtron syncer finished with import errors",
+        source: self.class.name,
+        metadata: { sync_id: sync&.id, errors: import_errors.map { |error| error[:message] } }
+      )
       raise StandardError.new(import_errors.map { |error| error[:message] }.join(", "))
     else
       collect_health_stats(sync, errors: nil)
+      sophtron_item.debug_log_event(
+        category: "sophtron_transaction_sync",
+        message: "Sophtron syncer finished successfully",
+        source: self.class.name,
+        metadata: { sync_id: sync&.id, linked_account_count: linked_accounts.count, unlinked_account_count: unlinked_count }
+      )
     end
   rescue => e
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ]) unless sync_errors_recorded?(sync)
+    sophtron_item.debug_log_event(
+      category: "sophtron_transaction_sync",
+      level: "error",
+      message: "Sophtron syncer failed",
+      source: self.class.name,
+      metadata: { sync_id: sync&.id, error: e.message, error_class: e.class.name }
+    )
     raise
   end
 
