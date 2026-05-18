@@ -96,7 +96,8 @@ class ActualImport < Import
       category = row[category_col_label].to_s.strip
       category_group = row[CATEGORY_GROUP_COLUMN].to_s.strip
 
-      return category if category_group.blank? || category.blank?
+      return category if category_group.blank?
+      return category_group if category.blank?
 
       "#{category_group}: #{category}"
     end

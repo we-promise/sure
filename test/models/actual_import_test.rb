@@ -38,4 +38,16 @@ class ActualImportTest < ActiveSupport::TestCase
     assert_equal "Income: Paycheck", import.rows.order(:source_row_number).third.category
     assert_equal "Transfer", import.rows.order(:source_row_number).fourth.category
   end
+
+  test "generated rows fall back to category group when category is blank" do
+    import = @family.imports.create!(
+      type: "ActualImport",
+      raw_file_str: file_fixture("imports/actual.csv").read.sub("Housing,Rent", "Housing,"),
+      col_sep: ","
+    )
+
+    import.generate_rows_from_csv
+
+    assert_equal "Housing", import.rows.order(:source_row_number).first.category
+  end
 end

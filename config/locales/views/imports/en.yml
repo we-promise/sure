@@ -113,7 +113,19 @@ en:
       mint_import:
         date_format_label: Date format
       actual_import:
+        preconfigured_notice: We have pre-configured your Actual Budget import for you. Please proceed to the next step.
+        leave_empty: Leave empty
+        date_label: Date
         date_format_label: Date format
+        amount_label: Amount
+        signage_convention_label: Signage convention
+        incomes_are_negative: Incomes are negative
+        incomes_are_positive: Incomes are positive
+        account_label: Account (optional)
+        name_label: Payee (optional)
+        category_label: Category (optional)
+        notes_label: Notes (optional)
+        apply_configuration: Apply configuration
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.

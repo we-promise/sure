@@ -99,7 +99,7 @@
                 enabled: true %>
             <% end %>
 
-            <% if params[:type].nil? || params[:type] == "ActualImport" || params[:type] == "TransactionImport" %>
+            <% if params[:type].nil? || params[:type] == "ActualImport" %>
               <%= render "imports/import_option",
                 type: "ActualImport",
                 icon_name: "wallet",
