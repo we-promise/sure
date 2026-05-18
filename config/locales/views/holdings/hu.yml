@@ -5,6 +5,7 @@ hu:
       brokerage_cash: Brókeri készpénz
     destroy:
       success: Pozíció törölve
+      cannot_delete: Ez a pozíció nem törölhető
     update:
       success: Bekerülési érték mentve.
       error: Érvénytelen bekerülési érték.
@@ -27,6 +28,7 @@ hu:
       provider: Szolgáltatótól
     cost_basis_cell:
       unknown: "--"
+      set: Megadás
       set_cost_basis_header: "Bekerülési érték megadása: %{ticker} (%{qty} részvény)"
       total_cost_basis_label: Teljes bekerülési érték
       or_per_share_label: "Vagy add meg részvényenként:"

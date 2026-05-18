@@ -58,8 +58,29 @@ module Accountable
       classification == "asset" ? "up" : "down"
     end
 
+    def singular_display_name
+      I18n.t("accounts.types.#{name.underscore}", default: legacy_singular_display_name)
+    end
+
     def display_name
-      self.name.pluralize.titleize
+      I18n.t("accounts.types_plural.#{name.underscore}", default: -> { legacy_display_name })
+    end
+
+    def legacy_display_name
+      return singular_display_name if name.in?([ "Depository", "Crypto" ])
+
+      singular_display_name.pluralize
+    end
+
+    def legacy_singular_display_name
+      case name
+      when "Depository"
+        "Cash"
+      when "Crypto"
+        "Crypto"
+      else
+        name.underscore.humanize
+      end
     end
 
     # Sums the balances of all active accounts of this type, converting foreign currencies to the family's currency.
@@ -78,6 +99,10 @@ module Accountable
         end
       }
     end
+  end
+
+  def singular_display_name
+    self.class.singular_display_name
   end
 
   def display_name

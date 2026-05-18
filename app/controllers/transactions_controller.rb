@@ -63,6 +63,8 @@ class TransactionsController < ApplicationController
                                          10.days.from_now.to_date,
                                          Date.current)
                                   .includes(:merchant)
+
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
 
   def clear_filter

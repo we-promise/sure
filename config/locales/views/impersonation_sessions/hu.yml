@@ -13,3 +13,13 @@ hu:
       success: Kilépés a munkamenetből megtörtént
     reject:
       success: Kérés elutasítva
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Feladatok
+      impersonating: Megszemélyesítés
+      leave: Kilépés
+      terminate: Befejezés
+      join_a_session: Csatlakozás munkamenethez
+      join: Csatlakozás
+      uuid_placeholder: UUID
+      request_impersonation: Megszemélyesítés kérése

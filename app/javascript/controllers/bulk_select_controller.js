@@ -13,6 +13,8 @@ export default class extends Controller {
   static values = {
     singularLabel: String,
     pluralLabel: String,
+    selectedLabel: { type: String, default: "selected" },
+    editLabel: { type: String, default: "Edit" },
     selectedIds: { type: Array, default: [] },
   };
 
@@ -28,7 +30,7 @@ export default class extends Controller {
 
   bulkEditDrawerHeaderTargetConnected(element) {
     const headingTextEl = element.querySelector("h2");
-    headingTextEl.innerText = `Edit ${
+    headingTextEl.innerText = `${this.editLabelValue} ${
       this.selectedIdsValue.length
     } ${this._pluralizedResourceName()}`;
   }
@@ -132,7 +134,7 @@ export default class extends Controller {
 
   _updateSelectionBar() {
     const count = this.selectedIdsValue.length;
-    this.selectionBarTextTarget.innerText = `${count} ${this._pluralizedResourceName()} selected`;
+    this.selectionBarTextTarget.innerText = `${count} ${this._pluralizedResourceName()} ${this.selectedLabelValue}`;
     this.selectionBarTarget.classList.toggle("hidden", count === 0);
     this.selectionBarTarget.querySelector("input[type='checkbox']").checked =
       count > 0;
