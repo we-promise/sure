@@ -433,7 +433,12 @@ export default class extends Controller {
       .attr("pointer-events", "none")
       .style("display", "none");
 
-    if (root.style.position !== "absolute") root.style.position = "relative";
+    // Only promote root to a positioned ancestor when it currently has no
+    // positioning context. Inline checks against `root.style.position`
+    // miss positions set via CSS (the inline style is empty), so we'd
+    // clobber a stylesheet `position: fixed/sticky/absolute` with our
+    // own `relative`. Read the computed style instead.
+    if (getComputedStyle(root).position === "static") root.style.position = "relative";
     const tooltip = document.createElement("div");
     tooltip.style.cssText = "position:absolute;pointer-events:none;display:none;background:var(--color-gray-900);color:var(--color-white);font-size:12px;line-height:1.35;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,0.15);";
     root.appendChild(tooltip);

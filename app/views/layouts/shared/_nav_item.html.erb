@@ -11,7 +11,7 @@
       <%= icon(icon, color: active ? "current" : "default", custom: icon_custom) %>
       <% if beta %>
         <span class="absolute -top-0.5 -right-0.5">
-          <%= render DS::Pill.new(tone: :violet, dot_only: true, title: "Beta") %>
+          <%= render DS::Pill.new(tone: :violet, dot_only: true, title: t("shared.beta")) %>
         </span>
       <% end %>
     <% end %>

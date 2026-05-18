@@ -88,6 +88,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: workers/preview
         run: |
+          set -euo pipefail
           CONTAINER_NAME="sure-preview-${{ github.event.pull_request.number }}-railscontainer"
           echo "Looking for stale preview container app: $CONTAINER_NAME"
 

@@ -4,6 +4,7 @@ en:
     self_hostable:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
+    beta: Beta
     confirm_modal:
       accept: Confirm
       body_html: "<p>You will not be able to undo this decision</p>"

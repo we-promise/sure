@@ -205,7 +205,7 @@ class Goal < ApplicationRecord
       currency_symbol: Money.new(0, currency).currency.symbol,
       current_amount: current_balance.to_f,
       avg_monthly: pace.to_f,
-      required_monthly: monthly_target_amount.to_f,
+      required_monthly: monthly_target_amount&.to_f,
       currency: currency,
       status: status.to_s,
       projection_end_value: proj_end.to_f,
