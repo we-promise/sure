@@ -62,6 +62,14 @@ en:
         one: 1 account linked
         other: "%{count} accounts linked"
       partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link Interactive Brokers account
+      no_accounts_available: No unlinked Interactive Brokers accounts are available yet.
+      run_sync_hint: "Run a sync from Settings > Providers after updating your Flex query."
+      wait_for_sync: Wait for the account discovery sync to finish.
+      balance: Balance
+      link: Link
+      cancel: Cancel
     create:
       success: Successfully configured Interactive Brokers.
     update:

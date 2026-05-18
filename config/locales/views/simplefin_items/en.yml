@@ -30,7 +30,34 @@ en:
         label: "SimpleFIN Setup Token:"
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
+      title: Update SimpleFin Connection
+      header_subtitle: Get a new setup token to reconnect your SimpleFIN account
+      connection_needs_update: "Your SimpleFIN connection needs to be updated:"
+      step_1_html: "Visit <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> to create a new setup token"
+      step_2: Copy the token and paste it below
+      step_3: "Click \"Update\" to restore access"
+      update: Update
+      cancel: Cancel
     setup_accounts:
+      title: Set Up Your SimpleFin Accounts
+      header_subtitle: Choose the correct account types for your imported accounts
+      choose_account_type: "Choose the correct account type for each SimpleFin account:"
+      account_type_checking_savings: Checking or Savings
+      account_type_checking_savings_desc: Regular bank accounts
+      account_type_credit_card: Credit Card
+      account_type_credit_card_desc: Credit card accounts
+      account_type_investment: Investment
+      account_type_investment_desc: "Brokerage, 401(k), IRA accounts"
+      account_type_loan: Loan or Mortgage
+      account_type_loan_desc: Debt accounts
+      account_type_other_asset: Other Asset
+      account_type_other_asset_desc: Everything else
+      transaction_history_title: "Transaction History:"
+      transaction_history_description_html: "SimpleFin typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
+      account_type_label: "Account Type:"
+      create_accounts: Create Accounts
+      creating_accounts: Creating Accounts...
+      cancel: Cancel
       account_card:
         balance: "Balance"
       activity:
