@@ -230,7 +230,7 @@ class Provider::SophtronTest < ActiveSupport::TestCase
 
   test "fetch failure error omits raw response body from message" do
     stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
-      .to_return(status: [500, "Internal Server Error"], body: '{"secret":"value"}', headers: { "Content-Type" => "application/json" })
+      .to_return(status: [ 500, "Internal Server Error" ], body: '{"secret":"value"}', headers: { "Content-Type" => "application/json" })
 
     error = assert_raises(Provider::Sophtron::Error) do
       Provider::Sophtron.response_data!(@provider.health_check_auth)
