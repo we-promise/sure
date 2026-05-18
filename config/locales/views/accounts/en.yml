@@ -142,6 +142,16 @@ en:
       credit_card: Credit Card
       loan: Loan
       other_liability: Other Liability
+    types_plural:
+      depository: Cash
+      investment: Investments
+      crypto: Crypto
+      property: Properties
+      vehicle: Vehicles
+      other_asset: Other Assets
+      credit_card: Credit Cards
+      loan: Loans
+      other_liability: Other Liabilities
     tax_treatments:
       taxable: Taxable
       tax_deferred: Tax-Deferred

@@ -30,9 +30,18 @@ hu:
       delete_subtitle: Ez eltávolítja az átutalást. Az alapul szolgáló tranzakciókat nem törli.
       delete_title: Eltávolítja az átutalást?
       details: Részletek
+      mark_recurring: Ismétlődőként jelölés
+      mark_recurring_subtitle: Kövesd ezt az átutalást ismétlődő mintaként a közelgő eseménylistában és az ismétlődők oldalon.
+      mark_recurring_title: Átutalás ismétlődőként jelölése
       note_label: Megjegyzések
       note_placeholder: Adj meg egy megjegyzést ehhez az átutaláshoz
       overview: Áttekintés
       settings: Beállítások
+      from: Honnan
+      to: Hova
+      date: Dátum
+      amount: Összeg
+      category: Kategória
+      uncategorized: Kategorizálatlan
     update:
       success: Átutalás frissítve

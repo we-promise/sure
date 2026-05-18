@@ -118,10 +118,10 @@
           ) %>
 
           <p class="text-primary text-sm font-medium mb-1 mt-4">
-            <%= t("pages.dashboard.balance_sheet.no_items", name: classification_group.name) %>
+            <%= t("pages.dashboard.balance_sheet.no_#{classification_group.classification}") %>
           </p>
           <p class="text-secondary text-sm text-center">
-            <%= t("pages.dashboard.balance_sheet.add_accounts", name: classification_group.name) %>
+            <%= t("pages.dashboard.balance_sheet.add_#{classification_group.classification}_accounts") %>
           </p>
         </div>
       <% end %>
