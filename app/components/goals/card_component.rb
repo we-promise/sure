@@ -26,6 +26,13 @@ class Goals::CardComponent < ApplicationComponent
     @linked_accounts ||= goal.linked_accounts.to_a
   end
 
+  # Open + unexpired pledges are preloaded on the index via the
+  # `.includes(:open_pledges, ...)` chain in GoalsController#index, so
+  # this is a hit on the in-memory association — no N+1.
+  def has_pending_pledge?
+    goal.open_pledges.any?
+  end
+
   def linked_accounts_count_label
     I18n.t("goals.goal_card.accounts", count: linked_accounts.size)
   end

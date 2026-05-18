@@ -1,9 +1,16 @@
 <div class="group relative bg-container rounded-xl shadow-border-xs hover:shadow-sm transition-shadow p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
-     <% if filterable %>data-goals-filter-target="card"<% end %>
+     <% if filterable %> data-goals-filter-target="card"<% end %>
      data-goal-name="<%= goal.name %>"
      data-goal-status="<%= goal.display_status %>">
   <div class="flex items-start gap-3">
-    <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
+    <div class="relative shrink-0">
+      <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
+      <% if has_pending_pledge? %>
+        <span class="absolute -top-0.5 -right-0.5">
+          <%= render DS::Pill.new(tone: :amber, size: :md, dot_only: true, title: t("goals.goal_card.pending_pledge")) %>
+        </span>
+      <% end %>
+    </div>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2 mb-0.5">
         <p class="text-base font-medium text-primary truncate">
