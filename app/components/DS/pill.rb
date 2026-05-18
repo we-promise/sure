@@ -1,20 +1,23 @@
 class DS::Pill < DesignSystemComponent
-  TONES = %i[violet indigo fuchsia amber gray].freeze
+  TONES = %i[violet indigo fuchsia amber green gray].freeze
   STYLES = %i[soft filled outline].freeze
   SIZES = %i[sm md].freeze
 
-  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title
+  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon
 
-  # Generic inline pill primitive. Currently the home of Beta / Canary
-  # markers; can be reused for future tags (NEW, PRO, EXPERIMENTAL, etc.)
-  # without forking the component.
+  # Generic inline pill primitive. Used for Beta / Canary markers and goal
+  # status badges, but designed so any future tag (NEW, PRO, EXPERIMENTAL,
+  # etc.) reuses the same shape without forking.
   #
   # - `dot_only: true` renders only the colored dot (no label, no border).
   #   Use on the collapsed sidebar nav, where there's no room for the label.
-  # - Sure has full violet / indigo / fuchsia / amber / gray ramps in the
-  #   design system; this component picks named tokens at render time. No
-  #   raw hex.
-  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil)
+  # - `icon:` overrides the dot with a Lucide icon (sized xs, current color).
+  #   Useful for status pills that benefit from a glyph (circle-check,
+  #   triangle-alert, pause, etc.) rather than the generic dot.
+  # - Sure has full violet / indigo / fuchsia / amber / green / gray ramps
+  #   in the design system; this component picks named tokens at render
+  #   time. No raw hex.
+  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil, icon: nil)
     @label = label || I18n.t("ds.pill.default_label", default: "Beta")
     @tone = TONES.include?(tone.to_sym) ? tone.to_sym : :violet
     @style = STYLES.include?(style.to_sym) ? style.to_sym : :soft
@@ -22,6 +25,7 @@ class DS::Pill < DesignSystemComponent
     @show_dot = show_dot
     @dot_only = dot_only
     @title = title
+    @icon = icon
   end
 
   def palette
@@ -34,6 +38,7 @@ class DS::Pill < DesignSystemComponent
       indigo:  { bg: "var(--color-indigo-50)",  bg_dark: "var(--color-indigo-tint-10)",  text: "color-mix(in oklab, var(--color-indigo-700), black 30%)",  text_dark: "var(--color-indigo-200)",  border: "var(--color-indigo-200)",  dot: "var(--color-indigo-500)",  fill: "var(--color-indigo-500)" },
       fuchsia: { bg: "var(--color-fuchsia-50)", bg_dark: "var(--color-fuchsia-tint-10)", text: "color-mix(in oklab, var(--color-fuchsia-700), black 30%)", text_dark: "var(--color-fuchsia-200)", border: "var(--color-fuchsia-200)", dot: "var(--color-fuchsia-500)", fill: "var(--color-fuchsia-500)" },
       amber:   { bg: "var(--color-yellow-50)",  bg_dark: "var(--color-yellow-tint-10)",  text: "color-mix(in oklab, var(--color-yellow-700), black 30%)",  text_dark: "var(--color-yellow-200)",  border: "var(--color-yellow-200)",  dot: "var(--color-yellow-500)",  fill: "var(--color-yellow-500)" },
+      green:   { bg: "var(--color-green-50)",   bg_dark: "var(--color-green-tint-10)",   text: "color-mix(in oklab, var(--color-green-700), black 30%)",   text_dark: "var(--color-green-200)",   border: "var(--color-green-200)",   dot: "var(--color-green-500)",   fill: "var(--color-green-500)" },
       gray:    { bg: "var(--color-gray-100)",   bg_dark: "var(--color-gray-tint-10)",    text: "color-mix(in oklab, var(--color-gray-700), black 30%)",    text_dark: "var(--color-gray-200)",    border: "var(--color-gray-200)",    dot: "var(--color-gray-500)",    fill: "var(--color-gray-500)" }
     }[tone]
   end
