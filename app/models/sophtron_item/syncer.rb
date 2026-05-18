@@ -114,19 +114,19 @@ class SophtronItem::Syncer
       errors = []
       if import_result[:accounts_failed].to_i.positive?
         errors << {
-          message: "#{import_result[:accounts_failed]} #{'account'.pluralize(import_result[:accounts_failed])} failed to import",
+          message: I18n.t("sophtron_items.syncer.accounts_failed", count: import_result[:accounts_failed]),
           category: "account_import"
         }
       end
 
       if import_result[:transactions_failed].to_i.positive?
         errors << {
-          message: "#{import_result[:transactions_failed]} #{'account'.pluralize(import_result[:transactions_failed])} failed to import transactions",
+          message: I18n.t("sophtron_items.syncer.transactions_failed", count: import_result[:transactions_failed]),
           category: "transaction_import"
         }
       end
 
-      errors.presence || [ { message: "Sophtron import failed", category: "sync_error" } ]
+      errors.presence || [ { message: I18n.t("sophtron_items.syncer.import_failed"), category: "sync_error" } ]
     end
 
     def sync_errors_recorded?(sync)
