@@ -112,6 +112,8 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+      actual_import:
+        date_format_label: Date format
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.
@@ -261,6 +263,7 @@ en:
       trade_import: "Trade import"
       account_import: "Account import"
       mint_import: "Mint import"
+      actual_import: "Actual import"
       qif_import: "QIF import"
       category_import: "Category import"
       rule_import: "Rule import"
@@ -293,6 +296,7 @@ en:
           trade_import: "Trade"
           account_import: "Account"
           mint_import: "Mint"
+          actual_import: "Actual"
           qif_import: "QIF"
           category_import: "Category"
           rule_import: "Rule"
@@ -321,6 +325,7 @@ en:
       import_accounts: Import accounts
       import_categories: Import categories
       import_mint: Import from Mint
+      import_actual: Import from Actual Budget
       import_portfolio: Import investments
       import_rules: Import rules
       import_transactions: Import transactions
