@@ -57,7 +57,7 @@ class IbkrAccount::Processor
         Rails.logger.error(
           "IbkrAccount::Processor - Failed to repair opening anchor for account #{account.id}: #{result.error}"
         )
-        Sentry.capture_message(result.error) if defined?(Sentry)
+        Sentry.capture_message(result.error)
       end
     end
 end

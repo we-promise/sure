@@ -91,7 +91,8 @@ class IbkrAccount::HistoricalBalancesSync
 
       by_date    = rows.index_by { |r| r[:date] }
       first_date = rows.first[:date]
-      last_date  = [ rows.last[:date], account.current_anchor_date || Date.current ].max
+      anchor_date = [ account.current_anchor_date || Date.current, Date.current ].min
+      last_date   = [ rows.last[:date], anchor_date ].max
 
       last_total = nil
       (first_date..last_date).filter_map do |date|
