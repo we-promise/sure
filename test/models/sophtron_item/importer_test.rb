@@ -102,6 +102,11 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, result[:transactions_imported]
     assert_equal 1, sophtron_account.reload.raw_transactions_payload.count
+
+    messages = DebugLogEntry.order(:created_at).last(5).map(&:message)
+    assert_includes messages, "Sophtron accounts fetched"
+    assert_includes messages, "Sophtron transaction fetch started"
+    assert_includes messages, "Sophtron transactions stored"
   end
 
   test "automatic import skips linked accounts that require manual sync" do
