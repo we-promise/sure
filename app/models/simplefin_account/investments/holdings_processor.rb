@@ -126,7 +126,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     # Returns a grouping key for a raw holding hash. Holdings with a symbol are
-    # keyed by the upcased symbol and currency (e.g. "AAPL:USD") so that
+    # keyed by the upcased symbol and currency (e.g. "AAPL-USD") so that
     # same-ticker, different-currency positions are never merged. Holdings
     # without a symbol get a unique key prefixed with "__nosym_" to ensure they
     # are always kept as individual records.
@@ -140,10 +140,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
     # Merges one or more lots for the same symbol into a single canonical holding
     # hash. Quantities and market values are summed; cost basis is computed as a
-    # weighted average via +weighted_average_cost_basis+. The merged record is
+    # weighted average via `weighted_average_cost_basis`. The merged record is
     # assigned a stable synthetic id of the form "HOL-{SYMBOL-CURRENCY}", and all
     # quantity/value field aliases are removed in favour of the canonical
-    # +shares+ and +market_value+ keys.
+    # `shares` and `market_value` keys.
     def normalize_to_aggregate(key, lots)
       first = lots.first
       symbol = first["symbol"].to_s.strip.upcase
@@ -178,11 +178,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
     # Computes the weighted average per-share cost basis across a collection of
     # lots. Each lot's contribution is weighted by its quantity. Whether a basis
     # value represents a per-share or total-position cost is determined by the
-    # source key and the +institution_reports_total_basis?+ flag — lots sourced
-    # from +total_cost+ or +value+ are always treated as totals, while
-    # +cost_basis+/+basis+ are treated as totals only for allowlisted
-    # institutions. Lots with no recognisable basis key or zero quantity are
-    # skipped.
+    # source key and the `institution_reports_total_basis?` flag — lots sourced
+    # from `total_cost` or `value` are always treated as totals, while
+    # `cost_basis`/`basis` are treated as totals only for allowlisted
+    # institutions. Lots with no recognisable basis key or zero quantity are skipped.
     def weighted_average_cost_basis(lots, qty_keys)
       total_basis = 0
       total_qty_with_basis = 0

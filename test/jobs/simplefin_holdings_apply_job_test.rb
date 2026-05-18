@@ -138,6 +138,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
           "symbol" => "AAPL",
           "shares" => 3,
           "market_value" => 600,
+          "cost_basis" => 900,
           "currency" => "USD"
         },
         {
@@ -145,6 +146,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
           "symbol" => "AAPL",
           "shares" => 7,
           "market_value" => 1400,
+          "cost_basis" => 1000,
           "currency" => "USD"
         }
       ]
@@ -158,5 +160,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
     refute_nil holding
     assert_equal 10, holding.qty
     assert_in_delta 2000.0, holding.amount.to_f, 0.01
+    # Weighted average per-share cost_basis: (3×900 + 7×1000) / 10 = 97
+    assert_in_delta 970.0, holding.cost_basis.to_f, 0.01
   end
 end
