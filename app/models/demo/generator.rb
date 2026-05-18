@@ -72,6 +72,9 @@ class Demo::Generator
         create_realistic_accounts!(family)
         create_realistic_transactions!(family)
         generate_budget_auto_fill!(family)
+
+        puts "🎯 Seeding goals..."
+        generate_goals!(family)
       end
 
       family.sync_later
