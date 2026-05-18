@@ -195,8 +195,9 @@ class GoalsController < ApplicationController
       currency = family.primary_currency_code
       today = Date.current
 
-      velocity_30d = family.savings_inflow_velocity(range: (today - 30)..today)
-      velocity_prior_30d = family.savings_inflow_velocity(range: (today - 60)..(today - 31))
+      windows = family.savings_inflow_windows(window_days: 30, now: today)
+      velocity_30d = windows[:current]
+      velocity_prior_30d = windows[:prior]
       delta_amount = velocity_30d - velocity_prior_30d
       delta_percent = velocity_prior_30d.zero? ? nil : ((delta_amount / velocity_prior_30d.abs) * 100).round(1)
 

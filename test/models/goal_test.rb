@@ -25,6 +25,24 @@ class GoalTest < ActiveSupport::TestCase
     assert_not @goal.valid?
   end
 
+  test "color must match hex format" do
+    @goal.color = "red; cursor: pointer"
+    assert_not @goal.valid?
+    assert_includes @goal.errors[:color], "is invalid"
+  end
+
+  test "color accepts standard 6-digit hex" do
+    @goal.color = "#abcdef"
+    assert @goal.valid?, @goal.errors.full_messages.to_sentence
+  end
+
+  test "display_status follows AASM state after pause! on the same instance" do
+    @goal.update!(color: "#4da568") if @goal.color.blank?
+    initial = @goal.display_status
+    @goal.pause!
+    assert_equal :paused, @goal.display_status, "stale memo would have returned #{initial.inspect}"
+  end
+
   test "must have at least one linked account on create" do
     new_goal = @family.goals.new(name: "Test", target_amount: 100, currency: "USD")
     assert_not new_goal.valid?
@@ -87,11 +105,13 @@ class GoalTest < ActiveSupport::TestCase
 
   test "progress_percent is 0 for empty active goal" do
     fresh = goals(:car_paydown)
-    fresh.target_amount = 10_000
+    fresh.update!(target_amount: 10_000)
     fresh.linked_accounts.update_all(balance: 0)
-    fresh.instance_variable_set(:@current_balance, nil)
-    fresh.linked_accounts.reload
-    assert_equal 0, fresh.progress_percent
+    # Refetch instead of poking @current_balance directly so the test
+    # exercises the real memo lifecycle (a request reads progress_percent
+    # on a freshly-loaded record after the underlying balances changed).
+    reloaded = Goal.find(fresh.id)
+    assert_equal 0, reloaded.progress_percent
   end
 
   test "remaining_amount is non-negative" do
@@ -221,11 +241,11 @@ class GoalTest < ActiveSupport::TestCase
   test "pledge_action_label_key flips on manual-only goals" do
     assert_equal "goals.show.pledge_just_transferred", @goal.pledge_action_label_key
     @goal.goal_accounts.where(account_id: @connected.id).destroy_all
-    @goal.reload
-    @goal.instance_variable_set(:@current_balance, nil)
     # After removing the only connected account, the goal is manual-only;
     # the copy must flip to "pledge_just_saved" so users aren't told to
-    # wait for a sync that won't run.
-    assert_equal "goals.show.pledge_just_saved", @goal.pledge_action_label_key
+    # wait for a sync that won't run. Refetch to exercise the real
+    # request lifecycle rather than poking a memo on the same instance.
+    reloaded = Goal.find(@goal.id)
+    assert_equal "goals.show.pledge_just_saved", reloaded.pledge_action_label_key
   end
 end

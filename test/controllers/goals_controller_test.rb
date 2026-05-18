@@ -165,8 +165,10 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   test "index KPI swaps to 'All caught up' when every tracked goal is reached" do
     family = users(:family_admin).family
     family.goals.destroy_all
+    # Real reached state: target $1 against the depository fixture's
+    # $5000 balance. Stubbing :status hides whether the controller
+    # actually reads the right method on each goal.
     build_goal(family, "Wedding", target_amount: 1, target_date: 1.year.from_now)
-    Goal.any_instance.stubs(:status).returns(:reached)
 
     get goals_url
     assert_response :success
@@ -183,6 +185,31 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
 
   public
+
+  test "create ignores forbidden params (family_id, state)" do
+    family = users(:family_admin).family
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
+
+    assert_difference -> { family.goals.count }, 1 do
+      post goals_url, params: {
+        goal: {
+          name: "Hijack target",
+          target_amount: 100,
+          currency: "USD",
+          state: "archived",
+          family_id: other_family.id,
+          account_ids: [ @depository.id ]
+        }
+      }
+    end
+
+    goal = family.goals.order(:created_at).last
+    # Strong params must strip both `state` (AASM-managed) and `family_id`
+    # (cross-family pivot) — otherwise a crafted POST would create rows
+    # outside the current family or skip the active-state assumption.
+    assert_equal "active", goal.state
+    assert_equal family.id, goal.family_id
+  end
 
   test "another family's goal returns 404" do
     other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
