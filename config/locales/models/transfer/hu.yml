@@ -4,6 +4,10 @@ hu:
     errors:
       models:
         transfer:
+          different_accounts: "Különböző számlákról kell lennie"
+          same_family: "Ugyanazon a háztartáson belül kell lennie"
+          opposite_amounts: "Ellentétes összegekkel kell rendelkeznie"
+          within_days: "%{count} napon belül kell lennie"
           attributes:
             base:
               inflow_cannot_be_in_multiple_transfers: A beérkező tranzakció nem szerepelhet több átutalásban

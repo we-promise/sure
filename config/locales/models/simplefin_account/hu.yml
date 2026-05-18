@@ -1,0 +1,7 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: "A SimpleFin-számlának rendelkeznie kell aktuális vagy elérhető egyenleggel"

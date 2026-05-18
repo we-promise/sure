@@ -10,6 +10,7 @@ hu:
       rate_type: Kamat típusa
       term_months: Futamidő (hónap)
       term_months_placeholder: '360'
+      none: Nincs
       subtype_prompt: Válassz hiteltípust
       subtype_none: Nincs
     new:
@@ -23,3 +24,14 @@ hu:
       term: Futamidő
       type: Típus
       unknown: Ismeretlen
+    tabs:
+      overview:
+        interest_rate: Kamatláb
+        monthly_payment: Havi törlesztőrészlet
+        not_applicable: N/A
+        original_principal: Eredeti tőkeösszeg
+        remaining_principal: Fennmaradó tőkeösszeg
+        term: Futamidő
+        type: Típus
+        unknown: Ismeretlen
+        edit_loan_details: "Hitel adatainak szerkesztése"

@@ -81,6 +81,32 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     ).import_provider_prices
   end
 
+  test "logs provider fetch failures to debug log" do
+    Security::Price.delete_all
+
+    error = Provider::Error.new("Rate limit exceeded")
+
+    @provider.stubs(:fetch_security_prices).returns(provider_error_response(error))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: 2.days.ago.to_date,
+        end_date: Date.current
+      ).import_provider_prices
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_price_fetch", entry.category
+    assert_equal "warn", entry.level
+    assert_equal "Could not fetch prices for ticker", entry.message
+    assert_equal "security/price/importer", entry.source.underscore
+    assert_equal @security.id, entry.metadata["security_id"]
+    assert_equal @security.ticker, entry.metadata["ticker"]
+    assert_equal "Rate limit exceeded", entry.metadata["provider_error"]
+  end
+
   test "writes post-listing prices when holding predates provider history" do
     # Regression: a 2018-06-15 trade for a pair the provider only has from
     # 2020-01-03 onwards (e.g. BTCEUR on Binance) used to hit the

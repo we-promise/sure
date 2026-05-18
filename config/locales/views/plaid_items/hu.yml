@@ -22,7 +22,12 @@ hu:
       syncing: Szinkronizálás folyamatban...
       update: Frissítés
     select_existing_account:
+      no_available_accounts: Nincs elérhető Plaid-számla az összekapcsoláshoz. Először csatlakozz egy új Plaid-fiókhoz.
       title: "%{account_name} csatlakoztatása Plaid-hez"
       description: Válassz egy Plaid-számlát a meglévő számlád összekapcsolásához
       cancel: Mégse
       link_account: Számla összekapcsolása
+    link_existing_account:
+      invalid_account: Érvénytelen Plaid-számla van kijelölve
+      already_linked: Ez a Plaid-számla már össze van kapcsolva
+      success: A számla sikeresen össze lett kapcsolva a Plaid-del

@@ -7,6 +7,10 @@ hu:
         disable_mfa_confirm: Biztosan le szeretnéd tiltani a kétlépéses hitelesítést?
           Ez kevésbé biztonságossá teszi a fiókodat.
         enable_mfa: 2FA engedélyezése
+        mfa_enabled_status_html: "A kétlépéses hitelesítés <span class=\"font-medium text-green-600\">engedélyezve</span>"
+        mfa_enabled_description: A fiókod egy extra biztonsági réteggel védett.
+        mfa_disabled_status_html: "A kétlépéses hitelesítés <span class=\"font-medium text-red-600\">letiltva</span>"
+        mfa_disabled_description: Engedélyezd a 2FA-t, hogy extra védelmet adj a fiókodnak.
         mfa_description: Adj egy extra biztonsági réteget a fiókodhoz azzal, hogy bejelentkezéskor
           kódot kérsz az hitelesítő alkalmazásodtól
         mfa_title: Kétlépéses hitelesítés

@@ -1,14 +1,14 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Link Interactive Brokers account") %>
+    <% dialog.with_header(title: t(".title")) %>
 
     <% dialog.with_body do %>
       <% if @available_ibkr_accounts.blank? %>
         <div class="p-4 text-sm text-secondary">
-          <p class="mb-2">No unlinked Interactive Brokers accounts are available yet.</p>
+          <p class="mb-2"><%= t(".no_accounts_available") %></p>
           <ul class="list-disc list-inside space-y-1">
-            <li>Run a sync from Settings &gt; Providers after updating your Flex query.</li>
-            <li>Wait for the account discovery sync to finish.</li>
+            <li><%= t(".run_sync_hint") %></li>
+            <li><%= t(".wait_for_sync") %></li>
           </ul>
         </div>
       <% else %>
@@ -21,7 +21,7 @@
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= ibkr_account.name.presence || ibkr_account.ibkr_account_id %></span>
                   <span class="text-xs text-secondary">
-                    <%= ibkr_account.currency %> • Balance: <%= number_to_currency((ibkr_account.current_balance || 0), unit: Money::Currency.new(ibkr_account.currency || "USD").symbol) %>
+                    <%= ibkr_account.currency %> • <%= t(".balance") %>: <%= number_to_currency((ibkr_account.current_balance || 0), unit: Money::Currency.new(ibkr_account.currency || "USD").symbol) %>
                   </span>
                 </div>
               </label>
@@ -29,8 +29,8 @@
           </div>
 
           <div class="flex items-center justify-end gap-2">
-            <%= render DS::Button.new(text: "Link", variant: :primary, icon: "link-2", type: :submit) %>
-            <%= render DS::Link.new(text: "Cancel", variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+            <%= render DS::Button.new(text: t(".link"), variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
           </div>
         <% end %>
       <% end %>

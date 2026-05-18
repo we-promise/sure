@@ -24,7 +24,7 @@ class RecurringTransaction < ApplicationRecord
 
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
-      errors.add(:base, "Either merchant or name must be present")
+      errors.add(:base, :merchant_or_name_required)
     end
   end
 

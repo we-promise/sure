@@ -99,6 +99,13 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal opening_date, opening_anchor.entry.date
   end
 
+  test "accountable display names expose singular and group contexts" do
+    assert_equal "Investment", Investment.singular_display_name
+    assert_equal "Investments", Investment.display_name
+    assert_equal "Cash", Depository.singular_display_name
+    assert_equal "Cash", Depository.display_name
+  end
+
   test "gets short/long subtype label" do
     investment = Investment.new(subtype: "hsa")
     account = @family.accounts.create!(

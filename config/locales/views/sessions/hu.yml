@@ -16,6 +16,8 @@ hu:
       sso_provider_unavailable: "Az egyszeri bejelentkezés szolgáltatója jelenleg nem elérhető. Kérjük, próbáld újra később, vagy lépj kapcsolatba egy rendszergazdával."
       sso_invalid_response: "Érvénytelen választ kaptunk az egyszeri bejelentkezés szolgáltatójától. Kérjük, próbáld újra."
       sso_failed: "Az egyszeri bejelentkezés sikertelen volt. Kérjük, próbáld újra."
+    mobile_sso_start:
+      redirecting_html: "Átirányítás bejelentkezéshez... <a href=\"%{url}\">Kattints ide</a>, ha nincs átirányítás."
     new:
       email: E-mail cím
       email_placeholder: te@pelda.hu

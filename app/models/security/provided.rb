@@ -240,10 +240,18 @@ module Security::Provided
       update(attrs) if attrs.any?
     else
       Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
-      Sentry.capture_exception(SecurityInfoMissingError.new("Failed to get security info"), level: :warning) do |scope|
-        scope.set_tags(security_id: self.id)
-        scope.set_context("security", { id: self.id, provider_error: response.error.message })
-      end
+      DebugLogEntry.capture(
+        category: "security_metadata_fetch",
+        level: "warn",
+        message: "Failed to get security info",
+        source: self.class.name,
+        provider: price_data_provider,
+        metadata: {
+          security_id: self.id,
+          ticker: ticker,
+          provider_error: response.error.message
+        }
+      )
     end
   end
 

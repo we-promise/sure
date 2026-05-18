@@ -1,0 +1,7 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Either merchant or name must be present"

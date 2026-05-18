@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -112,13 +112,13 @@ jobs:
           echo "Extracted version: $VERSION"
 
       - name: Download Android APK artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: app-release-apk
           path: ${{ runner.temp }}/mobile-artifacts
 
       - name: Download iOS build artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: ios-build-unsigned
           path: ${{ runner.temp }}/ios-build
@@ -258,7 +258,7 @@ jobs:
           done
 
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: gh-pages
           path: gh-pages

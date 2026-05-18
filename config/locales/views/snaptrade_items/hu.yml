@@ -2,6 +2,8 @@
 hu:
   snaptrade_items:
     default_name: "SnapTrade kapcsolat"
+    link_accounts:
+      use_setup_flow: Használd helyette a számlabeállítási folyamatot
     create:
       success: "SnapTrade sikeresen beállítva."
     update:
@@ -74,6 +76,8 @@ hu:
       available_accounts: "Elérhető számlák"
       balance_label: "Egyenleg:"
       account_number: "Számla:"
+      sync_start_date_label: "Tranzakciók importálása ettől:"
+      sync_start_date_help: "Hagyd üresen az összes elérhető előzményhez"
       create_button: "Kiválasztott számlák létrehozása"
       cancel_button: "Mégse"
       creating: "Számlák létrehozása..."
@@ -133,6 +137,7 @@ hu:
       needs_setup:
         one: "%{count} beállítást igényel"
         other: "%{count} beállítást igényel"
+      status_needs_registration: "Hitelesítő adatok elmentve. Fejezd be a beállítást egy brókercég csatlakoztatásához."
       status_ready: "Készen áll brókercégek csatlakoztatásához"
       setup_accounts_button: "Számlák beállítása"
       connect_button: "Brókercég csatlakoztatása"

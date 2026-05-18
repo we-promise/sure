@@ -29,12 +29,12 @@ jobs:
       app_version: ${{ steps.version.outputs.app_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Install Helm
-        uses: azure/setup-helm@v4.3.1
+        uses: azure/setup-helm@v5
 
       - name: Resolve chart and app versions
         id: version
@@ -88,7 +88,7 @@ jobs:
           helm package charts/sure -d .cr-release-packages
 
       - name: Upload packaged chart artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: helm-chart-package
           path: .cr-release-packages/*.tgz
@@ -98,7 +98,7 @@ jobs:
 
       - name: Checkout gh-pages
         if: ${{ inputs.update_gh_pages }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: gh-pages
           path: gh-pages

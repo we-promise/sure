@@ -137,6 +137,6 @@ class SimplefinAccount < ApplicationRecord
     end
     def has_balance
       return if current_balance.present? || available_balance.present?
-      errors.add(:base, "SimpleFin account must have either current or available balance")
+      errors.add(:base, :no_balance)
     end
 end

@@ -17,6 +17,7 @@ enabled = true
 [[containers]]
 class_name = "RailsContainer"
 image = "../../Dockerfile.preview"
+instance_type = "basic"
 max_instances = 1
 
 # Durable Object binding for the container

@@ -160,7 +160,7 @@ class Provider::EnableBanking
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
   # @return [Hash] Transactions and continuation_key for pagination
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
-                               continuation_key: nil, transaction_status: nil, psu_headers: {})
+                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retried_date_from: false)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
     query_params[:transaction_status] = transaction_status if transaction_status.present?
@@ -175,6 +175,22 @@ class Provider::EnableBanking
     )
 
     handle_response(response)
+  rescue EnableBankingError => e
+    corrected_date_from = e.corrected_date_from
+
+    if !retried_date_from && e.wrong_transactions_period? && corrected_date_from.present? && corrected_date_from != date_from
+      get_account_transactions(
+        account_id: account_id,
+        date_from: corrected_date_from,
+        date_to: date_to,
+        continuation_key: continuation_key,
+        transaction_status: transaction_status,
+        psu_headers: psu_headers,
+        retried_date_from: true
+      )
+    else
+      raise
+    end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     raise EnableBankingError.new("Exception during GET request: #{e.message}", :request_failed)
   end
@@ -237,7 +253,8 @@ class Provider::EnableBanking
       when 408
         raise EnableBankingError.new("Request timeout from Enable Banking API", :timeout)
       when 422
-        raise EnableBankingError.new("Validation error from Enable Banking API: #{response.body}", :validation_error)
+        response_data = parse_response_body(response)
+        raise EnableBankingError.new("Validation error from Enable Banking API: #{response.body}", :validation_error, response_data: response_data)
       when 429
         raise EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
@@ -255,11 +272,28 @@ class Provider::EnableBanking
     end
 
     class EnableBankingError < StandardError
-      attr_reader :error_type
+      attr_reader :error_type, :response_data
 
-      def initialize(message, error_type = :unknown)
+      def initialize(message, error_type = :unknown, response_data: nil)
         super(message)
         @error_type = error_type
+        @response_data = response_data
+      end
+
+      def wrong_transactions_period?
+        error_type == :validation_error && response_data.is_a?(Hash) && response_data[:error] == "WRONG_TRANSACTIONS_PERIOD"
+      end
+
+      def corrected_date_from
+        value = response_data&.dig(:detail, :date_from)
+
+        if value.is_a?(Date)
+          value
+        elsif value.present?
+          Date.iso8601(value)
+        end
+      rescue ArgumentError
+        nil
       end
     end
 end

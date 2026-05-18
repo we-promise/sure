@@ -10,7 +10,7 @@
       <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:ring-secondary focus-within:border-secondary">
         <%= icon("search") %>
         <%= form.text_field :search,
-                            placeholder: "Search transactions ...",
+                            placeholder: t(".search_placeholder"),
                             value: @q[:search],
                             class: "form-field__input placeholder:text-sm placeholder:text-secondary",
                             "data-auto-submit-form-target": "auto" %>
@@ -21,7 +21,7 @@
       <% menu.with_button(
         id: "transaction-filters-button",
         type: "button",
-        text: "Filter",
+        text: t(".filter"),
         variant: "outline",
         icon: "list-filter"
       ) %>

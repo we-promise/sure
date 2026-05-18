@@ -3,8 +3,61 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    rule:
+      edit: Edit
+      re_apply_rule: Re-apply rule
+      delete: Delete
+      then: THEN
+      and_more_conditions:
+        one: and 1 more condition
+        other: and %{count} more conditions
+      and_more_actions:
+        one: and 1 more action
+        other: and %{count} more actions
+      action_label_to: "%{label} to %{value}"
+      all_past_and_future: All past and future %{resource}
+      on_or_after: "%{resource} on or after %{date}"
+    form:
+      rule_name_label: Rule name (optional)
+      rule_name_placeholder: Enter a name for this rule
+      add_condition: Add condition
+      add_condition_group: Add condition group
+      add_action: Add action
+      all_past_and_future: All past and future %{resource}
+      starting_from: Starting from
+      then: THEN
+    index:
+      page_title: Rules
+      delete_all_rules: Delete all rules
+      new_rule: New rule
+      ai_cost_warning: AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
+      rules_heading: Rules
+      sort_by: "Sort by:"
+      sort_name: Name
+      sort_updated_at: Updated At
+      toggle_sort_direction: Toggle sort direction
+      no_rules_title: No rules yet
+      no_rules_description: Set up rules to perform actions to your transactions and other data on every account sync.
+    confirm:
+      title: Confirm changes
+      title_with_name: "Confirm changes to \"%{name}\""
+      apply_notice_html: "You are about to apply this rule to <span class=\"text-primary font-medium\">%{count} %{resource}</span> that meet the specified rule criteria.  Please confirm if you wish to proceed with this change."
+      ai_cost_title: AI Cost Estimation
+      ai_cost_with_estimate_html: "This will use AI to categorize %{count} transaction(s). Estimated cost: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "This will use AI to categorize %{count} transaction(s)."
+      cost_unavailable_model: "Cost estimation unavailable for model \"%{model}\"."
+      cost_unavailable_no_provider: Cost estimation unavailable (no LLM provider configured).
+      cost_warning: You may incur costs, please check with the model provider for the most up-to-date prices.
+      view_usage_history: View usage history
+      confirm_changes: Confirm changes
     actions:
       value_placeholder: Enter a value
+    update:
+      success: Rule updated
+    destroy:
+      success: Rule deleted
+    destroy_all:
+      success: All rules deleted
     apply_all:
       button: Apply All
       confirm_title: Apply All Rules
@@ -51,3 +104,12 @@ en:
         expense: Expense
         transfer: Transfer
         equal_to: Equal to
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: and
+        match: match
+        all: all
+        any: any
+        of_the_following_conditions: of the following conditions
+        add_condition: Add condition

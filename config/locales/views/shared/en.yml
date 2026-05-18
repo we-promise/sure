@@ -1,5 +1,8 @@
 ---
 en:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
     confirm_modal:
       accept: Confirm
@@ -17,5 +20,17 @@ en:
     syncing_notice:
       syncing: Syncing accounts data...
     require_admin: "Only admins can perform this action"
+    custom_confirm:
+      default_title: "Are you sure?"
+      default_body: "This is not reversible."
+      default_btn_text: "Confirm"
+    family_moniker:
+      singular: Family
+      plural: Families
     trend_change:
       no_change: "no change"
+    cancel: Cancel
+    transaction_tabs:
+      expense: Expense
+      income: Income
+      transfer: Transfer

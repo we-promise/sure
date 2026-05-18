@@ -7,6 +7,10 @@ en:
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
           This will make your account less secure.
         enable_mfa: Enable 2FA
+        mfa_enabled_status_html: "Two-factor authentication is <span class=\"font-medium text-green-600\">enabled</span>"
+        mfa_enabled_description: Your account is protected with an additional layer of security.
+        mfa_disabled_status_html: "Two-factor authentication is <span class=\"font-medium text-red-600\">disabled</span>"
+        mfa_disabled_description: Enable 2FA to add an extra layer of security to your account.
         mfa_description: Add an extra layer of security to your account by requiring
           a code from your authenticator app when signing in
         mfa_title: Two-Factor Authentication

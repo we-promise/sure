@@ -20,12 +20,12 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :setup_token,
-                        label: "Setup Token",
-                        placeholder: "Paste SimpleFIN setup token",
+                        label: t("settings.providers.simplefin_panel.setup_token_label"),
+                        placeholder: t("settings.providers.simplefin_panel.setup_token_placeholder"),
                         type: :password %>
 
     <div class="flex justify-end">
-      <%= form.submit "Save and connect",
+      <%= form.submit t("settings.providers.simplefin_panel.save_and_connect"),
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-gray-900 theme-dark:focus:ring-white focus:ring-offset-2 transition-colors" %>
     </div>
   <% end %>

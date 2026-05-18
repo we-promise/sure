@@ -86,8 +86,8 @@ class RulesController < ApplicationController
   def update
     if @rule.update(rule_params)
       respond_to do |format|
-        format.html { redirect_back_or_to rules_path, notice: "Rule updated" }
-        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: "Rule updated" }
+        format.html { redirect_back_or_to rules_path, notice: t(".success") }
+        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".success") }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -96,12 +96,12 @@ class RulesController < ApplicationController
 
   def destroy
     @rule.destroy
-    redirect_to rules_path, notice: "Rule deleted"
+    redirect_to rules_path, notice: t(".success")
   end
 
   def destroy_all
     Current.family.rules.destroy_all
-    redirect_to rules_path, notice: "All rules deleted"
+    redirect_to rules_path, notice: t(".success")
   end
 
   def confirm_all

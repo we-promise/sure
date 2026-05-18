@@ -17,7 +17,7 @@ class CategoryImport < Import
         parent = ensure_placeholder_category(row.category_parent)
 
         if parent && parent == category
-          errors.add(:base, "Category '#{category.name}' cannot be its own parent")
+          errors.add(:base, :own_parent, name: category.name)
           raise ActiveRecord::RecordInvalid.new(self)
         end
 
@@ -82,7 +82,7 @@ class CategoryImport < Import
       missing_headers = required_column_keys.map(&:to_s).reject { |key| header_for(key).present? }
       return if missing_headers.empty?
 
-      errors.add(:base, "Missing required columns: #{missing_headers.join(', ')}")
+      errors.add(:base, :missing_columns, columns: missing_headers.join(", "))
       raise ActiveRecord::RecordInvalid.new(self)
     end
 

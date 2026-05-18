@@ -1,8 +1,21 @@
 ---
 en:
   breadcrumbs:
+    ai_prompts: AI Prompts
+    api_key: API Key
+    bank_sync: Bank Sync
+    budgets: Budgets
     categorize: Categorize
+    dashboard: Dashboard
     exports: Exports
+    guides: Guides
     home: Home
     imports: Imports
+    intro: Intro
+    llm_usage: LLM Usage
+    merchants: Merchants
+    profile: Profile Info
+    reports: Reports
+    security: Security
+    self_hosting: Self-Hosting
     transactions: Transactions

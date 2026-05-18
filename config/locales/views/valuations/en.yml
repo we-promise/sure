@@ -1,6 +1,31 @@
 ---
 en:
   valuations:
+    confirmation_contents:
+      this_will: "This will %{action_verb} the account value on"
+      to_colon: "to:"
+      total_account_value: Total account value
+      holdings_value: Holdings value
+      brokerage_cash: Brokerage cash
+      account_balance: account balance
+      credit_card_balance: credit card balance
+      loan_balance: loan balance
+      property_value: property value
+      vehicle_value: vehicle value
+      crypto_balance: crypto balance
+      asset_value: asset value
+      liability_balance: liability balance
+      balance: balance
+      "on": "on"
+      to: "to"
+      recalculate_notice: "All future transactions and balances will be recalculated based on this %{change_or_update}."
+      change: change
+      update: update
+    create:
+      account_updated: Account updated
+    update:
+      account_updated: Account updated
+      entry_updated: Entry updated
     errors:
       amount_required: Amount is required
     form:
@@ -19,6 +44,7 @@ en:
       title: New balance
     show:
       amount: Amount
+      amount_label: Account value on date
       date_label: Date
       delete: Delete
       delete_subtitle: This action cannot be undone
@@ -31,3 +57,4 @@ en:
       overview: Overview
       settings: Settings
       opening_balance: "Opening balance"
+      update_value: Update value

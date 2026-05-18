@@ -112,7 +112,7 @@ class ApiKey < ApplicationRecord
     def prevent_demo_monitoring_key_destroy!
       return unless demo_monitoring_key?
 
-      errors.add(:base, "Cannot destroy demo monitoring API key")
+      errors.add(:base, :cannot_destroy_demo_key)
       throw(:abort)
     end
 end

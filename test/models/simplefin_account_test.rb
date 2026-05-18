@@ -41,7 +41,7 @@ class SimplefinAccountTest < ActiveSupport::TestCase
     )
 
     refute account.valid?
-    assert_includes account.errors[:base], "SimpleFin account must have either current or available balance"
+    assert_includes account.errors[:base], I18n.t("activerecord.errors.models.simplefin_account.no_balance")
   end
 
   test "can upsert snapshot data" do

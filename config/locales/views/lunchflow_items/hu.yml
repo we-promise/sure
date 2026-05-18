@@ -1,6 +1,29 @@
 ---
 hu:
   lunchflow_items:
+    api_error:
+      title: Lunch Flow kapcsolódási hiba
+      unable_to_connect: Nem sikerült csatlakozni a Lunch Flow-hoz
+      common_issues: "Gyakori problémák:"
+      invalid_api_key_label: Érvénytelen API-kulcs
+      invalid_api_key_desc: Ellenőrizd az API-kulcsodat a Szolgáltatói beállításokban
+      expired_credentials_label: Lejárt hitelesítő adatok
+      expired_credentials_desc: Generálj új API-kulcsot a Lunch Flow-ban
+      network_issue_label: Hálózati probléma
+      network_issue_desc: Ellenőrizd az internetkapcsolatodat
+      service_down_label: Szolgáltatás leállása
+      service_down_desc: A Lunch Flow API ideiglenesen nem érhető el
+      check_provider_settings: Szolgáltatói beállítások ellenőrzése
+    setup_required:
+      title: Lunch Flow beállítás szükséges
+      api_key_not_configured: Az API-kulcs nincs beállítva
+      api_key_description: A Lunch Flow számlák összekapcsolása előtt be kell állítanod a Lunch Flow API-kulcsodat.
+      setup_steps_title: "Beállítási lépések:"
+      setup_step_1_html: "Menj a <strong>Beállítások → Szolgáltatók</strong> menübe"
+      setup_step_2_html: "Keresd meg a <strong>Lunch Flow</strong> részt"
+      setup_step_3: Add meg a Lunch Flow API-kulcsodat
+      setup_step_4: Térj vissza ide a számlák összekapcsolásához
+      go_to_provider_settings: Szolgáltatói beállítások megnyitása
     create:
       success: Lunch Flow kapcsolat sikeresen létrehozva
     destroy:
@@ -86,7 +109,7 @@ hu:
         credit_card: Hitelkártya
         investment: Befektetési számla
         loan: Hitel vagy jelzálog
-        other_asset: Egyéb eszköz
+        other_asset: Egyéb vagyon
       subtype_labels:
         depository: "Számla altípusa:"
         credit_card: ""
@@ -95,7 +118,7 @@ hu:
         other_asset: ""
       subtype_messages:
         credit_card: "A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva."
-        other_asset: "Az egyéb eszközökhöz nincs szükség további beállításokra."
+        other_asset: "Az egyéb vagyonelemekhez nincs szükség további beállításokra."
       subtypes:
         depository:
           checking: Folyószámla

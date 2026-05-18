@@ -50,3 +50,7 @@ hu:
       inactive: Inaktív
     badges:
       manual: Manuális
+    transfer_marked_as_recurring: Átutalás ismétlődőként jelölve
+    transfer_already_exists: Ehhez a számlápárhoz már létezik ismétlődő átutalás
+    transfer_creation_failed: Nem sikerült létrehozni az ismétlődő átutalást. Kérlek ellenőrizd az átutalás adatait, és próbáld újra.
+    transfer_feature_disabled: Az ismétlődő tranzakciók le vannak tiltva ennél a háztartásnál

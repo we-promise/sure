@@ -7,7 +7,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -26,7 +26,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -75,7 +75,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -91,7 +91,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -104,7 +104,7 @@ class OidcAccountsController < ApplicationController
     # domain is not allowed, block JIT account creation—unless there's a
     # pending invitation for this user.
     unless invitation.present? || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
-      redirect_to new_session_path, alert: "SSO account creation is disabled. Please contact an administrator."
+      redirect_to new_session_path, alert: t(".account_creation_disabled")
       return
     end
 
@@ -164,7 +164,7 @@ class OidcAccountsController < ApplicationController
       elsif accept_pending_invitation_for(@user)
         t("invitations.accept_choice.joined_household")
       else
-        "Welcome! Your account has been created."
+        t(".account_created")
       end
       redirect_to root_path, notice: notice
     else

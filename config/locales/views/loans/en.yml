@@ -10,6 +10,7 @@ en:
       rate_type: Rate type
       term_months: Term (months)
       term_months_placeholder: '360'
+      none: None
       subtype_prompt: Select loan type
       subtype_none: None
     new:
@@ -23,3 +24,14 @@ en:
       term: Term
       type: Type
       unknown: Unknown
+    tabs:
+      overview:
+        interest_rate: Interest Rate
+        monthly_payment: Monthly Payment
+        not_applicable: N/A
+        original_principal: Original Principal
+        remaining_principal: Remaining Principal
+        term: Term
+        type: Type
+        unknown: Unknown
+        edit_loan_details: "Edit loan details"
