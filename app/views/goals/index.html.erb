@@ -85,7 +85,7 @@
     </section>
 
     <% if @any_pending_pledge %>
-      <%= render DS::Alert.new(variant: "warning", message: t(".pending_pledges_callout"), live: :polite) %>
+      <%= render DS::Alert.new(variant: "info", message: t(".pending_pledges_callout"), live: :polite) %>
     <% end %>
 
     <%# Goals section %>

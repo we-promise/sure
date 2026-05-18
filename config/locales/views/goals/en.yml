@@ -234,6 +234,9 @@ en:
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: Open
       pending_pledge: Pending pledge
+      pending_count:
+        one: 1 pending
+        other: "%{count} pending"
       footer_no_pledges: No matched pledges yet
       footer_last_today: Last pledge matched today
       footer_last_days:

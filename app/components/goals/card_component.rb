@@ -30,7 +30,11 @@ class Goals::CardComponent < ApplicationComponent
   # `.includes(:open_pledges, ...)` chain in GoalsController#index, so
   # this is a hit on the in-memory association — no N+1.
   def has_pending_pledge?
-    goal.open_pledges.any?
+    pending_pledges_count.positive?
+  end
+
+  def pending_pledges_count
+    @pending_pledges_count ||= goal.open_pledges.size
   end
 
   def linked_accounts_count_label
