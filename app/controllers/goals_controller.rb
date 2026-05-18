@@ -20,9 +20,10 @@ class GoalsController < ApplicationController
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
     @completed_goals = all_goals.select { |g| g.state == "completed" }.sort_by { |g| g.name.downcase }
     @archived_goals = all_goals.select { |g| g.state == "archived" }
-    # Completed goals join the chip-filterable grid below the active ones so
-    # the `completed` chip can isolate them. Archived stays in the separate
-    # collapsed-by-default section below.
+    # Completed goals join the chip-filterable grid below the active ones
+    # so the `completed` chip can isolate them. Archived stays in a
+    # separate collapsed-by-default section, opted out of the filter
+    # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count

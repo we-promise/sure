@@ -1,5 +1,5 @@
 <div class="group relative bg-container rounded-xl shadow-border-xs hover:shadow-sm transition-shadow p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
-     data-goals-filter-target="card"
+     <% if filterable %>data-goals-filter-target="card"<% end %>
      data-goal-name="<%= goal.name %>"
      data-goal-status="<%= goal.display_status %>">
   <div class="flex items-start gap-3">

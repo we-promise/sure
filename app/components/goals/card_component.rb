@@ -2,11 +2,12 @@ class Goals::CardComponent < ApplicationComponent
   RING_SIZE = 64
   RING_STROKE = 6
 
-  def initialize(goal:)
+  def initialize(goal:, filterable: true)
     @goal = goal
+    @filterable = filterable
   end
 
-  attr_reader :goal
+  attr_reader :goal, :filterable
 
   def progress_percent
     goal.progress_percent

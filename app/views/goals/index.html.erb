@@ -182,7 +182,7 @@
           </summary>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             <% @archived_goals.each do |goal| %>
-              <%= render Goals::CardComponent.new(goal: goal) %>
+              <%= render Goals::CardComponent.new(goal: goal, filterable: false) %>
             <% end %>
           </div>
         </details>
