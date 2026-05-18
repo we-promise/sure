@@ -13,15 +13,14 @@ class IbkrAccount::ActivitiesProcessor
     activities = (@ibkr_account.raw_activities_payload || {}).with_indifferent_access
     trades = Array(activities[:trades])
     cash_transactions = Array(activities[:cash_transactions])
-    @fee_transactions_count = 0
 
-    trades_count = trades.sum { |trade| process_trade(trade.with_indifferent_access) ? 1 : 0 }
-    cash_transactions_count = cash_transactions.sum { |cash_transaction| process_cash_transaction(cash_transaction.with_indifferent_access) ? 1 : 0 }
+    trade_results = trades.map { |trade| process_trade(trade.with_indifferent_access) }
+    trades_count = trade_results.count { |r| r[:imported] }
+    fee_count    = trade_results.sum   { |r| r[:fees] }
 
-    {
-      trades: trades_count,
-      transactions: cash_transactions_count + @fee_transactions_count
-    }
+    cash_count = cash_transactions.sum { |t| process_cash_transaction(t.with_indifferent_access) ? 1 : 0 }
+
+    { trades: trades_count, transactions: cash_count + fee_count }
   end
 
   private
@@ -35,14 +34,14 @@ class IbkrAccount::ActivitiesProcessor
     end
 
     def process_trade(row)
-      return false unless supported_trade?(row)
+      return { imported: false, fees: 0 } unless supported_trade?(row)
 
       security = resolve_security(row)
-      return false unless security
+      return { imported: false, fees: 0 } unless security
 
       quantity = parse_decimal(row[:quantity])
       native_price = parse_decimal(row[:trade_price])
-      return false if quantity.nil? || native_price.nil?
+      return { imported: false, fees: 0 } if quantity.nil? || native_price.nil?
 
       buy_sell = row[:buy_sell].to_s.upcase
       signed_quantity = buy_sell == "SELL" ? -quantity.abs : quantity.abs
@@ -65,11 +64,11 @@ class IbkrAccount::ActivitiesProcessor
         exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f
       )
 
-      import_commission_transaction(row, security, date)
-      true
+      fees = import_commission_transaction(row, security, date) ? 1 : 0
+      { imported: true, fees: fees }
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process trade #{row[:trade_id]}: #{e.message}")
-      false
+      { imported: false, fees: 0 }
     end
 
     def process_cash_transaction(row)
@@ -114,9 +113,10 @@ class IbkrAccount::ActivitiesProcessor
 
     def import_commission_transaction(row, security, date)
       commission = parse_decimal(row[:ib_commission])
-      return if commission.nil? || commission.zero?
-      currency = row.with_indifferent_access[:ib_commission_currency].to_s.upcase.presence || @ibkr_account.currency
-      ticker = security&.ticker || row.with_indifferent_access[:symbol]
+      return false if commission.nil? || commission.zero?
+
+      currency = row[:ib_commission_currency].to_s.upcase.presence || @ibkr_account.currency
+      ticker = security&.ticker || row[:symbol]
 
       result = import_adapter.import_transaction(
         external_id: "ibkr_trade_fee_#{row[:trade_id]}",
@@ -139,7 +139,7 @@ class IbkrAccount::ActivitiesProcessor
         }
       )
 
-      @fee_transactions_count += 1 if result
+      !!result
     end
 
     def build_trade_name(ticker, signed_quantity)
@@ -170,6 +170,7 @@ class IbkrAccount::ActivitiesProcessor
       type != "DIVIDENDS" || row[:conid].present?
     end
 
+    # supported_cash_transaction? ensures only known types reach here; no else branch needed
     def classify_cash_transaction(row, amount)
       type = row[:type].to_s.upcase.strip
 
@@ -178,8 +179,6 @@ class IbkrAccount::ActivitiesProcessor
         amount.positive? ? [ "Contribution", -amount.abs ] : [ "Withdrawal", amount.abs ]
       when "DIVIDENDS"
         [ "Dividend", -amount.abs ]
-      else
-        [ nil, nil ]
       end
     end
 
@@ -205,11 +204,11 @@ class IbkrAccount::ActivitiesProcessor
       end&.with_indifferent_access&.dig(:symbol)
       return holding_symbol if holding_symbol.present?
 
-      Array(@ibkr_account.raw_activities_payload&.dig("trades") || @ibkr_account.raw_activities_payload&.dig(:trades)).find do |trade|
+      activities = (@ibkr_account.raw_activities_payload || {}).with_indifferent_access
+      Array(activities[:trades]).find do |trade|
         trade.with_indifferent_access[:conid].to_s == conid.to_s
       end&.with_indifferent_access&.dig(:symbol)
     end
-
 
     def fx_rate_available?(row)
       source_currency = extract_currency(row, fallback: nil)
