@@ -44,6 +44,7 @@ class Transfer < ApplicationRecord
         begin
           transaction.update!(kind: "standard")
         rescue ActiveRecord::RecordNotFound
+        rescue NoMethodError
           next
         end
       end
