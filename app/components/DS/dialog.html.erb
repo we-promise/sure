@@ -2,14 +2,15 @@
   <%# `role="dialog"` + `aria-modal="true"` is redundant with `<dialog>`
       in modern browsers, but Safari and screen readers older than the
       2024 WAI-ARIA Mapping still benefit from the explicit role.
-      `aria-labelledby` references the in-DOM `<h*>` minted with the
-      stable `title_id`; if the caller doesn't supply a title (e.g.
-      `custom_header: true`), the reference resolves to nothing and AT
-      gracefully falls back to the dialog's first focusable. %>
+      `aria-labelledby` is only emitted when the header slot rendered
+      an auto-title (so the referenced id exists in the DOM); callers
+      using `custom_header: true` or body-only dialogs can pass
+      `aria-label` / `aria-labelledby` via `**opts` to provide their
+      own accessible name. %>
   <%= tag.dialog class: "w-full h-full bg-transparent text-primary theme-dark:backdrop:bg-alpha-black-900 backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] #{(drawer? || responsive?) ? "lg:p-3" : "lg:p-1"}",
               role: "dialog",
               "aria-modal": "true",
-              "aria-labelledby": title_id,
+              "aria-labelledby": (title_id if has_auto_title?),
               **merged_opts do %>
     <%= tag.div class: dialog_outer_classes do %>
       <%= tag.div class: dialog_inner_classes, data: { DS__dialog_target: "content" } do %>
