@@ -126,6 +126,13 @@ en:
     keep_both: No, keep both
     split_parent_row:
       split_label: "Split"
+    transfer_match:
+      auto_matched: Auto-matched
+      auto_matched_short: A/M
+      confirm_match: Confirm match
+      payment_confirmed: Payment is confirmed
+      reject_match: Reject match
+      transfer_confirmed: Transfer is confirmed
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted

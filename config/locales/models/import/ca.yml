@@ -3,7 +3,7 @@ ca:
   activerecord:
     attributes:
       import:
-        currency: Moneda
+        currency: Divisa
         number_format: Format numèric
     errors:
       models:
@@ -11,4 +11,5 @@ ca:
           attributes:
             raw_file_str:
               invalid_csv_format: no és un format CSV vàlid
-
+          duplicate_headers: 'Les capçaleres del CSV es normalitzen en columnes duplicades:
+            %{columns}'

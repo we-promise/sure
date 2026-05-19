@@ -1,6 +1,27 @@
 ---
 ca:
   properties:
+    address:
+      address_line1_label: Adreça línia 1
+      address_line1_placeholder: Carrer Major, 123
+      city_label: Ciutat
+      city_placeholder: Barcelona
+      country_label: País
+      country_placeholder: ESP
+      postal_code_label: Codi postal
+      postal_code_placeholder: '08001'
+      save: Desa
+      state_region_label: Província/Comarca
+      state_region_placeholder: BCN
+      title: Introdueix l'immoble manualment
+    balances:
+      market_value_label: Valor de mercat estimat
+      market_value_tooltip: El valor de mercat estimat del teu immoble. Aquest número
+        sovint es pot trobar a llocs com Idealista o Fotocasa, i mai és un número
+        exacte.
+      next: Següent
+      save: Desa
+      title: Introdueix l'immoble manualment
     edit:
       edit: Edita %{account}
     form:
@@ -22,7 +43,8 @@ ca:
       year_built: Any de construcció
       year_built_placeholder: '2000'
     new:
-      title: Introdueix els detalls de l'immoble
+      next: Següent
+      title: Introdueix l'immoble manualment
     overview:
       living_area: Superfície habitable
       market_value: Valor de mercat
@@ -30,4 +52,40 @@ ca:
       trend: Tendència
       unknown: Desconegut
       year_built: Any de construcció
-
+    overview_fields:
+      area_label: Superfície (opcional)
+      area_placeholder: '1200'
+      area_unit_label: Unitat de superfície
+      name_label: Nom
+      name_placeholder: Segona residència
+      property_type_label: Tipus d'immoble
+      square_feet: Peus quadrats
+      square_meters: Metres quadrats
+      subtype_prompt: Selecciona el tipus
+      year_built_label: Any de construcció (opcional)
+      year_built_placeholder: '1990'
+    subtypes:
+      agri_land:
+        long: Terra agrícola
+        short: Terra agrícola
+      apartment:
+        long: Pis
+        short: Pis
+      commercial:
+        long: Immoble comercial
+        short: Comercial
+      plot:
+        long: Solar / Terreny
+        short: Solar
+      rented:
+        long: Immoble llogat
+        short: Llogat
+    tabs:
+      overview:
+        edit_account_details: Edita els detalls del compte
+        living_area: Superfície habitable
+        market_value: Valor de mercat
+        purchase_price: Preu de compra
+        trend: Tendència
+        unknown: Desconegut
+        year_built: Any de construcció

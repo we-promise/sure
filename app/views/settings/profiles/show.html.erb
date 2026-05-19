@@ -50,7 +50,7 @@
             </div>
             <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
             <div class="rounded-md bg-surface px-1.5 py-0.5">
-              <p class="uppercase text-secondary font-medium text-xs"><%= user.role %></p>
+              <p class="uppercase text-secondary font-medium text-xs"><%= t("users.roles.#{user.role}", default: user.role.humanize) %></p>
             </div>
             <% if Current.user.admin? && user != Current.user %>
               <div class="ml-auto">
