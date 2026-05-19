@@ -94,7 +94,7 @@ en:
         create_provider: "Create Provider"
         update_provider: "Update Provider"
         errors_title:
-          one: "%{count} error prohibited this provider from being saved:"
+          one: "An error prohibited this provider from being saved:"
           other: "%{count} errors prohibited this provider from being saved:"
         provisioning_title: "User Provisioning"
         default_role_label: "Default Role for New Users"
