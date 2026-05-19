@@ -1,4 +1,4 @@
-<%= tag.details class: details_classes, open: open, **opts do %>
+<%= tag.details class: details_classes, open: open, **details_opts do %>
   <%= tag.summary class: summary_classes do %>
     <% if summary_content? %>
       <%# `<summary>` is `display: list-item`, so a flex inner div would

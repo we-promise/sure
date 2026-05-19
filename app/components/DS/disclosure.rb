@@ -32,7 +32,7 @@ class DS::Disclosure < DesignSystemComponent
   end
 
   def details_classes
-    case variant
+    base = case variant
     when :card
       "group bg-container p-4 shadow-border-xs rounded-xl"
     when :card_inset
@@ -40,6 +40,15 @@ class DS::Disclosure < DesignSystemComponent
     else
       "group"
     end
+
+    class_names(base, opts[:class])
+  end
+
+  # `opts` minus the `:class` key, since `details_classes` merges that
+  # separately to avoid duplicate-keyword collisions when forwarding to
+  # `tag.details`.
+  def details_opts
+    opts.except(:class)
   end
 
   def summary_classes
