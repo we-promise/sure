@@ -5,6 +5,7 @@ class DS::Tabs < DesignSystemComponent
       active_btn_classes: active_btn_classes,
       inactive_btn_classes: inactive_btn_classes,
       btn_classes: base_btn_classes,
+      dom_prefix: dom_prefix,
       classes: unstyled? ? classes : class_names(nav_container_classes, classes)
     )
   end
@@ -14,12 +15,24 @@ class DS::Tabs < DesignSystemComponent
       :div,
       class: ("hidden" unless tab_id == active_tab),
       role: "tabpanel",
-      id: "panel-#{tab_id}",
-      "aria-labelledby": tab_id,
+      id: panel_dom_id(tab_id),
+      "aria-labelledby": tab_dom_id(tab_id),
       tabindex: "0",
       data: { id: tab_id, DS__tabs_target: "panel" },
       &block
     )
+  end
+
+  # Scope tab/panel DOM ids to this component instance so multiple
+  # `DS::Tabs` widgets on the same page (which often reuse generic
+  # tab ids like "all" or "overview") don't collide and break the
+  # `aria-controls` / `aria-labelledby` associations.
+  def tab_dom_id(tab_id)
+    "#{dom_prefix}-tab-#{tab_id}"
+  end
+
+  def panel_dom_id(tab_id)
+    "#{dom_prefix}-panel-#{tab_id}"
   end
 
   VARIANTS = {
@@ -55,6 +68,10 @@ class DS::Tabs < DesignSystemComponent
   end
 
   private
+    def dom_prefix
+      @dom_prefix ||= "tabs-#{object_id}"
+    end
+
     def unstyled?
       variant == :unstyled
     end

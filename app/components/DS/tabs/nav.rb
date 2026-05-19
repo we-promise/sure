@@ -18,22 +18,23 @@ class DS::Tabs::Nav < DesignSystemComponent
   renders_many :btns, ->(id:, label:, classes: nil, &block) do
     is_active = id == active_tab
     content_tag(
-      :button, label, id: id,
+      :button, label, id: "#{dom_prefix}-tab-#{id}",
       type: "button",
       class: class_names(btn_classes, is_active ? active_btn_classes : inactive_btn_classes, classes),
       role: "tab",
       "aria-selected": is_active.to_s,
-      "aria-controls": "panel-#{id}",
+      "aria-controls": "#{dom_prefix}-panel-#{id}",
       tabindex: is_active ? "0" : "-1",
       data: { id: id, action: "click->DS--tabs#show keydown->DS--tabs#handleKeydown", DS__tabs_target: "navBtn" },
       &block
     )
   end
 
-  attr_reader :active_tab, :classes, :active_btn_classes, :inactive_btn_classes, :btn_classes
+  attr_reader :active_tab, :classes, :active_btn_classes, :inactive_btn_classes, :btn_classes, :dom_prefix
 
-  def initialize(active_tab:, classes: nil, active_btn_classes: nil, inactive_btn_classes: nil, btn_classes: nil)
+  def initialize(active_tab:, dom_prefix:, classes: nil, active_btn_classes: nil, inactive_btn_classes: nil, btn_classes: nil)
     @active_tab = active_tab
+    @dom_prefix = dom_prefix
     @classes = classes
     @active_btn_classes = active_btn_classes
     @inactive_btn_classes = inactive_btn_classes
