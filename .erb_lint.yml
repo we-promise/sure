@@ -41,3 +41,30 @@ linters:
           - 'border-gray-700'
           - 'border-gray-900'
           - 'border-white'
+      # Custom @utility tokens (bg-inverse, text-inverse, text-primary, etc.) do
+      # NOT support Tailwind's `/N` opacity modifier syntax — modifiers like
+      # `text-inverse/70` silently compile to nothing. Use `opacity-N` on the
+      # parent element, or migrate the token to `@theme --color-X` in
+      # design/tokens/sure.tokens.json so Tailwind auto-generates the
+      # color-mix pipeline. See #1653.
+      - suggestion: "Custom @utility tokens drop `/N` opacity modifiers silently. Use `opacity-N` instead, or migrate the token to @theme in design/tokens/sure.tokens.json (see #1653)."
+        deprecated:
+          - 'text-inverse\/\d+'
+          - 'bg-inverse\/\d+'
+          - 'bg-inverse-hover\/\d+'
+          - 'border-inverse\/\d+'
+          - 'text-primary\/\d+'
+          - 'text-secondary\/\d+'
+          - 'text-subdued\/\d+'
+          - 'border-primary\/\d+'
+          - 'border-secondary\/\d+'
+          - 'border-subdued\/\d+'
+          - 'button-bg-primary\/\d+'
+          - 'button-bg-primary-hover\/\d+'
+          - 'button-bg-secondary\/\d+'
+          - 'button-bg-secondary-hover\/\d+'
+          - 'button-bg-destructive\/\d+'
+          - 'button-bg-destructive-hover\/\d+'
+          - 'tab-item-active\/\d+'
+          - 'tab-item-hover\/\d+'
+          - 'tab-bg-group\/\d+'

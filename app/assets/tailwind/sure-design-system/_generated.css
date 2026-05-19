@@ -14,6 +14,17 @@
   --color-destructive: var(--color-red-600);
   --color-info: var(--color-blue-600);
   --color-shadow: --alpha(var(--color-black) / 6%);
+  --color-link: var(--color-blue-600);
+  --color-tertiary: var(--color-alpha-black-100);
+  --color-surface: var(--color-gray-50);
+  --color-surface-hover: var(--color-gray-100);
+  --color-surface-inset: var(--color-gray-100);
+  --color-surface-inset-hover: var(--color-gray-200);
+  --color-container: var(--color-white);
+  --color-container-hover: var(--color-gray-50);
+  --color-container-inset: var(--color-gray-50);
+  --color-container-inset-hover: var(--color-gray-100);
+  --color-nav-indicator: var(--color-black);
   --color-gray-25: #FAFAFA;
   --color-gray-50: #F7F7F7;
   --color-gray-100: #F0F0F0;
@@ -202,6 +213,17 @@
     --color-destructive: var(--color-red-400);
     --color-info: var(--color-blue-500);
     --color-shadow: --alpha(var(--color-white) / 8%);
+    --color-link: var(--color-blue-500);
+    --color-tertiary: var(--color-alpha-white-200);
+    --color-surface: var(--color-black);
+    --color-surface-hover: var(--color-gray-800);
+    --color-surface-inset: var(--color-gray-800);
+    --color-surface-inset-hover: var(--color-gray-800);
+    --color-container: var(--color-gray-900);
+    --color-container-hover: var(--color-gray-800);
+    --color-container-inset: var(--color-gray-800);
+    --color-container-inset-hover: var(--color-gray-700);
+    --color-nav-indicator: var(--color-white);
     --budget-unused-fill: var(--color-gray-500);
     --budget-unallocated-fill: var(--color-gray-700);
     --shadow-xs: 0px 1px 2px 0px --alpha(var(--color-white) / 8%);
@@ -209,70 +231,6 @@
     --shadow-md: 0px 4px 8px -2px --alpha(var(--color-white) / 8%);
     --shadow-lg: 0px 12px 16px -4px --alpha(var(--color-white) / 8%);
     --shadow-xl: 0px 20px 24px -4px --alpha(var(--color-white) / 8%);
-  }
-}
-
-@utility bg-surface {
-  @apply bg-gray-50;
-
-  @variant theme-dark {
-    @apply bg-black;
-  }
-}
-
-@utility bg-surface-hover {
-  @apply bg-gray-100;
-
-  @variant theme-dark {
-    @apply bg-gray-800;
-  }
-}
-
-@utility bg-surface-inset {
-  @apply bg-gray-100;
-
-  @variant theme-dark {
-    @apply bg-gray-800;
-  }
-}
-
-@utility bg-surface-inset-hover {
-  @apply bg-gray-200;
-
-  @variant theme-dark {
-    @apply bg-gray-800;
-  }
-}
-
-@utility bg-container {
-  @apply bg-white;
-
-  @variant theme-dark {
-    @apply bg-gray-900;
-  }
-}
-
-@utility bg-container-hover {
-  @apply bg-gray-50;
-
-  @variant theme-dark {
-    @apply bg-gray-800;
-  }
-}
-
-@utility bg-container-inset {
-  @apply bg-gray-50;
-
-  @variant theme-dark {
-    @apply bg-gray-800;
-  }
-}
-
-@utility bg-container-inset-hover {
-  @apply bg-gray-100;
-
-  @variant theme-dark {
-    @apply bg-gray-700;
   }
 }
 
@@ -336,14 +294,6 @@
   }
 }
 
-@utility text-link {
-  @apply text-blue-600;
-
-  @variant theme-dark {
-    @apply text-blue-500;
-  }
-}
-
 @utility shadow-border-xs {
   box-shadow: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-black-50);
 
@@ -397,14 +347,6 @@
 
   @variant theme-dark {
     @apply border-alpha-white-300;
-  }
-}
-
-@utility border-tertiary {
-  @apply border-alpha-black-100;
-
-  @variant theme-dark {
-    @apply border-alpha-white-200;
   }
 }
 
@@ -553,13 +495,5 @@
 
   @variant theme-dark {
     @apply bg-alpha-black-700;
-  }
-}
-
-@utility bg-nav-indicator {
-  @apply bg-black;
-
-  @variant theme-dark {
-    @apply bg-white;
   }
 }
