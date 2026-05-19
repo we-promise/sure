@@ -154,9 +154,9 @@ en:
         sharing_default_label: Default sharing for new accounts
         sharing_shared: Share with all members
         sharing_private: Keep private by default
-        beta:
-          title: Enable beta features
-          description: Opt in to in-progress features tagged beta or canary.
+        preview:
+          title: Enable preview features
+          description: Opt in to in-progress features tagged preview or canary.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
