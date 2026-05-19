@@ -38,9 +38,11 @@ class DS::Disclosure < DesignSystemComponent
     when :card
       # Card variant: no bg on summary — the parent details *is* the
       # surface. Keep cursor + focus-visible ring + flex baseline.
-      "list-none cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white"
+      # Ring token matches `settings/provider_card.html.erb` (the
+      # established focus pattern on container cards).
+      "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 rounded-xl"
     else
-      "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white"
+      "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300"
     end
   end
 end
