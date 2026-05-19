@@ -1,25 +1,25 @@
 <%# locals: (error_message:, return_path:) %>
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Mercury Connection Error") %>
+    <% dialog.with_header(title: t(".title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
         <div class="flex items-start gap-3">
           <%= icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
           <div class="text-sm">
-            <p class="font-medium text-primary mb-2">Unable to connect to Mercury</p>
+            <p class="font-medium text-primary mb-2"><%= t(".unable_to_connect") %></p>
             <p class="text-secondary"><%= error_message %></p>
           </div>
         </div>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary">Common Issues:</p>
+          <p class="font-medium text-primary"><%= t(".common_issues") %></p>
           <ul class="list-disc list-inside space-y-1 text-secondary">
-            <li><strong>Invalid API Token:</strong> Check your API token in Provider Settings</li>
-            <li><strong>Expired Credentials:</strong> Generate a new API token from Mercury</li>
-            <li><strong>Insufficient Permissions:</strong> Ensure your token has read-only access</li>
-            <li><strong>Network Issue:</strong> Check your internet connection</li>
-            <li><strong>Service Down:</strong> Mercury API may be temporarily unavailable</li>
+            <li><strong><%= t(".invalid_api_token_label") %>:</strong> <%= t(".invalid_api_token_desc") %></li>
+            <li><strong><%= t(".expired_credentials_label") %>:</strong> <%= t(".expired_credentials_desc") %></li>
+            <li><strong><%= t(".insufficient_permissions_label") %>:</strong> <%= t(".insufficient_permissions_desc") %></li>
+            <li><strong><%= t(".network_issue_label") %>:</strong> <%= t(".network_issue_desc") %></li>
+            <li><strong><%= t(".service_down_label") %>:</strong> <%= t(".service_down_desc") %></li>
           </ul>
         </div>
 
@@ -27,7 +27,7 @@
           <%= link_to settings_providers_path,
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover focus:outline-none focus:ring-2 focus:ring-gray-900 theme-dark:focus:ring-white focus:ring-offset-2 transition-colors",
                       data: { turbo: false } do %>
-            Check Provider Settings
+            <%= t(".check_provider_settings") %>
           <% end %>
         </div>
       </div>

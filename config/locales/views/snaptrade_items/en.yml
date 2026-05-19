@@ -1,6 +1,8 @@
 en:
   snaptrade_items:
     default_name: "SnapTrade Connection"
+    link_accounts:
+      use_setup_flow: Use the account setup flow instead
     create:
       success: "Successfully configured SnapTrade."
     update:
@@ -73,6 +75,8 @@ en:
       available_accounts: "Available Accounts"
       balance_label: "Balance:"
       account_number: "Account:"
+      sync_start_date_label: "Import transactions from:"
+      sync_start_date_help: "Leave blank for all available history"
       create_button: "Create Selected Accounts"
       cancel_button: "Cancel"
       creating: "Creating Accounts..."

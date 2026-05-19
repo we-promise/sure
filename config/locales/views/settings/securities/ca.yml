@@ -3,10 +3,40 @@ ca:
   settings:
     securities:
       show:
-        disable_mfa: Desactiva 2FA
+        disable_mfa: Desactiva la 2FA
         disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos?
           Això farà que el teu compte sigui menys segur.
-        enable_mfa: Activa 2FA
+        enable_mfa: Activa la 2FA
         mfa_description: Afegeix una capa extra de seguretat al teu compte requerint
           un codi de la teva app d'autenticació en iniciar sessió
+        mfa_disabled_description: Activa la 2FA per afegir una capa extra de seguretat
+          al teu compte.
+        mfa_disabled_status_html: L'autenticació en dos passos està <span class="font-medium
+          text-red-600">desactivada</span>
+        mfa_enabled_description: El teu compte està protegit amb una capa addicional
+          de seguretat.
+        mfa_enabled_status_html: L'autenticació en dos passos està <span class="font-medium
+          text-green-600">activada</span>
         mfa_title: Autenticació en dos passos
+        webauthn_add: Afegeix passkey o clau de seguretat
+        webauthn_added: Afegida el %{date}
+        webauthn_description: Utilitza una passkey, Touch ID, Windows Hello o una
+          clau de seguretat de maquinari com a segon factor en iniciar sessió.
+        webauthn_empty: Encara no hi ha cap passkey o clau de seguretat registrada.
+        webauthn_last_used: Última utilització fa %{time_ago}
+        webauthn_name_label: Nom de la clau
+        webauthn_name_placeholder: Touch ID MacBook, YubiKey, etc.
+        webauthn_remove: Elimina
+        webauthn_remove_confirm: Segur que vols eliminar aquesta passkey o clau de
+          seguretat?
+        webauthn_remove_confirm_body: Hauràs de tornar a registrar aquesta passkey
+          o clau de seguretat abans de poder utilitzar-la per a la verificació d'inici
+          de sessió.
+        webauthn_title: Passkeys i claus de seguretat
+        webauthn_unsupported: Aquest navegador no admet passkeys ni claus de seguretat.
+  webauthn_credentials:
+    default_name: Clau de seguretat
+    failure: No s'ha pogut desar aquesta passkey o clau de seguretat. Torna-ho a provar.
+    mfa_required: Activa l'autenticació en dos passos abans d'afegir una passkey o
+      clau de seguretat.
+    success: Passkey o clau de seguretat eliminada.

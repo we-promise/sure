@@ -64,3 +64,7 @@ es:
       data_warnings: "Avisos de datos: %{count}"
       notices: "Avisos: %{count}"
       view_data_quality: Ver detalles de calidad de datos
+  ds:
+    pill:
+      aria_label: "%{label}"
+      default_label: Experimental

@@ -8,8 +8,8 @@ class IbkrAccount::HoldingsProcessor
   def process
     return unless account.present?
 
-    grouped_positions.each_value do |group|
-      process_group(group)
+    grouped_positions.each do |(_, _, report_date), group|
+      process_group(group, report_date)
     end
   end
 
@@ -28,32 +28,32 @@ class IbkrAccount::HoldingsProcessor
         data = position.with_indifferent_access
         next unless supported_position?(data)
 
-        symbol_key = data[:conid].presence || data[:symbol].presence || data[:security_id].presence
+        # conid is guaranteed present by supported_position?, so no fallbacks needed
         currency = extract_currency(data, fallback: @ibkr_account.currency)
         report_date = parse_date(data[:report_date]) || @ibkr_account.report_date || Date.current
-        key = [ symbol_key, currency, report_date ]
+        key = [ data[:conid], currency, report_date ]
         groups[key] ||= []
         groups[key] << data
       end
     end
 
-    def process_group(rows)
+    def process_group(rows, report_date)
       sample = rows.first
       security = resolve_security(sample)
       return unless security
 
-      quantity = rows.sum { |row| parse_decimal(row[:position]) || BigDecimal("0") }
-      return if quantity.zero?
-
       price = parse_decimal(sample[:mark_price])
-      cost_basis = weighted_cost_basis_for(rows)
-      return unless price && cost_basis
+      # quantity and cost_basis are derived from the same set of valid lots so
+      # they are always consistent — a lot with an unparseable cost_basis_price
+      # is excluded from both counts rather than inflating qty while shrinking basis.
+      aggregate = valid_lots(rows)
+      return unless price && aggregate
 
-      amount = quantity.abs * price
-
+      quantity   = aggregate[:quantity]
+      cost_basis = aggregate[:cost_basis]
+      amount = quantity * price
       currency = extract_currency(sample, fallback: @ibkr_account.currency)
-      report_date = parse_date(sample[:report_date]) || @ibkr_account.report_date || Date.current
-      external_id = [ "ibkr", @ibkr_account.ibkr_account_id, sample[:conid].presence || security.ticker, report_date, currency ].join("_")
+      external_id = [ "ibkr", @ibkr_account.ibkr_account_id, sample[:conid], report_date, currency ].join("_")
 
       import_adapter.import_holding(
         security: security,
@@ -61,7 +61,7 @@ class IbkrAccount::HoldingsProcessor
         amount: amount,
         currency: currency,
         date: report_date,
-        price: price || BigDecimal("0"),
+        price: price,
         cost_basis: cost_basis,
         external_id: external_id,
         source: "ibkr",
@@ -70,22 +70,33 @@ class IbkrAccount::HoldingsProcessor
       )
     end
 
-    def weighted_cost_basis_for(rows)
+    # Aggregates only the lots that have both a parseable position and cost_basis_price.
+    # Returns { quantity:, cost_basis: } so the caller uses a consistent lot set for
+    # both values — a lot skipped here is excluded from quantity too, preventing the
+    # case where qty covers more shares than the cost basis was computed from.
+    def valid_lots(rows)
       total_quantity = BigDecimal("0")
       total_cost = BigDecimal("0")
 
       rows.each do |row|
-        row_quantity = parse_decimal(row[:position])
+        row_quantity   = parse_decimal(row[:position])
         row_cost_basis = parse_decimal(row[:cost_basis_price])
-        return nil unless row_quantity && row_cost_basis
+
+        unless row_quantity && row_cost_basis
+          Rails.logger.warn(
+            "IbkrAccount::HoldingsProcessor - Skipping lot with missing position or cost_basis_price " \
+            "for conid=#{row[:conid].inspect}"
+          )
+          next
+        end
 
         total_quantity += row_quantity.abs
-        total_cost += row_quantity.abs * row_cost_basis
+        total_cost     += row_quantity.abs * row_cost_basis
       end
 
       return nil if total_quantity.zero?
 
-      total_cost / total_quantity
+      { quantity: total_quantity, cost_basis: total_cost / total_quantity }
     end
 
     def supported_position?(row)

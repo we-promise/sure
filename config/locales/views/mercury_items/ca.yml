@@ -1,0 +1,233 @@
+---
+ca:
+  mercury_items:
+    api_error:
+      check_provider_settings: Revisa la configuració del proveïdor
+      common_issues: 'Problemes habituals:'
+      expired_credentials_desc: Genera un nou token API des de Mercury
+      expired_credentials_label: Credencials caducades
+      insufficient_permissions_desc: Assegura't que el teu token té accés només de
+        lectura
+      insufficient_permissions_label: Permisos insuficients
+      invalid_api_token_desc: Revisa el teu token API a la configuració del proveïdor
+      invalid_api_token_label: Token API no vàlid
+      network_issue_desc: Comprova la teva connexió a internet
+      network_issue_label: Problema de xarxa
+      service_down_desc: L'API de Mercury pot estar temporalment no disponible
+      service_down_label: Servei caigut
+      title: Error de connexió Mercury
+      unable_to_connect: No s'ha pogut connectar a Mercury
+    complete_account_setup:
+      all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
+      creation_failed: 'No s''han pogut crear els comptes: %{error}'
+      no_accounts: No hi ha comptes per configurar.
+      success: S'han creat correctament %{count} compte(s).
+    create:
+      success: La connexió Mercury s'ha creat correctament
+    destroy:
+      success: La connexió Mercury s'ha eliminat
+    index:
+      title: Connexions Mercury
+    link_accounts:
+      all_already_linked:
+        one: El compte seleccionat (%{names}) ja està enllaçat
+        other: 'Tots els %{count} comptes seleccionats ja estan enllaçats: %{names}'
+      api_error: 'Error de l''API: %{message}'
+      invalid_account_names:
+        one: No es pot enllaçar un compte sense nom
+        other: No es poden enllaçar %{count} comptes sense nom
+      link_failed: No s'han pogut enllaçar els comptes
+      no_accounts_selected: Selecciona almenys un compte
+      no_api_token: No s'ha trobat el token API de Mercury. Configura'l a la configuració
+        del proveïdor.
+      partial_invalid: S'han enllaçat correctament %{created_count} compte(s), %{already_linked_count}
+        ja estaven enllaçats, %{invalid_count} compte(s) tenien noms no vàlids
+      partial_success: 'S''han enllaçat correctament %{created_count} compte(s). %{already_linked_count}
+        compte(s) ja estaven enllaçats: %{already_linked_names}'
+      select_connection: Tria una connexió Mercury abans d'enllaçar comptes.
+      success:
+        one: S'ha enllaçat correctament %{count} compte
+        other: S'han enllaçat correctament %{count} comptes
+    link_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      api_error: 'Error de l''API: %{message}'
+      invalid_account_name: No es pot enllaçar un compte sense nom
+      mercury_account_already_linked: Aquest compte Mercury ja està enllaçat a un
+        altre compte
+      mercury_account_not_found: No s'ha trobat el compte Mercury
+      missing_parameters: Falten paràmetres obligatoris
+      no_api_token: No s'ha trobat el token API de Mercury. Configura'l a la configuració
+        del proveïdor.
+      select_connection: Tria una connexió Mercury abans d'enllaçar comptes.
+      success: S'ha enllaçat correctament %{account_name} amb Mercury
+    loading:
+      loading_message: Carregant comptes Mercury...
+      loading_title: Carregant
+    mercury_item:
+      accounts_need_setup: Els comptes necessiten configuració
+      delete: Elimina la connexió
+      deletion_in_progress: eliminació en curs...
+      error: Error
+      no_accounts_description: Aquesta connexió encara no té comptes enllaçats.
+      no_accounts_title: No hi ha comptes
+      setup_action: Configura els nous comptes
+      setup_description: "%{linked} de %{total} comptes enllaçats. Tria els tipus
+        de compte per als teus nous comptes Mercury importats."
+      setup_needed: Nous comptes a punt per configurar
+      status: Sincronitzat fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: Darrera sincronització fa %{timestamp} - %{summary}
+      syncing: Sincronitzant...
+      total: Total
+      unlinked: Sense enllaç
+    mercury_item_selection_error_payload:
+      select_connection: Tria una connexió Mercury abans de carregar comptes.
+    provider_connection:
+      default_description: Connecta't al teu banc a través de Mercury
+      default_name: Mercury
+      description: Connecta amb %{name}
+      name: Mercury - %{name}
+    provider_panel:
+      add_connection: Afegeix connexió Mercury
+      base_url_label: URL base (opcional)
+      base_url_placeholder: https://api.mercury.com/api/v1 (per defecte)
+      connection_name_label: Nom de la connexió
+      connection_name_placeholder: Compte corrent d'empresa
+      default_connection_name: Connexió Mercury
+      disconnect_confirm: Vols desconnectar %{name}?
+      instructions:
+        copy_token_html: Copia el <strong>token sencer</strong> (incloent el prefix
+          <code>secret-token:</code>) i afegeix-lo com a connexió amb nom a continuació
+        create_token: Crea un nou token API amb accés "només de lectura"
+        open_tokens: Ves a Configuració > Desenvolupador > Tokens API
+        sign_in_html: Visita %{link} i inicia sessió al compte que vols connectar
+        whitelist_ip_html: "<strong>Important:</strong> afegeix l'adreça IP del teu
+          servidor a la llista blanca del token"
+      keep_token_placeholder: Deixa-ho en blanc per mantenir el token actual
+      sandbox_note_html: Utilitza una connexió amb nom separada per a cada inici de
+        sessió/token API de Mercury que vulguis sincronitzar. Per a proves en sandbox,
+        utilitza <code>https://api-sandbox.mercury.com/api/v1</code> com a URL base.
+        Mercury requereix llistes blanques d'IP — assegura't d'afegir la teva IP al
+        panell de Mercury.
+      setup_accounts: Configura comptes
+      setup_title: 'Instruccions de configuració:'
+      sync: Sincronitza
+      token_label: Token
+      token_placeholder: Enganxa el token aquí
+      update_connection: Actualitza la connexió
+    render_mercury_item_selection_failure:
+      no_credentials_configured: Primer, configura el teu token API de Mercury a la
+        configuració del proveïdor.
+      select_connection: Tria una connexió Mercury a la configuració del proveïdor.
+    select_accounts:
+      accounts_selected: comptes seleccionats
+      api_error: 'Error de l''API: %{message}'
+      cancel: Cancel·la
+      configure_name_in_mercury: No es pot importar — configura el nom del compte
+        a Mercury
+      description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
+      link_accounts: Enllaça els comptes seleccionats
+      no_accounts_found: No s'han trobat comptes. Comprova la configuració del teu
+        token API.
+      no_api_token: El token API de Mercury no està configurat. Configura'l a la configuració.
+      no_credentials_configured: Primer, configura el teu token API de Mercury a la
+        configuració del proveïdor.
+      no_name_placeholder: "(Sense nom)"
+      select_connection: Tria una connexió Mercury a la configuració del proveïdor.
+      title: Selecciona comptes Mercury
+    select_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      all_accounts_already_linked: Tots els comptes Mercury ja estan enllaçats
+      api_error: 'Error de l''API: %{message}'
+      cancel: Cancel·la
+      configure_name_in_mercury: No es pot importar — configura el nom del compte
+        a Mercury
+      description: Selecciona un compte Mercury per enllaçar-lo amb aquest compte.
+        Les transaccions es sincronitzaran i deduplicaran automàticament.
+      link_account: Enllaça compte
+      no_account_specified: No s'ha especificat cap compte
+      no_accounts_found: No s'han trobat comptes Mercury. Comprova la configuració
+        del teu token API.
+      no_api_token: El token API de Mercury no està configurat. Configura'l a la configuració.
+      no_credentials_configured: Primer, configura el teu token API de Mercury a la
+        configuració del proveïdor.
+      no_name_placeholder: "(Sense nom)"
+      select_connection: Tria una connexió Mercury a la configuració del proveïdor.
+      title: Enllaça %{account_name} amb Mercury
+    setup_accounts:
+      account_type_label: 'Tipus de compte:'
+      account_types:
+        credit_card: Targeta de crèdit
+        depository: Compte corrent o d'estalvis
+        investment: Compte d'inversió
+        loan: Préstec o hipoteca
+        other_asset: Altre actiu
+        skip: Omet aquest compte
+      all_accounts_linked: Tots els teus comptes Mercury ja s'han configurat.
+      api_error: 'Error de l''API: %{message}'
+      balance: Saldo
+      cancel: Cancel·la
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte Mercury:'
+      create_accounts: Crea comptes
+      creating_accounts: Creant comptes...
+      fetch_failed: No s'han pogut obtenir els comptes
+      historical_data_range: 'Rang de dades històriques:'
+      no_accounts_to_setup: No hi ha comptes per configurar
+      no_api_token: El token API de Mercury no està configurat. Revisa la configuració
+        de la connexió.
+      subtitle: Tria els tipus de compte correctes per als teus comptes importats
+      subtype_labels:
+        credit_card: ''
+        depository: 'Subtipus de compte:'
+        investment: 'Tipus d''inversió:'
+        loan: 'Tipus de préstec:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Les targetes de crèdit es configuraran automàticament com a comptes
+          de targeta de crèdit.
+        other_asset: No calen opcions addicionals per a altres actius.
+      subtypes:
+        depository:
+          cd: Certificat de dipòsit
+          checking: Compte corrent
+          hsa: Compte d'estalvi per a salut
+          money_market: Mercat monetari
+          savings: Estalvis
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Pla 529
+          angel: Inversió àngel
+          brokerage: Corredoria
+          hsa: Compte d'estalvi per a salut
+          ira: IRA tradicional
+          mutual_fund: Fons d'inversió
+          pension: Pensió
+          retirement: Jubilació
+          roth_401k: Roth 401(k)
+          roth_ira: IRA Roth
+          tsp: Pla d'estalvis de jubilació (TSP)
+        loan:
+          auto: Préstec d'automòbil
+          mortgage: Hipoteca
+          other: Altre préstec
+          student: Préstec d'estudis
+      sync_start_date_help: Selecciona fins on vols sincronitzar l'historial de transaccions.
+        Hi ha un màxim de 3 anys d'historial disponible.
+      sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
+      title: Configura els teus comptes Mercury
+    setup_required:
+      api_token_description: Abans d'enllaçar comptes Mercury, has de configurar el
+        teu token API de Mercury.
+      api_token_not_configured: Token API no configurat
+      go_to_provider_settings: Ves a la configuració del proveïdor
+      setup_step_1_html: Ves a <strong>Configuració > Proveïdors</strong>
+      setup_step_2_html: Localitza la secció <strong>Mercury</strong>
+      setup_step_3: Introdueix el teu token API de Mercury
+      setup_step_4: Torna aquí per enllaçar els teus comptes
+      setup_steps_title: 'Passos de configuració:'
+      title: Cal configurar Mercury
+    sync:
+      success: Sincronització iniciada
+    update:
+      success: La connexió Mercury s'ha actualitzat
