@@ -26,7 +26,7 @@ class DS::Toggle < DesignSystemComponent
        # Offset places the ring outside the track so it lands on the
        # surrounding chrome regardless of theme.
        "peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2",
-       "peer-focus-visible:ring-gray-900 theme-dark:peer-focus-visible:ring-white",
+       "peer-focus-visible:ring-alpha-black-300 theme-dark:peer-focus-visible:ring-alpha-white-300",
        "peer-disabled:opacity-70 peer-disabled:cursor-not-allowed"
     )
   end
