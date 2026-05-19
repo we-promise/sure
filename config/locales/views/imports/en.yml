@@ -255,6 +255,16 @@ en:
       title: Import successful
       description: Your imported data has been successfully added to the app and is now ready for use.
       back_to_dashboard: Back to dashboard
+      verification:
+        title: Readback verification
+        checked: Checked
+        mismatches: Mismatches
+        status:
+          not_verified: Not verified
+          matched: Matched
+          mismatch: Mismatch
+          failed: Failed
+          reverted: Reverted
     importing:
       title: Import in progress
       description: "Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app."

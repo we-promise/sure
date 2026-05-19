@@ -164,6 +164,24 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 3, @import.rows_count
   end
 
+  test "sync_ndjson_rows_count! persists expected record counts" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: { id: "account-1" } },
+      { type: "Balance", data: { id: "balance-1" } },
+      { type: "Transaction", data: { id: "transaction-1" } },
+      { type: "UnknownType", data: { id: "unknown-1" } }
+    ]))
+
+    @import.reload
+
+    assert_equal 4, @import.rows_count
+    assert_equal 1, @import.expected_record_counts["accounts"]
+    assert_equal 1, @import.expected_record_counts["balances"]
+    assert_equal 1, @import.expected_record_counts["transactions"]
+    assert_not @import.expected_record_counts.key?("unknown_type")
+    assert_equal({}, @import.readback_verification)
+  end
+
   test "publishes import successfully" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -188,6 +206,111 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 1000.0, account.balance.to_f
     assert_equal "USD", account.currency
     assert_equal "Depository", account.accountable_type
+  end
+
+  test "publish records matched readback verification from family-scoped deltas" do
+    other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    other_family.accounts.create!(
+      name: "Other Checking",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    attach_ndjson(importable_history_ndjson)
+
+    @import.publish
+    @import.reload
+
+    verification = @import.readback_verification
+
+    assert_equal "complete", @import.status
+    assert_equal "matched", verification["status"]
+    assert_equal 1, verification.dig("expected_record_counts", "accounts")
+    assert_equal 1, verification.dig("expected_record_counts", "categories")
+    assert_equal 1, verification.dig("expected_record_counts", "tags")
+    assert_equal 1, verification.dig("expected_record_counts", "merchants")
+    assert_equal 1, verification.dig("expected_record_counts", "transactions")
+    assert_equal 1, verification.dig("actual_delta_counts", "accounts")
+    assert_equal 1, verification.dig("actual_delta_counts", "categories")
+    assert_equal 1, verification.dig("actual_delta_counts", "tags")
+    assert_equal 1, verification.dig("actual_delta_counts", "merchants")
+    assert_equal 1, verification.dig("actual_delta_counts", "transactions")
+    assert_empty verification["mismatches"]
+    assert_equal 1, other_family.accounts.count
+  end
+
+  test "publish records mismatch when expected rows are skipped by readback" do
+    attach_ndjson(build_ndjson([
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2024-01-15",
+        amount: "12.34",
+        name: "Skipped transaction",
+        currency: "USD"
+      } }
+    ]))
+
+    @import.publish
+    @import.reload
+
+    assert_equal "complete", @import.status
+    assert_equal "mismatch", @import.readback_verification["status"]
+    assert_equal({ "expected" => 1, "actual" => 0 }, @import.readback_verification.dig("mismatches", "transactions"))
+  end
+
+  test "failed publish records failed verification without partial mutation" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Rollback Account",
+        balance: "100.00",
+        currency: "USD",
+        accountable_type: "Depository"
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        date: "not-a-date",
+        amount: "12.34",
+        name: "Bad date",
+        currency: "USD"
+      } }
+    ]))
+
+    initial_account_count = @family.accounts.count
+    initial_transaction_count = @family.entries.where(entryable_type: "Transaction").count
+
+    @import.publish
+    @import.reload
+
+    assert_equal "failed", @import.status
+    assert_equal initial_account_count, @family.accounts.count
+    assert_equal initial_transaction_count, @family.entries.where(entryable_type: "Transaction").count
+    assert_equal "failed", @import.readback_verification["status"]
+    assert_equal 0, @import.readback_verification.dig("actual_delta_counts", "accounts")
+    assert_equal 0, @import.readback_verification.dig("actual_delta_counts", "transactions")
+  end
+
+  test "revert marks Sure readback verification as reverted" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Reverted Account",
+        balance: "100.00",
+        currency: "USD",
+        accountable_type: "Depository"
+      } }
+    ]))
+
+    @import.publish
+    assert_equal "matched", @import.reload.verification_status
+
+    @import.revert
+
+    assert_equal "pending", @import.status
+    assert_equal "reverted", @import.verification_status
   end
 
   test "import tracks created accounts for revert" do
@@ -238,5 +361,46 @@ class SureImportTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def importable_history_ndjson
+      build_ndjson([
+        { type: "Account", data: {
+          id: "account-1",
+          name: "Verified Checking",
+          balance: "1000.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        } },
+        { type: "Category", data: {
+          id: "category-1",
+          name: "Verified Category",
+          color: "#407706",
+          classification: "expense",
+          lucide_icon: "shapes"
+        } },
+        { type: "Tag", data: {
+          id: "tag-1",
+          name: "Verified Tag",
+          color: "#407706"
+        } },
+        { type: "Merchant", data: {
+          id: "merchant-1",
+          name: "Verified Merchant",
+          color: "#407706"
+        } },
+        { type: "Transaction", data: {
+          id: "transaction-1",
+          account_id: "account-1",
+          category_id: "category-1",
+          merchant_id: "merchant-1",
+          tag_ids: [ "tag-1" ],
+          date: "2024-01-15",
+          amount: "12.34",
+          name: "Verified transaction",
+          currency: "USD"
+        } }
+      ])
     end
 end

@@ -120,6 +120,36 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
                  json_response["data"]["stats"]["unassigned_mappings_count"]
   end
 
+  test "should show Sure import verification" do
+    sure_import = @family.imports.create!(type: "SureImport")
+    sure_import.ndjson_file.attach(
+      io: StringIO.new(build_ndjson([
+        { type: "Account", data: {
+          id: "account-1",
+          name: "API Verified Checking",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        } }
+      ])),
+      filename: "sure.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    sure_import.sync_ndjson_rows_count!
+    sure_import.publish
+
+    get api_v1_import_url(sure_import), headers: api_headers(@api_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    verification = json_response.dig("data", "verification")
+
+    assert_equal 1, verification.dig("expected_record_counts", "accounts")
+    assert_equal "matched", verification.dig("readback", "status")
+    assert_equal 1, verification.dig("readback", "actual_delta_counts", "accounts")
+    assert_empty verification.dig("readback", "mismatches")
+  end
+
   test "should list sanitized import row diagnostics" do
     get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(@read_only_api_key)
 
@@ -1182,6 +1212,10 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def build_ndjson(records)
+      records.map(&:to_json).join("\n")
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }

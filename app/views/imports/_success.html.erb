@@ -11,6 +11,43 @@
       <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
+    <% if import.is_a?(SureImport) %>
+      <% verification = import.verification_payload[:readback] %>
+      <% verification_status = verification.fetch("status", "not_verified") %>
+      <% checked_counts = verification.fetch("checked_counts", {}) %>
+      <% mismatches = verification.fetch("mismatches", {}) %>
+      <% checked_total = checked_counts.values.sum(&:to_i) %>
+
+      <div class="bg-container border border-primary rounded-lg p-4 space-y-3 text-left">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-sm font-medium text-primary"><%= t(".verification.title") %></h2>
+          <span class="text-xs font-medium text-secondary"><%= t(".verification.status.#{verification_status}", default: verification_status.humanize) %></span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p class="text-xs text-secondary"><%= t(".verification.checked") %></p>
+            <p class="font-medium text-primary"><%= checked_total %></p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t(".verification.mismatches") %></p>
+            <p class="font-medium text-primary"><%= mismatches.size %></p>
+          </div>
+        </div>
+
+        <% if mismatches.any? %>
+          <div class="space-y-2">
+            <% mismatches.first(3).each do |key, counts| %>
+              <div class="flex items-center justify-between gap-3 text-xs">
+                <span class="text-secondary"><%= key.humanize %></span>
+                <span class="font-medium text-primary"><%= counts["actual"] %> / <%= counts["expected"] %></span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
     <%= render DS::Link.new(
       text: t(".back_to_dashboard"),
       variant: "primary",

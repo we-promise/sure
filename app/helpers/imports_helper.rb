@@ -32,12 +32,17 @@ module ImportsHelper
   def dry_run_resource(key)
     map = {
       transactions: DryRunResource.new(label: "Transactions", icon: "credit-card", text_class: "text-cyan-500", bg_class: "bg-cyan-500/5"),
+      balances: DryRunResource.new(label: "Balances", icon: "line-chart", text_class: "text-secondary", bg_class: "bg-container-inset"),
       accounts: DryRunResource.new(label: "Accounts", icon: "layers", text_class: "text-orange-500", bg_class: "bg-orange-500/5"),
       categories: DryRunResource.new(label: "Categories", icon: "shapes", text_class: "text-blue-500", bg_class: "bg-blue-500/5"),
       tags: DryRunResource.new(label: "Tags", icon: "tags", text_class: "text-violet-500", bg_class: "bg-violet-500/5"),
       rules: DryRunResource.new(label: "Rules", icon: "workflow", text_class: "text-green-500", bg_class: "bg-green-500/5"),
       merchants: DryRunResource.new(label: "Merchants", icon: "store", text_class: "text-amber-500", bg_class: "bg-amber-500/5"),
+      recurring_transactions: DryRunResource.new(label: "Recurring Transactions", icon: "repeat-2", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      transfers: DryRunResource.new(label: "Transfers", icon: "repeat", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      rejected_transfers: DryRunResource.new(label: "Rejected Transfers", icon: "ban", text_class: "text-secondary", bg_class: "bg-container-inset"),
       trades: DryRunResource.new(label: "Trades", icon: "arrow-left-right", text_class: "text-emerald-500", bg_class: "bg-emerald-500/5"),
+      holdings: DryRunResource.new(label: "Holdings", icon: "briefcase-business", text_class: "text-secondary", bg_class: "bg-container-inset"),
       valuations: DryRunResource.new(label: "Valuations", icon: "trending-up", text_class: "text-pink-500", bg_class: "bg-pink-500/5"),
       budgets: DryRunResource.new(label: "Budgets", icon: "wallet", text_class: "text-indigo-500", bg_class: "bg-indigo-500/5"),
       budget_categories: DryRunResource.new(label: "Budget Categories", icon: "pie-chart", text_class: "text-teal-500", bg_class: "bg-teal-500/5")
