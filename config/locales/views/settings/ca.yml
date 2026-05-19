@@ -93,7 +93,7 @@ ca:
         cost_by_operation: Cost per operació
         cost_estimates_description: Els costos s'estimen segons els preus d'OpenAI
           de 2025. Els costos reals poden variar. El preu és per cada milió de tokens
-          i varia segons el model. Els models personalitzats o amb Self Hosting mostraran
+          i varia segons el model. Els models personalitzats o amb self hosting mostraran
           "N/D" i no s'inclouen als totals de cost.
         cost_estimates_title: Sobre les estimacions de cost
         end_date: Data de fi
@@ -562,7 +562,7 @@ ca:
       recurring_transactions_label: Recurrent
       rules_label: Regles
       security_label: Seguretat
-      self_hosting_label: Self Hosting
+      self_hosting_label: Self hosting
       sso_providers_label: Proveïdors SSO
       statement_vault_label: Arxiu d'extractes
       tags_label: Etiquetes

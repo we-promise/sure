@@ -91,7 +91,7 @@ ca:
       refresh_page: Recarrega la pàgina
       setup_guide_hint: Segueix la nostra guia completa de configuració de Docker
         per configurar Redis
-      subheading: La teva instal·lació Self Hosting de Sure necessita Redis configurat
+      subheading: La teva instal·lació de Sure amb self hosting necessita Redis configurat
         correctament.
       view_setup_guide: Veure la guia de configuració
       why_required_body: Sure utilitza Redis per executar les tasques en segon pla

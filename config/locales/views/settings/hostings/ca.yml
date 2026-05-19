@@ -195,7 +195,7 @@ ca:
         general: Configuració general
         invites: Codis d'invitació
         sync_settings: Configuració de sincronització
-        title: Self Hosting
+        title: Self hosting
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: La configuració s'ha desat, però no s'ha pogut actualitzar
           la planificació de sincronització. Torna-ho a provar o revisa els registres

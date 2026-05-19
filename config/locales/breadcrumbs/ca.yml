@@ -32,7 +32,7 @@ ca:
     guides: Guies
     holdings: Posicions
     home: Inici
-    hostings: Self Hosting
+    hostings: Self hosting
     ibkr_items: Interactive Brokers
     impersonation_sessions: Suplantacions
     imports: Importacions
@@ -68,7 +68,7 @@ ca:
     rules: Regles
     securities: Seguretat
     security: Seguretat
-    self_hosting: Self Hosting
+    self_hosting: Self hosting
     sessions: Inici de sessió
     simplefin_items: SimpleFIN
     snaptrade_items: SnapTrade

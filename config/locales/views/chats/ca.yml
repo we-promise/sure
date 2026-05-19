@@ -18,7 +18,7 @@ ca:
       title: Activa els xats d'IA
       unavailable_description_html: Per utilitzar l'assistent d'IA, has d'establir
         la variable d'entorn <code class="bg-surface-inset px-1 py-0.5 rounded font-mono
-        text-xs">OPENAI_ACCESS_TOKEN</code> o configurar-la a la configuració de Self Hosting
+        text-xs">OPENAI_ACCESS_TOKEN</code> o configurar-la a la configuració de self hosting
         de la teva instància.
     ai_greeting:
       commands_hint_html: Pots utilitzar <span class="bg-container border border-secondary
