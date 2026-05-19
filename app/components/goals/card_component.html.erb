@@ -1,4 +1,4 @@
-<div class="group relative bg-container rounded-xl shadow-border-xs hover:shadow-sm transition-shadow p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
+<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-container-hover transition-colors p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
      <% if filterable %> data-goals-filter-target="card"<% end %>
      data-goal-name="<%= goal.name %>"
      data-goal-status="<%= goal.display_status %>">
