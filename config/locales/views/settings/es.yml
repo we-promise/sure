@@ -49,7 +49,7 @@ es:
         month_start_day_warning: Tus presupuestos y cálculos del mes en curso utilizarán este día personalizado en lugar del día 1 de cada mes.
         preview:
           title: Habilitar funciones de vista previa
-          description: Activa las funciones en progreso etiquetadas como vista previa o canary.
+          description: Activa las funciones en desarrollo etiquetadas como vista previa o canary.
     profiles:
       destroy:
         cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.
