@@ -77,7 +77,7 @@ ca:
       link: Enllaça
       no_accounts_found: No s'han trobat comptes Kraken.
       title: Enllaça compte Kraken
-      wait_for_sync: Espera que Kraken acabi de sincronitzar.
+      wait_for_sync: Espera que Kraken acabi la sincronització.
     setup_accounts:
       accounts_count:
         one: "%{count} compte disponible"
@@ -86,7 +86,7 @@ ca:
       creating: Important...
       import_selected: Importa els seleccionats
       instructions: Kraken importa un compte d'exchange de cripto combinat per a aquesta
-        connexió, només amb posicions i ompliments d'operacions al comptat.
+        connexió, només amb posicions i execucions d'operacions al comptat.
       no_accounts: Tots els comptes Kraken s'han importat.
       select_all: Selecciona-ho tot
       subtitle: Selecciona el compte de l'exchange per fer-ne el seguiment

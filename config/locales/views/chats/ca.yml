@@ -28,7 +28,7 @@ ca:
         amb les teves finances. Tinc accés al web i a les dades del teu compte.
       questions_intro: 'Aquí tens algunes preguntes que pots fer:'
       spending_insights: Mostra anàlisi de la despesa
-      there: a tothom
+      there: ''
       unusual_patterns: Troba patrons inusuals
     chat:
       delete_chat: Elimina el xat

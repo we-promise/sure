@@ -30,11 +30,11 @@ ca:
         other: A %{count} comerços del proveïdor els falta informació del lloc web.
           Millora amb IA per detectar llocs web, mostrar logotips i fusionar comerços
           duplicats.
-      family_empty: Encara no hi ha comerços de %{moniker}
-      family_title: Comerços de %{moniker}
+      family_empty: Encara no hi ha comerços
+      family_title: Els teus comerços
       merge: Fusiona comerços
       new: Nou comerç
-      provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquesta %{moniker}
+      provider_empty: Encara no hi ha comerços del proveïdor vinculats
       provider_info: Aquests comerços es van detectar automàticament mitjançant les
         teves connexions bancàries o l'IA. Pots editar-los per crear-ne una còpia
         pròpia, o eliminar-los per desvincular-los de les teves transaccions.

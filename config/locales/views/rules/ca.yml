@@ -28,14 +28,14 @@ ca:
         preus més actualitzats.
       estimated_cost: 'Cost estimat: ~$%{cost}'
       success: Totes les regles s'han posat a la cua per executar-se
-      view_usage: Veure l'historial d'ús
+      view_usage: Mostra l'historial d'ús
     clear_ai_cache:
-      button: Reinicia la memòria cau d'IA
-      confirm_body: Segur que vols reiniciar la memòria cau d'IA? Això permetrà que
-        les regles d'IA tornin a processar totes les transaccions. Pot generar costos
+      button: Buida la memòria cau d'IA
+      confirm_body: Segur que vols buidar la memòria cau d'IA? Això permetrà que les
+        regles d'IA tornin a processar totes les transaccions. Pot generar costos
         d'API addicionals.
-      confirm_button: Reinicia la memòria cau
-      confirm_title: Reiniciar la memòria cau d'IA?
+      confirm_button: Buida la memòria cau
+      confirm_title: Vols buidar la memòria cau d'IA?
       success: La memòria cau d'IA s'està netejant. Pot trigar uns instants.
     condition_filters:
       transaction_type:
@@ -59,7 +59,7 @@ ca:
         preus més actualitzats.
       title: Confirma els canvis
       title_with_name: Confirma els canvis a "%{name}"
-      view_usage_history: Veure l'historial d'ús
+      view_usage_history: Mostra l'historial d'ús
     destroy:
       success: Regla eliminada
     destroy_all:

@@ -23,5 +23,5 @@ ca:
       role_label: Rol
       role_member: Membre
       submit: Envia la invitació
-      subtitle: Envia una invitació per unir-se al teu compte %{moniker} a %{product_name}
+      subtitle: Envia una invitació perquè s'uneixi al teu compte de %{product_name}
       title: Convida algú

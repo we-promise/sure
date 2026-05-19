@@ -44,11 +44,11 @@ ca:
       address_placeholder: Obligatori
       api_key_label: Clau API
       api_key_placeholder: Obligatori
-      blockchain_fetch_error: No s'han pogut carregar els blockchains. Torna-ho a
+      blockchain_fetch_error: No s'han pogut carregar les blockchains. Torna-ho a
         provar més tard.
       blockchain_label: Blockchain
       blockchain_placeholder: Obligatori
-      blockchain_select_blank: Selecciona un blockchain
+      blockchain_select_blank: Selecciona una blockchain
       configure: Configura
       default_name: Connexió CoinStats
       exchange_label: Exchange

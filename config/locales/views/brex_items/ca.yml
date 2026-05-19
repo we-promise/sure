@@ -143,7 +143,7 @@ ca:
       not_configured: No configurat
       sandbox_note_html: Utilitza una connexió amb nom separada per a cada empresa/token
         API de Brex que vulguis sincronitzar. Deixa l'URL base en blanc per a producció.
-        L'staging està limitat a les proves aprovades per Brex i no funciona amb tokens
+        El staging està limitat a les proves aprovades per Brex i no funciona amb tokens
         de clients.
       setup_accounts: Configura comptes
       setup_title: 'Instruccions de configuració:'

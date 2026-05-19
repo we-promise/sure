@@ -63,7 +63,7 @@ ca:
       link: Enllaça
       no_accounts_found: No s'han trobat comptes Binance.
       title: Enllaça compte Binance
-      wait_for_sync: Espera que Binance acabi de sincronitzar
+      wait_for_sync: Espera que Binance acabi la sincronització
     setup_accounts:
       accounts_count:
         one: "%{count} compte disponible"

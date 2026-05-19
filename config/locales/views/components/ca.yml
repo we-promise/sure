@@ -113,8 +113,8 @@ ca:
       rate_limited: Sota límit de %{time_ago}
       recently: recentment
       stale_pending:
-        one: "%{count} transacció pendent obsoleta (exclòs dels pressupostos)"
-        other: "%{count} transaccions pendents obsoletes (exclòs dels pressupostos)"
+        one: "%{count} transacció pendent obsoleta (exclosa dels pressupostos)"
+        other: "%{count} transaccions pendents obsoletes (excloses dels pressupostos)"
       stale_pending_count:
         one: "%{count} transacció"
         other: "%{count} transaccions"

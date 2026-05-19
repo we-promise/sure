@@ -112,7 +112,7 @@ ca:
       show:
         choose_level: Tria un nivell
         contributions_note: Les contribucions a %{product_name} apareixeran aquí.
-        currently_on_plan: Actualment al
+        currently_on_plan: 'Actualment al pla:'
         manage: Gestiona
         not_contributing_emphasis: no contribueixes
         not_contributing_prefix: Actualment
@@ -136,7 +136,7 @@ ca:
         country: País
         currencies_more: "+%{count} més"
         currencies_subtitle: Tria quines divises apareixen als camps de diners de
-          la teva %{moniker}
+          %{moniker}
         currencies_title: Divises de %{moniker}
         currency: Divisa
         currency_search_placeholder: Cerca divises
@@ -169,7 +169,7 @@ ca:
         sharing_default_label: Compartició predeterminada per a comptes nous
         sharing_private: Mantén privat per defecte
         sharing_shared: Comparteix amb tots els membres
-        sharing_subtitle: Controla com es comparteixen els comptes a la teva %{moniker}
+        sharing_subtitle: Controla com es comparteixen els comptes a %{moniker}
         sharing_title: Compartició de %{moniker}
         timezone: Fus horari
     profiles:
@@ -413,7 +413,7 @@ ca:
         read_only_body: No atorguis permisos de trading, cancel·lació, retirada, exportació,
           llibre major, Earn, staking o transferència. Sure només importa saldos,
           posicions i operacions spot.
-        read_only_title: Sincronització d'intercanvi només de lectura
+        read_only_title: Sincronització només de lectura amb l'exchange
         setup_accounts: Configura compte
         step1_html: Ves a <a href="https://pro.kraken.com/app/settings/api" target="_blank"
           rel="noopener noreferrer" class="underline">Kraken API settings</a>

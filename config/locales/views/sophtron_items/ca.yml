@@ -305,7 +305,7 @@ ca:
       description: Abans d'enllaçar comptes Sophtron, has de configurar el teu ID
         d'usuari i clau d'accés de Sophtron.
       go_to_provider_settings: Ves a la configuració del proveïdor
-      heading: ID d'usuari i clau d'accés no configurats
+      heading: ID d'usuari i clau d'accés sense configurar
       message: 'Per completar la configuració de la teva connexió Sophtron, ves a
         la pàgina de configuració del proveïdor i segueix les instruccions per autoritzar
         i configurar la teva connexió Sophtron.

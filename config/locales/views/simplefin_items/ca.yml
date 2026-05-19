@@ -84,7 +84,7 @@ ca:
       currently_linked_to: 'Actualment enllaçat a: %{account_name}'
       description: Selecciona un compte SimpleFIN per enllaçar-lo al teu compte existent
       link_account: Enllaça el compte
-      no_accounts_found: No s'han trobat comptes SimpleFIN per a aquest/a %{moniker}.
+      no_accounts_found: No s'han trobat comptes SimpleFIN per a %{moniker}.
       title: Enllaça %{account_name} amb SimpleFIN
       unlink_to_move: Per moure un enllaç, primer desenllaça'l del menú d'accions
         del compte.

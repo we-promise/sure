@@ -127,10 +127,10 @@ ca:
       quantity_hint: Nombre d'accions operades
       quantity_label: Quantitat (accions)
       quantity_placeholder: p. ex. 20
-      security_custom: "+ Introdueix una cotització personalitzada"
+      security_custom: "+ Introdueix un ticker personalitzat"
       security_label: Valor
-      security_not_listed_hint: No veus el teu valor? Selecciona "Introdueix una cotització
-        personalitzada" al final de la llista.
+      security_not_listed_hint: No veus el teu valor? Selecciona "Introdueix un ticker
+        personalitzat" al final de la llista.
       security_prompt: Selecciona un valor...
       submit: Converteix en operació
       success: Transacció convertida en operació
@@ -187,7 +187,7 @@ ca:
       title: Transaccions
       transaction: transacció
       transactions: transaccions
-    keep_both: No, mantenir ambdues
+    keep_both: 'No, mantén-les totes dues'
     list:
       drag_drop_subtitle: Puja transaccions directament
       drag_drop_title: Deixa anar el CSV per importar
@@ -296,7 +296,7 @@ ca:
       exclude: Exclou
       exclude_description: Les transaccions excloses es retiraran dels càlculs i informes
         de pressupost.
-      keep_both: No, mantenir ambdues
+      keep_both: 'No, mantén-les totes dues'
       loan_payment: Pagament de préstec
       mark_recurring: Marca com a recurrent
       mark_recurring_subtitle: Segueix-ho com a transacció recurrent. La variància
@@ -336,7 +336,7 @@ ca:
       transfer_or_debt_payment: Transferència o pagament de deute?
       uncategorized: "(sense categoritzar)"
     split_parent_row:
-      split_label: Divideix
+      split_label: Divisió
     transfer_match:
       auto_matched: Aparellada
       auto_matched_short: A/A

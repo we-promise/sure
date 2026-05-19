@@ -15,7 +15,7 @@ ca:
       enable: Activa el compte
       link_lunchflow: Enllaça amb Lunch Flow
       link_provider: Enllaça amb proveïdor
-      remove_default: Treu el predeterminat
+      remove_default: Treu com a predeterminat
       set_default: Estableix com a predeterminat
       sharing: Compartició
       troubleshoot: Resolució de problemes
@@ -30,7 +30,7 @@ ca:
       warning_can_delete: Després de desenllaçar-lo, podràs eliminar el compte si
         és necessari
       warning_manual_updates: Hauràs d'afegir transaccions i actualitzar saldos manualment
-      warning_no_sync: El compte ja no sincronitzarà automàticament amb el teu proveïdor
+      warning_no_sync: El compte ja no es sincronitzarà automàticament amb el teu proveïdor
       warning_title: Això significa
       warning_transactions_kept: Totes les transaccions i saldos existents es conservaran
     create:
@@ -170,7 +170,7 @@ ca:
       taxable: Guanys tributats en realitzar-se
     tax_treatments:
       tax_advantaged: Amb avantatge fiscal
-      tax_deferred: Diferit fiscalment
+      tax_deferred: Tributació diferida
       tax_exempt: Exempt d'impostos
       taxable: Subjecte a impostos
     types:

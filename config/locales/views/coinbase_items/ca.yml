@@ -65,7 +65,7 @@ ca:
       link: Enllaça
       no_accounts_found: No s'han trobat comptes Coinbase.
       title: Enllaça compte Coinbase
-      wait_for_sync: Espera que Coinbase acabi de sincronitzar
+      wait_for_sync: Espera que Coinbase acabi la sincronització
     setup_accounts:
       accounts_count:
         one: "%{count} cartera disponible"

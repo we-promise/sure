@@ -82,7 +82,7 @@ ca:
       api_error: 'Error de l''API: %{message}'
       cancel: Cancel·la
       configure_name_in_lunchflow: No es pot importar — configura el nom del compte
-        a Lunchflow
+        a Lunch Flow
       description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
       link_accounts: Enllaça els comptes seleccionats
       no_accounts_found: No s'han trobat comptes. Comprova la configuració de la teva
@@ -99,7 +99,7 @@ ca:
       api_error: 'Error de l''API: %{message}'
       cancel: Cancel·la
       configure_name_in_lunchflow: No es pot importar — configura el nom del compte
-        a Lunchflow
+        a Lunch Flow
       description: Selecciona un compte de Lunch Flow per enllaçar-lo amb aquest compte.
         Les transaccions se sincronitzaran i deduplicaran automàticament.
       link_account: Enllaça compte

@@ -2,4 +2,4 @@
 ca:
   invitation_mailer:
     invite_email:
-      subject: "%{inviter} t'ha convidat a unir-te a la seva llar a %{product_name}!"
+      subject: "%{inviter} t'ha convidat a unir-se al seu compte de %{product_name}!"

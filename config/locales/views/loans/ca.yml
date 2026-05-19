@@ -8,7 +8,7 @@ ca:
       interest_rate: Tipus d'interès
       interest_rate_placeholder: '5.25'
       none: Cap
-      rate_type: Tipus d'interès
+      rate_type: Modalitat del tipus
       subtype_none: Cap
       subtype_prompt: Selecciona el tipus de préstec
       term_months: Termini (mesos)

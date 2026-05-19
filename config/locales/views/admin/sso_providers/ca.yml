@@ -32,7 +32,9 @@ ca:
         enabled_help: Els usuaris podran iniciar sessió amb aquest proveïdor quan
           estigui activat
         enabled_label: Activa aquest proveïdor
-        errors_title: "%{count} error ha impedit desar aquest proveïdor:"
+        errors_title:
+          one: "%{count} error ha impedit desar aquest proveïdor:"
+          other: "%{count} errors han impedit desar aquest proveïdor:"
         groups_help: Llista separada per comes amb els noms dels grups del IdP. Fes
           servir * per fer coincidir tots els grups.
         guest_groups: Grups de convidats

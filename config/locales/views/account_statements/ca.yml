@@ -19,7 +19,7 @@ ca:
         duplicate: Duplicat
         mismatched: No coincideix
         missing: Falta
-        not_expected: No s'esperava
+        not_expected: No previst
     create:
       duplicates:
         one: S'ha omès 1 extracte duplicat.
@@ -41,7 +41,7 @@ ca:
       account_label: Compte
       confidence: Coincidència %{confidence}
       empty_linked: Encara no hi ha extractes enllaçats.
-      empty_unmatched: La safata d'extractes està buida.
+      empty_unmatched: La safata sense aparellar està buida.
       leave_unmatched: Deixa sense aparellar
       linked_title: Extractes enllaçats
       no_suggestion: Sense suggeriment

@@ -15,7 +15,7 @@ ca:
       success: T'has registrat correctament.
     new:
       invitation_message: "%{inviter} t'ha convidat a unir-te com a %{role}"
-      join_family_title: Uneix-te a la %{moniker} %{family}
+      join_family_title: Uneix-te a %{family} (%{moniker})
       password_placeholder: Introdueix la teva contrasenya
       password_requirements:
         case: Majúscules i minúscules

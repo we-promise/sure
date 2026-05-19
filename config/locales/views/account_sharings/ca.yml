@@ -7,7 +7,7 @@ ca:
         i informes
       include_in_finances: Inclou als meus pressupostos i informes
       member: Membre
-      no_members: No hi ha altres membres al teu %{moniker} amb qui compartir
+      no_members: Encara no hi ha altres membres amb qui compartir aquest compte
       owner_label: 'Propietari: %{name}'
       permission: Permís
       permissions:

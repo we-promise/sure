@@ -7,13 +7,13 @@ ca:
       no_accounts: No hi ha comptes per configurar.
       success: S'han creat correctament %{count} compte(s).
     create:
-      success: La connexió IndexaCapital s'ha creat correctament
+      success: La connexió Indexa Capital s'ha creat correctament
     destroy:
-      success: La connexió IndexaCapital s'ha eliminat
+      success: La connexió Indexa Capital s'ha eliminat
     errors:
-      provider_not_configured: El proveïdor IndexaCapital no està configurat
+      provider_not_configured: El proveïdor Indexa Capital no està configurat
     index:
-      title: Connexions IndexaCapital
+      title: Connexions Indexa Capital
     indexa_capital_item:
       accounts_need_setup: Els comptes necessiten configuració
       delete: Elimina la connexió
@@ -24,11 +24,11 @@ ca:
         other: "%{count} comptes més disponibles"
       no_accounts_description: Aquesta connexió encara no té comptes enllaçats.
       no_accounts_title: No hi ha comptes
-      provider_name: IndexaCapital
+      provider_name: Indexa Capital
       requires_update: La connexió necessita actualització
       setup_action: Configura els nous comptes
       setup_description: "%{linked} de %{total} comptes enllaçats. Tria els tipus
-        de compte per als teus nous comptes IndexaCapital importats."
+        de compte per als teus nous comptes Indexa Capital importats."
       setup_needed: Nous comptes a punt per configurar
       status: Sincronitzat fa %{timestamp} — %{summary}
       status_never: Mai sincronitzat
@@ -51,7 +51,7 @@ ca:
         other: No es poden enllaçar %{count} comptes sense nom
       link_failed: No s'han pogut enllaçar els comptes
       no_accounts_selected: Selecciona almenys un compte
-      no_api_key: No s'han trobat les credencials d'IndexaCapital. Configura-les a
+      no_api_key: No s'han trobat les credencials d'Indexa Capital. Configura-les a
         la configuració del proveïdor.
       partial_invalid: S'han enllaçat correctament %{created_count} compte(s), %{already_linked_count}
         ja estaven enllaçats, %{invalid_count} compte(s) tenien noms no vàlids
@@ -65,14 +65,14 @@ ca:
       api_error: 'Error de l''API: %{message}'
       invalid_account_name: No es pot enllaçar un compte sense nom
       missing_parameters: Falten paràmetres obligatoris
-      no_api_key: No s'han trobat les credencials d'IndexaCapital. Configura-les a
+      no_api_key: No s'han trobat les credencials d'Indexa Capital. Configura-les a
         la configuració del proveïdor.
-      provider_account_already_linked: Aquest compte IndexaCapital ja està enllaçat
+      provider_account_already_linked: Aquest compte Indexa Capital ja està enllaçat
         a un altre compte
-      provider_account_not_found: No s'ha trobat el compte IndexaCapital
-      success: S'ha enllaçat correctament %{account_name} amb IndexaCapital
+      provider_account_not_found: No s'ha trobat el compte Indexa Capital
+      success: S'ha enllaçat correctament %{account_name} amb Indexa Capital
     loading:
-      loading_message: Carregant comptes d'IndexaCapital...
+      loading_message: Carregant comptes d'Indexa Capital...
       loading_title: Carregant
     panel:
       alternative_auth: O utilitza l'autenticació amb nom d'usuari/contrasenya...
@@ -110,52 +110,52 @@ ca:
         nous comptes
       update_button: Actualitza la configuració
     preload_accounts:
-      no_credentials_configured: Primer, configura les teves credencials d'IndexaCapital
+      no_credentials_configured: Primer, configura les teves credencials d'Indexa Capital
         a la configuració del proveïdor.
     select_accounts:
       accounts_selected: comptes seleccionats
       api_error: 'Error de l''API: %{message}'
       cancel: Cancel·la
       configure_name_in_provider: No es pot importar — configura el nom del compte
-        a IndexaCapital
+        a Indexa Capital
       description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
       link_accounts: Enllaça els comptes seleccionats
-      no_accounts_found: No s'han trobat comptes. Comprova les teves credencials d'IndexaCapital.
-      no_api_key: Les credencials d'IndexaCapital no estan configurades. Configura-les
+      no_accounts_found: No s'han trobat comptes. Comprova les teves credencials d'Indexa Capital.
+      no_api_key: Les credencials d'Indexa Capital no estan configurades. Configura-les
         a la configuració.
-      no_credentials_configured: Primer, configura les teves credencials d'IndexaCapital
+      no_credentials_configured: Primer, configura les teves credencials d'Indexa Capital
         a la configuració del proveïdor.
       no_name_placeholder: "(Sense nom)"
-      title: Selecciona comptes IndexaCapital
+      title: Selecciona comptes Indexa Capital
     select_existing_account:
       account_already_linked: Aquest compte ja està enllaçat a un proveïdor
-      all_accounts_already_linked: Tots els comptes IndexaCapital ja estan enllaçats
+      all_accounts_already_linked: Tots els comptes Indexa Capital ja estan enllaçats
       api_error: 'Error de l''API: %{message}'
       balance_label: 'Saldo:'
       cancel: Cancel·la
       cancel_button: Cancel·la
       configure_name_in_provider: No es pot importar — configura el nom del compte
-        a IndexaCapital
-      connect_hint: Connecta un compte IndexaCapital per habilitar la sincronització
+        a Indexa Capital
+      connect_hint: Connecta un compte Indexa Capital per habilitar la sincronització
         automàtica.
-      description: Selecciona un compte IndexaCapital per enllaçar-lo amb aquest compte.
+      description: Selecciona un compte Indexa Capital per enllaçar-lo amb aquest compte.
         Les transaccions se sincronitzaran i deduplicaran automàticament.
-      header: Enllaça amb IndexaCapital
+      header: Enllaça amb Indexa Capital
       link_account: Enllaça compte
       link_button: Enllaça aquest compte
       linking_to: 'Enllaçant a:'
       no_account_specified: No s'ha especificat cap compte
-      no_accounts: No s'han trobat comptes IndexaCapital sense enllaçar.
-      no_accounts_found: No s'han trobat comptes IndexaCapital. Comprova les teves
+      no_accounts: No s'han trobat comptes Indexa Capital sense enllaçar.
+      no_accounts_found: No s'han trobat comptes Indexa Capital. Comprova les teves
         credencials.
-      no_api_key: Les credencials d'IndexaCapital no estan configurades. Configura-les
+      no_api_key: Les credencials d'Indexa Capital no estan configurades. Configura-les
         a la configuració.
-      no_credentials_configured: Primer, configura les teves credencials d'IndexaCapital
+      no_credentials_configured: Primer, configura les teves credencials d'Indexa Capital
         a la configuració del proveïdor.
       no_name_placeholder: "(Sense nom)"
       settings_link: Ves a la configuració del proveïdor
-      subtitle: Tria un compte IndexaCapital
-      title: Enllaça %{account_name} amb IndexaCapital
+      subtitle: Tria un compte Indexa Capital
+      title: Enllaça %{account_name} amb Indexa Capital
     setup_accounts:
       account_type_label: 'Tipus de compte:'
       account_types:
@@ -169,22 +169,22 @@ ca:
       accounts_count:
         one: "%{count} compte disponible"
         other: "%{count} comptes disponibles"
-      all_accounts_linked: Tots els teus comptes IndexaCapital ja s'han configurat.
+      all_accounts_linked: Tots els teus comptes Indexa Capital ja s'han configurat.
       api_error: 'Error de l''API: %{message}'
       balance: Saldo
       cancel: Cancel·la
-      choose_account_type: 'Tria el tipus de compte correcte per a cada compte IndexaCapital:'
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte Indexa Capital:'
       create_accounts: Crea comptes
       creating: Creant comptes...
       creating_accounts: Creant comptes...
       fetch_failed: No s'han pogut obtenir els comptes
       historical_data_range: 'Rang de dades històriques:'
       import_selected: Importa els comptes seleccionats
-      instructions: Selecciona els comptes que vols importar des d'IndexaCapital.
+      instructions: Selecciona els comptes que vols importar des d'Indexa Capital.
         Pots triar diversos comptes.
-      no_accounts: No s'han trobat comptes sense enllaçar d'aquesta connexió IndexaCapital.
+      no_accounts: No s'han trobat comptes sense enllaçar d'aquesta connexió Indexa Capital.
       no_accounts_to_setup: No hi ha comptes per configurar
-      no_api_key: Les credencials d'IndexaCapital no estan configurades. Revisa la
+      no_api_key: Les credencials d'Indexa Capital no estan configurades. Revisa la
         configuració de la connexió.
       select_all: Selecciona-ho tot
       subtitle: Tria els tipus de compte correctes per als teus comptes importats
@@ -229,12 +229,12 @@ ca:
           student: Préstec d'estudis
       sync_start_date_help: Selecciona fins on vols sincronitzar l'historial de transaccions.
       sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
-      title: Configura els teus comptes IndexaCapital
+      title: Configura els teus comptes Indexa Capital
     sync:
       status:
         calculating: Calculant saldos...
         checking_setup: Comprovant la configuració dels comptes...
-        importing: Important comptes des d'IndexaCapital...
+        importing: Important comptes des d'Indexa Capital...
         importing_data: Important dades del compte...
         needs_setup: "%{count} comptes necessiten configuració..."
         processing: Processant posicions i activitats...
@@ -246,4 +246,4 @@ ca:
         other: "%{count} comptes sincronitzats"
       synced_with_setup: "%{linked} sincronitzats, %{unlinked} necessiten configuració"
     update:
-      success: La connexió IndexaCapital s'ha actualitzat
+      success: La connexió Indexa Capital s'ha actualitzat

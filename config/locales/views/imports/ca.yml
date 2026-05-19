@@ -259,11 +259,11 @@ ca:
       ticker: Ticker
     create:
       csv_uploaded: CSV pujat correctament.
-      document_provider_not_configured: No hi ha cap arxiu vectorial configurat per
+      document_provider_not_configured: No hi ha cap magatzem vectorial configurat per
         a la pujada de documents.
       document_too_large: El fitxer del document és massa gran. La mida màxima és
         %{max_size}MB.
-      document_upload_failed: No hem pogut pujar el document a l'arxiu vectorial.
+      document_upload_failed: No hem pogut pujar el document a l'magatzem vectorial.
         Torna-ho a provar.
       document_uploaded: Document pujat correctament.
       file_too_large: El fitxer és massa gran. La mida màxima és %{max_size}MB.

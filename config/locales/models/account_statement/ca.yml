@@ -5,13 +5,13 @@ ca:
       account_statement:
         account: Compte
         account_last4_hint: Quatre últims dígits del compte
-        account_name_hint: Suggeriment del nom del compte
-        closing_balance: Saldo de tancament
+        account_name_hint: Pista del nom del compte
+        closing_balance: Saldo final
         content_sha256: Resum del contingut
         currency: Divisa
         filename: Nom del fitxer
-        institution_name_hint: Suggeriment de la institució
-        opening_balance: Saldo d'obertura
+        institution_name_hint: Pista de la institució
+        opening_balance: Saldo inicial
         original_file: Fitxer de l'extracte
         period_end_on: Final del període
         period_start_on: Inici del període
