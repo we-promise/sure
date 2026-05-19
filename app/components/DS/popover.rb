@@ -11,9 +11,16 @@ class DS::Popover < DesignSystemComponent
   attr_reader :variant, :avatar_url, :initials, :placement, :offset, :icon, :no_padding, :testid, :mobile_fullwidth, :max_width, :panel_id
 
   renders_one :button, ->(**button_options, &block) do
-    options_with_target = button_options.merge(data: { DS__popover_target: "button" })
+    options_with_target = button_options.deep_dup
+    options_with_target[:data] = (options_with_target[:data] || {}).merge(DS__popover_target: "button")
+    options_with_target[:aria] = {
+      haspopup: "dialog",
+      expanded: "false",
+      controls: panel_id
+    }.merge(options_with_target[:aria] || {})
 
     if block
+      options_with_target[:type] ||= "button"
       content_tag(:button, **options_with_target, &block)
     else
       DS::Button.new(**options_with_target)

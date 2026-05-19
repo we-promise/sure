@@ -69,6 +69,17 @@ export default class extends Controller {
     const items = this.#menuItems();
     if (items.length === 0) return;
     const currentIndex = items.indexOf(event.target);
+
+    // Activate the focused item on Enter / Space (ARIA menu pattern).
+    // Without this, link-based menuitems can't be activated by keyboard
+    // once focus has moved off the native default.
+    if (event.key === "Enter" || event.key === " ") {
+      if (currentIndex < 0) return;
+      event.preventDefault();
+      items[currentIndex].click();
+      return;
+    }
+
     let nextIndex = null;
     switch (event.key) {
       case "ArrowDown":

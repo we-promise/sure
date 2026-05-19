@@ -13,20 +13,20 @@ class DS::Menu < DesignSystemComponent
   attr_reader :variant, :placement, :offset, :icon_vertical, :no_padding, :testid, :mobile_fullwidth, :max_width, :menu_id
 
   renders_one :button, ->(**button_options, &block) do
-    options_with_target = button_options.merge(
-      data: { DS__menu_target: "button" },
-      aria: { haspopup: "menu", expanded: "false", controls: menu_id }
-    )
+    options_with_target = button_options.deep_dup
+    options_with_target[:data] = (options_with_target[:data] || {}).merge(DS__menu_target: "button")
+    options_with_target[:aria] = {
+      haspopup: "menu",
+      expanded: "false",
+      controls: menu_id
+    }.merge(options_with_target[:aria] || {})
 
     if block
+      options_with_target[:type] ||= "button"
       content_tag(:button, **options_with_target, &block)
     else
       DS::Button.new(**options_with_target)
     end
-  end
-
-  renders_one :header, ->(&block) do
-    content_tag(:div, class: "border-b border-tertiary", role: "presentation", &block)
   end
 
   renders_many :items, DS::MenuItem
