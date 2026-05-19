@@ -3001,6 +3001,8 @@ components:
           - account_statements
           - family_exports
           - imports
+          - import_sessions
+          - import_source_mappings
           - import_rows
           - import_mappings
           - accounts
@@ -3040,6 +3042,12 @@ components:
               type: integer
               minimum: 0
             imports:
+              type: integer
+              minimum: 0
+            import_sessions:
+              type: integer
+              minimum: 0
+            import_source_mappings:
               type: integer
               minimum: 0
             import_rows:
