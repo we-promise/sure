@@ -313,6 +313,24 @@ docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
 
+### Reset one self-hosted user's financial data
+
+Self-hosted administrators can reset one user's family financial data without deleting the user, login, session, or authentication records. This is intended for admin recovery and import testing; it is dry-run only unless explicitly confirmed.
+
+Dry run:
+
+```bash
+docker compose exec web bin/rails sure:admin:reset_financial_data USER_EMAIL="user@example.com"
+```
+
+Destructive reset:
+
+```bash
+docker compose exec web bin/rails sure:admin:reset_financial_data USER_EMAIL="user@example.com" CONFIRM_RESET_FINANCIAL_DATA=yes
+```
+
+The task resolves the user, prints the selected family scope, reports counts before deletion, counts deleted, and counts after deletion, then clears the selected family's financial/import data only. It does not reset other families or remove user/authentication records.
+
 ### Slow `.csv` import (processing rows taking longer than expected)
 
 Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.
