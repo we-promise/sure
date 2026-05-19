@@ -1,0 +1,13 @@
+<%= tag.div class: container_classes do %>
+  <%= tag.input type: "search",
+                name: name,
+                value: value,
+                placeholder: placeholder,
+                "aria-label": aria_label,
+                autocomplete: "off",
+                class: input_classes,
+                **opts %>
+  <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+    <%= helpers.icon("search", class: "text-secondary") %>
+  </div>
+<% end %>
