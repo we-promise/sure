@@ -1,12 +1,13 @@
 class DS::Disclosure < DesignSystemComponent
   renders_one :summary_content
 
-  VARIANTS = %i[default card card_inset].freeze
+  VARIANTS = %i[default card card_inset inline].freeze
 
   attr_reader :title, :align, :open, :variant, :opts
 
   # `:default` — bg-surface summary, no chrome on the `<details>`. Use
-  # for inline expanders inside a parent card.
+  # for inline expanders that sit inside a parent card (the summary
+  # itself reads as the surface).
   #
   # `:card` — `<details>` itself becomes a `bg-container shadow-border-xs
   # rounded-xl` card; the summary inherits the container (no own bg).
@@ -18,7 +19,13 @@ class DS::Disclosure < DesignSystemComponent
   # (e.g. the IBKR flex-query "report details" panel embedded inside
   # the IBKR settings flow). Same summary contract as `:card`.
   #
-  # In both card variants, callers should pass their own
+  # `:inline` — no surface, no padding, no shadow. The disclosure reads
+  # as a plain text-link-style toggle (e.g. "Alternative auth" inside
+  # a form, or a "Manage connections" lazy-load opener). Caller provides
+  # the summary text (and optional chevron) via the `summary_content`
+  # slot.
+  #
+  # In card / inline variants, callers should pass their own
   # `summary_content` slot; the built-in title rendering assumes the
   # `:default` shape.
   def initialize(title: nil, align: "right", open: false, variant: :default, **opts)
@@ -59,6 +66,12 @@ class DS::Disclosure < DesignSystemComponent
       # Ring token matches `settings/provider_card.html.erb` (the
       # established focus pattern on container cards).
       "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 rounded-xl"
+    when :inline
+      # Inline variant: no surface, no padding — the summary reads as
+      # plain text-link copy. Caller markup (text + optional chevron)
+      # provides the visual. Keep cursor + focus-visible ring + matching
+      # alpha-black-300 token used by the card variants for consistency.
+      "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 rounded-sm"
     else
       "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300"
     end
