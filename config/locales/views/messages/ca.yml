@@ -1,0 +1,6 @@
+---
+ca:
+  messages:
+    chat_form:
+      disclaimer: Les respostes de la IA són només informatives. No són consells financers!
+      placeholder: Pregunta el que vulguis ...

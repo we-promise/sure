@@ -1,0 +1,8 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          missing_columns: 'Falten columnes obligatòries: %{columns}'
+          own_parent: La categoria '%{name}' no pot ser el seu propi pare

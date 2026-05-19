@@ -1,0 +1,209 @@
+---
+ca:
+  providers:
+    snaptrade:
+      accounts_count:
+        one: "%{count} compte"
+        other: "%{count} comptes"
+      client_id_label: Client ID
+      client_id_placeholder: Introdueix el teu Client ID de SnapTrade
+      client_id_update_placeholder: Introdueix un nou Client ID per actualitzar
+      connect_button: Connecta un broker
+      connected_brokerages: 'Connectats:'
+      connection_description: Connecta't al teu broker a través de SnapTrade (25+
+        brokers admesos)
+      connections_error: 'No s''han pogut carregar les connexions: %{message}'
+      consumer_key_label: Consumer Key
+      consumer_key_placeholder: Introdueix la teva Consumer Key de SnapTrade
+      consumer_key_update_placeholder: Introdueix un nou Consumer Key per actualitzar
+      delete_connection: Elimina
+      delete_connection_body: Això eliminarà permanentment la connexió de %{brokerage}
+        de SnapTrade. Tots els comptes d'aquest broker quedaran sense enllaçar. Hauràs
+        de reconnectar per sincronitzar aquests comptes de nou.
+      delete_connection_confirm: Elimina la connexió
+      delete_connection_title: Vols eliminar la connexió amb el broker?
+      delete_orphaned_user: Elimina
+      delete_orphaned_user_body: Això eliminarà permanentment aquest usuari orfe de
+        SnapTrade i totes les seves connexions de broker, alliberant places de connexió.
+      delete_orphaned_user_confirm: Elimina el registre
+      delete_orphaned_user_title: Vols eliminar el registre orfe?
+      description: SnapTrade connecta amb més de 25 brokers importants (Fidelity,
+        Vanguard, Schwab, Robinhood, etc.) i proporciona l'historial complet d'operacions
+        amb etiquetes d'activitat i cost base.
+      free_tier_warning: El nivell gratuït de SnapTrade cobreix 5 connexions de broker.
+        Per a més, amplia el teu pla a SnapTrade.
+      loading_connections: Carregant connexions...
+      manage_connections: Gestiona connexions
+      name: SnapTrade
+      needs_linking: necessita enllaç
+      needs_setup:
+        one: "%{count} necessita configuració"
+        other: "%{count} necessiten configuració"
+      no_connections: No s'han trobat connexions de broker.
+      orphaned_connection: Connexió orfe (no sincronitzada localment)
+      orphaned_user: Registre orfe
+      orphaned_users_description: Aquests són registres d'usuari de SnapTrade anteriors
+        que ocupen places de connexió. Elimina'ls per alliberar places.
+      orphaned_users_title:
+        one: "%{count} registre orfe"
+        other: "%{count} registres orfes"
+      save_button: Desa la configuració
+      setup_accounts_button: Configura comptes
+      setup_title: 'Instruccions de configuració:'
+      status_connected:
+        one: "%{count} compte de SnapTrade"
+        other: "%{count} comptes de SnapTrade"
+      status_needs_registration: Credencials desades. Finalitza la configuració per
+        connectar un broker.
+      status_ready: Llest per connectar brokers
+      step_1_html: Crea un compte a <a href="https://dashboard.snaptrade.com" target="_blank"
+        rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
+      step_2: Copia el teu Client ID i Consumer Key des del panell
+      step_3: Introdueix les teves credencials a continuació i fes clic a Desa
+      step_4: Ves a la pàgina de comptes i utilitza 'Connecta un altre broker' per
+        enllaçar els teus comptes d'inversió
+      update_button: Actualitza la configuració
+  snaptrade_item:
+    brokerage_summary:
+      count:
+        one: "%{count} broker"
+        other: "%{count} brokers"
+      none: No hi ha brokers connectats
+    institution_summary:
+      count:
+        one: "%{count} entitat"
+        other: "%{count} entitats"
+      none: No hi ha entitats connectades
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      synced:
+        one: "%{count} compte sincronitzat"
+        other: "%{count} comptes sincronitzats"
+      synced_with_setup: "%{linked} sincronitzats, %{unlinked} necessiten configuració"
+    syncer:
+      activities_fetching_async: Les activitats s'estan obtenint en segon pla. Pot
+        trigar fins a un minut per a connexions de broker noves.
+      calculating: Calculant saldos...
+      checking_config: Comprovant la configuració dels comptes...
+      discovering: Descobrint comptes...
+      importing: Important comptes des de SnapTrade...
+      needs_setup: "%{count} comptes necessiten configuració..."
+      processing: Processant posicions i activitats...
+  snaptrade_items:
+    callback:
+      no_item: No s'ha trobat la configuració de SnapTrade.
+      success: Broker connectat! Selecciona quins comptes vols enllaçar.
+    complete_account_setup:
+      link_failed: 'No s''han pogut enllaçar els comptes: %{errors}'
+      no_accounts: No s'ha seleccionat cap compte per enllaçar.
+      partial_success:
+        one: S'ha enllaçat %{count} compte. %{failed_count} no s'han pogut enllaçar.
+        other: S'han enllaçat %{count} comptes. %{failed_count} no s'han pogut enllaçar.
+      success:
+        one: S'ha enllaçat correctament %{count} compte.
+        other: S'han enllaçat correctament %{count} comptes.
+    connect:
+      connection_failed: 'No s''ha pogut connectar a SnapTrade: %{message}'
+      decryption_failed: No s'han pogut llegir les credencials de SnapTrade. Elimina
+        aquesta connexió i torna-la a crear.
+    connections:
+      unknown_brokerage: Broker desconegut
+    create:
+      success: SnapTrade s'ha configurat correctament.
+    default_name: Connexió SnapTrade
+    delete_connection:
+      api_deletion_failed: No s'ha pogut eliminar la connexió de SnapTrade — falten
+        les credencials. La connexió encara pot existir al teu compte SnapTrade.
+      failed: 'No s''ha pogut eliminar la connexió: %{message}'
+      missing_authorization_id: Falta l'ID d'autorització
+      success: La connexió s'ha eliminat correctament. S'ha alliberat una plaça.
+    delete_orphaned_user:
+      failed: No s'ha pogut eliminar el registre orfe.
+      success: El registre orfe s'ha eliminat correctament.
+    destroy:
+      success: S'ha programat la connexió SnapTrade per a la seva eliminació.
+    link_accounts:
+      use_setup_flow: Utilitza en el seu lloc el flux de configuració de comptes
+    link_existing_account:
+      failed: 'No s''ha pogut enllaçar el compte: %{message}'
+      not_found: No s'ha trobat el compte.
+      success: S'ha enllaçat correctament al compte SnapTrade.
+    preload_accounts:
+      not_configured: SnapTrade no està configurat.
+    select_accounts:
+      not_configured: SnapTrade no està configurat.
+    select_existing_account:
+      balance_label: 'Saldo:'
+      cancel_button: Cancel·la
+      connect_hint: Pot ser que hagis de connectar primer un broker.
+      header: Enllaça un compte existent
+      link_button: Enllaça
+      linking_to: 'Enllaçant al compte:'
+      no_accounts: No hi ha comptes SnapTrade sense enllaçar disponibles.
+      not_found: No s'ha trobat el compte o la configuració de SnapTrade.
+      settings_link: Ves a la configuració del proveïdor
+      subtitle: Selecciona un compte SnapTrade per enllaçar
+      title: Enllaça amb un compte SnapTrade
+    setup_accounts:
+      account_number: 'Compte:'
+      available_accounts: Comptes disponibles
+      back_to_settings: Torna a la configuració
+      balance_label: 'Saldo:'
+      cancel_button: Cancel·la
+      create_button: Crea els comptes seleccionats
+      creating: Creant comptes...
+      done_button: Fet
+      free_tier_note: El nivell gratuït de SnapTrade permet 5 connexions de broker.
+        Revisa el teu panell de SnapTrade per veure l'ús actual.
+      header: Configura els teus comptes SnapTrade
+      info_activities: Historial d'operacions amb etiquetes d'activitat (Compra, Venda,
+        Dividend, etc.)
+      info_cost_basis: Cost base per posició (quan estigui disponible)
+      info_history: Fins a 3 anys d'historial de transaccions
+      info_holdings: Posicions amb preus i quantitats actuals
+      info_title: Dades d'inversió SnapTrade
+      link_button: Enllaça
+      linked_accounts: Ja enllaçats
+      linked_to: 'Enllaçat a:'
+      loading: Obtenint comptes des de SnapTrade...
+      loading_hint: Fes clic a Actualitza per comprovar si hi ha comptes.
+      no_accounts_message: No s'ha trobat cap compte de broker. Això pot passar si
+        has cancel·lat la connexió o si el teu broker no està admès.
+      no_accounts_title: No s'han trobat comptes
+      or_link_existing: 'O enllaça a un compte existent en lloc de crear-ne un de
+        nou:'
+      refresh: Actualitza
+      select_account: Selecciona un compte...
+      subtitle: Selecciona quins comptes de broker vols enllaçar
+      sync_start_date_help: Deixa-ho en blanc per a tot l'historial disponible
+      sync_start_date_label: 'Importa transaccions des de:'
+      syncing: Obtenint els teus comptes...
+      title: Configura comptes SnapTrade
+      try_again: Connecta un broker
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} compte necessita configuració"
+        other: "%{count} comptes necessiten configuració"
+      add_another_brokerage: Connecta un altre broker
+      connect_brokerage: Connecta un broker
+      delete: Elimina
+      deletion_in_progress: Eliminació en curs...
+      error: Error de sincronització
+      manage_connections: Gestiona connexions
+      more_accounts_available:
+        one: "%{count} compte més disponible per configurar"
+        other: "%{count} comptes més disponibles per configurar"
+      no_accounts_description: Connecta un broker per importar els teus comptes d'inversió.
+      no_accounts_title: No s'han descobert comptes
+      reconnect: Reconnecta
+      requires_update: La connexió necessita actualització
+      setup_accounts_menu: Configura comptes
+      setup_action: Configura comptes
+      setup_description: Alguns comptes de SnapTrade necessiten ser enllaçats a comptes
+        de Sure.
+      setup_needed: Els comptes necessiten configuració
+      status: Darrera sincronització fa %{timestamp} - %{summary}
+      status_never: Mai sincronitzat
+      syncing: Sincronitzant...
+    update:
+      success: La configuració de SnapTrade s'ha actualitzat correctament.
