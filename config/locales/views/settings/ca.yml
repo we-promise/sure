@@ -474,7 +474,7 @@ ca:
         step_3: Després ves a Comptes per enllaçar els teus comptes sincronitzats.
       status:
         err: Error
-        'false': No configurat
+        off: No configurat
         ok: Connectat
         warn: Cal acció
       sync_all: Sincronitza-ho tot

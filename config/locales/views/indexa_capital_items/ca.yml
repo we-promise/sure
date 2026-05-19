@@ -139,7 +139,7 @@ ca:
       connect_hint: Connecta un compte Indexa Capital per habilitar la sincronització
         automàtica.
       description: Selecciona un compte Indexa Capital per enllaçar-lo amb aquest compte.
-        Les transaccions se sincronitzaran i deduplicaran automàticament.
+        Les transaccions es sincronitzaran i deduplicaran automàticament.
       header: Enllaça amb Indexa Capital
       link_account: Enllaça compte
       link_button: Enllaça aquest compte

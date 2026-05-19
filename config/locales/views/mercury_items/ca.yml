@@ -143,7 +143,7 @@ ca:
       configure_name_in_mercury: No es pot importar — configura el nom del compte
         a Mercury
       description: Selecciona un compte Mercury per enllaçar-lo amb aquest compte.
-        Les transaccions se sincronitzaran i deduplicaran automàticament.
+        Les transaccions es sincronitzaran i deduplicaran automàticament.
       link_account: Enllaça compte
       no_account_specified: No s'ha especificat cap compte
       no_accounts_found: No s'han trobat comptes Mercury. Comprova la configuració

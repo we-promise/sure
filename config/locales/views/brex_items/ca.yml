@@ -175,7 +175,7 @@ ca:
       cancel: Cancel·la
       configure_name_in_brex: No es pot importar — configura el nom del compte a Brex
       description: Selecciona un compte Brex per enllaçar-lo amb aquest compte. Les
-        transaccions se sincronitzaran i deduplicaran automàticament.
+        transaccions es sincronitzaran i deduplicaran automàticament.
       link_account: Enllaça compte
       no_account_specified: No s'ha especificat cap compte
       no_accounts_found: No s'han trobat comptes Brex. Comprova la configuració del

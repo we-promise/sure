@@ -191,7 +191,7 @@ ca:
       configure_name_in_sophtron: No es pot importar — configura el nom del compte
         a Sophtron
       description: Selecciona un compte Sophtron per enllaçar-lo amb aquest compte.
-        Les transaccions se sincronitzaran i deduplicaran automàticament.
+        Les transaccions es sincronitzaran i deduplicaran automàticament.
       link_account: Enllaça compte
       no_access_key: La clau d'accés de Sophtron no està configurada. Configura-la
         a la configuració.
@@ -306,11 +306,9 @@ ca:
         d'usuari i clau d'accés de Sophtron.
       go_to_provider_settings: Ves a la configuració del proveïdor
       heading: ID d'usuari i clau d'accés sense configurar
-      message: 'Per completar la configuració de la teva connexió Sophtron, ves a
-        la pàgina de configuració del proveïdor i segueix les instruccions per autoritzar
+      message: Per completar la configuració de la teva connexió Sophtron, ves a la
+        pàgina de configuració del proveïdor i segueix les instruccions per autoritzar
         i configurar la teva connexió Sophtron.
-
-        '
       setup_steps_title: 'Passos de configuració:'
       step_1_html: Ves a <strong>Configuració → Proveïdors de sincronització bancària</strong>
       step_2_html: Localitza la secció <strong>Sophtron</strong>

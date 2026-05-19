@@ -124,7 +124,7 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
       items << { label: t_label(:market_changes), value: balance.net_market_flows_money, tooltip: t_tooltip(:market_changes), style: :flow } if balance.net_market_flows != 0
 
       if has_adjustments?
-        items << { label: t_label(:end_balance), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_balance_investment), style: :subtotal }
+        items << { label: t_label(:end_balance), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_balance_crypto), style: :subtotal }
         items << { label: t_label(:adjustments), value: total_adjustments, tooltip: t_tooltip(:adjustments), style: :adjustment }
       end
 

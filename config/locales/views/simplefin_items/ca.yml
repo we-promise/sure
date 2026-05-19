@@ -137,7 +137,7 @@ ca:
       title: Configura els teus comptes SimpleFIN
       transaction_history_description_html: SimpleFIN normalment proporciona <strong>60-90
         dies</strong> d'historial de transaccions, segons el teu banc. Després de
-        la configuració inicial, les noves transaccions se sincronitzaran automàticament.
+        la configuració inicial, les noves transaccions es sincronitzaran automàticament.
         La disponibilitat de les dades històriques varia segons l'entitat i el tipus
         de compte.
       transaction_history_title: 'Historial de transaccions:'
