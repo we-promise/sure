@@ -37,8 +37,23 @@ class SureImportTest < ActiveSupport::TestCase
   end
 
   test "max_row_count is higher than standard imports" do
-    assert_equal 100_000, SureImport.max_row_count
-    assert_equal 100_000, @import.max_row_count
+    with_env_overrides(
+      "SURE_IMPORT_MAX_ROWS" => nil,
+      "SURE_IMPORT_MAX_NDJSON_SIZE_MB" => nil
+    ) do
+      assert_equal 100_000, SureImport.max_row_count
+      assert_equal 100_000, @import.max_row_count
+    end
+  end
+
+  test "max row count and ndjson size can be configured by environment" do
+    with_env_overrides(
+      "SURE_IMPORT_MAX_ROWS" => "150000",
+      "SURE_IMPORT_MAX_NDJSON_SIZE_MB" => "64"
+    ) do
+      assert_equal 150_000, SureImport.max_row_count
+      assert_equal 64.megabytes, SureImport.max_ndjson_size
+    end
   end
 
   test "dry_run totals can be derived from existing line type counts" do
@@ -223,6 +238,130 @@ class SureImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "importing", @import.status
+  end
+
+  test "preflight reports blocking errors before publish_later enqueues" do
+    @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Blocked Account",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "Depository"
+      } },
+      { type: "Category", data: { id: "category-1", name: "Groceries" } }
+    ]))
+
+    assert_no_enqueued_jobs do
+      assert_raises SureImport::PreflightError do
+        @import.publish_later
+      end
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "Category name \"Groceries\" already exists"
+  end
+
+  test "publish_later reports unsupported records through preflight before publishable check" do
+    attach_ndjson(build_ndjson([
+      { type: "MysteryType", data: { id: "mystery-1" } }
+    ]))
+
+    assert_no_enqueued_jobs do
+      assert_raises SureImport::PreflightError do
+        @import.publish_later
+      end
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "unsupported record type MysteryType"
+  end
+
+  test "publish preflight failure does not partially import records" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Should Not Import",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "NotReal"
+      } }
+    ]))
+
+    assert_no_difference -> { @family.accounts.where(name: "Should Not Import").count } do
+      @import.publish
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "invalid accountable_type"
+  end
+
+  test "preflight catches missing fields unsupported types duplicate valuations and references" do
+    attach_ndjson(build_ndjson([
+      { type: "RecurringTransaction", data: { id: "recurring-1" } },
+      { type: "MysteryType", data: { id: "mystery-1" } },
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Bad Subtype",
+        balance: "100",
+        accountable_type: "Depository",
+        accountable: { subtype: "not-a-subtype" }
+      } },
+      { type: "Valuation", data: { account_id: "account-1", date: "2024-01-01", amount: "100" } },
+      { type: "Valuation", data: { account_id: "account-1", date: "2024-01-01", amount: "101" } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2024-01-02",
+        amount: "-5",
+        tag_ids: [ "missing-tag" ]
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    codes = result.errors.map { |error| error[:code] }
+
+    assert_not result.valid?
+    assert_includes codes, "missing_required_fields"
+    assert_includes codes, "unsupported_record_type"
+    assert_includes codes, "invalid_accountable_subtype"
+    assert_includes codes, "duplicate_valuation"
+    assert_includes codes, "missing_reference"
+  end
+
+  test "preflight catches duplicate taxonomy names inside ndjson" do
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "category-1", name: "Groceries" } },
+      { type: "Category", data: { id: "category-2", name: "Groceries" } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "duplicate_taxonomy_name"
+    assert_includes result.error_message, "appears more than once"
+  end
+
+  test "merge_existing_taxonomy allows explicit taxonomy reuse" do
+    category = @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "category-1", name: category.name } }
+    ]))
+
+    assert_not @import.sure_preflight.valid?
+
+    @import.merge_existing_taxonomy = true
+
+    assert @import.sure_preflight.valid?
   end
 
   private

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_18_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -917,6 +917,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_122500) do
     t.string "amount_type_inflow_value"
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
+    t.jsonb "import_options", default: {}, null: false
     t.string "amount_type_identifier_value"
     t.text "ai_summary"
     t.string "document_type"

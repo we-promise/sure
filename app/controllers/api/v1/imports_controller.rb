@@ -242,11 +242,19 @@ class Api::V1::ImportsController < Api::V1::BaseController
       end
 
       begin
-        @import.publish_later if @import.publishable? && params[:publish] == "true"
+        @import.publish_later if params[:publish] == "true"
       rescue Import::MaxRowCountExceededError
         render json: {
           error: "max_row_count_exceeded",
           message: "Import was uploaded but has too many rows to publish automatically.",
+          import_id: @import.id
+        }, status: :unprocessable_entity
+        return
+      rescue SureImport::PreflightError
+        render json: {
+          error: "preflight_failed",
+          message: "Import was uploaded but did not pass Sure NDJSON preflight.",
+          errors: @import.error.to_s.lines.map(&:strip).reject(&:blank?),
           import_id: @import.id
         }, status: :unprocessable_entity
         return
@@ -267,6 +275,8 @@ class Api::V1::ImportsController < Api::V1::BaseController
     def persist_sure_import!(family, content, filename, content_type)
       import = nil
       import = family.imports.create!(type: "SureImport")
+      import.merge_existing_taxonomy = params[:merge_existing_taxonomy]
+      import.save! if import.import_options_changed?
       import.ndjson_file.attach(
         io: StringIO.new(content),
         filename: filename,

@@ -25,6 +25,8 @@ class ImportsController < ApplicationController
     redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  rescue SureImport::PreflightError => e
+    redirect_to import_path(@import), alert: e.message
   end
 
   def index
@@ -211,8 +213,8 @@ class ImportsController < ApplicationController
     end
 
     def create_sure_import(file)
-      if file.size > SureImport::MAX_NDJSON_SIZE
-        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+      if file.size > SureImport.max_ndjson_size
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport.max_ndjson_size / 1.megabyte)
         return
       end
 
