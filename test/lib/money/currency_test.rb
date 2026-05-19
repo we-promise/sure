@@ -31,4 +31,25 @@ class Money::CurrencyTest < ActiveSupport::TestCase
   test "step returns the smallest value of the currency" do
     assert_equal 0.01, @currency.step
   end
+
+  test "raises UnknownCurrencyError for unknown iso codes by default" do
+    assert_raises(Money::Currency::UnknownCurrencyError) do
+      Money::Currency.new(:xyz_not_a_currency)
+    end
+  end
+
+  test "returns a generic placeholder when fallback is enabled" do
+    currency = Money::Currency.new(:xyz_not_a_currency, fallback: true)
+
+    assert_equal "XYZ_NOT_A_CURRENCY", currency.iso_code
+    assert_equal 100, currency.minor_unit_conversion
+    assert_equal 2, currency.default_precision
+  end
+
+  test "Money.new with fallback_currency: true accepts unknown currency" do
+    money = Money.new(1, "ETH-Z", fallback_currency: true)
+
+    assert_equal "ETH-Z", money.currency.iso_code
+    assert_equal 1, money.amount
+  end
 end

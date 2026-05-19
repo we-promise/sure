@@ -9,7 +9,7 @@ module Monetizable
 
           return nil if value.blank? || monetizable_currency.nil?
 
-          Money.new(value, monetizable_currency)
+          Money.new(value, monetizable_currency, fallback_currency: true)
         end
       end
     end

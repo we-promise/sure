@@ -9,7 +9,7 @@ class Money::Currency
   @@instances = {}
 
   class << self
-    def new(object)
+    def new(object, fallback: false)
       iso_code = case object
       when String, Symbol
         object.to_s.downcase
@@ -19,7 +19,7 @@ class Money::Currency
         raise ArgumentError, "Invalid argument type"
       end
 
-      @@instances[iso_code] ||= super(iso_code)
+      @@instances[iso_code] ||= super(iso_code, fallback: fallback)
     end
 
     def all
@@ -44,15 +44,41 @@ class Money::Currency
     def popular
       all.values.sort_by { |currency| currency["priority"] }.first(12).map { |currency_data| new(currency_data["iso_code"]) }
     end
+
+    private
+      # Generic placeholder data used when an unknown currency code reaches a
+      # display path (e.g. a balance for a crypto whose ticker isn't in
+      # config/currencies.yml). Keeps the page rendering instead of 500'ing.
+      def fallback_currency_data(iso_code)
+        upcased = iso_code.to_s.upcase
+        {
+          "name" => upcased,
+          "priority" => 100,
+          "iso_code" => upcased,
+          "iso_numeric" => "",
+          "html_code" => "",
+          "symbol" => "#{upcased} ",
+          "minor_unit" => "",
+          "minor_unit_conversion" => 100,
+          "smallest_denomination" => 1,
+          "separator" => ".",
+          "delimiter" => ",",
+          "default_format" => "%u%n",
+          "default_precision" => 2
+        }
+      end
   end
 
   attr_reader :name, :priority, :iso_code, :iso_numeric, :html_code,
               :symbol, :minor_unit, :minor_unit_conversion, :smallest_denomination,
               :separator, :delimiter, :default_format, :default_precision
 
-  def initialize(iso_code)
+  def initialize(iso_code, fallback: false)
     currency_data = self.class.all[iso_code]
-    raise UnknownCurrencyError if currency_data.nil?
+    if currency_data.nil?
+      raise UnknownCurrencyError unless fallback
+      currency_data = self.class.send(:fallback_currency_data, iso_code)
+    end
 
     @name = currency_data["name"]
     @priority = currency_data["priority"]

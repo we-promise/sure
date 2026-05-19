@@ -30,10 +30,10 @@ class Money
     end
   end
 
-  def initialize(obj, currency = Money.default_currency, store: ExchangeRate)
+  def initialize(obj, currency = Money.default_currency, store: ExchangeRate, fallback_currency: false)
     @source = obj
     @amount = obj.is_a?(Money) ? obj.amount : BigDecimal(obj.to_s)
-    @currency = obj.is_a?(Money) ? obj.currency : Money::Currency.new(currency)
+    @currency = obj.is_a?(Money) ? obj.currency : Money::Currency.new(currency, fallback: fallback_currency)
     @store = store
 
     validate!
