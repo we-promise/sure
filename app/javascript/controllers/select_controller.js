@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { autoUpdate } from "@floating-ui/dom"
 
 export default class extends Controller {
-  static targets = ["button", "menu", "input", "content"]
+  static targets = ["button", "menu", "input", "content", "option"]
   static values = {
     menuPlacement: { type: String, default: "auto" },
     offset: { type: Number, default: 6 }
@@ -70,12 +70,14 @@ export default class extends Controller {
     const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
     if (previousSelected) {
       previousSelected.setAttribute("aria-selected", "false")
+      previousSelected.setAttribute("tabindex", "-1")
       previousSelected.classList.remove("bg-container-inset")
       const prevIcon = previousSelected.querySelector(".check-icon")
       if (prevIcon) prevIcon.classList.add("hidden")
     }
 
     selectedElement.setAttribute("aria-selected", "true")
+    selectedElement.setAttribute("tabindex", "0")
     selectedElement.classList.add("bg-container-inset")
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")
@@ -130,8 +132,29 @@ export default class extends Controller {
 
   handleKeydown(event) {
     if (!this.isOpen) return
-    if (event.key === "Escape") { this.close(); this.buttonTarget.focus() }
-    if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click() }
+    if (event.key === "Escape") { this.close(); this.buttonTarget.focus(); return }
+    if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
+
+    // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
+    // between options (roving tabindex), Home/End jump to first/last.
+    // Bail if the focus is in the search input — the input gets its
+    // own caret movement and we don't want to fight it.
+    if (event.target.matches('input[type="search"]')) return
+
+    const options = this.hasOptionTarget ? this.optionTargets : []
+    if (options.length === 0) return
+    const currentIndex = options.indexOf(event.target)
+    let nextIndex = null
+    switch (event.key) {
+      case "ArrowDown": nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % options.length; break
+      case "ArrowUp": nextIndex = currentIndex < 0 ? options.length - 1 : (currentIndex - 1 + options.length) % options.length; break
+      case "Home": nextIndex = 0; break
+      case "End": nextIndex = options.length - 1; break
+      default: return
+    }
+    event.preventDefault()
+    options.forEach((opt, i) => opt.setAttribute("tabindex", i === nextIndex ? "0" : "-1"))
+    options[nextIndex].focus()
   }
 
   handleTurboLoad() { if (this.isOpen) this.close() }
