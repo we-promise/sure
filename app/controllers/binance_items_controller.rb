@@ -214,7 +214,11 @@ class BinanceItemsController < ApplicationController
     setup_params = complete_account_setup_params
 
     if setup_params[:sync_start_date].present?
-      parsed_date = Date.parse(setup_params[:sync_start_date].to_s) rescue nil
+      parsed_date = begin
+        Date.parse(setup_params[:sync_start_date].to_s)
+      rescue ArgumentError
+        nil
+      end
 
       if parsed_date.present? && parsed_date <= Date.current
         @binance_item.update!(sync_start_date: parsed_date)

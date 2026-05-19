@@ -96,23 +96,26 @@ class BinanceAccount::Processor
         end
       end
 
-      # 4. Merge Results
+      # 4. Process New Records into Database Entries FIRST
+      # We process these into the DB first. If they fail or raise an error,
+      # the method halts before updating the raw_transactions_payload cache,
+      # ensuring a retry happens on the next sync execution.
+      process_trades(new_trades_by_symbol, :spot) if new_trades_by_symbol.any?
+      process_trades(new_futures_by_symbol, :futures) if new_futures_by_symbol.any?
+      process_p2p_trades(new_p2p) if new_p2p.any?
+
+      # 5. Merge Results ONLY after successful DB insertion
       merged_spot    = existing_spot.merge(new_trades_by_symbol) { |_pair, old, new_t| old + new_t }
       merged_futures = existing_futures.merge(new_futures_by_symbol) { |_pair, old, new_t| old + new_t }
       merged_p2p     = existing_p2p + new_p2p
 
-      # 5. Update the Account Payload (Always updates fetched_at and P2P)
+      # 6. Update the Account Payload LAST (Safe Caching Boundary)
       binance_account.update!(raw_transactions_payload: {
         "spot"       => merged_spot,
         "futures"    => merged_futures,
         "p2p"        => merged_p2p,
         "fetched_at" => Time.current.iso8601
       })
-
-      # 6. Process New Records into Database Entries
-      process_trades(new_trades_by_symbol, :spot) if new_trades_by_symbol.any?
-      process_trades(new_futures_by_symbol, :futures) if new_futures_by_symbol.any?
-      process_p2p_trades(new_p2p) if new_p2p.any?
     end
 
     # Fetches only trades newer than what is already cached for the given pair.
@@ -420,7 +423,7 @@ class BinanceAccount::Processor
             end
           end
         rescue => e
-          Rails.logger.error "🚨 BINANCE P2P SYNC CRASHED for Order #{trade["orderNumber"]}: #{e.message}"
+          Rails.logger.error "BINANCE P2P SYNC CRASHED for Order #{trade["orderNumber"]}: #{e.message}"
         end
       end
     rescue StandardError => e

@@ -260,7 +260,9 @@ class Account < ApplicationRecord
     end
 
     def create_from_binance_account(binance_account)
-      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+      account = create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+      account.set_opening_anchor_balance(balance: 0)
+      account
     end
 
     def create_from_ibkr_account(ibkr_account)
@@ -284,13 +286,7 @@ class Account < ApplicationRecord
       }
 
       # Capture the created account in a variable
-      account = create_and_sync(attributes, skip_initial_sync: true)
-
-      # Force the opening balance to zero so the ledger builds cleanly from trade history
-      account.set_opening_anchor_balance(balance: 0)
-
-      # Return the account
-      account
+      create_and_sync(attributes, skip_initial_sync: true)
     end
 
     def create_from_kraken_account(kraken_account)
