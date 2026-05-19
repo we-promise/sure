@@ -176,6 +176,6 @@ class IndexaCapitalItem < ApplicationRecord
     def credentials_present_on_create
       return if credentials_configured?
 
-      errors.add(:base, "Either INDEXA_API_TOKEN env var or username/document/password credentials are required")
+      errors.add(:base, :credentials_required)
     end
 end

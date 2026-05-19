@@ -13,7 +13,7 @@ class BalanceSheet::ClassificationGroup
   end
 
   def name
-    classification.titleize.pluralize
+    I18n.t("pages.dashboard.balance_sheet.classifications.#{classification}", default: classification.titleize.pluralize)
   end
 
   def icon
@@ -34,7 +34,7 @@ class BalanceSheet::ClassificationGroup
                      .transform_keys { |at| Accountable.from_type(at) }
                      .map do |accountable, account_rows|
                        BalanceSheet::AccountGroup.new(
-                         name: I18n.t("accounts.types.#{accountable.name.underscore}", default: accountable.display_name),
+                         name: accountable.display_name,
                          color: accountable.color,
                          accountable_type: accountable,
                          accounts: account_rows,

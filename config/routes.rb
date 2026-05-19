@@ -1,5 +1,7 @@
-require "sidekiq/web"
-require "sidekiq/cron/web"
+unless Rails.env.production?
+  require "sidekiq/web"
+  require "sidekiq/cron/web"
+end
 
 Rails.application.routes.draw do
   resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
@@ -168,7 +170,7 @@ Rails.application.routes.draw do
     delete :disable
   end
 
-  mount Lookbook::Engine, at: "/design-system"
+  mount Lookbook::Engine, at: "/design-system" unless Rails.env.production?
 
   if Rails.env.development?
     mount Rswag::Api::Engine => "/api-docs"
@@ -176,7 +178,7 @@ Rails.application.routes.draw do
   end
 
   # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq"
+  mount Sidekiq::Web => "/sidekiq" unless Rails.env.production?
 
   # AI chats
   resources :chats do
@@ -234,8 +236,9 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
-    resource :preferences, only: :show
+    resource :preferences, only: %i[show update]
     resource :appearance, only: %i[show update]
+    resource :debug, only: :show
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
@@ -638,8 +641,8 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Render dynamic PWA files from app/views/pwa/*
-  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker" => "pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
+  get "manifest" => "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 

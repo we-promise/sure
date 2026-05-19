@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check TestFlight credentials
         id: check_prereqs
@@ -293,7 +293,7 @@ jobs:
 
       - name: Upload build artifact
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-ipa-testflight
           path: mobile/build/ios/ipa/*.ipa

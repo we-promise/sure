@@ -40,7 +40,7 @@
 
   <div class="ml-auto">
     <%= render DS::Link.new(
-        text: "Today",
+        text: t(".today"),
         variant: "outline",
         href: budget_path(Budget.date_to_param(Date.current)),
     ) %>
