@@ -67,4 +67,4 @@ es:
   ds:
     pill:
       aria_label: "%{label}"
-      default_label: Vista previa
+      default_label: Experimental
