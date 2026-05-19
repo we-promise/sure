@@ -23,10 +23,16 @@ class DS::MenuItem < DesignSystemComponent
   end
 
   def wrapper(&block)
+    # When roving is on, `menuitem_attrs` is part of the `DS::Menu` ARIA contract
+    # and must win — strip any caller overrides of `role`/`tabindex` from
+    # `merged_opts` before splatting, so a stray `role: :button` or
+    # `tabindex: 0` can't downgrade keyboard/AT semantics.
+    html_opts = roving ? merged_opts.except(:role, :tabindex) : merged_opts
+
     if variant == :button
-      button_to href, method: method, class: container_classes, **menuitem_attrs, **merged_opts, &block
+      button_to href, method: method, class: container_classes, **html_opts, **menuitem_attrs, &block
     elsif variant == :link
-      link_to href, class: container_classes, **menuitem_attrs, **merged_opts, &block
+      link_to href, class: container_classes, **html_opts, **menuitem_attrs, &block
     else
       nil
     end
