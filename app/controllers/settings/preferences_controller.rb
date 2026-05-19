@@ -14,8 +14,8 @@ class Settings::PreferencesController < ApplicationController
     @user.transaction do
       @user.lock!
       updated_prefs = (@user.preferences || {}).deep_dup
-      if params.dig(:user, :beta_features_enabled)
-        updated_prefs["beta_features_enabled"] = params.dig(:user, :beta_features_enabled) == "1"
+      if params.dig(:user, :preview_features_enabled)
+        updated_prefs["preview_features_enabled"] = params.dig(:user, :preview_features_enabled) == "1"
       end
       @user.update!(preferences: updated_prefs)
     end

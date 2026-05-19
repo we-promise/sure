@@ -19,7 +19,7 @@ en:
         destructive: Error
     pill:
       aria_label: "%{label}"
-      default_label: Beta
+      default_label: Preview
     dialog:
       close: Close
   provider_sync_summary:

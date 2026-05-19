@@ -365,8 +365,8 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_two_column") == true
   end
 
-  def beta_features_enabled?
-    preferences&.dig("beta_features_enabled") == true
+  def preview_features_enabled?
+    preferences&.dig("preview_features_enabled") == true
   end
 
   def update_transactions_preferences(prefs)
