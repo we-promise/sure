@@ -35,7 +35,12 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_equal "sure_import_session:#{session.id}", entry.source
     assert_equal "Transaction:txn-1", entry.external_id
     assert_equal 1, session.summary.dig("transactions", "created")
-    assert_equal 1, session.source_mappings.where(source_type: "Account", source_id: "acct-1").count
+
+    assert_source_mapping session, "Account", "acct-1", account
+    assert_source_mapping session, "Category", "cat-1", transaction.category
+    assert_source_mapping session, "Merchant", "merchant-1", transaction.merchant
+    assert_source_mapping session, "Tag", "tag-1", transaction.tags.first
+    assert_source_mapping session, "Transaction", "txn-1", transaction
   end
 
   test "publishing the same complete session does not duplicate imported transactions" do
@@ -194,6 +199,36 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert chunk.failed?
     assert_equal "missing_source_reference", chunk.error_details["code"]
     assert_equal "acct-1", chunk.error_details["source_id"]
+    assert_equal 0, @family.entries.count
+  end
+
+  test "source mappings from another family cannot satisfy missing references" do
+    other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
+    other_session = other_family.import_sessions.create!(expected_chunks: 1)
+    other_session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "other-entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    other_session.publish
+
+    assert other_session.reload.complete?
+    assert_equal 1, other_session.source_mappings.where(source_type: "Account", source_id: "acct-1").count
+
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(transaction_records),
+      filename: "transactions.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.failed?
+    assert_equal "missing_source_reference", session.imports.first.error_details["code"]
+    assert_equal "acct-1", session.imports.first.error_details["source_id"]
     assert_equal 0, @family.entries.count
   end
 
@@ -505,5 +540,12 @@ class ImportSessionTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def assert_source_mapping(session, source_type, source_id, target)
+      mapping = session.source_mappings.find_by!(source_type: source_type, source_id: source_id)
+
+      assert_equal @family, mapping.family
+      assert_equal target, mapping.target
     end
 end
