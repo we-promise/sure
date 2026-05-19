@@ -95,6 +95,27 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Regression: issue #1824. The OpenAI form auto-submits on blur, so entering
+  # the URI base before the model fires a partial submit that fails validation.
+  # The re-rendered form must show the user's submitted URI base — not the
+  # still-blank saved value — so they can finish typing the model.
+  test "preserves submitted openai uri base in form when validation fails" do
+    with_self_hosting do
+      Setting.openai_uri_base = nil
+      Setting.openai_model = ""
+
+      patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name=?]", "setting[openai_uri_base]" do |inputs|
+        assert_equal "https://api.example.com/v1", inputs.first["value"]
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
   test "can update openai model alone when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { openai_model: "gpt-4" } }
