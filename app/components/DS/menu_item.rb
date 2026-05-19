@@ -18,9 +18,9 @@ class DS::MenuItem < DesignSystemComponent
 
   def wrapper(&block)
     if variant == :button
-      button_to href, method: method, class: container_classes, **merged_opts, &block
+      button_to href, method: method, class: container_classes, role: "menuitem", tabindex: "-1", **merged_opts, &block
     elsif variant == :link
-      link_to href, class: container_classes, **merged_opts, &block
+      link_to href, class: container_classes, role: "menuitem", tabindex: "-1", **merged_opts, &block
     else
       nil
     end

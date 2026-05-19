@@ -17,6 +17,7 @@ en:
     reset_with_sample_data:
       success: Your account has been reset and sample data is being prepared. You’ll see demo data shortly.
     user_menu:
+      aria_label: Open account menu
       version: Version
       settings: Settings
       changelog: Changelog

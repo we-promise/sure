@@ -1,17 +1,11 @@
 <%= tag.div data: { controller: "DS--menu", DS__menu_placement_value: placement, DS__menu_offset_value: offset, DS__menu_mobile_fullwidth_value: mobile_fullwidth, testid: testid } do %>
   <% if variant == :icon %>
-    <%= render DS::Button.new(variant: "icon", icon: icon_vertical ? "more-vertical" : "more-horizontal", data: { DS__menu_target: "button" }) %>
+    <%= render DS::Button.new(variant: "icon", icon: icon_vertical ? "more-vertical" : "more-horizontal", aria: { haspopup: "menu", expanded: "false", controls: menu_id }, data: { DS__menu_target: "button" }) %>
   <% elsif variant == :button %>
     <%= button %>
-  <% elsif variant == :avatar %>
-    <button data-DS--menu-target="button">
-      <div class="w-9 h-9 cursor-pointer">
-        <%= render "settings/user_avatar", avatar_url: avatar_url, initials: initials %>
-      </div>
-    </button>
   <% end %>
 
-  <div data-DS--menu-target="content" class="px-2 lg:px-0 max-w-full hidden z-50">
+  <div id="<%= menu_id %>" data-DS--menu-target="content" class="px-2 lg:px-0 max-w-full hidden z-50" role="menu">
     <%= tag.div class: "mx-auto min-w-[200px] shadow-border-xs bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
       <%= header %>
 
@@ -19,8 +13,6 @@
         <% items.each do |item| %>
           <%= item %>
         <% end %>
-
-        <%= custom_content %>
       <% end %>
     <% end %>
   </div>
