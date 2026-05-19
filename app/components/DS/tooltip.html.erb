@@ -14,9 +14,13 @@
   <% else %>
     <%# `as: :span` — used when the tooltip is rendered inside an
         already-focusable interactive ancestor (e.g. `<summary>`),
-        where the HTML spec forbids nested interactive content. The
-        ancestor's focus still triggers the tooltip because `focusin`
-        bubbles up to the Stimulus controller on the outer span. %>
+        where the HTML spec forbids nested interactive content.
+        Keyboard reveal is wired in the controller, which (in addition
+        to listening on the outer span for the standalone case) also
+        binds `focusin/focusout/keydown` on the closest `<summary>`
+        ancestor — because `focusin` only bubbles UP, a listener on
+        this descendant span would never fire when the ancestor
+        disclosure receives focus. %>
     <span class="inline-flex items-center"
           aria-describedby="<%= tooltip_id %>">
       <%= helpers.icon icon_name, size: size, color: color %>
