@@ -31,6 +31,63 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "explicit taxonomy merge reuses existing category tag and merchant mappings" do
+    category = @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+    tag = @family.tags.create!(name: "Reviewed", color: "#12B76A")
+    merchant = @family.merchants.create!(name: "Market", color: "#1570EF")
+    original_category_color = category.reload.color
+    original_tag_color = tag.reload.color
+    original_merchant_color = merchant.reload.color
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Merge Checking",
+          balance: "1000.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      { type: "Category", data: { id: "cat-1", name: category.name, color: "#000000" } },
+      { type: "Tag", data: { id: "tag-1", name: tag.name, color: "#000000" } },
+      { type: "Merchant", data: { id: "merchant-1", name: merchant.name, color: "#000000" } },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          date: "2024-01-15",
+          amount: "-10.00",
+          name: "Merged taxonomy transaction",
+          category_id: "cat-1",
+          merchant_id: "merchant-1",
+          tag_ids: [ "tag-1" ],
+          currency: "USD"
+        }
+      }
+    ])
+
+    assert_no_difference -> { @family.categories.count } do
+      assert_no_difference -> { @family.tags.count } do
+        assert_no_difference -> { @family.merchants.count } do
+          Family::DataImporter.new(@family, ndjson, merge_existing_taxonomy: true).import!
+        end
+      end
+    end
+
+    transaction = @family.transactions.find_by!(merchant_id: merchant.id)
+    assert_equal category.id, transaction.category_id
+    assert_equal [ tag.id ], transaction.tag_ids
+    assert_equal original_category_color, category.reload.color
+    assert_equal original_tag_color, tag.reload.color
+    assert_equal original_merchant_color, merchant.reload.color
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -350,6 +407,42 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, opening_anchors.count
     assert_equal Date.parse("2020-04-01"), opening_anchors.first.entry.date
     assert_equal 5000.0, opening_anchors.first.entry.amount.to_f
+  end
+
+  test "skips synthesized opening anchor for authoritative balance history imports" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Imported With Full History",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository",
+          authoritative_balance_history: true
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-1",
+          account_id: "acct-1",
+          date: "2020-04-01",
+          amount: "4900",
+          name: "Imported balance",
+          currency: "USD",
+          kind: "reconciliation"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Imported With Full History")
+
+    assert_equal 5000.0, account.balance.to_f
+    assert_empty account.valuations.opening_anchor
+    assert_equal 1, account.valuations.reconciliation.count
   end
 
   test "imports categories with parent relationships" do
@@ -730,6 +823,115 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, transaction.tags.count
     assert_equal "Essential", transaction.tags.first.name
     assert_equal "Weekly groceries", transaction.entry.notes
+  end
+
+  test "imports native split lines and lets transfers reference split children" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "checking",
+          name: "Checking",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "wallet",
+          name: "Wallet",
+          balance: "500",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Category",
+        data: {
+          id: "cat-fee",
+          name: "Bank Fees",
+          color: "#FF0000",
+          classification: "expense"
+        }
+      },
+      {
+        type: "Tag",
+        data: {
+          id: "tag-imported",
+          name: "Imported"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "split-parent",
+          account_id: "checking",
+          date: "2024-01-15",
+          amount: "104.00",
+          name: "ATM withdrawal plus fee",
+          currency: "USD",
+          tag_ids: [ "tag-imported" ],
+          split_lines: [
+            {
+              id: "split-transfer-leg",
+              amount: "100.00",
+              name: "Cash movement",
+              notes: "Transfer portion"
+            },
+            {
+              id: "split-fee-line",
+              amount: "4.00",
+              name: "ATM fee",
+              category_id: "cat-fee",
+              notes: "Fee portion"
+            }
+          ]
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "wallet-inflow",
+          account_id: "wallet",
+          date: "2024-01-15",
+          amount: "-100.00",
+          name: "Cash received",
+          currency: "USD"
+        }
+      },
+      {
+        type: "Transfer",
+        data: {
+          id: "transfer-1",
+          inflow_transaction_id: "wallet-inflow",
+          outflow_transaction_id: "split-transfer-leg",
+          status: "confirmed",
+          notes: "Split-linked transfer"
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    parent_entry = @family.entries.find_by!(name: "ATM withdrawal plus fee")
+    assert parent_entry.split_parent?
+    assert_equal true, parent_entry.excluded
+    assert_equal 3, result[:entries].count
+
+    transfer_child = parent_entry.child_entries.find_by!(name: "Cash movement")
+    fee_child = parent_entry.child_entries.find_by!(name: "ATM fee")
+    assert_equal "Transfer portion", transfer_child.notes
+    assert_equal "Fee portion", fee_child.notes
+    assert_equal "Bank Fees", fee_child.transaction.category.name
+    assert_equal [ "Imported" ], transfer_child.transaction.tags.map(&:name)
+    assert_equal [ "Imported" ], fee_child.transaction.tags.map(&:name)
+
+    transfer = Transfer.find_by!(notes: "Split-linked transfer")
+    assert_equal "confirmed", transfer.status
+    assert_equal "Cash movement", transfer.outflow_transaction.entry.name
+    assert_equal "Cash received", transfer.inflow_transaction.entry.name
   end
 
   test "imports trades with securities" do

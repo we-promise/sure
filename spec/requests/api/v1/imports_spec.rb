@@ -150,6 +150,10 @@ RSpec.describe 'API V1 Imports', type: :request do
             type: :string,
             description: 'Set to "true" to automatically queue for processing if configuration is valid'
           },
+          merge_existing_taxonomy: {
+            type: :boolean,
+            description: 'SureImport only. When true, reuse existing family category, tag, and merchant rows by exact name instead of blocking taxonomy name collisions.'
+          },
           date_col_label: {
             type: :string,
             description: 'CSV imports only. Header name for the date column'
@@ -269,9 +273,22 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '500', 'import uploaded but publish enqueue failed' do
         schema '$ref' => '#/components/schemas/ErrorResponseWithImportId'
 
+        before do
+          allow(ImportJob).to receive(:perform_later).and_raise(StandardError, 'queue offline')
+        end
+
         let(:body) do
           {
-            raw_file_content: { type: 'Account', data: { id: 'account_1', name: 'Checking' } }.to_json,
+            raw_file_content: {
+              type: 'Account',
+              data: {
+                id: 'account_1',
+                name: 'Checking',
+                balance: '100',
+                currency: 'USD',
+                accountable_type: 'Depository'
+              }
+            }.to_json,
             type: 'SureImport',
             publish: 'true'
           }
@@ -395,6 +412,10 @@ RSpec.describe 'API V1 Imports', type: :request do
             type: :string,
             format: :uuid,
             description: 'Account ID used for account-scoped CSV import validation'
+          },
+          merge_existing_taxonomy: {
+            type: :boolean,
+            description: 'SureImport only. When true, reuse existing family category, tag, and merchant rows by exact name instead of blocking taxonomy name collisions.'
           },
           date_col_label: { type: :string, description: 'CSV imports only. Header name for the date column' },
           amount_col_label: { type: :string, description: 'CSV imports only. Header name for the amount column' },

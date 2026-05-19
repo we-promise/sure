@@ -4557,6 +4557,11 @@ paths:
                   type: string
                   description: Set to "true" to automatically queue for processing
                     if configuration is valid
+                merge_existing_taxonomy:
+                  type: boolean
+                  description: SureImport only. When true, reuse existing family category,
+                    tag, and merchant rows by exact name instead of blocking taxonomy
+                    name collisions.
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -4664,6 +4669,11 @@ paths:
                   type: string
                   description: Set to "true" to automatically queue for processing
                     if configuration is valid
+                merge_existing_taxonomy:
+                  type: boolean
+                  description: SureImport only. When true, reuse existing family category,
+                    tag, and merchant rows by exact name instead of blocking taxonomy
+                    name collisions.
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -4898,6 +4908,11 @@ paths:
                   type: string
                   format: uuid
                   description: Account ID used for account-scoped CSV import validation
+                merge_existing_taxonomy:
+                  type: boolean
+                  description: SureImport only. When true, reuse existing family category,
+                    tag, and merchant rows by exact name instead of blocking taxonomy
+                    name collisions.
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -5009,6 +5024,11 @@ paths:
                   type: string
                   format: uuid
                   description: Account ID used for account-scoped CSV import validation
+                merge_existing_taxonomy:
+                  type: boolean
+                  description: SureImport only. When true, reuse existing family category,
+                    tag, and merchant rows by exact name instead of blocking taxonomy
+                    name collisions.
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column

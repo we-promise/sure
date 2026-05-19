@@ -11,6 +11,16 @@
       <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
+    <% if import.error.present? %>
+      <div class="rounded-lg border border-destructive/15 bg-destructive/5 p-4 text-sm text-primary">
+        <ul class="list-disc space-y-1 pl-4">
+          <% import.error.lines.map(&:strip).reject(&:blank?).each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
     <%= render DS::Button.new(text: t(".try_again"), href: publish_import_path(import), full_width: true) %>
   </div>
 </div>

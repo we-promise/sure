@@ -728,8 +728,58 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         .select { |record| record["type"] == "Transfer" }
         .map { |record| record.dig("data", "id") }
 
-      assert_not_includes transaction_ids, split_parent_outflow.entryable.id
+      assert_includes transaction_ids, split_parent_outflow.entryable.id
+      split_parent_data = ndjson_records.find do |record|
+        record["type"] == "Transaction" && record.dig("data", "id") == split_parent_outflow.entryable.id
+      end
+      assert_equal 1, split_parent_data.dig("data", "split_lines").count
       assert_not_includes transfer_ids, transfer.id
+    end
+  end
+
+  test "exports native split lines in NDJSON and transfer decisions for split children" do
+    destination_account = @family.accounts.create!(
+      name: "Split Export Savings",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+
+    split_parent_outflow = create_transaction_entry(@account, amount: 104, date: Date.parse("2024-01-25"), name: "Split transfer parent")
+    split_children = split_parent_outflow.split!([
+      { name: "Split transfer child", amount: 100, category_id: @category.id },
+      { name: "Split fee child", amount: 4, category_id: @category.id }
+    ])
+    transfer_inflow = create_transaction_entry(destination_account, amount: -100, date: Date.parse("2024-01-25"), name: "Split transfer inflow")
+    transfer = Transfer.create!(
+      outflow_transaction: split_children.first.entryable,
+      inflow_transaction: transfer_inflow.entryable,
+      status: "confirmed",
+      notes: "Transfer uses split child"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+
+      parent_data = ndjson_records.find do |record|
+        record["type"] == "Transaction" && record.dig("data", "id") == split_parent_outflow.entryable.id
+      end
+      assert parent_data
+      assert_equal 2, parent_data.dig("data", "split_lines").count
+      assert_equal [ "Split transfer child", "Split fee child" ], parent_data.dig("data", "split_lines").map { |line| line["name"] }
+
+      transaction_ids = ndjson_records
+        .select { |record| record["type"] == "Transaction" }
+        .map { |record| record.dig("data", "id") }
+      refute_includes transaction_ids, split_children.first.entryable.id
+      refute_includes transaction_ids, split_children.second.entryable.id
+
+      transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == transfer.id }
+      assert transfer_data
+      assert_equal split_children.first.entryable.id, transfer_data.dig("data", "outflow_transaction_id")
+      assert_equal transfer_inflow.entryable.id, transfer_data.dig("data", "inflow_transaction_id")
     end
   end
 
