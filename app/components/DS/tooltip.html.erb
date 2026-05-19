@@ -1,14 +1,27 @@
 <span data-controller="DS--tooltip" data-DS--tooltip-placement-value="<%= placement %>" data-DS--tooltip-offset-value="<%= offset %>" data-DS--tooltip-cross-axis-value="<%= cross_axis %>" class="inline-flex">
-  <%# Wrap the trigger icon in a focusable `<button>` so AT users (and
-      keyboard-only users) can land on the tooltip anchor. The Lucide
-      icon itself carries `aria-hidden`, so the button's accessible
-      name comes from the tooltip content via `aria-describedby`. %>
-  <button type="button"
-          class="inline-flex items-center cursor-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white rounded"
-          aria-describedby="<%= tooltip_id %>"
-          aria-label="<%= t("ds.tooltip.trigger_label", default: "More info") %>">
-    <%= helpers.icon icon_name, size: size, color: color %>
-  </button>
+  <% if as == :button %>
+    <%# Wrap the trigger icon in a focusable `<button>` so AT users (and
+        keyboard-only users) can land on the tooltip anchor. The Lucide
+        icon itself carries `aria-hidden`, so the button's accessible
+        name comes from `aria-label`, and the tooltip text is exposed
+        via `aria-describedby`. %>
+    <button type="button"
+            class="inline-flex items-center cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 theme-dark:focus-visible:ring-alpha-white-300 rounded"
+            aria-describedby="<%= tooltip_id %>"
+            aria-label="<%= t("ds.tooltip.trigger_label", default: "More info") %>">
+      <%= helpers.icon icon_name, size: size, color: color %>
+    </button>
+  <% else %>
+    <%# `as: :span` — used when the tooltip is rendered inside an
+        already-focusable interactive ancestor (e.g. `<summary>`),
+        where the HTML spec forbids nested interactive content. The
+        ancestor's focus still triggers the tooltip because `focusin`
+        bubbles up to the Stimulus controller on the outer span. %>
+    <span class="inline-flex items-center"
+          aria-describedby="<%= tooltip_id %>">
+      <%= helpers.icon icon_name, size: size, color: color %>
+    </span>
+  <% end %>
 
   <div role="tooltip"
        id="<%= tooltip_id %>"
