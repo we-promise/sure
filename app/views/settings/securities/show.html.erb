@@ -45,9 +45,9 @@
   </div>
 <% end %>
 
-<% if Current.user.otp_required? %>
-  <%= settings_section title: t(".webauthn_title"), subtitle: t(".webauthn_description") do %>
-    <div class="space-y-4">
+<%= settings_section title: t(".webauthn_title"), subtitle: t(".webauthn_description") do %>
+  <div class="space-y-4">
+    <% if Current.user.otp_required? %>
       <% if @webauthn_credentials.any? %>
         <div class="space-y-2">
           <% @webauthn_credentials.each do |credential| %>
@@ -117,8 +117,24 @@
           ) %>
         </div>
       <% end %>
-    </div>
-  <% end %>
+    <% else %>
+      <div class="bg-surface-inset rounded-lg p-4 md:flex md:items-center md:justify-between gap-4">
+        <div class="space-y-1">
+          <h3 class="font-medium text-primary"><%= t(".webauthn_mfa_required_title") %></h3>
+          <p class="text-sm text-secondary"><%= t(".webauthn_mfa_required_description") %></p>
+        </div>
+
+        <div class="mt-4 md:mt-0">
+          <%= render DS::Link.new(
+            text: t(".webauthn_enable_mfa"),
+            variant: "secondary",
+            icon: "shield-check",
+            href: new_mfa_path
+          ) %>
+        </div>
+      </div>
+    <% end %>
+  </div>
 <% end %>
 
 <% if @oidc_identities.any? || AuthConfig.sso_providers.any? %>

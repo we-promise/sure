@@ -75,9 +75,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     budget = budgets(:one)
     plaid_item = plaid_items(:one)
 
-    provider = mock
-    provider.expects(:remove_item).with(plaid_item.access_token).once
-    PlaidItem.any_instance.stubs(:plaid_provider).returns(provider)
+    PlaidItem.any_instance.expects(:plaid_provider).never
 
     perform_enqueued_jobs(only: FamilyResetJob) do
       delete reset_user_url(@user)
@@ -104,9 +102,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     budget = budgets(:one)
     plaid_item = plaid_items(:one)
 
-    provider = mock
-    provider.expects(:remove_item).with(plaid_item.access_token).once
-    PlaidItem.any_instance.stubs(:plaid_provider).returns(provider)
+    PlaidItem.any_instance.expects(:plaid_provider).never
     Demo::Generator.any_instance.expects(:generate_new_user_data_for!).with(@user.family, email: @user.email)
 
     perform_enqueued_jobs(only: FamilyResetJob) do

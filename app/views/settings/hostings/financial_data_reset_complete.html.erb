@@ -1,0 +1,63 @@
+<%= render DS::Dialog.new(width: "lg", disable_click_outside: true) do |dialog| %>
+    <% dialog.with_header(
+      title: t("settings.hostings.financial_data_reset_complete.title"),
+      subtitle: t("settings.hostings.financial_data_reset_complete.subtitle")
+    ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-5">
+        <%= render DS::Alert.new(
+          title: t("settings.hostings.financial_data_reset_complete.success_title"),
+          message: t("settings.hostings.financial_data_reset_complete.success_message"),
+          variant: :success,
+          live: :status
+        ) %>
+
+        <div class="bg-container-inset rounded-lg p-4 space-y-3">
+          <h3 class="font-medium text-primary"><%= t("settings.hostings.financial_data_reset_complete.scope_title") %></h3>
+          <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt class="text-secondary"><%= t("settings.hostings.financial_data_reset.user_label") %></dt>
+              <dd class="text-primary font-medium"><%= @reset_result.user.email %></dd>
+            </div>
+            <div>
+              <dt class="text-secondary"><%= t("settings.hostings.financial_data_reset.family_label") %></dt>
+              <dd class="text-primary font-medium"><%= @reset_result.family.name.presence || t("settings.hostings.financial_data_reset.unnamed_family") %></dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="max-h-72 overflow-y-auto rounded-lg border border-primary">
+          <table class="w-full text-sm">
+            <thead class="bg-container-inset sticky top-0">
+              <tr>
+                <th class="px-3 py-2 text-left font-medium text-secondary"><%= t("settings.hostings.financial_data_reset.table.target") %></th>
+                <th class="px-3 py-2 text-right font-medium text-secondary"><%= t("settings.hostings.financial_data_reset_complete.table.before") %></th>
+                <th class="px-3 py-2 text-right font-medium text-secondary"><%= t("settings.hostings.financial_data_reset_complete.table.deleted") %></th>
+                <th class="px-3 py-2 text-right font-medium text-secondary"><%= t("settings.hostings.financial_data_reset_complete.table.after") %></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
+              <% Family::FinancialDataReset::COUNT_KEYS.each do |key| %>
+                <tr>
+                  <td class="px-3 py-2 text-primary"><%= key.to_s.humanize %></td>
+                  <td class="px-3 py-2 text-right text-primary"><%= number_with_delimiter(@reset_result.before_counts.fetch(key, 0)) %></td>
+                  <td class="px-3 py-2 text-right text-primary"><%= number_with_delimiter(@reset_result.deleted_counts.fetch(key, 0)) %></td>
+                  <td class="px-3 py-2 text-right text-primary"><%= number_with_delimiter(@reset_result.after_counts.fetch(key, 0)) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex justify-end">
+          <%= render DS::Button.new(
+            text: t("settings.hostings.financial_data_reset_complete.close"),
+            variant: "primary",
+            type: "button",
+            data: { action: "DS--dialog#close" }
+          ) %>
+        </div>
+      </div>
+    <% end %>
+<% end %>

@@ -20,6 +20,9 @@ en:
           security key as a second factor when signing in.
         webauthn_empty: No passkeys or security keys are registered yet.
         webauthn_last_used: Last used %{time_ago} ago
+        webauthn_mfa_required_title: Enable 2FA before adding passkeys
+        webauthn_mfa_required_description: WebAuthn passkeys and security keys are available after authenticator-app 2FA is enabled for this account.
+        webauthn_enable_mfa: Enable 2FA
         webauthn_name_label: Key name
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
         webauthn_remove: Remove

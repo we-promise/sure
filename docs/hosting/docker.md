@@ -122,6 +122,8 @@ WEBAUTHN_ALLOWED_ORIGINS="https://sure.example.com"
 
 `WEBAUTHN_RP_ID` should usually be your registrable domain, not a full URL. See [WebAuthn MFA Configuration](webauthn.md) before changing hostnames or reverse proxy settings for an instance with registered passkeys.
 
+These values configure browser trust for WebAuthn. Users add passkeys from **Settings → Security** after enabling authenticator-app 2FA in Sure.
+
 #### Binding to IPv6 (optional)
 
 By default Sure listens on `0.0.0.0:3000` (IPv4 wildcard) inside the container and Docker publishes the port on the host's IPv4 interface only. If you want the app reachable over IPv6 as well, two things need to change:
@@ -330,6 +332,8 @@ docker compose exec web bin/rails sure:admin:reset_financial_data USER_EMAIL="us
 ```
 
 The task resolves the user, prints the selected family scope, reports counts before deletion, counts deleted, and counts after deletion, then clears the selected family's financial/import data only. It does not reset other families or remove user/authentication records.
+
+You can also run the same reset from the web app in self-hosted mode from **Settings → Self-Hosting → Danger Zone**. The web flow shows the resolved scope and dry-run counts first, then requires typed confirmation before deleting the selected family workspace's financial data.
 
 ### Slow `.csv` import (processing rows taking longer than expected)
 

@@ -27,9 +27,45 @@ en:
         danger_zone: Danger Zone
         clear_cache: Clear data cache
         clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
+        reset_financial_data: Reset financial data
+        reset_financial_data_warning: Clear this family workspace's accounts, imports, transactions, categories, tags, merchants, rules, and related financial records while preserving user login records.
+        review_financial_data_reset: Review reset
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+      financial_data_reset:
+        title: Reset financial data
+        subtitle: Review the exact family workspace scope before deleting financial and import data.
+        warning_title: This permanently clears financial records
+        warning_body: User, authentication, session, and login records are preserved. Financial/import/reference data for this family workspace is deleted and cannot be recovered from Sure after confirmation.
+        scope_title: Resolved scope
+        user_label: User
+        family_label: Family
+        unnamed_family: Unnamed family
+        counts_title: Records that will be cleared
+        total_count:
+          one: "%{count} total record"
+          other: "%{count} total records"
+        table:
+          target: Target
+          records: Records
+        confirmation_label: Type "%{phrase}" to confirm
+        confirmation_help: This confirmation is checked on the server before any records are deleted.
+        cancel: Cancel
+        submit: Reset financial data
+      destroy_financial_data_reset:
+        confirmation_mismatch: Type "%{phrase}" exactly to reset financial data.
+      financial_data_reset_complete:
+        title: Financial data reset complete
+        subtitle: The selected family workspace has been cleared and the user login record was preserved.
+        success_title: Reset complete
+        success_message: Financial and import records were cleared for this family workspace only.
+        scope_title: Reset scope
+        table:
+          before: Before
+          deleted: Deleted
+          after: After
+        close: Close
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.

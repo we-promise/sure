@@ -5,7 +5,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   include ProviderTestHelper
 
   setup do
-    sign_in users(:family_admin)
+    sign_in @user = users(:family_admin)
 
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
@@ -136,6 +136,74 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_not Security::Price.exists?(security_price.id)
     assert_not Holding.exists?(holding.id)
     assert_not Balance.exists?(account_balance.id)
+  end
+
+  test "admin can preview financial data reset when self hosting is enabled" do
+    with_self_hosting do
+      get financial_data_reset_settings_hosting_url
+    end
+
+    assert_response :success
+    assert_includes response.body, @user.email
+    assert_includes response.body, Family::FinancialDataReset::CONFIRMATION_PHRASE
+    assert_includes response.body, "Records that will be cleared"
+  end
+
+  test "financial data reset preview requires family admin" do
+    sign_in users(:family_member)
+
+    with_self_hosting do
+      get financial_data_reset_settings_hosting_url
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+  end
+
+  test "financial data reset is unavailable when self hosting is disabled" do
+    get financial_data_reset_settings_hosting_url
+
+    assert_response :forbidden
+  end
+
+  test "destructive financial data reset requires typed confirmation" do
+    account = @user.family.accounts.first
+
+    with_self_hosting do
+      delete financial_data_reset_settings_hosting_url, params: { confirmation: "wrong" }
+    end
+
+    assert_response :unprocessable_entity
+    assert Account.exists?(account.id)
+    assert_includes response.body, "Type &quot;#{Family::FinancialDataReset::CONFIRMATION_PHRASE}&quot; exactly"
+  end
+
+  test "destructive financial data reset clears only the current family" do
+    other_family = families(:empty)
+    other_category = other_family.categories.create!(
+      name: "Other Family Category",
+      color: "#12B76A",
+      lucide_icon: "tag"
+    )
+
+    with_self_hosting do
+      delete financial_data_reset_settings_hosting_url, params: { confirmation: Family::FinancialDataReset::CONFIRMATION_PHRASE }
+    end
+
+    assert_response :success
+    assert_includes response.body, "Financial data reset complete"
+    family = @user.family.reload
+    assert_empty family.accounts
+    assert_empty family.imports
+    assert_empty family.categories
+    assert_empty family.tags
+    assert_empty family.merchants
+    assert_empty family.recurring_transactions
+    assert_empty family.rules
+    assert_empty family.budgets
+    assert_empty family.syncs
+    assert User.exists?(@user.id)
+    assert Category.exists?(other_category.id)
   end
 
   test "can update assistant type to external" do

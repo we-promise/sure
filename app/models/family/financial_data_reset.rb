@@ -1,6 +1,8 @@
 class Family::FinancialDataReset
   ConfirmationRequiredError = Class.new(StandardError)
 
+  CONFIRMATION_PHRASE = "RESET FINANCIAL DATA"
+
   PROVIDER_ITEM_ASSOCIATIONS = %i[
     plaid_items
     simplefin_items
@@ -56,11 +58,13 @@ class Family::FinancialDataReset
 
   attr_reader :user, :family
 
-  def initialize(user:, dry_run: true, confirmed: false)
+  def initialize(user: nil, family: nil, dry_run: true, confirmed: false)
     @user = user
-    @family = user.family
+    @family = family || user&.family
     @dry_run = ActiveModel::Type::Boolean.new.cast(dry_run)
     @confirmed = ActiveModel::Type::Boolean.new.cast(confirmed)
+
+    raise ArgumentError, "user or family is required" unless @family
   end
 
   def call

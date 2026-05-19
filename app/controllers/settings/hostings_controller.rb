@@ -12,7 +12,7 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :financial_data_reset, :destroy_financial_data_reset ]
   before_action :ensure_super_admin_for_onboarding, only: :update
 
   def show
@@ -209,6 +209,27 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, notice: t(".cache_cleared")
   end
 
+  def financial_data_reset
+    load_financial_data_reset_preview
+    render layout: financial_data_reset_layout
+  end
+
+  def destroy_financial_data_reset
+    unless financial_data_reset_confirmed?
+      load_financial_data_reset_preview
+      @reset_error = t(".confirmation_mismatch", phrase: financial_data_reset_confirmation_phrase)
+      return render :financial_data_reset, status: :unprocessable_entity, layout: financial_data_reset_layout
+    end
+
+    @reset_result = Family::FinancialDataReset.new(
+      user: Current.user,
+      dry_run: false,
+      confirmed: true
+    ).call
+
+    render :financial_data_reset_complete, layout: financial_data_reset_layout
+  end
+
   def disconnect_external_assistant
     Setting.external_assistant_url = nil
     Setting.external_assistant_token = nil
@@ -235,13 +256,30 @@ class Settings::HostingsController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+      redirect_to settings_hosting_path, alert: t("settings.hostings.not_authorized") unless Current.user.admin?
     end
 
     def ensure_super_admin_for_onboarding
       onboarding_params = %i[onboarding_state invite_only_default_family_id]
       return unless onboarding_params.any? { |p| hosting_params.key?(p) }
       redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.super_admin?
+    end
+
+    def load_financial_data_reset_preview
+      @reset_result = Family::FinancialDataReset.new(user: Current.user).call
+      @confirmation_phrase = financial_data_reset_confirmation_phrase
+    end
+
+    def financial_data_reset_confirmation_phrase
+      Family::FinancialDataReset::CONFIRMATION_PHRASE
+    end
+
+    def financial_data_reset_confirmed?
+      params[:confirmation].to_s == financial_data_reset_confirmation_phrase
+    end
+
+    def financial_data_reset_layout
+      turbo_frame_request? ? false : "settings"
     end
 
     def sync_auto_sync_scheduler!

@@ -25,3 +25,5 @@ WEBAUTHN_ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 Changing `WEBAUTHN_RP_ID` after users register credentials can make existing passkeys and security keys unavailable. Keep the value stable across reverse proxy, domain, and hostname changes.
+
+After the relying party settings are configured, users still add passkeys inside Sure from **Settings → Security**. Passkeys are MFA credentials, so authenticator-app 2FA must be enabled before the passkey registration form is shown.
