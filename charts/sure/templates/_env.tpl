@@ -48,8 +48,9 @@ The helper always injects:
       key: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
 {{- end }}
 {{- if $includeDatabase }}
+{{- $explicitDb := (index $ctx.Values.rails.extraEnv "DATABASE_URL") -}}
 {{- $dburl := include "sure.databaseUrl" $ctx -}}
-{{- if $dburl }}
+{{- if and $dburl (not $explicitDb) }}
 - name: DB_PASSWORD
   valueFrom:
     secretKeyRef:
@@ -60,8 +61,9 @@ The helper always injects:
 {{- end }}
 {{- end }}
 {{- if $includeRedis }}
+{{- $explicitRedis := (index $ctx.Values.rails.extraEnv "REDIS_URL") -}}
 {{- $redis := include "sure.redisUrl" $ctx -}}
-{{- if $redis }}
+{{- if and $redis (not $explicitRedis) }}
 - name: REDIS_PASSWORD
   valueFrom:
     secretKeyRef:
