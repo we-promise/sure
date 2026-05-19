@@ -32,10 +32,10 @@ class DS::Disclosure < DesignSystemComponent
     @title = title
     @align = align.to_sym
     @open = open
-    @variant = variant.to_sym
+    @variant = variant&.to_sym
     @opts = opts
 
-    raise ArgumentError, "Invalid variant: #{@variant}. Must be one of #{VARIANTS.inspect}" unless VARIANTS.include?(@variant)
+    raise ArgumentError, "Invalid variant: #{@variant.inspect}. Must be one of #{VARIANTS.inspect}" unless VARIANTS.include?(@variant)
   end
 
   def details_classes
