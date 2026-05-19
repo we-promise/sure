@@ -47,10 +47,13 @@ es:
         month_start_day: El mes de presupuesto comienza el
         month_start_day_hint: Establece cuándo empieza tu mes financiero (ej. el día de cobro)
         month_start_day_warning: Tus presupuestos y cálculos del mes en curso utilizarán este día personalizado en lugar del día 1 de cada mes.
+        preview:
+          title: Habilitar funciones de vista previa
+          description: Activa las funciones en progreso etiquetadas como vista previa o canary.
     profiles:
       destroy:
         cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.
-        member_removal_failed: Hubo un problema al eliminar al miembro.
+
         member_removed: El miembro fue eliminado con éxito.
         not_authorized: No estás autorizado para eliminar miembros.
       show:
