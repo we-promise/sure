@@ -6,11 +6,12 @@ class DS::Link < DS::Buttonish
   VARIANTS = VARIANTS.reverse_merge(
     default: {
       # Underline + `text-link` so the link is distinguishable by more
-      # than color alone (WCAG 1.4.1). Focus ring lands on the page
-      # chrome via `outline-offset`, visible regardless of theme.
+      # than color alone (WCAG 1.4.1). Focus ring uses the established
+      # alpha-ring DS pattern (also used by DS::Toggle, DS::Tooltip,
+      # provider_card, form-field) so theming stays centralized.
       container_classes: "text-link underline underline-offset-2 hover:no-underline " \
-                         "focus-visible:outline-2 focus-visible:outline-offset-2 " \
-                         "focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white",
+                         "focus-visible:ring-2 focus-visible:ring-alpha-black-300 " \
+                         "theme-dark:focus-visible:ring-alpha-white-300",
       icon_classes: "text-secondary"
     }
   ).freeze
