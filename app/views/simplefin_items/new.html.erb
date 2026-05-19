@@ -16,8 +16,13 @@
             <%= f.text_field :setup_token, class: "input", placeholder: t(".setup_token_placeholder") %>
           </div>
           <div class="flex items-center gap-2 justify-end pt-2">
-            <%= link_to t(".cancel"), accounts_path, class: "btn", data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
-            <%= f.submit t(".connect"), class: "btn btn--primary" %>
+            <%= render DS::Link.new(
+              text: t(".cancel"),
+              href: accounts_path,
+              variant: :secondary,
+              data: { turbo_frame: "_top", action: "DS--dialog#close" }
+            ) %>
+            <%= f.submit t(".connect") %>
           </div>
         </div>
       <% end %>
