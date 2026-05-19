@@ -15,11 +15,11 @@ class DS::Menu < DesignSystemComponent
   renders_one :button, ->(**button_options, &block) do
     options_with_target = button_options.deep_dup
     options_with_target[:data] = (options_with_target[:data] || {}).merge(DS__menu_target: "button")
-    options_with_target[:aria] = {
+    options_with_target[:aria] = (options_with_target[:aria] || {}).merge(
       haspopup: "menu",
       expanded: "false",
       controls: menu_id
-    }.merge(options_with_target[:aria] || {})
+    )
 
     if block
       options_with_target[:type] ||= "button"
