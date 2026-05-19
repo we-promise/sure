@@ -104,12 +104,25 @@ class SureImport < Import
     self.class.dry_run_totals_from_ndjson(ndjson_blob_string)
   end
 
-  def import!
-    importer = Family::DataImporter.new(family, ndjson_blob_string)
+  def import!(import_session: nil)
+    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self)
     result = importer.import!
 
-    result[:accounts].each { |account| accounts << account }
-    result[:entries].each { |entry| entries << entry }
+    Import.transaction do
+      result[:accounts].each { |account| account.save! if account.new_record? }
+      result[:entries].each { |entry| entry.save! if entry.new_record? }
+
+      account_ids = result[:accounts].filter_map(&:id)
+      entry_ids = result[:entries].filter_map(&:id)
+      existing_account_ids = accounts.where(id: account_ids).pluck(:id)
+      existing_entry_ids = entries.where(id: entry_ids).pluck(:id)
+
+      accounts.concat(result[:accounts].reject { |account| existing_account_ids.include?(account.id) })
+      entries.concat(result[:entries].reject { |entry| existing_entry_ids.include?(entry.id) })
+      update!(summary: result[:summary]) if has_attribute?(:summary)
+    end
+
+    result
   end
 
   def uploaded?

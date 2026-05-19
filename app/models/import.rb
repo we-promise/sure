@@ -33,11 +33,13 @@ class Import < ApplicationRecord
 
   belongs_to :family
   belongs_to :account, optional: true
+  belongs_to :import_session, optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
 
   scope :ordered, -> { order(created_at: :desc) }
+  scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
 
   enum :status, {
     pending: "pending",
@@ -53,6 +55,7 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validates :client_chunk_id, length: { maximum: 255 }, allow_blank: true
   validate :custom_column_import_requires_identifier
   validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family

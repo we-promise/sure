@@ -125,6 +125,26 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, balance.flows_factor
   end
 
+  test "counts skipped balance rows with blank account references once" do
+    ndjson = build_ndjson([
+      {
+        type: "Balance",
+        data: {
+          id: "balance-1",
+          account_id: "",
+          date: "2024-01-31",
+          balance: "1200.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 1, result.dig(:summary, "balances", "skipped")
+    assert_not Balance.exists?(date: Date.iso8601("2024-01-31"), currency: "USD", balance: BigDecimal("1200.00"))
+  end
+
   test "imports duplicate raw balance records idempotently by account date and currency" do
     balance_record = {
       type: "Balance",
@@ -404,6 +424,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     tag = @family.tags.find_by(name: "Important")
     assert_not_nil tag
     assert_equal "#FF0000", tag.color
+  end
+
+  test "imports tags with deterministic fallback color when source omits color" do
+    ndjson = build_ndjson([
+      {
+        type: "Tag",
+        data: {
+          id: "tag-1",
+          name: "Important"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    tag = @family.tags.find_by!(name: "Important")
+    assert_equal Tag::COLORS.first, tag.color
   end
 
   test "imports merchants" do

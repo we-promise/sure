@@ -1118,6 +1118,68 @@ RSpec.configure do |config|
               data: { '$ref' => '#/components/schemas/ImportDetail' }
             }
           },
+          ImportSessionChunk: {
+            type: :object,
+            required: %w[id sequence status rows_count summary created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              sequence: { type: :integer, minimum: 1 },
+              client_chunk_id: { type: :string, nullable: true },
+              status: { type: :string, enum: %w[pending importing complete failed] },
+              rows_count: { type: :integer, minimum: 0 },
+              summary: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  additionalProperties: { type: :integer }
+                }
+              },
+              error: {
+                type: :object,
+                nullable: true,
+                additionalProperties: true
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ImportSession: {
+            type: :object,
+            required: %w[id type status chunks_count summary chunks created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string, enum: %w[SureImport] },
+              status: { type: :string, enum: %w[pending importing complete failed] },
+              client_session_id: { type: :string, nullable: true },
+              expected_chunks: { type: :integer, nullable: true, minimum: 1 },
+              chunks_count: { type: :integer, minimum: 0 },
+              summary: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  additionalProperties: { type: :integer }
+                }
+              },
+              error: {
+                type: :object,
+                nullable: true,
+                additionalProperties: true
+              },
+              chunks: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ImportSessionChunk' }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ImportSessionResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/ImportSession' }
+            }
+          },
           ProviderConnectionInstitution: {
             type: :object,
             required: %w[name],
@@ -1554,13 +1616,15 @@ RSpec.configure do |config|
               },
               counts: {
                 type: :object,
-                required: %w[accounts categories tags merchants plaid_items imports budgets],
+                required: %w[accounts categories tags merchants plaid_items import_sessions import_source_mappings imports budgets],
                 properties: {
                   accounts: { type: :integer, minimum: 0 },
                   categories: { type: :integer, minimum: 0 },
                   tags: { type: :integer, minimum: 0 },
                   merchants: { type: :integer, minimum: 0 },
                   plaid_items: { type: :integer, minimum: 0 },
+                  import_sessions: { type: :integer, minimum: 0 },
+                  import_source_mappings: { type: :integer, minimum: 0 },
                   imports: { type: :integer, minimum: 0 },
                   budgets: { type: :integer, minimum: 0 }
                 }
