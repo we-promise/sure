@@ -8,7 +8,10 @@ class RenameBetaFeaturesEnabledPreference < ActiveRecord::Migration[7.2]
     execute(<<~SQL)
       UPDATE users
       SET preferences = (preferences - 'beta_features_enabled')
-        || jsonb_build_object('preview_features_enabled', preferences->'beta_features_enabled')
+        || jsonb_build_object(
+          'preview_features_enabled',
+          COALESCE(preferences->'preview_features_enabled', preferences->'beta_features_enabled')
+        )
       WHERE preferences ? 'beta_features_enabled'
     SQL
   end
@@ -17,7 +20,10 @@ class RenameBetaFeaturesEnabledPreference < ActiveRecord::Migration[7.2]
     execute(<<~SQL)
       UPDATE users
       SET preferences = (preferences - 'preview_features_enabled')
-        || jsonb_build_object('beta_features_enabled', preferences->'preview_features_enabled')
+        || jsonb_build_object(
+          'beta_features_enabled',
+          COALESCE(preferences->'beta_features_enabled', preferences->'preview_features_enabled')
+        )
       WHERE preferences ? 'preview_features_enabled'
     SQL
   end
