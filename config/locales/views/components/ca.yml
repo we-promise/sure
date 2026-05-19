@@ -92,7 +92,7 @@ ca:
       close: Tanca
     pill:
       aria_label: "%{label}"
-      default_label: Beta
+      default_label: Experimental
   provider_sync_summary:
     accounts:
       institutions: 'Institucions: %{count}'

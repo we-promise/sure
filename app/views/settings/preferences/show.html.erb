@@ -217,26 +217,26 @@
   <% end %>
 <% end %>
 
-<%# Beta features toggle — visible to all users, not just admins. Lives at the
-    bottom of Preferences as a standalone card (no section header) so the toggle
-    row is the entire surface. Posts directly to settings#preferences#update via
-    the Settings::PreferencesController, matching the auto-submit pattern used
-    on the Appearance page. %>
+<%# Preview features toggle — visible to all users, not just admins. Lives at
+    the bottom of Preferences as a standalone card (no section header) so the
+    toggle row is the entire surface. Posts directly to
+    settings#preferences#update via the Settings::PreferencesController,
+    matching the auto-submit pattern used on the Appearance page. %>
 <section class="bg-container shadow-border-xs rounded-xl p-4">
   <%= form_with url: settings_preferences_path, method: :patch,
         data: { controller: "auto-submit-form" } do |f| %>
     <%# Wrapping the row in <label for=…> makes the title + description
         themselves a click target for the toggle, so the cursor-pointer
         affordance on the container is honest. %>
-    <label for="user_beta_features_enabled" class="flex cursor-pointer items-center gap-4 justify-between">
+    <label for="user_preview_features_enabled" class="flex cursor-pointer items-center gap-4 justify-between">
       <div class="text-sm space-y-1">
-        <h4 class="text-primary"><%= t(".beta.title") %></h4>
-        <p class="text-secondary"><%= t(".beta.description") %></p>
+        <h4 class="text-primary"><%= t(".preview.title") %></h4>
+        <p class="text-secondary"><%= t(".preview.description") %></p>
       </div>
       <%= render DS::Toggle.new(
-            id: "user_beta_features_enabled",
-            name: "user[beta_features_enabled]",
-            checked: @user.beta_features_enabled?,
+            id: "user_preview_features_enabled",
+            name: "user[preview_features_enabled]",
+            checked: @user.preview_features_enabled?,
             data: { auto_submit_form_target: "auto" }
       ) %>
     </label>

@@ -129,10 +129,9 @@ ca:
         additional_currencies_label: Divises addicionals
         base_currency_badge: Divisa base
         base_currency_label: Divisa base
-        beta:
-          description: Activa funcions en desenvolupament etiquetades com a beta o
-            canary.
-          title: Activa funcions beta
+        preview:
+          description: Activa funcions en desenvolupament etiquetades com a experimentals o canary.
+          title: Activa funcions experimentals
         country: País
         currencies_more: "+%{count} més"
         currencies_subtitle: Tria quines divises apareixen als camps de diners
