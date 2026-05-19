@@ -36,32 +36,35 @@ fr:
       start_date: Date de début
     new:
       title: Saisir les détails du prêt
-    overview:
-      interest_rate: Taux d'intérêt
-      monthly_payment: Mensualité
-      not_applicable: N/A
-      original_principal: Capital initial emprunté
-      remaining_principal: Capital restant
-      repayment_progress: État d'avancement du remboursement
-      term: Durée
-      type: Type
-      rate_types:
-        fixed: Fixe
-        variable: Variable
-        adjustable: Adjustable
-      unknown: Inconnu
-      already_paid_html: "Vous avez déjà remboursé <span class=\"font-medium text-amber-500\">%{percentage}</span> de votre prêt"
-      initial_leverage: Effet de levier initial
-      debt_over_down_payment: Dette / apport
-      total_cost: Coût total
-      principal: Capital
-      interest: Intérêt
-      insurance: Assurance
-      payments_made: Paiements effectués
-      remaining_payments: Paiements restants
-      years:
-          one: "%{count} année"
-          other: "%{count} années"
-      months:
-        one: "%{count} mois"
-        other: "%{count} mois"
+    tabs:
+      overview:
+        interest_rate: Taux d'intérêt
+        monthly_payment: Mensualité
+        not_applicable: N/A
+        original_principal: Capital initial emprunté
+        remaining_principal: Capital restant
+        repayment_progress: État d'avancement du remboursement
+        term: Durée
+        type: Type
+        rate_types:
+          fixed: Fixe
+          variable: Variable
+          adjustable: Révisable
+        unknown: Inconnu
+        already_paid_html: "Vous avez déjà remboursé <span class=\"font-medium text-amber-500\">%{percentage}</span> de votre prêt"
+        initial_leverage: Effet de levier initial
+        debt_over_down_payment: Dette / apport
+        total_cost: Coût total
+        principal: Capital
+        interest: Intérêt
+        insurance: Assurance
+        payments_made: Paiements effectués
+        remaining_payments: Paiements restants
+        years:
+            one: "%{count} année"
+            other: "%{count} années"
+        months:
+          one: "%{count} mois"
+          other: "%{count} mois"
+        edit_loan_details: "Modifier les détails du prêt"
+

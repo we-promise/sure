@@ -38,36 +38,7 @@ en:
     new:
       title: Enter loan details
     overview:
-      interest_rate: Interest Rate
-      monthly_payment: Monthly Payment
-      not_applicable: N/A
-      original_principal: Original Principal
-      remaining_principal: Remaining Principal
-      repayment_progress: Repayment progress
-      term: Term
-      type: Type
-      rate_types:
-        fixed: Fixed
-        variable: Variable
-        adjustable: Adjustable
-      unknown: Unknown
-<<<<<<< HEAD
-      already_paid_html: "You have already repaid <span class=\"font-medium text-amber-500\">%{percentage}</span> of your loan"
-      initial_leverage: Initial Leverage
-      debt_over_down_payment: Debt / down payment
-      total_cost: Total Cost
-      principal: Principal
-      interest: Interest
-      insurance: Insurance
-      payments_made: Payments made
-      remaining_payments: Remaining payments
-      years:
-        one: "%{count} year"
-        other: "%{count} years"
-      months:
-        one: "%{count} month"
-        other: "%{count} months"
-=======
+      
     tabs:
       overview:
         interest_rate: Interest Rate
@@ -75,8 +46,28 @@ en:
         not_applicable: N/A
         original_principal: Original Principal
         remaining_principal: Remaining Principal
+        repayment_progress: Repayment progress
         term: Term
         type: Type
+        rate_types:
+          fixed: Fixed
+          variable: Variable
+          adjustable: Adjustable
         unknown: Unknown
+        already_paid_html: "You have already repaid <span class=\"font-medium text-amber-500\">%{percentage}</span> of your loan"
+        initial_leverage: Initial Leverage
+        debt_over_down_payment: Debt / down payment
+        total_cost: Total Cost
+        principal: Principal
+        interest: Interest
+        insurance: Insurance
+        payments_made: Payments made
+        remaining_payments: Remaining payments
+        years:
+          one: "%{count} year"
+          other: "%{count} years"
+        months:
+          one: "%{count} month"
+          other: "%{count} months"
         edit_loan_details: "Edit loan details"
 >>>>>>> 0c126b16 (feat(i18n): extract hardcoded English strings to locale files (#1806))
