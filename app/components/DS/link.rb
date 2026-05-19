@@ -5,7 +5,12 @@ class DS::Link < DS::Buttonish
 
   VARIANTS = VARIANTS.reverse_merge(
     default: {
-      container_classes: "",
+      # Underline + `text-link` so the link is distinguishable by more
+      # than color alone (WCAG 1.4.1). Focus ring lands on the page
+      # chrome via `outline-offset`, visible regardless of theme.
+      container_classes: "text-link underline underline-offset-2 hover:no-underline " \
+                         "focus-visible:outline-2 focus-visible:outline-offset-2 " \
+                         "focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white",
       icon_classes: "text-secondary"
     }
   ).freeze
@@ -18,10 +23,37 @@ class DS::Link < DS::Buttonish
       data = data.merge(turbo_frame: frame)
     end
 
+    # External link hardening: `target="_blank"` without `rel="noopener"`
+    # exposes window.opener to the new tab (reverse-tabnabbing). Always
+    # set `noopener noreferrer` when we send the user off-tab. Authors
+    # can override by passing `rel:` explicitly.
+    if merged_opts[:target].to_s == "_blank"
+      merged_opts[:rel] ||= "noopener noreferrer"
+    end
+
+    # Icon-only links have no visible text node, so screen readers fall
+    # back to announcing the href. Derive a humanized fallback from the
+    # icon key so AT users hear *something* meaningful; explicit
+    # `aria: { label: }` on the caller still wins. Mirrors DS::Button.
+    if icon_only? && icon.present?
+      aria = (merged_opts[:aria] || {}).symbolize_keys
+      if aria[:label].blank? && merged_opts[:"aria-label"].blank?
+        aria[:label] = icon.to_s.tr("-_", " ").capitalize
+        merged_opts[:aria] = aria
+      end
+    end
+
     merged_opts.merge(
       class: class_names(container_classes, extra_classes),
       data: data
     )
+  end
+
+  # Render an sr-only suffix when the link opens in a new tab so AT
+  # users hear "(opens in new tab)" — visual is a separate concern
+  # (callers can render a `external-link` icon if they want a glyph).
+  def opens_in_new_tab?
+    opts[:target].to_s == "_blank"
   end
 
   private
