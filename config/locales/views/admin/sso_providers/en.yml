@@ -93,7 +93,9 @@ en:
         submit: "Save Provider"
         create_provider: "Create Provider"
         update_provider: "Update Provider"
-        errors_title: "%{count} error prohibited this provider from being saved:"
+        errors_title:
+          one: "%{count} error prohibited this provider from being saved:"
+          other: "%{count} errors prohibited this provider from being saved:"
         provisioning_title: "User Provisioning"
         default_role_label: "Default Role for New Users"
         default_role_help: "Role assigned to users created via just-in-time (JIT) SSO account provisioning. Defaults to Member."
