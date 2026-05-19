@@ -22,6 +22,8 @@ en:
       default_label: Beta
     dialog:
       close: Close
+    tooltip:
+      trigger_label: More info
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

@@ -1,8 +1,22 @@
 <span data-controller="DS--tooltip" data-DS--tooltip-placement-value="<%= placement %>" data-DS--tooltip-offset-value="<%= offset %>" data-DS--tooltip-cross-axis-value="<%= cross_axis %>" class="inline-flex">
-  <%= helpers.icon icon_name, size: size, color: color %>
+  <%# Wrap the trigger icon in a focusable `<button>` so AT users (and
+      keyboard-only users) can land on the tooltip anchor. The Lucide
+      icon itself carries `aria-hidden`, so the button's accessible
+      name comes from the tooltip content via `aria-describedby`. %>
+  <button type="button"
+          class="inline-flex items-center cursor-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white rounded"
+          aria-describedby="<%= tooltip_id %>"
+          aria-label="<%= t("ds.tooltip.trigger_label", default: "More info") %>">
+    <%= helpers.icon icon_name, size: size, color: color %>
+  </button>
 
-  <div role="tooltip" data-DS--tooltip-target="tooltip" class="hidden absolute z-50 bg-inverse text-sm px-1.5 py-1 rounded-md">
-    <div class="text-inverse font-normal max-w-[200px]">
+  <div role="tooltip"
+       id="<%= tooltip_id %>"
+       data-DS--tooltip-target="tooltip"
+       class="hidden absolute z-50 bg-inverse text-sm px-1.5 py-1 rounded-md">
+    <%# `max-w-[20rem]` scales with the root font-size so AT users with
+        a larger base font don't see the tooltip clipped. %>
+    <div class="text-inverse font-normal max-w-[20rem]">
       <%= tooltip_content %>
     </div>
   </div>
