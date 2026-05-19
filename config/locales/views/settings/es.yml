@@ -53,11 +53,10 @@ es:
     profiles:
       destroy:
         cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.
-
         member_removed: El miembro fue eliminado con éxito.
         not_authorized: No estás autorizado para eliminar miembros.
       show:
-        confirm_delete:
+
           body: ¿Estás seguro de que deseas eliminar permanentemente tu cuenta? Esta acción es irreversible.
           title: ¿Eliminar cuenta?
         confirm_reset:

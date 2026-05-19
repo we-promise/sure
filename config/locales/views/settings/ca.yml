@@ -43,6 +43,9 @@ ca:
         language: Idioma
         language_auto: Idioma del navegador
         page_title: Preferències
+        preview:
+          description: Activa funcions en curs etiquetades com a vista prèvia o canary.
+          title: Activa les funcions de vista prèvia
         theme_dark: Fosc
         theme_light: Clar
         theme_subtitle: Tria el tema preferit per a l'aplicació
@@ -126,15 +129,6 @@ ca:
       advanced_section_title: Avançat
       ai_prompts_label: Prompts d'IA
       api_key_label: Clau API
-        additional_currencies_label: Divises addicionals
-        base_currency_badge: Divisa base
-        base_currency_label: Divisa base
-        preview:
-          description: Activa funcions en curs etiquetades com a vista prèvia o canary.
-          title: Activa les funcions de vista prèvia
-        country: País
-        currencies_more: "+%{count} més"
-        currencies_subtitle: Tria quines divises apareixen als camps de diners
       merchants_label: Comerços
       other_section_title: Més
       preferences_label: Preferències

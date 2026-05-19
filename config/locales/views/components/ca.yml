@@ -49,50 +49,7 @@ ca:
       skipped: 'Omès: %{count}'
       title: Transaccions
       updated: 'Actualitzat: %{count}'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      close: Tanca
+  ds:
     pill:
       aria_label: "%{label}"
       default_label: Vista prèvia
-  provider_sync_summary:
-    accounts:
-      institutions: 'Institucions: %{count}'
