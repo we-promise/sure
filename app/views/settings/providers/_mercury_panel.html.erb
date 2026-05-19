@@ -19,18 +19,20 @@
   <% if active_items.any? %>
     <div class="space-y-3">
       <% active_items.each do |item| %>
-        <details class="group bg-container p-4 shadow-border-xs rounded-xl">
-          <summary class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
-                <p class="text-blue-600 text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>
-              </div>
-              <div>
-                <p class="font-medium text-primary"><%= item.name %></p>
-                <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
+                  <p class="text-blue-600 text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>
+                </div>
+                <div>
+                  <p class="font-medium text-primary"><%= item.name %></p>
+                  <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+                </div>
               </div>
             </div>
-          </summary>
+          <% end %>
 
           <div class="mt-4 space-y-4">
             <div class="flex items-center gap-2">
@@ -83,7 +85,7 @@
               </div>
             <% end %>
           </div>
-        </details>
+        <% end %>
       <% end %>
     </div>
   <% end %>
