@@ -1616,13 +1616,15 @@ RSpec.configure do |config|
               },
               counts: {
                 type: :object,
-                required: %w[accounts categories tags merchants plaid_items imports budgets],
+                required: %w[accounts categories tags merchants plaid_items import_sessions import_source_mappings imports budgets],
                 properties: {
                   accounts: { type: :integer, minimum: 0 },
                   categories: { type: :integer, minimum: 0 },
                   tags: { type: :integer, minimum: 0 },
                   merchants: { type: :integer, minimum: 0 },
                   plaid_items: { type: :integer, minimum: 0 },
+                  import_sessions: { type: :integer, minimum: 0 },
+                  import_source_mappings: { type: :integer, minimum: 0 },
                   imports: { type: :integer, minimum: 0 },
                   budgets: { type: :integer, minimum: 0 }
                 }

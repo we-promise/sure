@@ -116,6 +116,19 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "reset status returns family data counts" do
+    import_session = @user.family.import_sessions.create!(expected_chunks: 1)
+    import_session.imports.create!(
+      family: @user.family,
+      type: "SureImport",
+      sequence: 1
+    )
+    import_session.source_mappings.create!(
+      family: @user.family,
+      source_type: "Category",
+      source_id: "source-category-1",
+      target: @user.family.categories.first
+    )
+
     get "/api/v1/users/reset/status", headers: api_headers(@read_only_api_key)
 
     assert_response :ok
@@ -128,8 +141,12 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert body["counts"].key?("tags")
     assert body["counts"].key?("merchants")
     assert body["counts"].key?("plaid_items")
+    assert body["counts"].key?("import_sessions")
+    assert body["counts"].key?("import_source_mappings")
     assert body["counts"].key?("imports")
     assert body["counts"].key?("budgets")
+    assert_equal 1, body["counts"]["import_sessions"]
+    assert_equal 1, body["counts"]["import_source_mappings"]
   end
 
   # -- Delete account --------------------------------------------------------

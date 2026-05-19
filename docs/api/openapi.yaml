@@ -2935,6 +2935,8 @@ components:
           - tags
           - merchants
           - plaid_items
+          - import_sessions
+          - import_source_mappings
           - imports
           - budgets
           properties:
@@ -2951,6 +2953,12 @@ components:
               type: integer
               minimum: 0
             plaid_items:
+              type: integer
+              minimum: 0
+            import_sessions:
+              type: integer
+              minimum: 0
+            import_source_mappings:
               type: integer
               minimum: 0
             imports:

@@ -76,6 +76,8 @@ class Api::V1::UsersController < Api::V1::BaseController
         tags: family.tags.count,
         merchants: family.merchants.count,
         plaid_items: family.plaid_items.count,
+        import_sessions: family.import_sessions.count,
+        import_source_mappings: family.import_source_mappings.count,
         imports: family.imports.count,
         budgets: family.budgets.count
       }
