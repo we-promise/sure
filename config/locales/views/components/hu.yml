@@ -1,5 +1,24 @@
 ---
 hu:
+  UI:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Kijelölés be-/kikapcsolása
+      chart:
+        no_data_available: "Nincs elérhető adat"
+      activity_date:
+        balance_tooltip: "A nap végi egyenleg, az összes tranzakció és korrekció után"
+        no_balance_data: "Erre a dátumra nincs elérhető egyenlegadat"
+  ds:
+    alert:
+      variants:
+        info: Információ
+        success: Siker
+        warning: Figyelmeztetés
+        error: Hiba
+        destructive: Hiba
+    dialog:
+      close: Bezárás
   provider_sync_summary:
     title: Szinkronizálás összegzése
     last_sync: "Utolsó szinkronizálás: %{time_ago} ezelőtt"

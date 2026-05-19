@@ -988,6 +988,56 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes data["required_headers"], "Amount"
   end
 
+  test "should apply Actual defaults before preflight header validation" do
+    actual_content = [
+      "Account,Date,Payee,Notes,Category_Group,Category,Amount,Split_Amount,Cleared",
+      "Checking Account,2024-01-01,Coffee Shop,Morning coffee,Food,Coffee,-4.25,0,Cleared"
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "ActualImport",
+             raw_file_content: actual_content
+           },
+           headers: api_headers(@read_only_api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal "ActualImport", data["type"]
+    assert_equal true, data["valid"]
+    assert_empty data["missing_required_headers"]
+    assert_includes data["required_headers"], "Date"
+    assert_includes data["required_headers"], "Amount"
+  end
+
+  test "should not overwrite explicit Actual preflight column mappings with defaults" do
+    actual_content = [
+      "Booked On,Value,Payee",
+      "2024-01-01,-4.25,Coffee Shop"
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "ActualImport",
+             raw_file_content: actual_content,
+             date_col_label: "Booked On",
+             amount_col_label: "Value"
+           },
+           headers: api_headers(@read_only_api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal true, data["valid"]
+    assert_equal [ "Booked On", "Value" ], data["required_headers"]
+    assert_empty data["missing_required_headers"]
+  end
+
   test "should not overwrite explicit Mint preflight column mappings with defaults" do
     mint_content = [
       "Posted On,Value,Description",

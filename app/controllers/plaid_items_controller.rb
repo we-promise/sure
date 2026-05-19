@@ -62,7 +62,7 @@ class PlaidItemsController < ApplicationController
       .select { |pa| pa.account_provider.nil? && pa.account.nil? } # Not linked via new or legacy system
 
     if @available_plaid_accounts.empty?
-      redirect_to account_path(@account), alert: "No available Plaid accounts to link. Please connect a new Plaid account first."
+      redirect_to account_path(@account), alert: t(".no_available_accounts")
     end
   end
 
@@ -72,13 +72,13 @@ class PlaidItemsController < ApplicationController
 
     # Verify the Plaid account belongs to this family's Plaid items
     unless Current.family.plaid_items.include?(plaid_account.plaid_item)
-      redirect_to account_path(@account), alert: "Invalid Plaid account selected"
+      redirect_to account_path(@account), alert: t(".invalid_account")
       return
     end
 
     # Verify the Plaid account is not already linked
     if plaid_account.account_provider.present? || plaid_account.account.present?
-      redirect_to account_path(@account), alert: "This Plaid account is already linked"
+      redirect_to account_path(@account), alert: t(".already_linked")
       return
     end
 
@@ -88,7 +88,7 @@ class PlaidItemsController < ApplicationController
       provider: plaid_account
     )
 
-    redirect_to accounts_path, notice: "Account successfully linked to Plaid"
+    redirect_to accounts_path, notice: t(".success")
   end
 
   private

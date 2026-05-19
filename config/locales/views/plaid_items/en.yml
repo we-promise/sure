@@ -25,7 +25,12 @@ en:
       syncing: Syncing...
       update: Update
     select_existing_account:
+      no_available_accounts: No available Plaid accounts to link. Please connect a new Plaid account first.
       title: "Link %{account_name} to Plaid"
       description: Select a Plaid account to link to your existing account
       cancel: Cancel
       link_account: Link account
+    link_existing_account:
+      invalid_account: Invalid Plaid account selected
+      already_linked: This Plaid account is already linked
+      success: Account successfully linked to Plaid
