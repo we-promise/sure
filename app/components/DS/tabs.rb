@@ -13,6 +13,10 @@ class DS::Tabs < DesignSystemComponent
     content_tag(
       :div,
       class: ("hidden" unless tab_id == active_tab),
+      role: "tabpanel",
+      id: "panel-#{tab_id}",
+      "aria-labelledby": tab_id,
+      tabindex: "0",
       data: { id: tab_id, DS__tabs_target: "panel" },
       &block
     )
@@ -20,9 +24,12 @@ class DS::Tabs < DesignSystemComponent
 
   VARIANTS = {
     default: {
-      active_btn_classes: "bg-white theme-dark:bg-gray-700 text-primary shadow-sm",
+      # `tab-item-active` is a Sure token utility (white light / gray-700 dark).
+      # Swapping out the raw `bg-white theme-dark:bg-gray-700` removes the
+      # last raw-palette reference in DS::Tabs.
+      active_btn_classes: "tab-item-active text-primary shadow-sm",
       inactive_btn_classes: "text-secondary hover:bg-surface-inset-hover",
-      base_btn_classes: "w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200",
+      base_btn_classes: "w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md motion-safe:transition-colors motion-safe:duration-200",
       nav_container_classes: "flex bg-surface-inset p-1 rounded-lg mb-4"
     }
   }
