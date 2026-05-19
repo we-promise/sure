@@ -135,9 +135,8 @@ ca:
           title: Activa funcions beta
         country: País
         currencies_more: "+%{count} més"
-        currencies_subtitle: Tria quines divises apareixen als camps de diners de
-          %{moniker}
-        currencies_title: Divises de %{moniker}
+        currencies_subtitle: Tria quines divises apareixen als camps de diners
+        currencies_title: Divises
         currency: Divisa
         currency_search_placeholder: Cerca divises
         date_format: Format de data
@@ -169,8 +168,8 @@ ca:
         sharing_default_label: Compartició predeterminada per a comptes nous
         sharing_private: Mantén privat per defecte
         sharing_shared: Comparteix amb tots els membres
-        sharing_subtitle: Controla com es comparteixen els comptes a %{moniker}
-        sharing_title: Compartició de %{moniker}
+        sharing_subtitle: Controla com es comparteixen els comptes entre els membres
+        sharing_title: Compartició de comptes
         timezone: Fus horari
     profiles:
       destroy:
