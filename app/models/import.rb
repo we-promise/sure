@@ -14,6 +14,13 @@ class Import < ApplicationRecord
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
+  def self.separator_options
+    [
+      [ I18n.t("activerecord.attributes.import.col_seps.comma"), "," ],
+      [ I18n.t("activerecord.attributes.import.col_seps.semicolon"), ";" ]
+    ]
+  end
+
   NUMBER_FORMATS = {
     "1,234.56" => { separator: ".", delimiter: "," },  # US/UK/Asia
     "1.234,56" => { separator: ",", delimiter: "." },  # Most of Europe
