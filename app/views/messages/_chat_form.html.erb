@@ -23,7 +23,9 @@
         <% end %>
       </div>
 
-      <%= icon("arrow-up", as_button: true, type: "submit") %>
+      <%= icon("arrow-up", as_button: true, type: "submit",
+              disabled: message_hint.blank?,
+              data: { chat_target: "submit" }) %>
     </div>
   <% end %>
 
