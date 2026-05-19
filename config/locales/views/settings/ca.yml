@@ -130,8 +130,8 @@ ca:
         base_currency_badge: Divisa base
         base_currency_label: Divisa base
         preview:
-          description: Activa funcions en curs etiquetades com a vista prèvia o canary.
-          title: Activa les funcions de vista prèvia
+          description: Activa funcions en desenvolupament etiquetades com a vista prèvia o canary.
+          title: Activa funcions de vista prèvia
         country: País
         currencies_more: "+%{count} més"
         currencies_subtitle: Tria quines divises apareixen als camps de diners
