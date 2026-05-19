@@ -170,7 +170,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         merged["cost_basis"] = stored_basis.to_s
       end
 
-      Rails.logger.debug("SimpleFIN: normalized #{lots.size} lot for #{symbol}")
+      Rails.logger.debug("SimpleFIN: normalized #{lots.size} #{'lot'.pluralize(lots.size)} for #{symbol}")
 
       merged
     end
