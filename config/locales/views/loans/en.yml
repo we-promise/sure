@@ -70,4 +70,3 @@ en:
           one: "%{count} month"
           other: "%{count} months"
         edit_loan_details: "Edit loan details"
->>>>>>> 0c126b16 (feat(i18n): extract hardcoded English strings to locale files (#1806))
