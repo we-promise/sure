@@ -1,9 +1,14 @@
 class DS::MenuItem < DesignSystemComponent
   VARIANTS = %i[link button divider].freeze
 
-  attr_reader :variant, :text, :icon, :href, :method, :destructive, :confirm, :frame, :opts
+  attr_reader :variant, :text, :icon, :href, :method, :destructive, :confirm, :frame, :roving, :opts
 
-  def initialize(variant:, text: nil, icon: nil, href: nil, method: :post, destructive: false, confirm: nil, frame: nil, **opts)
+  # `roving: true` (default) emits `tabindex="-1"` and `role="menuitem"` — correct
+  # for `DS::Menu`, which provides arrow-key roving and announces `role="menu"`.
+  # `roving: false` omits both so items stay in the normal Tab order — required
+  # inside `DS::Popover`, which has no roving handler and is not a `role="menu"`
+  # container.
+  def initialize(variant:, text: nil, icon: nil, href: nil, method: :post, destructive: false, confirm: nil, frame: nil, roving: true, **opts)
     @variant = variant.to_sym
     @text = text
     @icon = icon
@@ -12,15 +17,16 @@ class DS::MenuItem < DesignSystemComponent
     @destructive = destructive
     @confirm = confirm
     @frame = frame
+    @roving = roving
     @opts = opts
     raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
   end
 
   def wrapper(&block)
     if variant == :button
-      button_to href, method: method, class: container_classes, role: "menuitem", tabindex: "-1", **merged_opts, &block
+      button_to href, method: method, class: container_classes, **menuitem_attrs, **merged_opts, &block
     elsif variant == :link
-      link_to href, class: container_classes, role: "menuitem", tabindex: "-1", **merged_opts, &block
+      link_to href, class: container_classes, **menuitem_attrs, **merged_opts, &block
     else
       nil
     end
@@ -38,6 +44,10 @@ class DS::MenuItem < DesignSystemComponent
   end
 
   private
+    def menuitem_attrs
+      roving ? { role: "menuitem", tabindex: "-1" } : {}
+    end
+
     def container_classes
       [
         "flex items-center gap-2 p-2 rounded-md w-full",
