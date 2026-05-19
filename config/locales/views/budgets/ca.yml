@@ -1,6 +1,15 @@
 ---
 ca:
   budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Pressupost superat en <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: per assignar
+      over_set: "> 100 % assignat"
+      percent_set: "%{percent} assignat"
+    budget_category_form:
+      monthly_average: "%{amount}/mes (mitjana)"
+      shared_placeholder: Compartit
+      shared_title: Deixa-ho buit per compartir el pressupost de la categoria pare
     confirm_button:
       confirm: Confirma
     index:
@@ -37,6 +46,9 @@ ca:
       unused: Sense utilitzar
     budget_header:
       today: Avui
+    budget_nav:
+      categories: Categories
+      setup: Configuració
     budgeted_summary:
       budgeted: Pressupostat
       earned: "%{amount} guanyats"
