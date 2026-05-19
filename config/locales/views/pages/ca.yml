@@ -32,7 +32,7 @@ ca:
         contributions: Aportacions
         holding: Posició
         no_investments: No hi ha comptes d'inversió
-        period_activity: Activitat del %{period}
+        period_activity: 'Activitat — %{period}'
         return: Rendiment
         title: Inversions
         total_return: Rendiment total
@@ -56,8 +56,8 @@ ca:
         title: Encara no hi ha comptes
       outflows_donut:
         categories: Categories
-        title: Sortides
-        total_outflows: Total de sortides
+        title: Sortides de caixa
+        total_outflows: Total de sortides de caixa
         value: Valor
         weight: Pes
       subtitle: Això és el que està passant amb les teves finances
