@@ -1,0 +1,83 @@
+---
+ca:
+  coinbase_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} compte necessita configuració"
+        other: "%{count} comptes necessiten configuració"
+      calculating_balances: Calculant saldos...
+      checking_configuration: Comprovant la configuració del compte...
+      checking_credentials: Comprovant credencials...
+      credentials_invalid: Credencials de l'API no vàlides. Revisa la teva clau API
+        i el secret.
+      importing_accounts: Important comptes des de Coinbase...
+      processing_accounts: Processant dades del compte...
+  coinbase_items:
+    coinbase_item:
+      delete: Elimina
+      deletion_in_progress: Eliminant...
+      import_wallets_menu: Importa carteres
+      more_wallets_available:
+        one: "%{count} cartera més disponible per importar"
+        other: "%{count} carteres més disponibles per importar"
+      no_accounts_message: Les teves carteres de Coinbase apareixeran aquí després
+        de sincronitzar.
+      no_accounts_title: No s'han trobat comptes
+      provider_name: Coinbase
+      reconnect: Les credencials necessiten actualització
+      setup_action: Importa carteres
+      setup_description: Selecciona quines carteres de Coinbase vols seguir.
+      setup_needed: Carteres a punt per importar
+      status: Darrera sincronització fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: Darrera sincronització fa %{timestamp} - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} compte sincronitzat"
+          other: "%{count} comptes sincronitzats"
+        no_accounts: No s'han trobat comptes
+        partial_sync: "%{linked_count} sincronitzats, %{unlinked_count} necessiten
+          configuració"
+      syncing: Sincronitzant...
+      update_credentials: Actualitza les credencials
+    complete_account_setup:
+      no_accounts: No hi ha carteres per importar
+      none_selected: No s'ha seleccionat cap cartera
+      success:
+        one: S'ha importat %{count} cartera
+        other: S'han importat %{count} carteres
+    create:
+      default_name: Coinbase
+      success: S'ha connectat correctament a Coinbase! Els teus comptes s'estan sincronitzant.
+    destroy:
+      success: S'ha programat la connexió Coinbase per a la seva eliminació.
+    link_existing_account:
+      errors:
+        invalid_coinbase_account: Compte Coinbase no vàlid
+        only_manual: Només els comptes manuals es poden enllaçar a Coinbase
+      success: S'ha enllaçat correctament al compte Coinbase
+    select_existing_account:
+      balance: Saldo
+      cancel: Cancel·la
+      check_provider_health: Comprova que les teves credencials de l'API de Coinbase
+        siguin vàlides
+      currently_linked_to: 'Actualment enllaçat a: %{account_name}'
+      link: Enllaça
+      no_accounts_found: No s'han trobat comptes Coinbase.
+      title: Enllaça compte Coinbase
+      wait_for_sync: Espera que Coinbase acabi la sincronització
+    setup_accounts:
+      accounts_count:
+        one: "%{count} cartera disponible"
+        other: "%{count} carteres disponibles"
+      cancel: Cancel·la
+      creating: Important...
+      import_selected: Importa les seleccionades
+      instructions: Selecciona les carteres que vols importar. Les carteres no seleccionades
+        quedaran disponibles si les vols afegir més tard.
+      no_accounts: Totes les carteres s'han importat.
+      select_all: Selecciona-ho tot
+      subtitle: Selecciona quines carteres vols seguir
+      title: Importa carteres Coinbase
+    update:
+      success: La configuració de Coinbase s'ha actualitzat correctament.
