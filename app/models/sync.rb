@@ -250,6 +250,8 @@ class Sync < ApplicationRecord
     end
 
     def update_family_sync_timestamp
+      return unless family.persisted?
+
       family.touch(:latest_sync_activity_at)
     end
 
