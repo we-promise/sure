@@ -1,0 +1,97 @@
+<%= render DS::Dialog.new(width: "lg", disable_click_outside: true) do |dialog| %>
+    <% dialog.with_header(
+      title: t("settings.hostings.financial_data_reset.title"),
+      subtitle: t("settings.hostings.financial_data_reset.subtitle")
+    ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-5">
+        <%= render DS::Alert.new(
+          title: t("settings.hostings.financial_data_reset.warning_title"),
+          variant: :destructive,
+          live: :polite
+        ) do %>
+          <p><%= t("settings.hostings.financial_data_reset.warning_body") %></p>
+        <% end %>
+
+        <% if @reset_error.present? %>
+          <%= render DS::Alert.new(message: @reset_error, variant: :error, live: :alert) %>
+        <% end %>
+
+        <div class="bg-container-inset rounded-lg p-4 space-y-3">
+          <h3 class="font-medium text-primary"><%= t("settings.hostings.financial_data_reset.scope_title") %></h3>
+          <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt class="text-secondary"><%= t("settings.hostings.financial_data_reset.user_label") %></dt>
+              <dd class="text-primary font-medium"><%= @reset_result.user.email %></dd>
+            </div>
+            <div>
+              <dt class="text-secondary"><%= t("settings.hostings.financial_data_reset.family_label") %></dt>
+              <dd class="text-primary font-medium"><%= @reset_result.family.name.presence || t("settings.hostings.financial_data_reset.unnamed_family") %></dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="font-medium text-primary"><%= t("settings.hostings.financial_data_reset.counts_title") %></h3>
+            <span class="text-sm text-secondary">
+              <%= t("settings.hostings.financial_data_reset.total_count", count: number_with_delimiter(@reset_result.before_counts.values.sum)) %>
+            </span>
+          </div>
+
+          <div class="max-h-64 overflow-y-auto rounded-lg border border-primary">
+            <table class="w-full text-sm">
+              <thead class="bg-container-inset sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-secondary"><%= t("settings.hostings.financial_data_reset.table.target") %></th>
+                  <th class="px-3 py-2 text-right font-medium text-secondary"><%= t("settings.hostings.financial_data_reset.table.records") %></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
+                <% Family::FinancialDataReset::COUNT_KEYS.each do |key| %>
+                  <% count = @reset_result.before_counts.fetch(key, 0) %>
+                  <tr>
+                    <td class="px-3 py-2 text-primary"><%= key.to_s.humanize %></td>
+                    <td class="px-3 py-2 text-right text-primary"><%= number_with_delimiter(count) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <%= form_with url: financial_data_reset_settings_hosting_path,
+                      method: :delete,
+                      class: "space-y-4",
+                      data: { turbo_frame: "modal" } do %>
+          <div class="space-y-2">
+            <%= label_tag :confirmation, t("settings.hostings.financial_data_reset.confirmation_label", phrase: @confirmation_phrase), class: "block text-sm font-medium text-primary" %>
+            <%= text_field_tag :confirmation,
+                               nil,
+                               autocomplete: "off",
+                               class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full",
+                               aria: { describedby: "financial-data-reset-confirmation-help" } %>
+            <p id="financial-data-reset-confirmation-help" class="text-sm text-secondary">
+              <%= t("settings.hostings.financial_data_reset.confirmation_help") %>
+            </p>
+          </div>
+
+          <div class="flex flex-col-reverse md:flex-row md:justify-end gap-2">
+            <%= render DS::Button.new(
+              text: t("settings.hostings.financial_data_reset.cancel"),
+              variant: "secondary",
+              type: "button",
+              data: { action: "DS--dialog#close" }
+            ) %>
+            <%= render DS::Button.new(
+              text: t("settings.hostings.financial_data_reset.submit"),
+              variant: "destructive",
+              icon: "database-zap",
+              type: "submit"
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+<% end %>

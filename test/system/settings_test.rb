@@ -72,6 +72,26 @@ class SettingsTest < ApplicationSystemTestCase
     assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true, count: 1 # text copied and icon changed to checkmark
   end
 
+  test "can review self-hosted financial reset from settings" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
+    Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
+
+    open_settings_from_sidebar
+    click_link "Self-Hosting", match: :first
+    click_link "Review reset"
+
+    assert_selector "dialog[open]", text: "Reset financial data"
+    assert_text @user.email
+    assert_text "Records that will be cleared"
+
+    fill_in "confirmation", with: "wrong"
+    click_button "Reset financial data"
+
+    assert_selector "dialog[open]", text: "Type \"RESET FINANCIAL DATA\" exactly"
+  end
+
   test "does not show payment link if self hosting" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     open_settings_from_sidebar

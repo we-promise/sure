@@ -16,5 +16,20 @@
               }}
       %>
     </div>
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="w-full md:w-2/3">
+        <h3 class="font-medium text-primary"><%= t("settings.hostings.show.reset_financial_data") %></h3>
+        <p class="text-secondary text-sm"><%= t("settings.hostings.show.reset_financial_data_warning") %></p>
+      </div>
+      <%= render DS::Link.new(
+        text: t("settings.hostings.show.review_financial_data_reset"),
+        variant: "destructive",
+        href: financial_data_reset_settings_hosting_path,
+        icon: "database-zap",
+        frame: :modal,
+        class: "w-full md:w-auto justify-center"
+      ) %>
+    </div>
   </div>
 <% end %>

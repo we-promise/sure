@@ -242,6 +242,8 @@ Rails.application.routes.draw do
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
+      get :financial_data_reset, on: :collection
+      delete :financial_data_reset, action: :destroy_financial_data_reset, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show
