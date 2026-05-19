@@ -42,8 +42,8 @@ class DS::FilledIcon < DesignSystemComponent
     @hex_color = hex_color
     @size = size.to_sym
     @rounded = rounded
-    @description = description
-    @aria_hidden = aria_hidden.nil? ? description.blank? : aria_hidden
+    @description = description.presence
+    @aria_hidden = aria_hidden.nil? ? @description.blank? : aria_hidden
   end
 
   def container_classes
