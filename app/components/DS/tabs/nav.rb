@@ -1,12 +1,14 @@
 class DS::Tabs::Nav < DesignSystemComponent
   erb_template <<~ERB
-    <%# `role="tablist"` overrides the implicit `<nav>` landmark — the
-        tab pattern is its own widget per WAI-ARIA APG and shouldn't
-        announce as a navigation landmark. Keyboard navigation
+    <%# Neutral `<div>` host for `role="tablist"`. Per ARIA-in-HTML,
+        `<nav>` has a fixed landmark role and may not be repurposed as
+        a tablist — some AT implementations ignore the override and
+        the child `role="tab"` elements end up parentless. The tab
+        pattern is its own widget per WAI-ARIA APG; keyboard nav
         (ArrowLeft/Right, Home, End, Enter/Space) is driven by the
-        Stimulus controller; manual activation pattern (focus moves
-        first, activate on Enter/Space). %>
-    <%= tag.nav class: classes,
+        Stimulus controller with the manual-activation pattern
+        (focus moves first, activate on Enter/Space). %>
+    <%= tag.div class: classes,
                 role: "tablist",
                 "aria-orientation": "horizontal" do %>
       <% btns.each do |btn| %>
