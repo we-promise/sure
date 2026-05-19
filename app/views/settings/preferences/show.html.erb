@@ -182,7 +182,7 @@
             </div>
             <div class="flex justify-end gap-2">
               <%= render DS::Button.new(text: t("shared.cancel"), type: :button, variant: :ghost, data: { action: "DS--dialog#close" }) %>
-              <%= render DS::Button.new(text: t(".save_currencies")) %>
+              <%= render DS::Button.new(text: t(".save_currencies"), type: :submit) %>
             </div>
           <% end %>
         <% end %>
