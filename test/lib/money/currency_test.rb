@@ -52,4 +52,17 @@ class Money::CurrencyTest < ActiveSupport::TestCase
     assert_equal "ETH-Z", money.currency.iso_code
     assert_equal 1, money.amount
   end
+
+  test "fallback cache does not bypass strict lookup for unknown codes" do
+    code = :"never_known_#{SecureRandom.hex(4)}"
+
+    # Warm the fallback cache.
+    Money::Currency.new(code, fallback: true)
+
+    # Strict caller must still raise — the fallback placeholder must not be
+    # served from cache under the canonical iso_code key.
+    assert_raises(Money::Currency::UnknownCurrencyError) do
+      Money::Currency.new(code)
+    end
+  end
 end

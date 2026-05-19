@@ -5,8 +5,11 @@ class Money::Currency
 
   CURRENCIES_FILE_PATH = Rails.root.join("config", "currencies.yml")
 
-  # Cached instances by iso code
+  # Cached instances by iso code. Fallback placeholders use the FALLBACK_CACHE_PREFIX
+  # so a strict `new(code)` after a fallback `new(code, fallback: true)` still
+  # raises UnknownCurrencyError instead of returning the cached placeholder.
   @@instances = {}
+  FALLBACK_CACHE_PREFIX = "__fallback__".freeze
 
   class << self
     def new(object, fallback: false)
@@ -19,7 +22,20 @@ class Money::Currency
         raise ArgumentError, "Invalid argument type"
       end
 
-      @@instances[iso_code] ||= super(iso_code, fallback: fallback)
+      if fallback
+        # Strict path first: if the code is real, return the canonical instance
+        # (and cache it under its iso_code, shared with strict callers).
+        return @@instances[iso_code] if @@instances.key?(iso_code)
+
+        begin
+          return @@instances[iso_code] ||= super(iso_code, fallback: false)
+        rescue UnknownCurrencyError
+          cache_key = "#{FALLBACK_CACHE_PREFIX}#{iso_code}"
+          return @@instances[cache_key] ||= super(iso_code, fallback: true)
+        end
+      end
+
+      @@instances[iso_code] ||= super(iso_code, fallback: false)
     end
 
     def all
