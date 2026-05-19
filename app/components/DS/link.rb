@@ -35,10 +35,19 @@ class DS::Link < DS::Buttonish
     # back to announcing the href. Derive a humanized fallback from the
     # icon key so AT users hear *something* meaningful; explicit
     # `aria: { label: }` on the caller still wins. Mirrors DS::Button.
+    #
+    # When the link also opens in a new tab, fold the cue into the
+    # generated `aria-label` itself — `aria-label` overrides the
+    # descendant accessible name, so the sr-only "(opens in new tab)"
+    # span in the template would otherwise be masked.
     if icon_only? && icon.present?
       aria = (merged_opts[:aria] || {}).symbolize_keys
       if aria[:label].blank? && merged_opts[:"aria-label"].blank?
-        aria[:label] = icon.to_s.tr("-_", " ").capitalize
+        label = icon.to_s.tr("-_", " ").humanize
+        if merged_opts[:target].to_s == "_blank"
+          label = "#{label} #{I18n.t("ds.link.opens_in_new_tab", default: "(opens in new tab)")}"
+        end
+        aria[:label] = label
         merged_opts[:aria] = aria
       end
     end
