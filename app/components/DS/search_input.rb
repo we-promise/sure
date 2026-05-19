@@ -39,13 +39,17 @@ class DS::SearchInput < DesignSystemComponent
   end
 
   def input_classes
+    # `text-base sm:text-sm` — keep the base font at 16px so iOS Safari
+    # does not zoom the viewport when the input is focused. Shrink to
+    # 14px from `sm:` upward. The previous unconditional `text-sm`
+    # triggered the mobile zoom regression.
     case variant
     when :embedded
       # No own focus ring — the parent panel handles focus chrome via
       # `focus-within`. `focus:outline-hidden focus:ring-0` neutralizes
       # the browser default so it doesn't compete with the panel's
       # state.
-      "bg-container text-primary text-sm placeholder:text-secondary font-normal " \
+      "bg-container text-primary text-base sm:text-sm placeholder:text-secondary font-normal " \
         "h-10 pl-10 w-full border-none rounded-lg " \
         "focus:outline-hidden focus:ring-0"
     else
@@ -55,7 +59,7 @@ class DS::SearchInput < DesignSystemComponent
       # `focus:ring-gray-500` from the inline callsites — that utility
       # had no backing token and rendered invisibly on the bordered
       # bg-container surface.
-      "block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container text-sm " \
+      "block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container text-base sm:text-sm " \
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 " \
         "theme-dark:focus-visible:outline-white"
     end
