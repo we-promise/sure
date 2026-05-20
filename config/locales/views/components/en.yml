@@ -89,6 +89,8 @@ en:
       default_label: Preview
     dialog:
       close: Close
+    tooltip:
+      trigger_label: More info
     link:
       opens_in_new_tab: (opens in new tab)
   provider_sync_summary:
