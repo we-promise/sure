@@ -1,6 +1,10 @@
 @layer base {
   button {
-    @apply cursor-pointer focus-visible:outline-gray-900;
+    @apply cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-alpha-black-300;
+
+    @variant theme-dark {
+      @apply focus-visible:ring-alpha-white-300;
+    }
   }
 
   hr {

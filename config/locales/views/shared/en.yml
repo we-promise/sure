@@ -25,8 +25,10 @@ en:
       default_body: "This is not reversible."
       default_btn_text: "Confirm"
     family_moniker:
-      singular: Family
+      group_plural: Groups
+      group_singular: Group
       plural: Families
+      singular: Family
     trend_change:
       no_change: "no change"
     cancel: Cancel

@@ -1,5 +1,8 @@
 <div class="relative inline-block select-none">
   <%= hidden_field_tag name, unchecked_value, id: nil %>
-  <%= check_box_tag name, checked_value, checked, class: "sr-only peer", disabled: disabled, id: id, **opts %>
+  <%# `role="switch"` upgrades the underlying checkbox so AT users hear
+      "switch, on" / "switch, off" instead of "checkbox, checked". The
+      visual already reads as a switch — semantics now match. %>
+  <%= check_box_tag name, checked_value, checked, class: "sr-only peer", disabled: disabled, id: id, role: "switch", **opts %>
   <%= label_tag name, "&nbsp;".html_safe, class: label_classes, for: id %>
 </div>

@@ -17,8 +17,8 @@
     </div>
   <% else %>
     <%# Unlocked OR editable context (drawer) - show clickable menu %>
-    <%= render DS::Menu.new(variant: :button, placement: "bottom-end") do |menu| %>
-      <% menu.with_button(class: "hover:text-primary cursor-pointer group") do %>
+    <%= render DS::Popover.new(variant: :button, placement: "bottom-end") do |popover| %>
+      <% popover.with_button(class: "hover:text-primary cursor-pointer group") do %>
         <% if holding.avg_cost %>
           <div class="flex items-center gap-1">
             <%= tag.span format_money(holding.avg_cost), class: "privacy-sensitive" %>
@@ -34,7 +34,7 @@
           </div>
         <% end %>
       <% end %>
-      <% menu.with_custom_content do %>
+      <% popover.with_custom_content do %>
         <div class="p-4 min-w-[280px]"
              data-controller="cost-basis-form"
              data-cost-basis-form-qty-value="<%= holding.qty %>">
@@ -96,7 +96,7 @@
             <div class="flex justify-end gap-2 pt-2">
               <button type="button"
                       class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover"
-                      data-action="click->DS--menu#close">
+                      data-action="click->DS--popover#close">
                 <%= t(".cancel") %>
               </button>
               <%= f.submit t(".save"), class: "inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover" %>
