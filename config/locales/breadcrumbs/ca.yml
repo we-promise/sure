@@ -1,6 +1,87 @@
 ---
 ca:
   breadcrumbs:
+    account_sharings: Compartició de comptes
+    account_statements: Arxiu d'extractes
+    accounts: Comptes
+    ai_prompts: Prompts d'IA
+    api_key: Clau API
+    api_keys: Claus API
+    appearance: Aparença
+    appearances: Aparença
+    bank_sync: Sincronització bancària
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Categories del pressupost
+    budgets: Pressupostos
+    categories: Categories
+    categorize: Categoritza
+    chats: Xats
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Targetes de crèdit
+    cryptos: Cripto
+    dashboard: Tauler
+    debug: Depuració
+    debugs: Depuració
+    depositories: Comptes d'efectiu
+    enable_banking_items: Enable Banking
     exports: Exportacions
+    family_exports: Exportacions
+    family_merchants: Comerços
+    guides: Guies
+    holdings: Posicions
     home: Inici
+    hostings: Self hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Suplantacions
     imports: Importacions
+    indexa_capital_items: Indexa Capital
+    intro: Introducció
+    investments: Inversions
+    invitations: Invitacions
+    invite_codes: Codis d'invitació
+    kraken_items: Kraken
+    llm_usage: Ús d'LLM
+    llm_usages: Ús d'LLM
+    loans: Préstecs
+    lunchflow_items: Lunch Flow
+    merchants: Comerços
+    mercury_items: Mercury
+    messages: Missatges
+    mfa: Autenticació de dos factors
+    oidc_accounts: Comptes SSO
+    onboardings: Configuració inicial
+    other_assets: Altres actius
+    other_liabilities: Altres passius
+    payments: Pagaments
+    pending_duplicate_merges: Revisió de duplicats
+    plaid_items: Plaid
+    preferences: Preferències
+    profile: Informació del perfil
+    profiles: Informació del perfil
+    properties: Propietats
+    providers: Proveïdors
+    recurring_transactions: Recurrents
+    registrations: Registre
+    reports: Informes
+    rules: Regles
+    securities: Seguretat
+    security: Seguretat
+    self_hosting: Self hosting
+    sessions: Inici de sessió
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Divisió
+    sso_identities: Connexions SSO
+    sso_providers: Proveïdors SSO
+    subscriptions: Subscripció
+    tags: Etiquetes
+    trades: Operacions
+    transactions: Transaccions
+    transfer_matches: Coincidències de transferències
+    transfers: Transferències
+    users: Usuaris
+    valuations: Valoracions
+    vehicles: Vehicles

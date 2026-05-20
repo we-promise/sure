@@ -8,6 +8,9 @@ en:
       unused: "Unused"
     budget_header:
       today: "Today"
+    budget_nav:
+      categories: Categories
+      setup: Setup
     over_allocation_warning:
       over_allocated_message: "You have over-allocated your budget. Please fix your allocations."
       fix_allocations: "Fix allocations"
@@ -60,6 +63,15 @@ en:
       no_source: "No previous budget found to copy from"
       already_initialized: "This budget has already been set up"
   budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Budget exceeded by <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: left to allocate
+      over_set: "> 100% set"
+      percent_set: "%{percent} set"
+    budget_category_form:
+      monthly_average: "%{amount}/m avg"
+      shared_placeholder: Shared
+      shared_title: Leave empty to share parent's budget
     confirm_button:
       confirm: "Confirm"
     no_categories:
