@@ -52,14 +52,15 @@
                          new_name: new_sfa.name),
                  btn_text: t("simplefin_items.replacement_prompt.relink")
                ) %>
-            <%= button_to t("simplefin_items.replacement_prompt.relink"),
-                         link_existing_account_simplefin_items_path(
-                           account_id: sure_account.id,
-                           simplefin_account_id: new_sfa.id
-                         ),
-                         method: :post,
-                         data: { turbo_confirm: confirm.to_data_attribute },
-                         class: "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
+            <%= render DS::Button.new(
+              text: t("simplefin_items.replacement_prompt.relink"),
+              href: link_existing_account_simplefin_items_path(
+                account_id: sure_account.id,
+                simplefin_account_id: new_sfa.id
+              ),
+              variant: :primary,
+              data: { turbo_method: :post, turbo_confirm: confirm.to_data_attribute }
+            ) %>
           </div>
         </div>
       </div>

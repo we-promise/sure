@@ -53,11 +53,13 @@
                         <%= t(".reconnect") %>
                     <% end %>
                     <% else %>
-                    <%= link_to select_bank_enable_banking_item_path(item),
-                                class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-inverse button-bg-primary hover:button-bg-primary-hover transition-colors",
-                                data: { turbo_frame: "modal" } do %>
-                        <%= t(".connect_bank") %>
-                    <% end %>
+                    <%= render DS::Link.new(
+                      text: t(".connect_bank"),
+                      href: select_bank_enable_banking_item_path(item),
+                      variant: :primary,
+                      size: :sm,
+                      data: { turbo_frame: "modal" }
+                    ) %>
                     <% end %>
 
                     <%= button_to enable_banking_item_path(item),
@@ -73,13 +75,13 @@
             <%# Add Connection button below the list - only show if we have a valid session to copy credentials from %>
             <% if item_for_new_connection %>
                 <div class="flex justify-center pt-2">
-                <%= button_to new_connection_enable_banking_item_path(item_for_new_connection),
-                                method: :post,
-                                class: "inline-flex items-center gap-2 justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover transition-colors",
-                                data: { turbo_frame: "modal" } do %>
-                    <%= icon "plus", size: "sm" %>
-                    <%= t(".add_connection") %>
-                <% end %>
+                <%= render DS::Button.new(
+                  text: t(".add_connection"),
+                  icon: "plus",
+                  href: new_connection_enable_banking_item_path(item_for_new_connection),
+                  variant: :primary,
+                  data: { turbo_method: :post, turbo_frame: "modal" }
+                ) %>
                 </div>
             <% end %>
             </div>
@@ -104,11 +106,13 @@
                 </div>
 
                 <div class="mt-4">
-                <%= link_to settings_providers_path,
-                            class: "w-full inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap rounded-lg hidden md:inline-flex px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
-                            data: { turbo: false } do %>
-                    <%= t(".go_to_provider_settings") %>
-                <% end %>
+                <%= render DS::Link.new(
+                  text: t(".go_to_provider_settings"),
+                  href: settings_providers_path,
+                  variant: :primary,
+                  full_width: true,
+                  data: { turbo: false }
+                ) %>
                 </div>
             </div>
         <% end %>
