@@ -91,6 +91,10 @@ en:
       close: Close
     popover:
       avatar_default_label: Open menu
+    tooltip:
+      trigger_label: More info
+    link:
+      opens_in_new_tab: (opens in new tab)
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"
