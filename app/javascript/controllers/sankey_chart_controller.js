@@ -32,6 +32,7 @@ export default class extends Controller {
   static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
 
   connect() {
+    this.connected = true;
     this.zoomRootId = null;
     this.resizeObserver = new ResizeObserver(() => this.#draw());
     this.resizeObserver.observe(this.#chartElement());
@@ -41,7 +42,16 @@ export default class extends Controller {
     this.#draw();
   }
 
+  dataValueChanged() {
+    if (!this.connected) return;
+
+    this.zoomRootId = null;
+    this.#syncZoomControls();
+    this.#draw();
+  }
+
   disconnect() {
+    this.connected = false;
     this.resizeObserver?.disconnect();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();

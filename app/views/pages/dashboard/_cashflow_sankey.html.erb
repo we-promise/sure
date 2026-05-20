@@ -11,53 +11,13 @@
   </div>
   <% if sankey_data[:links].present? %>
     <div class="w-full h-96">
-      <div
-        data-controller="sankey-chart"
-        data-sankey-chart-data-value="<%= sankey_data.to_json %>"
-        data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-        class="w-full h-full privacy-sensitive flex flex-col gap-2">
-        <div class="flex justify-start">
-          <%= render DS::Button.new(
-            variant: :icon,
-            icon: "arrow-left",
-            type: "button",
-            title: t("pages.dashboard.cashflow_sankey.zoom_out"),
-            aria: { label: t("pages.dashboard.cashflow_sankey.zoom_out") },
-            hidden: true,
-            data: {
-              sankey_chart_target: "zoomOutButton",
-              action: "sankey-chart#zoomOut"
-            }
-          ) %>
-        </div>
-        <div data-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
-      </div>
+      <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data %>
     </div>
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
       <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
       <% dialog.with_body do %>
         <div class="w-full h-[85dvh] max-h-[90dvh] overflow-y-auto overscroll-contain">
-          <div
-            data-controller="sankey-chart"
-            data-sankey-chart-data-value="<%= sankey_data.to_json %>"
-            data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-            class="w-full h-full privacy-sensitive flex flex-col gap-2">
-            <div class="flex justify-start">
-              <%= render DS::Button.new(
-                variant: :icon,
-                icon: "arrow-left",
-                type: "button",
-                title: t("pages.dashboard.cashflow_sankey.zoom_out"),
-                aria: { label: t("pages.dashboard.cashflow_sankey.zoom_out") },
-                hidden: true,
-                data: {
-                  sankey_chart_target: "zoomOutButton",
-                  action: "sankey-chart#zoomOut"
-                }
-              ) %>
-            </div>
-            <div data-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
-          </div>
+          <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data %>
         </div>
       <% end %>
     <% end %>
