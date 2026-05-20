@@ -48,7 +48,8 @@ module AccountableResource
       @account.lock_saved_attributes!
     end
 
-    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+    redirect_to stored_return_to_or(account_path(@account), explicit_return_to: account_params[:return_to]),
+                notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
   def update
