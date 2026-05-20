@@ -22,7 +22,7 @@
               variant: :secondary,
               data: { turbo_frame: "_top", action: "DS--dialog#close" }
             ) %>
-            <%= f.submit t(".connect") %>
+            <%= render DS::Button.new(text: t(".connect"), type: :submit) %>
           </div>
         </div>
       <% end %>
