@@ -1,8 +1,5 @@
 class DS::Dialog < DesignSystemComponent
   renders_one :header, ->(title: nil, subtitle: nil, custom_header: false, **opts, &block) do
-    # Track whether we rendered the auto-title so the template only
-    # emits `aria-labelledby` when there's a real id to reference.
-    @has_auto_title = true if title.present?
     content_tag(:header, class: "px-4 flex flex-col gap-2", **opts) do
       title_div = content_tag(:div, class: "flex items-center justify-between gap-2") do
         # `id: title_id` lets the host `<dialog>` reference the title via
@@ -68,14 +65,7 @@ class DS::Dialog < DesignSystemComponent
     @scrollable = scrollable
     @heading_level = heading_level
     @title_id = "dialog-title-#{SecureRandom.hex(4)}"
-    @has_auto_title = false
     @opts = opts
-  end
-
-  # True only when the header slot was rendered with a non-blank `title:`,
-  # which is the only case where `title_id` resolves to an in-DOM element.
-  def has_auto_title?
-    @has_auto_title
   end
 
   def frame
