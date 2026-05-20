@@ -1,0 +1,21 @@
+---
+ca:
+  pdf_import_mailer:
+    next_steps:
+      document_stored_note: Aquest document s'ha desat per a la teva referència. Es
+        pot fer servir per donar context en futures converses amb la IA.
+      document_type_label: Tipus de document
+      footer_note: Aquest és un missatge automàtic. No responguis directament a aquest
+        correu electrònic.
+      greeting: Hola %{name},
+      intro: Hem acabat d'analitzar el document PDF que has pujat a %{product}.
+      next_steps_intro: 'Tens diverses opcions:'
+      next_steps_label: Què cal fer ara?
+      option_delete: Elimina aquesta importació si ja no la necessites
+      option_extract_transactions: Extreu transaccions d'aquest extracte
+      option_keep_reference: Mantén aquest document com a referència per a futures
+        converses amb la IA
+      summary_label: Resum d'IA
+      transactions_note: Sembla que aquest document conté transaccions. Ara pots extreure-les
+        i revisar-les.
+      view_import_button: Mira els detalls de la importació
