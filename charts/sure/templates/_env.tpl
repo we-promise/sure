@@ -49,7 +49,7 @@ The helper always injects:
 {{- end }}
 {{- if $includeDatabase }}
 {{- $railsExtraEnv := (default (dict) $ctx.Values.rails.extraEnv) -}}
-{{- $explicitDb := (index $railsExtraEnv "DATABASE_URL") -}}
+{{- $explicitDb := hasKey $railsExtraEnv "DATABASE_URL" -}}
 {{- $dburl := include "sure.databaseUrl" $ctx -}}
 {{- if and $dburl (not $explicitDb) }}
 - name: DB_PASSWORD
@@ -63,7 +63,7 @@ The helper always injects:
 {{- end }}
 {{- if $includeRedis }}
 {{- $railsExtraEnv := (default (dict) $ctx.Values.rails.extraEnv) -}}
-{{- $explicitRedis := (index $railsExtraEnv "REDIS_URL") -}}
+{{- $explicitRedis := hasKey $railsExtraEnv "REDIS_URL" -}}
 {{- $redis := include "sure.redisUrl" $ctx -}}
 {{- if and $redis (not $explicitRedis) }}
 - name: REDIS_PASSWORD
