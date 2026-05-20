@@ -96,7 +96,7 @@ class IncomeStatement
       CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
     end
 
-    NetCategoryTotals.new(
+    @net_category_totals_by_period[period_cache_key(period)] = NetCategoryTotals.new(
       net_expense_categories: net_expense_categories,
       net_income_categories: net_income_categories,
       total_net_expense: total_net_expense,
