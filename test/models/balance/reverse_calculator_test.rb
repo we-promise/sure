@@ -2,6 +2,7 @@ require "test_helper"
 
 class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
   include LedgerTestingHelper
+  include BalanceTestHelper
 
   # When syncing backwards, we start with the account balance and generate everything from there.
   test "when missing anchor and no entries, falls back to cached account balance" do
