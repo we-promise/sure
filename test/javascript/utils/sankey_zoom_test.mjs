@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   sankeyNodeHasChildren,
   zoomSankeyData,
-} from "../../../app/javascript/utils/sankey_zoom.js";
+} from "../../../app/javascript/utils/sankey_zoom.mjs";
 
 test("zooms an expense category to the clicked root and descendants", () => {
   const data = {
