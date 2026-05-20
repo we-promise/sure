@@ -197,7 +197,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     Api::V1::AuthController.any_instance.stubs(:invite_code_required?).returns(true)
 
     assert_difference("User.count", 1) do
-      assert_difference("InviteCode.count", -1) do
+      assert_no_difference("InviteCode.count") do
         post "/api/v1/auth/signup", params: {
           user: {
             email: "newuser@example.com",
@@ -212,6 +212,32 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :created
+    invite_code.reload
+    assert_equal 1, invite_code.signup_attempts_count
+    assert_equal 1, invite_code.successful_signups_count
+  end
+
+  test "should track invite-code attempts even when signup validation fails" do
+    invite_code = InviteCode.create!
+    Api::V1::AuthController.any_instance.stubs(:invite_code_required?).returns(true)
+
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/signup", params: {
+        user: {
+          email: "newuser@example.com",
+          password: "weak",
+          first_name: "New",
+          last_name: "User"
+        },
+        device: @device_info,
+        invite_code: invite_code.token
+      }
+    end
+
+    assert_response :unprocessable_entity
+    invite_code.reload
+    assert_equal 1, invite_code.signup_attempts_count
+    assert_equal 0, invite_code.successful_signups_count
   end
 
   test "should reject invalid invite code" do

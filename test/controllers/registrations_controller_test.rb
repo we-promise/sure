@@ -65,7 +65,10 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
           password: "Password1!",
           invite_code: invite_code } }
         assert_redirected_to root_url
-        assert_not InviteCode.exists?(token: invite_code)
+        code = InviteCode.find_by_token(invite_code)
+        assert code.present?
+        assert_equal 1, code.signup_attempts_count
+        assert_equal 1, code.successful_signups_count
       end
     end
   end
@@ -82,7 +85,10 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_response :unprocessable_entity
-      assert InviteCode.exists?(token: invite_code)
+      code = InviteCode.find_by_token(invite_code)
+      assert code.present?
+      assert_equal 1, code.signup_attempts_count
+      assert_equal 0, code.successful_signups_count
     end
   end
 

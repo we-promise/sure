@@ -146,7 +146,7 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   # INVITE CODE MODEL TESTS
   # ============================================================================
 
-  test "invite code token is encrypted and claim works" do
+  test "invite code token is encrypted and reusable after claim" do
     token = InviteCode.generate!
     assert token.present?
 
@@ -154,9 +154,9 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     result = InviteCode.claim!(token)
     assert result
 
-    # Should not be able to claim again (destroyed)
+    # Should still be able to claim again because invite codes no longer expire
     result2 = InviteCode.claim!(token)
-    assert_nil result2
+    assert result2
   end
 
   test "invite code case-insensitive lookup works" do

@@ -18,11 +18,15 @@ module Api
           return
         end
 
+        invite_code = InviteCode.find_by_token(params[:invite_code]) if params[:invite_code].present?
+
         # Validate invite code if provided
-        if params[:invite_code].present? && !InviteCode.exists?(token: params[:invite_code]&.downcase)
+        if params[:invite_code].present? && invite_code.blank?
           render json: { error: "Invalid invite code" }, status: :forbidden
           return
         end
+
+        invite_code&.record_signup_attempt!
 
         # Validate password
         password_errors = validate_password(params[:user][:password])
@@ -56,7 +60,7 @@ module Api
               render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
               raise ActiveRecord::Rollback
             end
-            InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
+            invite_code&.record_successful_signup!
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           end

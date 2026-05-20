@@ -6,6 +6,7 @@ class RegistrationsController < ApplicationController
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
+  before_action :prepare_invite_code, only: :create
   before_action :validate_password_requirements, only: :create
 
   def new
@@ -28,7 +29,7 @@ class RegistrationsController < ApplicationController
       @user.role = User.role_for_new_family_creator
     end
 
-    if signup_with_invite_claim!
+    if signup_with_invite_tracking!
       redirect_to root_path, notice: t(".success")
     elsif @invite_code_invalid
       redirect_to new_registration_path, alert: t("registrations.create.invalid_invite_code")
@@ -54,10 +55,7 @@ class RegistrationsController < ApplicationController
       specific_param ? params[specific_param] : params
     end
 
-    # Keep save+claim atomic so failed signups never burn valid invite codes.
-    def signup_with_invite_claim!
-      invite_code = user_params[:invite_code]
-      @invite_code_invalid = invite_code_required? && invite_code.blank?
+    def signup_with_invite_tracking!
       return false if @invite_code_invalid
 
       success = false
@@ -67,11 +65,7 @@ class RegistrationsController < ApplicationController
           raise ActiveRecord::Rollback
         end
 
-        if invite_code_required? && !InviteCode.claim!(invite_code)
-          @invite_code_invalid = true
-          raise ActiveRecord::Rollback
-        end
-
+        @invite_code&.record_successful_signup!
         @invitation&.update!(accepted_at: Time.current)
         @session = create_session_for(@user)
         success = true
@@ -103,6 +97,16 @@ class RegistrationsController < ApplicationController
       if @user.errors.present?
         render :new, status: :unprocessable_entity
       end
+    end
+
+    def prepare_invite_code
+      invite_code = user_params[:invite_code]
+      @invite_code_invalid = invite_code_required? && invite_code.blank?
+      return if invite_code.blank?
+
+      @invite_code = InviteCode.find_by_token(invite_code)
+      @invite_code_invalid ||= @invite_code.nil?
+      @invite_code&.record_signup_attempt!
     end
 
     def ensure_signup_open
