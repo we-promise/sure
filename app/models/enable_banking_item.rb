@@ -1,5 +1,5 @@
 class EnableBankingItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -166,27 +166,6 @@ class EnableBankingItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "EnableBankingItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
-
   def upsert_enable_banking_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -287,6 +266,10 @@ class EnableBankingItem < ApplicationRecord
   end
 
   private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 
     def parse_session_expiry(session_result)
       if session_result[:access].present? && session_result[:access][:valid_until].present?

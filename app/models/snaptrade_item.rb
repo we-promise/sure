@@ -1,5 +1,5 @@
 class SnaptradeItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -87,27 +87,6 @@ class SnaptradeItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    linked_accounts = accounts.reject { |a| a.pending_deletion? || a.disabled? }
-    return [] if linked_accounts.empty?
-
-    results = []
-    linked_accounts.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "SnaptradeItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
 
   def upsert_snaptrade_snapshot!(accounts_snapshot)
     assign_attributes(
@@ -218,4 +197,14 @@ class SnaptradeItem < ApplicationRecord
       I18n.t("snaptrade_item.brokerage_summary.count", count: brokerages.count)
     end
   end
+
+  private
+
+    def balance_sync_accounts
+      accounts.reject { |a| a.pending_deletion? || a.disabled? }
+    end
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

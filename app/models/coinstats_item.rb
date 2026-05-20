@@ -1,7 +1,7 @@
 # Represents a CoinStats API connection for a family.
 # Stores credentials and manages associated wallet and exchange portfolio accounts.
 class CoinstatsItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -77,27 +77,6 @@ class CoinstatsItem < ApplicationRecord
   # @param window_start_date [Date, nil] Start of sync window
   # @param window_end_date [Date, nil] End of sync window
   # @return [Array<Hash>] Results with success status per account
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "CoinstatsItem #{id} - Failed to schedule sync for wallet #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
-
   # Persists raw API response for debugging and reprocessing.
   # @param accounts_snapshot [Hash] Raw API response data
   def upsert_coinstats_snapshot!(accounts_snapshot)
@@ -153,4 +132,10 @@ class CoinstatsItem < ApplicationRecord
   def exchange_configured?
     exchange_portfolio_id.present? && exchange_connection_id.present?
   end
+
+  private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

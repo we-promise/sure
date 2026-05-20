@@ -626,4 +626,45 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
       ]
     )
   end
+
+  test "incremental reverse sync only recalculates from window_start_date when prior balance exists" do
+    window_start = 2.days.ago.to_date
+
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "opening_anchor", date: 10.days.ago, balance: 15000 }
+      ]
+    )
+
+    create_balance(
+      account: account,
+      date: window_start - 1,
+      balance: 18000,
+      cash_balance: 18000
+    )
+
+    calculator = Balance::ReverseCalculator.new(account, window_start_date: window_start)
+    calculated = calculator.calculate
+
+    assert calculator.incremental?
+    assert_equal (Date.current.downto(window_start).to_a), calculated.map(&:date)
+  end
+
+  test "incremental reverse sync falls back to full recalculation without prior balance" do
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "opening_anchor", date: 5.days.ago, balance: 15000 }
+      ]
+    )
+
+    calculator = Balance::ReverseCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    calculated = calculator.calculate
+
+    assert_not calculator.incremental?
+    assert_equal (Date.current.downto(account.opening_anchor_date).to_a), calculated.map(&:date)
+  end
 end

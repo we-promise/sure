@@ -1,5 +1,5 @@
 class BrexItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, Account::SchedulesBalanceSyncs
 
   BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
 
@@ -69,27 +69,6 @@ class BrexItem < ApplicationRecord
       rescue => e
         Rails.logger.error "BrexItem #{id} - Failed to process account #{brex_account.id}: #{e.message}"
         results << { brex_account_id: brex_account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
-
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "BrexItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
       end
     end
 
@@ -168,6 +147,11 @@ class BrexItem < ApplicationRecord
   end
 
   private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
+
     def normalize_token
       self.token = token&.strip
     end

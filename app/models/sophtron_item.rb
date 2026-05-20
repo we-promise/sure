@@ -12,7 +12,7 @@
 # @attr [Boolean] scheduled_for_deletion Whether the item is scheduled for deletion
 # @attr [DateTime] last_synced_at When the last successful sync occurred
 class SophtronItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Account::SchedulesBalanceSyncs
 
   INITIAL_LOAD_LOOKBACK_DAYS = 120
   MAX_TRANSACTION_HISTORY_YEARS = 3
@@ -148,28 +148,16 @@ class SophtronItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, sophtron_accounts_scope: linked_visible_sophtron_accounts)
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, import_window_start_date: nil, sophtron_accounts_scope: linked_visible_sophtron_accounts)
     linked_accounts = sophtron_accounts_scope.includes(:account_provider).filter_map(&:current_account)
-    return [] if linked_accounts.empty?
-
-    results = []
-    # Only schedule syncs for active accounts
-    linked_accounts.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "SophtronItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-        # Continue scheduling other accounts even if one fails
-      end
-    end
-
-    results
+    schedule_account_syncs_for(
+      linked_accounts,
+      parent_sync: parent_sync,
+      window_start_date: window_start_date,
+      window_end_date: window_end_date,
+      import_window_start_date: import_window_start_date,
+      report_results: true
+    )
   end
 
   def start_initial_load_later
@@ -389,6 +377,10 @@ class SophtronItem < ApplicationRecord
   end
 
   private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 
     def find_matching_customer(customers)
       customers = Array(customers)

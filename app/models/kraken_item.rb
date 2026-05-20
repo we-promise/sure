@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class KrakenItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -59,22 +59,6 @@ class KrakenItem < ApplicationRecord
     end
 
     results
-  end
-
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    accounts.visible.map do |account|
-      account.sync_later(
-        parent_sync: parent_sync,
-        window_start_date: window_start_date,
-        window_end_date: window_end_date
-      )
-      { account_id: account.id, success: true }
-    rescue StandardError => e
-      Rails.logger.error "KrakenItem #{id} - Failed to schedule sync for account #{account.id}: #{e.full_message}"
-      { account_id: account.id, success: false, error: e.message }
-    end
   end
 
   def upsert_kraken_snapshot!(payload)
@@ -145,6 +129,10 @@ class KrakenItem < ApplicationRecord
   end
 
   private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 
     def strip_credentials
       self.api_key = api_key.to_s.strip if api_key_changed? && !api_key.nil?

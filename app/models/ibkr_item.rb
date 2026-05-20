@@ -1,5 +1,5 @@
 class IbkrItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -60,22 +60,6 @@ class IbkrItem < ApplicationRecord
     end
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.reject { |account| account.pending_deletion? || account.disabled? }.each_with_object([]) do |account, results|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error("IbkrItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}")
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-  end
-
   def upsert_ibkr_snapshot!(payload)
     update!(raw_payload: payload, status: :good)
   end
@@ -121,4 +105,14 @@ class IbkrItem < ApplicationRecord
   def institution_display_name
     I18n.t("ibkr_items.defaults.name")
   end
+
+  private
+
+    def balance_sync_accounts
+      accounts.reject { |account| account.pending_deletion? || account.disabled? }
+    end
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

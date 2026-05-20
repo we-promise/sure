@@ -1,5 +1,5 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, Account::SchedulesBalanceSyncs
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -71,17 +71,6 @@ class PlaidItem < ApplicationRecord
   def process_accounts
     plaid_accounts.each do |plaid_account|
       PlaidAccount::Processor.new(plaid_account).process
-    end
-  end
-
-  # Once all the data is fetched, we can schedule account syncs to calculate historical balances
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.each do |account|
-      account.sync_later(
-        parent_sync: parent_sync,
-        window_start_date: window_start_date,
-        window_end_date: window_end_date
-      )
     end
   end
 

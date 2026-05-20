@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class IndexaCapitalItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -81,26 +81,6 @@ class IndexaCapitalItem < ApplicationRecord
   end
 
   # Schedule sync jobs for all linked accounts
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "IndexaCapitalItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
 
   def upsert_indexa_capital_snapshot!(accounts_snapshot)
     assign_attributes(
@@ -177,5 +157,9 @@ class IndexaCapitalItem < ApplicationRecord
       return if credentials_configured?
 
       errors.add(:base, :credentials_required)
+    end
+
+    def schedule_account_syncs_report_results?
+      true
     end
 end
