@@ -31,21 +31,21 @@ module ImportsHelper
 
   def dry_run_resource(key)
     map = {
-      transactions: DryRunResource.new(label: t("imports.dry_run_resources.transactions"), icon: "credit-card", text_class: "text-cyan-500", bg_class: "bg-cyan-500/5"),
+      transactions: DryRunResource.new(label: t("imports.dry_run_resources.transactions"), icon: "credit-card", text_class: "text-info", bg_class: "bg-info/10"),
       balances: DryRunResource.new(label: t("imports.dry_run_resources.balances"), icon: "line-chart", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      accounts: DryRunResource.new(label: t("imports.dry_run_resources.accounts"), icon: "layers", text_class: "text-orange-500", bg_class: "bg-orange-500/5"),
-      categories: DryRunResource.new(label: t("imports.dry_run_resources.categories"), icon: "shapes", text_class: "text-blue-500", bg_class: "bg-blue-500/5"),
-      tags: DryRunResource.new(label: t("imports.dry_run_resources.tags"), icon: "tags", text_class: "text-violet-500", bg_class: "bg-violet-500/5"),
-      rules: DryRunResource.new(label: t("imports.dry_run_resources.rules"), icon: "workflow", text_class: "text-green-500", bg_class: "bg-green-500/5"),
-      merchants: DryRunResource.new(label: t("imports.dry_run_resources.merchants"), icon: "store", text_class: "text-amber-500", bg_class: "bg-amber-500/5"),
+      accounts: DryRunResource.new(label: t("imports.dry_run_resources.accounts"), icon: "layers", text_class: "text-warning", bg_class: "bg-warning/10"),
+      categories: DryRunResource.new(label: t("imports.dry_run_resources.categories"), icon: "shapes", text_class: "text-info", bg_class: "bg-info/10"),
+      tags: DryRunResource.new(label: t("imports.dry_run_resources.tags"), icon: "tags", text_class: "text-info", bg_class: "bg-info/10"),
+      rules: DryRunResource.new(label: t("imports.dry_run_resources.rules"), icon: "workflow", text_class: "text-success", bg_class: "bg-success/10"),
+      merchants: DryRunResource.new(label: t("imports.dry_run_resources.merchants"), icon: "store", text_class: "text-warning", bg_class: "bg-warning/10"),
       recurring_transactions: DryRunResource.new(label: t("imports.dry_run_resources.recurring_transactions"), icon: "repeat-2", text_class: "text-secondary", bg_class: "bg-container-inset"),
       transfers: DryRunResource.new(label: t("imports.dry_run_resources.transfers"), icon: "repeat", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      rejected_transfers: DryRunResource.new(label: t("imports.dry_run_resources.rejected_transfers"), icon: "ban", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      trades: DryRunResource.new(label: t("imports.dry_run_resources.trades"), icon: "arrow-left-right", text_class: "text-emerald-500", bg_class: "bg-emerald-500/5"),
+      rejected_transfers: DryRunResource.new(label: t("imports.dry_run_resources.rejected_transfers"), icon: "ban", text_class: "text-destructive", bg_class: "bg-destructive/10"),
+      trades: DryRunResource.new(label: t("imports.dry_run_resources.trades"), icon: "arrow-left-right", text_class: "text-success", bg_class: "bg-success/10"),
       holdings: DryRunResource.new(label: t("imports.dry_run_resources.holdings"), icon: "briefcase-business", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      valuations: DryRunResource.new(label: t("imports.dry_run_resources.valuations"), icon: "trending-up", text_class: "text-pink-500", bg_class: "bg-pink-500/5"),
-      budgets: DryRunResource.new(label: t("imports.dry_run_resources.budgets"), icon: "wallet", text_class: "text-indigo-500", bg_class: "bg-indigo-500/5"),
-      budget_categories: DryRunResource.new(label: t("imports.dry_run_resources.budget_categories"), icon: "pie-chart", text_class: "text-teal-500", bg_class: "bg-teal-500/5")
+      valuations: DryRunResource.new(label: t("imports.dry_run_resources.valuations"), icon: "trending-up", text_class: "text-info", bg_class: "bg-info/10"),
+      budgets: DryRunResource.new(label: t("imports.dry_run_resources.budgets"), icon: "wallet", text_class: "text-info", bg_class: "bg-info/10"),
+      budget_categories: DryRunResource.new(label: t("imports.dry_run_resources.budget_categories"), icon: "pie-chart", text_class: "text-success", bg_class: "bg-success/10")
     }
 
     map[key]

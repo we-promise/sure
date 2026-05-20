@@ -2,7 +2,7 @@
 
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-sm">
-    <div class="mx-auto bg-green-500/5 h-8 w-8 rounded-full flex items-center justify-center">
+    <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
       <%= icon "check", color: "success" %>
     </div>
 
@@ -23,11 +23,11 @@
         <div class="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p class="text-xs text-secondary"><%= t(".verification.checked") %></p>
-            <p class="font-medium text-primary"><%= verification.checked_total %></p>
+            <p class="font-medium text-primary"><%= number_with_delimiter(verification.checked_total) %></p>
           </div>
           <div>
             <p class="text-xs text-secondary"><%= t(".verification.mismatches") %></p>
-            <p class="font-medium text-primary"><%= verification.mismatches_count %></p>
+            <p class="font-medium text-primary"><%= number_with_delimiter(verification.mismatches_count) %></p>
           </div>
         </div>
 
@@ -36,7 +36,7 @@
             <% verification.mismatches_preview.each do |key, counts| %>
               <div class="flex items-center justify-between gap-3 text-xs">
                 <span class="text-secondary"><%= key.humanize %></span>
-                <span class="font-medium text-primary"><%= counts["actual"] %> / <%= counts["expected"] %></span>
+                <span class="font-medium text-primary"><%= number_with_delimiter(counts["actual"]) %> / <%= number_with_delimiter(counts["expected"]) %></span>
               </div>
             <% end %>
           </div>

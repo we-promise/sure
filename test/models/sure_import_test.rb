@@ -354,11 +354,13 @@ class SureImportTest < ActiveSupport::TestCase
     original_error = StandardError.new("original import failure")
     logged_messages = []
 
-    Rails.logger.stub(:warn, ->(message) { logged_messages << message }) do
-      @import.stub(:update_columns, ->(*) { raise StandardError, "verification write failed" }) do
-        @import.send(:record_failed_readback_verification!, before_counts:, error: original_error)
-      end
+    Rails.logger.stubs(:warn).with do |message|
+      logged_messages << message unless logged_messages.include?(message)
+      true
     end
+    @import.stubs(:update_columns).raises(StandardError, "verification write failed")
+
+    @import.send(:record_failed_readback_verification!, before_counts:, error: original_error)
 
     assert_match(/Failed to record Sure import readback verification/, logged_messages.first)
     assert_match(/verification write failed/, logged_messages.first)
