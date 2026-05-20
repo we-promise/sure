@@ -9,7 +9,7 @@
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-white: #ffffff;
   --color-black: #0B0B0B;
-  --color-success: var(--color-green-600);
+  --color-success: var(--color-green-700);
   --color-warning: var(--color-yellow-600);
   --color-destructive: var(--color-red-600);
   --color-info: var(--color-blue-600);
@@ -197,7 +197,7 @@
 
 @layer base {
   [data-theme="dark"] {
-    --color-success: var(--color-green-500);
+    --color-success: var(--color-green-400);
     --color-warning: var(--color-yellow-400);
     --color-destructive: var(--color-red-400);
     --color-info: var(--color-blue-500);
