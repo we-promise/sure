@@ -112,6 +112,20 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+      actual_import:
+        preconfigured_notice: We have pre-configured your Actual Budget import for you. Please proceed to the next step.
+        leave_empty: Leave empty
+        date_label: Date
+        date_format_label: Date format
+        amount_label: Amount
+        signage_convention_label: Signage convention
+        incomes_are_negative: Incomes are negative
+        incomes_are_positive: Incomes are positive
+        account_label: Account (optional)
+        name_label: Payee (optional)
+        category_label: Category (optional)
+        notes_label: Notes (optional)
+        apply_configuration: Apply configuration
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.
@@ -203,6 +217,22 @@ en:
       account: "Account"
       category: "Category"
       tag: "Tag"
+    dry_run_resources:
+      transactions: "Transactions"
+      balances: "Balances"
+      accounts: "Accounts"
+      categories: "Categories"
+      tags: "Tags"
+      rules: "Rules"
+      merchants: "Merchants"
+      recurring_transactions: "Recurring Transactions"
+      transfers: "Transfers"
+      rejected_transfers: "Rejected Transfers"
+      trades: "Trades"
+      holdings: "Holdings"
+      valuations: "Valuations"
+      budgets: "Budgets"
+      budget_categories: "Budget Categories"
     column_labels:
       date: "Date"
       amount: "Amount"
@@ -241,6 +271,16 @@ en:
       title: Import successful
       description: Your imported data has been successfully added to the app and is now ready for use.
       back_to_dashboard: Back to dashboard
+      verification:
+        title: Readback verification
+        checked: Checked
+        mismatches: Mismatches
+        status:
+          not_verified: Not verified
+          matched: Matched
+          mismatch: Mismatch
+          failed: Failed
+          reverted: Reverted
     importing:
       title: Import in progress
       description: "Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app."
@@ -261,6 +301,7 @@ en:
       trade_import: "Trade import"
       account_import: "Account import"
       mint_import: "Mint import"
+      actual_import: "Actual import"
       qif_import: "QIF import"
       category_import: "Category import"
       rule_import: "Rule import"
@@ -293,6 +334,7 @@ en:
           trade_import: "Trade"
           account_import: "Account"
           mint_import: "Mint"
+          actual_import: "Actual"
           qif_import: "QIF"
           category_import: "Category"
           rule_import: "Rule"
@@ -321,6 +363,7 @@ en:
       import_accounts: Import accounts
       import_categories: Import categories
       import_mint: Import from Mint
+      import_actual: Import from Actual Budget
       import_portfolio: Import investments
       import_rules: Import rules
       import_transactions: Import transactions

@@ -17,8 +17,8 @@
       </div>
     </div>
 
-    <%= render DS::Menu.new(variant: "button", no_padding: true) do |menu| %>
-      <% menu.with_button(
+    <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
+      <% popover.with_button(
         id: "transaction-filters-button",
         type: "button",
         text: t(".filter"),
@@ -26,7 +26,7 @@
         icon: "list-filter"
       ) %>
 
-      <% menu.with_custom_content do %>
+      <% popover.with_custom_content do %>
         <%= render "transactions/searches/menu", form: form %>
       <% end %>
     <% end %>

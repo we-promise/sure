@@ -152,7 +152,7 @@ end %>
             <% if content_for?(:breadcrumbs) %>
               <%= yield :breadcrumbs %>
             <% else %>
-              <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
+              <%= render "layouts/shared/breadcrumbs", breadcrumbs: breadcrumbs %>
             <% end %>
           </div>
 

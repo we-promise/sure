@@ -10,9 +10,16 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport QifImport SureImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport PdfImport QifImport SureImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
+
+  def self.separator_options
+    [
+      [ I18n.t("activerecord.attributes.import.col_seps.comma"), "," ],
+      [ I18n.t("activerecord.attributes.import.col_seps.semicolon"), ";" ]
+    ]
+  end
 
   NUMBER_FORMATS = {
     "1,234.56" => { separator: ".", delimiter: "," },  # US/UK/Asia

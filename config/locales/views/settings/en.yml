@@ -6,6 +6,42 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Debug event log"
+        subtitle: "Meaningful operational events for super admins. Newest first."
+        empty: "No debug events found."
+        missing_value: "-"
+        filters:
+          all: "All"
+          category: "Category"
+          level: "Level"
+          source: "Source"
+          provider: "Provider"
+          start_date: "From"
+          end_date: "To"
+          family_id: "Family ID"
+          account_id: "Account ID"
+          user_id: "User ID"
+          account_provider_id: "Account provider ID"
+          submit: "Filter"
+          reset: "Reset"
+        table:
+          time: "Time"
+          level: "Level"
+          category: "Category"
+          source: "Source"
+          message: "Message"
+          context: "Context"
+          metadata: "Metadata"
+          view_metadata: "View"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
     llm_usages:
       show:
         page_title: "LLM Usage & Costs"
@@ -95,6 +131,7 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        translations_notice: Please note, we are still working on translations for various languages.
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
@@ -117,6 +154,9 @@ en:
         sharing_default_label: Default sharing for new accounts
         sharing_shared: Share with all members
         sharing_private: Keep private by default
+        preview:
+          title: Enable preview features
+          description: Opt in to in-progress features tagged preview or canary.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -219,6 +259,7 @@ en:
       api_keys_label: API Key
       appearance_label: Appearance
       bank_sync_label: Bank sync
+      debug_label: Debug
     settings_nav_link_large:
       next: Next
       previous: Back
@@ -301,6 +342,8 @@ en:
       encryption_error:
         title: Encryption keys missing
         message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
+      provider_form:
+        save_and_connect: "Save and connect"
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
