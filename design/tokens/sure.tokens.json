@@ -18,7 +18,7 @@
     "white": { "$value": "#ffffff", "$type": "color" },
     "black": { "$value": "#0B0B0B", "$type": "color" },
 
-    "success":     { "$value": "{color.green.600}",  "$type": "color", "$extensions": { "sure.dark": "{color.green.500}" } },
+    "success":     { "$value": "{color.green.700}",  "$type": "color", "$extensions": { "sure.dark": "{color.green.400}" } },
     "warning":     { "$value": "{color.yellow.600}", "$type": "color", "$extensions": { "sure.dark": "{color.yellow.400}" } },
     "destructive": { "$value": "{color.red.600}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
     "info":        { "$value": "{color.blue.600}",   "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
