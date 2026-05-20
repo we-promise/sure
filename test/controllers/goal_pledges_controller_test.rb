@@ -2,11 +2,22 @@ require "test_helper"
 
 class GoalPledgesControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in users(:family_admin)
+    @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in @user
     @goal = goals(:vacation_italy)
     @account = accounts(:depository)
     @pledge = goal_pledges(:open_transfer)
     ensure_tailwind_build
+  end
+
+  test "redirects users without preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    get new_goal_pledge_url(@goal), headers: { "Turbo-Frame" => "modal" }
+
+    assert_redirected_to root_path
+    assert_match(/preview/i, flash[:alert])
   end
 
   test "new renders the pledge form inside a turbo frame" do

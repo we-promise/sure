@@ -1,4 +1,5 @@
 class GoalsController < ApplicationController
+  before_action :require_preview_features!
   before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
@@ -19,9 +20,10 @@ class GoalsController < ApplicationController
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
     @completed_goals = all_goals.select { |g| g.state == "completed" }.sort_by { |g| g.name.downcase }
     @archived_goals = all_goals.select { |g| g.state == "archived" }
-    # Completed goals join the chip-filterable grid below the active ones so
-    # the `completed` chip can isolate them. Archived stays in the separate
-    # collapsed-by-default section below.
+    # Completed goals join the chip-filterable grid below the active ones
+    # so the `completed` chip can isolate them. Archived stays in a
+    # separate collapsed-by-default section, opted out of the filter
+    # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
     @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
@@ -194,8 +196,9 @@ class GoalsController < ApplicationController
       currency = family.primary_currency_code
       today = Date.current
 
-      velocity_30d = family.savings_inflow_velocity(range: (today - 30)..today)
-      velocity_prior_30d = family.savings_inflow_velocity(range: (today - 60)..(today - 31))
+      windows = family.savings_inflow_windows(window_days: 30, now: today)
+      velocity_30d = windows[:current]
+      velocity_prior_30d = windows[:prior]
       delta_amount = velocity_30d - velocity_prior_30d
       delta_percent = velocity_prior_30d.zero? ? nil : ((delta_amount / velocity_prior_30d.abs) * 100).round(1)
 
@@ -219,6 +222,20 @@ class GoalsController < ApplicationController
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
 
+      # Denominator of the "Goals on track" tile. A goal only belongs in
+      # the fraction if there is a benchmark to compare against:
+      # - reached  → target already hit, no longer tracked toward pace
+      # - paused   → user stopped the pace clock on purpose
+      # - no_target_date → open-ended saving (emergency fund, sabbatical
+      #   fund, etc.) has no required monthly pace, so "on track" is
+      #   undefined. Counting it would penalise the user for having
+      #   open-ended goals — they'd never improve the ratio.
+      # When this hits zero the tile swaps to a celebration / empty
+      # state in the view.
+      tracked_total = active_goals.count do |g|
+        !g.paused? && g.status != :reached && g.status != :no_target_date
+      end
+
       {
         currency: currency,
         velocity_30d_money: Money.new(velocity_30d.abs, currency),
@@ -232,6 +249,7 @@ class GoalsController < ApplicationController
         behind_count: behind,
         no_date_count: no_date,
         paused_count: paused,
+        tracked_total: tracked_total,
         active_total: active_goals.size
       }
     end

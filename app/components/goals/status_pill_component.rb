@@ -1,19 +1,17 @@
 class Goals::StatusPillComponent < ApplicationComponent
-  # Text colors here intentionally use palette steps (green/yellow/gray-700)
-  # instead of the `text-success` / `text-warning` / `text-secondary` tokens
-  # because the functional tokens drop below WCAG 1.4.3 4.5:1 on tinted
-  # surfaces in light mode (~2.88:1 / 3.0:1 / 4.16:1). Each variant carries
-  # a theme-dark: override so the dark-700 text doesn't disappear against
-  # the dark-mode tinted surface. Local override only; revert once
-  # we-promise/sure#1736 lands token-level fixes.
+  # Maps the goal's display_status to the DS::Pill primitive's tone +
+  # glyph. Outline style is used so the pill keeps its colored border on
+  # any card background (resting bg-container, hover bg-surface-hover);
+  # the filled / soft variants blended into the hover state and lost
+  # contrast on cards.
   VARIANTS = {
-    on_track: { classes: "bg-green-500/10 text-green-700 theme-dark:text-green-300", icon: "circle-check" },
-    behind: { classes: "bg-surface-inset text-yellow-700 theme-dark:text-yellow-300", icon: "triangle-alert" },
-    reached: { classes: "bg-green-500/10 text-green-700 theme-dark:text-green-300", icon: "star" },
-    completed: { classes: "bg-green-500/10 text-green-700 theme-dark:text-green-300", icon: "circle-check-big" },
-    no_target_date: { classes: "bg-surface-inset text-gray-700 theme-dark:text-gray-200", icon: "infinity" },
-    paused: { classes: "bg-surface-inset text-gray-700 theme-dark:text-gray-200", icon: "pause" },
-    archived: { classes: "bg-surface-inset text-gray-700 theme-dark:text-gray-200", icon: "archive" }
+    on_track:       { tone: :green, icon: "circle-check" },
+    behind:         { tone: :amber, icon: "triangle-alert" },
+    reached:        { tone: :green, icon: "star" },
+    completed:      { tone: :green, icon: "circle-check-big" },
+    no_target_date: { tone: :gray,  icon: "infinity" },
+    paused:         { tone: :gray,  icon: "pause" },
+    archived:       { tone: :gray,  icon: "archive" }
   }.freeze
 
   def initialize(goal:)
@@ -30,13 +28,5 @@ class Goals::StatusPillComponent < ApplicationComponent
 
   def label
     I18n.t("goals.status.#{status_key}", default: status_key.to_s.titleize)
-  end
-
-  def classes
-    variant[:classes]
-  end
-
-  def icon_name
-    variant[:icon]
   end
 end

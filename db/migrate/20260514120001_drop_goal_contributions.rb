@@ -6,7 +6,7 @@ class DropGoalContributions < ActiveRecord::Migration[7.2]
   def down
     create_table :goal_contributions, id: :uuid do |t|
       t.references :goal, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
-      t.references :account, null: false, foreign_key: { on_delete: :restrict }, type: :uuid
+      t.references :account, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
       t.decimal :amount, precision: 19, scale: 4, null: false
       t.string :currency, null: false
       t.string :source, default: "manual", null: false

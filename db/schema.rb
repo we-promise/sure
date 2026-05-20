@@ -91,9 +91,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
     t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
     t.check_constraint "period_start_on IS NULL OR period_end_on IS NULL OR period_start_on <= period_end_on", name: "chk_account_statements_period_order"
-    t.check_constraint "review_status::text = ANY (ARRAY['unmatched'::character varying, 'linked'::character varying, 'rejected'::character varying]::text[])", name: "chk_account_statements_review_status"
+    t.check_constraint "review_status::text = ANY (ARRAY['unmatched'::character varying::text, 'linked'::character varying::text, 'rejected'::character varying::text])", name: "chk_account_statements_review_status"
     t.check_constraint "source::text = 'manual_upload'::text", name: "chk_account_statements_source"
-    t.check_constraint "upload_status::text = ANY (ARRAY['stored'::character varying, 'failed'::character varying]::text[])", name: "chk_account_statements_upload_status"
+    t.check_constraint "upload_status::text = ANY (ARRAY['stored'::character varying::text, 'failed'::character varying::text])", name: "chk_account_statements_upload_status"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1971,7 +1971,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"
-  add_foreign_key "goal_accounts", "accounts", on_delete: :cascade
+  add_foreign_key "goal_accounts", "accounts", on_delete: :restrict
   add_foreign_key "goal_accounts", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "accounts", on_delete: :restrict
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade

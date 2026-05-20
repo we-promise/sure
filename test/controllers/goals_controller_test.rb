@@ -2,11 +2,22 @@ require "test_helper"
 
 class GoalsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in users(:family_admin)
+    @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in @user
     @goal = goals(:vacation_italy)
     @depository = accounts(:depository)
     @connected = accounts(:connected)
     ensure_tailwind_build
+  end
+
+  test "redirects users without preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    get goals_url
+
+    assert_redirected_to root_path
+    assert_match(/preview/i, flash[:alert])
   end
 
   test "index renders with active filter by default" do
@@ -149,6 +160,72 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       delete goal_url(@goal)
     end
     assert_redirected_to goals_path
+  end
+
+  test "index KPI swaps to 'All caught up' when every tracked goal is reached" do
+    family = users(:family_admin).family
+    family.goals.destroy_all
+    # Real reached state: target $1 against the depository fixture's
+    # $5000 balance. Stubbing :status hides whether the controller
+    # actually reads the right method on each goal.
+    build_goal(family, "Wedding", target_amount: 1, target_date: 1.year.from_now)
+
+    get goals_url
+    assert_response :success
+    assert_match(/All caught up/i, response.body)
+    assert_match(/1\s*reached/i, response.body)
+  end
+
+  test "index KPI 'on track' denominator excludes no-target-date goals" do
+    family = users(:family_admin).family
+    family.goals.destroy_all
+    # One trackable goal (has target_date) + one open-ended (no target_date).
+    # The trackable one should be the only thing in the denominator;
+    # open-ended goals can't be off pace because they have no required pace.
+    build_goal(family, "House", target_amount: 1_000_000, target_date: 1.year.from_now)
+    build_goal(family, "Emergency", target_amount: 1_000_000, target_date: nil)
+
+    get goals_url
+    assert_response :success
+    # Expect "0 of 1" — the open-ended goal stays out of the fraction
+    # even though it's active.
+    assert_match(/0\s*of\s*1/i, response.body)
+    assert_match(/without a deadline/i, response.body)
+  end
+
+  private
+    def build_goal(family, name, target_amount: 1_000_000, target_date: nil)
+      g = family.goals.new(name: name, target_amount: target_amount, target_date: target_date, currency: "USD")
+      g.goal_accounts.build(account: @depository)
+      g.save!
+      g
+    end
+
+  public
+
+  test "create ignores forbidden params (family_id, state)" do
+    family = users(:family_admin).family
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
+
+    assert_difference -> { family.goals.count }, 1 do
+      post goals_url, params: {
+        goal: {
+          name: "Hijack target",
+          target_amount: 100,
+          currency: "USD",
+          state: "archived",
+          family_id: other_family.id,
+          account_ids: [ @depository.id ]
+        }
+      }
+    end
+
+    goal = family.goals.order(:created_at).last
+    # Strong params must strip both `state` (AASM-managed) and `family_id`
+    # (cross-family pivot) — otherwise a crafted POST would create rows
+    # outside the current family or skip the active-state assumption.
+    assert_equal "active", goal.state
+    assert_equal family.id, goal.family_id
   end
 
   test "another family's goal returns 404" do

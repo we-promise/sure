@@ -5,6 +5,7 @@ class Goal < ApplicationRecord
   ICONS = Category.icon_codes
 
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
+  validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
   belongs_to :family
   has_many :goal_accounts, dependent: :destroy
@@ -35,6 +36,8 @@ class Goal < ApplicationRecord
   end
 
   aasm column: :state do
+    after_all_transitions :reset_state_dependent_caches!
+
     state :active, initial: true
     state :paused
     state :completed
@@ -202,7 +205,7 @@ class Goal < ApplicationRecord
       currency_symbol: Money.new(0, currency).currency.symbol,
       current_amount: current_balance.to_f,
       avg_monthly: pace.to_f,
-      required_monthly: monthly_target_amount.to_f,
+      required_monthly: monthly_target_amount&.to_f,
       currency: currency,
       status: status.to_s,
       projection_end_value: proj_end.to_f,
@@ -397,6 +400,16 @@ class Goal < ApplicationRecord
   end
 
   private
+    # Cleared after every AASM transition. The state column drives the
+    # display_status / projection_summary memos; without this the same
+    # instance keeps returning the pre-transition value if a controller
+    # calls archive! / pause! and then renders without reload.
+    def reset_state_dependent_caches!
+      %i[@display_status @projection_summary].each do |ivar|
+        remove_instance_variable(ivar) if instance_variable_defined?(ivar)
+      end
+    end
+
     # K/M shorthand for narrow chart annotations (axis ticks, projection
     # short-form, pending-pledge badge). Locale-aware currency symbol via
     # Money so the chart matches the rest of the app for EUR/GBP families.

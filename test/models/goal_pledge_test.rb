@@ -138,6 +138,27 @@ class GoalPledgeTest < ActiveSupport::TestCase
     assert_equal 0, pledge.days_left
   end
 
+  test "amount cannot be negative" do
+    @pledge.amount = -5
+    assert_not @pledge.valid?
+    assert_includes @pledge.errors[:amount], "must be greater than 0"
+  end
+
+  test "expire! is a no-op on an already-expired pledge" do
+    @pledge.expire!
+    expired_at = @pledge.updated_at
+    travel 1.second do
+      @pledge.expire!
+      assert_equal expired_at.to_i, @pledge.updated_at.to_i, "second expire! should not touch the row"
+    end
+    assert @pledge.status_expired?
+  end
+
+  test "cancel! raises on non-open pledge" do
+    pledge = goal_pledges(:matched_transfer)
+    assert_raises(GoalPledge::NotOpenError) { pledge.cancel! }
+  end
+
   private
     def build_entry(account:, amount:, date:)
       OpenStruct.new(account_id: account.id, amount: BigDecimal(amount.to_s), date: date.to_date)

@@ -32,6 +32,10 @@ export default class extends Controller {
     }
   }
 
+  disconnect() {
+    clearTimeout(this._urlSyncTimer);
+  }
+
   filter() {
     const query = this.hasInputTarget
       ? this.inputTarget.value.toLocaleLowerCase().trim()
@@ -60,7 +64,16 @@ export default class extends Controller {
     }
 
     this.updateEmptyState(visible, query, active);
-    this.#syncUrl();
+    this.#scheduleUrlSync();
+  }
+
+  // Debounced wrapper. Firing replaceState on every keystroke is wasteful
+  // and produced visible jank on slow CPUs; deferring 200 ms collapses a
+  // typing burst into a single URL update without losing back-button
+  // fidelity (replaceState doesn't create history entries anyway).
+  #scheduleUrlSync() {
+    clearTimeout(this._urlSyncTimer);
+    this._urlSyncTimer = setTimeout(() => this.#syncUrl(), 200);
   }
 
   #hydrateFromUrl() {

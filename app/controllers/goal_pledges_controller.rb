@@ -1,4 +1,5 @@
 class GoalPledgesController < ApplicationController
+  before_action :require_preview_features!
   before_action :set_goal
   before_action :set_pledge, only: %i[renew destroy]
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found

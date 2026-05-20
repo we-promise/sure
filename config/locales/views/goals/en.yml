@@ -1,6 +1,11 @@
 ---
 en:
   goals:
+    color_picker:
+      color_heading: Color
+      icon_heading: Icon
+      poor_contrast: Poor contrast, choose darker color or
+      auto_adjust: auto-adjust.
     index:
       title: Goals
       subtitle: Save toward what matters.
@@ -34,6 +39,7 @@ en:
             one: 1 paused
             other: "%{count} paused"
         on_track_sub_all_good: All active goals on pace
+        on_track_all_caught_up: All caught up
       goals_section:
         heading: Goals
         subtitle: Save toward what matters.
@@ -227,6 +233,10 @@ en:
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: Open
+      pending_pledge: Pending pledge
+      pending_count:
+        one: 1 pending
+        other: "%{count} pending"
       footer_no_pledges: No matched pledges yet
       footer_last_today: Last pledge matched today
       footer_last_days:

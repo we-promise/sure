@@ -23,7 +23,7 @@
            data-color-icon-picker-target="popup">
         <div class="flex gap-2 flex-col mb-3" data-color-icon-picker-target="selection">
           <div data-color-icon-picker-target="pickerSection"></div>
-          <h4 class="text-secondary text-xs uppercase tracking-wide">Color</h4>
+          <h4 class="text-secondary text-xs uppercase tracking-wide"><%= t("goals.color_picker.color_heading") %></h4>
           <div class="flex flex-wrap gap-2 items-center" data-color-icon-picker-target="colorsSection">
             <% colors.each do |c| %>
               <label class="relative">
@@ -43,14 +43,14 @@
               <%= icon "palette", size: "2xl", data: { action: "click->color-icon-picker#toggleSections" } %>
             </div>
             <div data-color-icon-picker-target="validationMessage" class="hidden self-start flex gap-1 items-center text-xs text-destructive">
-              <span>Poor contrast, choose darker color or</span>
-              <button type="button" class="underline cursor-pointer" data-action="color-icon-picker#autoAdjust">auto-adjust.</button>
+              <span><%= t("goals.color_picker.poor_contrast") %></span>
+              <button type="button" class="underline cursor-pointer" data-action="color-icon-picker#autoAdjust"><%= t("goals.color_picker.auto_adjust") %></button>
             </div>
           </div>
         </div>
 
         <div class="flex flex-col gap-2">
-          <h4 class="text-secondary text-xs uppercase tracking-wide">Icon</h4>
+          <h4 class="text-secondary text-xs uppercase tracking-wide"><%= t("goals.color_picker.icon_heading") %></h4>
           <div class="flex flex-wrap gap-0.5 max-h-40 overflow-y-auto scrollbar">
             <% icons.each do |icon_name| %>
               <label class="relative">

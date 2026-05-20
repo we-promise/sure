@@ -18,7 +18,7 @@
                else "info"
                end
 
-  label = I18n.t("goals.status.#{goal.status}", default: goal.status.to_s.titleize)
+  label = t("goals.status.#{goal.status}", default: goal.status.to_s.titleize)
 %>
 <div class="rounded-lg border px-3 py-2 text-sm flex items-center gap-2 <%= variant_classes %>">
   <span class="shrink-0"><%= icon(icon_glyph, size: "sm") %></span>

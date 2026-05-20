@@ -1,5 +1,5 @@
-<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-surface-hover transition-colors p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
-     data-goals-filter-target="card"
+<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-container-hover transition-colors p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
+     <% if filterable %> data-goals-filter-target="card"<% end %>
      data-goal-name="<%= goal.name %>"
      data-goal-status="<%= goal.display_status %>">
   <div class="flex items-start gap-3">
@@ -58,6 +58,8 @@
       <%= render Goals::AccountStackComponent.new(accounts: linked_accounts, color_map: goal.account_color_map) %>
       <span class="text-xs text-subdued"><%= linked_accounts_count_label %></span>
     </div>
-    <span class="text-xs text-subdued tabular-nums"><%= footer_line %></span>
+    <span class="text-xs text-subdued tabular-nums">
+      <%= footer_line %><% if has_pending_pledge? %> · <%= t("goals.goal_card.pending_count", count: pending_pledges_count) %><% end %>
+    </span>
   </div>
 </div>

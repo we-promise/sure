@@ -2,11 +2,12 @@ class Goals::CardComponent < ApplicationComponent
   RING_SIZE = 64
   RING_STROKE = 6
 
-  def initialize(goal:)
+  def initialize(goal:, filterable: true)
     @goal = goal
+    @filterable = filterable
   end
 
-  attr_reader :goal
+  attr_reader :goal, :filterable
 
   def progress_percent
     goal.progress_percent
@@ -23,6 +24,17 @@ class Goals::CardComponent < ApplicationComponent
 
   def linked_accounts
     @linked_accounts ||= goal.linked_accounts.to_a
+  end
+
+  # Open + unexpired pledges are preloaded on the index via the
+  # `.includes(:open_pledges, ...)` chain in GoalsController#index, so
+  # this is a hit on the in-memory association — no N+1.
+  def has_pending_pledge?
+    pending_pledges_count.positive?
+  end
+
+  def pending_pledges_count
+    @pending_pledges_count ||= goal.open_pledges.size
   end
 
   def linked_accounts_count_label
