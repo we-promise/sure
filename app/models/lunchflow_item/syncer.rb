@@ -81,19 +81,19 @@ class LunchflowItem::Syncer
 
       if accounts_failed.positive?
         errors << {
-          message: "Lunchflow import: #{accounts_failed} account(s) failed to update",
+          message: I18n.t("provider_warnings.lunchflow_accounts_failed", count: accounts_failed),
           category: "lunchflow_import"
         }
       end
       if transactions_failed.positive?
         errors << {
-          message: "Lunchflow import: transaction fetch failed for #{transactions_failed} account(s)",
+          message: I18n.t("provider_warnings.lunchflow_transactions_failed", count: transactions_failed),
           category: "lunchflow_import"
         }
       end
       if errors.empty? && import_result[:error].present?
         errors << {
-          message: "Lunchflow import: #{import_result[:error]}",
+          message: I18n.t("provider_warnings.lunchflow_import_error", error: import_result[:error]),
           category: "lunchflow_import"
         }
       end
