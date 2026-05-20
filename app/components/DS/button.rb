@@ -22,7 +22,6 @@ class DS::Button < DS::Buttonish
     def merged_opts
       merged_opts = opts.dup || {}
       extra_classes = merged_opts.delete(:class)
-      href = merged_opts.delete(:href)
       data = merged_opts.delete(:data) || {}
 
       if confirm.present?
@@ -31,6 +30,28 @@ class DS::Button < DS::Buttonish
 
       if frame.present?
         data = data.merge(turbo_frame: frame)
+      end
+
+      # `content_tag(:button, ...)` defaults to `type="submit"` per the HTML
+      # spec — meaning a DS::Button rendered inside a form will steal Enter-key
+      # submission from the first text input. Default to `type="button"` so
+      # callers must opt into submit behavior explicitly. `button_to` (href
+      # branch) wraps the button in its own form, so submit there is correct
+      # and we leave its default alone.
+      if href.blank?
+        merged_opts[:type] ||= "button"
+      end
+
+      # Icon-only buttons have no visible text node, so screen readers fall
+      # back to announcing "button" with no name. Derive a humanized fallback
+      # from the icon key so AT users hear *something* meaningful; explicit
+      # `aria: { label: }` on the caller still wins.
+      if icon_only? && icon.present?
+        aria = (merged_opts[:aria] || {}).symbolize_keys
+        if aria[:label].blank? && merged_opts[:"aria-label"].blank?
+          aria[:label] = icon.to_s.tr("-_", " ").capitalize
+          merged_opts[:aria] = aria
+        end
       end
 
       merged_opts.merge(
