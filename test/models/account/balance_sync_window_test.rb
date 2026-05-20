@@ -21,13 +21,15 @@ class Account::BalanceSyncWindowTest < ActiveSupport::TestCase
 
   test "derives window from last_synced_at lookback when no explicit window" do
     last_synced = 2.days.ago
+    lookback_start = last_synced.to_date - Account::BalanceSyncWindow::LOOKBACK
+    floor = [ @account.opening_anchor_date, @account.start_date ].compact.max
 
     window = Account::BalanceSyncWindow.for_account(
       @account,
       last_synced_at: last_synced
     )
 
-    assert_equal (last_synced.to_date - Account::BalanceSyncWindow::LOOKBACK), window
+    assert_equal [ lookback_start, floor ].compact.max, window
   end
 
   test "uses earliest entry touched since parent sync" do
