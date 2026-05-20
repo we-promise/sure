@@ -69,6 +69,8 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
+        # Intentional downgrade from v6.4.0 to v5.0.0 to match every other
+        # workflow in this repo. See PR #1870 review thread.
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "24"
