@@ -182,6 +182,34 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal({}, @import.readback_verification)
   end
 
+  test "import resyncs expected counts from current attachment" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: { id: "stale-account" } }
+    ]))
+    @import.ndjson_file.attach(
+      io: StringIO.new(build_ndjson([
+        { type: "Category", data: {
+          id: "current-category",
+          name: "Current Category",
+          color: "#407706",
+          classification: "expense",
+          lucide_icon: "shapes"
+        } }
+      ])),
+      filename: "current.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    @import.import!
+    @import.reload
+
+    assert_equal 1, @import.rows_count
+    assert_equal 0, @import.expected_record_counts["accounts"]
+    assert_equal 1, @import.expected_record_counts["categories"]
+    assert_equal 1, @import.readback_verification.dig("expected_record_counts", "categories")
+    assert_equal "matched", @import.readback_verification["status"]
+  end
+
   test "publishes import successfully" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -231,13 +259,41 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 1, verification.dig("expected_record_counts", "tags")
     assert_equal 1, verification.dig("expected_record_counts", "merchants")
     assert_equal 1, verification.dig("expected_record_counts", "transactions")
+    assert_equal 1, verification.dig("expected_record_counts", "valuations")
     assert_equal 1, verification.dig("actual_delta_counts", "accounts")
     assert_equal 1, verification.dig("actual_delta_counts", "categories")
     assert_equal 1, verification.dig("actual_delta_counts", "tags")
     assert_equal 1, verification.dig("actual_delta_counts", "merchants")
     assert_equal 1, verification.dig("actual_delta_counts", "transactions")
+    assert_equal 1, verification.dig("actual_delta_counts", "valuations")
+    assert_equal 0, verification.dig("checked_counts", "balances")
     assert_empty verification["mismatches"]
     assert_equal 1, other_family.accounts.count
+  end
+
+  test "publish verifies expected zero record types against unexpected readback deltas" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Implicit Opening Anchor",
+        balance: "100.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } }
+    ]))
+
+    @import.publish
+    @import.reload
+
+    verification = @import.readback_verification
+
+    assert_equal "complete", @import.status
+    assert_equal "mismatch", verification["status"]
+    assert_equal 0, verification.dig("expected_record_counts", "valuations")
+    assert_equal 0, verification.dig("checked_counts", "valuations")
+    assert_equal 1, verification.dig("actual_delta_counts", "valuations")
+    assert_equal({ "expected" => 0, "actual" => 1 }, verification.dig("mismatches", "valuations"))
   end
 
   test "publish records mismatch when expected rows are skipped by readback" do
@@ -293,16 +349,23 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 0, @import.readback_verification.dig("actual_delta_counts", "transactions")
   end
 
+  test "failed publish keeps original error when failed verification cannot be recorded" do
+    before_counts = @import.send(:readback_count_snapshot)
+    original_error = StandardError.new("original import failure")
+    logged_messages = []
+
+    Rails.logger.stub(:warn, ->(message) { logged_messages << message }) do
+      @import.stub(:update_columns, ->(*) { raise StandardError, "verification write failed" }) do
+        @import.send(:record_failed_readback_verification!, before_counts:, error: original_error)
+      end
+    end
+
+    assert_match(/Failed to record Sure import readback verification/, logged_messages.first)
+    assert_match(/verification write failed/, logged_messages.first)
+  end
+
   test "revert marks Sure readback verification as reverted" do
-    attach_ndjson(build_ndjson([
-      { type: "Account", data: {
-        id: "account-1",
-        name: "Reverted Account",
-        balance: "100.00",
-        currency: "USD",
-        accountable_type: "Depository"
-      } }
-    ]))
+    attach_ndjson(importable_history_ndjson)
 
     @import.publish
     assert_equal "matched", @import.reload.verification_status
@@ -311,6 +374,21 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_equal "pending", @import.status
     assert_equal "reverted", @import.verification_status
+  end
+
+  test "revert failure leaves existing Sure readback verification untouched" do
+    attach_ndjson(importable_history_ndjson)
+
+    @import.publish
+    verification = @import.reload.readback_verification
+
+    @import.stub(:entries, -> { raise StandardError, "revert failed before pending" }) do
+      @import.revert
+    end
+
+    assert_equal "revert_failed", @import.status
+    assert_equal verification, @import.readback_verification
+    assert_equal "matched", @import.verification_status
   end
 
   test "import tracks created accounts for revert" do
@@ -372,6 +450,14 @@ class SureImportTest < ActiveSupport::TestCase
           currency: "USD",
           accountable_type: "Depository",
           accountable: { subtype: "checking" }
+        } },
+        { type: "Valuation", data: {
+          id: "valuation-1",
+          account_id: "account-1",
+          date: "2024-01-14",
+          amount: "1000.00",
+          currency: "USD",
+          kind: "opening_anchor"
         } },
         { type: "Category", data: {
           id: "category-1",

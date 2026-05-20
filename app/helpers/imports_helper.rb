@@ -31,24 +31,28 @@ module ImportsHelper
 
   def dry_run_resource(key)
     map = {
-      transactions: DryRunResource.new(label: "Transactions", icon: "credit-card", text_class: "text-cyan-500", bg_class: "bg-cyan-500/5"),
-      balances: DryRunResource.new(label: "Balances", icon: "line-chart", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      accounts: DryRunResource.new(label: "Accounts", icon: "layers", text_class: "text-orange-500", bg_class: "bg-orange-500/5"),
-      categories: DryRunResource.new(label: "Categories", icon: "shapes", text_class: "text-blue-500", bg_class: "bg-blue-500/5"),
-      tags: DryRunResource.new(label: "Tags", icon: "tags", text_class: "text-violet-500", bg_class: "bg-violet-500/5"),
-      rules: DryRunResource.new(label: "Rules", icon: "workflow", text_class: "text-green-500", bg_class: "bg-green-500/5"),
-      merchants: DryRunResource.new(label: "Merchants", icon: "store", text_class: "text-amber-500", bg_class: "bg-amber-500/5"),
-      recurring_transactions: DryRunResource.new(label: "Recurring Transactions", icon: "repeat-2", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      transfers: DryRunResource.new(label: "Transfers", icon: "repeat", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      rejected_transfers: DryRunResource.new(label: "Rejected Transfers", icon: "ban", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      trades: DryRunResource.new(label: "Trades", icon: "arrow-left-right", text_class: "text-emerald-500", bg_class: "bg-emerald-500/5"),
-      holdings: DryRunResource.new(label: "Holdings", icon: "briefcase-business", text_class: "text-secondary", bg_class: "bg-container-inset"),
-      valuations: DryRunResource.new(label: "Valuations", icon: "trending-up", text_class: "text-pink-500", bg_class: "bg-pink-500/5"),
-      budgets: DryRunResource.new(label: "Budgets", icon: "wallet", text_class: "text-indigo-500", bg_class: "bg-indigo-500/5"),
-      budget_categories: DryRunResource.new(label: "Budget Categories", icon: "pie-chart", text_class: "text-teal-500", bg_class: "bg-teal-500/5")
+      transactions: DryRunResource.new(label: t("imports.dry_run_resources.transactions"), icon: "credit-card", text_class: "text-cyan-500", bg_class: "bg-cyan-500/5"),
+      balances: DryRunResource.new(label: t("imports.dry_run_resources.balances"), icon: "line-chart", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      accounts: DryRunResource.new(label: t("imports.dry_run_resources.accounts"), icon: "layers", text_class: "text-orange-500", bg_class: "bg-orange-500/5"),
+      categories: DryRunResource.new(label: t("imports.dry_run_resources.categories"), icon: "shapes", text_class: "text-blue-500", bg_class: "bg-blue-500/5"),
+      tags: DryRunResource.new(label: t("imports.dry_run_resources.tags"), icon: "tags", text_class: "text-violet-500", bg_class: "bg-violet-500/5"),
+      rules: DryRunResource.new(label: t("imports.dry_run_resources.rules"), icon: "workflow", text_class: "text-green-500", bg_class: "bg-green-500/5"),
+      merchants: DryRunResource.new(label: t("imports.dry_run_resources.merchants"), icon: "store", text_class: "text-amber-500", bg_class: "bg-amber-500/5"),
+      recurring_transactions: DryRunResource.new(label: t("imports.dry_run_resources.recurring_transactions"), icon: "repeat-2", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      transfers: DryRunResource.new(label: t("imports.dry_run_resources.transfers"), icon: "repeat", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      rejected_transfers: DryRunResource.new(label: t("imports.dry_run_resources.rejected_transfers"), icon: "ban", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      trades: DryRunResource.new(label: t("imports.dry_run_resources.trades"), icon: "arrow-left-right", text_class: "text-emerald-500", bg_class: "bg-emerald-500/5"),
+      holdings: DryRunResource.new(label: t("imports.dry_run_resources.holdings"), icon: "briefcase-business", text_class: "text-secondary", bg_class: "bg-container-inset"),
+      valuations: DryRunResource.new(label: t("imports.dry_run_resources.valuations"), icon: "trending-up", text_class: "text-pink-500", bg_class: "bg-pink-500/5"),
+      budgets: DryRunResource.new(label: t("imports.dry_run_resources.budgets"), icon: "wallet", text_class: "text-indigo-500", bg_class: "bg-indigo-500/5"),
+      budget_categories: DryRunResource.new(label: t("imports.dry_run_resources.budget_categories"), icon: "pie-chart", text_class: "text-teal-500", bg_class: "bg-teal-500/5")
     }
 
     map[key]
+  end
+
+  def import_verification_view(import)
+    ImportVerificationView.new(import.verification_payload)
   end
 
   def permitted_import_configuration_path(import)
@@ -80,4 +84,49 @@ module ImportsHelper
     end
 
     DryRunResource = Struct.new(:label, :icon, :text_class, :bg_class, keyword_init: true)
+
+    ImportVerificationView = Struct.new(:payload) do
+      def status
+        readback.fetch("status", "not_verified").to_s
+      end
+
+      def checked_total
+        checked_counts.values.sum(&:to_i)
+      end
+
+      def checked_counts
+        hash_value(readback["checked_counts"])
+      end
+
+      def mismatches
+        hash_value(readback["mismatches"])
+      end
+
+      def mismatches_count
+        mismatches.size
+      end
+
+      def mismatches_preview
+        mismatches.first(3)
+      end
+
+      def mismatches?
+        mismatches.any?
+      end
+
+      private
+        def readback
+          hash_value(payload_hash["readback"])
+        end
+
+        def payload_hash
+          hash_value(payload)
+        end
+
+        def hash_value(value)
+          return {} unless value.respond_to?(:to_h)
+
+          value.to_h.deep_stringify_keys
+        end
+    end
 end

@@ -119,7 +119,7 @@ class SureImport < Import
   end
 
   def import!
-    sync_ndjson_counts! if expected_record_counts.blank?
+    sync_ndjson_counts!
     before_counts = readback_count_snapshot
     importer = Family::DataImporter.new(family, ndjson_blob_string)
     result = importer.import!
@@ -235,7 +235,9 @@ class SureImport < Import
       after_counts = readback_count_snapshot
       actual_delta_counts = delta_counts(before_counts, after_counts)
       expected_counts = normalized_expected_record_counts
-      checked_counts = expected_counts.select { |_key, expected_count| expected_count.to_i.positive? }
+      checked_counts = (actual_delta_counts.keys | expected_counts.keys).index_with do |key|
+        expected_counts.fetch(key, 0).to_i
+      end
       mismatches = checked_counts.each_with_object({}) do |(key, expected_count), result|
         actual_count = actual_delta_counts.fetch(key, 0)
         next if actual_count == expected_count.to_i

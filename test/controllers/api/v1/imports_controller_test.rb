@@ -130,6 +130,14 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
           balance: "100.00",
           currency: "USD",
           accountable_type: "Depository"
+        } },
+        { type: "Valuation", data: {
+          id: "valuation-1",
+          account_id: "account-1",
+          date: "2024-01-14",
+          amount: "100.00",
+          currency: "USD",
+          kind: "opening_anchor"
         } }
       ])),
       filename: "sure.ndjson",
@@ -145,8 +153,11 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     verification = json_response.dig("data", "verification")
 
     assert_equal 1, verification.dig("expected_record_counts", "accounts")
+    assert_equal 1, verification.dig("expected_record_counts", "valuations")
     assert_equal "matched", verification.dig("readback", "status")
     assert_equal 1, verification.dig("readback", "actual_delta_counts", "accounts")
+    assert_equal 1, verification.dig("readback", "actual_delta_counts", "valuations")
+    assert_equal 0, verification.dig("readback", "checked_counts", "balances")
     assert_empty verification.dig("readback", "mismatches")
   end
 
