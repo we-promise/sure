@@ -27,105 +27,108 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
 
   private
 
+    def t_label(key)
+      I18n.t("UI.account.balance_reconciliation.labels.#{key}")
+    end
+
+    def t_tooltip(key)
+      I18n.t("UI.account.balance_reconciliation.tooltips.#{key}")
+    end
+
     def default_items
       items = [
-        { label: "Start balance", value: balance.start_balance_money, tooltip: "The account balance at the beginning of this day", style: :start },
-        { label: "Net cash flow", value: net_cash_flow, tooltip: "Net change in balance from all transactions during the day", style: :flow }
+        { label: t_label(:start_balance), value: balance.start_balance_money, tooltip: t_tooltip(:start_balance), style: :start },
+        { label: t_label(:net_cash_flow), value: net_cash_flow, tooltip: t_tooltip(:net_cash_flow), style: :flow }
       ]
 
       if has_adjustments?
-        items << { label: "End balance", value: end_balance_before_adjustments, tooltip: "The calculated balance after all transactions", style: :subtotal }
-        items << { label: "Adjustments", value: total_adjustments, tooltip: "Manual reconciliations or other adjustments", style: :adjustment }
+        items << { label: t_label(:end_balance), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_balance), style: :subtotal }
+        items << { label: t_label(:adjustments), value: total_adjustments, tooltip: t_tooltip(:adjustments), style: :adjustment }
       end
 
-      items << { label: "Final balance", value: balance.end_balance_money, tooltip: "The final account balance for the day", style: :final }
+      items << { label: t_label(:final_balance), value: balance.end_balance_money, tooltip: t_tooltip(:final_balance), style: :final }
       items
     end
 
     def credit_card_items
       items = [
-        { label: "Start balance", value: balance.start_balance_money, tooltip: "The balance owed at the beginning of this day", style: :start },
-        { label: "Charges", value: balance.cash_outflows_money, tooltip: "New charges made during the day", style: :flow },
-        { label: "Payments", value: balance.cash_inflows_money * -1, tooltip: "Payments made to the card during the day", style: :flow }
+        { label: t_label(:start_balance), value: balance.start_balance_money, tooltip: t_tooltip(:start_balance_credit), style: :start },
+        { label: t_label(:charges), value: balance.cash_outflows_money, tooltip: t_tooltip(:charges), style: :flow },
+        { label: t_label(:payments), value: balance.cash_inflows_money * -1, tooltip: t_tooltip(:payments), style: :flow }
       ]
 
       if has_adjustments?
-        items << { label: "End balance", value: end_balance_before_adjustments, tooltip: "The calculated balance after all transactions", style: :subtotal }
-        items << { label: "Adjustments", value: total_adjustments, tooltip: "Manual reconciliations or other adjustments", style: :adjustment }
+        items << { label: t_label(:end_balance), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_balance), style: :subtotal }
+        items << { label: t_label(:adjustments), value: total_adjustments, tooltip: t_tooltip(:adjustments), style: :adjustment }
       end
 
-      items << { label: "Final balance", value: balance.end_balance_money, tooltip: "The final balance owed for the day", style: :final }
+      items << { label: t_label(:final_balance), value: balance.end_balance_money, tooltip: t_tooltip(:final_balance_credit), style: :final }
       items
     end
 
     def investment_items
       items = [
-        { label: "Start balance", value: balance.start_balance_money, tooltip: "The total portfolio value at the beginning of this day", style: :start }
+        { label: t_label(:start_balance), value: balance.start_balance_money, tooltip: t_tooltip(:start_balance_investment), style: :start }
       ]
 
-      # Change in brokerage cash (includes deposits, withdrawals, and cash from trades)
-      items << { label: "Change in brokerage cash", value: net_cash_flow, tooltip: "Net change in cash from deposits, withdrawals, and trades", style: :flow }
-
-      # Change in holdings from trading activity
-      items << { label: "Change in holdings (buys/sells)", value: net_non_cash_flow, tooltip: "Impact on holdings from buying and selling securities", style: :flow }
-
-      # Market price changes
-      items << { label: "Change in holdings (market price activity)", value: balance.net_market_flows_money, tooltip: "Change in holdings value from market price movements", style: :flow }
+      items << { label: t_label(:change_in_brokerage_cash), value: net_cash_flow, tooltip: t_tooltip(:change_in_brokerage_cash), style: :flow }
+      items << { label: t_label(:change_in_holdings_trades), value: net_non_cash_flow, tooltip: t_tooltip(:change_in_holdings_trades), style: :flow }
+      items << { label: t_label(:change_in_holdings_market), value: balance.net_market_flows_money, tooltip: t_tooltip(:change_in_holdings_market), style: :flow }
 
       if has_adjustments?
-        items << { label: "End balance", value: end_balance_before_adjustments, tooltip: "The calculated balance after all activity", style: :subtotal }
-        items << { label: "Adjustments", value: total_adjustments, tooltip: "Manual reconciliations or other adjustments", style: :adjustment }
+        items << { label: t_label(:end_balance), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_balance_investment), style: :subtotal }
+        items << { label: t_label(:adjustments), value: total_adjustments, tooltip: t_tooltip(:adjustments), style: :adjustment }
       end
 
-      items << { label: "Final balance", value: balance.end_balance_money, tooltip: "The final portfolio value for the day", style: :final }
+      items << { label: t_label(:final_balance), value: balance.end_balance_money, tooltip: t_tooltip(:final_balance_investment), style: :final }
       items
     end
 
     def loan_items
       items = [
-        { label: "Start principal", value: balance.start_balance_money, tooltip: "The principal balance at the beginning of this day", style: :start },
-        { label: "Net principal change", value: net_non_cash_flow, tooltip: "Principal payments and new borrowing during the day", style: :flow }
+        { label: t_label(:start_principal), value: balance.start_balance_money, tooltip: t_tooltip(:start_principal), style: :start },
+        { label: t_label(:net_principal_change), value: net_non_cash_flow, tooltip: t_tooltip(:net_principal_change), style: :flow }
       ]
 
       if has_adjustments?
-        items << { label: "End principal", value: end_balance_before_adjustments, tooltip: "The calculated principal after all transactions", style: :subtotal }
-        items << { label: "Adjustments", value: balance.non_cash_adjustments_money, tooltip: "Manual reconciliations or other adjustments", style: :adjustment }
+        items << { label: t_label(:end_principal), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_principal), style: :subtotal }
+        items << { label: t_label(:adjustments), value: balance.non_cash_adjustments_money, tooltip: t_tooltip(:adjustments), style: :adjustment }
       end
 
-      items << { label: "Final principal", value: balance.end_balance_money, tooltip: "The final principal balance for the day", style: :final }
+      items << { label: t_label(:final_principal), value: balance.end_balance_money, tooltip: t_tooltip(:final_principal), style: :final }
       items
     end
 
-    def asset_items # Property/Vehicle
+    def asset_items
       items = [
-        { label: "Start value", value: balance.start_balance_money, tooltip: "The asset value at the beginning of this day", style: :start },
-        { label: "Net value change", value: net_total_flow, tooltip: "All value changes including improvements and depreciation", style: :flow }
+        { label: t_label(:start_value), value: balance.start_balance_money, tooltip: t_tooltip(:start_value), style: :start },
+        { label: t_label(:net_value_change), value: net_total_flow, tooltip: t_tooltip(:net_value_change), style: :flow }
       ]
 
       if has_adjustments?
-        items << { label: "End value", value: end_balance_before_adjustments, tooltip: "The calculated value after all changes", style: :subtotal }
-        items << { label: "Adjustments", value: total_adjustments, tooltip: "Manual value adjustments or appraisals", style: :adjustment }
+        items << { label: t_label(:end_value), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_value), style: :subtotal }
+        items << { label: t_label(:adjustments), value: total_adjustments, tooltip: t_tooltip(:adjustments_asset), style: :adjustment }
       end
 
-      items << { label: "Final value", value: balance.end_balance_money, tooltip: "The final asset value for the day", style: :final }
+      items << { label: t_label(:final_value), value: balance.end_balance_money, tooltip: t_tooltip(:final_value), style: :final }
       items
     end
 
     def crypto_items
       items = [
-        { label: "Start balance", value: balance.start_balance_money, tooltip: "The crypto holdings value at the beginning of this day", style: :start }
+        { label: t_label(:start_balance), value: balance.start_balance_money, tooltip: t_tooltip(:start_balance_crypto), style: :start }
       ]
 
-      items << { label: "Buys", value: balance.cash_outflows_money * -1, tooltip: "Crypto purchases during the day", style: :flow } if balance.cash_outflows != 0
-      items << { label: "Sells", value: balance.cash_inflows_money, tooltip: "Crypto sales during the day", style: :flow } if balance.cash_inflows != 0
-      items << { label: "Market changes", value: balance.net_market_flows_money, tooltip: "Value changes from market price movements", style: :flow } if balance.net_market_flows != 0
+      items << { label: t_label(:buys), value: balance.cash_outflows_money * -1, tooltip: t_tooltip(:buys), style: :flow } if balance.cash_outflows != 0
+      items << { label: t_label(:sells), value: balance.cash_inflows_money, tooltip: t_tooltip(:sells), style: :flow } if balance.cash_inflows != 0
+      items << { label: t_label(:market_changes), value: balance.net_market_flows_money, tooltip: t_tooltip(:market_changes), style: :flow } if balance.net_market_flows != 0
 
       if has_adjustments?
-        items << { label: "End balance", value: end_balance_before_adjustments, tooltip: "The calculated balance after all activity", style: :subtotal }
-        items << { label: "Adjustments", value: total_adjustments, tooltip: "Manual reconciliations or other adjustments", style: :adjustment }
+        items << { label: t_label(:end_balance), value: end_balance_before_adjustments, tooltip: t_tooltip(:end_balance_crypto), style: :subtotal }
+        items << { label: t_label(:adjustments), value: total_adjustments, tooltip: t_tooltip(:adjustments), style: :adjustment }
       end
 
-      items << { label: "Final balance", value: balance.end_balance_money, tooltip: "The final crypto holdings value for the day", style: :final }
+      items << { label: t_label(:final_balance), value: balance.end_balance_money, tooltip: t_tooltip(:final_balance_crypto), style: :final }
       items
     end
 

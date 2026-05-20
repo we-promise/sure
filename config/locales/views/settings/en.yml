@@ -133,6 +133,7 @@ en:
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
         personal_budgets: Personal budgets
         personal_budgets_hint: Enable individual budgets for each family member.
+        translations_notice: Please note, we are still working on translations for various languages.
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
@@ -155,9 +156,9 @@ en:
         sharing_default_label: Default sharing for new accounts
         sharing_shared: Share with all members
         sharing_private: Keep private by default
-        beta:
-          title: Enable beta features
-          description: Opt in to in-progress features tagged beta or canary.
+        preview:
+          title: Enable preview features
+          description: Opt in to in-progress features tagged preview or canary.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
