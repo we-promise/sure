@@ -5,6 +5,7 @@ class DS::Tabs < DesignSystemComponent
       active_btn_classes: active_btn_classes,
       inactive_btn_classes: inactive_btn_classes,
       btn_classes: base_btn_classes,
+      dom_prefix: dom_prefix,
       classes: unstyled? ? classes : class_names(nav_container_classes, classes)
     )
   end
@@ -13,16 +14,35 @@ class DS::Tabs < DesignSystemComponent
     content_tag(
       :div,
       class: ("hidden" unless tab_id == active_tab),
+      role: "tabpanel",
+      id: panel_dom_id(tab_id),
+      "aria-labelledby": tab_dom_id(tab_id),
+      tabindex: "0",
       data: { id: tab_id, DS__tabs_target: "panel" },
       &block
     )
   end
 
+  # Scope tab/panel DOM ids to this component instance so multiple
+  # `DS::Tabs` widgets on the same page (which often reuse generic
+  # tab ids like "all" or "overview") don't collide and break the
+  # `aria-controls` / `aria-labelledby` associations.
+  def tab_dom_id(tab_id)
+    "#{dom_prefix}-tab-#{tab_id}"
+  end
+
+  def panel_dom_id(tab_id)
+    "#{dom_prefix}-panel-#{tab_id}"
+  end
+
   VARIANTS = {
     default: {
-      active_btn_classes: "bg-white theme-dark:bg-gray-700 text-primary shadow-sm",
+      # `tab-item-active` is a Sure token utility (white light / gray-700 dark).
+      # Swapping out the raw `bg-white theme-dark:bg-gray-700` removes the
+      # last raw-palette reference in DS::Tabs.
+      active_btn_classes: "tab-item-active text-primary shadow-sm",
       inactive_btn_classes: "text-secondary hover:bg-surface-inset-hover",
-      base_btn_classes: "w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200",
+      base_btn_classes: "w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md motion-safe:transition-colors motion-safe:duration-200",
       nav_container_classes: "flex bg-surface-inset p-1 rounded-lg mb-4"
     }
   }
@@ -48,6 +68,10 @@ class DS::Tabs < DesignSystemComponent
   end
 
   private
+    def dom_prefix
+      @dom_prefix ||= "tabs-#{object_id}"
+    end
+
     def unstyled?
       variant == :unstyled
     end

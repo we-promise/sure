@@ -10,7 +10,7 @@ class DS::Buttonish < DesignSystemComponent
     },
     destructive: {
       container_classes: "text-inverse bg-red-500 theme-dark:bg-red-400 hover:bg-red-600 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
-      icon_classes: "fg-white"
+      icon_classes: "text-inverse"
     },
     outline: {
       container_classes: "text-primary border border-secondary bg-transparent hover:bg-surface-hover",
@@ -43,13 +43,13 @@ class DS::Buttonish < DesignSystemComponent
     },
     md: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-9 h-9",
+      icon_container_classes: "inline-flex items-center justify-center w-11 h-11",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
     },
     lg: {
       container_classes: "px-4 py-3",
-      icon_container_classes: "inline-flex items-center justify-center w-10 h-10",
+      icon_container_classes: "inline-flex items-center justify-center w-12 h-12",
       radius_classes: "rounded-xl",
       text_classes: "text-base"
     }
