@@ -30,14 +30,23 @@ class IncomeStatement
   end
 
   def expense_totals(period: Period.current_month)
-    build_period_total(classification: "expense", period: period)
+    # Memoized per instance so callers that also invoke `net_category_totals`
+    @expense_totals_by_period ||= {}
+    @expense_totals_by_period[period_cache_key(period)] ||=
+      build_period_total(classification: "expense", period: period)
   end
 
   def income_totals(period: Period.current_month)
-    build_period_total(classification: "income", period: period)
+    @income_totals_by_period ||= {}
+    @income_totals_by_period[period_cache_key(period)] ||=
+      build_period_total(classification: "income", period: period)
   end
 
   def net_category_totals(period: Period.current_month)
+    @net_category_totals_by_period ||= {}
+    cached = @net_category_totals_by_period[period_cache_key(period)]
+    return cached if cached
+
     expense = expense_totals(period: period)
     income = income_totals(period: period)
 
@@ -124,6 +133,10 @@ class IncomeStatement
 
     def categories
       @categories ||= family.categories.all.to_a
+    end
+
+    def period_cache_key(period)
+      [ period.start_date, period.end_date ]
     end
 
     def build_period_total(classification:, period:)
