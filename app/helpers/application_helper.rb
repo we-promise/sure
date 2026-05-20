@@ -14,6 +14,24 @@ module ApplicationHelper
     form_with(**options, &block)
   end
 
+  # Locale-aware ordinal label for integers.
+  # English falls through to Ruby's ordinalize ("1st"); Catalan returns "1r"/"2n"/...
+  def localized_ordinal(number)
+    case I18n.locale
+    when :ca
+      n = number.to_i
+      suffix = case n
+      when 1, 3 then "r"
+      when 2 then "n"
+      when 4 then "t"
+      else "è"
+      end
+      "#{n}#{suffix}"
+    else
+      number.to_i.ordinalize
+    end
+  end
+
   def icon(key, size: "md", color: "default", custom: false, as_button: false, **opts)
     extra_classes = opts.delete(:class)
     sizes = { xs: "w-3 h-3", sm: "w-4 h-4", md: "w-5 h-5", lg: "w-6 h-6", xl: "w-7 h-7", "2xl": "w-8 h-8" }

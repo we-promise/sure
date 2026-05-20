@@ -19,7 +19,8 @@ en:
       parent_category_label: "Parent category (optional)"
       color: Color
       icon: Icon
-      poor_contrast: "Poor contrast, choose darker color or"
+      auto_adjust: auto-adjust.
+      poor_contrast: "Poor contrast, choose a darker color or"
     destroy_all:
       success: All categories deleted
     index:

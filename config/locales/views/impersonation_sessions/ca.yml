@@ -13,3 +13,13 @@ ca:
       success: Has sortit de la sessió
     reject:
       success: Sol·licitud rebutjada
+    super_admin_bar:
+      impersonating: Personificant
+      jobs: Tasques
+      join: Uneix-te
+      join_a_session: Uneix-te a una sessió
+      leave: Surt
+      request_impersonation: Sol·licita personificació
+      super_admin: Super administrador
+      terminate: Finalitza
+      uuid_placeholder: UUID

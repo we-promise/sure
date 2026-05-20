@@ -5,7 +5,7 @@ class PillComponentPreview < ViewComponent::Preview
   # @param label text
   # @param show_dot toggle
   # @param dot_only toggle
-  def default(tone: "violet", style: "soft", size: "sm", label: "Beta", show_dot: true, dot_only: false)
+  def default(tone: "violet", style: "soft", size: "sm", label: "Preview", show_dot: true, dot_only: false)
     render DS::Pill.new(
       label: label,
       tone: tone.to_sym,
