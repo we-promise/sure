@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+# Use jemalloc to reduce memory fragmentation if available
+JEMALLOC="/usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2"
+if [ -f "$JEMALLOC" ]; then
+  export LD_PRELOAD="$JEMALLOC"
+fi
+
 # If running the rails server then create or migrate existing database
 if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
   ./bin/rails db:prepare
