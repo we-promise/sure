@@ -72,15 +72,21 @@ class Loan < ApplicationRecord
   end
 
   private
+    # Schedule arithmetic is done end-to-end in BigDecimal so 360 iterations don't accumulate
+    # binary-floating-point drift. The final-period correction still absorbs any sub-cent
+    # rounding remainder so the loan zeroes out exactly.
+    DIVISION_PRECISION = 18
+    ZERO = BigDecimal("0").freeze
+
     def build_amortization_schedule
       return [] unless rate_type == "fixed"
       return [] if term_months.nil? || term_months <= 0 || interest_rate.nil?
 
-      principal = original_balance.amount.to_f
+      principal = original_balance.amount
       return [] if principal.zero?
 
-      monthly_rate = (interest_rate.to_f / 100.0) / 12.0
-      payment = exact_monthly_payment_dollars(principal, monthly_rate)
+      monthly_rate = (interest_rate.to_d / 100).div(12, DIVISION_PRECISION)
+      payment = exact_monthly_payment(principal, monthly_rate)
       start_date = schedule_start_date
       currency = account.currency
 
@@ -98,7 +104,7 @@ class Loan < ApplicationRecord
 
         payment_amount = (interest_amount + principal_amount).round(2)
         ending_balance = (balance - principal_amount).round(2)
-        ending_balance = 0.0 if ending_balance.negative?
+        ending_balance = ZERO if ending_balance.negative?
 
         rows << {
           period: period,
@@ -116,12 +122,14 @@ class Loan < ApplicationRecord
       rows
     end
 
-    def exact_monthly_payment_dollars(principal, monthly_rate)
+    def exact_monthly_payment(principal, monthly_rate)
       if monthly_rate.zero?
-        (principal / term_months).round(2)
+        principal.div(term_months, DIVISION_PRECISION)
       else
-        factor = (1 + monthly_rate)**term_months
-        ((principal * monthly_rate * factor) / (factor - 1)).round(2)
+        factor = (1 + monthly_rate) ** term_months
+        principal.mul(monthly_rate, DIVISION_PRECISION)
+                 .mul(factor, DIVISION_PRECISION)
+                 .div(factor - 1, DIVISION_PRECISION)
       end
     end
 
