@@ -148,7 +148,9 @@ class IncomeStatement
       other_investments_category = family.categories.other_investments
 
       category_totals = [ *categories, uncategorized_category, other_investments_category ].map do |category|
-        subcategory = categories.find { |c| c.id == category.parent_id }
+        ### @bittensorrider
+        ### Assigned but unused variable - so comment out
+        # subcategory = categories.find { |c| c.id == category.parent_id }
 
         parent_category_total = if category.uncategorized?
           # Regular uncategorized: NULL category_id and NOT uncategorized investment
