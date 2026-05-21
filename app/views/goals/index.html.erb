@@ -108,18 +108,15 @@
 
       <% if @show_search %>
         <div class="flex flex-wrap items-center gap-2.5 mb-4">
-          <div class="relative flex-1 min-w-[200px]">
-            <input type="search"
-                   autocomplete="off"
-                   data-goals-filter-target="input"
-                   data-action="input->goals-filter#filter"
-                   aria-label="<%= t(".search.aria_label") %>"
-                   placeholder="<%= t(".search.placeholder") %>"
-                   class="block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container focus:outline-none focus:ring-2 focus:ring-alpha-black-100 sm:text-sm">
-            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <%= icon "search", class: "text-secondary" %>
-            </div>
-          </div>
+          <%= render DS::SearchInput.new(
+                aria_label: t(".search.aria_label"),
+                placeholder: t(".search.placeholder"),
+                class: "flex-1 min-w-[200px]",
+                data: {
+                  goals_filter_target: "input",
+                  action: "input->goals-filter#filter"
+                }
+              ) %>
           <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
             <% %w[all on_track behind no_target_date paused completed].each do |status| %>
               <% active = status == "all" %>
