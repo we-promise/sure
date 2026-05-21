@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Bumped `pipelock.image.tag` from `2.0.0` to `2.2.0` (three minor releases behind latest). Floating `@v2` CI action pin picks up patch/minor updates automatically.
-- Refreshed pipelock feature notes in the chart README, `docs/hosting/pipelock.md`, and `pipelock.example.yaml` to reference the upstream changelog instead of a single version.
+- Bumped `pipelock.image.tag` from `2.2.0` to `2.5.0`. Picks up three releases of scanner, federation, and audit work — see the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/blob/main/CHANGELOG.md) for the full surface.
+- Refreshed pipelock feature notes in the chart README, `docs/hosting/pipelock.md`, and `pipelock.example.yaml` to call out 2.5 highlights (Audit Packet v0, request-body prompt-injection blocking, SPIFFE-strict inbound envelopes, scanner attribution on MCP block receipts).
+- Expanded the `pipelock.extraConfig` escape-hatch comment to reference the new sections available in 2.5 (browser_shield, mediation_envelope, redaction, learn, media_policy, a2a_scanning, emit).
+- Defaulted `pipelock.mcpToolPolicy.enabled` to `false`. Pipelock 2.x rejects an enabled `mcp_tool_policy` with no rules, so the prior chart default (`enabled: true`, empty rules) hard-failed config validation on startup. Operators who want tool policy active must now set `enabled: true` and provide at least one entry in `pipelock.mcpToolPolicy.rules`.
 
 ### Added
+- `pipelock.requestBodyScanning` (pipelock 2.5+): structured config for scanning outbound request bodies for prompt-injection and bodies/sensitive headers for DLP payloads. Disabled by default to preserve existing chart behavior; opt in with `enabled: true`.
+- `pipelock.healthWatchdog` (pipelock 2.4+): structured config for the wedge-detection watchdog. Operators can opt into per-subsystem detail in `/health` responses via `exposeSubsystems: true`.
+- `pipelock.mcpToolPolicy.rules`: structured Helm values for rendering `mcp_tool_policy.rules`, including redirect-profile references.
 - README: CI scan status badge for the pipelock workflow.
 
 ## [0.6.9-alpha] - 2026-03-24
