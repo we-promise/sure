@@ -53,6 +53,20 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Test Brex Connection"
   end
 
+  test "sync all control submits with POST" do
+    SimplefinItem.create!(
+      family: families(:dylan_family),
+      name: "Test SimpleFIN Sync All Control",
+      access_url: "https://bridge.simplefin.org/simplefin/access"
+    )
+
+    with_self_hosting do
+      get settings_providers_url
+      assert_response :success
+      assert_select "form[action=?][method=?]", sync_all_settings_providers_path, "post"
+    end
+  end
+
   test "correctly identifies declared vs dynamic fields" do
     # All current provider fields are dynamic, but the logic should correctly
     # distinguish between declared and dynamic fields
