@@ -122,6 +122,47 @@ class InvitationTest < ActiveSupport::TestCase
     assert_includes invitation.errors[:email], "has already been invited to this family"
   end
 
+  # Regression: issue #1689. Accepting an invitation must not silently rehome a
+  # user away from a family they own. The previous behaviour overwrote
+  # `user.family_id`, orphaning the prior family + its accounts and locking the
+  # user out of their historical data.
+  test "accept_for refuses when user already belongs to a family with accounts" do
+    owner = users(:empty)
+    owner_family = families(:empty)
+    owner_family.accounts.create!(
+      name: "Prior savings", balance: 100, currency: "USD",
+      accountable: Depository.new
+    )
+    owner.update_columns(family_id: owner_family.id, role: "admin")
+
+    invitation = @family.invitations.create!(email: owner.email, role: "member", inviter: @inviter)
+
+    result = invitation.accept_for(owner)
+
+    assert_not result, "accept_for must refuse to rehome a user away from a family they own with accounts"
+    owner.reload
+    assert_equal owner_family.id, owner.family_id, "user.family_id must not be silently overwritten"
+    invitation.reload
+    assert_nil invitation.accepted_at, "invitation must remain pending so a new flow can recover"
+    assert owner_family.accounts.exists?, "original family's accounts must remain intact"
+  end
+
+  test "would_orphan_existing_family? is false when current family has no accounts" do
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+
+    assert_not invitation.would_orphan_existing_family?(user)
+  end
+
+  test "would_orphan_existing_family? is false when same-family role change" do
+    user = users(:family_member)
+    user.update!(family_id: @family.id, role: "member")
+    invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
+
+    assert_not invitation.would_orphan_existing_family?(user)
+  end
+
   test "accept_for applies guest role defaults" do
     user = users(:family_member)
     user.update!(

@@ -32,6 +32,7 @@ class Invitation < ApplicationRecord
     return false if user.blank?
     return false unless pending?
     return false unless emails_match?(user)
+    return false if would_orphan_existing_family?(user)
 
     transaction do
       user.update!(family_id: family_id, role: role.to_s)
@@ -39,6 +40,19 @@ class Invitation < ApplicationRecord
       auto_share_existing_accounts(user) if family.share_all_by_default?
     end
     true
+  end
+
+  # Issue #1689: accepting an invitation overwrites `user.family_id`, which
+  # previously stranded the prior family + its accounts when the invitee
+  # already owned one. Returns true when accepting this invitation would
+  # rehome the user away from a family that still holds accounts they could
+  # lose access to.
+  def would_orphan_existing_family?(user)
+    return false if user.blank?
+    return false if user.family_id.blank?
+    return false if user.family_id == family_id
+
+    user.family.accounts.exists?
   end
 
   private
