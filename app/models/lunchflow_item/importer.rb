@@ -15,7 +15,16 @@ class LunchflowItem::Importer
     accounts_data = fetch_accounts_data
     unless accounts_data
       Rails.logger.error "LunchflowItem::Importer - Failed to fetch accounts data for item #{lunchflow_item.id}"
-      return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
+      return {
+        success: false,
+        error: "Failed to fetch accounts data",
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        accounts_pruned: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }
     end
 
     # Store raw payload
@@ -124,13 +133,21 @@ class LunchflowItem::Importer
     # unlinked records that pin the item to "Need setup" (#1861). Mirrors
     # SimpleFin's prune_orphaned_simplefin_accounts. LunchFlow linkage is only
     # via AccountProvider (no legacy FK), so a present account_provider means keep.
+    #
+    # account_id is nullable on lunchflow_accounts. A NULL account_id can never
+    # match an upstream id, and `where.not(account_id: upstream_account_ids)`
+    # alone would silently drop those rows (SQL `NULL NOT IN (...)` is never
+    # TRUE). We explicitly OR them back in so a NULL-id unlinked record — which
+    # has no upstream identity and would otherwise pin the item to "Need setup"
+    # forever — is also pruned. The per-record account_provider guard below still
+    # protects any linked record regardless of its account_id.
     def prune_orphaned_lunchflow_accounts(upstream_account_ids)
       return 0 if upstream_account_ids.blank?
 
-      orphaned = lunchflow_item.lunchflow_accounts
-        .includes(:account_provider)
+      scope = lunchflow_item.lunchflow_accounts.includes(:account_provider)
+      orphaned = scope
         .where.not(account_id: upstream_account_ids)
-        .where.not(account_id: nil)
+        .or(scope.where(account_id: nil))
 
       pruned = 0
       orphaned.each do |lunchflow_account|
