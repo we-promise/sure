@@ -62,7 +62,10 @@ class SidekiqHealth
   def reason
     return :redis_unreachable if @load_failure
     return :no_worker_processes if processes_count.zero?
-    return :stale_heartbeat if last_heartbeat_at && last_heartbeat_at < PROCESS_HEARTBEAT_TIMEOUT.ago
+    # A registered process with no published heartbeat is just as
+    # suspect as one whose last heartbeat is stale — either way Sidekiq
+    # isn't telling us a worker is alive.
+    return :stale_heartbeat if last_heartbeat_at.nil? || last_heartbeat_at < PROCESS_HEARTBEAT_TIMEOUT.ago
     return :queue_backed_up if max_queue_latency > LATENCY_THRESHOLD
     nil
   end

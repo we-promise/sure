@@ -3,7 +3,7 @@
 module Admin
   class SystemHealthController < Admin::BaseController
     def show
-      @health = SidekiqHealth.new
+      @health = current_sidekiq_health
     end
   end
 end
