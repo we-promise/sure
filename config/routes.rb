@@ -702,6 +702,7 @@ Rails.application.routes.draw do
         delete :invitations, to: "invitations#destroy_all"
       end
     end
+    resource :system_health, only: :show, controller: "system_health"
   end
 
   # Defines the root path route ("/")
