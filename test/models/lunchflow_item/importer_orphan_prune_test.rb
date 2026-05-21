@@ -83,4 +83,39 @@ class LunchflowItem::ImporterOrphanPruneTest < ActiveSupport::TestCase
     assert_nil LunchflowAccount.find_by(id: orphan2.id)
     assert_not_nil LunchflowAccount.find_by(id: kept.id)
   end
+
+  test "prunes an unlinked LunchflowAccount with a nil account_id" do
+    # account_id is nullable; a NULL id can never match upstream and would be
+    # silently skipped by a plain `where.not(account_id: ...)` (SQL three-valued
+    # logic). Such an unlinked record is a genuine orphan and must be pruned.
+    orphan = @item.lunchflow_accounts.create!(
+      account_id: nil,
+      name: "Never received an upstream id",
+      currency: "USD"
+    )
+
+    pruned = @importer.send(:prune_orphaned_lunchflow_accounts, [ "acct-new" ])
+
+    assert_equal 1, pruned
+    assert_nil LunchflowAccount.find_by(id: orphan.id), "nil account_id orphan should be pruned"
+  end
+
+  test "import returns accounts_pruned in its result and prunes orphans end-to-end" do
+    orphan = @item.lunchflow_accounts.create!(
+      account_id: "acct-old",
+      name: "Deleted Account",
+      currency: "USD"
+    )
+
+    provider = mock()
+    provider.stubs(:get_accounts).returns(
+      accounts: [ { id: "acct-new", name: "New Account", currency: "USD" } ]
+    )
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: provider)
+    result = importer.import
+
+    assert_equal 1, result[:accounts_pruned]
+    assert_nil LunchflowAccount.find_by(id: orphan.id), "orphan should be pruned through import"
+  end
 end
