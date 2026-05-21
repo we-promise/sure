@@ -45,12 +45,6 @@ class IncomeStatement
   end
 
   def net_category_totals(period: Period.current_month)
-    ### `return cached if cached` will miss the cache if the stored value is ever falsy (nil or false)
-    # @net_category_totals_by_period ||= {}
-    # cached = @net_category_totals_by_period[period_cache_key(period)]
-    # return cached if cached
-
-    ### follow CodeRabbit's recommendation during PR review
     key = period_cache_key(period)
     @net_category_totals_by_period ||= {}
     return @net_category_totals_by_period[key] if @net_category_totals_by_period.key?(key)
@@ -156,9 +150,6 @@ class IncomeStatement
       other_investments_category = family.categories.other_investments
 
       category_totals = [ *categories, uncategorized_category, other_investments_category ].map do |category|
-        ### Assigned but unused variable - so comment out
-        # subcategory = categories.find { |c| c.id == category.parent_id }
-
         parent_category_total = if category.uncategorized?
           # Regular uncategorized: NULL category_id and NOT uncategorized investment
           totals.select { |t| t.category_id.nil? && !t.is_uncategorized_investment }&.sum(&:total) || 0
