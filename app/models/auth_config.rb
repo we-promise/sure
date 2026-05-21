@@ -73,18 +73,50 @@ class AuthConfig
       domains.map(&:downcase).include?(domain)
     end
 
+    # Single canonical source of truth for the SSO provider list.
+    # Always returns Array<Hash> with deeply symbolized keys, so consumers do
+    # not have to defensively re-symbolize. The underlying source (DB via
+    # ProviderLoader, YAML, or the runtime list registered by the OmniAuth
+    # initializer) is intentionally opaque to callers — see issue #1617.
     def sso_providers
-      if FeatureFlags.db_sso_providers?
-        # After boot, OmniAuth registers successfully configured providers into
-        # Rails.configuration.x.auth.sso_providers. Prefer that filtered list
-        # so we never render login buttons for providers that couldn't be
-        # registered (e.g., missing required fields in YAML fallback).
-        # Fall back to ProviderLoader for pre-boot contexts.
-        registered = Rails.configuration.x.auth.sso_providers
-        registered&.any? ? registered : ProviderLoader.load_providers
-      else
-        Rails.configuration.x.auth.sso_providers || []
-      end
+      raw =
+        if FeatureFlags.db_sso_providers?
+          # After boot, OmniAuth registers successfully configured providers
+          # into Rails.configuration.x.auth.sso_providers. Prefer that filtered
+          # list so we never render login buttons for providers that couldn't
+          # be registered (e.g., missing required fields in YAML fallback).
+          # Fall back to ProviderLoader for pre-boot contexts.
+          registered = Rails.configuration.x.auth.sso_providers
+          registered&.any? ? registered : ProviderLoader.load_providers
+        else
+          Rails.configuration.x.auth.sso_providers || []
+        end
+
+      normalize_providers(raw)
     end
+
+    # Convenience lookup matching by `:name` first, then `:id`. Used by every
+    # site that previously did `sso_providers.find { |p| p[:name] == … }` —
+    # consolidating the lookup here keeps the matching rules in one place.
+    def find_sso_provider(name_or_id)
+      key = name_or_id.to_s
+      return nil if key.blank?
+
+      sso_providers.find { |p| p[:name].to_s == key || p[:id].to_s == key }
+    end
+
+    # Reset the underlying provider cache. Admin UI calls this after editing
+    # provider records so subsequent reads pick up the change.
+    def clear_sso_provider_cache
+      ProviderLoader.clear_cache
+    end
+
+    private
+
+      def normalize_providers(providers)
+        Array(providers).map do |p|
+          p.respond_to?(:deep_symbolize_keys) ? p.deep_symbolize_keys : p
+        end
+      end
   end
 end
