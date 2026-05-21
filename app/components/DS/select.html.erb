@@ -39,8 +39,7 @@
           placeholder: t("helpers.select.search_placeholder"),
           data: {
             list_filter_target: "input",
-            action: "list-filter#filter",
-            aria-label="<%= t("helpers.select.search_placeholder") %>"
+            action: "input->list-filter#filter input->select#syncTabindex"
           }
         ) %>
       </div>
