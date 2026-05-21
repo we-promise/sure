@@ -1,5 +1,7 @@
 class PwaController < ApplicationController
   skip_authentication
+  # Service workers must be served without CSRF protection
+  skip_before_action :verify_authenticity_token
 
   def manifest
     # Force JSON format to avoid MissingTemplate errors when browsers request /manifest
