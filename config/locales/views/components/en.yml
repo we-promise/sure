@@ -89,6 +89,8 @@ en:
       default_label: Preview
     dialog:
       close: Close
+    popover:
+      avatar_default_label: Open menu
     tooltip:
       trigger_label: More info
     link:
