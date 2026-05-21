@@ -18,8 +18,15 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     income_statement = IncomeStatement.new(@family)
     IncomeStatement.stubs(:new).returns(income_statement)
 
-    fake_period_total = stub(
+    fake_expense_period_total = IncomeStatement::PeriodTotal.new(
       classification: "expense",
+      total: 0,
+      currency: @family.currency,
+      category_totals: []
+    )
+
+    fake_income_period_total = IncomeStatement::PeriodTotal.new(
+      classification: "income",
       total: 0,
       currency: @family.currency,
       category_totals: []
@@ -28,12 +35,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     income_statement.expects(:build_period_total)
       .with(classification: "expense", period: kind_of(Period))
       .once
-      .returns(fake_period_total)
+      .returns(fake_expense_period_total)
 
     income_statement.expects(:build_period_total)
       .with(classification: "income", period: kind_of(Period))
       .once
-      .returns(fake_period_total)
+      .returns(fake_income_period_total)
 
     get root_path
 
