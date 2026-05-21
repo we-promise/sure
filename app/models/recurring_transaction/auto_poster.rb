@@ -35,15 +35,40 @@ class RecurringTransaction::AutoPoster
   # skip paths (inactive, not due, no account, transfer) — those are
   # business outcomes, not errors. Unexpected exceptions still bubble
   # so the job's Sentry instrumentation catches them.
+  #
+  # Concurrency: the critical section runs under `with_lock` (SELECT
+  # ... FOR UPDATE) and re-checks the due/active guards inside the
+  # lock. Without this, two workers (overlapping cron + manual
+  # enqueue, or a Sidekiq retry colliding with the next run) could
+  # both pass the unlocked guards and double-post the same date —
+  # there's no DB uniqueness constraint preventing duplicate Entries
+  # for a recurring/date pair, so the lock is the only barrier.
   def call
+    # Cheap pre-lock checks. If the row is obviously skippable we
+    # don't want to take a row lock just to exit.
     return Result.new(status: :skipped_inactive, reason: "recurring transaction is not active") unless @recurring.active?
     return Result.new(status: :skipped_not_due, reason: "next_expected_date is in the future") if @recurring.next_expected_date.future?
     return Result.new(status: :skipped_no_account, reason: "recurring transaction has no source account") if @recurring.account_id.blank?
     return Result.new(status: :skipped_transfer, reason: "recurring transfers are not auto-posted in V1") if @recurring.transfer?
 
-    entry = nil
-    RecurringTransaction.transaction do
-      entry = @recurring.account.entries.create!(
+    posted_entry = nil
+    skip_result = nil
+
+    @recurring.with_lock do
+      # Re-check after acquiring the row lock. Another worker may have
+      # advanced `next_expected_date` (or flipped the row inactive)
+      # between our pre-lock check and the lock acquisition.
+      if !@recurring.active?
+        skip_result = Result.new(status: :skipped_inactive, reason: "row became inactive before lock acquisition")
+        next
+      end
+
+      if @recurring.next_expected_date.future?
+        skip_result = Result.new(status: :skipped_not_due, reason: "another worker already advanced next_expected_date")
+        next
+      end
+
+      posted_entry = @recurring.account.entries.create!(
         date: @recurring.next_expected_date,
         name: display_name,
         amount: posting_amount,
@@ -52,17 +77,24 @@ class RecurringTransaction::AutoPoster
         source: "recurring_auto_post"
       )
 
-      entry.lock_saved_attributes!
-      entry.mark_user_modified!
+      # Intentionally NOT calling `entry.mark_user_modified!` /
+      # `entry.lock_saved_attributes!`. These auto-posted entries are
+      # system-generated; marking them user_modified would make
+      # provider syncs treat them as protected and skip reconciliation
+      # when the same transaction later imports from Plaid/SimpleFIN/
+      # etc. The `source: "recurring_auto_post"` tag is enough for any
+      # downstream code that wants to identify these.
 
       # Advance next_expected_date forward so the row is no longer "due"
       # on subsequent job runs in the same day.
       @recurring.record_occurrence!(@recurring.next_expected_date, posting_amount)
     end
 
-    entry.sync_account_later
+    return skip_result if skip_result
 
-    Result.new(status: :posted, entry: entry)
+    posted_entry.sync_account_later
+
+    Result.new(status: :posted, entry: posted_entry)
   end
 
   private

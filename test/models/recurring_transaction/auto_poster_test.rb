@@ -38,6 +38,20 @@ class RecurringTransaction::AutoPosterTest < ActiveSupport::TestCase
     assert_kind_of Transaction, result.entry.entryable
   end
 
+  # Provider syncs (Plaid / SimpleFIN / etc.) treat `user_modified` entries as
+  # protected and skip reconciliation. Auto-posted entries are system-generated,
+  # not user-edited — they must stay reconcilable so the same transaction can
+  # be claimed by a provider import later (#1080 review feedback).
+  test "auto-posted entry is not marked user_modified" do
+    recurring = build_due_recurring
+
+    result = RecurringTransaction::AutoPoster.new(recurring).call
+
+    assert result.posted?
+    assert_not result.entry.user_modified?
+    assert_not result.entry.protected_from_sync?
+  end
+
   test "advances next_expected_date after posting so the row is no longer due" do
     recurring = build_due_recurring
     original_next = recurring.next_expected_date
