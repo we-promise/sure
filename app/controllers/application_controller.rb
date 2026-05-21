@@ -16,7 +16,7 @@ class ApplicationController < ActionController::Base
   before_action :set_default_chat
   before_action :set_active_storage_url_options
 
-  helper_method :demo_config, :demo_host_match?, :show_demo_warning?
+  helper_method :demo_config, :demo_host_match?, :show_demo_warning?, :current_sidekiq_health
 
   private
     def accept_pending_invitation_for(user)
@@ -92,6 +92,12 @@ class ApplicationController < ActionController::Base
 
     def show_demo_warning?
       demo_host_match?
+    end
+
+    # Cached once per request so the global layout, banner partial, and
+    # any controller-level checks share a single Redis round-trip.
+    def current_sidekiq_health
+      @current_sidekiq_health ||= SidekiqHealth.new
     end
 
     def accessible_accounts
