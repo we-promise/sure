@@ -57,6 +57,22 @@ class SidekiqHealthTest < ActiveSupport::TestCase
     assert_equal :stale_heartbeat, health.reason
   end
 
+  test "reports stale_heartbeat when a registered process has no heartbeat at all" do
+    # Sidekiq's ProcessSet can return entries with a nil `beat` key during
+    # startup or after a forced kill — treat it the same as a stale beat,
+    # not as healthy.
+    stub_sidekiq(
+      processes: [ { "beat" => nil } ],
+      queues: [ fake_queue ]
+    )
+
+    health = SidekiqHealth.new
+
+    assert_not health.healthy?
+    assert_equal :stale_heartbeat, health.reason
+    assert_nil health.last_heartbeat_at
+  end
+
   test "reports queue_backed_up when oldest job exceeds latency threshold" do
     stub_sidekiq(
       processes: [ fresh_process ],
