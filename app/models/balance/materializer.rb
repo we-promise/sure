@@ -73,6 +73,7 @@ class Balance::Materializer
       )
     end
 
+    # Called only from #materialize_balances after #calculate_balances, so calculator.incremental? is safe.
     def purge_stale_balances
       sorted_balances = @balances.sort_by(&:date)
 

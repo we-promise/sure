@@ -72,11 +72,6 @@ class CoinstatsItem < ApplicationRecord
     results
   end
 
-  # Queues balance sync jobs for all visible accounts.
-  # @param parent_sync [Sync, nil] Parent sync for tracking
-  # @param window_start_date [Date, nil] Start of sync window
-  # @param window_end_date [Date, nil] End of sync window
-  # @return [Array<Hash>] Results with success status per account
   # Persists raw API response for debugging and reprocessing.
   # @param accounts_snapshot [Hash] Raw API response data
   def upsert_coinstats_snapshot!(accounts_snapshot)

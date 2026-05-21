@@ -102,6 +102,13 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+
+    # Plaid #accounts returns a plain Array (not an Account relation), so schedule all
+    # linked accounts — including disabled/pending-deletion — matching pre-refactor behavior.
+    def balance_sync_accounts
+      accounts
+    end
+
     def remove_plaid_item
       return unless plaid_provider.present?
 

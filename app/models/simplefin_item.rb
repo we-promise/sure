@@ -454,6 +454,13 @@ class SimplefinItem < ApplicationRecord
   end
 
   private
+
+    # SimpleFIN #accounts returns a plain Array (not an Account relation), so schedule all
+    # linked accounts — including disabled/pending-deletion — matching pre-refactor behavior.
+    def balance_sync_accounts
+      accounts
+    end
+
     # Parse sync_stats, handling cases where it might be a raw JSON string
     # (e.g., from console testing or bypassed serialization)
     def parse_sync_stats(sync_stats)
