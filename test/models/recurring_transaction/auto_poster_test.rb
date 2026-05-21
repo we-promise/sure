@@ -1,0 +1,119 @@
+require "test_helper"
+
+class RecurringTransaction::AutoPosterTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+    @account = accounts(:depository)
+    @merchant = merchants(:netflix)
+  end
+
+  def build_due_recurring(**overrides)
+    @family.recurring_transactions.create!({
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: Date.current.day,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      status: "active",
+      occurrence_count: 1,
+      auto_post: true
+    }.merge(overrides))
+  end
+
+  test "posts a real entry for an active, due, non-transfer recurring" do
+    recurring = build_due_recurring
+
+    result = nil
+    assert_difference -> { @account.entries.count }, 1 do
+      result = RecurringTransaction::AutoPoster.new(recurring).call
+    end
+
+    assert result.posted?
+    assert_equal Date.current, result.entry.date
+    assert_equal "USD", result.entry.currency
+    assert_equal 15.99, result.entry.amount.to_d
+    assert_equal "recurring_auto_post", result.entry.source
+    assert_kind_of Transaction, result.entry.entryable
+  end
+
+  test "advances next_expected_date after posting so the row is no longer due" do
+    recurring = build_due_recurring
+    original_next = recurring.next_expected_date
+
+    RecurringTransaction::AutoPoster.new(recurring).call
+    recurring.reload
+
+    assert_operator recurring.next_expected_date, :>, original_next
+    assert_equal 2, recurring.occurrence_count
+  end
+
+  test "skips inactive recurring" do
+    recurring = build_due_recurring(status: "inactive")
+
+    result = nil
+    assert_no_difference -> { @account.entries.count } do
+      result = RecurringTransaction::AutoPoster.new(recurring).call
+    end
+
+    assert_not result.posted?
+    assert_equal :skipped_inactive, result.status
+  end
+
+  test "skips recurring whose next_expected_date is still in the future" do
+    recurring = build_due_recurring(next_expected_date: 1.week.from_now.to_date)
+
+    result = nil
+    assert_no_difference -> { @account.entries.count } do
+      result = RecurringTransaction::AutoPoster.new(recurring).call
+    end
+
+    assert_not result.posted?
+    assert_equal :skipped_not_due, result.status
+  end
+
+  test "skips transfers in V1" do
+    other_account = accounts(:credit_card)
+    recurring = build_due_recurring(
+      destination_account: other_account,
+      merchant: nil,
+      name: "Monthly card payment"
+    )
+
+    result = nil
+    assert_no_difference -> { @account.entries.count } do
+      result = RecurringTransaction::AutoPoster.new(recurring).call
+    end
+
+    assert_not result.posted?
+    assert_equal :skipped_transfer, result.status
+  end
+
+  test "uses expected_amount_avg for manual recurring with variance" do
+    recurring = build_due_recurring(
+      manual: true,
+      amount: 20.0,
+      expected_amount_min: 18.0,
+      expected_amount_max: 22.0,
+      expected_amount_avg: 19.5
+    )
+
+    result = RecurringTransaction::AutoPoster.new(recurring).call
+
+    assert result.posted?
+    assert_equal 19.5, result.entry.amount.to_d
+  end
+
+  test "second call in the same day skips because next_expected_date is now in the future" do
+    recurring = build_due_recurring
+
+    first = RecurringTransaction::AutoPoster.new(recurring).call
+    assert first.posted?
+
+    recurring.reload
+    second = RecurringTransaction::AutoPoster.new(recurring).call
+    assert_not second.posted?
+    assert_equal :skipped_not_due, second.status
+  end
+end

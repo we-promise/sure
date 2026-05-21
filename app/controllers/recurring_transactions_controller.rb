@@ -61,6 +61,22 @@ class RecurringTransactionsController < ApplicationController
     end
   end
 
+  def toggle_auto_post
+    @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).find(params[:id])
+    @recurring_transaction.update!(auto_post: !@recurring_transaction.auto_post?)
+
+    message = @recurring_transaction.auto_post? ?
+      t("recurring_transactions.auto_post_enabled") :
+      t("recurring_transactions.auto_post_disabled")
+
+    respond_to do |format|
+      format.html do
+        flash[:notice] = message
+        redirect_to recurring_transactions_path
+      end
+    end
+  end
+
   def destroy
     @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).find(params[:id])
     @recurring_transaction.destroy!

@@ -411,6 +411,7 @@ Rails.application.routes.draw do
 
     member do
       match :toggle_status, via: [ :get, :post ]
+      match :toggle_auto_post, via: [ :get, :post ]
     end
   end
 
