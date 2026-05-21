@@ -15,9 +15,8 @@ class Goals::CardComponent < ApplicationComponent
 
   def ring_color
     case goal.status
-    when :reached then "var(--color-green-600)"
-    when :behind then "var(--color-yellow-600)"
-    when :on_track then "var(--color-green-500)"
+    when :reached, :on_track then "var(--color-success)"
+    when :behind then "var(--color-warning)"
     else "var(--color-gray-400)"
     end
   end
