@@ -43,9 +43,16 @@ class IncomeStatement
   end
 
   def net_category_totals(period: Period.current_month)
+    ### @bittensorrider
+    ### `return cached if cached` will miss the cache if the stored value is ever falsy (nil or false)
+    # @net_category_totals_by_period ||= {}
+    # cached = @net_category_totals_by_period[period_cache_key(period)]
+    # return cached if cached
+
+    ### follow CodeRabbit's recommendation during PR review
+    key = period_cache_key(period)
     @net_category_totals_by_period ||= {}
-    cached = @net_category_totals_by_period[period_cache_key(period)]
-    return cached if cached
+    return @net_category_totals_by_period[key] if @net_category_totals_by_period.key?(key)
 
     expense = expense_totals(period: period)
     income = income_totals(period: period)
