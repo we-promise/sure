@@ -5,8 +5,8 @@ class Settings::ProvidersController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Bank sync", nil ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.bank_sync"), nil ]
     ]
 
     prepare_show_context
@@ -66,9 +66,9 @@ class Settings::ProvidersController < ApplicationController
       # Reload provider configurations if needed
       reload_provider_configs(updated_fields)
 
-      redirect_to settings_providers_path, notice: "Provider settings updated successfully"
+      redirect_to settings_providers_path, notice: t(".updated_successfully")
     else
-      redirect_to settings_providers_path, notice: "No changes were made"
+      redirect_to settings_providers_path, notice: t(".no_changes")
     end
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")

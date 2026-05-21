@@ -16,13 +16,15 @@
 
       <%= render DS::Button.new(
         variant: "destructive",
+        type: :submit,
         text: t(".delete_and_leave_uncategorized", tag_name: @tag.name),
         full_width: true,
         data: { deletion_target: "destructiveSubmitButton" }
       ) %>
 
       <%= render DS::Button.new(
-        text: "Delete and reassign",
+        text: t(".delete_and_reassign"),
+        type: :submit,
         data: { deletion_target: "safeSubmitButton" },
         hidden: true,
         full_width: true

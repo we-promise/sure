@@ -1,0 +1,7 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: "Either INDEXA_API_TOKEN env var or username/document/password credentials are required"

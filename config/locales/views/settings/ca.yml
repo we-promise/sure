@@ -1,9 +1,5 @@
 ---
 ca:
-  views:
-    settings:
-      payments:
-        renewal: "La teva contribució continua el %{date}."
   settings:
     ai_prompts:
       show:
@@ -23,18 +19,125 @@ ca:
           subtitle: La IA categoritza automàticament les teves transaccions segons
             les categories definides
           title: Categoritzador de transaccions
-    payments:
+    appearances:
       show:
-        page_title: Pagament
-        subscription_subtitle: Actualitza la teva subscripció i dades de pagament
-        subscription_title: Gestiona la subscripció
+        dashboard_subtitle: Personalitza com es mostra el tauler de control
+        dashboard_title: Tauler de control
+        dashboard_two_column_description: Mostra els ginys del tauler en dues columnes
+          en pantalles grans. Si està desactivat, els ginys s'apilen en una sola columna.
+        dashboard_two_column_title: Disseny a dues columnes
+        page_title: Aparença
+        split_grouped_description: Mostra les transaccions dividides agrupades sota
+          la seva matriu a la llista de transaccions. Si està desactivat, els fills
+          apareixen com a files individuals.
+        split_grouped_title: Agrupa les transaccions dividides
+        theme_dark: Fosc
+        theme_light: Clar
+        theme_subtitle: Tria el tema preferit per a l'aplicació
+        theme_system: Sistema
+        theme_title: Tema
+        transactions_subtitle: Personalitza com es mostren les transaccions
+        transactions_title: Transaccions
+    debugs:
+      show:
+        context:
+          account: account=%{value}
+          account_provider: account_provider=%{value}
+          family: family=%{value}
+          provider: provider=%{value}
+          user: user=%{value}
+        empty: No s'han trobat esdeveniments de depuració.
+        filters:
+          account_id: ID del compte
+          account_provider_id: ID del proveïdor del compte
+          all: Tots
+          category: Categoria
+          end_date: Fins
+          family_id: ID de la família
+          level: Nivell
+          provider: Proveïdor
+          reset: Restableix
+          source: Origen
+          start_date: Des de
+          submit: Filtra
+          user_id: ID de l'usuari
+        missing_value: "-"
+        page_title: Depuració
+        subtitle: Esdeveniments operatius rellevants per a superadministradors. Els
+          més nous primer.
+        table:
+          category: Categoria
+          context: Context
+          level: Nivell
+          message: Missatge
+          metadata: Metadades
+          source: Origen
+          time: Hora
+          view_metadata: Veure
+        title: Registre d'esdeveniments de depuració
     hostings:
       ensure_admin:
         not_authorized: No autoritzat
+    llm_usages:
+      show:
+        avg_cost_per_request: Cost mitjà/sol·licitud
+        based_on_requests: Basat en %{with_cost} de %{total} sol·licituds amb dades
+          de cost
+        col_cost: Cost
+        col_date: Data
+        col_model: Model
+        col_operation: Operació
+        col_tokens: Tokens
+        completion: completació
+        cost_by_model: Cost per model
+        cost_by_operation: Cost per operació
+        cost_estimates_description: Els costos s'estimen segons els preus d'OpenAI
+          de 2025. Els costos reals poden variar. El preu és per cada milió de tokens
+          i varia segons el model. Els models personalitzats o amb self hosting mostraran
+          "N/D" i no s'inclouen als totals de cost.
+        cost_estimates_title: Sobre les estimacions de cost
+        end_date: Data de fi
+        failed: Errades
+        filter: Filtra
+        no_usage_data: No s'han trobat dades d'ús per al període seleccionat
+        page_title: Ús i costos d'LLM
+        prompt: prompt
+        recent_usage: Ús recent
+        start_date: Data d'inici
+        subtitle: Fes el seguiment del teu ús d'IA i els costos estimats
+        total_cost: Cost total
+        total_requests: Total de sol·licituds
+        total_tokens: Total de tokens
+    payments:
+      show:
+        choose_level: Tria un nivell
+        contributions_note: Les contribucions a %{product_name} apareixeran aquí.
+        currently_on_plan: 'Actualment al pla:'
+        manage: Gestiona
+        not_contributing_emphasis: no contribueixes
+        not_contributing_prefix: Actualment
+        page_title: Pagaments
+        payment_via_stripe: Pagament a través de Stripe
+        subscription_subtitle: Actualitza les teves dades de targeta de crèdit
+        subscription_title: Gestiona contribucions
+        trial_days_left:
+          one: Les dades s'eliminaran en %{count} dia
+          other: Les dades s'eliminaran en %{count} dies
+        trialing: Actualment fas servir la demostració oberta de %{product_name}
     preferences:
       show:
+        additional_currencies_label: Divises addicionals
+        base_currency_badge: Divisa base
+        base_currency_label: Divisa base
+        preview:
+          description: Activa funcions en desenvolupament etiquetades com a experimentals o canary.
+          title: Activa funcions experimentals
         country: País
-        currency: Moneda
+        currencies_more: "+%{count} més"
+        currencies_subtitle: Tria quines divises apareixen als camps de diners
+        currencies_title: Divises
+        currency: Divisa
+        currency_search_placeholder: Cerca divises
         date_format: Format de data
         default_account_order: Ordre de comptes per defecte
         default_period: Període per defecte
@@ -42,12 +145,30 @@ ca:
         general_title: General
         language: Idioma
         language_auto: Idioma del navegador
+        manage_currencies: Gestiona divises
+        manage_currencies_subtitle: Desmarca les divises que mai utilitzes, o redueix
+          la llista a unes poques.
+        month_start_day: El mes del pressupost comença el
+        month_start_day_hint: Estableix quan comença el teu mes pressupostari (p.
+          ex., dia de cobrament)
+        month_start_day_warning: Els teus pressupostos i càlculs MTD utilitzaran aquest
+          dia d'inici personalitzat en lloc del dia 1 de cada mes.
+        translations_notice: Tingues en compte que encara estem treballant en les traduccions
+          a diversos idiomes.
+        no_additional_currencies: Cap seleccionada
+        no_matching_currencies: No s'han trobat divises
         page_title: Preferències
-        theme_dark: Fosc
-        theme_light: Clar
-        theme_subtitle: Tria el tema preferit per a l'aplicació
-        theme_system: Sistema
-        theme_title: Tema
+        save_currencies: Desa les divises
+        select_all_currencies: Selecciona-ho tot
+        select_base_only: Només la divisa base
+        selected_currencies_count:
+          one: "%{count} seleccionada"
+          other: "%{count} seleccionades"
+        sharing_default_label: Compartició predeterminada per a comptes nous
+        sharing_private: Mantén privat per defecte
+        sharing_shared: Comparteix amb tots els membres
+        sharing_subtitle: Controla com es comparteixen els comptes entre els membres
+        sharing_title: Compartició de comptes
         timezone: Fus horari
     profiles:
       destroy:
@@ -82,10 +203,13 @@ ca:
           les teves dades i no es podrà desfer.
         email: Correu electrònic
         first_name: Nom
+        group_form_input_placeholder: Introdueix el nom del grup
+        group_form_label: Nom del grup
+        group_title: Membres del grup
         household_form_input_placeholder: Introdueix el nom de la llar
         household_form_label: Nom de la llar
-        household_subtitle: Convida membres de la família, parelles i altres persones.
-          Els convidats podran accedir al teu compte familiar i als comptes compartits.
+        household_subtitle: Els convidats poden iniciar sessió al teu compte de %{moniker}
+          i accedir als recursos compartits.
         household_title: Llar
         invitation_link: Enllaç d'invitació
         invite_member: Afegeix membre
@@ -103,49 +227,346 @@ ca:
         reset_account_with_sample_data_warning: Elimina totes les teves dades existents
           i carrega dades d'exemple per explorar amb un entorn preomplert.
         save: Desa
+    providers:
+      bank_sync:
+        lede: Connecta comptes externs perquè transaccions, saldos i posicions flueixin
+          automàticament a Sure.
+        page_title: Sincronització bancària
+      binance_panel:
+        api_key_label: Clau API
+        api_key_placeholder: Enganxa la teva clau API de Binance
+        api_secret_label: Secret de l'API
+        api_secret_placeholder: Enganxa el teu secret de l'API de Binance
+        connect_button: Connecta Binance
+        disconnect_confirm: Segur que vols desconnectar Binance?
+        ip_hint_body: 'Afegeix la IP de sortida del servidor de l''aplicació a la
+          llista blanca de la clau API de Binance:'
+        ip_hint_contact_admin: Contacta amb el teu administrador per obtenir la IP
+          de sortida del servidor de l'aplicació.
+        ip_hint_title: Cal incloure la IP a la llista blanca
+        no_withdraw_body: No activis permisos de retirada en crear la teva clau API
+          de Binance. Sure només necessita accés de lectura.
+        no_withdraw_title: Només clau de lectura
+        setup_instructions: 'Per connectar Binance, crea una clau API de només lectura:'
+        step1_html: Ves a <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Binance API
+          Management</a>
+        step2: Crea una nova clau API només amb el permís Enable Reading
+        step3: Enganxa la teva clau API i secret a sota
+        sync: Sincronitza
+        syncing: Sincronitzant...
+      clear_filter: Neteja filtres
+      coinbase_panel:
+        api_key_label: Clau API
+        api_key_placeholder: Introdueix la teva clau API de Coinbase
+        api_secret_label: Secret de l'API
+        api_secret_placeholder: Introdueix el teu secret de l'API de Coinbase
+        connect_button: Connecta Coinbase
+        disconnect_confirm: Segur que vols desconnectar aquesta connexió de Coinbase?
+          Els teus comptes sincronitzats passaran a ser comptes manuals.
+        setup_instructions: 'Per connectar Coinbase:'
+        step1_html: Ves a <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase
+          API Settings</a>
+        step2: Crea una nova clau API amb permisos de només lectura (veure comptes,
+          veure transaccions)
+        step3: Copia la teva clau API i secret de l'API i enganxa'ls a sota
+        sync: Sincronitza
+        syncing: Sincronitzant...
+      connect: Connecta
+      drawer_trust_statement: Accés només de lectura. Sure mai no pot moure diners
+        i les teves credencials s'emmagatzemen xifrades.
+      empty_filter: Cap proveïdor coincideix amb el teu filtre.
+      enable_banking_panel:
+        add_connection: Afegeix connexió
+        application_id_label: ID d'aplicació
+        application_id_placeholder_new: Introdueix l'ID d'aplicació
+        application_id_placeholder_update: Introdueix el nou ID per actualitzar
+        callback_url_instruction: Per a l'URL de retorn de trucada, fes servir %{callback_url}.
+        client_certificate_label: Certificat de client (amb clau privada)
+        config_locked_message: Desconnecta tots els bancs vinculats abans de canviar
+          aquestes credencials.
+        config_locked_title: Configuració bloquejada
+        configured: Configurat
+        connect_bank: Connecta banc
+        connected_bank: Banc connectat
+        connection: Connexió
+        connection_error: Error de connexió
+        country_label: País
+        ready_to_link: Llest per enllaçar comptes
+        reconnect: Reconnecta
+        remove: Elimina
+        remove_confirm: Segur que vols eliminar aquesta connexió?
+        save_and_connect: Desa i connecta
+        select_country: Selecciona país...
+        session_expired_reconnect: Sessió expirada — reconnecta
+        session_expires: 'La sessió expira: %{date}'
+        step_1_html: Ves a %{link} i obtén les teves credencials de desenvolupador.
+        step_2: Tria el teu país i enganxa l'ID d'aplicació + certificat de client
+          a sota.
+        step_3: Desa, després utilitza Afegeix connexió per enllaçar el teu banc.
+        sync: Sincronitza
+        syncing: Sincronitzant
+        unknown: Desconegut
+        update_connection: Actualitza connexió
+      encryption_error:
+        message: La sincronització bancària requereix Active Record encryption configurat.
+          Estableix primary_key, deterministic_key i key_derivation_salt a les teves
+          credencials de Rails o variables d'entorn.
+        title: Falten les claus de xifratge
+      groups:
+        available: Disponibles
+        empty_available: Tots els proveïdors disponibles estan connectats.
+        your_connections: Les teves connexions
+      health_strip:
+        accounts_syncing: comptes sincronitzant-se
+        connected: connectats
+        last_synced: Última sincronització fa %{time}
+        needs_attention: necessita atenció
+      ibkr_panel:
+        accounts_tab: Comptes
+        configuration:
+          all_other_options: 'Tota la resta d''opcions de configuració: "No"'
+          date_format: 'Format de data: yyyy-MM-dd'
+          date_time_separator: 'Separador de data/hora: ; (punt i coma)'
+          format: 'Format: XML'
+          models: 'Models: Opcional'
+          period: 'Període: Últims 365 dies naturals'
+          profit_and_loss: 'Pèrdues i guanys: Per defecte'
+          time_format: 'Format d''hora: HH:mm:ss'
+        disconnect_confirm: Vols desconnectar Interactive Brokers?
+        flex_query_details:
+          configuration_heading: Estableix aquestes opcions de consulta
+          eyebrow: Flex Query
+          sections_heading: Activa aquestes seccions i camps
+          summary: Expandeix per veure les seccions, camps i configuració exactes
+            que ha d'incloure la teva Flex Query d'activitat d'IBKR.
+          title: Seccions, camps i configuració
+        not_configured: No configurat.
+        query_id_label: ID de consulta
+        query_id_placeholder_existing: Deixa en blanc per mantenir l'ID actual
+        query_id_placeholder_new: Introdueix el teu ID de Flex Query d'IBKR
+        report_window_note: Els informes Flex d'IBKR estan limitats a la finestra
+          de consulta configurada a IBKR. Sure importarà les posicions actuals completes
+          més fins a 365 dies d'activitat d'aquest informe.
+        save_configuration: Desa la configuració
+        sections:
+          account_information: 'Account Information: Account ID, Currency'
+          cash_report: 'Cash Report:'
+          cash_report_fields: 'Fields: Currency, Ending Cash'
+          cash_report_options: 'Options: None'
+          cash_transactions: 'Cash Transactions:'
+          cash_transactions_fields: 'Fields: Amount, Conid, Currency, FX Rate To Base,
+            Report Date, Transaction ID, Type'
+          cash_transactions_options: 'Options: Dividends, Deposits & Withdrawals,
+            Detail'
+          change_in_position_value_summary: 'Change In Position Value Summary: Currency,
+            End Of Period Value'
+          net_asset_value: 'Net Asset Value (NAV) in Base:'
+          net_asset_value_fields: 'Fields: Currency, Report Date, Total'
+          net_asset_value_options: 'Options: None'
+          open_positions: 'Open Positions:'
+          open_positions_fields: 'Fields: Asset Class, Conid, Cost Basis Price, Currency,
+            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
+            ID Type, Side, Symbol'
+          open_positions_options: 'Options: Summary'
+          trades: 'Trades:'
+          trades_fields: 'Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate
+            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
+            Date, Trade ID, TradePrice, Transaction ID'
+          trades_options: 'Options: Execution'
+        status_configured_prefix: "%{summary}. Visita la"
+        status_configured_suffix: pestanya per gestionar els comptes descoberts.
+        steps:
+          step_1: Al teu IBKR Client Portal, navega a "Performance & Reports" > "Flex
+            Queries".
+          step_2: Fes clic a la icona "+" a la secció "Activity Flex Query" per crear
+            una nova consulta.
+          step_3: Anomena la teva consulta (p. ex., "Sure Sync"), després revisa els
+            detalls de la Flex Query a sota i activa les seccions, camps i opcions
+            de configuració llistades.
+          step_4: Desa la consulta, anota el teu "Query ID", després usa la icona
+            d'engranatge a la secció "Flex Web Service Configuration" per generar
+            un Token d'accés.
+          step_5: Enganxa el teu Query ID i Token a sota, desa la configuració, i
+            ves a Comptes per enllaçar els comptes d'IBKR descoberts.
+        sync: Sincronitza
+        token_label: Token
+        token_placeholder_existing: Deixa en blanc per mantenir el Token actual
+        token_placeholder_new: Introdueix el teu Token d'IBKR Flex Web Service
+        update_configuration: Actualitza la configuració
+      kraken_panel:
+        add_connection: Afegeix connexió Kraken
+        api_key_label: Clau API
+        api_key_placeholder: Enganxa la teva clau API de Kraken
+        api_secret_label: Clau privada
+        api_secret_placeholder: Enganxa la teva clau privada de Kraken
+        connection_name_label: Nom de la connexió
+        connection_name_placeholder: Kraken principal
+        default_connection_name: Kraken
+        disconnect: Desconnecta
+        disconnect_confirm: Segur que vols desconnectar %{name}?
+        keep_api_key_placeholder: Deixa en blanc per mantenir la clau API existent
+        keep_api_secret_placeholder: Deixa en blanc per mantenir la clau privada existent
+        read_only_body: No atorguis permisos de trading, cancel·lació, retirada, exportació,
+          llibre major, Earn, staking o transferència. Sure només importa saldos,
+          posicions i operacions spot.
+        read_only_title: Sincronització només de lectura amb l'exchange
+        setup_accounts: Configura compte
+        step1_html: Ves a <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">Kraken API settings</a>
+        step2: Crea una clau API només amb Query Funds i Query Closed Orders & Trades.
+        step3: Enganxa la clau API i la clau privada a sota.
+        sync: Sincronitza
+        syncing: Sincronitzant...
+        update_connection: Actualitza connexió
+      lunchflow_panel:
+        api_key_label: Clau API
+        api_key_placeholder_new: Enganxa la clau API aquí
+        api_key_placeholder_update: Introdueix la nova clau API per actualitzar
+        base_url_label: URL base (opcional)
+        base_url_placeholder: https://lunchflow.app/api/v1 (per defecte)
+        save_and_connect: Desa i connecta
+        step_1_html: Ves a %{link} i crea una clau API.
+        step_2: Enganxa la teva clau a sota i connecta.
+        step_3: Després ves a Comptes per enllaçar els teus comptes sincronitzats.
+        update_connection: Actualitza connexió
+      maturity:
+        alpha: Alfa
+        beta: Beta
+      meta:
+        last_synced: Sincronitzat fa %{time}
+        no_recent_sync: Sincronització vençuda
+        reconsent_needed:
+          one: Cal renovar el consentiment en 1 dia
+          other: Cal renovar el consentiment en %{count} dies
+        reconsent_required: Cal renovar el consentiment
+        registration_needed: Cal registrar-se
+        sync_error: Error de sincronització
+      not_authorized: No autoritzat
+      not_found: Proveïdor no trobat.
+      plaid_eu_panel:
+        step_1_html: Obre el %{link} i copia el teu Client ID i Secret Key d'UE.
+      plaid_panel:
+        step_1_html: Obre el %{link} i copia el teu Client ID i Secret Key.
+        step_2: Tria un entorn. Fes servir sandbox per a proves i production per a
+          comptes reals.
+        step_3: Enganxa les teves credencials a sota i connecta.
+      recently_synced: Sincronitzat recentment. Torna-ho a provar d'aquí a un moment.
+      search_filters:
+        aria_label: Cerca proveïdors
+        chips:
+          all: Tots
+          bank: Bancs
+          crypto: Cripto
+          investment: Inversions
+        placeholder: Cerca proveïdors
+      setup_steps:
+        eyebrow: Configuració
+        need_help: Necessites ajuda?
+      simplefin_panel:
+        save_and_connect: Desa i connecta
+        setup_token_label: Token de configuració
+        setup_token_placeholder: Enganxa el token de configuració de SimpleFIN
+        step_1_html: Ves a %{link} per obtenir un token d'un sol ús.
+        step_2: Enganxa el token a sota i connecta.
+        step_3: Després ves a Comptes per enllaçar els teus comptes sincronitzats.
+      status:
+        err: Error
+        off: No configurat
+        ok: Connectat
+        warn: Cal acció
+      sync_all: Sincronitza-ho tot
+      sync_all_in_progress: Sincronitzant tots els proveïdors connectats…
+      sync_all_recently: Sincronització ja en curs. Torna-ho a provar d'aquí a un
+        moment.
+      sync_provider: Sincronitza ara
+      sync_provider_in_progress: Sincronització iniciada.
+      sync_provider_no_items: No hi ha connexions disponibles per sincronitzar.
+      taglines:
+        binance: Sincronitza els teus saldos spot de Binance utilitzant una clau API
+          de només lectura.
+        brex: Sincronitza l'activitat d'efectiu i targeta corporativa de Brex amb
+          accés de només lectura.
+        coinbase: Importa les teves posicions cripto de Coinbase i fes el seguiment
+          del rendiment.
+        coinstats: Fes el seguiment de tota la teva cartera cripto a través de carteres
+          i exchanges.
+        enable_banking: Sincronitza comptes bancaris europeus mitjançant l'open banking
+          PSD2.
+        ibkr: Sincronitza comptes d'inversió d'Interactive Brokers mitjançant importacions
+          Flex Query.
+        indexa_capital: Fes el seguiment de la teva cartera d'inversió automatitzada
+          d'Indexa Capital.
+        kraken: Sincronitza saldos i operacions spot de Kraken utilitzant una clau
+          API de només lectura.
+        lunchflow: Connecta més de 20.000 bancs de més de 40 països (Regne Unit, UE,
+          EUA i més!).
+        mercury: Sincronitza automàticament els teus comptes bancaris empresarials
+          de Mercury.
+        plaid: Connecta milers d'institucions financeres dels EUA mitjançant Plaid.
+        plaid_eu: Connecta institucions financeres europees mitjançant Plaid (PSD2
+          / Open Banking).
+        simplefin: Connecta comptes bancaris dels EUA mitjançant el protocol obert
+          SimpleFIN.
+        snaptrade: Connecta comptes d'inversió mitjançant la xarxa d'agregació SnapTrade.
+        sophtron: Connecta bancs i serveis dels EUA i Canadà.
+      update:
+        no_changes: No s'ha fet cap canvi
+        updated_successfully: Configuració del proveïdor actualitzada correctament
     securities:
       show:
-        page_title: Valor
+        page_title: Seguretat
         sso_confirm_body: Segur que vols desconnectar el teu compte de %{provider}?
-          Pots tornar-lo a connectar més tard iniciant sessió amb aquest proveïdor una altra vegada.
+          Pots tornar-lo a connectar més tard iniciant sessió amb aquest proveïdor
+          una altra vegada.
         sso_confirm_button: Desconnecta
         sso_confirm_title: Desconnectar compte?
-        sso_connect_hint: Tanca sessió i inicia amb un proveïdor SSO per connectar un compte.
+        sso_connect_hint: Tanca sessió i inicia amb un proveïdor SSO per connectar
+          un compte.
         sso_disconnect: Desconnecta
         sso_last_used: Darrer ús
         sso_never: Mai
         sso_no_email: Sense correu electrònic
         sso_no_identities: No hi ha comptes SSO connectats
-        sso_subtitle: Gestiona les teves connexions de compte amb inici de sessió únic
+        sso_subtitle: Gestiona les teves connexions de compte amb inici de sessió
+          únic
         sso_title: Comptes connectats
-        sso_warning_message: Aquesta és la teva única mètode d'inici de sessió. Hauries de configurar una contrasenya
-          a la teva configuració de seguretat abans de desconnectar-te, altrament podries quedar blocat
-          fora del teu compte.
+        sso_warning_message: Aquesta és l'única forma d'inici de sessió. Hauries de
+          configurar una contrasenya a la teva configuració de seguretat abans de
+          desconnectar, altrament podries quedar bloquejat/da fora del teu compte.
     settings_nav:
       accounts_label: Comptes
       advanced_section_title: Avançat
       ai_prompts_label: Prompts d'IA
       api_key_label: Clau API
       api_keys_label: Clau API
+      appearance_label: Aparença
       bank_sync_label: Sincronització bancària
-      payment_label: Pagament
       categories_label: Categories
+      debug_label: Depuració
+      exports_label: Exportacions
       feedback_label: Feedback
       general_section_title: General
-      imports_label: Importacions
-      exports_label: Exportacions
       guides_label: Guies
+      imports_label: Importacions
+      llm_usage_label: Ús d'LLM
       logout: Tanca la sessió
       merchants_label: Comerços
       other_section_title: Més
+      payment_label: Pagament
       preferences_label: Preferències
       profile_label: Informació del perfil
+      providers_label: Proveïdors
       recurring_transactions_label: Recurrent
       rules_label: Regles
       security_label: Seguretat
-      self_hosting_label: Autoallotjament
+      self_hosting_label: Self hosting
+      sso_providers_label: Proveïdors SSO
+      statement_vault_label: Arxiu d'extractes
       tags_label: Etiquetes
       transactions_section_title: Transaccions
+      users_label: Usuaris
       whats_new_label: Novetats
     settings_nav_link_large:
       next: Següent
@@ -153,5 +574,10 @@ ca:
     user_avatar_field:
       accepted_formats: JPG o PNG. Màxim 5MB.
       change: Canvia la foto
-      choose: Pujar foto
+      choose: Puja una foto
       choose_label: "(opcional)"
+  views:
+    settings:
+      payments:
+        cancellation: La teva contribució finalitza el %{date}.
+        renewal: La teva contribució continua el %{date}.

@@ -83,11 +83,25 @@ class Family < ApplicationRecord
 
 
   def moniker_label
-    moniker.presence || "Family"
+    case moniker.presence
+    when nil, "Family"
+      I18n.t("shared.family_moniker.singular", default: "Family")
+    when "Group"
+      I18n.t("shared.family_moniker.group_singular", default: "Group")
+    else
+      moniker
+    end
   end
 
   def moniker_label_plural
-    moniker_label == "Group" ? "Groups" : "Families"
+    case moniker.presence
+    when nil, "Family"
+      I18n.t("shared.family_moniker.plural", default: "Families")
+    when "Group"
+      I18n.t("shared.family_moniker.group_plural", default: "Groups")
+    else
+      "#{moniker}s"
+    end
   end
 
   def share_all_by_default?

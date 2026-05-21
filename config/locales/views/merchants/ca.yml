@@ -9,20 +9,37 @@ ca:
       unlinked_success: El comerç s'ha eliminat de les teves transaccions
     edit:
       title: Edita el comerç
+    enhance:
+      already_running: La millora ja està en curs. Espera que acabi.
+      success: S'ha iniciat la millora de comerços del proveïdor. Aviat es milloraran
+        els comerços i es fusionaran els duplicats.
+    family_merchant:
+      delete: Elimina
+      edit: Edita
     form:
       name_placeholder: Nom del comerç
+      website_hint: Introdueix el lloc web del comerç per mostrar-ne automàticament
+        el logotip
+      website_placeholder: Lloc web (p. ex., starbucks.com)
     index:
       empty: Encara no hi ha comerços
-      family_empty: Encara no hi ha comerços familiars
-      family_title: Comerços familiars
+      enhance_button: Millora amb IA
+      enhance_info:
+        one: A %{count} comerç del proveïdor li falta informació del lloc web. Millora
+          amb IA per detectar llocs web, mostrar logotips i fusionar comerços duplicats.
+        other: A %{count} comerços del proveïdor els falta informació del lloc web.
+          Millora amb IA per detectar llocs web, mostrar logotips i fusionar comerços
+          duplicats.
+      family_empty: Encara no hi ha comerços
+      family_title: Els teus comerços
       merge: Fusiona comerços
       new: Nou comerç
-      provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquesta família
-      provider_info: Aquests comerços es van detectar automàticament mitjançant les teves connexions
-        bancàries o IA. Pots editar-los per crear la teva pròpia còpia, o eliminar-los per desvincular-los
-        de les teves transaccions.
-      provider_read_only: Els comerços del proveïdor se sincronitzen automàticament
-        amb les institucions connectades. No es poden editar aquí.
+      provider_empty: Encara no hi ha comerços del proveïdor vinculats
+      provider_info: Aquests comerços es van detectar automàticament mitjançant les
+        teves connexions bancàries o l'IA. Pots editar-los per crear-ne una còpia
+        pròpia, o eliminar-los per desvincular-los de les teves transaccions.
+      provider_read_only: Els comerços del proveïdor se sincronitzen des de les teves
+        institucions connectades. No es poden editar aquí.
       provider_title: Comerços del proveïdor
       table:
         actions: Accions
@@ -30,8 +47,9 @@ ca:
         source: Origen
       title: Comerços
       unlinked_info: Aquests comerços s'han eliminat recentment de les teves transaccions.
-        Desapareixeran d'aquesta llista després de 30 dies a menys que s'assignin novament a una transacció.
-      unlinked_title: Recently unlinked
+        Desapareixeran d'aquesta llista al cap de 30 dies si no s'assignen novament
+        a una transacció.
+      unlinked_title: Desvinculats recentment
     merchant:
       confirm_accept: Elimina el comerç
       confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan
@@ -40,29 +58,31 @@ ca:
       delete: Elimina el comerç
       edit: Edita el comerç
     merge:
-      description: Select a target merchant and the merchants to merge into it. All
-        transactions from merged merchants will be reassigned to the target.
-      select_target: Select target merchant...
-      sources_hint: Selected merchants will be merged into the target. Family merchants
-        will be deleted, provider merchants will be unlinked.
-      sources_label: Merchants to merge
-      submit: Merge selected
-      target_label: Merge into (target)
-      title: Merge merchants
+      description: Selecciona un comerç de destinació i els comerços que hi vols fusionar.
+        Totes les transaccions dels comerços fusionats es reassignaran a la destinació.
+      select_target: Selecciona el comerç de destinació...
+      sources_hint: Els comerços seleccionats es fusionaran amb el de destinació.
+        Els comerços de la família s'eliminaran, els del proveïdor es desvincularan.
+      sources_label: Comerços per fusionar
+      submit: Fusiona els seleccionats
+      target_label: Fusiona amb (destinació)
+      title: Fusiona comerços
     new:
       title: Nou comerç
     perform_merge:
-      invalid_merchants: Invalid merchants selected
-      no_merchants_selected: No merchants selected to merge
-      success: Successfully merged %{count} merchants
-      target_not_found: Target merchant not found
+      invalid_merchants: Comerços seleccionats no vàlids
+      no_merchants_selected: No s'ha seleccionat cap comerç per fusionar
+      success:
+        one: S'ha fusionat correctament %{count} comerç
+        other: S'han fusionat correctament %{count} comerços
+      target_not_found: No s'ha trobat el comerç de destinació
     provider_merchant:
-      edit: Edit
-      remove: Remove
-      remove_confirm_body: Are you sure you want to remove %{name}? This will unlink
-        all associated transactions from this merchant but will not delete the merchant
-        itself.
-      remove_confirm_title: Remove merchant?
+      edit: Edita
+      remove: Elimina
+      remove_confirm_body: Segur que vols eliminar %{name}? Això desvincularà totes
+        les transaccions associades d'aquest comerç, però no eliminarà el comerç en
+        si.
+      remove_confirm_title: Vols eliminar el comerç?
     update:
-      converted_success: Merchant converted and updated successfully
+      converted_success: Comerç convertit i actualitzat correctament
       success: Comerç actualitzat correctament

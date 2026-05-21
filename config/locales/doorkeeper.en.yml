@@ -66,12 +66,15 @@ en:
         deny: 'Deny'
       error:
         title: 'An error has occurred'
+        go_back: 'Go back'
       new:
         title: 'Authorization required'
         prompt: 'Authorize %{client_name} to use your account?'
         able_to: 'This application will be able to'
       show:
         title: 'Authorization code'
+        authorization_code_label: 'Authorization Code:'
+        copy_instructions: 'Copy this code and paste it into the application.'
       form_post:
         title: 'Submit this form'
 

@@ -97,7 +97,7 @@ RSpec.describe 'API V1 Imports', type: :request do
                 schema: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] }
       parameter name: :type, in: :query, required: false,
                 description: 'Filter by import type',
-                schema: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport SureImport] }
+                schema: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] }
 
       response '200', 'imports listed' do
         schema '$ref' => '#/components/schemas/ImportCollection'
@@ -138,7 +138,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport SureImport],
+            enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport],
             description: 'Import type (defaults to TransactionImport)'
           },
           account_id: {
@@ -286,7 +286,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration and row statistics.'
+      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -388,7 +388,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport SureImport],
+            enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport],
             description: 'Import type to validate (defaults to TransactionImport)'
           },
           account_id: {
