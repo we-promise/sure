@@ -86,6 +86,8 @@ class Account::MarketDataImporter
         reopened ? Date.current : (holding_date || Date.current)
       end
 
+      next unless start_dates[security_id]
+
       security.import_provider_prices(start_date: start_dates[security_id], end_date: end_date)
       security.import_provider_details
     end
@@ -106,7 +108,7 @@ class Account::MarketDataImporter
       account_start_date = account.start_date
 
       security_ids.each_with_object({}) do |security_id, hash|
-        trade_date   = trade_start_dates[security_id]
+        hash[security_id] = [ trade_date, holding_date ].compact.min || account_start_date || Date.current
         holding_date = provider_holding_security_ids.include?(security_id) ? account_start_date : nil
         hash[security_id] = [ trade_date, holding_date ].compact.min || account_start_date
       end
