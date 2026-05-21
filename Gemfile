@@ -45,7 +45,6 @@ gem "sentry-sidekiq"
 gem "posthog-ruby"
 gem "logtail-rails"
 # gem "skylight", groups: [ :production ]
-### @bittensorrider
 # Make sure Skylight is available for both of PROD and DEV
 group :development, :production do
   gem "skylight"

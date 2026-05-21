@@ -39,7 +39,6 @@ module Sure
       theme: [ "light", "dark" ] # available in view as params[:theme]
     }
 
-    ### @bittensorrider
     # Enable Skylight instrumentation for ActiveJob (background workers)
     if defined?(Skylight) && config.respond_to?(:skylight)
       config.skylight.probes << "active_job"
