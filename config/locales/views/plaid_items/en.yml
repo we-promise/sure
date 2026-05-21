@@ -15,6 +15,7 @@ en:
       connection_lost_description: This connection is no longer valid. You'll need
         to delete this connection and add it again to continue syncing data.
       delete: Delete
+      deletion_in_progress: (deletion in progress...)
       error: Error occurred while syncing data
       no_accounts_description: We could not load any accounts from this financial
         institution.
