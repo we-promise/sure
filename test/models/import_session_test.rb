@@ -43,6 +43,32 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_source_mapping session, "Transaction", "txn-1", transaction
   end
 
+  test "publishing session chunks records readback verification for each chunk" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 2,
+      content: build_ndjson(transaction_records),
+      filename: "transactions.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    entity_chunk, transaction_chunk = session.imports.ordered_by_sequence.to_a
+    assert_equal 1, entity_chunk.expected_record_counts["accounts"]
+    assert_equal 1, transaction_chunk.expected_record_counts["transactions"]
+    assert_includes SureImport::VERIFICATION_STATUSES, entity_chunk.readback_verification["status"]
+    assert_equal 1, entity_chunk.readback_verification.dig("checked_counts", "accounts")
+    assert_equal 1, transaction_chunk.readback_verification.dig("checked_counts", "transactions")
+    assert_equal 1, transaction_chunk.readback_verification.dig("actual_delta_counts", "transactions")
+  end
+
   test "publishing the same complete session does not duplicate imported transactions" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(

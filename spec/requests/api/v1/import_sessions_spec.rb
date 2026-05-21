@@ -189,31 +189,58 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json', 'multipart/form-data'
       produces 'application/json'
-
-      parameter name: :body, in: :body, required: false, schema: {
-        type: :object,
-        properties: {
-          sequence: {
-            type: :integer,
-            minimum: 1,
-            description: 'One-based chunk sequence. Earlier dependency chunks must have lower sequence numbers.'
+      metadata[:operation][:requestBody] = {
+        required: true,
+        content: {
+          'application/json' => {
+            schema: {
+              type: :object,
+              required: %w[sequence raw_file_content],
+              properties: {
+                sequence: {
+                  type: :integer,
+                  minimum: 1,
+                  description: 'One-based chunk sequence. Earlier dependency chunks must have lower sequence numbers.'
+                },
+                client_chunk_id: {
+                  type: :string,
+                  nullable: true,
+                  description: 'Client-provided idempotency key for this chunk.'
+                },
+                raw_file_content: {
+                  type: :string,
+                  description: 'Raw Sure NDJSON content. Each chunk is limited to 10MB.'
+                }
+              }
+            }
           },
-          client_chunk_id: {
-            type: :string,
-            nullable: true,
-            description: 'Client-provided idempotency key for this chunk.'
-          },
-          raw_file_content: {
-            type: :string,
-            description: 'Raw Sure NDJSON content. Each chunk is limited to 10MB.'
-          },
-          file: {
-            type: :string,
-            format: :binary,
-            description: 'Multipart Sure NDJSON file upload. Each chunk is limited to 10MB.'
+          'multipart/form-data' => {
+            schema: {
+              type: :object,
+              required: %w[sequence file],
+              properties: {
+                sequence: {
+                  type: :integer,
+                  minimum: 1,
+                  description: 'One-based chunk sequence. Earlier dependency chunks must have lower sequence numbers.'
+                },
+                client_chunk_id: {
+                  type: :string,
+                  nullable: true,
+                  description: 'Client-provided idempotency key for this chunk.'
+                },
+                file: {
+                  type: :string,
+                  format: :binary,
+                  description: 'Multipart Sure NDJSON file upload. Each chunk is limited to 10MB.'
+                }
+              }
+            }
           }
         }
       }
+
+      parameter name: :body, in: :body, required: false
 
       response '201', 'chunk uploaded' do
         schema '$ref' => '#/components/schemas/ImportSessionResponse'

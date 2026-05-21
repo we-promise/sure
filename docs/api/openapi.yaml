@@ -4844,6 +4844,49 @@ paths:
       - Import Sessions
       security:
       - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - sequence
+              - raw_file_content
+              properties:
+                sequence:
+                  type: integer
+                  minimum: 1
+                  description: One-based chunk sequence. Earlier dependency chunks
+                    must have lower sequence numbers.
+                client_chunk_id:
+                  type: string
+                  nullable: true
+                  description: Client-provided idempotency key for this chunk.
+                raw_file_content:
+                  type: string
+                  description: Raw Sure NDJSON content. Each chunk is limited to 10MB.
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - sequence
+              - file
+              properties:
+                sequence:
+                  type: integer
+                  minimum: 1
+                  description: One-based chunk sequence. Earlier dependency chunks
+                    must have lower sequence numbers.
+                client_chunk_id:
+                  type: string
+                  nullable: true
+                  description: Client-provided idempotency key for this chunk.
+                file:
+                  type: string
+                  format: binary
+                  description: Multipart Sure NDJSON file upload. Each chunk is limited
+                    to 10MB.
       parameters: []
       responses:
         '201':
@@ -4882,50 +4925,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                sequence:
-                  type: integer
-                  minimum: 1
-                  description: One-based chunk sequence. Earlier dependency chunks
-                    must have lower sequence numbers.
-                client_chunk_id:
-                  type: string
-                  nullable: true
-                  description: Client-provided idempotency key for this chunk.
-                raw_file_content:
-                  type: string
-                  description: Raw Sure NDJSON content. Each chunk is limited to 10MB.
-                file:
-                  type: string
-                  format: binary
-                  description: Multipart Sure NDJSON file upload. Each chunk is limited
-                    to 10MB.
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                sequence:
-                  type: integer
-                  minimum: 1
-                  description: One-based chunk sequence. Earlier dependency chunks
-                    must have lower sequence numbers.
-                client_chunk_id:
-                  type: string
-                  nullable: true
-                  description: Client-provided idempotency key for this chunk.
-                raw_file_content:
-                  type: string
-                  description: Raw Sure NDJSON content. Each chunk is limited to 10MB.
-                file:
-                  type: string
-                  format: binary
-                  description: Multipart Sure NDJSON file upload. Each chunk is limited
-                    to 10MB.
   "/api/v1/import_sessions/{id}/publish":
     parameters:
     - name: id
