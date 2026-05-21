@@ -12,18 +12,9 @@ class Loan < ApplicationRecord
 
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
-    return Money.new(0, account.currency) if account.loan.original_balance.amount.zero? || term_months.zero?
+    return Money.new(0, account.currency) if original_balance.amount.zero? || term_months.zero?
 
-    annual_rate = interest_rate / 100.0
-    monthly_rate = annual_rate / 12.0
-
-    if monthly_rate.zero?
-      payment = account.loan.original_balance.amount / term_months
-    else
-      payment = (account.loan.original_balance.amount * monthly_rate * (1 + monthly_rate)**term_months) / ((1 + monthly_rate)**term_months - 1)
-    end
-
-    Money.new(payment.round, account.currency)
+    Money.new(exact_monthly_payment(original_balance.amount, monthly_rate).round(2), account.currency)
   end
 
   def original_balance
@@ -85,8 +76,8 @@ class Loan < ApplicationRecord
       principal = original_balance.amount
       return [] if principal.zero?
 
-      monthly_rate = (interest_rate.to_d / 100).div(12, DIVISION_PRECISION)
-      payment = exact_monthly_payment(principal, monthly_rate)
+      rate = monthly_rate
+      payment = exact_monthly_payment(principal, rate)
       start_date = schedule_start_date
       currency = account.currency
 
@@ -94,7 +85,7 @@ class Loan < ApplicationRecord
       rows = []
 
       (1..term_months).each do |period|
-        interest_amount = (balance * monthly_rate).round(2)
+        interest_amount = (balance * rate).round(2)
         principal_amount = (payment - interest_amount).round(2)
 
         # Absorb rounding drift in the final period so the balance lands exactly on zero.
@@ -131,6 +122,10 @@ class Loan < ApplicationRecord
                  .mul(factor, DIVISION_PRECISION)
                  .div(factor - 1, DIVISION_PRECISION)
       end
+    end
+
+    def monthly_rate
+      (interest_rate.to_d / 100).div(12, DIVISION_PRECISION)
     end
 
     def schedule_start_date

@@ -11,7 +11,7 @@ class LoanTest < ActiveSupport::TestCase
   test "calculates correct monthly payment for fixed rate loan" do
     loan_account = build_loan_account(balance: 500000, interest_rate: 3.5, term_months: 360)
 
-    assert_equal 2245, loan_account.loan.monthly_payment.amount
+    assert_in_delta 2245.22, loan_account.loan.monthly_payment.amount.to_f, 0.01
   end
 
   test "amortization schedule returns one row per term month" do
