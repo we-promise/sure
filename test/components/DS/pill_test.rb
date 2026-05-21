@@ -51,7 +51,9 @@ class DS::PillTest < ViewComponent::TestCase
     # Lucide icon helper renders the inline SVG; verifying we see at least one <svg>
     # is enough — the icon helper is covered by its own tests.
     assert_selector "svg"
-    # And the dot is suppressed when an icon takes its place.
-    refute_selector "span.rounded-full[style*='background-color']", count: 1
+    # And the dot is suppressed when an icon takes its place. `refute_selector
+    # ..., count: N` only fails when there are exactly N matches, so use
+    # `assert_no_selector` to strictly assert zero dots.
+    assert_no_selector "span.rounded-full[style*='background-color']"
   end
 end
