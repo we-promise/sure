@@ -40,10 +40,12 @@ module Sure
     }
 
     # Enable Skylight instrumentation for ActiveJob (background workers)
+    # Developers can opt-in to Skylight locally by setting SKYLIGHT_ENABLED=true
     if defined?(Skylight) && config.respond_to?(:skylight)
       config.skylight.probes << "active_job"
-      # Enable Skylight for DEV env to help identify performance bottlenecks
-      config.skylight.environments += [ "development" ]
+      if ENV["SKYLIGHT_ENABLED"] == "true"
+        config.skylight.environments += [ "development" ]
+      end
     end
 
     # Enable Rack::Attack middleware for API rate limiting
