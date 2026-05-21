@@ -8,5 +8,7 @@ class NormalizeRuleConditionTypes < ActiveRecord::Migration[7.2]
   end
 
   def down
+    raise ActiveRecord::IrreversibleMigration,
+      "Cannot reverse normalization of legacy 'name' condition_type values"
   end
 end
