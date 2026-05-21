@@ -1,4 +1,4 @@
-<details class="<%= details_classes %>" <%= "open" if open %>>
+<%= tag.details class: details_classes, open: open, **details_opts do %>
   <%= tag.summary class: summary_classes do %>
     <% if summary_content? %>
       <%# `<summary>` is `display: list-item`, so a flex inner div would
@@ -28,4 +28,4 @@
   <div class="mt-2">
     <%= content %>
   </div>
-</details>
+<% end %>
