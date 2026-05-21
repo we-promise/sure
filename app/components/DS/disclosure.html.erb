@@ -1,13 +1,14 @@
 <details class="group" <%= "open" if open %>>
   <%= tag.summary class: class_names(
-    "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface"
+    "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white"
   ) do %>
     <% if summary_content? %>
       <%= summary_content %>
     <% else %>
       <div class="flex items-center gap-3">
         <% if align == :left %>
-          <%= helpers.icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+          <%= helpers.icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
         <% end %>
 
         <%= tag.span class: class_names("font-medium", align == :left ? "text-sm text-primary" : "text-xs uppercase text-secondary") do %>
@@ -16,7 +17,7 @@
       </div>
 
       <% if align == :right %>
-        <%= helpers.icon "chevron-down", class: "group-open:transform group-open:rotate-180" %>
+        <%= helpers.icon "chevron-down", class: "group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
       <% end %>
     <% end %>
   <% end %>
