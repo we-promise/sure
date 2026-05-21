@@ -56,6 +56,45 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal other_import, other_mapping.import
   end
 
+  test "sync_mappings removes category mappings for a removed column without touching other imports" do
+    other_import = @import.family.imports.create!(type: "TransactionImport")
+    other_mapping = other_import.mappings.create!(key: "KeepMe", type: "Import::CategoryMapping")
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: <<~CSV,
+        date,amount,category
+        2024-01-01,-10.00,Food & Drink
+        2024-01-02,-20.00,Groceries
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      category_col_label: "category",
+      date_format: "%Y-%m-%d"
+    )
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    first_mapping = Import::CategoryMapping.for_import(@import).find_by!(key: "Food & Drink")
+    second_mapping = Import::CategoryMapping.for_import(@import).find_by!(key: "Groceries")
+
+    @import.update!(
+      raw_file_str: <<~CSV,
+        date,amount
+        2024-01-01,-10.00
+      CSV
+      category_col_label: nil,
+    )
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_raises(ActiveRecord::RecordNotFound) { first_mapping.reload }
+    assert_raises(ActiveRecord::RecordNotFound) { second_mapping.reload }
+    assert_empty Import::CategoryMapping.for_import(@import).where(key: [ "Food & Drink", "Groceries" ])
+    assert Import::CategoryMapping.exists?(other_mapping.id)
+    assert_equal other_import, other_mapping.reload.import
+  end
+
   test "imports transactions, categories, tags, and accounts" do
     import = <<~CSV
       date,name,amount,category,tags,account,notes
