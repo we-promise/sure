@@ -28,7 +28,7 @@
             <% colors.each do |c| %>
               <label class="relative">
                 <%= form.radio_button :color, c, class: "sr-only peer", data: { action: "change->color-icon-picker#handleColorChange" } %>
-                <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-gray-500" style="background-color: <%= c %>"></div>
+                <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-alpha-black-500" style="background-color: <%= c %>"></div>
               </label>
             <% end %>
             <label class="relative">
