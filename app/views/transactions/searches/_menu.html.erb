@@ -37,8 +37,8 @@
         </div>
 
         <div>
-          <%= render DS::Button.new(text: t(".cancel"), type: "button", variant: "ghost", data: { action: "DS--menu#close" }) %>
-          <%= render DS::Button.new(text: t(".apply")) %>
+          <%= render DS::Button.new(text: t(".cancel"), type: "button", variant: "ghost", data: { action: "DS--popover#close" }) %>
+          <%= render DS::Button.new(text: t(".apply"), type: :submit) %>
         </div>
       </div>
     </div>

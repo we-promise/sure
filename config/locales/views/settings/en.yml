@@ -342,6 +342,8 @@ en:
       encryption_error:
         title: Encryption keys missing
         message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
+      provider_form:
+        save_and_connect: "Save and connect"
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
