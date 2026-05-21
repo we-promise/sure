@@ -44,11 +44,8 @@ gem "sentry-rails"
 gem "sentry-sidekiq"
 gem "posthog-ruby"
 gem "logtail-rails"
-# Skylight is enabled in both DEV and PROD so contributors can
-# profile performance locally as well as in production.
-group :development, :production do
-  gem "skylight"
-end
+gem "skylight", group: :production
+gem "skylight", group: :development, require: false if ENV["SKYLIGHT_ENABLED"] == "true"
 
 # Active Storage
 gem "aws-sdk-s3", "~> 1.208.0", require: false
