@@ -111,6 +111,6 @@ class RecurringTransaction::AutoPoster
     end
 
     def display_name
-      @recurring.merchant&.name || @recurring.name || "Scheduled transaction"
+      @recurring.merchant&.name || @recurring.name || I18n.t("recurring_transactions.auto_post_default_name")
     end
 end

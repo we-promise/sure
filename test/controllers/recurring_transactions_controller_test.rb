@@ -23,6 +23,40 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not @recurring.reload.auto_post?
   end
 
+  # Pins the security contract from the earlier route fix. The
+  # toggle_auto_post route is post-only specifically because GET-accessible
+  # state-changing endpoints are a CSRF / accidental-trigger risk. If
+  # someone later loosens the route back to `match via: [:get, :post]`
+  # this test catches the regression.
+  test "toggle_auto_post does not respond to GET" do
+    assert_raises(ActionController::RoutingError) do
+      get toggle_auto_post_recurring_transaction_url(@recurring)
+    end
+  end
+
+  test "toggle_auto_post refuses to enable on a transfer recurring" do
+    other_account = accounts(:credit_card)
+    transfer_recurring = @recurring.family.recurring_transactions.create!(
+      account: @recurring.account,
+      destination_account: other_account,
+      merchant: nil,
+      name: "Monthly card payment",
+      amount: 100.0,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 1
+    )
+
+    post toggle_auto_post_recurring_transaction_url(transfer_recurring)
+
+    assert_redirected_to recurring_transactions_path
+    assert_equal I18n.t("recurring_transactions.auto_post_transfer_not_allowed"), flash[:alert]
+    assert_not transfer_recurring.reload.auto_post?
+  end
+
   test "toggle_auto_post is scoped to current family — cannot toggle another family's recurring" do
     other_family = families(:empty)
     other_account = other_family.accounts.create!(

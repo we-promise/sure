@@ -87,6 +87,22 @@ class RecurringTransaction::AutoPosterTest < ActiveSupport::TestCase
     assert_equal :skipped_not_due, result.status
   end
 
+  test "skips recurring with no source account" do
+    # `account` is optional on RecurringTransaction (the DB-level
+    # check_constraint only requires it when destination_account_id is
+    # set), so the AutoPoster needs to handle a nil account explicitly
+    # rather than NoMethodError on @recurring.account.entries.
+    recurring = build_due_recurring(account: nil)
+
+    result = nil
+    assert_no_difference -> { Entry.count } do
+      result = RecurringTransaction::AutoPoster.new(recurring).call
+    end
+
+    assert_not result.posted?
+    assert_equal :skipped_no_account, result.status
+  end
+
   test "skips transfers in V1" do
     other_account = accounts(:credit_card)
     recurring = build_due_recurring(
