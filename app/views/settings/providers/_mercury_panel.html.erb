@@ -78,8 +78,7 @@
                   href: setup_accounts_mercury_item_path(item),
                   frame: :modal
                 ) %>
-                <%= form.submit t("mercury_items.provider_panel.update_connection"),
-                                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+                <%= form.submit t("mercury_items.provider_panel.update_connection") %>
               </div>
             <% end %>
           </div>
@@ -117,8 +116,7 @@
     <p class="text-xs text-secondary px-1 -mt-1"><%= t("mercury_items.provider_panel.sandbox_note_html").html_safe %></p>
 
     <div class="flex justify-end">
-      <%= form.submit t("mercury_items.provider_panel.add_connection"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+      <%= form.submit t("mercury_items.provider_panel.add_connection") %>
     </div>
   <% end %>
 

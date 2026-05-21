@@ -33,7 +33,9 @@ class ImportsController < ApplicationController
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
     ]
-    render layout: "settings"
+    respond_to do |format|
+      format.html { render layout: "settings" }
+    end
   end
 
   def new

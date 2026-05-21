@@ -28,16 +28,20 @@
                 </div>
               </div>
               <div class="flex items-center gap-2 mt-3">
-                <%= button_to t("transactions.show.merge_duplicate"),
-                    merge_duplicate_transaction_path(@entry.transaction),
-                    method: :post,
-                    class: "btn btn--primary btn--sm",
-                    data: { turbo_frame: "_top" } %>
-                <%= button_to t("transactions.show.keep_both"),
-                    dismiss_duplicate_transaction_path(@entry.transaction),
-                    method: :post,
-                    class: "btn btn--outline btn--sm",
-                    data: { turbo_frame: "_top" } %>
+                <%= render DS::Button.new(
+                  text: t("transactions.show.merge_duplicate"),
+                  href: merge_duplicate_transaction_path(@entry.transaction),
+                  variant: :primary,
+                  size: :sm,
+                  data: { turbo_method: :post, turbo_frame: "_top" }
+                ) %>
+                <%= render DS::Button.new(
+                  text: t("transactions.show.keep_both"),
+                  href: dismiss_duplicate_transaction_path(@entry.transaction),
+                  variant: :outline,
+                  size: :sm,
+                  data: { turbo_method: :post, turbo_frame: "_top" }
+                ) %>
               </div>
             </div>
           </div>
