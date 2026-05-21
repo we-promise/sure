@@ -76,9 +76,9 @@ class IncomeStatement
     raw_expense_categories = []
     raw_income_categories = []
 
-    all_keys.each do |key|
-      exp_ct = expense_by_cat[key]
-      inc_ct = income_by_cat[key]
+    all_keys.each do |cat|
+      exp_ct = expense_by_cat[cat]
+      inc_ct = income_by_cat[cat]
       exp_total = exp_ct&.total || 0
       inc_total = inc_ct&.total || 0
       net = exp_total - inc_total
@@ -104,7 +104,7 @@ class IncomeStatement
       CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
     end
 
-    @net_category_totals_by_period[period_cache_key(period)] = NetCategoryTotals.new(
+    @net_category_totals_by_period[key] = NetCategoryTotals.new(
       net_expense_categories: net_expense_categories,
       net_income_categories: net_income_categories,
       total_net_expense: total_net_expense,

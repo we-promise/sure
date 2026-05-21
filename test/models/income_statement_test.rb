@@ -46,8 +46,8 @@ class IncomeStatementTest < ActiveSupport::TestCase
     expense_period_total = IncomeStatement::PeriodTotal.new("expense", 900, @family.currency, [])
     income_period_total = IncomeStatement::PeriodTotal.new("income", 1000, @family.currency, [])
 
-    IncomeStatement.any_instance.expects(:build_period_total).with(classification: "expense", period: period).once.returns(expense_period_total)
-    IncomeStatement.any_instance.expects(:build_period_total).with(classification: "income", period: period).once.returns(income_period_total)
+    income_statement.expects(:build_period_total).with(classification: "expense", period: period).once.returns(expense_period_total)
+    income_statement.expects(:build_period_total).with(classification: "income", period: period).once.returns(income_period_total)
 
     income_statement.net_category_totals(period: period)
     income_statement.expense_totals(period: period)

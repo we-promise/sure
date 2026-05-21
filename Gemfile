@@ -44,8 +44,8 @@ gem "sentry-rails"
 gem "sentry-sidekiq"
 gem "posthog-ruby"
 gem "logtail-rails"
-# gem "skylight", groups: [ :production ]
-# Make sure Skylight is available for both of PROD and DEV
+# Skylight is enabled in both DEV and PROD so contributors can
+# profile performance locally as well as in production.
 group :development, :production do
   gem "skylight"
 end
