@@ -1,0 +1,33 @@
+---
+en:
+  admin:
+    system_health:
+      show:
+        title: System health
+        alert:
+          title: Background jobs aren't running
+        status_section_title: Sidekiq status
+        status_section_description: Current state of the background worker that powers syncs, balances, and net-worth calculations.
+        counters_section_title: Job counters
+        counters_section_description: Aggregate Sidekiq counters across all queues.
+        queues_section_title: Queues
+        queues_section_description: Per-queue depth and oldest-job age. Latency is the seconds the oldest job has been waiting.
+        labels:
+          status: Status
+          processes: Worker processes
+          last_heartbeat: Last heartbeat
+          max_queue_latency: Oldest job age
+          enqueued: Enqueued
+          retries: Retries
+          failed: Failed
+          processed_total: Processed total
+          queue: Queue
+          size: Size
+          latency: Latency
+        values:
+          healthy: Healthy
+          unhealthy: Degraded
+          time_ago: "%{time_ago} ago"
+          never: Never
+          seconds: "%{seconds}s"
+          no_queues: "No queues are registered. The worker may not be running."

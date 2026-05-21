@@ -40,6 +40,12 @@
     <%= render "impersonation_sessions/super_admin_bar" if Current.true_user&.super_admin? && show_super_admin_bar? %>
     <%= render "impersonation_sessions/approval_bar" if Current.true_user&.impersonated_support_sessions&.initiated&.any? %>
 
+    <% if Current.user && !current_sidekiq_health.healthy? %>
+      <div class="fixed z-40 top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+        <%= render "shared/sidekiq_health_banner", health: current_sidekiq_health %>
+      </div>
+    <% end %>
+
     <%= yield %>
   </body>
 </html>

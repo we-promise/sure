@@ -1,0 +1,29 @@
+<%# locals: (health:) %>
+
+<% return if health.healthy? %>
+<% reason_key = health.reason %>
+
+<div role="alert"
+     aria-live="assertive"
+     class="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4 text-sm text-primary">
+  <div class="flex items-start gap-3">
+    <div class="shrink-0">
+      <%= icon "alert-triangle", size: "sm", color: "warning" %>
+    </div>
+    <div class="flex-1 space-y-1">
+      <p class="font-semibold"><%= t("shared.sidekiq_health_banner.title") %></p>
+      <p class="text-secondary"><%= t("shared.sidekiq_health_banner.body") %></p>
+      <% if Current.user&.super_admin? %>
+        <p class="text-secondary">
+          <%= t("shared.sidekiq_health_banner.reasons.#{reason_key}") if reason_key %>
+        </p>
+        <%= render DS::Link.new(
+          text: t("shared.sidekiq_health_banner.cta"),
+          variant: "ghost",
+          href: admin_system_health_path,
+          icon: "arrow-right"
+        ) %>
+      <% end %>
+    </div>
+  </div>
+</div>
