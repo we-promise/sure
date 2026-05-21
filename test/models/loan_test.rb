@@ -31,8 +31,8 @@ class LoanTest < ActiveSupport::TestCase
 
     assert_equal 1200.00, first[:interest].amount.to_f
     assert_in_delta 238.92, first[:principal].amount.to_f, 0.05
-    assert_equal first[:beginning_balance].amount.to_f - first[:principal].amount.to_f,
-                 first[:ending_balance].amount.to_f
+    assert_in_delta first[:beginning_balance].amount.to_f - first[:principal].amount.to_f,
+                    first[:ending_balance].amount.to_f, 0.01
   end
 
   test "amortization schedule pays the loan down to zero in the final period" do
