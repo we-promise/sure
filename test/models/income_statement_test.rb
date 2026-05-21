@@ -39,6 +39,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "memoizes expense and income period totals across repeated calculations" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    expense_period_total = IncomeStatement::PeriodTotal.new("expense", 900, @family.currency, [])
+    income_period_total = IncomeStatement::PeriodTotal.new("income", 1000, @family.currency, [])
+
+    IncomeStatement.any_instance.expects(:build_period_total).with(classification: "expense", period: period).once.returns(expense_period_total)
+    IncomeStatement.any_instance.expects(:build_period_total).with(classification: "income", period: period).once.returns(income_period_total)
+
+    income_statement.net_category_totals(period: period)
+    income_statement.expense_totals(period: period)
+    income_statement.income_totals(period: period)
+    income_statement.net_category_totals(period: period)
+  end
+
   test "calculates income for a period" do
     income_statement = IncomeStatement.new(@family)
     income_totals = income_statement.income_totals(period: Period.last_30_days)

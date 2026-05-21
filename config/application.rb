@@ -39,12 +39,13 @@ module Sure
       theme: [ "light", "dark" ] # available in view as params[:theme]
     }
 
-    # Enable Skylight instrumentation for ActiveJob (background workers)
-    config.skylight.probes << "active_job" if defined?(Skylight)
-
     ### @bittensorrider
-    # Enable Skylight for dev env to help identify performance bottlenecks during DEV
-    config.skylight.environments += [ "development" ]
+    # Enable Skylight instrumentation for ActiveJob (background workers)
+    if defined?(Skylight) && config.respond_to?(:skylight)
+      config.skylight.probes << "active_job"
+      # Enable Skylight for DEV env to help identify performance bottlenecks
+      config.skylight.environments += [ "development" ]
+    end
 
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
