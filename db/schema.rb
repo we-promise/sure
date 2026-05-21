@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -561,6 +561,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.string "aspsp_auth_approach"
     t.jsonb "aspsp_psu_types", default: []
     t.string "last_psu_ip"
+    t.datetime "last_psu_ip_at"
     t.string "psu_type"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
     t.index ["status"], name: "index_enable_banking_items_on_status"

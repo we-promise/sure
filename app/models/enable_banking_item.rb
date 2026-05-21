@@ -48,7 +48,33 @@ class EnableBankingItem < ApplicationRecord
     !session_valid?
   end
 
-  # TODO: implement data retention policy for last_psu_ip (GDPR/CCPA — nullify after session expiry or 90 days)
+  # GDPR/CCPA: PSU IP is cleared after session expiry or PSU_IP_RETENTION_DAYS (see DataCleanerJob).
+  PSU_IP_RETENTION_DAYS = 90
+
+  scope :with_stale_psu_ip, -> {
+    now = Time.current
+    retention = PSU_IP_RETENTION_DAYS.days.ago
+
+    where.not(last_psu_ip: nil).where(
+      <<~SQL.squish,
+        (session_expires_at IS NOT NULL AND session_expires_at <= :now)
+        OR (last_psu_ip_at IS NOT NULL AND last_psu_ip_at <= :retention)
+        OR (last_psu_ip_at IS NULL AND updated_at <= :retention)
+      SQL
+      now: now,
+      retention: retention
+    )
+  }
+
+  def self.clear_stale_psu_ip!
+    with_stale_psu_ip.update_all(last_psu_ip: nil, last_psu_ip_at: nil)
+  end
+
+  def record_psu_ip!(ip)
+    return if ip.blank?
+
+    update!(last_psu_ip: ip, last_psu_ip_at: Time.current)
+  end
 
   validate :psu_type_in_aspsp_types
 

@@ -4,6 +4,7 @@ class DataCleanerJob < ApplicationJob
   def perform
     clean_old_merchant_associations
     clean_expired_archived_exports
+    clean_stale_enable_banking_psu_ips
   end
 
   private
@@ -20,5 +21,12 @@ class DataCleanerJob < ApplicationJob
       deleted_count = ArchivedExport.expired.destroy_all.count
 
       Rails.logger.info("DataCleanerJob: Deleted #{deleted_count} expired archived exports") if deleted_count > 0
+    end
+
+    def clean_stale_enable_banking_psu_ips
+      cleared_count = EnableBankingItem.clear_stale_psu_ip!
+      return if cleared_count.zero?
+
+      Rails.logger.info("DataCleanerJob: Cleared PSU IP from #{cleared_count} Enable Banking items")
     end
 end
