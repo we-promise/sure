@@ -134,6 +134,7 @@ class Security::Resolver
       )
 
       security.country_code = match.country_code
+      security.name = match.name if match.name.present? && security.name.blank?
 
       # Set provider when explicitly provided (user selection) or when the
       # record is new / has no provider yet. Automated syncs pass nil and
