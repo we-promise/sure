@@ -116,6 +116,34 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_model = nil
   end
 
+  # PR #1862 review (jjmata): symmetric coverage for the model field. When the
+  # user changes the URI base and clears the model in the same auto-submit, the
+  # cross-field validation fails — the re-rendered model input must reflect the
+  # user's submitted (cleared) value, not silently revert to the saved model.
+  test "preserves submitted openai model in form when validation fails" do
+    with_self_hosting do
+      Setting.openai_uri_base = "https://saved.example.com/v1"
+      Setting.openai_model = "saved-model"
+
+      patch settings_hosting_url, params: { setting: {
+        openai_uri_base: "https://new.example.com/v1",
+        openai_model: ""
+      } }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name=?]", "setting[openai_uri_base]" do |inputs|
+        assert_equal "https://new.example.com/v1", inputs.first["value"]
+      end
+      assert_select "input[name=?]", "setting[openai_model]" do |inputs|
+        assert_not_equal "saved-model", inputs.first["value"].to_s,
+          "model field must reflect the submitted (cleared) value, not the saved model"
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
   test "can update openai model alone when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { openai_model: "gpt-4" } }
