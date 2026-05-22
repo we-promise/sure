@@ -239,16 +239,11 @@ class BudgetCategory < ApplicationRecord
   end
 
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
-    return BudgetCategory.none if category.id.nil?
+    return [] unless category.parent_id.nil?
+    return [] if category.id.nil?
 
-    if budget.association(:budget_categories).loaded?
-      budget.budget_subcategories_for(category.id)
-    else
-      budget.budget_categories
-        .joins(:category)
-        .where(categories: { parent_id: category.id })
-    end
+    # Avoid repeated per-parent queries (Skylight N+1)
+    budget.budget_subcategories_for(category.id)
   end
 
   private

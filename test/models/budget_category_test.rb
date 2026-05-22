@@ -142,6 +142,18 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_empty uncategorized_bc.subcategories
   end
 
+  test "subcategories loads budget categories once when not preloaded" do
+    budget = Budget.find(@budget.id)
+    budget.association(:budget_categories).reset
+    assert_not budget.association(:budget_categories).loaded?
+
+    parent_budget_category = budget.budget_categories.find { |bc| bc.category.parent_id.nil? && bc.category_id.present? }
+    assert parent_budget_category, "expected a top-level budget category in fixtures"
+
+    queries = count_sql_queries { parent_budget_category.subcategories.to_a }
+    assert_operator queries, :<=, 1
+  end
+
   test "subcategories does not query when budget categories are preloaded" do
     @budget.budget_categories.load
 
