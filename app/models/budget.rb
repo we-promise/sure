@@ -109,10 +109,14 @@ class Budget < ApplicationRecord
 
     # Remove old categories
     budget_categories.where(category_id: categories_to_remove).destroy_all if categories_to_remove.any?
+
+    association(:budget_categories).reset if association(:budget_categories).loaded?
+    remove_instance_variable(:@budget_categories_by_parent_category_id) if defined?(@budget_categories_by_parent_category_id)
   end
 
   def uncategorized_budget_category
     budget_categories.uncategorized.tap do |bc|
+      bc.budget = self
       bc.budgeted_spending = [ available_to_allocate, 0 ].max
       bc.currency = family.currency
     end

@@ -453,4 +453,24 @@ class BudgetTest < ActiveSupport::TestCase
     # Other Investments synthetic categories previously caused this to return 0
     assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
   end
+
+  test "sync_budget_categories resets loaded association to prevent category N+1" do
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+
+    # Force-load the association, then create a category to trigger sync updates.
+    budget.budget_categories.load
+    Category.create!(name: "New Cat #{Time.now.to_f}", family: @family, color: "#bbbbbb", lucide_icon: "tag")
+
+    assert budget.association(:budget_categories).loaded?
+    budget.sync_budget_categories
+    assert_not budget.association(:budget_categories).loaded?
+  end
+
+  test "uncategorized_budget_category is associated to budget" do
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.update!(budgeted_spending: 100, currency: @family.currency)
+
+    uncategorized = budget.uncategorized_budget_category
+    assert_equal budget, uncategorized.budget
+  end
 end
