@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pipelock.requestBodyScanning` (pipelock 2.5+): structured config for scanning outbound request bodies for prompt-injection and bodies/sensitive headers for DLP payloads. Disabled by default to preserve existing chart behavior; opt in with `enabled: true`.
 - `pipelock.healthWatchdog` (pipelock 2.4+): structured config for the wedge-detection watchdog. Operators can opt into per-subsystem detail in `/health` responses via `exposeSubsystems: true`.
 - `pipelock.mcpToolPolicy.rules`: structured Helm values for rendering `mcp_tool_policy.rules`, including redirect-profile references.
+- `asserts.tpl` guard that fails `helm template`/`helm install` when `pipelock.mcpToolPolicy.enabled=true` is paired with an empty `rules` list, surfacing the pipelock validation error at render time instead of container startup.
 - README: CI scan status badge for the pipelock workflow.
 
 ## [0.6.9-alpha] - 2026-03-24
