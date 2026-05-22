@@ -2,35 +2,35 @@ class DS::Buttonish < DesignSystemComponent
   VARIANTS = {
     primary: {
       container_classes: "text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
-      icon_classes: "fg-inverse"
+      icon_classes: "text-inverse"
     },
     secondary: {
       container_classes: "text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600",
-      icon_classes: "fg-primary"
+      icon_classes: "text-primary"
     },
     destructive: {
       container_classes: "text-inverse bg-red-500 theme-dark:bg-red-400 hover:bg-red-600 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
-      icon_classes: "fg-white"
+      icon_classes: "text-inverse"
     },
     outline: {
       container_classes: "text-primary border border-secondary bg-transparent hover:bg-surface-hover",
-      icon_classes: "fg-gray"
+      icon_classes: "text-secondary"
     },
     outline_destructive: {
-      container_classes: "text-destructive border border-secondary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700",
-      icon_classes: "fg-gray"
+      container_classes: "text-destructive border border-secondary bg-transparent hover:bg-container-inset-hover",
+      icon_classes: "text-secondary"
     },
     ghost: {
-      container_classes: "text-primary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700",
-      icon_classes: "fg-gray"
+      container_classes: "text-primary bg-transparent hover:bg-container-inset-hover",
+      icon_classes: "text-secondary"
     },
     icon: {
-      container_classes: "hover:bg-gray-100 theme-dark:hover:bg-gray-700",
-      icon_classes: "fg-gray"
+      container_classes: "hover:bg-container-inset-hover",
+      icon_classes: "text-secondary"
     },
     icon_inverse: {
       container_classes: "bg-inverse hover:bg-inverse-hover",
-      icon_classes: "fg-inverse"
+      icon_classes: "text-inverse"
     }
   }.freeze
 
@@ -43,13 +43,13 @@ class DS::Buttonish < DesignSystemComponent
     },
     md: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-9 h-9",
+      icon_container_classes: "inline-flex items-center justify-center w-11 h-11",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
     },
     lg: {
       container_classes: "px-4 py-3",
-      icon_container_classes: "inline-flex items-center justify-center w-10 h-10",
+      icon_container_classes: "inline-flex items-center justify-center w-12 h-12",
       radius_classes: "rounded-xl",
       text_classes: "text-base"
     }
@@ -80,7 +80,7 @@ class DS::Buttonish < DesignSystemComponent
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,
-      size_data.dig(:text_classes),
+      icon_only? ? nil : size_data.dig(:text_classes),
       variant_data.dig(:container_classes)
     )
   end
@@ -108,7 +108,7 @@ class DS::Buttonish < DesignSystemComponent
   end
 
   def icon_only?
-    variant.in?([ :icon, :icon_inverse ])
+    variant.in?([ :icon, :icon_inverse ]) || (icon.present? && text.blank?)
   end
 
   private

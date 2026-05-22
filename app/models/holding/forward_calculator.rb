@@ -18,7 +18,7 @@ class Holding::ForwardCalculator
         trades = portfolio_cache.get_trades(date: date)
         update_cost_basis_tracker(trades)
         next_portfolio = transform_portfolio(current_portfolio, trades, direction: :forward)
-        holdings += build_holdings(next_portfolio, date)
+        holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
 
@@ -89,7 +89,11 @@ class Holding::ForwardCalculator
 
         # Convert trade price to account currency if needed
         trade_price = Money.new(trade.price, trade.currency)
-        converted_price = trade_price.exchange_to(account.currency, fallback_rate: 1).amount
+        begin
+          converted_price = trade_price.exchange_to(account.currency).amount
+        rescue Money::ConversionError
+          converted_price = trade.price
+        end
 
         tracker[:total_cost] += converted_price * trade.qty
         tracker[:total_qty] += trade.qty

@@ -1,0 +1,81 @@
+---
+pl:
+  provider_sync_summary:
+    title: Podsumowanie synchronizacji
+    last_sync: 'Ostatnia synchronizacja: %{time_ago} temu'
+    accounts:
+      title: Konta
+      total: 'Łącznie: %{count}'
+      linked: 'Połączone: %{count}'
+      unlinked: 'Niepołączone: %{count}'
+      institutions: 'Instytucje: %{count}'
+    transactions:
+      title: Transakcje
+      seen: 'Wykryte: %{count}'
+      imported: 'Zaimportowane: %{count}'
+      updated: 'Zaktualizowane: %{count}'
+      skipped: 'Pominięte: %{count}'
+      fetching: Pobieranie z biura maklerskiego...
+      protected:
+        one: "%{count} wpis chroniony (nie nadpisano)"
+        few: "%{count} wpisy chronione (nie nadpisano)"
+        many: "%{count} wpisów chronionych (nie nadpisano)"
+        other: "%{count} wpisów chronionych (nie nadpisano)"
+      view_protected: Zobacz chronione wpisy
+    skip_reasons:
+      excluded: Wykluczone
+      user_modified: Zmodyfikowane przez użytkownika
+      import_locked: Import z CSV
+      protected: Chronione
+    holdings:
+      title: Pozycje
+      found: 'Znalezione: %{count}'
+      processed: 'Przetworzone: %{count}'
+    trades:
+      title: Transakcje giełdowe
+      imported: 'Zaimportowane: %{count}'
+      skipped: 'Pominięte: %{count}'
+      fetching: Pobieranie aktywności z biura maklerskiego...
+    health:
+      title: Kondycja
+      view_error_details: Zobacz szczegóły błędów
+      rate_limited: Ograniczenie limitu %{time_ago}
+      recently: niedawno
+      errors: 'Błędy: %{count}'
+      pending_reconciled:
+        one: "Uzgodniono %{count} zduplikowaną transakcję oczekującą"
+        few: "Uzgodniono %{count} zduplikowane transakcje oczekujące"
+        many: "Uzgodniono %{count} zduplikowanych transakcji oczekujących"
+        other: "Uzgodniono %{count} zduplikowanych transakcji oczekujących"
+      view_reconciled: Zobacz uzgodnione transakcje
+      duplicate_suggestions:
+        one: "%{count} możliwy duplikat wymaga przeglądu"
+        few: "%{count} możliwe duplikaty wymagają przeglądu"
+        many: "%{count} możliwych duplikatów wymaga przeglądu"
+        other: "%{count} możliwe duplikaty wymagają przeglądu"
+      view_duplicate_suggestions: Zobacz sugerowane duplikaty
+      stale_pending:
+        one: "%{count} przestarzała transakcja oczekująca (wykluczona z budżetów)"
+        few: "%{count} przestarzałe transakcje oczekujące (wykluczone z budżetów)"
+        many: "%{count} przestarzałych transakcji oczekujących (wykluczonych z budżetów)"
+        other: "%{count} przestarzałych transakcji oczekujących (wykluczonych z budżetów)"
+      view_stale_pending: Zobacz dotknięte konta
+      stale_pending_count:
+        one: "%{count} transakcja"
+        few: "%{count} transakcje"
+        many: "%{count} transakcji"
+        other: "%{count} transakcji"
+      stale_unmatched:
+        one: "%{count} transakcja oczekująca wymaga ręcznego przeglądu"
+        few: "%{count} transakcje oczekujące wymagają ręcznego przeglądu"
+        many: "%{count} transakcji oczekujących wymaga ręcznego przeglądu"
+        other: "%{count} transakcji oczekujących wymaga ręcznego przeglądu"
+      view_stale_unmatched: Zobacz transakcje wymagające przeglądu
+      stale_unmatched_count:
+        one: "%{count} transakcja"
+        few: "%{count} transakcje"
+        many: "%{count} transakcji"
+        other: "%{count} transakcji"
+      data_warnings: 'Ostrzeżenia danych: %{count}'
+      notices: 'Powiadomienia: %{count}'
+      view_data_quality: Zobacz szczegóły jakości danych

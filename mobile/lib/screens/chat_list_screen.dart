@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_conversation_screen.dart';
@@ -13,6 +12,9 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
+  bool _isSelectionMode = false;
+  final Set<String> _selectedChatIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -36,9 +38,60 @@ class _ChatListScreenState extends State<ChatListScreen> {
     await _loadChats();
   }
 
-  Future<void> _createNewChat() async {
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      _selectedChatIds.clear();
+    });
+  }
+
+  void _toggleSelectAll(List<String> allIds) {
+    setState(() {
+      if (_selectedChatIds.length == allIds.length) {
+        _selectedChatIds.clear();
+      } else {
+        _selectedChatIds
+          ..clear()
+          ..addAll(allIds);
+      }
+    });
+  }
+
+  void _toggleChatSelection(String id) {
+    setState(() {
+      if (_selectedChatIds.contains(id)) {
+        _selectedChatIds.remove(id);
+      } else {
+        _selectedChatIds.add(id);
+      }
+    });
+  }
+
+  Future<void> _deleteSelectedChats() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Chats'),
+        content: Text(
+          'Delete ${_selectedChatIds.length} chat(s)? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
 
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken == null) {
@@ -46,46 +99,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return;
     }
 
-    // Show loading dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    final chat = await chatProvider.createChat(
+    final success = await chatProvider.deleteMultipleChats(
       accessToken: accessToken,
-      title: Chat.defaultTitle,
+      chatIds: _selectedChatIds.toList(),
     );
 
-    // Close loading dialog
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (!mounted) return;
 
-    if (chat != null && mounted) {
-      // Navigate to chat conversation
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChatConversationScreen(chatId: chat.id),
-        ),
-      );
+    setState(() {
+      _isSelectionMode = false;
+      _selectedChatIds.clear();
+    });
 
-      // Refresh list after returning
-      _loadChats();
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(chatProvider.errorMessage ?? 'Failed to create chat'),
-          backgroundColor: Colors.red,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Chats deleted' : 'Failed to delete chats',
         ),
-      );
-    }
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _openNewChat() async {
+    if (!mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChatConversationScreen(chatId: null),
+      ),
+    );
+
+    if (mounted) _loadChats();
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -114,17 +160,38 @@ class _ChatListScreenState extends State<ChatListScreen> {
         title: const Text('Chats'),
         centerTitle: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 12, right: 12),
-            child: InkWell(
-              onTap: _handleRefresh,
-              child: const SizedBox(
-                width: 36,
-                height: 36,
-                child: Icon(Icons.refresh),
+          if (_isSelectionMode) ...[
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _selectedChatIds.isNotEmpty ? _deleteSelectedChats : null,
+            ),
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              onPressed: () {
+                final allIds = Provider.of<ChatProvider>(context, listen: false)
+                    .chats
+                    .map((c) => c.id)
+                    .toList();
+                _toggleSelectAll(allIds);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _toggleSelectionMode,
+            ),
+          ] else ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 12, right: 12),
+              child: InkWell(
+                onTap: _handleRefresh,
+                child: const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(Icons.refresh),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
       body: Consumer<ChatProvider>(
@@ -206,9 +273,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
               itemCount: chatProvider.chats.length,
               itemBuilder: (context, index) {
                 final chat = chatProvider.chats[index];
+                final isSelected = _selectedChatIds.contains(chat.id);
                 return Dismissible(
                   key: Key(chat.id),
-                  direction: DismissDirection.endToStart,
+                  direction: _isSelectionMode
+                      ? DismissDirection.none
+                      : DismissDirection.endToStart,
                   background: Container(
                     color: Colors.red,
                     alignment: Alignment.centerRight,
@@ -248,13 +318,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     }
                   },
                   child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: colorScheme.primaryContainer,
-                      child: Icon(
-                        Icons.chat,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
-                    ),
+                    leading: _isSelectionMode
+                        ? Checkbox(
+                            value: isSelected,
+                            onChanged: (_) => _toggleChatSelection(chat.id),
+                          )
+                        : CircleAvatar(
+                            backgroundColor: colorScheme.primaryContainer,
+                            child: Icon(
+                              Icons.chat,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                          ),
                     title: Text(
                       chat.title,
                       maxLines: 1,
@@ -263,7 +338,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     subtitle: chat.lastMessageAt != null
                         ? Text(_formatDateTime(chat.lastMessageAt!))
                         : null,
-                    trailing: chat.messageCount != null
+                    trailing: chat.messageCount != null && !_isSelectionMode
                         ? Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -281,6 +356,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           )
                         : null,
                     onTap: () async {
+                      if (_isSelectionMode) {
+                        _toggleChatSelection(chat.id);
+                        return;
+                      }
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -289,6 +368,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       );
                       _loadChats();
                     },
+                    onLongPress: _isSelectionMode
+                        ? null
+                        : () {
+                            setState(() {
+                              _isSelectionMode = true;
+                              _selectedChatIds.add(chat.id);
+                            });
+                          },
                   ),
                 );
               },
@@ -297,7 +384,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _createNewChat,
+        onPressed: _openNewChat,
         tooltip: 'New Chat',
         child: const Icon(Icons.add),
       ),

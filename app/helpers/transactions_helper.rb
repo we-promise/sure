@@ -20,6 +20,10 @@ module TransactionsHelper
     transaction_search_filters[0]
   end
 
+  def in_split_group?(entry, params_grouped)
+    entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).

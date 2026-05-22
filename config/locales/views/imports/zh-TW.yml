@@ -90,3 +90,8 @@ zh-TW:
     ready:
       description: 以下是發佈此匯入後，將新增至您帳戶的項目摘要。
       title: 確認您的匯入資料
+      summary_item_label: 項目
+      summary_count_label: 數量
+      empty_summary: 在此檔案中找不到可匯入的記錄。檔案可能是空的，或各行不符合預期的匯出格式（每行應為包含「type」與「data」鍵的 JSON 物件，且類型須為此匯入支援的類型）。
+      publish_import: 發佈匯入
+      back_to_imports: 返回匯入列表

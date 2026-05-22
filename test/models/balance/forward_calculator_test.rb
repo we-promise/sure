@@ -581,6 +581,182 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  # ------------------------------------------------------------------------------------------------
+  # Incremental calculation (window_start_date)
+  # ------------------------------------------------------------------------------------------------
+
+  test "incremental sync produces same results as full sync for the recalculated window" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 5.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 4.days.ago.to_date, amount: -500 },  # income → 20500
+        { type: "transaction", date: 2.days.ago.to_date, amount: 100 }    # expense → 20400
+      ]
+    )
+
+    # Persist full balances via the materializer (same path as production).
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    # Incremental from 3.days.ago: seeds from persisted balance on 4.days.ago (20500).
+    incremental = Balance::ForwardCalculator.new(account, window_start_date: 3.days.ago.to_date).calculate
+
+    assert_equal [ 3.days.ago.to_date, 2.days.ago.to_date ], incremental.map(&:date).sort
+
+    assert_calculated_ledger_balances(
+      calculated_data: incremental,
+      expected_data: [
+        {
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 20500, cash_balance: 20500 },
+          balances: { start: 20500, start_cash: 20500, start_non_cash: 0, end_cash: 20500, end_non_cash: 0, end: 20500 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago.to_date,
+          legacy_balances: { balance: 20400, cash_balance: 20400 },
+          balances: { start: 20500, start_cash: 20500, start_non_cash: 0, end_cash: 20400, end_non_cash: 0, end: 20400 },
+          flows: { cash_inflows: 0, cash_outflows: 100 },
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
+  test "falls back to full recalculation when prior balance has a non-cash component" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500 }
+      ]
+    )
+
+    # Persist a prior balance (window_start_date - 1 = 3.days.ago) with a non-zero
+    # non-cash component. This simulates an investment account where holdings were
+    # fully recalculated, making the stored non-cash seed potentially stale.
+    account.balances.create!(
+      date: 3.days.ago.to_date,
+      balance: 20000,
+      cash_balance: 15000,
+      currency: "USD",
+      start_cash_balance: 15000,
+      start_non_cash_balance: 5000,
+      cash_inflows: 0, cash_outflows: 0,
+      non_cash_inflows: 0, non_cash_outflows: 0,
+      net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0,
+      flows_factor: 1
+    )
+
+    result = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date).calculate
+
+    # Fell back: full range from opening_anchor_date, not just the window.
+    assert_includes result.map(&:date), 3.days.ago.to_date
+    assert_includes result.map(&:date), 2.days.ago.to_date
+  end
+
+  test "falls back to full recalculation when no prior balance exists in DB" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500 }
+      ]
+    )
+
+    # No persisted balances — prior_balance will be nil, so fall back to full sync.
+    result = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date).calculate
+
+    # Full range returned (opening_anchor_date to last entry date).
+    assert_equal [ 3.days.ago.to_date, 2.days.ago.to_date ], result.map(&:date).sort
+
+    assert_calculated_ledger_balances(
+      calculated_data: result,
+      expected_data: [
+        {
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago.to_date,
+          legacy_balances: { balance: 20500, cash_balance: 20500 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20500, end_non_cash: 0, end: 20500 },
+          flows: { cash_inflows: 500, cash_outflows: 0 },
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
+  test "multi-currency account falls back to full recalc so late exchange rate imports are picked up" do
+    # Step 1: Create account with a EUR entry and a stale exchange rate (1:1 EUR→USD).
+    # This simulates an initial sync where an imprecise rate is available.
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 100 },
+        { type: "transaction", date: 3.days.ago.to_date, amount: -100 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500, currency: "EUR" }
+      ]
+    )
+    ExchangeRate.create!(date: 2.days.ago.to_date, from_currency: "EUR", to_currency: "USD", rate: 1.0)
+
+    # First full sync — balances computed with stale rate (1:1 EUR→USD).
+    # opening 100 + $100 txn + €500*1.0 = $700
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    stale_balance = account.balances.find_by(date: 2.days.ago.to_date)
+    assert stale_balance, "Balance should exist after full sync"
+
+    # Step 2: Corrected exchange rate arrives later (e.g. daily cron imports it).
+    ExchangeRate.find_by!(date: 2.days.ago.to_date, from_currency: "EUR", to_currency: "USD").update!(rate: 1.2)
+
+    # Step 3: Next sync requests incremental from today — but the guard should
+    # force a full recalc because the account has multi-currency entries.
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 1.day.ago.to_date)
+    result = calculator.calculate
+
+    assert_not calculator.incremental?, "Should not be incremental for multi-currency accounts"
+
+    # Full range returned — includes dates before the window.
+    assert_includes result.map(&:date), 4.days.ago.to_date
+
+    # The EUR entry on 2.days.ago is now converted at 1.2, so the balance
+    # picks up the corrected rate: opening 100 + $100 txn + €500*1.2 = $800
+    # (without the guard, incremental mode would have seeded from the stale
+    # $700 balance computed with rate 1.0, and never corrected it).
+    corrected = result.find { |b| b.date == 2.days.ago.to_date }
+    assert corrected
+    assert_equal 800, corrected.balance,
+      "Balance should reflect the corrected EUR→USD rate (€500 * 1.2 = $600, not $500)"
+  end
+
+  test "falls back to full recalculation for foreign accounts (account currency != family currency)" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "EUR" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -100 }
+      ]
+    )
+
+    # Precondition: account currency must differ from family currency for this test.
+    assert_not_equal account.currency, account.family.currency,
+      "Test requires account currency (#{account.currency}) to differ from family currency (#{account.family.currency})"
+
+    # Persist balances via full materializer.
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    result = calculator.calculate
+
+    # Full range returned.
+    assert_includes result.map(&:date), 3.days.ago.to_date
+    assert_not calculator.incremental?, "Should not be incremental for foreign currency accounts"
+  end
+
   private
     def assert_balances(calculated_data:, expected_balances:)
       # Sort calculated data by date to ensure consistent ordering

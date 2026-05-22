@@ -18,7 +18,9 @@ de:
       success:
         one: "%{count} Konto erfolgreich verknüpft."
         other: "%{count} Konten erfolgreich verknüpft."
-      partial_success: "%{linked} Konto/Konten verknüpft. %{failed} Verknüpfung(en) fehlgeschlagen."
+      partial_success:
+        one: "%{count} Konto verknüpft. %{failed_count} Verknüpfung(en) fehlgeschlagen."
+        other: "%{count} Konten verknüpft. %{failed_count} Verknüpfung(en) fehlgeschlagen."
       link_failed: "Konten konnten nicht verknüpft werden: %{errors}"
       no_accounts: "Es wurden keine Konten zur Verknüpfung ausgewählt."
     preload_accounts:
@@ -132,8 +134,6 @@ de:
         one: "%{count} muss eingerichtet werden"
         other: "%{count} müssen eingerichtet werden"
       status_ready: "Bereit zum Verbinden von Brokern"
-      status_needs_registration: "Zugangsdaten gespeichert. Gehen Sie zur Konten-Seite, um Broker zu verbinden."
-      status_not_configured: "Nicht konfiguriert"
       setup_accounts_button: "Konten einrichten"
       connect_button: "Broker verbinden"
       connected_brokerages: "Verbunden:"

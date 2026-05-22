@@ -2,7 +2,7 @@ class Trade::CreateForm
   include ActiveModel::Model
 
   attr_accessor :account, :date, :amount, :currency, :qty,
-                :price, :ticker, :manual_ticker, :type, :transfer_account_id
+                :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
 
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
@@ -10,6 +10,8 @@ class Trade::CreateForm
     case type
     when "buy", "sell"
       create_trade
+    when "dividend"
+      create_dividend_income
     when "interest"
       create_interest_income
     when "deposit", "withdrawal"
@@ -20,17 +22,23 @@ class Trade::CreateForm
   private
     # Users can either look up a ticker from a provider or enter a manual, "offline" ticker (that we won't fetch prices for)
     def security
-      ticker_symbol, exchange_operating_mic = ticker.present? ? ticker.split("|") : [ manual_ticker, nil ]
+      parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }
+      return nil if parsed[:ticker].blank?
 
       Security::Resolver.new(
-        ticker_symbol,
-        exchange_operating_mic: exchange_operating_mic
+        parsed[:ticker],
+        exchange_operating_mic: parsed[:exchange_operating_mic],
+        price_provider: parsed[:price_provider]
       ).resolve
+    end
+
+    def ticker_present?
+      ticker.present? || manual_ticker.present?
     end
 
     def create_trade
       signed_qty = type == "sell" ? -qty.to_d : qty.to_d
-      signed_amount = signed_qty * price.to_d
+      signed_amount = signed_qty * price.to_d + fee.to_d
 
       trade_entry = account.entries.new(
         name: Trade.build_name(type, qty, security.ticker),
@@ -40,6 +48,7 @@ class Trade::CreateForm
         entryable: Trade.new(
           qty: signed_qty,
           price: price,
+          fee: fee.to_d,
           currency: currency,
           security: security,
           investment_activity_label: type.capitalize # "buy" → "Buy", "sell" → "Sell"
@@ -54,15 +63,47 @@ class Trade::CreateForm
       trade_entry
     end
 
-    def create_interest_income
-      signed_amount = amount.to_d * -1
+    # Dividends are always a Trade. Security is required.
+    def create_dividend_income
+      unless ticker_present?
+        entry = account.entries.build(entryable: Trade.new)
+        entry.errors.add(:base, I18n.t("trades.form.dividend_requires_security"))
+        return entry
+      end
 
+      begin
+        sec = security
+        create_income_trade(sec: sec, label: "Dividend", name: "Dividend: #{sec.ticker}")
+      rescue => e
+        Rails.logger.warn("Dividend security resolution failed: #{e.class} - #{e.message}")
+        entry = account.entries.build(entryable: Trade.new)
+        entry.errors.add(:base, I18n.t("trades.form.dividend_requires_security"))
+        entry
+      end
+    end
+
+    # Interest in an investment account is always a Trade.
+    # Falls back to a synthetic cash security when none is selected.
+    def create_interest_income
+      sec = ticker_present? ? security : Security.cash_for(account)
+      name = sec.cash? ? "Interest" : "Interest: #{sec.ticker}"
+      create_income_trade(sec: sec, label: "Interest", name: name)
+    end
+
+    def create_income_trade(sec:, label:, name:)
       entry = account.entries.build(
-        name: "Interest payment",
+        name: name,
         date: date,
-        amount: signed_amount,
+        amount: amount.to_d * -1,
         currency: currency,
-        entryable: Transaction.new
+        entryable: Trade.new(
+          qty: 0,
+          price: 0,
+          fee: 0,
+          currency: currency,
+          security: sec,
+          investment_activity_label: label
+        )
       )
 
       if entry.save

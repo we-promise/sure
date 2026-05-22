@@ -7,15 +7,7 @@ class AccountableSparklinesController < ApplicationController
     # Use HTTP conditional GET so the client receives 304 Not Modified when possible.
     if stale?(etag: etag_key, last_modified: family.latest_sync_completed_at)
       @series = Rails.cache.fetch(etag_key, expires_in: 24.hours) do
-        builder = Balance::ChartSeriesBuilder.new(
-          account_ids: account_ids,
-          currency: family.currency,
-          period: Period.last_30_days,
-          favorable_direction: @accountable.favorable_direction,
-          interval: "1 day"
-        )
-
-        builder.balance_series
+        build_series
       end
 
       render layout: false
@@ -35,7 +27,43 @@ class AccountableSparklinesController < ApplicationController
       family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
     end
 
+    def accounts
+      @accounts ||= family.accounts.visible.where(accountable_type: accountable.name)
+    end
+
+    def build_series
+      return aggregate_normalized_series if requires_normalized_aggregation?
+
+      Balance::ChartSeriesBuilder.new(
+        account_ids: account_ids,
+        currency: family.currency,
+        period: Period.last_30_days,
+        favorable_direction: @accountable.favorable_direction,
+        interval: "1 day"
+      ).balance_series
+    end
+
+    # balance_type is derived purely from accountable_type, so only Investment/Crypto
+    # can yield :investment. Short-circuit to avoid an N+1 `account.linked?` check
+    # on every account for non-investment accountable types (loan, credit_card, etc).
+    # The `Account.linked` scope is the SQL-level mirror of `Account#linked?`.
+    def requires_normalized_aggregation?
+      return false unless %w[Investment Crypto].include?(@accountable.name)
+
+      accounts.linked.exists?
+    end
+
+    def aggregate_normalized_series
+      Balance::LinkedInvestmentSeriesNormalizer.aggregate_accounts(
+        accounts: accounts,
+        currency: family.currency,
+        period: Period.last_30_days,
+        favorable_direction: @accountable.favorable_direction,
+        interval: "1 day"
+      )
+    end
+
     def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline", invalidate_on_data_updates: true)
+      family.build_cache_key("#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
     end
 end

@@ -2,7 +2,9 @@ class TransactionCategoriesController < ApplicationController
   include ActionView::RecordIdentifier
 
   def update
-    @entry = Current.family.entries.transactions.find(params[:transaction_id])
+    @entry = Current.accessible_entries.transactions.find(params[:transaction_id])
+    return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
+
     @entry.update!(entry_params)
 
     transaction = @entry.transaction
@@ -19,6 +21,7 @@ class TransactionCategoriesController < ApplicationController
     transaction.lock_saved_attributes!
     @entry.lock_saved_attributes!
 
+    in_split_group = helpers.in_split_group?(@entry, params[:grouped])
     respond_to do |format|
       format.html { redirect_back_or_to transaction_path(@entry) }
       format.turbo_stream do
@@ -26,12 +29,12 @@ class TransactionCategoriesController < ApplicationController
           turbo_stream.replace(
             dom_id(transaction, "category_menu_mobile"),
             partial: "transactions/transaction_category",
-            locals: { transaction: transaction, variant: "mobile" }
+            locals: { transaction: transaction, variant: "mobile", in_split_group: in_split_group }
           ),
           turbo_stream.replace(
             dom_id(transaction, "category_menu_desktop"),
             partial: "transactions/transaction_category",
-            locals: { transaction: transaction, variant: "desktop" }
+            locals: { transaction: transaction, variant: "desktop", in_split_group: in_split_group }
           ),
           turbo_stream.replace(
             "category_name_mobile_#{transaction.id}",

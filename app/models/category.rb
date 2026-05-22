@@ -9,6 +9,7 @@ class Category < ApplicationRecord
   belongs_to :parent, class_name: "Category", optional: true
 
   validates :name, :color, :lucide_icon, :family, presence: true
+  validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family_id }
 
   validate :category_level_limit
@@ -35,6 +36,55 @@ class Category < ApplicationRecord
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
 
+  ICON_KEYWORDS = {
+    /income|salary|paycheck|wage|earning/                          => "circle-dollar-sign",
+    /groceries|grocery|supermarket/                                => "shopping-bag",
+    /food|dining|restaurant|meal|lunch|dinner|breakfast/           => "utensils",
+    /coffee|cafe|café/                                             => "coffee",
+    /shopping|retail/                                              => "shopping-cart",
+    /transport|transit|commute|subway|metro/                       => "bus",
+    /parking/                                                      => "circle-parking",
+    /car|auto|vehicle/                                             => "car",
+    /gas|fuel|petrol/                                              => "fuel",
+    /flight|airline/                                               => "plane",
+    /travel|trip|vacation|holiday/                                 => "plane",
+    /hotel|lodging|accommodation/                                  => "hotel",
+    /movie|cinema|film|theater|theatre/                            => "film",
+    /music|concert/                                                => "music",
+    /game|gaming/                                                  => "gamepad-2",
+    /entertainment|leisure/                                        => "drama",
+    /sport|fitness|gym|workout|exercise/                           => "dumbbell",
+    /pharmacy|drug|medicine|pill|medication|dental|dentist/        => "pill",
+    /health|medical|clinic|doctor|physician/                       => "stethoscope",
+    /personal care|beauty|salon|spa|hair/                          => "scissors",
+    /mortgage|rent/                                                => "home",
+    /home|house|apartment|housing/                                 => "home",
+    /improvement|renovation|remodel/                               => "hammer",
+    /repair|maintenance/                                           => "wrench",
+    /electric|power|energy/                                        => "zap",
+    /water|sewage/                                                 => "waves",
+    /internet|cable|broadband|subscription|streaming/              => "wifi",
+    /utilities|utility/                                            => "lightbulb",
+    /phone|telephone/                                              => "phone",
+    /mobile|cell/                                                  => "smartphone",
+    /insurance/                                                    => "shield",
+    /gift|present/                                                 => "gift",
+    /donat|charity|nonprofit/                                      => "hand-helping",
+    /tax|irs|revenue/                                              => "landmark",
+    /loan|debt|credit card/                                        => "credit-card",
+    /service|professional/                                         => "briefcase",
+    /fee|charge/                                                   => "receipt",
+    /bank|banking/                                                 => "landmark",
+    /saving/                                                       => "piggy-bank",
+    /invest|stock|fund|portfolio/                                  => "trending-up",
+    /pet|dog|cat|animal|vet/                                       => "paw-print",
+    /education|school|university|college|tuition/                  => "graduation-cap",
+    /book|reading|library/                                         => "book",
+    /child|kid|baby|infant|daycare/                                => "baby",
+    /cloth|apparel|fashion|wear/                                   => "shirt",
+    /ticket/                                                       => "ticket"
+  }.freeze
+
   # Category name keys for i18n
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
@@ -58,6 +108,16 @@ class Category < ApplicationRecord
   end
 
   class << self
+    def suggested_icon(name)
+      name_down = name.to_s.downcase
+
+      ICON_KEYWORDS.each do |pattern, icon|
+        return icon if name_down.match?(pattern)
+      end
+
+      "shapes"
+    end
+
     def icon_codes
       %w[
         ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3 bath
@@ -137,28 +197,28 @@ class Category < ApplicationRecord
     private
       def default_categories
         [
-          [ "Income", "#22c55e", "circle-dollar-sign" ],
-          [ "Food & Drink", "#f97316", "utensils" ],
-          [ "Groceries", "#407706", "shopping-bag" ],
-          [ "Shopping", "#3b82f6", "shopping-cart" ],
-          [ "Transportation", "#0ea5e9", "bus" ],
-          [ "Travel", "#2563eb", "plane" ],
-          [ "Entertainment", "#a855f7", "drama" ],
-          [ "Healthcare", "#4da568", "pill" ],
-          [ "Personal Care", "#14b8a6", "scissors" ],
-          [ "Home Improvement", "#d97706", "hammer" ],
-          [ "Mortgage / Rent", "#b45309", "home" ],
-          [ "Utilities", "#eab308", "lightbulb" ],
-          [ "Subscriptions", "#6366f1", "wifi" ],
-          [ "Insurance", "#0284c7", "shield" ],
-          [ "Sports & Fitness", "#10b981", "dumbbell" ],
-          [ "Gifts & Donations", "#61c9ea", "hand-helping" ],
-          [ "Taxes", "#dc2626", "landmark" ],
-          [ "Loan Payments", "#e11d48", "credit-card" ],
-          [ "Services", "#7c3aed", "briefcase" ],
-          [ "Fees", "#6b7280", "receipt" ],
-          [ "Savings & Investments", "#059669", "piggy-bank" ],
-          [ investment_contributions_name, "#0d9488", "trending-up" ]
+          [ I18n.t("models.category.defaults.income"),                "#22c55e", "circle-dollar-sign" ],
+          [ I18n.t("models.category.defaults.food_and_drink"),        "#f97316", "utensils" ],
+          [ I18n.t("models.category.defaults.groceries"),             "#407706", "shopping-bag" ],
+          [ I18n.t("models.category.defaults.shopping"),              "#3b82f6", "shopping-cart" ],
+          [ I18n.t("models.category.defaults.transportation"),        "#0ea5e9", "bus" ],
+          [ I18n.t("models.category.defaults.travel"),                "#2563eb", "plane" ],
+          [ I18n.t("models.category.defaults.entertainment"),         "#a855f7", "drama" ],
+          [ I18n.t("models.category.defaults.healthcare"),            "#4da568", "pill" ],
+          [ I18n.t("models.category.defaults.personal_care"),         "#14b8a6", "scissors" ],
+          [ I18n.t("models.category.defaults.home_improvement"),      "#d97706", "hammer" ],
+          [ I18n.t("models.category.defaults.mortgage_rent"),         "#b45309", "home" ],
+          [ I18n.t("models.category.defaults.utilities"),             "#eab308", "lightbulb" ],
+          [ I18n.t("models.category.defaults.subscriptions"),         "#6366f1", "wifi" ],
+          [ I18n.t("models.category.defaults.insurance"),             "#0284c7", "shield" ],
+          [ I18n.t("models.category.defaults.sports_and_fitness"),    "#10b981", "dumbbell" ],
+          [ I18n.t("models.category.defaults.gifts_and_donations"),   "#61c9ea", "hand-helping" ],
+          [ I18n.t("models.category.defaults.taxes"),                 "#dc2626", "landmark" ],
+          [ I18n.t("models.category.defaults.loan_payments"),         "#e11d48", "credit-card" ],
+          [ I18n.t("models.category.defaults.services"),              "#7c3aed", "briefcase" ],
+          [ I18n.t("models.category.defaults.fees"),                  "#6b7280", "receipt" ],
+          [ I18n.t("models.category.defaults.savings_and_investments"), "#059669", "piggy-bank" ],
+          [ investment_contributions_name,                       "#0d9488", "trending-up" ]
         ]
       end
   end

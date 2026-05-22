@@ -7,6 +7,7 @@ class BudgetsController < ApplicationController
 
   def show
     @source_budget = @budget.most_recent_initialized_budget unless @budget.initialized?
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.budgets"), nil ] ]
   end
 
   def edit
@@ -53,12 +54,12 @@ class BudgetsController < ApplicationController
 
     def set_budget
       start_date = Budget.param_to_date(params[:month_year], family: Current.family)
-      @budget = Budget.find_or_bootstrap(Current.family, start_date: start_date)
+      @budget = Budget.find_or_bootstrap(Current.family, start_date: start_date, user: Current.user)
       raise ActiveRecord::RecordNotFound unless @budget
     end
 
     def redirect_to_current_month_budget
-      current_budget = Budget.find_or_bootstrap(Current.family, start_date: Date.current)
+      current_budget = Budget.find_or_bootstrap(Current.family, start_date: Date.current, user: Current.user)
       redirect_to budget_path(current_budget)
     end
 end

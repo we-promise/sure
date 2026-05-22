@@ -94,11 +94,6 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
-  test "tax_treatment returns tax_advantaged for French PEA" do
-    investment = Investment.new(subtype: "pea")
-    assert_equal :tax_advantaged, investment.tax_treatment
-  end
-
   # French account types
 
   test "tax_treatment returns tax_exempt for French regulated savings accounts" do
@@ -109,7 +104,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "tax_treatment returns tax_advantaged for French tax-advantaged plans" do
-    %w[assurance_vie contrat_de_capitalisation pee peg pel].each do |subtype|
+    %w[assurance_vie contrat_de_capitalisation pee peg pel pea].each do |subtype|
       investment = Investment.new(subtype: subtype)
       assert_equal :tax_advantaged, investment.tax_treatment, "Expected #{subtype} to be tax_advantaged"
     end
@@ -128,7 +123,6 @@ class InvestmentTest < ActiveSupport::TestCase
       assert_equal :taxable, investment.tax_treatment, "Expected #{subtype} to be taxable"
     end
   end
-
   # Generic account types
 
   test "tax_treatment returns tax_deferred for generic pension and retirement" do
@@ -157,9 +151,8 @@ class InvestmentTest < ActiveSupport::TestCase
         "Subtype #{key} has invalid tax_treatment: #{metadata[:tax_treatment]}"
     end
   end
-
   test "all subtypes have valid region values" do
-    valid_regions = [ "us", "uk", "ca", "au", "eu", "fr", nil ]
+    valid_regions = [ "us", "uk", "ca", "au", "eu", "fr", "in", nil ]
 
     Investment::SUBTYPES.each do |key, metadata|
       assert_includes valid_regions, metadata[:region],
@@ -183,5 +176,41 @@ class InvestmentTest < ActiveSupport::TestCase
 
     assert_includes labels, eu_label
     assert_equal eu_label, labels.first
+  end
+
+  # India account types
+
+  test "India pension subtypes have tax_advantaged treatment" do
+    %w[nps apy].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :tax_advantaged, investment.tax_treatment, "Expected #{subtype} to be tax_advantaged"
+    end
+  end
+
+  test "India equity subtypes are taxable" do
+    %w[indian_stocks indian_equity indian_etf].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :taxable, investment.tax_treatment, "Expected #{subtype} to be taxable"
+    end
+  end
+
+  test "life insurance is tax_advantaged" do
+    investment = Investment.new(subtype: "life_insurance")
+    assert_equal :tax_advantaged, investment.tax_treatment
+  end
+
+  test "India subtypes all belong to the 'in' region" do
+    india_keys = Investment::SUBTYPES.keys.select { |k| Investment::SUBTYPES.dig(k, :region) == "in" }
+    assert india_keys.any?, "Expected at least one India subtype"
+    india_keys.each do |key|
+      assert_equal "in", Investment::SUBTYPES.dig(key, :region), "Expected #{key} to have region 'in'"
+    end
+  end
+
+  test "subtypes_grouped_for_select places India region first for INR users" do
+    grouped = Investment.subtypes_grouped_for_select(currency: "INR")
+    assert grouped.any?, "grouped should not be empty"
+    first_group_label = grouped.first[0]
+    assert_equal I18n.t("accounts.subtype_regions.in"), first_group_label
   end
 end

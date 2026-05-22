@@ -3,6 +3,7 @@ require "test_helper"
 class ImportsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    ensure_tailwind_build
   end
 
   test "gets index" do
@@ -32,8 +33,10 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "Import accounts"
     assert_select "button", text: "Import transactions", count: 0
     assert_select "button", text: "Import investments", count: 0
-    assert_select "button", text: "Import from Mint", count: 0
-    assert_select "span", text: "Import accounts first to unlock this option.", count: 3
+    assert_select "button", text: "Import from Mint", count: 1
+    assert_select "button", text: "Import from Actual Budget", count: 1
+    assert_select "button", text: "Import from Quicken (QIF)", count: 1
+    assert_select "span", text: "Import accounts first to unlock this option.", count: 2
     assert_select "div[aria-disabled=true]", count: 3
   end
 

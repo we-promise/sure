@@ -35,7 +35,7 @@ class Holding::ReverseCalculator
         previous_portfolio = transform_portfolio(current_portfolio, today_trades, direction: :reverse)
 
         # If current day, always use holding prices (since that's what Plaid gives us).  For historical values, use market data (since Plaid doesn't supply historical prices)
-        holdings += build_holdings(current_portfolio, date, price_source: date == Date.current ? "holding" : nil)
+        holdings.concat(build_holdings(current_portfolio, date, price_source: date == Date.current ? "holding" : nil))
         current_portfolio = previous_portfolio
       end
 
@@ -79,41 +79,46 @@ class Holding::ReverseCalculator
       end.compact
     end
 
-    # Pre-compute cost basis for all securities at all dates using forward pass through trades
-    # Stores: { security_id => { date => cost_basis } }
     def precompute_cost_basis
-      @cost_basis_by_date = Hash.new { |h, k| h[k] = {} }
+      @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
       tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
 
-      trades = portfolio_cache.get_trades.sort_by(&:date)
-      trade_index = 0
+      portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
+        trade = trade_entry.entryable
+        next unless trade.qty > 0
 
-      account.start_date.upto(Date.current).each do |date|
-        # Process all trades up to and including this date
-        while trade_index < trades.size && trades[trade_index].date <= date
-          trade_entry = trades[trade_index]
-          trade = trade_entry.entryable
-
-          if trade.qty > 0 # Only track buys
-            security_id = trade.security_id
-            trade_price = Money.new(trade.price, trade.currency)
-            converted_price = trade_price.exchange_to(account.currency, fallback_rate: 1).amount
-
-            tracker[security_id][:total_cost] += converted_price * trade.qty
-            tracker[security_id][:total_qty] += trade.qty
-          end
-          trade_index += 1
+        security_id = trade.security_id
+        trade_price = Money.new(trade.price, trade.currency)
+        begin
+          converted_price = trade_price.exchange_to(account.currency).amount
+        rescue Money::ConversionError
+          converted_price = trade.price
         end
 
-        # Store current cost basis snapshot for each security at this date
-        tracker.each do |security_id, data|
-          next if data[:total_qty].zero?
-          @cost_basis_by_date[security_id][date] = data[:total_cost] / data[:total_qty]
-        end
+        tracker[security_id][:total_cost] += converted_price * trade.qty
+        tracker[security_id][:total_qty] += trade.qty
+
+        @cost_basis_snapshots[security_id] << [
+          trade_entry.date,
+          tracker[security_id][:total_cost] / tracker[security_id][:total_qty]
+        ]
       end
     end
 
     def cost_basis_for(security_id, date)
-      @cost_basis_by_date.dig(security_id, date)
+      snapshots = @cost_basis_snapshots[security_id]
+      return nil if snapshots.empty?
+
+      lo, hi, result = 0, snapshots.size - 1, nil
+      while lo <= hi
+        mid = (lo + hi) / 2
+        if snapshots[mid][0] <= date
+          result = snapshots[mid][1]
+          lo = mid + 1
+        else
+          hi = mid - 1
+        end
+      end
+      result
     end
 end

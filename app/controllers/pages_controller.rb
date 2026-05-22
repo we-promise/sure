@@ -11,7 +11,7 @@ class PagesController < ApplicationController
 
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
-    @accounts = Current.family.accounts.visible.with_attached_logo
+    @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
     family_currency = Current.family.currency
 
@@ -26,11 +26,11 @@ class PagesController < ApplicationController
 
     @dashboard_sections = build_dashboard_sections
 
-    @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.dashboard"), nil ] ]
   end
 
   def intro
-    @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), chats_path ], [ t("breadcrumbs.intro"), nil ] ]
   end
 
   def update_preferences
@@ -90,7 +90,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
           locals: { sankey_data: @cashflow_sankey_data, period: @period },
-          visible: Current.family.accounts.any?,
+          visible: @accounts.any?,
           collapsible: true
         },
         {
@@ -98,7 +98,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.outflows_donut.title",
           partial: "pages/dashboard/outflows_donut",
           locals: { outflows_data: @outflows_data, period: @period },
-          visible: Current.family.accounts.any? && @outflows_data[:categories].present?,
+          visible: @accounts.any? && @outflows_data[:categories].present?,
           collapsible: true
         },
         {
@@ -106,7 +106,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.investment_summary.title",
           partial: "pages/dashboard/investment_summary",
           locals: { investment_statement: @investment_statement, period: @period },
-          visible: Current.family.accounts.any? && @investment_statement.investment_accounts.any?,
+          visible: @accounts.any? && @investment_statement.investment_accounts.any?,
           collapsible: true
         },
         {
@@ -114,7 +114,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.net_worth_chart.title",
           partial: "pages/dashboard/net_worth_chart",
           locals: { balance_sheet: @balance_sheet, period: @period },
-          visible: Current.family.accounts.any?,
+          visible: @accounts.any?,
           collapsible: true
         },
         {
@@ -122,7 +122,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.balance_sheet.title",
           partial: "pages/dashboard/balance_sheet",
           locals: { balance_sheet: @balance_sheet },
-          visible: Current.family.accounts.any?,
+          visible: @accounts.any?,
           collapsible: true
         }
       ]
@@ -152,7 +152,7 @@ class PagesController < ApplicationController
 
       add_node = ->(unique_key, display_name, value, percentage, color) {
         node_indices[unique_key] ||= begin
-          nodes << { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << { id: unique_key, name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
           nodes.size - 1
         end
       }

@@ -1,11 +1,19 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
+  before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  before_destroy :capture_account_statement_ids_to_move
+  after_destroy_commit :move_account_statements_to_inbox
+
   validates :name, :balance, :currency, presence: true
+  validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
+  belongs_to :owner, class_name: "User", optional: true
   belongs_to :import, optional: true
 
+  has_many :account_shares, dependent: :destroy
+  has_many :shared_users, through: :account_shares, source: :user
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
   has_many :transactions, through: :entries, source: :entryable, source_type: "Transaction"
@@ -13,6 +21,15 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
+  has_many :recurring_transactions, dependent: :destroy
+  # Inverse for recurring transfers where this account is the destination.
+  # Account#recurring_transactions only matches account_id; without this
+  # association, destroying the destination account would hit the FK
+  # cascade silently and the AR cache wouldn't reflect the deletion.
+  has_many :inbound_recurring_transfers,
+           class_name: "RecurringTransaction",
+           foreign_key: :destination_account_id,
+           dependent: :destroy
 
   monetize :balance, :cash_balance
 
@@ -36,7 +53,34 @@ class Account < ApplicationRecord
     manual.where.not(status: :pending_deletion)
   }
 
+  # All accounts a user can access (owned + shared with them)
+  scope :accessible_by, ->(user) {
+    left_joins(:account_shares)
+      .where("accounts.owner_id = :uid OR account_shares.user_id = :uid", uid: user.id)
+      .distinct
+  }
+
+  # Accounts a user can write to (owned or shared with full_control)
+  scope :writable_by, ->(user) {
+    left_joins(:account_shares)
+      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')", uid: user.id)
+      .distinct
+  }
+
+  # Accounts that count in a user's financial calculations
+  scope :included_in_finances_for, ->(user) {
+    left_joins(:account_shares)
+      .where(
+        "accounts.owner_id = :uid OR " \
+        "(account_shares.user_id = :uid AND account_shares.include_in_finances = true)",
+        uid: user.id
+      )
+      .distinct
+  }
+
   has_one_attached :logo, dependent: :purge_later
+  # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
+  has_many :account_statements
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -96,6 +140,8 @@ class Account < ApplicationRecord
           date: opening_balance_date
         )
         raise result.error if result.error
+
+        account.auto_share_with_family! if account.family.share_all_by_default?
       end
 
       # Skip initial sync for linked accounts - the provider sync will handle balance creation
@@ -138,8 +184,9 @@ class Account < ApplicationRecord
         end
       end
 
+      family = simplefin_account.simplefin_item.family
       attributes = {
-        family: simplefin_account.simplefin_item.family,
+        family: family,
         name: simplefin_account.name,
         balance: balance,
         cash_balance: cash_balance,
@@ -165,8 +212,9 @@ class Account < ApplicationRecord
 
       cash_balance = balance
 
+      family = enable_banking_account.enable_banking_item.family
       attributes = {
-        family: enable_banking_account.enable_banking_item.family,
+        family: family,
         name: enable_banking_account.name,
         balance: balance,
         cash_balance: cash_balance,
@@ -211,8 +259,55 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_binance_account(binance_account)
+      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+    end
+
+    def create_from_ibkr_account(ibkr_account)
+      family = ibkr_account.ibkr_item.family
+      default_name = if ibkr_account.ibkr_account_id.present?
+        "Interactive Brokers (#{ibkr_account.ibkr_account_id})"
+      else
+        "Interactive Brokers"
+      end
+
+      attributes = {
+        family: family,
+        name: default_name,
+        balance: 0,
+        cash_balance: 0,
+        currency: ibkr_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
+    def create_from_kraken_account(kraken_account)
+      create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
+    end
 
     private
+
+      def create_from_crypto_exchange_account(provider_account, family:)
+        attributes = {
+          family: family,
+          name: provider_account.name,
+          balance: (provider_account.current_balance || 0).to_d,
+          cash_balance: 0,
+          currency: provider_account.currency.presence || family.currency,
+          accountable_type: "Crypto",
+          accountable_attributes: {
+            subtype: "exchange",
+            tax_treatment: "taxable"
+          }
+        }
+
+        create_and_sync(attributes, skip_initial_sync: true)
+      end
 
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
         attributes = {}
@@ -243,13 +338,31 @@ class Account < ApplicationRecord
     read_attribute(:institution_domain).presence || provider&.institution_domain
   end
 
+  def manual_crypto_exchange?
+    accountable_type == "Crypto" &&
+      accountable&.subtype == "exchange" &&
+      account_providers.none? &&
+      plaid_account_id.blank? &&
+      simplefin_account_id.blank?
+  end
+
   def logo_url
-    provider&.logo_url
+    if institution_domain.present? && Setting.brand_fetch_client_id.present?
+      logo_size = Setting.brand_fetch_logo_size
+
+      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    elsif provider&.logo_url.present?
+      provider.logo_url
+    elsif logo.attached?
+      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
   end
 
   def destroy_later
-    mark_for_deletion!
-    DestroyJob.perform_later(self)
+    transaction do
+      mark_for_deletion!
+      DestroyJob.perform_later(self)
+    end
   end
 
   # Override destroy to handle error recovery for accounts
@@ -263,15 +376,27 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    holdings
-      .where(currency: currency)
-      .where.not(qty: 0)
-      .where(
-        id: holdings.select("DISTINCT ON (security_id) id")
-                    .where(currency: currency)
-                    .order(:security_id, date: :desc)
-      )
-      .order(amount: :desc)
+    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
+      holdings
+        .where.not(account_provider_id: nil)
+        .where(date: provider_snapshot_date)
+        .where.not(qty: 0)
+        .order(amount: :desc)
+    else
+      holdings
+        .where(currency: currency)
+        .where.not(qty: 0)
+        .where(
+          id: holdings.select("DISTINCT ON (security_id) id")
+                      .where(currency: currency)
+                      .order(:security_id, date: :desc)
+        )
+        .order(amount: :desc)
+    end
+  end
+
+  def latest_provider_holdings_snapshot_date
+    holdings.where.not(account_provider_id: nil).maximum(:date)
   end
 
   def start_date
@@ -302,12 +427,27 @@ class Account < ApplicationRecord
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
+  def supports_default?
+    depository? || credit_card?
+  end
+
+  def eligible_for_transaction_default?
+    supports_default? && active? && !linked?
+  end
+
   # Determines if this account supports manual trade entry
   # Investment accounts always support trades; Crypto only if subtype is "exchange"
   def supports_trades?
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false
+  end
+
+  def traded_standard_securities
+    Security.where(id: holdings.select(:security_id))
+            .standard
+            .distinct
+            .order(:ticker)
   end
 
   # The balance type determines which "component" of balance is being tracked.
@@ -328,4 +468,79 @@ class Account < ApplicationRecord
       raise "Unknown account type: #{accountable_type}"
     end
   end
+
+  def owned_by?(user)
+    user.present? && owner_id == user.id
+  end
+
+  def shared_with?(user)
+    return false if user.nil?
+
+    owned_by?(user) ||
+      if account_shares.loaded?
+        account_shares.any? { |s| s.user_id == user.id }
+      else
+        account_shares.exists?(user: user)
+      end
+  end
+
+  def shared?
+    account_shares.any?
+  end
+
+  def permission_for(user)
+    return :owner if owned_by?(user)
+    account_shares.find_by(user: user)&.permission&.to_sym
+  end
+
+  def share_with!(user, permission: "read_only", include_in_finances: true)
+    account_shares.create!(user: user, permission: permission, include_in_finances: include_in_finances)
+  end
+
+  def unshare_with!(user)
+    account_shares.where(user: user).destroy_all
+  end
+
+  def auto_share_with_family!
+    records = family.users.where.not(id: owner_id).pluck(:id).map do |user_id|
+      { account_id: id, user_id: user_id, permission: "read_write",
+        include_in_finances: true, created_at: Time.current, updated_at: Time.current }
+    end
+
+    AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
+  end
+
+  private
+
+    def assign_default_owner
+      return if owner.present?
+
+      if Current.user.present? && Current.user.family_id == family_id
+        self.owner = Current.user
+      else
+        self.owner = family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+      end
+    end
+
+    def owner_belongs_to_family
+      return if User.where(id: owner_id, family_id: family_id).exists?
+      errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def capture_account_statement_ids_to_move
+      @statement_ids_to_move = account_statements.ids
+    end
+
+    def move_account_statements_to_inbox
+      statement_ids = Array(@statement_ids_to_move).compact
+      return if statement_ids.empty?
+
+      # Bypass callbacks deliberately: the account was destroyed, so linked statements need a direct inbox move.
+      AccountStatement.where(id: statement_ids).update_all(
+        account_id: nil,
+        review_status: "unmatched",
+        match_confidence: nil,
+        updated_at: Time.current
+      )
+    end
 end

@@ -95,3 +95,8 @@ nb:
       description: Her er en oppsummering av de nye elementene som vil bli lagt til kontoen din
         når du publiserer denne importen.
       title: Bekreft importdataene dine
+      summary_item_label: Element
+      summary_count_label: Antall
+      empty_summary: Vi fant ingen poster som kan importeres i denne filen. Den kan være tom, eller linjene samsvarer ikke med det forventede eksportformatet (hver linje skal være et JSON-objekt med nøklene «type» og «data», med typer denne importen støtter).
+      publish_import: Publiser import
+      back_to_imports: Tilbake til importer

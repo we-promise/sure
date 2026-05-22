@@ -16,7 +16,7 @@ Purpose: provide short, actionable guidance so Copilot suggestions match project
 ### Testing
 - `bin/rails test` - Run all tests
 - `bin/rails test:db` - Run tests with database reset
-- `bin/rails test:system` - Run system tests only (use sparingly - they take longer)
+- `DISABLE_PARALLELIZATION=true bin/rails test:system` - Run system tests only (use sparingly - they take longer)
 - `bin/rails test test/models/account_test.rb` - Run specific test file
 - `bin/rails test test/models/account_test.rb:42` - Run specific test at line
 
@@ -37,7 +37,7 @@ Purpose: provide short, actionable guidance so Copilot suggestions match project
 - `bin/setup` - Initial project setup (installs dependencies, prepares database)
 
 ## Pre-PR workflow (run locally before opening PR)
-- Tests: bin/rails test (all), bin/rails test:system (when applicable)
+- Tests: bin/rails test (all), DISABLE_PARALLELIZATION=true bin/rails test:system (when applicable)
 - Linters: bin/rubocop -f github -a; bundle exec erb_lint ./app/**/*.erb -a
 - Security: bin/brakeman --no-pager
 
@@ -86,7 +86,7 @@ Sidekiq handles asynchronous tasks:
 - **Stimulus Controllers**: Handle interactivity, organized alongside components
 - **Charts**: D3.js for financial visualizations (time series, donut, sankey)
 - **Styling**: Tailwind CSS v4.x with custom design system
-  - Design system defined in `app/assets/tailwind/maybe-design-system.css`
+  - Design system defined in `app/assets/tailwind/sure-design-system.css`
   - Always use functional tokens (e.g., `text-primary` not `text-white`)
   - Prefer semantic HTML elements over JS components
   - Use `icon` helper for icons, never `lucide_icon` directly
@@ -261,7 +261,7 @@ end
 ## TailwindCSS Design System
 
 ### Design System Rules
-- **Always reference `app/assets/tailwind/maybe-design-system.css`** for primitives and tokens
+- **Always reference `app/assets/tailwind/sure-design-system.css`** for primitives and tokens
 - **Use functional tokens** defined in design system:
   - `text-primary` instead of `text-white`
   - `bg-container` instead of `bg-white`

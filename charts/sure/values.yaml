@@ -110,6 +110,15 @@ cnpg:
     #   are passed through for CNPG to validate.
     backup: {}
 
+    # NOTE: These are example values for resource limits and requests, adapt them to your cluster and workload needs. CNPG can run on very small resource requests, but you may want to increase limits for production workloads.
+    # resources:
+    #   requests:
+    #     cpu: 100m
+    #     memory: 256Mi
+    #   limits:
+    #     cpu: 200m
+    #     memory: 512Mi
+    #     
     # Optional CNPG plugin configuration (rendered as `.spec.plugins` on the Cluster CR)
     # Example (barman-cloud plugin as WAL archiver):
     # plugins:
@@ -488,12 +497,16 @@ pipelock:
   enabled: false
   image:
     repository: ghcr.io/luckypipewrench/pipelock
-    tag: "0.3.2"
+    tag: "2.2.0"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
   # Pipelock run mode: strict, balanced, audit
   mode: balanced
+  # Trusted domains: allow internal services whose public DNS resolves to private IPs.
+  # Without this, SSRF scanning blocks legitimate internal-to-internal traffic.
+  # Example: ["api.internal.example.com", "*.corp.example.com"]
+  trustedDomains: []
   forwardProxy:
     enabled: true
     port: 8888
@@ -519,6 +532,14 @@ pipelock:
   mcpToolPolicy:
     enabled: true
     action: warn
+    # Redirect profiles: route matched tool calls to audited handler programs instead
+    # of blocking. The handler returns a synthetic MCP response. Fail-closed on error.
+    # Example:
+    #   redirectProfiles:
+    #     safe-fetch:
+    #       exec: ["/pipelock", "internal-redirect", "fetch-proxy"]
+    #       reason: "Route fetch calls through audited proxy"
+    redirectProfiles: {}
   # MCP session binding: pins tool inventory on first tools/list, detects injection
   mcpSessionBinding:
     enabled: true
@@ -581,8 +602,8 @@ pipelock:
 
   # Escape hatch: ADDITIONAL config sections appended to pipelock.yaml.
   # Use for sections not covered by structured values above (session_profiling,
-  # data_budget, adaptive_enforcement, kill_switch, internal CIDRs, etc.)
-  # Do NOT duplicate keys already rendered above — behavior is parser-dependent.
+  # data_budget, adaptive_enforcement, kill_switch, sandbox, reverse_proxy, etc.)
+  # Do NOT duplicate keys already rendered above - behavior is parser-dependent.
   extraConfig: {}
 
   # Hard-fail helm template when externalAssistant is enabled without pipelock.

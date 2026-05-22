@@ -30,7 +30,48 @@ en:
         label: "SimpleFIN Setup Token:"
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
+      title: Update SimpleFin Connection
+      header_subtitle: Get a new setup token to reconnect your SimpleFIN account
+      connection_needs_update: "Your SimpleFIN connection needs to be updated:"
+      step_1_html: "Visit <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> to create a new setup token"
+      step_2: Copy the token and paste it below
+      step_3: "Click \"Update\" to restore access"
+      update: Update
+      cancel: Cancel
     setup_accounts:
+      title: Set Up Your SimpleFin Accounts
+      header_subtitle: Choose the correct account types for your imported accounts
+      choose_account_type: "Choose the correct account type for each SimpleFin account:"
+      account_type_checking_savings: Checking or Savings
+      account_type_checking_savings_desc: Regular bank accounts
+      account_type_credit_card: Credit Card
+      account_type_credit_card_desc: Credit card accounts
+      account_type_investment: Investment
+      account_type_investment_desc: "Brokerage, 401(k), IRA accounts"
+      account_type_loan: Loan or Mortgage
+      account_type_loan_desc: Debt accounts
+      account_type_other_asset: Other Asset
+      account_type_other_asset_desc: Everything else
+      transaction_history_title: "Transaction History:"
+      transaction_history_description_html: "SimpleFin typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
+      account_type_label: "Account Type:"
+      create_accounts: Create Accounts
+      creating_accounts: Creating Accounts...
+      cancel: Cancel
+      account_card:
+        balance: "Balance"
+      activity:
+        recent:
+          one: "1 transaction • latest %{when}"
+          other: "%{count} transactions • latest %{when}"
+        dormant: "No activity in %{days} days"
+        empty: "No transactions imported yet"
+        likely_closed: "No recent activity and zero balance — this may be a closed or replaced card"
+        today: "today"
+        yesterday: "yesterday"
+        days_ago:
+          one: "1 day ago"
+          other: "%{count} days ago"
       stale_accounts:
         title: "Accounts No Longer in SimpleFIN"
         description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."
@@ -97,7 +138,17 @@ en:
       success: Account successfully linked to SimpleFIN
       errors:
         only_manual: Only manual accounts can be linked
+        different_provider: This account is linked to a different provider. Unlink it from that provider first, then link to SimpleFIN.
         invalid_simplefin_account: Invalid SimpleFIN account selected
+    dismiss_replacement_suggestion:
+      dismissed: Replacement suggestion dismissed
+    replacement_prompt:
+      title: "Your %{institution} card may have been replaced"
+      description: "“%{account_name}” is linked to “%{old_name}”, which has had no recent activity and a zero balance. A new card, “%{new_name}”, is now active at the same institution. Relink to keep your history intact."
+      relink: Relink to new card
+      confirm_title: Relink to the new card?
+      confirm_body: "“%{account_name}” will be linked to “%{new_name}”. Your transaction history stays; future transactions come from the new card."
+      dismiss_aria: Dismiss replacement suggestion
     reconciled_status:
       message:
         one: "%{count} duplicate pending transaction reconciled"

@@ -1,0 +1,67 @@
+---
+pt-BR:
+  provider_sync_summary:
+    title: Resumo da sincronização
+    last_sync: "Última sincronização: há %{time_ago}"
+    accounts:
+      title: Contas
+      total: "Total: %{count}"
+      linked: "Vinculado: %{count}"
+      unlinked: "Não vinculado: %{count}"
+      institutions: "Instituições: %{count}"
+    transactions:
+      title: Transações
+      seen: "Vistos: %{count}"
+      imported: "Importado: %{count}"
+      updated: "Atualizado: %{count}"
+      skipped: "Ignorada: %{count}"
+      fetching: "Buscando na corretora..."
+      protected:
+        one: "%{count} entrada protegida (não sobrescrita)"
+        other: "%{count} entradas protegidas (não sobrescritas)"
+      view_protected: Ver entradas protegidas
+    skip_reasons:
+      excluded: Excluída
+      user_modified: Usuário modificou
+      import_locked: Importação de CSV
+      protected: Protegida
+    holdings:
+      title: Holdings
+      found: "Encontrado: %{count}"
+      processed: "Processados: %{count}"
+    trades:
+      title: Trocas
+      imported: "Importado: %{count}"
+      skipped: "Ignorado: %{count}"
+      fetching: "Buscar atividades da corretora..."
+    health:
+      title: Saúde
+      view_error_details: Ver detalhes do erro
+      rate_limited: "Taxa limitada %{time_ago}"
+      recently: recentemente
+      errors: "Erros: %{count}"
+      pending_reconciled:
+        one: "%{count} transações pendentes duplicadas reconciliadas"
+        other: "%{count} transações pendentes duplicadas reconciliadas"
+      view_reconciled: Visualizar transações conciliadas
+      duplicate_suggestions:
+        one: "%{count} possível duplicado precisa de revisão"
+        other: "%{count} possíveis duplicados precisam ser revisados"
+      view_duplicate_suggestions: Ver duplicados sugeridos
+      stale_pending:
+        one: "%{count} transações pendentes obsoletas (excluídas dos orçamentos)"
+        other: "%{count} transações pendentes obsoletas (excluídas dos orçamentos)"
+      view_stale_pending: Veja as contas afetadas
+      stale_pending_count:
+        one: "%{count} transação"
+        other: "%{count} transações"
+      stale_unmatched:
+        one: "%{count} transação pendente precisa de revisão manual"
+        other: "%{count} transações pendentes precisam de revisão manual"
+      view_stale_unmatched: Veja as transações que precisam de revisão.
+      stale_unmatched_count:
+        one: "%{count} transação"
+        other: "%{count} transações"
+      data_warnings: "Avisos de dados: %{count}"
+      notices: "Avisos: %{count}"
+      view_data_quality: Veja os detalhes da qualidade dos dados.

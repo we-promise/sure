@@ -83,7 +83,8 @@ class Account::ProviderImportAdapter
         incoming_pending =
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending"))
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
       end
 
       if entry.new_record? && !incoming_pending
@@ -108,18 +109,53 @@ class Account::ProviderImportAdapter
         end
 
         if pending_match
+          old_pending_external_id = pending_match.external_id
+          pending_entry_date      = pending_match.date
           entry = pending_match
           entry.assign_attributes(external_id: external_id)
+
+          # Clear the pending flag so this entry no longer shows as pending after being claimed
+          # by a booked transaction. Also record the old external_id so the sync engine can
+          # exclude it from re-import (preventing the old pending from being recreated on the
+          # next sync when the stored raw payload still contains the pending transaction data).
+          if entry.entryable.is_a?(Transaction)
+            ex = (entry.transaction.extra || {}).deep_dup
+            Transaction::PENDING_PROVIDERS.each do |provider|
+              next unless ex.key?(provider)
+              ex[provider].delete("pending")
+              ex.delete(provider) if ex[provider].empty?
+            end
+            if old_pending_external_id.present?
+              existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
+              ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
+            end
+            entry.transaction.extra = ex
+          end
         end
       end
 
       # Track if this is a new posted transaction (for fuzzy suggestion after save)
       is_new_posted = entry.new_record? && !incoming_pending
 
+      # Preserve the original pending date across all syncs:
+      # - First claim: pending_entry_date is captured from the pending match above
+      # - Subsequent syncs: entry already exists (no pending_match found), so check
+      #   auto_claimed_pending_ids which signals it was previously auto-claimed and
+      #   keep entry.date (the pending date stored on first claim) unchanged
+      effective_date = if pending_entry_date
+        pending_entry_date
+      elsif !entry.new_record? &&
+            entry.entryable.is_a?(Transaction) &&
+            entry.transaction.extra&.key?("auto_claimed_pending_ids")
+        entry.date
+      else
+        date
+      end
+
       entry.assign_attributes(
         amount: amount,
         currency: currency,
-        date: date
+        date: effective_date
       )
 
       # Use enrichment pattern to respect user overrides
@@ -160,6 +196,10 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
+      elsif account.accountable_type == "Loan" && amount.negative?
+        auto_kind = "loan_payment"
+      elsif account.accountable_type == "CreditCard" && amount.negative?
+        auto_kind = "cc_payment"
       end
 
       # Set investment activity label, kind, and category if detected
@@ -546,8 +586,9 @@ class Account::ProviderImportAdapter
   # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
+  # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -580,13 +621,16 @@ class Account::ProviderImportAdapter
       end
 
       # Always update Trade attributes (works for both new and existing records)
-      entry.entryable.assign_attributes(
+      trade_attributes = {
         security: security,
         qty: quantity,
         price: price,
         currency: currency,
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
-      )
+      }
+      trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+
+      entry.entryable.assign_attributes(trade_attributes)
 
       entry.assign_attributes(
         date: date,
@@ -691,6 +735,7 @@ class Account::ProviderImportAdapter
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -737,6 +782,7 @@ class Account::ProviderImportAdapter
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -806,6 +852,7 @@ class Account::ProviderImportAdapter
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)

@@ -4,15 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/accounts_provider.dart';
+import 'providers/categories_provider.dart';
 import 'providers/transactions_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/biometric_lock_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
+import 'services/preferences_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +39,8 @@ class SureApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => CategoriesProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(
           create: (_) => AccountsProvider(),
           update: (_, connectivityService, accountsProvider) {
@@ -62,7 +68,8 @@ class SureApp extends StatelessWidget {
           },
         ),
       ],
-      child: MaterialApp(
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp(
         title: 'Sure Finances',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -139,14 +146,14 @@ class SureApp extends StatelessWidget {
             ),
           ),
         ),
-        themeMode: ThemeMode.system,
+        themeMode: themeProvider.themeMode,
         routes: {
           '/config': (context) => const BackendConfigScreen(),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const MainNavigationScreen(),
         },
         home: const AppWrapper(),
-      ),
+      )),
     );
   }
 }
@@ -158,23 +165,54 @@ class AppWrapper extends StatefulWidget {
   State<AppWrapper> createState() => _AppWrapperState();
 }
 
-class _AppWrapperState extends State<AppWrapper> {
+class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   bool _isCheckingConfig = true;
   bool _hasBackendUrl = false;
+  bool _isLocked = false;
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkBackendConfig();
     _initDeepLinks();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _markLockedIfEnabled();
+    } else if (state == AppLifecycleState.resumed && _isLocked) {
+      // Lock screen is already showing via build(); biometric auto-triggers there.
+    }
+  }
+
+  Future<void> _markLockedIfEnabled() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isAuthenticated) return;
+    final enabled = await PreferencesService.instance.getBiometricEnabled();
+    if (enabled && mounted) {
+      setState(() => _isLocked = true);
+    }
+  }
+
+  void _onUnlocked() {
+    if (mounted) setState(() => _isLocked = false);
+  }
+
+  Future<void> _onLockLogout() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.logout();
+    if (mounted) setState(() => _isLocked = false);
   }
 
   void _initDeepLinks() {
@@ -219,12 +257,6 @@ class _AppWrapperState extends State<AppWrapper> {
     });
   }
 
-  void _goToBackendConfig() {
-    setState(() {
-      _hasBackendUrl = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isCheckingConfig) {
@@ -253,16 +285,30 @@ class _AppWrapperState extends State<AppWrapper> {
         }
 
         if (authProvider.isAuthenticated) {
-          return const MainNavigationScreen();
+          return Stack(
+            children: [
+              const MainNavigationScreen(),
+              if (_isLocked)
+                BiometricLockScreen(
+                  onUnlocked: _onUnlocked,
+                  onLogout: _onLockLogout,
+                ),
+            ],
+          );
+        }
+
+        // Clear stale lock state so it doesn't flash on the next login.
+        if (_isLocked) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _isLocked = false);
+          });
         }
 
         if (authProvider.ssoOnboardingPending) {
           return const SsoOnboardingScreen();
         }
 
-        return LoginScreen(
-          onGoToSettings: _goToBackendConfig,
-        );
+        return const LoginScreen();
       },
     );
   }

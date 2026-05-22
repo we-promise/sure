@@ -43,6 +43,25 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='sankey-chart']"
   end
 
+  test "dashboard renders sankey chart zoom controls and stable node ids" do
+    parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
+
+    create_transaction(account: @family.accounts.first, name: "General shopping", amount: 100, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "Grocery store", amount: 50, category: subcategory)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-sankey-chart-target='zoomOutButton'][hidden]", count: 2
+
+    chart = css_select("[data-controller='sankey-chart']").first
+    sankey_data = JSON.parse(chart["data-sankey-chart-data-value"])
+
+    assert_includes sankey_data.fetch("nodes").map { |node| node.fetch("id") }, "cash_flow_node"
+    assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path

@@ -4,6 +4,6 @@ one:
   locality: Los Angeles
   region: CA
   country: US
-  postal_code: 90001
+  postal_code: "90001"
   addressable: one
   addressable_type: Property

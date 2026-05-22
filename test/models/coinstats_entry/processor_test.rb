@@ -264,4 +264,202 @@ class CoinstatsEntry::ProcessorTest < ActiveSupport::TestCase
       processor.process
     end
   end
+
+  test "restores legacy transaction entry if trade import fails" do
+    exchange_crypto = Crypto.create!
+    exchange_account_record = @family.accounts.create!(
+      accountable: exchange_crypto,
+      name: "Bitvavo",
+      balance: 1000,
+      currency: "USD"
+    )
+    exchange_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "USD",
+      account_id: "exchange_portfolio:portfolio_123",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        coins: []
+      }
+    )
+    AccountProvider.create!(account: exchange_account_record, provider: exchange_account)
+
+    legacy_entry = exchange_account_record.entries.create!(
+      entryable: Transaction.new,
+      external_id: "coinstats_trade_legacy",
+      source: "coinstats",
+      amount: 100,
+      currency: "USD",
+      date: Date.new(2025, 1, 15),
+      name: "Trade BTC"
+    )
+
+    transaction_data = {
+      type: "Trade",
+      date: "2025-01-15T10:00:00.000Z",
+      hash: { id: "trade_legacy" },
+      transactions: [
+        {
+          items: [
+            { coin: { id: "bitcoin", symbol: "BTC" }, count: "-0.1", totalWorth: "100" },
+            { coin: { id: "ethereum", symbol: "ETH" }, count: "1.5", totalWorth: "100" }
+          ]
+        }
+      ]
+    }
+
+    Security::Resolver.any_instance.stubs(:resolve).returns(securities(:aapl))
+    Account::ProviderImportAdapter.any_instance.expects(:import_trade).raises(StandardError, "boom")
+
+    processor = CoinstatsEntry::Processor.new(transaction_data, coinstats_account: exchange_account)
+
+    assert_raises(StandardError) { processor.process }
+    assert exchange_account_record.entries.exists?(id: legacy_entry.id)
+  end
+
+  test "exchange trades prefer the disposed asset leg" do
+    exchange_crypto = Crypto.create!
+    exchange_account_record = @family.accounts.create!(
+      accountable: exchange_crypto,
+      name: "Bitvavo",
+      balance: 1000,
+      currency: "USD"
+    )
+    exchange_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "USD",
+      account_id: "exchange_portfolio:portfolio_123",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        coins: []
+      }
+    )
+    AccountProvider.create!(account: exchange_account_record, provider: exchange_account)
+
+    transaction_data = {
+      type: "Trade",
+      date: "2025-01-15T10:00:00.000Z",
+      hash: { id: "trade_disposed_asset" },
+      transactions: [
+        {
+          items: [
+            { coin: { id: "bitcoin", symbol: "BTC" }, count: "-0.00335845", totalWorth: "100" },
+            { coin: { id: "ethereum", symbol: "ETH" }, count: "0.05580825", totalWorth: "100" }
+          ]
+        }
+      ]
+    }
+
+    Security::Resolver.any_instance.stubs(:resolve).returns(securities(:aapl))
+
+    processor = CoinstatsEntry::Processor.new(transaction_data, coinstats_account: exchange_account)
+    processor.process
+
+    entry = exchange_account_record.entries.order(created_at: :desc).first
+    assert_equal "Trade BTC", entry.name
+    assert_equal "Sell", entry.trade.investment_activity_label
+  end
+
+  test "portfolio exchange fallback keeps disposed asset sign when trade import is skipped" do
+    exchange_crypto = Crypto.create!
+    exchange_account_record = @family.accounts.create!(
+      accountable: exchange_crypto,
+      name: "Bitvavo",
+      balance: 1000,
+      currency: "USD"
+    )
+    exchange_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "USD",
+      account_id: "exchange_portfolio:portfolio_123",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        coins: []
+      }
+    )
+    AccountProvider.create!(account: exchange_account_record, provider: exchange_account)
+
+    transaction_data = {
+      type: "Trade",
+      date: "2025-01-15T10:00:00.000Z",
+      hash: { id: "trade_fallback_sign" },
+      transactions: [
+        {
+          items: [
+            { coin: { id: "bitcoin", symbol: "BTC" }, count: "-0.00335845", totalWorth: "100" },
+            { coin: { id: "ethereum", symbol: "ETH" }, count: "0.05580825", totalWorth: "100" }
+          ]
+        }
+      ]
+    }
+
+    Security::Resolver.any_instance.stubs(:resolve).returns(nil)
+
+    processor = CoinstatsEntry::Processor.new(transaction_data, coinstats_account: exchange_account)
+    processor.process
+
+    entry = exchange_account_record.entries.order(created_at: :desc).first
+    assert_equal BigDecimal("100"), entry.amount
+    assert_equal "Trade BTC", entry.name
+  end
+
+  test "preserves protected legacy transaction when migrating exchange trade" do
+    exchange_crypto = Crypto.create!
+    exchange_account_record = @family.accounts.create!(
+      accountable: exchange_crypto,
+      name: "Bitvavo",
+      balance: 1000,
+      currency: "USD"
+    )
+    exchange_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "USD",
+      account_id: "exchange_portfolio:portfolio_123",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        coins: []
+      }
+    )
+    AccountProvider.create!(account: exchange_account_record, provider: exchange_account)
+
+    legacy_entry = exchange_account_record.entries.create!(
+      entryable: Transaction.new,
+      external_id: "coinstats_trade_protected",
+      source: "coinstats",
+      amount: 100,
+      currency: "USD",
+      date: Date.new(2025, 1, 15),
+      name: "Trade BTC"
+    )
+    legacy_entry.mark_user_modified!
+
+    transaction_data = {
+      type: "Trade",
+      date: "2025-01-15T10:00:00.000Z",
+      hash: { id: "trade_protected" },
+      transactions: [
+        {
+          items: [
+            { coin: { id: "bitcoin", symbol: "BTC" }, count: "-0.00335845", totalWorth: "100" },
+            { coin: { id: "ethereum", symbol: "ETH" }, count: "0.05580825", totalWorth: "100" }
+          ]
+        }
+      ]
+    }
+
+    Security::Resolver.any_instance.stubs(:resolve).returns(securities(:aapl))
+
+    processor = CoinstatsEntry::Processor.new(transaction_data, coinstats_account: exchange_account)
+
+    assert_no_difference("Trade.count") { assert_equal legacy_entry, processor.process }
+    assert_equal "Transaction", legacy_entry.reload.entryable_type
+  end
 end

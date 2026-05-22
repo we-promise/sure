@@ -20,7 +20,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
           nature: "inflow",
           entryable_type: @entry.entryable_type,
           entryable_attributes: {
-            tag_ids: [ Tag.first.id, Tag.second.id ],
+            tag_ids: [ tags(:one).id, tags(:two).id ],
             category_id: Category.first.id,
             merchant_id: Merchant.first.id
           }
@@ -49,7 +49,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
           excluded: false,
           entryable_attributes: {
             id: @entry.entryable_id,
-            tag_ids: [ Tag.first.id, Tag.second.id ],
+            tag_ids: [ tags(:one).id, tags(:two).id ],
             category_id: Category.first.id,
             merchant_id: Merchant.first.id
           }
@@ -63,7 +63,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.current, @entry.date
     assert_equal "USD", @entry.currency
     assert_equal -100, @entry.amount
-    assert_equal [ Tag.first.id, Tag.second.id ], @entry.entryable.tag_ids.sort
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.entryable.tag_ids.sort
     assert_equal Category.first.id, @entry.entryable.category_id
     assert_equal Merchant.first.id, @entry.entryable.merchant_id
     assert_equal "test notes", @entry.notes
@@ -94,6 +94,47 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # Only finds 1 transaction that matches filter
     assert_dom "#" + dom_id(searchable_transaction), count: 1
     assert_dom "#total-transactions", count: 1, text: "1"
+  end
+
+  test "can update notes on split child transaction" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    patch transaction_url(child), params: {
+      entry: { notes: "split child note", entryable_attributes: { id: child.entryable_id } }
+    }
+
+    assert_response :redirect
+    assert_equal "split child note", child.reload.notes
+  end
+
+  test "can update tags on split child transaction" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+    tag = tags(:one)
+
+    patch transaction_url(child), params: {
+      entry: { entryable_attributes: { id: child.entryable_id, tag_ids: [ tag.id ] } }
+    }
+
+    assert_response :redirect
+    assert_equal [ tag.id ], child.reload.entryable.tag_ids
+  end
+
+  test "split parent rows mark amount as privacy-sensitive" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
+
+    entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
   end
 
   test "can paginate" do
@@ -159,10 +200,12 @@ end
     totals = OpenStruct.new(
       count: 1,
       expense_money: Money.new(10000, "USD"),
-      income_money: Money.new(0, "USD")
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"),
+      transfer_outflow_money: Money.new(0, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: {}).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: {}, accessible_account_ids: [ account.id ]).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url
@@ -181,14 +224,41 @@ end
     totals = OpenStruct.new(
       count: 1,
       expense_money: Money.new(10000, "USD"),
-      income_money: Money.new(0, "USD")
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"),
+      transfer_outflow_money: Money.new(0, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }, accessible_account_ids: [ account.id ]).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url(q: { categories: [ "Food" ], types: [ "expense" ] })
     assert_response :success
+  end
+
+  test "shows inflow/outflow labels when filtering by transfers only" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, amount: 100)
+
+    search = Transaction::Search.new(family, filters: { "types" => [ "transfer" ] })
+    totals = OpenStruct.new(
+      count: 2,
+      expense_money: Money.new(0, "USD"),
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(5000, "USD"),
+      transfer_outflow_money: Money.new(3000, "USD")
+    )
+
+    Transaction::Search.expects(:new).with(family, filters: { "types" => [ "transfer" ] }, accessible_account_ids: [ account.id ]).returns(search)
+    search.expects(:totals).once.returns(totals)
+
+    get transactions_url(q: { types: [ "transfer" ] })
+    assert_response :success
+    assert_select "#total-income", text: totals.transfer_inflow_money.format
+    assert_select "#total-expense", text: totals.transfer_outflow_money.format
   end
 
   test "mark_as_recurring creates a manual recurring transaction" do
@@ -223,6 +293,7 @@ end
 
     # Create existing recurring transaction
     family.recurring_transactions.create!(
+      account: account,
       merchant: merchant,
       amount: entry.amount,
       currency: entry.currency,
@@ -309,6 +380,38 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "new with duplicate_entry_id pre-fills form from source transaction" do
+    @entry.reload
+
+    get new_transaction_url(duplicate_entry_id: @entry.id)
+    assert_response :success
+    assert_select "input[name='entry[name]'][value=?]", @entry.name
+    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+      assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
+    end
+    assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"
+  end
+
+  test "new with invalid duplicate_entry_id renders empty form" do
+    get new_transaction_url(duplicate_entry_id: -1)
+    assert_response :success
+    assert_select "input[name='entry[name]']" do |elements|
+      assert_nil elements.first["value"]
+    end
+  end
+
+  test "new with duplicate_entry_id from another family does not prefill form" do
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    other_entry = create_transaction(account: other_account, name: "Should not leak", amount: 50)
+
+    get new_transaction_url(duplicate_entry_id: other_entry.id)
+    assert_response :success
+    assert_select "input[name='entry[name]']" do |elements|
+      assert_nil elements.first["value"]
+    end
+  end
+
   test "unlock clears import_locked flag" do
     family = families(:empty)
     sign_in users(:empty)
@@ -327,5 +430,158 @@ end
     entry.reload
     assert_not entry.import_locked?
     assert_not entry.protected_from_sync?
+  end
+
+  test "exchange_rate endpoint returns rate for different currencies" do
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "EUR", to: "USD", date: Date.current)
+                .returns(1.2)
+
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD",
+      date: Date.current
+    }
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_equal 1.2, json_response["rate"]
+  end
+
+  test "exchange_rate endpoint returns same_currency for matching currencies" do
+    get exchange_rate_url, params: {
+      from: "USD",
+      to: "USD"
+    }
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert json_response["same_currency"]
+    assert_equal 1.0, json_response["rate"]
+  end
+
+  test "exchange_rate endpoint uses provided date" do
+    custom_date = 3.days.ago.to_date
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "EUR", to: "USD", date: custom_date)
+                .returns(1.25)
+
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD",
+      date: custom_date
+    }
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_equal 1.25, json_response["rate"]
+  end
+
+  test "exchange_rate endpoint returns 400 when from currency is missing" do
+    get exchange_rate_url, params: {
+      to: "USD"
+    }
+
+    assert_response :bad_request
+    json_response = JSON.parse(response.body)
+    assert_equal "from and to currencies are required", json_response["error"]
+  end
+
+  test "exchange_rate endpoint returns 400 when to currency is missing" do
+    get exchange_rate_url, params: {
+      from: "EUR"
+    }
+
+    assert_response :bad_request
+    json_response = JSON.parse(response.body)
+    assert_equal "from and to currencies are required", json_response["error"]
+  end
+
+  test "exchange_rate endpoint returns 400 on invalid date format" do
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD",
+      date: "not-a-date"
+    }
+
+    assert_response :bad_request
+    json_response = JSON.parse(response.body)
+    assert_equal "Invalid date format", json_response["error"]
+  end
+
+  test "exchange_rate endpoint returns 404 when rate not found" do
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "EUR", to: "USD", date: Date.current)
+                .returns(nil)
+
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD"
+    }
+
+    assert_response :not_found
+    json_response = JSON.parse(response.body)
+    assert_equal "Exchange rate not found", json_response["error"]
+  end
+
+  test "creates transaction with custom exchange rate" do
+    account = @user.family.accounts.create!(
+      name: "USD Account",
+      currency: "USD",
+      balance: 1000,
+      accountable: Depository.new
+    )
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          name: "EUR transaction with custom rate",
+          date: Date.current,
+          currency: "EUR",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id,
+            exchange_rate: "1.5"
+          }
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_equal "EUR", created_entry.currency
+    assert_equal 100, created_entry.amount
+    assert_equal 1.5, created_entry.transaction.extra["exchange_rate"]
+  end
+
+  test "creates transaction without custom exchange rate" do
+    account = @user.family.accounts.create!(
+      name: "USD Account",
+      currency: "USD",
+      balance: 1000,
+      accountable: Depository.new
+    )
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          name: "EUR transaction without custom rate",
+          date: Date.current,
+          currency: "EUR",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id
+          }
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_nil created_entry.transaction.extra["exchange_rate"]
   end
 end

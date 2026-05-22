@@ -77,6 +77,19 @@ intro_user:
   show_ai_sidebar: false
   ui_layout: intro
 
+inactive_trial_user:
+  family: inactive_trial
+  first_name: Inactive
+  last_name: User
+  email: inactive@example.com
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  role: admin
+  onboarded_at: <%= 90.days.ago %>
+  ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+  ui_layout: dashboard
+
 # SSO-only user: created via JIT provisioning, no local password
 sso_only:
   family: empty

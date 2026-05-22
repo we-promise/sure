@@ -1,0 +1,9 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        entry:
+          attributes:
+            base:
+              invalid_sell_quantity: nem lehet eladni %{sell_qty} részvényt (%{ticker}), mert csak %{current_qty} részvényed van

@@ -50,6 +50,10 @@ class SimplefinItem::Importer
       # This allows the item to recover automatically when a bank's auth issue is resolved
       # in SimpleFIN Bridge, without requiring the user to manually reconnect.
       maybe_clear_requires_update_status
+
+      # Detect likely card-replacement scenarios (e.g., fraud replacement).
+      # Persist suggestions on sync_stats so the UI can render a relink prompt.
+      detect_replacement_candidates
     rescue RateLimitedError => e
       stats["rate_limited"] = true
       stats["rate_limited_at"] = Time.current.iso8601
@@ -324,6 +328,29 @@ class SimplefinItem::Importer
       return unless sync && sync.respond_to?(:sync_stats)
       merged = (sync.sync_stats || {}).merge(stats)
       sync.update_columns(sync_stats: merged) # avoid callbacks/validations during tight loops
+    end
+
+    # Run the replacement detector on the current simplefin_item and stash
+    # suggestions on sync_stats for the UI to render. The detector is best-
+    # effort; any error is logged but never fails the whole sync.
+    def detect_replacement_candidates
+      suggestions = SimplefinItem::ReplacementDetector.new(simplefin_item).call
+      return if suggestions.empty?
+
+      stats["replacement_suggestions"] = suggestions
+      persist_stats!
+      Rails.logger.info(
+        "SimpleFIN: detected #{suggestions.size} replacement suggestion(s) for item ##{simplefin_item.id}"
+      )
+      ActiveSupport::Notifications.instrument(
+        "simplefin.replacement_suggestions",
+        item_id: simplefin_item.id,
+        count: suggestions.size
+      )
+    rescue => e
+      Rails.logger.warn(
+        "SimpleFIN: replacement detector failed for item ##{simplefin_item.id}: #{e.class} - #{e.message}"
+      )
     end
 
     # Reset status to good if no auth errors occurred in this sync.
@@ -937,32 +964,16 @@ class SimplefinItem::Importer
     # Record non-fatal provider errors into sync stats without raising, so the
     # rest of the accounts can continue to import. This is used when the
     # response contains both :accounts and :errors.
+    #
+    # NOTE: per-institution partial errors (e.g. one bank's auth expired inside
+    # a SimpleFIN Bridge connection that spans many institutions) are recorded
+    # for observability but must NOT flip the whole simplefin_item to
+    # requires_update - that would block sync for every other institution on
+    # the same connection. The top-level handle_errors path is the correct
+    # place to flag the item when the SimpleFIN token itself is dead.
     def record_errors(errors)
       arr = Array(errors)
       return if arr.empty?
-
-      # Determine if these errors indicate the item needs an update (e.g. 2FA)
-      needs_update = arr.any? do |error|
-        if error.is_a?(String)
-          down = error.downcase
-          down.include?("reauth") || down.include?("auth") || down.include?("two-factor") || down.include?("2fa") || down.include?("forbidden") || down.include?("unauthorized")
-        else
-          code = error[:code].to_s.downcase
-          type = error[:type].to_s.downcase
-          code.include?("auth") || code.include?("token") || type.include?("auth")
-        end
-      end
-
-      if needs_update
-        Rails.logger.warn("SimpleFin: marking item ##{simplefin_item.id} requires_update due to auth-related provider errors")
-        simplefin_item.update!(status: :requires_update)
-        ActiveSupport::Notifications.instrument(
-          "simplefin.item_requires_update",
-          item_id: simplefin_item.id,
-          reason: "provider_errors_partial",
-          count: arr.size
-        )
-      end
 
       Rails.logger.info("SimpleFin: recording #{arr.size} non-fatal provider error(s) with partial data present")
       ActiveSupport::Notifications.instrument(

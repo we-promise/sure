@@ -12,7 +12,7 @@ class AssistantMessageTest < ActiveSupport::TestCase
     streams = capture_turbo_stream_broadcasts(@chat)
     assert_equal 2, streams.size
     assert_equal "append", streams.first["action"]
-    assert_equal "messages", streams.first["target"]
+    assert_equal @chat.messages_target, streams.first["target"]
     assert_equal "update", streams.last["action"]
     assert_equal "assistant_message_#{message.id}", streams.last["target"]
   end

@@ -52,10 +52,11 @@ class RuleImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
-    csv_rows.each do |row|
+    csv_rows.each.with_index(1) do |row, index|
       normalized_row = normalize_rule_row(row)
 
       rows.create!(
+        source_row_number: index,
         name: normalized_row[:name].to_s.strip,
         resource_type: normalized_row[:resource_type].to_s.strip,
         active: parse_boolean(normalized_row[:active]),
@@ -114,7 +115,7 @@ class RuleImport < Import
 
       # Validate resource type
       unless resource_type == "transaction"
-        errors.add(:base, "Unsupported resource type: #{resource_type}")
+        errors.add(:base, :unsupported_resource_type, resource_type: resource_type)
         raise ActiveRecord::RecordInvalid.new(self)
       end
 
@@ -123,13 +124,13 @@ class RuleImport < Import
         conditions_data = parse_json_safely(row.conditions, "conditions")
         actions_data = parse_json_safely(row.actions, "actions")
       rescue JSON::ParserError => e
-        errors.add(:base, "Invalid JSON in conditions or actions: #{e.message}")
+        errors.add(:base, :invalid_json, message: e.message)
         raise ActiveRecord::RecordInvalid.new(self)
       end
 
       # Validate we have at least one action
       if actions_data.empty?
-        errors.add(:base, "Rule must have at least one action")
+        errors.add(:base, :min_actions)
         raise ActiveRecord::RecordInvalid.new(self)
       end
 
@@ -289,8 +290,13 @@ class RuleImport < Import
     def parse_json_safely(json_string, field_name)
       return [] if json_string.blank?
 
-      # Clean up the JSON string - remove extra escaping that might come from CSV parsing
       cleaned = json_string.to_s.strip
+
+      # Most API-created rows already store valid JSON. Parse them as-is before
+      # falling back to the legacy cleanup path for older malformed payloads.
+      parse_json_payload(cleaned, normalize_legacy_strings: false)
+    rescue JSON::ParserError
+      # Clean up the JSON string - remove extra escaping that might come from CSV parsing
 
       # Remove surrounding quotes if present (both single and double)
       cleaned = cleaned.gsub(/\A["']+|["']+\z/, "")
@@ -321,8 +327,46 @@ class RuleImport < Import
       end
 
       # Try parsing
-      JSON.parse(cleaned)
+      parse_json_payload(cleaned, normalize_legacy_strings: true)
     rescue JSON::ParserError => e
       raise JSON::ParserError.new("Invalid JSON in #{field_name}: #{e.message}. Raw value: #{json_string.inspect}")
+    end
+
+    def parse_json_payload(payload, normalize_legacy_strings:)
+      parsed = JSON.parse(payload)
+      parsed = JSON.parse(parsed) if wrapped_json_payload?(parsed)
+
+      normalize_json_values(parsed, normalize_legacy_strings:)
+    end
+
+    def wrapped_json_payload?(value)
+      return false unless value.is_a?(String)
+
+      stripped_value = value.strip
+      stripped_value.start_with?("[", "{")
+    end
+
+    def normalize_json_values(value, normalize_legacy_strings:)
+      case value
+      when Array
+        value.map { |item| normalize_json_values(item, normalize_legacy_strings:) }
+      when Hash
+        value.transform_values { |item| normalize_json_values(item, normalize_legacy_strings:) }
+      when String
+        normalized = value
+          .gsub(/\\u([0-9a-fA-F]{4})/i) { [ $1.to_i(16) ].pack("U") }
+          .gsub('\\"', '"')
+
+        if normalize_legacy_strings
+          normalized = normalized
+            .gsub("\\n", "\n")
+            .gsub("\\r", "\r")
+            .gsub("\\t", "\t")
+        end
+
+        normalized
+      else
+        value
+      end
     end
 end

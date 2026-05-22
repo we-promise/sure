@@ -5,7 +5,7 @@ module Money::Formatting
   # European style: dot as thousands delimiter, comma as decimal separator, symbol after number
   EUROPEAN_SYMBOL_AFTER = %i[de es it tr ca ro].freeze
   # Scandinavian/Eastern European: space as thousands delimiter, comma as decimal separator, symbol after number
-  SPACE_DELIMITER_SYMBOL_AFTER = %i[pl nb].freeze
+  SPACE_DELIMITER_SYMBOL_AFTER = %i[pl nb hu].freeze
   # European style: dot as thousands delimiter, comma as decimal separator, symbol before number
   EUROPEAN_SYMBOL_BEFORE = %i[nl pt-BR].freeze
 
@@ -13,7 +13,7 @@ module Money::Formatting
     locale = options[:locale] || I18n.locale
     default_opts = format_options(locale)
 
-    number_to_currency(amount, default_opts.merge(options))
+    number_to_currency(amount, default_opts.merge(options.except(:locale)))
   end
   alias_method :to_s, :format
 

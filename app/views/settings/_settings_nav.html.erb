@@ -4,8 +4,9 @@ nav_sections = [
     header: t(".general_section_title"),
     items: [
       { label: t(".accounts_label"), path: accounts_path, icon: "layers" },
-      { label: t(".bank_sync_label"), path: settings_bank_sync_path, icon: "banknote" },
+      { label: t(".bank_sync_label"), path: settings_providers_path, icon: "banknote", if: Current.user&.admin? },
       { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt" },
+      { label: t(".appearance_label"), path: settings_appearance_path, icon: "palette" },
       { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user" },
       { label: t(".security_label"), path: settings_security_path, icon: "shield-check" },
       { label: t(".payment_label"), path: settings_payment_path, icon: "circle-dollar-sign", if: !self_hosted? && Current.family.can_manage_subscription? }
@@ -18,7 +19,8 @@ nav_sections = [
       { label: t(".tags_label"), path: tags_path, icon: "tags" },
       { label: t(".rules_label"), path: rules_path, icon: "git-branch" },
       { label: t(".merchants_label"), path: family_merchants_path, icon: "store" },
-      { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" }
+      { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" },
+      { label: t(".statement_vault_label"), path: account_statements_path, icon: "archive", if: Current.user&.admin? }
     ]
   },
   (
@@ -26,14 +28,14 @@ nav_sections = [
       header: t(".advanced_section_title"),
       items: [
         { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },
-        { label: "LLM Usage", path: settings_llm_usage_path, icon: "activity" },
+        { label: t(".llm_usage_label"), path: settings_llm_usage_path, icon: "activity" },
         { label: t(".api_keys_label"), path: settings_api_key_path, icon: "key" },
+        { label: t(".debug_label", default: "Debug"), path: settings_debug_path, icon: "bug", if: Current.user&.super_admin? },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
-        { label: "Providers", path: settings_providers_path, icon: "plug" },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
-        { label: "SSO Providers", path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
-        { label: "Users", path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
+        { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
+        { label: t(".users_label"), path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
       ]
     } : nil
   ),

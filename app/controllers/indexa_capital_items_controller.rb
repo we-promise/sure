@@ -4,6 +4,7 @@ class IndexaCapitalItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_indexa_capital_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @indexa_capital_items = Current.family.indexa_capital_items.ordered
@@ -221,9 +222,10 @@ class IndexaCapitalItemsController < ApplicationController
   end
 
   def complete_account_setup
-    account_configs = params[:accounts] || {}
+    account_ids = Array(params[:account_ids]).reject(&:blank?)
+    sync_start_dates = params[:sync_start_dates] || {}
 
-    if account_configs.empty?
+    if account_ids.empty?
       redirect_to setup_accounts_indexa_capital_item_path(@indexa_capital_item), alert: t(".no_accounts")
       return
     end
@@ -231,25 +233,31 @@ class IndexaCapitalItemsController < ApplicationController
     created_count = 0
     skipped_count = 0
 
-    account_configs.each do |indexa_capital_account_id, config|
-      next if config[:account_type] == "skip"
-
+    account_ids.each do |indexa_capital_account_id|
       indexa_capital_account = @indexa_capital_item.indexa_capital_accounts.find_by(id: indexa_capital_account_id)
       next unless indexa_capital_account
       next if indexa_capital_account.account_provider.present?
 
-      accountable_type = infer_accountable_type(config[:account_type], config[:subtype])
-      account = create_account_from_indexa_capital(indexa_capital_account, accountable_type, config)
+      # Parse the form-supplied date up front so a malformed value is silently
+      # dropped rather than aborting the loop body after the account is
+      # already persisted (which would mark a successfully-created account
+      # as "skipped").
+      raw_sync_start_date = sync_start_dates[indexa_capital_account_id]
+      sync_start_date = (Date.parse(raw_sync_start_date.to_s) rescue nil) if raw_sync_start_date.present?
 
-      if account&.persisted?
+      # Wrap creation, provider link, and sync_start_date persistence in a
+      # single transaction so a failure in ensure_account_provider! (or the
+      # sync_start_date update) rolls back the Account row instead of leaving
+      # an orphan that is also wrongly counted as "created".
+      ActiveRecord::Base.transaction do
+        account = create_account_from_indexa_capital(indexa_capital_account, "Investment", {})
         indexa_capital_account.ensure_account_provider!(account)
-        indexa_capital_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
-        created_count += 1
-      else
-        skipped_count += 1
+        indexa_capital_account.update!(sync_start_date: sync_start_date) if sync_start_date
       end
+
+      created_count += 1
     rescue => e
-      Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - Error: #{e.message}"
+      Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - Error linking #{indexa_capital_account_id}: #{e.message}"
       skipped_count += 1
     end
 
@@ -290,6 +298,7 @@ class IndexaCapitalItemsController < ApplicationController
         accountable: accountable_class.new
       )
 
+      account.auto_share_with_family! if Current.family.share_all_by_default?
       indexa_capital_account.ensure_account_provider!(account)
       account
     end
@@ -303,12 +312,15 @@ class IndexaCapitalItemsController < ApplicationController
         accountable_attrs[:subtype] = config[:subtype]
       end
 
-      Current.family.accounts.create!(
+      account = Current.family.accounts.create!(
         name: indexa_capital_account.name,
         balance: config[:balance].present? ? config[:balance].to_d : (indexa_capital_account.current_balance || 0),
         currency: indexa_capital_account.currency || "EUR",
         accountable: accountable_class.new(accountable_attrs)
       )
+
+      account.auto_share_with_family! if Current.family.share_all_by_default?
+      account
     end
 
     def infer_accountable_type(account_type, subtype = nil)

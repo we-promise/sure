@@ -1,4 +1,5 @@
-<%= styled_form_with model: transfer, class: "space-y-4", data: { turbo_frame: "_top", controller: "transfer-form" } do |f| %>
+<% account_currencies = Current.family.accounts.map { |a| [a.id, a.currency] }.to_h.to_json %>
+<%= styled_form_with model: transfer, class: "space-y-4", data: { turbo_frame: "_top", controller: "transfer-form", transfer_form_exchange_rate_url_value: exchange_rate_path, transfer_form_account_currencies_value: account_currencies } do |f| %>
   <% if transfer.errors.present? %>
     <div class="text-destructive flex items-center gap-2">
       <%= icon "circle-alert", size: "sm" %>
@@ -14,22 +15,62 @@
   <% account_ids << params[:to_account_id] if params[:to_account_id].present? %>
   <% account_ids << transfer.from_account_id if transfer.respond_to?(:from_account_id) && transfer.from_account_id.present? %>
   <% account_ids << transfer.to_account_id if transfer.respond_to?(:to_account_id) && transfer.to_account_id.present? %>
+  <% selected_accounts = @accounts.select { |a| account_ids.include?(a.id) } %>
 
-  <% if account_ids.any? && Current.family.accounts.where(id: account_ids).any? { |a| a.investment? || a.crypto? } %>
+  <% if selected_accounts.any? { |a| a.investment? || a.crypto? } %>
     <% show_type_tabs = false %>
   <% end %>
 
   <% if show_type_tabs %>
     <section>
-      <%= render "shared/transaction_type_tabs", active_tab: "transfer" %>
+      <%= render "shared/transaction_type_tabs", active_tab: "transfer", account_id: @from_account_id %>
     </section>
   <% end %>
 
   <section class="space-y-2">
-    <%= f.collection_select :from_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id }, required: true %>
-    <%= f.collection_select :to_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".to") }, required: true %>
-    <%= f.number_field :amount, label: t(".amount"), required: true, min: 0, placeholder: "100", step: 0.00000001 %>
-    <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current %>
+    <%= f.collection_select :from_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id, variant: :logo }, { required: true, data: { transfer_form_target: "fromAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+    <%= f.collection_select :to_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".to"), variant: :logo }, { required: true, data: { transfer_form_target: "toAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+    
+    <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
+    
+    <%= f.number_field :amount, label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
+    
+    <% convert_input = capture do %>
+      <%= f.number_field :exchange_rate,
+        label: t("shared.exchange_rate_tabs.exchange_rate"),
+        min: "0.00000000000001",
+        step: "0.00000000000001",
+        placeholder: "1.0",
+        class: "form-field__input",
+        data: {
+          transfer_form_target: "exchangeRateField",
+          action: "input->transfer-form#onConvertExchangeRateChange"
+        } %>
+    <% end %>
+
+    <% destination_input = capture do %>
+      <%= tag.input type: "number",
+        id: "transfer_form_destination_amount",
+        class: "form-field__input",
+        min: "0",
+        step: "0.00000001",
+        placeholder: "92",
+        data: {
+          transfer_form_target: "destinationAmount",
+          action: "input->transfer-form#onCalculateRateDestinationAmountChange"
+        } %>
+    <% end %>
+
+    <%= render "shared/exchange_rate_tabs",
+      controller_id: "transfer-form",
+      controller_key: "transfer_form",
+      help_text: t("shared.exchange_rate_tabs.exchange_rate_help"),
+      convert_tab_label: t("shared.exchange_rate_tabs.convert_tab"),
+      calculate_rate_tab_label: t("shared.exchange_rate_tabs.calculate_rate_tab"),
+      destination_amount_label: t("shared.exchange_rate_tabs.destination_amount"),
+      exchange_rate_label: t("shared.exchange_rate_tabs.exchange_rate"),
+      convert_input: convert_input,
+      destination_input: destination_input %>
   </section>
 
   <section>

@@ -1,0 +1,15 @@
+---
+pl:
+  shared:
+    confirm_modal:
+      accept: Potwierdź
+      body_html: "<p>Nie będzie można cofnąć tej decyzji</p>"
+      cancel: Anuluj
+      title: Czy na pewno?
+    money_field:
+      label: Kwota
+    syncing_notice:
+      syncing: Synchronizowanie danych kont...
+    require_admin: "Tę akcję mogą wykonać tylko administratorzy"
+    trend_change:
+      no_change: "bez zmian"

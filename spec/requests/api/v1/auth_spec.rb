@@ -261,7 +261,10 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid credentials or expired linking code' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+        schema oneOf: [
+          { '$ref' => '#/components/schemas/ErrorResponse' },
+          { '$ref' => '#/components/schemas/MfaRequiredResponse' }
+        ]
         run_test!
       end
     end

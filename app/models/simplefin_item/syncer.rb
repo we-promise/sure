@@ -172,28 +172,10 @@ class SimplefinItem::Syncer
         target_id = ActionView::RecordIdentifier.dom_id(simplefin_item)
         Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: target_id, html: card_html)
 
-        # Also refresh the Manual Accounts group so duplicates clear without a full page reload
-        begin
-          manual_accounts = simplefin_item.family.accounts
-            .visible_manual
-            .order(:name)
-          if manual_accounts.any?
-            manual_html = ApplicationController.render(
-              partial: "accounts/index/manual_accounts",
-              formats: [ :html ],
-              locals: { accounts: manual_accounts }
-            )
-            Turbo::StreamsChannel.broadcast_update_to(simplefin_item.family, target: "manual-accounts", html: manual_html)
-          else
-            manual_html = ApplicationController.render(inline: '<div id="manual-accounts"></div>')
-            Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: "manual-accounts", html: manual_html)
-          end
-        rescue => inner
-          Rails.logger.warn("SimplefinItem::Syncer manual-accounts broadcast failed: #{inner.class} - #{inner.message}")
-        end
-
-        # Intentionally do not broadcast modal reloads here to avoid unexpected auto-pop after sync.
-        # Modal opening is controlled explicitly via controller redirects with actionable conditions.
+        # Broadcast a refresh signal instead of rendered HTML. Each user's browser
+        # re-fetches via their own authenticated request, so the manual accounts
+        # list is correctly scoped to the current user.
+        simplefin_item.family.broadcast_refresh
       rescue => e
         Rails.logger.warn("SimplefinItem::Syncer broadcast failed: #{e.class} - #{e.message}")
       end

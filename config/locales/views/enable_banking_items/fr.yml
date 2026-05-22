@@ -1,9 +1,15 @@
 ---
 fr:
   enable_banking_items:
+    errors:
+      api_error: "Erreur de communication avec la banque."
+      network_unreachable: "Le service bancaire est temporairement injoignable. Veuillez réessayer plus tard."
+      session_invalid: "Session expirée. Veuillez reconnecter votre banque."
+      unexpected: "Une erreur inattendue est survenue lors de la synchronisation."
     authorize:
       authorization_failed: Échec de l'initiation de l'autorisation
       bank_required: Veuillez sélectionner une banque.
+      decoupled_not_supported: Cette banque utilise une méthode d'authentification sur un appareil séparé qui n'est pas encore prise en charge. Veuillez ajouter ce compte manuellement.
       invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
       redirect_uri_not_allowed: Redirection non autorisée. Veuillez configurer `%{callback_url}` dans les paramètres de votre application Enable Banking.
       unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer.
@@ -39,11 +45,17 @@ fr:
       invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
       reauthorization_failed: Échec de la réautorisation
     select_bank:
+      beta_label: Bêta
       cancel: Annuler
       check_country: Veuillez vérifier les paramètres de votre code pays.
       credentials_required: Veuillez d'abord configurer vos identifiants Enable Banking.
       description: Sélectionnez la banque que vous souhaitez connecter à vos comptes.
       no_banks: Aucune banque disponible pour ce pays/région.
+      no_search_results: "Aucun établissement ne correspond à votre recherche."
+      search_placeholder: Recherchez votre banque...
+      search_label: "Rechercher votre banque"
       title: Sélectionnez votre banque
+    setup_accounts:
+      psd2_savings_notice: "Remarque : Certains comptes d'épargne réglementés français (Livret A, PEL, LEP, LDDS) peuvent avoir un accès limité ou inexistant via l'Open Banking (DSP2). Si un compte d'épargne est manquant, vous pouvez l'ajouter manuellement."
     update:
       success: Configuration d'Enable Banking mise à jour.

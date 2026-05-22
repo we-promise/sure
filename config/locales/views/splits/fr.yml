@@ -1,0 +1,47 @@
+---
+fr:
+  splits:
+    new:
+      title: Diviser la transaction
+      description: Divisez cette transaction en plusieurs entrées avec différentes catégories et montants.
+      submit: Diviser la transaction
+      cancel: Annuler
+      add_row: Ajouter une division
+      remove_row: Retirer
+      remaining: Restant
+      amounts_must_match: Les montants des divisions doivent être égaux au montant initial de la transaction.
+      name_label: Nom
+      name_placeholder: Nom de la division
+      amount_label: Montant
+      category_label: Catégorie
+      uncategorized: "(sans catégorie)"
+      original_name: "Nom :"
+      original_date: "Date :"
+      original_amount: "Montant"
+      split_number: "Division n°%{number}"
+    create:
+      success: Transaction divisée avec succès
+      not_splittable: Cette transaction ne peut pas être divisée.
+    destroy:
+      success: Division de la transaction annulée avec succès
+    show:
+      title: Entrées de la division
+      description: Cette transaction a été divisée en plusieurs entrées.
+      button_title: Diviser la transaction
+      button_description: Divisez cette transaction en plusieurs entrées avec différentes catégories et montants.
+      button: Diviser
+      unsplit_title: Annuler la division
+      unsplit_button: Annuler la division
+      unsplit_confirm: Cela supprimera toutes les entrées de division et restaurera la transaction initiale.
+    edit:
+      title: Modifier la division
+      description: Modifiez les entrées de division de cette transaction.
+      submit: Mettre à jour la division
+      not_split: Cette transaction n'est pas divisée.
+    update:
+      success: Division mise à jour avec succès
+    child:
+      title: Partie d'une division
+      description: Cette entrée fait partie d'une transaction divisée.
+      edit_split: Modifier la division
+      unsplit: Annuler la division

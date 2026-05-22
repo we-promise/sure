@@ -536,6 +536,16 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_nil net.net_expense_categories.find { |ct| ct.category.id == @food_category.id }
   end
 
+  test "empty account_ids returns no results for category stats" do
+    results = IncomeStatement::CategoryStats.new(@family, account_ids: []).call
+    assert_empty results
+  end
+
+  test "empty account_ids returns no results for family stats" do
+    results = IncomeStatement::FamilyStats.new(@family, account_ids: []).call
+    assert_empty results
+  end
+
   test "returns zero totals when family has only tax-advantaged accounts" do
     # Create a fresh family with ONLY tax-advantaged accounts
     family_only_retirement = Family.create!(

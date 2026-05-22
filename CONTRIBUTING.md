@@ -24,6 +24,9 @@ In general, _full features_ that get us closer to [our 🔜 Vision](https://gith
 To get setup for local development, you have two options:
 
 1. [Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers) with VSCode (see the `.devcontainer` folder)
+   - A `selenium/standalone-chrome` service is included in the Dev Container setup, so **system tests work out of the box** — no local Chrome required.
+   - Run system tests: `DISABLE_PARALLELIZATION=true bin/rails test:system`
+   - Watch the browser live at `http://localhost:7900` or `http://localhost:4444` (password: `secret`)
 2. Local Development
    - [Mac Setup Guide](https://github.com/we-promise/sure/wiki/Mac-Dev-Setup-Guide)
    - [Linux Setup Guide](https://github.com/we-promise/sure/wiki/Linux-Dev-Setup-Guide)
@@ -40,3 +43,12 @@ To get setup for local development, you have two options:
 7. Before requesting a review, please make sure that all [Github Checks](https://docs.github.com/en/rest/checks?apiVersion=2022-11-28) have passed and your branch is up-to-date with the `main` branch. After doing so, request a review and wait for a maintainer's approval.
 
 All PRs should target the `main` branch.
+
+### Automated Security Scanning
+
+Every pull request to the `main` branch automatically runs a Pipelock security scan. This scan analyzes your PR diff for:
+
+- Leaked secrets (API keys, tokens, credentials)
+- Agent security risks (misconfigurations, exposed credentials, missing controls)
+
+The scan runs as part of the CI pipeline and typically completes in ~30 seconds. If security issues are found, the CI check will fail. You don't need to configure anything—the security scanning is automatic and zero-configuration.

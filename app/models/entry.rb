@@ -1,11 +1,19 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  TRUTHY_VALUES = [ true, "true", "1", 1 ].freeze
+  private_constant :TRUTHY_VALUES
+
+  attr_accessor :unsplitting
+
   monetize :amount
 
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
+  belongs_to :parent_entry, class_name: "Entry", optional: true
+
+  has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -14,6 +22,11 @@ class Entry < ApplicationRecord
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
+
+  validate :cannot_unexclude_split_parent
+  validate :split_child_date_matches_parent
+
+  before_destroy :prevent_individual_child_deletion, if: :split_child?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -38,27 +51,28 @@ class Entry < ApplicationRecord
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
+    conditions = Transaction::PENDING_PROVIDERS.map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean = true" }
     joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-      SQL
+      .where(conditions.join(" OR "))
   }
 
   scope :excluding_pending, -> {
     # For non-Transaction entries (Trade, Valuation), always include
-    # For Transaction entries, exclude if pending flag is true
+    # For Transaction entries, exclude if any provider marks it pending
     where(<<~SQL.squish)
       entries.entryable_type != 'Transaction'
       OR NOT EXISTS (
         SELECT 1 FROM transactions t
         WHERE t.id = entries.entryable_id
-        AND (
-          (t.extra -> 'simplefin' ->> 'pending')::boolean = true
-          OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
-          OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        )
+        AND (#{Transaction::PENDING_CHECK_SQL})
+      )
+    SQL
+  }
+
+  scope :excluding_split_parents, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
       )
     SQL
   }
@@ -71,6 +85,35 @@ class Entry < ApplicationRecord
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(:account).where(accounts: { family_id: family.id })
+  end
+
+  # Uncategorized, non-transfer transaction entries on draft or active accounts.
+  # Caller is responsible for scoping to accessible entries before applying this scope.
+  scope :uncategorized_transactions, -> {
+    joins(:account)
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(accounts: { status: %w[draft active] })
+      .where(transactions: { category_id: nil })
+      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where(entries: { excluded: false })
+  }
+
+  # Returns uncategorized, non-transfer entries whose name matches the given filter string.
+  # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
+  # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
+  def self.uncategorized_matching(entries, filter, transaction_type = nil)
+    sanitized = sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
+    scope = entries
+              .uncategorized_transactions
+              .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
+
+    scope = case transaction_type
+    when "income"  then scope.where("entries.amount < 0")
+    when "expense" then scope.where("entries.amount >= 0")
+    else scope
+    end
+
+    scope.includes(entryable: :merchant).order(entries: { date: :desc }).to_a
   end
 
   # Auto-exclude stale pending transactions for an account
@@ -101,6 +144,10 @@ class Entry < ApplicationRecord
   def self.reconcile_pending_duplicates(account: nil, dry_run: false, date_window: 8, amount_tolerance: 0.25)
     stats = { checked: 0, reconciled: 0, details: [] }
 
+    not_pending_sql = Transaction::PENDING_PROVIDERS
+      .map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean IS NOT TRUE" }
+      .join(" AND ")
+
     # Get pending entries to check
     scope = Entry.pending.where(excluded: false)
     scope = scope.where(account: account) if account
@@ -117,11 +164,7 @@ class Entry < ApplicationRecord
         .where(currency: pending_entry.currency)
         .where(amount: pending_entry.amount)
         .where(date: pending_entry.date..(pending_entry.date + date_window.days)) # Posted must be ON or AFTER pending date
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
-        SQL
+        .where(not_pending_sql)
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
         .to_a # Load limited records to avoid COUNT(*) on .size
 
@@ -164,11 +207,7 @@ class Entry < ApplicationRecord
         .where(currency: pending_entry.currency)
         .where(date: pending_entry.date..(pending_entry.date + fuzzy_date_window.days)) # Posted ON or AFTER pending
         .where("ABS(entries.amount) BETWEEN ? AND ?", min_amount, max_amount)
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
-        SQL
+        .where(not_pending_sql)
 
       # Match by name similarity (first 3 words)
       name_words = pending_entry.name.downcase.gsub(/[^a-z0-9\s]/, "").split.first(3).join(" ")
@@ -206,10 +245,12 @@ class Entry < ApplicationRecord
                 pending_transaction.update!(
                   extra: existing_extra.merge(
                     "potential_posted_match" => {
-                      "entry_id" => fuzzy_match.id,
-                      "reason" => "fuzzy_amount_match",
+                      "entry_id"      => fuzzy_match.id,
+                      "reason"        => "fuzzy_amount_match",
                       "posted_amount" => fuzzy_match.amount.to_s,
-                      "detected_at" => Date.current.to_s
+                      "confidence"    => "medium",
+                      "dismissed"     => false,
+                      "detected_at"   => Date.current.to_s
                     }
                   )
                 )
@@ -313,6 +354,61 @@ class Entry < ApplicationRecord
     end
   end
 
+  def split_parent?
+    child_entries.exists?
+  end
+
+  def split_child?
+    parent_entry_id.present?
+  end
+
+  # Splits this entry into child entries. Marks parent as excluded.
+  #
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
+  # @return [Array<Entry>] the created child entries
+  def split!(splits)
+    total = splits.sum { |s| s[:amount].to_d }
+    unless total == amount
+      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+    end
+
+    self.class.transaction do
+      children = splits.map do |split_attrs|
+        child_transaction = Transaction.new(
+          category_id: split_attrs[:category_id],
+          merchant_id: entryable.try(:merchant_id),
+          kind: entryable.try(:kind)
+        )
+
+        child_entries.create!(
+          account: account,
+          date: date,
+          name: split_attrs[:name],
+          amount: split_attrs[:amount],
+          currency: currency,
+          excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
+          entryable: child_transaction
+        )
+      end
+
+      update!(excluded: true)
+      mark_user_modified!
+
+      children
+    end
+  end
+
+  # Removes split children and restores parent entry.
+  def unsplit!
+    self.class.transaction do
+      child_entries.each do |child|
+        child.unsplitting = true
+        child.destroy!
+      end
+      update!(excluded: false)
+    end
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -339,6 +435,7 @@ class Entry < ApplicationRecord
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
+        name: bulk_update_params[:name],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
           merchant_id: bulk_update_params[:merchant_id]
@@ -352,10 +449,20 @@ class Entry < ApplicationRecord
 
       transaction do
         all.each do |entry|
+          changed = false
+
           # Update standard attributes
           if bulk_attributes.present?
-            bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
-            entry.update! bulk_attributes
+            attrs = bulk_attributes.dup
+            attrs.delete(:date) if entry.split_child?
+            attrs.delete(:entryable_attributes) unless entry.transaction?
+
+            if attrs.present?
+              attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
+              attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
+              entry.update! attrs
+              changed = true
+            end
           end
 
           # Handle tags separately - only when explicitly requested
@@ -363,14 +470,39 @@ class Entry < ApplicationRecord
             entry.transaction.tag_ids = tag_ids
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+            changed = true
           end
 
-          entry.lock_saved_attributes!
-          entry.mark_user_modified!
+          if changed
+            entry.lock_saved_attributes!
+            entry.mark_user_modified!
+          end
         end
       end
 
       all.size
     end
   end
+
+  private
+
+    def cannot_unexclude_split_parent
+      return unless excluded_changed?(from: true, to: false) && split_parent?
+
+      errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def split_child_date_matches_parent
+      return unless split_child? && date_changed?
+      return unless parent_entry.present?
+      return if date == parent_entry.date
+
+      errors.add(:date, "must match the parent transaction date for split children")
+    end
+
+    def prevent_individual_child_deletion
+      return if destroyed_by_association || unsplitting
+
+      throw :abort
+    end
 end

@@ -1,0 +1,75 @@
+---
+hu:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Sikeresen csatlakoztál a Binance-hez! A számlád szinkronizálása folyamatban van.
+    update:
+      success: A Binance konfiguráció sikeresen frissítve.
+    destroy:
+      success: A Binance kapcsolat törlése ütemezve.
+    setup_accounts:
+      title: Binance számla importálása
+      subtitle: Válaszd ki, melyik portfóliókat szeretnéd követni
+      instructions: Válaszd ki, melyik Binance portfóliókat szeretnéd importálni. Csak az egyenleggel rendelkező portfóliók jelennek meg.
+      no_accounts: Minden számla importálva lett.
+      accounts_count:
+        one: "%{count} számla elérhető"
+        other: "%{count} számla elérhető"
+      select_all: Összes kijelölése
+      import_selected: Kijelöltek importálása
+      cancel: Mégse
+      creating: Importálás...
+    complete_account_setup:
+      success:
+        one: "%{count} számla importálva"
+        other: "%{count} számla importálva"
+      none_selected: Nincs kijelölt számla
+      no_accounts: Nincs importálható számla
+    binance_item:
+      provider_name: Binance
+      syncing: Szinkronizálás...
+      reconnect: A hitelesítő adatok frissítése szükséges
+      deletion_in_progress: Törlés folyamatban...
+      sync_status:
+        no_accounts: Nem találhatók számlák
+        all_synced:
+          one: "%{count} számla szinkronizálva"
+          other: "%{count} számla szinkronizálva"
+        partial_sync: "%{linked_count} szinkronizálva, %{unlinked_count} beállítást igényel"
+      status: "Utolsó szinkronizálás: %{timestamp} ezelőtt"
+      status_with_summary: "Utolsó szinkronizálás: %{timestamp} ezelőtt – %{summary}"
+      status_never: Még nem volt szinkronizálva
+      update_credentials: Hitelesítő adatok frissítése
+      delete: Töröl
+      no_accounts_title: Nem találhatók számlák
+      no_accounts_message: A Binance portfóliód szinkronizálás után fog megjelenni itt.
+      setup_needed: Számla importálásra kész
+      setup_description: Válaszd ki, melyik Binance portfóliókat szeretnéd követni.
+      setup_action: Számla importálása
+      import_accounts_menu: Számla importálása
+      stale_rate_warning: "Az egyenleg közelítő érték – a(z) %{date}-i pontos árfolyam nem volt elérhető. A következő szinkronizáláskor frissülni fog."
+    select_existing_account:
+      title: Binance számla összekapcsolása
+      no_accounts_found: Nem találhatók Binance számlák.
+      wait_for_sync: Várd meg, amíg a Binance befejezi a szinkronizálást
+      check_provider_health: Ellenőrizd, hogy a Binance API hitelesítő adataid érvényesek-e
+      currently_linked_to: "Jelenleg összekapcsolva: %{account_name}"
+      link: Összekapcsolás
+      cancel: Mégse
+    link_existing_account:
+      success: Sikeresen összekapcsolva a Binance számlával
+      errors:
+        only_manual: Csak manuális számlák kapcsolhatók össze a Binance-szel
+        invalid_binance_account: Érvénytelen Binance számla
+  binance_item:
+    syncer:
+      checking_credentials: Hitelesítő adatok ellenőrzése...
+      credentials_invalid: Érvénytelen API hitelesítő adatok. Kérjük, ellenőrizd az API kulcsodat és a titkos kódodat.
+      importing_accounts: Számlák importálása a Binance-ből...
+      checking_configuration: Számlakonfiguráció ellenőrzése...
+      accounts_need_setup:
+        one: "%{count} számla beállítást igényel"
+        other: "%{count} számla beállítást igényel"
+      processing_accounts: Számlaadatok feldolgozása...
+      calculating_balances: Egyenlegek kiszámítása...

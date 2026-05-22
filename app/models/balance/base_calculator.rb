@@ -15,8 +15,7 @@ class Balance::BaseCalculator
     end
 
     def holdings_value_for_date(date)
-      @holdings_value_for_date ||= {}
-      @holdings_value_for_date[date] ||= sync_cache.get_holdings(date).sum(&:amount)
+      sync_cache.get_holdings_value(date)
     end
 
     def derive_cash_balance_on_date_from_total(total_balance:, date:)

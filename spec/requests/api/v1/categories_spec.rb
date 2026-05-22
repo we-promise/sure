@@ -96,6 +96,93 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
     end
+
+    post 'Create category' do
+      tags 'Categories'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        '$ref' => '#/components/schemas/CategoryCreateRequest'
+      }
+
+      response '201', 'category created' do
+        schema '$ref' => '#/components/schemas/CategoryDetail'
+
+        let(:body) do
+          {
+            category: {
+              name: 'Imported / Coffee',
+              color: '#22c55e',
+              icon: 'coffee'
+            }
+          }
+        end
+
+        run_test!
+      end
+
+      response '201', 'subcategory created with parent' do
+        schema '$ref' => '#/components/schemas/CategoryDetail'
+
+        let(:body) do
+          {
+            category: {
+              name: 'Imported / Espresso',
+              color: '#22c55e',
+              icon: 'coffee',
+              parent_id: parent_category.id
+            }
+          }
+        end
+
+        run_test!
+      end
+
+      response '422', 'validation error - duplicate name' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { category: { name: parent_category.name } } }
+
+        run_test!
+      end
+
+      response '403', 'forbidden - api key missing read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:read_only_api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Read Key',
+            key: key,
+            scopes: %w[read],
+            source: 'mobile'
+          )
+        end
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        let(:body) { { category: { name: 'Anything' } } }
+
+        run_test!
+      end
+
+      response '400', 'bad request - missing category payload' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { {} }
+
+        run_test!
+      end
+
+      response '401', 'unauthorized - missing api key' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+        let(:body) { { category: { name: 'Anything' } } }
+
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/categories/{id}' do

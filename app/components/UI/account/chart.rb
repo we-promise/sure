@@ -31,20 +31,22 @@ class UI::Account::Chart < ApplicationComponent
     when "Investment", "Crypto"
       case view
       when "balance"
-        "Total account value"
+        I18n.t("UI.account.chart.title.total_account_value")
       when "holdings_balance"
-        "Holdings value"
+        I18n.t("UI.account.chart.title.holdings_value")
       when "cash_balance"
-        "Cash value"
+        I18n.t("UI.account.chart.title.cash_value")
       end
-    when "Property", "Vehicle"
-      "Estimated #{account.accountable_type.humanize.downcase} value"
+    when "Property"
+      I18n.t("UI.account.chart.title.estimated_property_value")
+    when "Vehicle"
+      I18n.t("UI.account.chart.title.estimated_vehicle_value")
     when "CreditCard", "OtherLiability"
-      "Debt balance"
+      I18n.t("UI.account.chart.title.debt_balance")
     when "Loan"
-      "Remaining principal balance"
+      I18n.t("UI.account.chart.title.remaining_principal_balance")
     else
-      "Balance"
+      I18n.t("UI.account.chart.title.balance")
     end
   end
 
@@ -55,7 +57,11 @@ class UI::Account::Chart < ApplicationComponent
   def converted_balance_money
     return nil unless foreign_currency?
 
-    account.balance_money.exchange_to(account.family.currency, fallback_rate: 1)
+    begin
+      account.balance_money.exchange_to(account.family.currency)
+    rescue Money::ConversionError
+      nil
+    end
   end
 
   def view
@@ -68,5 +74,16 @@ class UI::Account::Chart < ApplicationComponent
 
   def trend
     series.trend
+  end
+
+  def comparison_label
+    start_date = series.start_date
+    return period.comparison_label if start_date.blank?
+
+    if start_date > period.start_date
+      I18n.t("UI.account.chart.vs_available_history")
+    else
+      period.comparison_label
+    end
   end
 end

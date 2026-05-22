@@ -2,6 +2,7 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
   ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
@@ -9,9 +10,16 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport PdfImport QifImport SureImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
+
+  def self.separator_options
+    [
+      [ I18n.t("activerecord.attributes.import.col_seps.comma"), "," ],
+      [ I18n.t("activerecord.attributes.import.col_seps.semicolon"), ";" ]
+    ]
+  end
 
   NUMBER_FORMATS = {
     "1,234.56" => { separator: ".", delimiter: "," },  # US/UK/Asia
@@ -19,6 +27,14 @@ class Import < ApplicationRecord
     "1 234,56" => { separator: ",", delimiter: " " },  # French/Scandinavian
     "1,234"    => { separator: "",  delimiter: "," }   # Zero-decimal currencies like JPY
   }.freeze
+
+  def self.reasonable_date_range
+    Date.new(1970, 1, 1)..Date.today.next_year(5)
+  end
+
+  def self.max_csv_size
+    MAX_CSV_SIZE
+  end
 
   AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column].freeze
 
@@ -63,6 +79,51 @@ class Import < ApplicationRecord
         converters: [ ->(str) { str&.strip } ],
         liberal_parsing: true
       )
+    end
+
+    # Attempts to identify the best-matching date format from a list of candidates
+    # by trying to parse sample date strings with each format.
+    #
+    # Returns the strptime format string (e.g. "%m-%d-%Y") that best matches the
+    # samples, or the +fallback+ when no candidate can parse any sample.
+    #
+    # Scoring:
+    #   1. Formats that parse ALL samples beat those that only parse some.
+    #   2. Among equal parse counts, formats whose parsed dates fall within a
+    #      reasonable range (1970..today+5y) score higher.
+    def detect_date_format(samples, candidates: Family::DATE_FORMATS.map(&:last), fallback: "%Y-%m-%d")
+      return fallback if samples.blank?
+
+      cleaned = samples.map(&:to_s).reject(&:blank?).uniq.first(50)
+      return fallback if cleaned.empty?
+
+      reasonable_range = reasonable_date_range
+
+      scored = candidates.map do |fmt|
+        parsed_count     = 0
+        reasonable_count = 0
+
+        cleaned.each do |s|
+          begin
+            date = Date.strptime(s, fmt)
+          rescue Date::Error, ArgumentError
+            next
+          end
+          next unless date
+
+          parsed_count += 1
+          reasonable_count += 1 if reasonable_range.cover?(date)
+        end
+
+        { format: fmt, parsed: parsed_count, reasonable: reasonable_count }
+      end
+
+      # Filter to candidates that parsed at least one sample
+      viable = scored.select { |s| s[:parsed] > 0 }
+      return fallback if viable.empty?
+
+      best = viable.max_by { |s| [ s[:parsed], s[:reasonable] ] }
+      best[:format]
     end
   end
 
@@ -153,21 +214,22 @@ class Import < ApplicationRecord
   def generate_rows_from_csv
     rows.destroy_all
 
-    mapped_rows = csv_rows.map do |row|
+    mapped_rows = csv_rows.map.with_index(1) do |row, index|
       {
-        account: row[account_col_label].to_s,
-        date: row[date_col_label].to_s,
-        qty: sanitize_number(row[qty_col_label]).to_s,
-        ticker: row[ticker_col_label].to_s,
-        exchange_operating_mic: row[exchange_operating_mic_col_label].to_s,
-        price: sanitize_number(row[price_col_label]).to_s,
-        amount: sanitize_number(row[amount_col_label]).to_s,
-        currency: (row[currency_col_label] || default_currency).to_s,
-        name: (row[name_col_label] || default_row_name).to_s,
-        category: row[category_col_label].to_s,
-        tags: row[tags_col_label].to_s,
-        entity_type: row[entity_type_col_label].to_s,
-        notes: row[notes_col_label].to_s
+        source_row_number: index,
+        account: csv_value(row, account_col_label, "account", "account_name").to_s,
+        date: csv_value(row, date_col_label, "date").to_s,
+        qty: sanitize_number(csv_value(row, qty_col_label, "qty", "quantity")).to_s,
+        ticker: csv_value(row, ticker_col_label, "ticker").to_s,
+        exchange_operating_mic: csv_value(row, exchange_operating_mic_col_label, "exchange_operating_mic").to_s,
+        price: sanitize_number(csv_value(row, price_col_label, "price")).to_s,
+        amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
+        currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
+        name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
+        category: csv_value(row, category_col_label, "category").to_s,
+        tags: csv_value(row, tags_col_label, "tags").to_s,
+        entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
+        notes: csv_value(row, notes_col_label, "notes").to_s
       }
     end
 
@@ -197,6 +259,10 @@ class Import < ApplicationRecord
     []
   end
 
+  def rows_ordered
+    rows.ordered
+  end
+
   def uploaded?
     raw_file_str.present?
   end
@@ -205,12 +271,33 @@ class Import < ApplicationRecord
     uploaded? && rows_count > 0
   end
 
+  def configured_for_status_detail?
+    configured?
+  end
+
   def cleaned?
     configured? && rows.all?(&:valid?)
   end
 
   def publishable?
     cleaned? && mappings.all?(&:valid?)
+  end
+
+  def cleaned_from_validation_stats?(invalid_rows_count:)
+    configured? && invalid_rows_count.zero?
+  end
+
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    cleaned_from_validation_stats?(invalid_rows_count: invalid_rows_count) && mappings.all?(&:valid?)
+  end
+
+  def mapping_status_counts
+    mappable_ids = mappings.pluck(:mappable_id)
+
+    {
+      mappings_count: mappable_ids.size,
+      unassigned_mappings_count: mappable_ids.count(&:nil?)
+    }
   end
 
   def revertable?
@@ -248,6 +335,38 @@ class Import < ApplicationRecord
     )
   end
 
+  # Returns date formats that can successfully parse the file's date samples,
+  # filtered to dates within reasonable_date_range.
+  # Result: array of { label:, format:, preview: } hashes.
+  # Subclasses should override #raw_date_samples to provide date strings.
+  def valid_date_formats_with_preview
+    first_sample = raw_date_samples.find(&:present?)
+    return [] if first_sample.blank?
+
+    Family::DATE_FORMATS.filter_map do |label, fmt|
+      parsed = try_parse_date_sample(first_sample, format: fmt)
+      next unless parsed
+      next unless self.class.reasonable_date_range.cover?(Date.parse(parsed))
+
+      { label: label, format: fmt, preview: parsed }
+    end
+  end
+
+  # Returns raw date strings from the import file for format detection/preview.
+  # Subclasses should override to extract dates from their specific format.
+  def raw_date_samples
+    []
+  end
+
+  # Attempts to parse a raw date sample with the given strptime format.
+  # Returns ISO 8601 date string or nil. Subclasses can override for
+  # format-specific normalization (e.g. QIF apostrophe dates).
+  def try_parse_date_sample(sample, format:)
+    Date.strptime(sample, format).iso8601
+  rescue Date::Error, ArgumentError
+    nil
+  end
+
   def max_row_count
     10000
   end
@@ -267,6 +386,55 @@ class Import < ApplicationRecord
 
     def default_currency
       account&.currency || family.currency
+    end
+
+    def csv_value(row, label, *aliases)
+      return if label.blank?
+
+      [ label, *aliases ].each do |candidate|
+        header = header_for(candidate)
+        next if header.blank?
+
+        value = row[header]
+        return value if value.present?
+      end
+
+      nil
+    end
+
+    def header_for(candidate)
+      return if candidate.blank?
+
+      normalized_csv_headers[normalize_header(candidate)]
+    end
+
+    def normalized_csv_headers
+      @normalized_csv_headers ||= begin
+        grouped_headers = Array(csv_headers)
+          .filter_map do |header|
+            normalized = normalize_header(header)
+            next if normalized.blank?
+
+            [ normalized, header ]
+          end
+          .group_by(&:first)
+
+        duplicate_headers = grouped_headers.values.filter_map do |headers|
+          originals = headers.map(&:last).uniq
+          originals if originals.many?
+        end
+
+        if duplicate_headers.any?
+          errors.add(:base, :duplicate_headers, columns: duplicate_headers.map { |headers| headers.join(", ") }.join("; "))
+          raise ActiveRecord::RecordInvalid, self
+        end
+
+        grouped_headers.transform_values { |headers| headers.first.last }
+      end
+    end
+
+    def normalize_header(header)
+      header.to_s.strip.downcase.gsub(/\*/, "").gsub(/[\s-]+/, "_")
     end
 
     def parsed_csv

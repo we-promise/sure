@@ -5,10 +5,11 @@ class IncomeStatement
 
   monetize :median_expense, :median_income
 
-  attr_reader :family
+  attr_reader :family, :user
 
-  def initialize(family)
+  def initialize(family, user: nil)
     @family = family
+    @user = user || Current.user
   end
 
   def totals(transactions_scope: nil, date_range:)
@@ -29,14 +30,23 @@ class IncomeStatement
   end
 
   def expense_totals(period: Period.current_month)
-    build_period_total(classification: "expense", period: period)
+    # Memoized per instance so callers that also invoke `net_category_totals`
+    @expense_totals_by_period ||= {}
+    @expense_totals_by_period[period_cache_key(period)] ||=
+      build_period_total(classification: "expense", period: period)
   end
 
   def income_totals(period: Period.current_month)
-    build_period_total(classification: "income", period: period)
+    @income_totals_by_period ||= {}
+    @income_totals_by_period[period_cache_key(period)] ||=
+      build_period_total(classification: "income", period: period)
   end
 
   def net_category_totals(period: Period.current_month)
+    @net_category_totals_by_period ||= {}
+    cached = @net_category_totals_by_period[period_cache_key(period)]
+    return cached if cached
+
     expense = expense_totals(period: period)
     income = income_totals(period: period)
 
@@ -86,7 +96,7 @@ class IncomeStatement
       CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
     end
 
-    NetCategoryTotals.new(
+    @net_category_totals_by_period[period_cache_key(period)] = NetCategoryTotals.new(
       net_expense_categories: net_expense_categories,
       net_income_categories: net_income_categories,
       total_net_expense: total_net_expense,
@@ -123,6 +133,10 @@ class IncomeStatement
 
     def categories
       @categories ||= family.categories.all.to_a
+    end
+
+    def period_cache_key(period)
+      [ period.start_date, period.end_date ]
     end
 
     def build_period_total(classification:, period:)
@@ -175,23 +189,31 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, interval, family.entries_cache_version
-      ]) { FamilyStats.new(family, interval:).call }
+        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, interval, family.entries_cache_version
-      ]) { CategoryStats.new(family, interval:).call }
+        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+      ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
+    end
+
+    def included_account_ids
+      @included_account_ids ||= user ? user.finance_accounts.pluck(:id) : nil
+    end
+
+    def included_account_ids_hash
+      @included_account_ids_hash ||= included_account_ids ? Digest::MD5.hexdigest(included_account_ids.sort.join(",")) : nil
     end
 
     def totals_query(transactions_scope:, date_range:)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, sql_hash, family.entries_cache_version
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range).call }
+        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 
     def monetizable_currency

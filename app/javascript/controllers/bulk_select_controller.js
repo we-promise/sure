@@ -8,10 +8,13 @@ export default class extends Controller {
     "selectionBar",
     "selectionBarText",
     "bulkEditDrawerHeader",
+    "duplicateLink",
   ];
   static values = {
     singularLabel: String,
     pluralLabel: String,
+    selectedLabel: { type: String, default: "selected" },
+    editLabel: { type: String, default: "Edit" },
     selectedIds: { type: Array, default: [] },
   };
 
@@ -27,7 +30,7 @@ export default class extends Controller {
 
   bulkEditDrawerHeaderTargetConnected(element) {
     const headingTextEl = element.querySelector("h2");
-    headingTextEl.innerText = `Edit ${
+    headingTextEl.innerText = `${this.editLabelValue} ${
       this.selectedIdsValue.length
     } ${this._pluralizedResourceName()}`;
   }
@@ -131,10 +134,27 @@ export default class extends Controller {
 
   _updateSelectionBar() {
     const count = this.selectedIdsValue.length;
-    this.selectionBarTextTarget.innerText = `${count} ${this._pluralizedResourceName()} selected`;
+    this.selectionBarTextTarget.innerText = `${count} ${this._pluralizedResourceName()} ${this.selectedLabelValue}`;
     this.selectionBarTarget.classList.toggle("hidden", count === 0);
     this.selectionBarTarget.querySelector("input[type='checkbox']").checked =
       count > 0;
+
+    if (this.hasDuplicateLinkTarget) {
+      const selectedRow = this._selectedRow();
+      const canDuplicate =
+        count === 1 && selectedRow?.dataset.entryType === "Transaction";
+
+      this.duplicateLinkTarget.classList.toggle("hidden", !canDuplicate);
+
+      if (canDuplicate) {
+        const url = new URL(
+          this.duplicateLinkTarget.href,
+          window.location.origin,
+        );
+        url.searchParams.set("duplicate_entry_id", this.selectedIdsValue[0]);
+        this.duplicateLinkTarget.href = url.toString();
+      }
+    }
   }
 
   _pluralizedResourceName() {
@@ -143,6 +163,14 @@ export default class extends Controller {
     }
 
     return this.pluralLabelValue;
+  }
+
+  _selectedRow() {
+    if (this.selectedIdsValue.length !== 1) return null;
+
+    return this.rowTargets.find(
+      (row) => row.dataset.id === this.selectedIdsValue[0],
+    );
   }
 
   _updateGroups() {

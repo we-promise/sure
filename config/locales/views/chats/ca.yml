@@ -1,7 +1,54 @@
 ---
 ca:
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raonament de l'assistent
+    tool_calls:
+      arguments: 'Arguments:'
+      function: 'Funció:'
+      tool_calls: Crides a eines
   chats:
-    demo_banner_message: "Estàs utilitzant un LLM Qwen3 de pesos oberts amb crèdits proporcionats
-      per Cloudflare Workers AI. Els resultats poden variar ja que el codi es va provar
-      principalment amb `gpt-4.1` però els teus tokens no van a cap altre lloc per ser entrenats! 🤖"
-    demo_banner_title: Mode de demostració
+    ai_consent:
+      available_description: El xat amb IA pot respondre preguntes financeres i oferir-te
+        anàlisis basades en les teves dades. Per utilitzar aquesta funcionalitat l'has
+        d'activar explícitament.
+      disable_note: Desactiva-ho en qualsevol moment. Totes les dades enviades als
+        nostres proveïdors de LLM són anonimitzades.
+      enable_button: Activa els xats d'IA
+      title: Activa els xats d'IA
+      unavailable_description_html: Per utilitzar l'assistent d'IA, has d'establir
+        la variable d'entorn <code class="bg-surface-inset px-1 py-0.5 rounded font-mono
+        text-xs">OPENAI_ACCESS_TOKEN</code> o configurar-la a la configuració de self hosting
+        de la teva instància.
+    ai_greeting:
+      commands_hint_html: Pots utilitzar <span class="bg-container border border-secondary
+        px-1.5 py-0.5 rounded font-mono text-xs">/</span> per accedir a les ordres
+      evaluate_portfolio: Avalua la cartera d'inversió
+      greeting: Hola %{name}! Sóc una IA / model de llenguatge gran que et pot ajudar
+        amb les teves finances. Tinc accés al web i a les dades del teu compte.
+      questions_intro: 'Aquí tens algunes preguntes que pots fer:'
+      spending_insights: Mostra anàlisi de la despesa
+      there: ''
+      unusual_patterns: Troba patrons inusuals
+    chat:
+      delete_chat: Elimina el xat
+      edit_chat_title: Edita el títol del xat
+    chat_nav:
+      all_chats: Tots els xats
+      delete_chat: Elimina el xat
+      edit_chat_title: Edita el títol del xat
+      start_new_chat: Inicia un xat nou
+    demo_banner_message: "Estàs utilitzant LLM amb crèdits proporcionats per Cloudflare
+      Workers AI. Els resultats poden variar, ja que el codi s'ha provat amb `gpt-4.1`,
+      però els teus tokens no s'envien enlloc més per entrenar-los! 🤖"
+    demo_banner_title: Mode demostració actiu
+    destroy:
+      notice: Xat eliminat correctament
+    error:
+      retry: Torna-ho a provar
+    index:
+      chats: Xats
+      new_chat: Nou xat
+    thinking: Pensant...
+    update:
+      success: Xat actualitzat

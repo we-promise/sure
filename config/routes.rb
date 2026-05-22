@@ -1,5 +1,7 @@
-require "sidekiq/web"
-require "sidekiq/cron/web"
+unless Rails.env.production?
+  require "sidekiq/web"
+  require "sidekiq/cron/web"
+end
 
 Rails.application.routes.draw do
   resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
@@ -33,9 +35,55 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :brex_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts, to: "brex_items/account_flows#preload_accounts"
+      get :select_accounts, to: "brex_items/account_flows#select_accounts"
+      post :link_accounts, to: "brex_items/account_flows#link_accounts"
+      get :select_existing_account, to: "brex_items/account_flows#select_existing_account"
+      post :link_existing_account, to: "brex_items/account_flows#link_existing_account"
+    end
+
+    member do
+      post :sync
+      get :setup_accounts, to: "brex_items/account_setups#setup_accounts"
+      post :complete_account_setup, to: "brex_items/account_setups#complete_account_setup"
+    end
+  end
+
   resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :binance_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :kraken_items, only: [ :create, :update, :destroy ] do
+    collection do
       get :select_accounts
       post :link_accounts
       get :select_existing_account
@@ -70,10 +118,25 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :ibkr_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # CoinStats routes
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
       post :link_wallet
+      post :link_exchange
     end
     member do
       post :sync
@@ -102,13 +165,20 @@ Rails.application.routes.draw do
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
     post :verify, to: "mfa#verify_code"
+    post :webauthn_options
+    post :verify_webauthn
     delete :disable
   end
 
-  mount Lookbook::Engine, at: "/design-system"
+  mount Lookbook::Engine, at: "/design-system" unless Rails.env.production?
+
+  if Rails.env.development?
+    mount Rswag::Api::Engine => "/api-docs"
+    mount Rswag::Ui::Engine => "/api-docs"
+  end
 
   # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq"
+  mount Sidekiq::Web => "/sidekiq" unless Rails.env.production?
 
   # AI chats
   resources :chats do
@@ -124,6 +194,8 @@ Rails.application.routes.draw do
       get :download
     end
   end
+
+  get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
   get "feedback", to: "pages#feedback"
@@ -164,20 +236,31 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
-    resource :preferences, only: :show
+    resource :preferences, only: %i[show update]
+    resource :appearance, only: %i[show update]
+    resource :debug, only: :show
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show
+    resources :webauthn_credentials, only: %i[create destroy] do
+      post :options, on: :collection
+    end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
-    resource :bank_sync, only: :show, controller: "bank_sync"
-    resource :providers, only: %i[show update]
+    get "bank_sync", to: redirect("/settings/providers", status: 301)
+    resource :providers, only: %i[show update] do
+      collection do
+        post :sync_all
+        post ":provider_key/sync", action: :sync, as: :sync_provider
+        get ":provider_key/connect_form", action: :connect_form, as: :connect_form
+      end
+    end
   end
 
   resource :subscription, only: %i[new show create] do
@@ -208,6 +291,7 @@ Rails.application.routes.draw do
     get :export_transactions, on: :collection
     get :google_sheets_instructions, on: :collection
     get :print, on: :collection
+    get :picker, on: :collection
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
@@ -221,10 +305,17 @@ Rails.application.routes.draw do
     collection do
       get :merge
       post :perform_merge
+      post :enhance
     end
   end
 
-  resources :transfers, only: %i[new create destroy show update]
+  get :exchange_rate, to: "exchange_rates#show"
+
+  resources :transfers, only: %i[new create destroy show update] do
+    member do
+      post :mark_as_recurring
+    end
+  end
 
   resources :imports, only: %i[index new show create update destroy] do
     member do
@@ -237,6 +328,7 @@ Rails.application.routes.draw do
     resource :configuration, only: %i[show update], module: :import
     resource :clean, only: :show, module: :import
     resource :confirm, only: :show, module: :import
+    resource :qif_category_selection, only: %i[show update], module: :import
 
     resources :rows, only: %i[show update], module: :import
     resources :mappings, only: :update, module: :import
@@ -263,11 +355,18 @@ Rails.application.routes.draw do
   namespace :transactions do
     resource :bulk_deletion, only: :create
     resource :bulk_update, only: %i[new create]
+    resource :categorize, only: %i[show create] do
+      patch :assign_entry, on: :collection
+      get :preview_rule, on: :collection
+    end
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
+    resource :split, only: %i[new create edit update destroy]
     resource :transfer_match, only: %i[new create]
+    resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
+    resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
     collection do
       delete :clear_filter
@@ -325,6 +424,8 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :set_default
+      patch :remove_default
       get :select_provider
       get :confirm_unlink
       delete :unlink
@@ -332,6 +433,16 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+    end
+
+    resource :sharing, only: [ :show, :update ], controller: "account_sharings"
+  end
+
+  resources :account_statements, only: %i[index show create update destroy] do
+    member do
+      patch :link
+      patch :unlink
+      patch :reject
     end
   end
 
@@ -381,17 +492,39 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
-      resources :categories, only: [ :index, :show ]
-      resources :merchants, only: %i[index show]
-      resources :tags, only: %i[index show create update destroy]
+      resources :balances, only: [ :index, :show ]
+      resources :budgets, only: [ :index, :show ]
+      resources :budget_categories, only: [ :index, :show ]
+      resources :categories, only: [ :index, :show, :create ]
+      resources :merchants, only: [ :index, :show ]
+      resources :rules, only: [ :index, :show ]
+      resources :rule_runs, only: [ :index, :show ]
+      resources :securities, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show ]
+      resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
-      resources :valuations, only: [ :create, :update, :show ]
-      resources :imports, only: [ :index, :show, :create ]
+      resources :transfers, only: [ :index, :show ]
+      resources :rejected_transfers, only: [ :index, :show ]
+      resources :valuations, only: [ :index, :create, :update, :show ]
+      resources :recurring_transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :family_exports, only: [ :index, :show, :create ] do
+        get :download, on: :member
+      end
+      resources :imports, only: [ :index, :show, :create ] do
+        post :preflight, on: :collection
+        get :rows, on: :member
+      end
       resource :usage, only: [ :show ], controller: :usage
-      post :sync, to: "sync#create"
+      resource :balance_sheet, only: [ :show ], controller: :balance_sheet
+      resource :family_settings, only: [ :show ], controller: :family_settings
+      post :sync, to: "sync#create", as: :sync_job
+      resources :syncs, only: [ :index, :show ] do
+        get :latest, on: :collection
+      end
+      resources :provider_connections, only: [ :index ]
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do
@@ -399,6 +532,7 @@ Rails.application.routes.draw do
         end
       end
 
+      get "users/reset/status", to: "users#reset_status"
       delete "users/reset", to: "users#reset"
       delete "users/me", to: "users#destroy"
 
@@ -450,6 +584,7 @@ Rails.application.routes.draw do
       post :balances
       get :setup_accounts
       post :complete_account_setup
+      post :dismiss_replacement_suggestion
     end
   end
 
@@ -464,6 +599,27 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :sophtron_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :connect_institution
+      post :sync
+      post :toggle_manual_sync
+      post :balances
+      get :connection_status
+      post :submit_mfa
       get :setup_accounts
       post :complete_account_setup
     end
@@ -485,8 +641,8 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Render dynamic PWA files from app/views/pwa/*
-  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker" => "pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
+  get "manifest" => "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
 
   get "imports/:import_id/upload/sample_csv", to: "import/uploads#sample_csv", as: :import_upload_sample_csv
 
@@ -505,6 +661,12 @@ Rails.application.routes.draw do
       end
     end
     resources :users, only: [ :index, :update ]
+    resources :invitations, only: [ :destroy ]
+    resources :families, only: [] do
+      member do
+        delete :invitations, to: "invitations#destroy_all"
+      end
+    end
   end
 
   # Defines the root path route ("/")

@@ -295,6 +295,11 @@ XLIM:
   name: Lima
   country: PE
 
+# Crypto exchanges
+BNCX:
+  name: Binance
+  country: AE
+
 # Middle East & Africa
 XTAE:
   name: Tel Aviv

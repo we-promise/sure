@@ -1,13 +1,17 @@
 import {
   autoUpdate,
   computePosition,
+  flip,
   offset,
   shift,
 } from "@floating-ui/dom";
 import { Controller } from "@hotwired/stimulus";
 
 /**
- * A "menu" can contain arbitrary content including non-clickable items, links, buttons, and forms.
+ * Strict action-list menu. Container is `role="menu"`, items are
+ * `role="menuitem"`. Arrow Up/Down moves focus between items, Home/End
+ * jumps to first/last, Escape closes the menu and returns focus to the
+ * trigger. Use DS::Popover for mixed-content panels (forms, pickers).
  */
 export default class extends Controller {
   static targets = ["button", "content"];
@@ -16,6 +20,7 @@ export default class extends Controller {
     show: Boolean,
     placement: { type: String, default: "bottom-end" },
     offset: { type: Number, default: 6 },
+    mobileFullwidth: { type: Boolean, default: true },
   };
 
   connect() {
@@ -57,31 +62,71 @@ export default class extends Controller {
     if (event.key === "Escape") {
       this.close();
       this.buttonTarget.focus();
+      return;
     }
+    if (!this.show) return;
+
+    const items = this.#menuItems();
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(event.target);
+
+    // Activate the focused item on Enter / Space (ARIA menu pattern).
+    // Without this, link-based menuitems can't be activated by keyboard
+    // once focus has moved off the native default.
+    if (event.key === "Enter" || event.key === " ") {
+      if (currentIndex < 0) return;
+      event.preventDefault();
+      items[currentIndex].click();
+      return;
+    }
+
+    let nextIndex = null;
+    switch (event.key) {
+      case "ArrowDown":
+        nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+        break;
+      case "ArrowUp":
+        nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = items.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    items.forEach((item, i) => item.setAttribute("tabindex", i === nextIndex ? "0" : "-1"));
+    items[nextIndex].focus();
   };
 
   toggle = () => {
     this.show = !this.show;
     this.contentTarget.classList.toggle("hidden", !this.show);
+    this.buttonTarget.setAttribute("aria-expanded", this.show.toString());
     if (this.show) {
       this.update();
-      this.focusFirstElement();
+      this.#focusFirstMenuItem();
     }
   };
 
   close() {
     this.show = false;
     this.contentTarget.classList.add("hidden");
+    this.buttonTarget.setAttribute("aria-expanded", "false");
   }
 
-  focusFirstElement() {
-    const focusableElements =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const firstFocusableElement =
-      this.contentTarget.querySelectorAll(focusableElements)[0];
-    if (firstFocusableElement) {
-      firstFocusableElement.focus({ preventScroll: true });
-    }
+  #menuItems() {
+    return Array.from(this.contentTarget.querySelectorAll('[role="menuitem"]'));
+  }
+
+  #focusFirstMenuItem() {
+    const items = this.#menuItems();
+    if (items.length === 0) return;
+    items.forEach((item, i) => item.setAttribute("tabindex", i === 0 ? "0" : "-1"));
+    items[0].focus({ preventScroll: true });
   }
 
   startAutoUpdate() {
@@ -105,13 +150,14 @@ export default class extends Controller {
     if (!this.buttonTarget || !this.contentTarget) return;
 
     const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
+    const useMobileFullwidth = isSmallScreen && this.mobileFullwidthValue;
 
     computePosition(this.buttonTarget, this.contentTarget, {
-      placement: isSmallScreen ? "bottom" : this.placementValue,
-      middleware: [offset(this.offsetValue), shift({ padding: 5 })],
+      placement: useMobileFullwidth ? "bottom" : this.placementValue,
+      middleware: [offset(this.offsetValue), flip({ padding: 5 }), shift({ padding: 5 })],
       strategy: "fixed",
     }).then(({ x, y }) => {
-      if (isSmallScreen) {
+      if (useMobileFullwidth) {
         Object.assign(this.contentTarget.style, {
           position: "fixed",
           left: "0px",
