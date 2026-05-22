@@ -47,7 +47,8 @@
     </div>
 
     <%# Bottom Section: Categories full width %>
-    <% has_over_budget = budget_has_over_budget?(@budget) %>
+    <% categories_state = budget_categories_view_state(@budget) %>
+    <% has_over_budget = categories_state[:over_budget_count].positive? %>
     <%= content_tag :div,
       class: "w-full bg-container rounded-xl shadow-border-xs p-4",
       data: (has_over_budget ? { controller: "budget-filter" } : {}) do %>

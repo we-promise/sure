@@ -15,10 +15,16 @@ class BudgetCategory < ApplicationRecord
     delegate :name, :color, to: :category
 
     def self.for(budget_categories)
-      top_level_categories = budget_categories.select { |budget_category| budget_category.category.parent_id.nil? }
-      top_level_categories.map do |top_level_category|
-        subcategories = budget_categories.select { |bc| bc.category.parent_id == top_level_category.category_id && top_level_category.category_id.present? }
-        new(top_level_category, subcategories.sort_by { |subcategory| subcategory.category.name })
+      by_parent_id = budget_categories.group_by { |budget_category| budget_category.category.parent_id }
+
+      Array(by_parent_id[nil]).map do |top_level_budget_category|
+        subcategories = if top_level_budget_category.category_id.present?
+          Array(by_parent_id[top_level_budget_category.category_id])
+        else
+          []
+        end
+
+        new(top_level_budget_category, subcategories.sort_by { |subcategory| subcategory.category.name })
       end.sort_by { |group| group.category.name }
     end
 
@@ -236,9 +242,13 @@ class BudgetCategory < ApplicationRecord
     return BudgetCategory.none unless category.parent_id.nil?
     return BudgetCategory.none if category.id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    if budget.association(:budget_categories).loaded?
+      budget.budget_subcategories_for(category.id)
+    else
+      budget.budget_categories
+        .joins(:category)
+        .where(categories: { parent_id: category.id })
+    end
   end
 
   private

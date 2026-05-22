@@ -49,6 +49,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     )
   end
 
+  def count_sql_queries
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      sql = payload[:sql]
+      next if payload[:name] == "SCHEMA"
+      next if sql.match?(/\A(?:BEGIN|COMMIT|SAVEPOINT|RELEASE|ROLLBACK)\b/i)
+
+      count += 1
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+    count
+  end
+
   test "subcategory with zero budget inherits from parent" do
     assert @subcategory_inheriting_bc.inherits_parent_budget?
     refute @subcategory_with_limit_bc.inherits_parent_budget?
@@ -126,6 +140,13 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     # Before the fix, this would return all top-level categories because
     # category.id is nil, causing WHERE parent_id IS NULL to match all roots
     assert_empty uncategorized_bc.subcategories
+  end
+
+  test "subcategories does not query when budget categories are preloaded" do
+    @budget.budget_categories.load
+
+    queries = count_sql_queries { @parent_budget_category.subcategories.to_a }
+    assert_equal 0, queries
   end
 
   test "parent with only inheriting subcategories shares entire budget" do

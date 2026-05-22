@@ -118,6 +118,10 @@ class Budget < ApplicationRecord
     end
   end
 
+  def budget_subcategories_for(parent_category_id)
+    budget_categories_by_parent_category_id[parent_category_id] || []
+  end
+
   def transactions
     scope = family.transactions.visible.in_period(period)
     if current_user
@@ -287,11 +291,11 @@ class Budget < ApplicationRecord
   # Income: How much user earned relative to what they expected to earn
   # =============================================================================
   def estimated_income
-    family.income_statement.median_income(interval: "month")
+    income_statement.median_income(interval: "month")
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_statement.income_totals(period: period).total
   end
 
   def actual_income_percent
@@ -311,6 +315,10 @@ class Budget < ApplicationRecord
   end
 
   private
+    def budget_categories_by_parent_category_id
+      @budget_categories_by_parent_category_id ||= budget_categories.to_a.group_by { |bc| bc.category.parent_id }
+    end
+
     def income_statement
       @income_statement ||= family.income_statement(user: current_user)
     end
