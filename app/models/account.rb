@@ -341,7 +341,7 @@ class Account < ApplicationRecord
   def manual_crypto_exchange?
     accountable_type == "Crypto" &&
       accountable&.subtype == "exchange" &&
-      account_providers.none? &&
+      account_providers_count.to_i.zero? &&
       plaid_account_id.blank? &&
       simplefin_account_id.blank?
   end
