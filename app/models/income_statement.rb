@@ -148,8 +148,6 @@ class IncomeStatement
       other_investments_category = family.categories.other_investments
 
       category_totals = [ *categories, uncategorized_category, other_investments_category ].map do |category|
-        subcategory = categories.find { |c| c.id == category.parent_id }
-
         parent_category_total = if category.uncategorized?
           # Regular uncategorized: NULL category_id and NOT uncategorized investment
           totals.select { |t| t.category_id.nil? && !t.is_uncategorized_investment }&.sum(&:total) || 0
@@ -201,7 +199,7 @@ class IncomeStatement
     end
 
     def included_account_ids
-      @included_account_ids ||= user ? user.finance_accounts.pluck(:id) : nil
+      @included_account_ids ||= user ? user.finance_account_ids : nil
     end
 
     def included_account_ids_hash

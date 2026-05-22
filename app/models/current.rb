@@ -19,12 +19,12 @@ class Current < ActiveSupport::CurrentAttributes
 
   def accessible_accounts
     return family&.accounts unless user
-    user.accessible_accounts
+    @_accessible_accounts ||= user.accessible_accounts
   end
 
   def finance_accounts
     return family&.accounts unless user
-    user.finance_accounts
+    @_finance_accounts ||= user.finance_accounts
   end
 
   def accessible_entries

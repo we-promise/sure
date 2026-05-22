@@ -42,7 +42,7 @@ class BalanceSheet::AccountTotals
 
     def finance_account_ids
       @finance_account_ids ||= if user
-        family.accounts.included_in_finances_for(user).pluck(:id).to_set
+        user.finance_account_ids.to_set
       else
         nil
       end

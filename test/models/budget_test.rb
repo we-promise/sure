@@ -21,7 +21,7 @@ class BudgetTest < ActiveSupport::TestCase
       balance: 1000
     )
 
-    old_entry = Entry.create!(
+    _old_entry = Entry.create!(
       account: old_account,
       entryable: Transaction.new(category: categories(:income)),
       date: 3.years.ago,
