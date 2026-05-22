@@ -18,8 +18,10 @@ module StoreLocation
 private
   def stored_return_to_or(fallback_path, explicit_return_to: nil)
     if explicit_return_to.present?
-      session.delete(:return_to)
-      return safe_return_path(explicit_return_to) || fallback_path
+      if (return_path = safe_return_path(explicit_return_to))
+        session.delete(:return_to)
+        return return_path
+      end
     end
 
     safe_return_path(session.delete(:return_to)) || fallback_path
@@ -39,8 +41,6 @@ private
 
     if (return_path = safe_return_path(params[:return_to]))
       session[:return_to] = return_path
-    else
-      session.delete(:return_to)
     end
   end
 
@@ -60,12 +60,20 @@ private
     path = value.to_s
     return nil unless path.start_with?("/")
     return nil if path.start_with?("//")
+    return nil if path.start_with?("/\\")
 
     uri = URI.parse(path)
     return nil if uri.scheme.present? || uri.host.present?
+    return nil if unsafe_decoded_path?(uri.path)
 
     path
-  rescue URI::InvalidURIError
+  rescue URI::InvalidURIError, ArgumentError
     nil
+  end
+
+  def unsafe_decoded_path?(path)
+    decoded_path = URI.decode_www_form_component(path.to_s)
+
+    decoded_path.start_with?("//", "/\\") || decoded_path.split("/").include?("..")
   end
 end
