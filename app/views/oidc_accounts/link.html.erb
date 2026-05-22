@@ -6,7 +6,7 @@
   <div class="mb-6">
     <%= render DS::Alert.new(title: t("oidc_accounts.link.verify_heading"), variant: :warning) do %>
       <% email_suffix = @pending_auth["email"].present? ? t("oidc_accounts.link.email_suffix_html", email: @pending_auth["email"]) : "" %>
-      <%= t("oidc_accounts.link.verify_description_html", provider: @pending_auth["provider"], email_suffix: email_suffix).html_safe %>
+      <p><%= t("oidc_accounts.link.verify_description_html", provider: @pending_auth["provider"], email_suffix: email_suffix).html_safe %></p>
     <% end %>
   </div>
 
@@ -34,7 +34,7 @@
 <% else %>
   <div class="mb-6">
     <%= render DS::Alert.new(title: t("oidc_accounts.link.create_heading"), variant: :info) do %>
-      <%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %>
+      <p><%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %></p>
     <% end %>
   </div>
 
