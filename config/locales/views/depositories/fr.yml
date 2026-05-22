@@ -8,3 +8,19 @@ fr:
       subtype_prompt: Sélectionnez le type de compte
     new:
       title: Saisir le solde du compte
+    subtypes:
+      cd:
+        long: Certificat de dépôt
+        short: CD
+      checking:
+        long: Vérification
+        short: Vérification
+      hsa:
+        long: Compte d'épargne santé
+        short: HSA
+      money_market:
+        long: Marché monétaire
+        short: MM
+      savings:
+        long: Économies
+        short: Économies

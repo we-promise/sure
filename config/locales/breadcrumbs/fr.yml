@@ -1,8 +1,88 @@
 ---
 fr:
   breadcrumbs:
+    account_sharings: Partage de compte
+    account_statements: Coffre-fort de relevés
+    accounts: Comptes
+    ai_prompts: Invites IA
+    api_key: Clé API
+    api_keys: Clés API
+    appearance: Apparence
+    appearances: Apparence
+    bank_sync: Synchronisation bancaire
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Catégories budgétaires
+    budgets: Budgets
+    categories: Catégories
     categorize: Catégoriser
+    chats: Discussions
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Cartes de crédit
+    cryptos: Cryptomonnaie
+    dashboard: Tableau de bord
+    debug: Débogage
+    debugs: Débogage
+    depositories: Comptes espèces
+    enable_banking_items: Activer les services bancaires
     exports: Exports
+    family_exports: Exportations
+    family_merchants: Marchands
+    guides: Guides
+    holdings: Holdings
     home: Accueil
+    hostings: Auto-hébergement
+    ibkr_items: Courtiers interactifs
+    impersonation_sessions: Usurpations d'identité
     imports: Imports
+    indexa_capital_items: Indexa Capital
+    intro: Introduction
+    investments: Investissements
+    invitations: Invitations
+    invite_codes: Codes d'invitation
+    kraken_items: Kraken
+    llm_usage: Utilisation du LLM
+    llm_usages: Utilisation du LLM
+    loans: Prêts
+    lunchflow_items: Déjeuner
+    mcp: Serveur MCP
+    merchants: Marchands
+    mercury_items: Mercure
+    messages: Messages
+    mfa: Authentification à deux facteurs
+    oidc_accounts: Comptes SSO
+    onboardings: Intégration
+    other_assets: Autres actifs
+    other_liabilities: Autres passifs
+    payments: Paiements
+    pending_duplicate_merges: Avis en double
+    plaid_items: Plaid
+    preferences: Préférences
+    profile: Informations sur le profil
+    profiles: Informations sur le profil
+    properties: Propriétés
+    providers: Fournisseurs
+    recurring_transactions: Récurrent
+    registrations: Inscrivez-vous
+    reports: Rapports
+    rules: Règles
+    securities: Sécurité
+    security: Sécurité
+    self_hosting: Auto-hébergement
+    sessions: Connectez-vous
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Diviser
+    sso_identities: Connexions SSO
+    sso_providers: Fournisseurs SSO
+    subscriptions: Abonnement
+    tags: Balises
+    trades: Métiers
     transactions: Transactions
+    transfer_matches: Matchs de transfert
+    transfers: Transferts
+    users: Utilisateurs
+    valuations: Évaluations
+    vehicles: Véhicules
