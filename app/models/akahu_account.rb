@@ -1,6 +1,16 @@
 class AkahuAccount < ApplicationRecord
   include CurrencyNormalizable, Encryptable
 
+  AKAHU_ACCOUNT_TYPE_MAP = {
+    "CHECKING" => { accountable_type: "Depository", subtype: "checking" },
+    "SAVINGS" => { accountable_type: "Depository", subtype: "savings" },
+    "TERMDEPOSIT" => { accountable_type: "Depository", subtype: "cd" },
+    "CREDITCARD" => { accountable_type: "CreditCard", subtype: "credit_card" },
+    "LOAN" => { accountable_type: "Loan" },
+    "KIWISAVER" => { accountable_type: "Investment", subtype: "retirement" },
+    "INVESTMENT" => { accountable_type: "Investment" }
+  }.freeze
+
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
@@ -17,6 +27,14 @@ class AkahuAccount < ApplicationRecord
 
   def current_account
     account
+  end
+
+  def suggested_account_type
+    AKAHU_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.fetch(:accountable_type)
+  end
+
+  def suggested_subtype
+    AKAHU_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.fetch(:subtype)
   end
 
   def upsert_akahu_snapshot!(account_snapshot)

@@ -185,6 +185,9 @@ class AkahuItemsController < ApplicationController
       [ t(".account_types.investment"), "Investment" ],
       [ t(".account_types.loan"), "Loan" ]
     ]
+    @akahu_account_type_suggestions = @akahu_accounts.each_with_object({}) do |akahu_account, suggestions|
+      suggestions[akahu_account.id] = akahu_account.suggested_account_type || "skip"
+    end
   end
 
   def complete_account_setup
@@ -274,7 +277,13 @@ class AkahuItemsController < ApplicationController
     def create_account_from_akahu(akahu_account, account_type)
       balance = akahu_account.current_balance || 0
       balance = balance.abs if account_type.in?(%w[CreditCard Loan])
-      subtype = "credit_card" if account_type == "CreditCard"
+      subtype = if account_type == "CreditCard"
+        "credit_card"
+      elsif account_type == "Depository" && akahu_account.suggested_account_type == account_type
+        akahu_account.suggested_subtype
+      elsif account_type == "Investment" && akahu_account.suggested_account_type == account_type
+        akahu_account.suggested_subtype
+      end
       cash_balance = account_type == "Investment" ? 0 : balance
 
       Account.create_and_sync(
