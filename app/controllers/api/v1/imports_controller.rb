@@ -105,8 +105,6 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     # 4. Save and Process
     if @import.save
-      import_ready_for_publish = true
-
       # Generate rows if file content was provided
       if @import.uploaded?
         begin
@@ -114,15 +112,21 @@ class Api::V1::ImportsController < Api::V1::BaseController
           @import.reload
           @import.sync_mappings
         rescue StandardError => e
-          import_ready_for_publish = false
           Rails.logger.error "Row generation or mapping sync failed for import #{@import.id}: #{e.message}"
+          @import.update!(status: :failed, error: e.message)
+          render json: {
+            error: "processing_failed",
+            message: "Import was uploaded but could not be processed.",
+            import_id: @import.id
+          }, status: :internal_server_error
+          return
         end
       end
 
       # If the import is configured (has rows), we can try to auto-publish or just leave it as pending
       # For API simplicity, if enough info is provided, we might want to trigger processing
 
-      if import_ready_for_publish && @import.configured? && params[:publish] == "true"
+      if @import.configured? && params[:publish] == "true"
         @import.publish_later
       end
 
