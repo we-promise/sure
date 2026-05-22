@@ -14,7 +14,12 @@ class DS::Toggle < DesignSystemComponent
   def label_classes
     class_names(
        "relative block w-9 h-5 cursor-pointer",
-       "rounded-full bg-surface-inset",
+       # `bg-toggle-track` lifts the dark-mode off-track to gray-700 so the
+       # switch keeps WCAG 1.4.11 contrast against the surrounding
+       # bg-container (gray-900). `bg-surface-inset` resolves to gray-800
+       # in dark mode and dropped to ~1.5:1 against the container,
+       # making the toggle nearly invisible inside modals.
+       "rounded-full bg-toggle-track",
        # `motion-safe:` gates the bg + thumb-translate transitions on
        # `prefers-reduced-motion`; reduced-motion users get a snap.
        "motion-safe:transition-colors motion-safe:duration-300",
