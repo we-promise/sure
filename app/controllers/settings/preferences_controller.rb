@@ -12,7 +12,8 @@ class Settings::PreferencesController < ApplicationController
   def update
     @user = Current.user
     user_params = params.permit(user: [ :preview_features_enabled ]).fetch(:user, {})
-    module_params = params.permit(family: { modules: {} }).dig(:family, :modules)
+    allowed_module_keys = Family::AVAILABLE_MODULES.map(&:to_sym)
+    module_params = params.permit(family: { modules: allowed_module_keys }).dig(:family, :modules)
 
     ActiveRecord::Base.transaction do
       @user.lock!

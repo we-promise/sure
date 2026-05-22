@@ -246,7 +246,7 @@
             <h5 class="text-primary"><%= t("modules.#{module_name}.title") %></h5>
             <p class="text-secondary"><%= t("modules.#{module_name}.description") %></p>
           </div>
-          <%= hidden_field_tag "family[modules][#{module_name}]", "0" %>
+          <%= hidden_field_tag "family[modules][#{module_name}]", "0", id: nil %>
           <%= render DS::Toggle.new(
                 id: "family_modules_#{module_name}",
                 name: "family[modules][#{module_name}]",
