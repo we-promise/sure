@@ -1,31 +1,60 @@
 class DS::Pill < DesignSystemComponent
-  TONES = %i[violet indigo fuchsia amber green gray].freeze
+  TONES = %i[violet indigo fuchsia amber green gray red].freeze
   STYLES = %i[soft filled outline].freeze
   SIZES = %i[sm md].freeze
 
-  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon
+  # Semantic-name → visual-tone aliases. Lets callers say
+  # `tone: :success` instead of binding to the underlying palette name.
+  # The aliases live here (not on the caller) so the visual palette can
+  # be retuned without touching every callsite.
+  SEMANTIC_TONE_ALIASES = {
+    success:     :green,
+    warning:     :amber,
+    error:       :red,
+    destructive: :red,
+    info:        :indigo,
+    neutral:     :gray
+  }.freeze
 
-  # Generic inline pill primitive. Used for Beta / Canary markers and goal
-  # status badges, but designed so any future tag (NEW, PRO, EXPERIMENTAL,
-  # etc.) reuses the same shape without forking.
+  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon, :marker
+
+  # Generic inline pill primitive. Two modes:
+  #
+  # - `marker: true` (default) — the original shape from #1829: uppercase
+  #   10/11px text, tracking-wide. Reads as a stage marker (Beta, Canary,
+  #   NEW, PRO, EXPERIMENTAL, …).
+  #
+  # - `marker: false` — normal case, snaps to the DS text scale
+  #   (`text-xs` / `text-sm`). Reads as a status / category badge.
+  #   Pair with semantic tones (`:success`, `:warning`, `:error`,
+  #   `:info`, `:neutral`) for status badges; pair with visual tones
+  #   (`:violet`, `:indigo`, etc.) for category tags.
+  #
+  # Other options:
   #
   # - `dot_only: true` renders only the colored dot (no label, no border).
   #   Use on the collapsed sidebar nav, where there's no room for the label.
   # - `icon:` overrides the dot with a Lucide icon (sized xs, current color).
   #   Useful for status pills that benefit from a glyph (circle-check,
   #   triangle-alert, pause, etc.) rather than the generic dot.
-  # - Sure has full violet / indigo / fuchsia / amber / green / gray ramps
-  #   in the design system; this component picks named tokens at render
-  #   time. No raw hex.
-  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil, icon: nil)
+  # - Tones accept both visual names (`:violet`, `:amber`, …) and
+  #   semantic aliases (`:success`, `:warning`, `:error`,
+  #   `:destructive`, `:neutral`, `:info`). Aliases resolve via
+  #   `SEMANTIC_TONE_ALIASES`.
+  # - Sure has full violet / indigo / fuchsia / amber / green / gray /
+  #   red ramps in the design system; this component picks named tokens
+  #   at render time. No raw hex.
+  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil, icon: nil, marker: true)
+    resolved_tone = SEMANTIC_TONE_ALIASES.fetch(tone.to_sym, tone.to_sym)
     @label = label || I18n.t("ds.pill.default_label", default: "Beta")
-    @tone = TONES.include?(tone.to_sym) ? tone.to_sym : :violet
+    @tone = TONES.include?(resolved_tone) ? resolved_tone : :violet
     @style = STYLES.include?(style.to_sym) ? style.to_sym : :soft
     @size = SIZES.include?(size.to_sym) ? size.to_sym : :sm
     @show_dot = show_dot
     @dot_only = dot_only
     @title = title
     @icon = icon
+    @marker = marker
   end
 
   def palette
@@ -39,7 +68,8 @@ class DS::Pill < DesignSystemComponent
       fuchsia: { bg: "var(--color-fuchsia-50)", bg_dark: "var(--color-fuchsia-tint-10)", text: "color-mix(in oklab, var(--color-fuchsia-700), black 30%)", text_dark: "var(--color-fuchsia-200)", border: "var(--color-fuchsia-200)", dot: "var(--color-fuchsia-500)", fill: "var(--color-fuchsia-500)" },
       amber:   { bg: "var(--color-yellow-50)",  bg_dark: "var(--color-yellow-tint-10)",  text: "color-mix(in oklab, var(--color-yellow-700), black 30%)",  text_dark: "var(--color-yellow-200)",  border: "var(--color-yellow-200)",  dot: "var(--color-yellow-500)",  fill: "var(--color-yellow-500)" },
       green:   { bg: "var(--color-green-50)",   bg_dark: "var(--color-green-tint-10)",   text: "color-mix(in oklab, var(--color-green-700), black 30%)",   text_dark: "var(--color-green-200)",   border: "var(--color-green-200)",   dot: "var(--color-green-500)",   fill: "var(--color-green-500)" },
-      gray:    { bg: "var(--color-gray-100)",   bg_dark: "var(--color-gray-tint-10)",    text: "color-mix(in oklab, var(--color-gray-700), black 30%)",    text_dark: "var(--color-gray-200)",    border: "var(--color-gray-200)",    dot: "var(--color-gray-500)",    fill: "var(--color-gray-500)" }
+      gray:    { bg: "var(--color-gray-100)",   bg_dark: "var(--color-gray-tint-10)",    text: "color-mix(in oklab, var(--color-gray-700), black 30%)",    text_dark: "var(--color-gray-200)",    border: "var(--color-gray-200)",    dot: "var(--color-gray-500)",    fill: "var(--color-gray-500)" },
+      red:     { bg: "var(--color-red-50)",     bg_dark: "var(--color-red-tint-10)",     text: "color-mix(in oklab, var(--color-red-700), black 30%)",     text_dark: "var(--color-red-200)",     border: "var(--color-red-200)",     dot: "var(--color-red-500)",     fill: "var(--color-red-500)" }
     }[tone]
   end
 
@@ -77,15 +107,27 @@ class DS::Pill < DesignSystemComponent
 
   def container_classes
     base = [
-      "inline-flex items-center align-middle font-medium uppercase whitespace-nowrap shrink-0",
+      "inline-flex items-center align-middle font-medium whitespace-nowrap shrink-0",
       "border rounded-md",
       "leading-none"
     ]
-    # text-[10/11px] stays as arbitrary values: the pill is intentionally
-    # sub-12px (Sure's smallest scale token is text-xs / 12px) to read as
-    # a marker, not a label. Padding / gap / tracking snap to Tailwind's
-    # scale to satisfy the design-system "no arbitrary values" rule.
-    base << (size == :md ? "px-2 py-0.5 text-[11px] tracking-wide gap-1" : "px-1.5 py-0.5 text-[10px] tracking-wider gap-1")
+
+    if marker
+      # Marker mode (Beta / Canary / NEW): uppercase, sub-12px text,
+      # wider tracking. text-[10/11px] stays as arbitrary values — the
+      # pill is intentionally sub-12px (Sure's smallest scale token is
+      # text-xs / 12px) so it reads as a marker, not a label. Padding /
+      # gap / tracking snap to Tailwind's scale to satisfy the
+      # design-system "no arbitrary values" rule.
+      base << "uppercase"
+      base << (size == :md ? "px-2 py-0.5 text-[11px] tracking-wide gap-1" : "px-1.5 py-0.5 text-[10px] tracking-wider gap-1")
+    else
+      # Badge mode (Pending / Active / Past due / category tag):
+      # normal case, snaps to the design-system text scale
+      # (`text-xs` / `text-sm`). Padding bumps slightly so the badge
+      # reads as a status chip rather than a sub-12px marker.
+      base << (size == :md ? "px-2 py-0.5 text-sm gap-1.5" : "px-1.5 py-0.5 text-xs gap-1")
+    end
     class_names(*base)
   end
 end
