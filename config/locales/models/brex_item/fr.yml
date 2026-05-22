@@ -1,0 +1,14 @@
+---
+fr:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: URL de base
+        name: Nom de la connexion
+        token: Jeton
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: doit être vide, https://api.brex.com ou https://api-staging.brex.com

@@ -5,16 +5,18 @@ fr:
       edit: Éditer %{account}
     form:
       subtype_label: Type de compte
-      subtype_prompt: Sélectionner un type de compte
       subtype_none: Aucun
+      subtype_prompt: Sélectionner un type de compte
+      tax_treatment_hint: La plupart des cryptomonnaies sont détenues dans des comptes
+        imposables. Sélectionnez une autre option si elles sont détenues dans un compte
+        fiscalement avantageux.
       tax_treatment_label: Traitement fiscal
-      tax_treatment_hint: La plupart des cryptomonnaies sont détenues dans des comptes imposables. Sélectionnez une autre option si elles sont détenues dans un compte fiscalement avantageux.
     new:
       title: Saisir le solde du compte
     subtypes:
-      wallet:
-        short: Portefeuille
-        long: Portefeuille crypto
       exchange:
-        short: Plateforme d'échange
         long: Plateforme d'échange crypto
+        short: Plateforme d'échange
+      wallet:
+        long: Portefeuille crypto
+        short: Portefeuille
