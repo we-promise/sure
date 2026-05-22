@@ -320,7 +320,7 @@ class Family::DataExporter
             kind: transaction.kind,
             created_at: transaction.created_at,
             updated_at: transaction.updated_at
-          }
+          }.merge(entry_provenance(transaction.entry))
         }.to_json
       end
 
@@ -372,7 +372,7 @@ class Family::DataExporter
             currency: trade.currency,
             created_at: trade.created_at,
             updated_at: trade.updated_at
-          }
+          }.merge(entry_provenance(trade.entry))
         }.to_json
       end
 
@@ -420,7 +420,7 @@ class Family::DataExporter
             kind: entry.entryable.kind,
             created_at: entry.created_at,
             updated_at: entry.updated_at
-          }
+          }.merge(entry_provenance(entry))
         }.to_json
       end
 
@@ -454,6 +454,13 @@ class Family::DataExporter
 
     def exportable_transactions
       @family.transactions.merge(Entry.excluding_split_parents)
+    end
+
+    def entry_provenance(entry)
+      {
+        external_id: entry.external_id,
+        source: entry.source
+      }.compact
     end
 
     def family_transaction_ids

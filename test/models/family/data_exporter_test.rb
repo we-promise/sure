@@ -608,6 +608,69 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports entry provenance in transaction trade and valuation NDJSON records" do
+    transaction_entry = @account.entries.create!(
+      date: Date.parse("2024-06-01"),
+      amount: -25,
+      name: "Provider transaction",
+      currency: "USD",
+      external_id: "provider-txn-1",
+      source: "simplefin",
+      entryable: Transaction.new
+    )
+    security = Security.create!(
+      ticker: "PRV#{SecureRandom.hex(3).upcase}",
+      name: "Provider Security",
+      exchange_operating_mic: "XNAS"
+    )
+    trade_entry = @account.entries.create!(
+      date: Date.parse("2024-06-02"),
+      amount: -100,
+      name: "Provider trade",
+      currency: "USD",
+      external_id: "provider-trade-1",
+      source: "plaid",
+      entryable: Trade.new(
+        security: security,
+        qty: 1,
+        price: 100,
+        currency: "USD"
+      )
+    )
+    valuation_entry = @account.entries.create!(
+      date: Date.parse("2024-06-03"),
+      amount: 1_100,
+      name: "Provider valuation",
+      currency: "USD",
+      external_id: "provider-valuation-1",
+      source: "api",
+      entryable: Valuation.new
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+
+      transaction_data = ndjson_records.find do |record|
+        record["type"] == "Transaction" && record.dig("data", "id") == transaction_entry.transaction.id
+      end
+      trade_data = ndjson_records.find do |record|
+        record["type"] == "Trade" && record.dig("data", "entry_id") == trade_entry.id
+      end
+      valuation_data = ndjson_records.find do |record|
+        record["type"] == "Valuation" && record.dig("data", "entry_id") == valuation_entry.id
+      end
+
+      assert_equal "provider-txn-1", transaction_data["data"]["external_id"]
+      assert_equal "simplefin", transaction_data["data"]["source"]
+      assert_equal "provider-trade-1", trade_data["data"]["external_id"]
+      assert_equal "plaid", trade_data["data"]["source"]
+      assert_equal "provider-valuation-1", valuation_data["data"]["external_id"]
+      assert_equal "api", valuation_data["data"]["source"]
+    end
+  end
+
   test "exports recurring transactions in NDJSON" do
     merchant = @family.merchants.create!(name: "Internet Provider")
     recurring_transaction = @family.recurring_transactions.create!(
