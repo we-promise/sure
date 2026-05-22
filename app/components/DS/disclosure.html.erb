@@ -1,10 +1,13 @@
-<details class="group" <%= "open" if open %>>
-  <%= tag.summary class: class_names(
-    "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface",
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white"
-  ) do %>
+<%= tag.details class: details_classes, open: open, **details_opts do %>
+  <%= tag.summary class: summary_classes do %>
     <% if summary_content? %>
-      <%= summary_content %>
+      <%# `<summary>` is `display: list-item`, so a flex inner div would
+          shrink-wrap to content width and any `justify-between` inside
+          the slot has nothing to distribute. Wrap in a `w-full` block
+          so caller-supplied flex rows stretch across the card. %>
+      <div class="w-full">
+        <%= summary_content %>
+      </div>
     <% else %>
       <div class="flex items-center gap-3">
         <% if align == :left %>
@@ -25,4 +28,4 @@
   <div class="mt-2">
     <%= content %>
   </div>
-</details>
+<% end %>
