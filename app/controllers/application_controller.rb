@@ -94,10 +94,16 @@ class ApplicationController < ActionController::Base
       demo_host_match?
     end
 
-    # Cached once per request so the global layout, banner partial, and
-    # any controller-level checks share a single Redis round-trip.
+    # Returns the current Sidekiq health snapshot in self-hosted mode and
+    # `nil` in managed mode. Memoized per request and additionally cached
+    # across requests by `SidekiqHealth.current`, so an authenticated page
+    # render adds at most one Redis round-trip per cache window — not three
+    # per request. Returns `nil` (not a healthy stand-in) in managed mode
+    # so callers must explicitly handle the "check disabled" case; the
+    # banner already gates on `Current.user&.super_admin?` and `present?`.
     def current_sidekiq_health
-      @current_sidekiq_health ||= SidekiqHealth.new
+      return @current_sidekiq_health if defined?(@current_sidekiq_health)
+      @current_sidekiq_health = Rails.application.config.app_mode.self_hosted? ? SidekiqHealth.current : nil
     end
 
     def accessible_accounts

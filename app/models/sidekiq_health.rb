@@ -10,22 +10,37 @@
 # configured latency budget. Anything else flips `healthy?` to false and
 # `reason` gives the most-specific failure for display / logging.
 #
-# Constructed once per request via `ApplicationController#current_sidekiq_health`
-# so individual page renders share a single Redis round-trip. All Sidekiq
+# Reuse via `SidekiqHealth.current` (or `ApplicationController#current_sidekiq_health`)
+# rather than `.new` so the result is shared across a request and cached
+# for `CACHE_TTL` across requests — `.new` always hits Redis. All Sidekiq
 # calls are eager-loaded in `initialize` and wrapped in a defensive
 # rescue — a degraded Redis must never crash a page render.
 class SidekiqHealth
   # A worker is considered alive if it published a heartbeat within this
   # window. Sidekiq's default heartbeat interval is 5s, so 2 minutes is
   # conservative — covers a temporarily-paused worker, deploy restart, or
-  # transient Redis blip without flapping the banner.
-  PROCESS_HEARTBEAT_TIMEOUT = 2.minutes
+  # transient Redis blip without flapping the banner. Operators on
+  # under-resourced self-hosted boxes can raise it via
+  # `SIDEKIQ_HEALTH_HEARTBEAT_TIMEOUT` (seconds) if heartbeats legitimately
+  # arrive slower than this on their hardware.
+  PROCESS_HEARTBEAT_TIMEOUT = (ENV["SIDEKIQ_HEALTH_HEARTBEAT_TIMEOUT"].presence&.to_i&.then { |s| s.seconds } || 2.minutes)
 
   # Oldest-enqueued-job age that we treat as "backed up". Tuned to the
   # default queue config in `config/sidekiq.yml` (concurrency: 3): a
   # healthy queue empties well inside this window even under bursty
-  # sync load.
-  LATENCY_THRESHOLD = 5.minutes
+  # sync load. Self-hosted deployments running a single-threaded worker
+  # or large sync backlogs can raise it via `SIDEKIQ_HEALTH_LATENCY_THRESHOLD`
+  # (seconds) to avoid a constant false-positive banner.
+  LATENCY_THRESHOLD = (ENV["SIDEKIQ_HEALTH_LATENCY_THRESHOLD"].presence&.to_i&.then { |s| s.seconds } || 5.minutes)
+
+  # How long a cached health snapshot is reused before re-querying Redis.
+  # A bad worker is visible within `CACHE_TTL` of the failure — short
+  # enough to feel live, long enough that authenticated page loads don't
+  # round-trip Redis on every render. Override with `SIDEKIQ_HEALTH_CACHE_TTL`
+  # (seconds) if needed.
+  CACHE_TTL = (ENV["SIDEKIQ_HEALTH_CACHE_TTL"].presence&.to_i&.then { |s| s.seconds } || 60.seconds)
+
+  CACHE_KEY = "sidekiq_health/v1"
 
   REASONS = %i[redis_unreachable no_worker_processes stale_heartbeat queue_backed_up].freeze
 
@@ -35,7 +50,22 @@ class SidekiqHealth
   class << self
     # Convenience for view helpers / banners that just need the boolean.
     def healthy?
-      new.healthy?
+      current.healthy?
+    end
+
+    # Cached entry point. Re-uses a snapshot for up to `CACHE_TTL` so
+    # the global banner check doesn't add a Redis round-trip per page
+    # load. Cache misses still pay the full Sidekiq query, but only once
+    # per TTL window across the whole process.
+    def current
+      Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_TTL) { new }
+    end
+
+    # Forces the next `current` call to re-query Redis. Useful from the
+    # admin page so an operator who just restarted the worker sees the
+    # new state immediately.
+    def expire_cache!
+      Rails.cache.delete(CACHE_KEY)
     end
   end
 
