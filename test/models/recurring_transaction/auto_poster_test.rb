@@ -135,6 +135,25 @@ class RecurringTransaction::AutoPosterTest < ActiveSupport::TestCase
     assert_equal 19.5, result.entry.amount.to_d
   end
 
+  # Edge case: a manual recurring that has `auto_post: true` flipped on
+  # before its first posted occurrence will still have `expected_amount_avg`
+  # nil (the running average is seeded by `record_occurrence!` from real
+  # transactions, not from the template). `posting_amount` must fall back
+  # to the template `amount` rather than blowing up on nil arithmetic
+  # inside Money#initialize.
+  test "manual recurring with nil expected_amount_avg falls back to template amount" do
+    recurring = build_due_recurring(
+      manual: true,
+      amount: 12.34,
+      expected_amount_avg: nil
+    )
+
+    result = RecurringTransaction::AutoPoster.new(recurring).call
+
+    assert result.posted?
+    assert_equal 12.34, result.entry.amount.to_d
+  end
+
   test "second call in the same day skips because next_expected_date is now in the future" do
     recurring = build_due_recurring
 

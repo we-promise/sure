@@ -28,10 +28,16 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   # state-changing endpoints are a CSRF / accidental-trigger risk. If
   # someone later loosens the route back to `match via: [:get, :post]`
   # this test catches the regression.
+  #
+  # Asserts a 404 response rather than `assert_raises ActionController::RoutingError`:
+  # in `ActionDispatch::IntegrationTest` the routing error is raised inside
+  # `RouteSet` and then caught by the exceptions middleware, which renders
+  # a 404. Asserting the raise only passes in dev-mode behavior and would
+  # silently pass for the wrong reason here.
   test "toggle_auto_post does not respond to GET" do
-    assert_raises(ActionController::RoutingError) do
-      get toggle_auto_post_recurring_transaction_url(@recurring)
-    end
+    get toggle_auto_post_recurring_transaction_url(@recurring)
+    assert_response :not_found
+    assert_not @recurring.reload.auto_post?
   end
 
   test "toggle_auto_post refuses to enable on a transfer recurring" do
