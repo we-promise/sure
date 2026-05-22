@@ -30,11 +30,11 @@ class BalanceSheet::AccountTotals
         scope = family.accounts.visible.with_attached_logo
                   .includes(
                     :account_shares,
-                    :accountable,
                     :plaid_account,
                     :simplefin_account,
                     account_providers: :provider
                   )
+                  .preload(:accountable)
         scope = scope.accessible_by(user) if user
         scope
       end
