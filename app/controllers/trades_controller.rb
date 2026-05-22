@@ -1,6 +1,8 @@
 class TradesController < ApplicationController
   include EntryableResource
 
+  require_module! :investments
+
   before_action :set_entry_for_unlock, only: :unlock
 
   # Defaults to a buy trade

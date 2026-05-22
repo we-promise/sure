@@ -227,3 +227,34 @@
     </label>
   <% end %>
 </section>
+
+<%# Family feature modules. One toggle per entry in Family::AVAILABLE_MODULES.
+    Stored as opt-out strings in families.disabled_modules; default state is
+    enabled so existing families see no change. See docs/feature-gating.md. %>
+<section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
+  <div class="text-sm space-y-1">
+    <h4 class="text-primary"><%= t(".modules.title") %></h4>
+    <p class="text-secondary"><%= t(".modules.description") %></p>
+  </div>
+
+  <%= form_with url: settings_preferences_path, method: :patch,
+        data: { controller: "auto-submit-form" } do |f| %>
+    <div class="space-y-3">
+      <% Family::AVAILABLE_MODULES.each do |module_name| %>
+        <label for="family_modules_<%= module_name %>" class="flex cursor-pointer items-center gap-4 justify-between">
+          <div class="text-sm space-y-1">
+            <h5 class="text-primary"><%= t("modules.#{module_name}.title") %></h5>
+            <p class="text-secondary"><%= t("modules.#{module_name}.description") %></p>
+          </div>
+          <%= hidden_field_tag "family[modules][#{module_name}]", "0" %>
+          <%= render DS::Toggle.new(
+                id: "family_modules_#{module_name}",
+                name: "family[modules][#{module_name}]",
+                checked: @family.module_enabled?(module_name),
+                data: { auto_submit_form_target: "auto" }
+          ) %>
+        </label>
+      <% end %>
+    </div>
+  <% end %>
+</section>

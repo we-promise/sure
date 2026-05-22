@@ -157,6 +157,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+        modules:
+          title: Feature modules
+          description: Turn whole feature verticals on or off. Existing data is preserved; toggling back on restores everything.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.

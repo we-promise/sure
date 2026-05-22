@@ -335,4 +335,12 @@ class Api::V1::BaseController < ApplicationController
         render_json({ error: "feature_disabled", message: "AI features are not enabled for this user" }, status: :forbidden)
       end
     end
+
+    # Check if a Family feature module is enabled. Mirrors `require_ai_enabled`.
+    # See docs/feature-gating.md for the three-tier gating model.
+    def require_module!(name)
+      family = Current.family || current_resource_owner&.family
+      return if family&.module_enabled?(name)
+      render_json({ error: "feature_disabled", message: "Feature module '#{name}' is disabled for this family" }, status: :forbidden)
+    end
 end

@@ -1,0 +1,6 @@
+en:
+  modules:
+    not_enabled: This feature module is disabled. Re-enable it in Settings → Preferences.
+    investments:
+      title: Investments
+      description: Track holdings, trades, and investment/crypto accounts. Disabling hides the entire investments surface; existing data is preserved.
