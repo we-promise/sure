@@ -118,4 +118,47 @@ class SidekiqHealthTest < ActiveSupport::TestCase
     assert_not health.healthy?
     assert_equal :redis_unreachable, health.reason
   end
+
+  test "current memoizes across calls inside the cache TTL" do
+    with_memory_cache do
+      stub_sidekiq(processes: [ fresh_process ], queues: [ fake_queue ])
+
+      first = SidekiqHealth.current
+      # If `current` re-queried Redis, raising from ProcessSet on the
+      # second call would surface. The cached snapshot should still be
+      # returned and stay `healthy?`.
+      Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("would explode"))
+      second = SidekiqHealth.current
+
+      assert_same first, second
+      assert second.healthy?
+    end
+  end
+
+  test "expire_cache! forces the next current call to re-query Redis" do
+    with_memory_cache do
+      stub_sidekiq(processes: [ fresh_process ], queues: [ fake_queue ])
+      first = SidekiqHealth.current
+      assert first.healthy?
+
+      stub_sidekiq(processes: [], queues: [])
+      SidekiqHealth.expire_cache!
+      second = SidekiqHealth.current
+
+      assert_not second.healthy?
+      assert_equal :no_worker_processes, second.reason
+    end
+  end
+
+  private
+    # Stubs Rails.cache with an in-process MemoryStore for the duration
+    # of the block so cache hit/miss behavior is actually exercised —
+    # test env defaults to :null_store, which would skip every `fetch`
+    # body and make caching invisible to assertions.
+    def with_memory_cache
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      yield
+    ensure
+      Rails.unstub(:cache)
+    end
 end

@@ -1,4 +1,10 @@
 <%# locals: (health:) %>
+<%#
+  Rendered only to super admins from the global layout (`_htmldoc.html.erb`).
+  Regular family members can't act on a Sidekiq outage and would just see a
+  vague warning, so we don't show them anything — the system-health page is
+  the one place this nudge points to and it's super-admin gated.
+%>
 
 <% return if health.healthy? %>
 <% reason_key = health.reason %>
@@ -13,17 +19,15 @@
     <div class="flex-1 space-y-1">
       <p class="font-semibold"><%= t("shared.sidekiq_health_banner.title") %></p>
       <p class="text-secondary"><%= t("shared.sidekiq_health_banner.body") %></p>
-      <% if Current.user&.super_admin? %>
-        <p class="text-secondary">
-          <%= t("shared.sidekiq_health_banner.reasons.#{reason_key}") if reason_key %>
-        </p>
-        <%= render DS::Link.new(
-          text: t("shared.sidekiq_health_banner.cta"),
-          variant: "ghost",
-          href: admin_system_health_path,
-          icon: "arrow-right"
-        ) %>
-      <% end %>
+      <p class="text-secondary">
+        <%= t("shared.sidekiq_health_banner.reasons.#{reason_key}") if reason_key %>
+      </p>
+      <%= render DS::Link.new(
+        text: t("shared.sidekiq_health_banner.cta"),
+        variant: "ghost",
+        href: admin_system_health_path,
+        icon: "arrow-right"
+      ) %>
     </div>
   </div>
 </div>
