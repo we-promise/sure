@@ -2,6 +2,7 @@ class Current < ActiveSupport::CurrentAttributes
   attribute :user_agent, :ip_address
 
   attribute :session
+  attribute :latest_sync_by_syncable, :latest_completed_sync_by_syncable, :syncing_by_syncable
 
   delegate :family, to: :user, allow_nil: true
 

@@ -1,8 +1,16 @@
 require "test_helper"
 
 class SyncableTest < ActiveSupport::TestCase
-  def test_preloaded_syncs_avoid_additional_queries
-    account = Account.includes(:syncs).find(accounts(:depository).id)
+  def test_current_sync_maps_avoid_additional_queries
+    account = Account.find(accounts(:depository).id)
+
+    sync = Sync.create!(syncable: account)
+    sync.start!
+
+    key = [ account.class.base_class.name, account.id ]
+    Current.latest_sync_by_syncable = { key => sync }
+    Current.latest_completed_sync_by_syncable = {}
+    Current.syncing_by_syncable = { key => true }
 
     queries = capture_sql_queries do
       account.syncing?
@@ -11,6 +19,8 @@ class SyncableTest < ActiveSupport::TestCase
     end
 
     assert_equal [], queries
+  ensure
+    Current.reset
   end
 
   private

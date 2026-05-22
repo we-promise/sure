@@ -6,6 +6,11 @@ module Syncable
   end
 
   def syncing?
+    if Current.respond_to?(:syncing_by_syncable) && (syncing_by_syncable = Current.syncing_by_syncable)
+      key = [self.class.base_class.name, id]
+      return !!syncing_by_syncable[key]
+    end
+
     if association(:syncs).loaded?
       visible_after = Sync::VISIBLE_FOR.ago
       syncs.any? { |sync| sync.in_progress? && sync.created_at > visible_after }
@@ -15,6 +20,11 @@ module Syncable
   end
 
   def latest_sync_record
+    if Current.respond_to?(:latest_sync_by_syncable) && (latest_sync_by_syncable = Current.latest_sync_by_syncable)
+      key = [self.class.base_class.name, id]
+      return latest_sync_by_syncable[key]
+    end
+
     if association(:syncs).loaded?
       syncs.max_by { |sync| [ sync.created_at, sync.id ] }
     else
@@ -23,6 +33,11 @@ module Syncable
   end
 
   def latest_completed_sync_record
+    if Current.respond_to?(:latest_completed_sync_by_syncable) && (latest_completed_sync_by_syncable = Current.latest_completed_sync_by_syncable)
+      key = [self.class.base_class.name, id]
+      return latest_completed_sync_by_syncable[key]
+    end
+
     if association(:syncs).loaded?
       syncs.select(&:completed?).max_by { |sync| [ sync.created_at, sync.id ] }
     else

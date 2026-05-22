@@ -71,6 +71,39 @@ class Sync < ApplicationRecord
       query
     end
 
+    def for_syncables(syncables)
+      syncables = Array(syncables).compact
+      return none if syncables.empty?
+
+      scope = none
+      syncables.group_by { |record| record.class.base_class.name }.each do |type, records|
+        ids = records.map(&:id)
+        scope = scope.or(where(syncable_type: type, syncable_id: ids))
+      end
+      scope
+    end
+
+    def latest_by_syncable(syncables)
+      for_syncables(syncables)
+        .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
+        .order("syncable_type, syncable_id, created_at DESC, id DESC")
+        .includes(:children)
+        .index_by { |sync| [sync.syncable_type, sync.syncable_id] }
+    end
+
+    def latest_completed_by_syncable(syncables)
+      for_syncables(syncables)
+        .completed
+        .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
+        .order("syncable_type, syncable_id, created_at DESC, id DESC")
+        .index_by { |sync| [sync.syncable_type, sync.syncable_id] }
+    end
+
+    def syncing_by_syncable(syncables)
+      keys = for_syncables(syncables).visible.distinct.pluck(:syncable_type, :syncable_id)
+      keys.index_with(true)
+    end
+
     private
       def account_syncable_ids(family, resource_owner)
         (resource_owner ? resource_owner.accessible_accounts : family.accounts)

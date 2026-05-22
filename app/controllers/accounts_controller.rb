@@ -11,20 +11,22 @@ class AccountsController < ApplicationController
           .listable_manual
           .where(id: @accessible_account_ids)
           .with_attached_logo
-          .includes(:syncs, :accountable, :account_providers, :plaid_account, :simplefin_account)
+          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
-    @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:syncs, :plaid_accounts))
-    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo.includes(:syncs))
-    @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:syncs, :lunchflow_accounts))
-    @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo.includes(:syncs))
-    @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts, :syncs))
-    @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:syncs, :mercury_accounts))
-    @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, :syncs, brex_accounts: :account_provider))
-    @coinbase_items = visible_provider_items(family.coinbase_items.ordered.with_attached_logo.includes(:coinbase_accounts, :accounts, :syncs))
-    @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.with_attached_logo.includes(:syncs, :snaptrade_accounts))
-    @ibkr_items = visible_provider_items(family.ibkr_items.ordered.with_attached_logo.includes(:syncs, :ibkr_accounts))
-    @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:syncs, :indexa_capital_accounts))
-    @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:syncs, :sophtron_accounts))
+    @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
+    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
+    @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
+    @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
+    @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
+    @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
+    @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider))
+    @coinbase_items = visible_provider_items(family.coinbase_items.ordered.with_attached_logo.includes(:coinbase_accounts, :accounts))
+    @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.with_attached_logo.includes(:snaptrade_accounts))
+    @ibkr_items = visible_provider_items(family.ibkr_items.ordered.with_attached_logo.includes(:ibkr_accounts))
+    @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
+    @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
+
+    preload_latest_sync_metadata_for_index!
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -240,6 +242,36 @@ class AccountsController < ApplicationController
         Current.user.admin? ||
           (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
+    end
+
+    def preload_latest_sync_metadata_for_index!
+      items = [
+        @plaid_items,
+        @simplefin_items,
+        @lunchflow_items,
+        @enable_banking_items,
+        @coinstats_items,
+        @mercury_items,
+        @brex_items,
+        @coinbase_items,
+        @snaptrade_items,
+        @ibkr_items,
+        @indexa_capital_items,
+        @sophtron_items
+      ].flatten.compact
+
+      accounts = @manual_accounts.to_a
+      items.each do |item|
+        next unless item.respond_to?(:accounts)
+        accounts.concat(item.accounts)
+      end
+      accounts = accounts.uniq { |account| account.id }
+
+      syncables = items + accounts
+
+      Current.latest_sync_by_syncable = Sync.latest_by_syncable(syncables)
+      Current.latest_completed_sync_by_syncable = Sync.latest_completed_by_syncable(syncables)
+      Current.syncing_by_syncable = Sync.syncing_by_syncable(syncables)
     end
 
     def build_statement_tab_data
