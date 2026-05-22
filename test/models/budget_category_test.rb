@@ -149,6 +149,18 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 0, queries
   end
 
+  test "subcategories does not query when budget is loaded via association inverse" do
+    budget = Budget.find(@budget.id)
+    budget.budget_categories.load
+
+    parent_budget_category = budget.budget_categories.find { |bc| bc.category.parent_id.nil? && bc.category_id.present? }
+    assert parent_budget_category, "expected a top-level budget category in fixtures"
+    assert_same budget, parent_budget_category.budget
+
+    queries = count_sql_queries { parent_budget_category.subcategories.to_a }
+    assert_equal 0, queries
+  end
+
   test "parent with only inheriting subcategories shares entire budget" do
     # Set subcategory_with_limit to also inherit
     @subcategory_with_limit_bc.update!(budgeted_spending: 0)

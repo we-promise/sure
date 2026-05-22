@@ -7,7 +7,7 @@ class Budget < ApplicationRecord
 
   belongs_to :family
 
-  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy, inverse_of: :budget
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: :family_id }
@@ -274,7 +274,7 @@ class Budget < ApplicationRecord
   # Budget allocations: How much user has budgeted for all parent categories combined
   # =============================================================================
   def allocated_spending
-    budget_categories.reject { |bc| bc.subcategory? }.sum(&:budgeted_spending)
+    budget_categories.reject(&:subcategory?).sum { |bc| bc.budgeted_spending || 0 }
   end
 
   def allocated_percent

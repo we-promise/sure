@@ -473,4 +473,13 @@ class BudgetTest < ActiveSupport::TestCase
     uncategorized = budget.uncategorized_budget_category
     assert_equal budget, uncategorized.budget
   end
+
+  test "allocated_spending treats nil budgeted_spending as zero" do
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+
+    budget_category = budget.budget_categories.first
+    budget_category.update!(budgeted_spending: nil)
+
+    assert_equal 0, budget.allocated_spending
+  end
 end

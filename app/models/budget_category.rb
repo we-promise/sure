@@ -1,7 +1,7 @@
 class BudgetCategory < ApplicationRecord
   include Monetizable
 
-  belongs_to :budget
+  belongs_to :budget, inverse_of: :budget_categories
   belongs_to :category
 
   validates :budget_id, uniqueness: { scope: :category_id }
