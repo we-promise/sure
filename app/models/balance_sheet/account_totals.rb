@@ -76,9 +76,12 @@ class BalanceSheet::AccountTotals
         ids = Rails.cache.read(cache_key)
 
         if ids
-          visible_accounts.where(id: ids).to_a
+          records = visible_accounts.where(id: ids).to_a
+          ActiveRecord::Associations::Preloader.new(records: records, associations: :accountable).call
+          records
         else
           records = visible_accounts.to_a
+          ActiveRecord::Associations::Preloader.new(records: records, associations: :accountable).call
           Rails.cache.write(cache_key, records.map(&:id))
           records
         end
