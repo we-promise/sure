@@ -98,11 +98,17 @@ class AuthConfig
     # Convenience lookup matching by `:name` first, then `:id`. Used by every
     # site that previously did `sso_providers.find { |p| p[:name] == … }` —
     # consolidating the lookup here keeps the matching rules in one place.
+    #
+    # The match is genuinely two-pass: a name hit anywhere in the list wins
+    # over an id hit, so a config where one provider's `id` aliases another
+    # provider's `name` can never resolve a name lookup to the wrong provider.
     def find_sso_provider(name_or_id)
       key = name_or_id.to_s
       return nil if key.blank?
 
-      sso_providers.find { |p| p[:name].to_s == key || p[:id].to_s == key }
+      providers = sso_providers
+      providers.find { |p| p[:name].to_s == key } ||
+        providers.find { |p| p[:id].to_s == key }
     end
 
     # Reset the underlying provider cache. Admin UI calls this after editing
@@ -114,7 +120,14 @@ class AuthConfig
     private
 
       def normalize_providers(providers)
-        Array(providers).map do |p|
+        return [] if providers.blank?
+
+        # Coerce a lone Hash into a single-element list. `Array(hash)` would
+        # explode it into `[[key, value], …]` pairs and silently corrupt the
+        # provider entries, so handle the Hash case explicitly.
+        providers = [ providers ] if providers.is_a?(Hash)
+
+        providers.map do |p|
           p.respond_to?(:deep_symbolize_keys) ? p.deep_symbolize_keys : p
         end
       end

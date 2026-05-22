@@ -96,6 +96,22 @@ class AuthConfigTest < ActiveSupport::TestCase
     assert_nil AuthConfig.find_sso_provider("unknown")
   end
 
+  # PR #1905 review (Codex P1): name match must win over an id match anywhere in
+  # the list, even when another provider's id aliases this lookup key — a
+  # single-pass OR could otherwise resolve a name lookup to the wrong provider.
+  test "find_sso_provider prefers a name match over an id match earlier in the list" do
+    Rails.configuration.x.auth.sso_providers = [
+      { name: "shadow", id: "authentik", strategy: "openid_connect", label: "Decoy (id alias)" },
+      { name: "authentik", id: "authentik_real", strategy: "openid_connect", label: "Real Authentik" }
+    ]
+
+    cfg = AuthConfig.find_sso_provider("authentik")
+
+    assert_equal "authentik", cfg[:name]
+    assert_equal "Real Authentik", cfg[:label],
+      "a name match must win over an id match that appears earlier in the list"
+  end
+
   test "find_sso_provider returns symbol-keyed config even when underlying source is string-keyed" do
     Rails.configuration.x.auth.sso_providers = [
       { "name" => "yaml_only", "id" => "yaml_only", "strategy" => "openid_connect", "label" => "YAML" }
@@ -111,5 +127,23 @@ class AuthConfigTest < ActiveSupport::TestCase
   test "clear_sso_provider_cache delegates to the underlying provider loader" do
     ProviderLoader.expects(:clear_cache).once
     AuthConfig.clear_sso_provider_cache
+  end
+
+  # PR #1905 review (maintainer): cover the DB branch that falls back to
+  # ProviderLoader. The other tests stub Rails.configuration directly; this one
+  # exercises the FeatureFlags → ProviderLoader path and proves normalization
+  # still applies to whatever the loader returns (string-keyed here).
+  test "sso_providers normalizes the ProviderLoader fallback when db providers are enabled" do
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    Rails.configuration.x.auth.sso_providers = []
+    ProviderLoader.stubs(:load_providers).returns([
+      { "name" => "db_loaded", "id" => "db_loaded", "strategy" => "openid_connect", "label" => "DB Loaded" }
+    ])
+
+    providers = AuthConfig.sso_providers
+
+    assert_equal 1, providers.length
+    assert_equal "db_loaded", providers.first[:name]
+    assert_nil providers.first["name"], "ProviderLoader output must be symbolized like every other source"
   end
 end
