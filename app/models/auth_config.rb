@@ -124,12 +124,12 @@ class AuthConfig
 
         # Coerce a lone Hash into a single-element list. `Array(hash)` would
         # explode it into `[[key, value], …]` pairs and silently corrupt the
-        # provider entries, so handle the Hash case explicitly.
+        # provider entries, so handle the Hash case explicitly. Every provider
+        # entry is a Hash (YAML config, the omniauth.rb runtime list, or
+        # SsoProvider#to_omniauth_config), so deep_symbolize_keys is safe.
         providers = [ providers ] if providers.is_a?(Hash)
 
-        providers.map do |p|
-          p.respond_to?(:deep_symbolize_keys) ? p.deep_symbolize_keys : p
-        end
+        providers.map(&:deep_symbolize_keys)
       end
   end
 end
