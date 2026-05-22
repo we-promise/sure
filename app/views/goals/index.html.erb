@@ -170,19 +170,21 @@
 
     <% if @archived_goals.any? %>
       <section>
-        <details class="group">
-          <summary class="inline-flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary cursor-pointer list-none">
-            <span class="text-subdued group-open:rotate-90 transition-transform"><%= icon("chevron-right", size: "sm") %></span>
-            <span><%= t(".archived_section.heading") %></span>
-            <span class="text-subdued">·</span>
-            <span class="tabular-nums"><%= @archived_goals.size %></span>
-          </summary>
+        <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <span class="inline-flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
+              <span class="text-subdued group-open:rotate-90 motion-safe:transition-transform"><%= icon("chevron-right", size: "sm") %></span>
+              <span><%= t(".archived_section.heading") %></span>
+              <span class="text-subdued">·</span>
+              <span class="tabular-nums"><%= @archived_goals.size %></span>
+            </span>
+          <% end %>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             <% @archived_goals.each do |goal| %>
               <%= render Goals::CardComponent.new(goal: goal, filterable: false) %>
             <% end %>
           </div>
-        </details>
+        <% end %>
       </section>
     <% end %>
   <% end %>
