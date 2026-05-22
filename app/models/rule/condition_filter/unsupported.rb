@@ -13,6 +13,10 @@ class Rule::ConditionFilter::Unsupported < Rule::ConditionFilter
   end
 
   def apply(scope, _operator, _value)
+    Rails.logger.warn(
+      "Rule::ConditionFilter::Unsupported applied: " \
+      "rule_id=#{rule&.id.inspect} condition_type=#{@condition_type.inspect} — matching zero records"
+    )
     scope.none
   end
 end

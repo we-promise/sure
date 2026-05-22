@@ -1,4 +1,9 @@
 class Rule::Condition < ApplicationRecord
+  # Keep in sync with the keys returned by each Rule::Registry subclass'
+  # #condition_filters (plus "compound", which is handled directly in #apply
+  # rather than via a filter). A cross-check test in
+  # test/models/rule/condition_test.rb guards against drift between this list
+  # and the registry.
   SUPPORTED_CONDITION_TYPES = %w[
     compound
     transaction_account
