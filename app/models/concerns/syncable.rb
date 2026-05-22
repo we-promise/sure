@@ -7,7 +7,7 @@ module Syncable
 
   def syncing?
     if Current.respond_to?(:syncing_by_syncable) && (syncing_by_syncable = Current.syncing_by_syncable)
-      key = [self.class.base_class.name, id]
+      key = [ self.class.base_class.name, id ]
       return !!syncing_by_syncable[key]
     end
 
@@ -21,7 +21,7 @@ module Syncable
 
   def latest_sync_record
     if Current.respond_to?(:latest_sync_by_syncable) && (latest_sync_by_syncable = Current.latest_sync_by_syncable)
-      key = [self.class.base_class.name, id]
+      key = [ self.class.base_class.name, id ]
       return latest_sync_by_syncable[key]
     end
 
@@ -34,7 +34,7 @@ module Syncable
 
   def latest_completed_sync_record
     if Current.respond_to?(:latest_completed_sync_by_syncable) && (latest_completed_sync_by_syncable = Current.latest_completed_sync_by_syncable)
-      key = [self.class.base_class.name, id]
+      key = [ self.class.base_class.name, id ]
       return latest_completed_sync_by_syncable[key]
     end
 

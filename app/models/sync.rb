@@ -88,7 +88,7 @@ class Sync < ApplicationRecord
         .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
         .order("syncable_type, syncable_id, created_at DESC, id DESC")
         .includes(:children)
-        .index_by { |sync| [sync.syncable_type, sync.syncable_id] }
+        .index_by { |sync| [ sync.syncable_type, sync.syncable_id ] }
     end
 
     def latest_completed_by_syncable(syncables)
@@ -96,7 +96,7 @@ class Sync < ApplicationRecord
         .completed
         .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
         .order("syncable_type, syncable_id, created_at DESC, id DESC")
-        .index_by { |sync| [sync.syncable_type, sync.syncable_id] }
+        .index_by { |sync| [ sync.syncable_type, sync.syncable_id ] }
     end
 
     def syncing_by_syncable(syncables)
