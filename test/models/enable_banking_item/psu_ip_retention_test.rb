@@ -40,14 +40,15 @@ class EnableBankingItem::PsuIpRetentionTest < ActiveSupport::TestCase
     end
   end
 
-  test "with_stale_psu_ip includes legacy items without last_psu_ip_at past retention" do
+  test "with_stale_psu_ip uses last_psu_ip_at not updated_at for retention" do
     travel_to Time.zone.parse("2026-05-20 12:00:00") do
-      item = EnableBankingItem.create!(@base_attrs.merge(
-        last_psu_ip: "203.0.113.3",
+      item = create_item(
+        last_psu_ip: "203.0.113.6",
+        last_psu_ip_at: 91.days.ago,
         session_id: "sess",
         session_expires_at: 30.days.from_now
-      ))
-      item.update_columns(updated_at: 91.days.ago, last_psu_ip_at: nil)
+      )
+      item.update_columns(updated_at: Time.current)
 
       assert_includes EnableBankingItem.with_stale_psu_ip, item
     end

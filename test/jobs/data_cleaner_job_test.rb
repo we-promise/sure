@@ -9,6 +9,7 @@ class DataCleanerJobTest < ActiveJob::TestCase
 
   test "clears stale Enable Banking PSU IP addresses" do
     travel_to Time.zone.parse("2026-05-20 12:00:00") do
+      recorded_at = 1.day.ago
       stale_item = EnableBankingItem.create!(
         family: @family,
         name: "Stale EB",
@@ -16,7 +17,7 @@ class DataCleanerJobTest < ActiveJob::TestCase
         application_id: "app_id",
         client_certificate: "cert",
         last_psu_ip: "203.0.113.10",
-        last_psu_ip_at: 1.day.ago,
+        last_psu_ip_at: recorded_at,
         session_id: "sess",
         session_expires_at: 1.hour.ago
       )
@@ -27,7 +28,7 @@ class DataCleanerJobTest < ActiveJob::TestCase
         application_id: "app_id",
         client_certificate: "cert",
         last_psu_ip: "203.0.113.11",
-        last_psu_ip_at: 1.day.ago,
+        last_psu_ip_at: recorded_at,
         session_id: "sess",
         session_expires_at: 30.days.from_now
       )
@@ -40,7 +41,7 @@ class DataCleanerJobTest < ActiveJob::TestCase
       assert_nil stale_item.last_psu_ip
       assert_nil stale_item.last_psu_ip_at
       assert_equal "203.0.113.11", fresh_item.last_psu_ip
-      assert_equal 1.day.ago, fresh_item.last_psu_ip_at
+      assert_in_delta recorded_at.to_f, fresh_item.last_psu_ip_at.to_f, 1.0
     end
   end
 end

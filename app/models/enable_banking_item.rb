@@ -58,8 +58,7 @@ class EnableBankingItem < ApplicationRecord
     where.not(last_psu_ip: nil).where(
       <<~SQL.squish,
         (session_expires_at IS NOT NULL AND session_expires_at <= :now)
-        OR (last_psu_ip_at IS NOT NULL AND last_psu_ip_at <= :retention)
-        OR (last_psu_ip_at IS NULL AND updated_at <= :retention)
+        OR (last_psu_ip_at <= :retention)
       SQL
       now: now,
       retention: retention
