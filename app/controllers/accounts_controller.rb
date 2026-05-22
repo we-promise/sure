@@ -309,7 +309,7 @@ class AccountsController < ApplicationController
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views
     def build_sync_stats_maps
-      manual_accounts_exist = family.accounts.listable_manual.exists?
+      manual_accounts_exist = @manual_accounts.any?
 
       # SimpleFIN sync stats
       @simplefin_sync_stats_map = {}
