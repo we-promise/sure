@@ -32,7 +32,7 @@ class SimplefinItem < ApplicationRecord
 
   # Get accounts from both new and legacy systems
   def accounts
-    @accounts ||= simplefin_accounts
+    simplefin_accounts
       .includes(:account, account_provider: :account)
       .map(&:current_account)
       .compact
