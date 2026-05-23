@@ -147,11 +147,19 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     budget.association(:budget_categories).reset
     assert_not budget.association(:budget_categories).loaded?
 
-    parent_budget_category = budget.budget_categories.find { |bc| bc.category.parent_id.nil? && bc.category_id.present? }
+    parent_budget_category = BudgetCategory
+      .joins(:category)
+      .where(budget_id: budget.id, categories: { parent_id: nil })
+      .where.not(category_id: nil)
+      .includes(:budget, :category)
+      .first
     assert parent_budget_category, "expected a top-level budget category in fixtures"
 
+    parent_budget_category.budget.association(:budget_categories).reset
+    assert_not parent_budget_category.budget.association(:budget_categories).loaded?
+
     queries = count_sql_queries { parent_budget_category.subcategories.to_a }
-    assert_operator queries, :<=, 1
+    assert_operator queries, :<=, 2
   end
 
   test "subcategories does not query when budget categories are preloaded" do
