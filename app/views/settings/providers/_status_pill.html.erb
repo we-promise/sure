@@ -1,7 +1,15 @@
 <%# locals: (status:) %>
-<% classes = status_pill_classes(status) %>
-<% dot_class, pill_class = classes[:dot], classes[:pill] %>
-<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium <%= pill_class %>">
-  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 <%= dot_class %>"></span>
-  <%= t("settings.providers.status.#{status}") %>
-</span>
+<%
+  tone = case status.to_s.to_sym
+         when :ok  then :success
+         when :warn then :warning
+         when :err  then :error
+         else :neutral
+         end
+%>
+<%= render DS::Pill.new(
+  label: t("settings.providers.status.#{status}"),
+  tone: tone,
+  marker: false,
+  size: :sm
+) %>
