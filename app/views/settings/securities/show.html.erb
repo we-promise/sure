@@ -25,10 +25,10 @@
               instead of the enable/disable form they could never submit. %>
           <p class="text-sm text-subdued"><%= t(".mfa_sso_only") %></p>
         <% elsif Current.user.otp_required? %>
-          <details class="group" <%= "open" if flash[:alert].present? %>>
-            <summary class="cursor-pointer text-sm font-medium text-destructive">
-              <%= t(".disable_mfa") %>
-            </summary>
+          <%= render DS::Disclosure.new(variant: :inline, open: flash[:alert].present?) do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <span class="text-sm font-medium text-destructive"><%= t(".disable_mfa") %></span>
+            <% end %>
             <%= styled_form_with url: disable_mfa_path, method: :delete, class: "mt-3 space-y-3", data: { turbo: false } do |f| %>
               <%= f.password_field :password,
                 required: true,
@@ -37,7 +37,7 @@
                 placeholder: t(".disable_mfa_password_placeholder") %>
               <%= f.submit t(".disable_mfa") %>
             <% end %>
-          </details>
+          <% end %>
         <% else %>
           <%= render DS::Link.new(
             text: t(".enable_mfa"),

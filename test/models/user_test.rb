@@ -723,8 +723,8 @@ class UserTest < ActiveSupport::TestCase
   test "backup code cannot be reused after verification" do
     user = users(:family_admin)
     user.setup_mfa!
-    user.enable_mfa!
-    code = user.otp_backup_codes.first
+    # enable_mfa! returns plaintext backup codes (one-time read; storage is bcrypt-hashed)
+    code = user.enable_mfa!.first
 
     assert user.verify_otp?(code)
     assert_not user.reload.verify_otp?(code), "Backup code should not be reusable"

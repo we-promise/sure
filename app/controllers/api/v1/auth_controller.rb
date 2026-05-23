@@ -12,8 +12,10 @@ module Api
       before_action :log_api_access, only: :enable_ai
 
       def signup
-        # Block signups when registration is closed (self-hosted)
-        if Rails.application.config.app_mode.self_hosted? && Setting.onboarding_state == "closed"
+        # Block signups when registration is closed. Mirror RegistrationsController
+        # which gates on onboarding_state alone (not app_mode), so the API and
+        # web flows stay aligned across hosted + self-hosted deployments.
+        if Setting.onboarding_state == "closed"
           render json: { error: "Registration is currently closed" }, status: :forbidden
           return
         end
