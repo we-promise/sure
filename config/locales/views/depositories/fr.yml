@@ -13,8 +13,8 @@ fr:
         long: Certificat de dépôt
         short: CD
       checking:
-        long: Vérification
-        short: Vérification
+        long: Compte courant
+        short: Compte courant
       hsa:
         long: Compte d'épargne santé
         short: HSA
@@ -22,5 +22,5 @@ fr:
         long: Marché monétaire
         short: MM
       savings:
-        long: Économies
-        short: Économies
+        long: Compte d'épargne
+        short: Compte d'épargne

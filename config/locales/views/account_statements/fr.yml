@@ -16,7 +16,7 @@ fr:
       status:
         ambiguous: Ambigu
         covered: Couvert
-        duplicate: Dupliquer
+        duplicate: Dupliqué
         mismatched: Incompatibilité
         missing: Manquant
         not_expected: Pas prévu
@@ -61,7 +61,7 @@ fr:
       checks:
         closing_balance: Solde de clôture
         opening_balance: Solde d'ouverture
-        period_movement: Mouvement d'époque
+        period_movement: Mouvements de la période
         unknown_check: Chèque inconnu
       matched: Correspondant
       mismatched: Incompatibilité
@@ -78,7 +78,7 @@ fr:
       difference: Différence
       download: Télécharger
       institution_name_hint: Indice d'établissement
-      ledger_amount: Bien sûr, grand livre
+      ledger_amount: Solde Sure
       link_suggestion: Suggestion de lien
       linked_to: Lié à %{account}.
       linking_title: Lien du compte
@@ -86,7 +86,7 @@ fr:
       no_suggestion: Aucune suggestion de compte pour l'instant.
       opening_balance: Solde d'ouverture
       period_end_on: Fin de période
-      period_start_on: Début des règles
+      period_start_on: Début de période
       reconciliation_title: Réconciliation
       reconciliation_unavailable: Ajoutez une période de relevé et un solde d’ouverture
         ou de clôture, puis assurez-vous que Sure dispose d’un historique de solde

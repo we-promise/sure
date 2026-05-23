@@ -46,7 +46,7 @@ fr:
         underline">SimpleFIN Bridge</a> pour créer un nouveau jeton de configuration.
       step_2: Copiez le jeton et collez-le ci-dessous
       step_3: Cliquez sur "Mettre à jour" pour restaurer l'accès
-      title: Mettre à jour la connexion SimpleFin
+      title: Mettre à jour la connexion SimpleFIN
       update: Mise à jour
     link_existing_account:
       errors:
@@ -118,7 +118,7 @@ fr:
         yesterday: hier
       cancel: Annuler
       choose_account_type: 'Choisissez le type de compte correct pour chaque compte
-        SimpleFin :'
+        SimpleFIN :'
       create_accounts: Créer des comptes
       creating_accounts: Création de comptes...
       header_subtitle: Choisissez les types de comptes corrects pour vos comptes importés
@@ -134,8 +134,8 @@ fr:
         transaction_count:
           one: "%{count} transaction"
           other: "%{count} transactions"
-      title: Configurez vos comptes SimpleFin
-      transaction_history_description_html: SimpleFin fournit généralement <strong>60
+      title: Configurez vos comptes SimpleFIN
+      transaction_history_description_html: SimpleFIN fournit généralement <strong>60
         à 90 jours</strong> d'historique des transactions, en fonction de votre banque.
         Après la configuration initiale, les nouvelles transactions seront automatiquement
         synchronisées. La disponibilité des données historiques varie selon l'institution
