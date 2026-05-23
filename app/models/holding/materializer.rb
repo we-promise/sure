@@ -57,9 +57,16 @@ class Holding::Materializer
       # Load existing holdings to check locked status and source priority
       existing_holdings_map = load_existing_holdings_map
 
-      # Separate holdings into categories based on cost_basis reconciliation
-      holdings_to_upsert_with_cost = []
-      holdings_to_upsert_without_cost = []
+      # Separate holdings into categories based on cost_basis reconciliation.
+      # Use two buffers that flush at PERSIST_BATCH_SIZE so peak memory is bounded
+      # rather than accumulating the full upsert payload before writing.
+      holdings_buffer_to_upsert_with_cost = []
+      holdings_buffer_to_upsert_without_cost = []
+
+      flush = ->(buf) do
+        account.holdings.upsert_all(buf, unique_by: %i[account_id security_id date currency])
+        buf.clear
+      end
 
       @holdings.each do |holding|
         key = holding_key(holding)
@@ -94,13 +101,15 @@ class Holding::Materializer
 
         if existing&.cost_basis_locked?
           # For locked holdings, preserve ALL cost_basis fields
-          holdings_to_upsert_without_cost << base_attrs
+          holdings_buffer_to_upsert_without_cost << base_attrs
+          flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
         elsif reconciled[:should_update] && reconciled[:cost_basis].present?
           # Update with new cost_basis and source
-          holdings_to_upsert_with_cost << base_attrs.merge(
+          holdings_buffer_to_upsert_with_cost << base_attrs.merge(
             "cost_basis" => reconciled[:cost_basis],
             "cost_basis_source" => reconciled[:cost_basis_source]
           )
+          flush.call(holdings_buffer_to_upsert_with_cost) if holdings_buffer_to_upsert_with_cost.size >= PERSIST_BATCH_SIZE
         else
           # No new calculated value — fall back to the most recent provider
           # cost_basis for this security on or before the holding date.
@@ -109,38 +118,29 @@ class Holding::Materializer
           preserve_existing = existing&.cost_basis.present? && %w[calculated manual].include?(existing_source)
 
           if preserve_existing
-            holdings_to_upsert_without_cost << base_attrs
+            holdings_buffer_to_upsert_without_cost << base_attrs
+            flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
           else
             carried = carry_forward_provider_cost_basis(holding)
 
             if carried && (existing&.cost_basis != carried || existing_source != "provider")
-              holdings_to_upsert_with_cost << base_attrs.merge(
+              holdings_buffer_to_upsert_with_cost << base_attrs.merge(
                 "cost_basis" => carried,
                 "cost_basis_source" => "provider"
               )
+              flush.call(holdings_buffer_to_upsert_with_cost) if holdings_buffer_to_upsert_with_cost.size >= PERSIST_BATCH_SIZE
             else
               # No cost_basis to set, or existing is better - don't touch cost_basis fields
-              holdings_to_upsert_without_cost << base_attrs
+              holdings_buffer_to_upsert_without_cost << base_attrs
+              flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
             end
           end
         end
       end
 
-      # Upsert with cost_basis updates
-      holdings_to_upsert_with_cost.each_slice(PERSIST_BATCH_SIZE) do |slice|
-        account.holdings.upsert_all(
-          slice,
-          unique_by: %i[account_id security_id date currency]
-        )
-      end
-
-      # Upsert without cost_basis (preserves existing)
-      holdings_to_upsert_without_cost.each_slice(PERSIST_BATCH_SIZE) do |slice|
-        account.holdings.upsert_all(
-          slice,
-          unique_by: %i[account_id security_id date currency]
-        )
-      end
+      # Flush remaining items in each buffer
+      flush.call(holdings_buffer_to_upsert_with_cost) unless holdings_buffer_to_upsert_with_cost.empty?
+      flush.call(holdings_buffer_to_upsert_without_cost) unless holdings_buffer_to_upsert_without_cost.empty?
     end
 
     def load_existing_holdings_map
