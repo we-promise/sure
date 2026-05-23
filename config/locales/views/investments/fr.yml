@@ -162,8 +162,8 @@ fr:
         long: Superannuation
         short: Super
       tax_free_bond:
-        long: Caution non imposable
-        short: Caution non imposable
+        long: Obligation non imposable
+        short: Obligation non imposable
       tfsa:
         long: Compte d'épargne libre d'impôt
         short: CELI

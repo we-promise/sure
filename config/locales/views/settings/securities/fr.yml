@@ -32,7 +32,7 @@ fr:
         webauthn_remove_confirm_body: Vous devrez enregistrer à nouveau ce mot de
           passe ou cette clé de sécurité avant de pouvoir l'utiliser pour la vérification
           de la connexion.
-        webauthn_title: Mots-clés et clés de sécurité
+        webauthn_title: Clés d'accès et clés de sécurité
         webauthn_unsupported: Ce navigateur ne prend pas en charge les mots de passe
           ou les clés de sécurité.
   webauthn_credentials:

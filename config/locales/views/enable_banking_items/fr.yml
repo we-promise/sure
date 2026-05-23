@@ -35,7 +35,7 @@ fr:
       no_accounts_found_description:
         Aucun compte n'a été trouvé à partir d'Enable
         Banking. Essayez à nouveau de synchroniser.
-      provider_name: Activer les services bancaires
+      provider_name: Enable Banking
       reconnect: Reconnecter
       set_up_accounts: Configurer des comptes
       setup_needed: Configuration nécessaire
@@ -72,7 +72,7 @@ fr:
       connection: Connexion
       go_to_provider_settings: Accédez aux paramètres du fournisseur
       link_enable_banking_title: Lier Enable Banking
-      not_configured: Activer la connexion bancaire non configurée
+      not_configured: Connexion Enable Banking non configurée
       not_configured_description:
         Avant de pouvoir associer des comptes Enable Banking,
         vous devez configurer votre connexion Enable Banking.
@@ -83,8 +83,8 @@ fr:
       session_expired: Session expirée - réautorisation requise
       session_expires: La session expire
       setup_step_1_html: Accédez à <strong>Paramètres → Fournisseurs</strong>.
-      setup_step_2_html: Recherchez la section <strong>Activer les services bancaires</strong>.
-      setup_step_3: Entrez vos identifiants Activer Banking
+      setup_step_2_html: Recherchez la section <strong>Enable Banking</strong>.
+      setup_step_3: Entrez vos identifiants Enable Banking
       setup_step_4: Revenez ici pour lier vos comptes
       setup_steps_title: "Étapes de configuration :"
       sync: Synchroniser
@@ -104,11 +104,11 @@ fr:
       search_placeholder: Recherchez votre banque...
       title: Sélectionnez votre banque
     select_existing_account:
-      all_linked: Tous les comptes Activer les services bancaires semblent déjà liés.
+      all_linked: Tous les comptes Enable Banking semblent déjà liés.
       balance: Solde
       cancel: Annuler
-      link: Lien
-      title: Lier Activer le compte bancaire
+      link: Lier
+      title: Lier le compte Enable Banking
       try_after_sync:
         Si vous venez de vous connecter ou de synchroniser, réessayez
         une fois la synchronisation terminée.
@@ -121,7 +121,7 @@ fr:
       cancel: Annuler
       choose_account_type:
         "Choisissez le type de compte correct pour chaque compte
-        Activer Banking :"
+        Enable Banking :"
       create_accounts: Créer des comptes
       creating_accounts: Création de comptes...
       header_subtitle: Choisissez les types de comptes corrects pour vos comptes importés
@@ -135,6 +135,6 @@ fr:
         Sélectionnez jusqu'où vous souhaitez synchroniser l'historique
         des transactions. Maximum 2 ans d'historique disponible.
       sync_start_date_label: "Commencez à synchroniser les transactions à partir de :"
-      title: Configurer vos comptes bancaires activés
+      title: Configurer vos comptes Enable Banking
     update:
       success: Configuration d'Enable Banking mise à jour.
