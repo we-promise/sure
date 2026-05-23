@@ -104,24 +104,26 @@ class DS::Pill < DesignSystemComponent
   def container_classes
     base = [
       "inline-flex items-center align-middle font-medium whitespace-nowrap shrink-0",
-      "border rounded-md",
-      "leading-none"
+      "border leading-none"
     ]
 
     if marker
-      # Marker mode (Beta / Canary / NEW): uppercase, sub-12px text,
-      # wider tracking. text-[10/11px] stays as arbitrary values — the
-      # pill is intentionally sub-12px (Sure's smallest scale token is
-      # text-xs / 12px) so it reads as a marker, not a label. Padding /
-      # gap / tracking snap to Tailwind's scale to satisfy the
-      # design-system "no arbitrary values" rule.
-      base << "uppercase"
+      # Marker mode (Beta / Canary / NEW): rounded-md (slight chip
+      # shape), uppercase, sub-12px text, wider tracking.
+      # text-[10/11px] stays as arbitrary values — the pill is
+      # intentionally sub-12px (Sure's smallest scale token is text-xs
+      # / 12px) so it reads as a marker, not a label. Padding / gap /
+      # tracking snap to Tailwind's scale to satisfy the design-system
+      # "no arbitrary values" rule.
+      base << "rounded-md uppercase"
       base << (size == :md ? "px-2 py-0.5 text-[11px] tracking-wide gap-1" : "px-1.5 py-0.5 text-[10px] tracking-wider gap-1")
     else
       # Badge mode (Pending / Active / Past due / category tag):
-      # normal case, snaps to the design-system text scale
-      # (`text-xs` / `text-sm`). Padding bumps slightly so the badge
-      # reads as a status chip rather than a sub-12px marker.
+      # rounded-full pill shape (matches the existing convention used
+      # by `settings/providers/_status_pill`, `_maturity_badge`, and
+      # the inline transaction badges). Normal case, snaps to the
+      # design-system text scale (`text-xs` / `text-sm`).
+      base << "rounded-full"
       base << (size == :md ? "px-2 py-0.5 text-sm gap-1.5" : "px-1.5 py-0.5 text-xs gap-1")
     end
     class_names(*base)

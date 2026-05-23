@@ -165,16 +165,11 @@
     </div>
   </div>
 
-  <!-- Pricing Information -->
-  <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-    <div class="flex items-start gap-2">
-      <%= icon "info", class: "w-5 h-5 text-blue-600 mt-0.5" %>
-      <div>
-        <p class="text-sm font-medium text-blue-900"><%= t(".cost_estimates_title") %></p>
-        <p class="text-xs text-blue-700 mt-1">
-          <%= t(".cost_estimates_description") %>
-        </p>
-      </div>
-    </div>
+  <div class="mt-6">
+    <%= render DS::Alert.new(
+      title: t(".cost_estimates_title"),
+      message: t(".cost_estimates_description"),
+      variant: :info
+    ) %>
   </div>
 </div>
