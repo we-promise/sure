@@ -475,10 +475,20 @@ class BudgetTest < ActiveSupport::TestCase
   end
 
   test "allocated_spending treats nil budgeted_spending as zero" do
-    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    category = Category.create!(
+      name: "Spending #{Time.now.to_f}",
+      family: @family,
+      color: "#bbbbbb",
+      lucide_icon: "tag"
+    )
 
-    budget_category = budget.budget_categories.first
-    budget_category.update!(budgeted_spending: nil)
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.budget_categories.load
+
+    budget_category = budget.budget_categories.find { |bc| bc.category_id == category.id }
+    assert budget_category, "expected synced budget category for created category"
+
+    budget_category[:budgeted_spending] = nil
 
     assert_equal 0, budget.allocated_spending
   end

@@ -159,7 +159,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_not parent_budget_category.budget.association(:budget_categories).loaded?
 
     queries = count_sql_queries { parent_budget_category.subcategories.to_a }
-    assert_operator queries, :<=, 2
+    assert_operator queries, :<=, 1
   end
 
   test "subcategories does not query when budget categories are preloaded" do

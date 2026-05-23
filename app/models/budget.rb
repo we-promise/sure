@@ -320,7 +320,16 @@ class Budget < ApplicationRecord
 
   private
     def budget_categories_by_parent_category_id
-      @budget_categories_by_parent_category_id ||= budget_categories.to_a.group_by { |bc| bc.category.parent_id }
+      @budget_categories_by_parent_category_id ||= begin
+        if association(:budget_categories).loaded?
+          budget_categories.to_a.group_by { |bc| bc.category.parent_id }
+        else
+          budget_categories
+            .eager_load(:category)
+            .to_a
+            .group_by { |bc| bc.association(:category).target&.parent_id }
+        end
+      end
     end
 
     def income_statement
