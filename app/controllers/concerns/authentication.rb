@@ -85,6 +85,7 @@ module Authentication
       id_token_hint
       sso_login_provider
     ].freeze
+    private_constant :SESSION_KEYS_PRESERVED_ON_RESET
 
     def reset_session_preserving_handoff
       preserved = SESSION_KEYS_PRESERVED_ON_RESET.each_with_object({}) do |k, h|

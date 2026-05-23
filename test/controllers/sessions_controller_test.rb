@@ -211,10 +211,46 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     post verify_mfa_path, params: { code: totp.now }
     assert_redirected_to root_path
 
-    # After privilege-change reset_session, OIDC logout hints must still be
-    # present so destroy can redirect to the IdP for RP-initiated logout.
+    # Positive: OIDC logout hints must still be present so destroy can redirect
+    # to the IdP for RP-initiated logout.
     assert_equal "fake-id-token-for-rp-logout", session[:id_token_hint]
     assert_equal oidc_identity.provider, session[:sso_login_provider]
+
+    # Negative: mfa_* handoff keys must be wiped after successful verification.
+    # The preserve list is intentionally narrow — anything not explicitly listed
+    # in SESSION_KEYS_PRESERVED_ON_RESET must not survive a privilege change.
+    assert_nil session[:mfa_user_id]
+    assert_nil session[:mfa_started_at]
+    assert_nil session[:mfa_attempts]
+  end
+
+  test "OIDC MFA flow enforces 5-min TTL (regression: TTL was skipped for OIDC)" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert session[:mfa_started_at].present?, "OIDC MFA handoff must seed mfa_started_at for TTL to fire"
+
+    # Travel past TTL — even a valid TOTP must be rejected and the user
+    # bounced back to sign-in. Previously the TTL was silently skipped because
+    # mfa_started_at was absent from the OIDC handoff.
+    travel_to(6.minutes.from_now) do
+      totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+      post verify_mfa_path, params: { code: totp.now }
+      assert_redirected_to new_session_path
+      assert_not Session.exists?(user_id: @user.id)
+      assert_nil session[:mfa_user_id]
+    end
   end
 
   test "redirects to account linking when no OIDC identity exists" do
