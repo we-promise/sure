@@ -100,7 +100,7 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
 
     # Mock futures trades
     provider.stubs(:get_futures_trades).returns([])
-    provider.stubs(:get_futures_trades).with("BTCUSDT", limit: 1000, from_id: nil).returns([
+    provider.stubs(:get_futures_trades).with("BTCUSDT", limit: 1000, from_id: nil, startTime: nil).returns([
       { "id" => 1, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true }
     ])
 

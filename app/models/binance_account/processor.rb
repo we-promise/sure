@@ -126,13 +126,17 @@ class BinanceAccount::Processor
       max_cached_id = cached_trades&.map { |t| t["id"].to_i }&.max
 
       from_id = max_cached_id ? max_cached_id + 1 : nil
+      start_time = nil
+      unless max_cached_id
+        start_time = binance_account.binance_item&.sync_start_date&.to_time&.to_i&.*(1000)
+      end
       all_new = []
 
       loop do
         page = if market_type == :spot
-          provider.get_spot_trades(pair, limit: limit, from_id: from_id)
+          provider.get_spot_trades(pair, limit: limit, from_id: from_id, startTime: start_time)
         else
-          provider.get_futures_trades(pair, limit: limit, from_id: from_id)
+          provider.get_futures_trades(pair, limit: limit, from_id: from_id, startTime: start_time)
         end
         break if page.blank?
 
@@ -195,7 +199,9 @@ class BinanceAccount::Processor
       current = assets.map { |a| a["symbol"] || a[:symbol] }.compact
 
       # Base symbols from previously fetched pairs (recovers sold-out assets)
-      prev_pairs = binance_account.raw_transactions_payload&.dig("spot")&.keys || []
+      prev_spot    = binance_account.raw_transactions_payload&.dig("spot")&.keys || []
+      prev_futures = binance_account.raw_transactions_payload&.dig("futures")&.keys || []
+      prev_pairs   = (prev_spot + prev_futures).uniq
       previous   = prev_pairs.map { |pair| pair.gsub(quote_re, "") }
 
       (current + previous).uniq.compact.reject { |s| s.blank? || stablecoins.include?(s) }
@@ -207,6 +213,7 @@ class BinanceAccount::Processor
       end
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - trade processing failed: #{e.message}"
+      raise
     end
 
     def process_trade(trade, pair, market_type)
@@ -283,6 +290,7 @@ class BinanceAccount::Processor
       end
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - failed to process trade #{trade["id"]}: #{e.message}"
+      raise
     end
 
     # Converts an amount denominated in quote_symbol to USD.
@@ -424,10 +432,12 @@ class BinanceAccount::Processor
           end
         rescue => e
           Rails.logger.error "BINANCE P2P SYNC CRASHED for Order #{trade["orderNumber"]}: #{e.message}"
+          raise
         end
       end
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - P2P trade processing failed: #{e.message}"
+      raise
     end
 
     def commission_in_usd(trade, base_symbol, trade_price, date: nil)

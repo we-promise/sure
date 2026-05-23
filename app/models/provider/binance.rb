@@ -153,7 +153,7 @@ class Provider::Binance
     end
 
     def timestamp_params
-      { "timestamp" => (Time.current.to_f * 1000).to_i.to_s, "recvWindow" => "60000" }
+      { "timestamp" => (Time.current.to_f * 1000).to_i.to_s, "recvWindow" => "5000" }
     end
 
     # HMAC-SHA256 of the query string.
