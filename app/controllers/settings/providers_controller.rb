@@ -194,6 +194,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
+      { key: "bitstamp",       title: "Bitstamp",        turbo_id: "bitstamp",       partial: "bitstamp_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
@@ -217,6 +218,7 @@ class Settings::ProvidersController < ApplicationController
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
+      "bitstamp"       => "BitstampItem",
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
       "ibkr"           => "IbkrItem",
@@ -250,6 +252,8 @@ class Settings::ProvidersController < ApplicationController
         @binance_items = Current.family.binance_items.active.ordered
       when "kraken"
         @kraken_items = Current.family.kraken_items.active.ordered
+      when "bitstamp"
+        @bitstamp_items = Current.family.bitstamp_items.active.ordered
       when "snaptrade"
         @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       when "ibkr"
@@ -290,6 +294,7 @@ class Settings::ProvidersController < ApplicationController
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      @bitstamp_items = Current.family.bitstamp_items.active.ordered
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -319,6 +324,7 @@ class Settings::ProvidersController < ApplicationController
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
+        "bitstamp"       => @bitstamp_items,
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,
         "ibkr"           => @ibkr_items,
