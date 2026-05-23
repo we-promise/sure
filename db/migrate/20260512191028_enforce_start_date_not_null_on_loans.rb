@@ -1,6 +1,5 @@
 class EnforceStartDateNotNullOnLoans < ActiveRecord::Migration[7.2]
   def up
-    # Sécurité : vérifier qu'il ne reste aucun NULL avant d'enforcer
     null_count = execute("SELECT COUNT(*) FROM loans WHERE start_date IS NULL")
                    .first["count"].to_i
 
