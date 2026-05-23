@@ -204,6 +204,7 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_equal I18n.t("accounts.subtype_regions.in"), first_group_label
   end
 
+<<<<<<< HEAD
   test "subtypes_grouped_for_select includes France region when country is FR" do
     grouped = Investment.subtypes_grouped_for_select(currency: "EUR", country: "FR")
     labels = grouped.map(&:first)
@@ -220,5 +221,21 @@ class InvestmentTest < ActiveSupport::TestCase
 
     assert_includes labels, eu_label
     assert_equal eu_label, labels.first
+  end
+
+  test "subtypes_grouped_for_select includes generic subtypes regardless of country or currency" do
+    generic_label = I18n.t("accounts.subtype_regions.generic")
+
+    # FR country, EUR currency
+    grouped_fr = Investment.subtypes_grouped_for_select(currency: "EUR", country: "FR")
+    assert_includes grouped_fr.map(&:first), generic_label
+
+    # US country, USD currency
+    grouped_us = Investment.subtypes_grouped_for_select(currency: "USD", country: "US")
+    assert_includes grouped_us.map(&:first), generic_label
+
+    # No country, no currency
+    grouped_none = Investment.subtypes_grouped_for_select
+    assert_includes grouped_none.map(&:first), generic_label
   end
 end
