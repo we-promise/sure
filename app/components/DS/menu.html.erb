@@ -1,6 +1,6 @@
 <%= tag.div data: { controller: "DS--menu", DS__menu_placement_value: placement, DS__menu_offset_value: offset, DS__menu_mobile_fullwidth_value: mobile_fullwidth, testid: testid } do %>
-  <% if variant == :icon %>
-    <%= render DS::Button.new(variant: "icon", icon: icon_vertical ? "more-vertical" : "more-horizontal", aria: { haspopup: "menu", expanded: "false", controls: menu_id }, data: { DS__menu_target: "button" }) %>
+  <% if icon_only? %>
+    <%= render DS::Button.new(variant: "icon", size: icon_button_size, icon: icon_vertical ? "more-vertical" : "more-horizontal", aria: { haspopup: "menu", expanded: "false", controls: menu_id }, data: { DS__menu_target: "button" }) %>
   <% elsif variant == :button %>
     <%= button %>
   <% end %>
