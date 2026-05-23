@@ -83,12 +83,20 @@ class Account < ApplicationRecord
   has_many :account_statements
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
-  delegate :subtype, to: :accountable, allow_nil: true
 
-  # Writer for subtype that delegates to the accountable
-  # This allows forms to set subtype directly on the account
+  def subtype
+    return self[:subtype] if self[:subtype].present?
+    return nil unless association(:accountable).loaded?
+
+    association(:accountable).target&.subtype
+  end
+
   def subtype=(value)
-    accountable&.subtype = value
+    self[:subtype] = value
+
+    if association(:accountable).loaded? && (target = association(:accountable).target)
+      target.subtype = value if target.respond_to?(:subtype=)
+    end
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -340,7 +348,7 @@ class Account < ApplicationRecord
 
   def manual_crypto_exchange?
     accountable_type == "Crypto" &&
-      accountable&.subtype == "exchange" &&
+      subtype == "exchange" &&
       account_providers_count.to_i.zero? &&
       plaid_account_id.blank? &&
       simplefin_account_id.blank?
