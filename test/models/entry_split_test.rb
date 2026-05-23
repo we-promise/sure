@@ -51,6 +51,22 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_equal(-30, children.last.amount)
   end
 
+  test "can split a pending transaction" do
+    @entry.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+
+    assert @entry.transaction.pending?, "transaction should be pending"
+    assert @entry.transaction.splittable?, "pending transactions should be splittable"
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    assert_equal 2, children.size
+    assert @entry.reload.split_parent?
+    assert @entry.transaction.pending?, "pending flag should still be set on the split parent"
+  end
+
   test "cannot split transfers" do
     transfer = create_transfer(
       from_account: accounts(:depository),
@@ -128,6 +144,48 @@ class EntrySplitTest < ActiveSupport::TestCase
     @entry.excluded = false
     refute @entry.valid?
     assert_includes @entry.errors[:excluded], "cannot be toggled off for a split transaction"
+  end
+
+  test "auto_exclude_stale_pending skips split-parent pending entries" do
+    @entry.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+    @entry.update!(date: 10.days.ago.to_date)
+
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+    @entry.reload
+
+    # split parent is already excluded: true; auto_exclude must not count it as "newly excluded"
+    excluded_count = Entry.auto_exclude_stale_pending(account: accounts(:depository), days: 8)
+
+    assert_equal 0, excluded_count, "split-parent pending entries should not be auto-excluded"
+    assert @entry.split_parent?, "split structure must be intact"
+    assert_equal 2, @entry.child_entries.count
+  end
+
+  test "reconcile_pending_duplicates skips split-parent pending entries" do
+    @entry.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+    @entry.reload
+
+    # Create a posted transaction that would otherwise match the pending split parent
+    posted = create_transaction(
+      amount: 100,
+      name: "Grocery Store",
+      account: accounts(:depository),
+      date: Date.current
+    )
+
+    stats = Entry.reconcile_pending_duplicates(account: accounts(:depository))
+
+    assert_equal 0, stats[:reconciled], "reconciler must skip split-parent pending entries"
+    assert @entry.split_parent?, "split structure must remain intact"
+    assert Entry.exists?(posted.id)
   end
 
   test "excluding_split_parents scope excludes parents with children" do

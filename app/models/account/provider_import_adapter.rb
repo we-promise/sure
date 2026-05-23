@@ -109,27 +109,46 @@ class Account::ProviderImportAdapter
         end
 
         if pending_match
-          old_pending_external_id = pending_match.external_id
-          pending_entry_date      = pending_match.date
-          entry = pending_match
-          entry.assign_attributes(external_id: external_id)
+          # Reload to get a consistent DB view in case a concurrent split! just ran.
+          pending_match.reload if pending_match.persisted?
 
-          # Clear the pending flag so this entry no longer shows as pending after being claimed
-          # by a booked transaction. Also record the old external_id so the sync engine can
-          # exclude it from re-import (preventing the old pending from being recreated on the
-          # next sync when the stored raw payload still contains the pending transaction data).
-          if entry.entryable.is_a?(Transaction)
-            ex = (entry.transaction.extra || {}).deep_dup
-            Transaction::PENDING_PROVIDERS.each do |provider|
-              next unless ex.key?(provider)
-              ex[provider].delete("pending")
-              ex.delete(provider) if ex[provider].empty?
+          # Split-parent pending: only auto-claim when the posted amount matches exactly.
+          # If amounts differ (tip adjustment, FX rounding, partial post), fall through so
+          # the post-save fuzzy-suggestion path stores a potential_posted_match for user review.
+          # Note: Plaid's pending_transaction_id link (priority 1 above) does NOT verify
+          # amount equality, so this gate is required for both priority-1 and priority-2 paths.
+          if pending_match.split_parent? && pending_match.amount != amount
+            Rails.logger.info(
+              "Skipping pending→posted auto-claim: entry #{pending_match.id} (#{pending_match.name}) " \
+              "is a split parent with amount #{pending_match.amount}, posted amount=#{amount}. " \
+              "Storing potential_posted_match suggestion instead."
+            )
+            pending_match = nil
+            # entry remains a new record; is_new_posted stays true so the fuzzy-suggestion
+            # block below fires after save and writes the suggestion onto the split parent.
+          else
+            old_pending_external_id = pending_match.external_id
+            pending_entry_date      = pending_match.date
+            entry = pending_match
+            entry.assign_attributes(external_id: external_id)
+
+            # Clear the pending flag so this entry no longer shows as pending after being claimed
+            # by a booked transaction. Also record the old external_id so the sync engine can
+            # exclude it from re-import (preventing the old pending from being recreated on the
+            # next sync when the stored raw payload still contains the pending transaction data).
+            if entry.entryable.is_a?(Transaction)
+              ex = (entry.transaction.extra || {}).deep_dup
+              Transaction::PENDING_PROVIDERS.each do |provider|
+                next unless ex.key?(provider)
+                ex[provider].delete("pending")
+                ex.delete(provider) if ex[provider].empty?
+              end
+              if old_pending_external_id.present?
+                existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
+                ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
+              end
+              entry.transaction.extra = ex
             end
-            if old_pending_external_id.present?
-              existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
-              ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
-            end
-            entry.transaction.extra = ex
           end
         end
       end

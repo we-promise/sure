@@ -122,7 +122,7 @@ class Entry < ApplicationRecord
   # @param days [Integer] Number of days after which pending is considered stale (default: 8)
   # @return [Integer] Number of entries excluded
   def self.auto_exclude_stale_pending(account:, days: 8)
-    stale_entries = account.entries.stale_pending(days: days).where(excluded: false)
+    stale_entries = account.entries.stale_pending(days: days).where(excluded: false).excluding_split_parents
     count = stale_entries.count
 
     if count > 0
@@ -149,7 +149,7 @@ class Entry < ApplicationRecord
       .join(" AND ")
 
     # Get pending entries to check
-    scope = Entry.pending.where(excluded: false)
+    scope = Entry.pending.where(excluded: false).excluding_split_parents
     scope = scope.where(account: account) if account
 
     scope.includes(:account, :entryable).find_each do |pending_entry|
@@ -360,6 +360,10 @@ class Entry < ApplicationRecord
 
   def split_child?
     parent_entry_id.present?
+  end
+
+  def pending_split_parent?
+    split_parent? && entryable.is_a?(Transaction) && transaction.pending?
   end
 
   # Splits this entry into child entries. Marks parent as excluded.

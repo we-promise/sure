@@ -28,13 +28,24 @@
                 </div>
               </div>
               <div class="flex items-center gap-2 mt-3">
-                <%= render DS::Button.new(
-                  text: t("transactions.show.merge_duplicate"),
-                  href: merge_duplicate_transaction_path(@entry.transaction),
-                  variant: :primary,
-                  size: :sm,
-                  data: { turbo_method: :post, turbo_frame: "_top" }
-                ) %>
+                <% if @entry.split_parent? %>
+                  <span title="<%= t("transactions.show.merge_split_parent_blocked") %>">
+                    <%= render DS::Button.new(
+                      text: t("transactions.show.merge_duplicate"),
+                      variant: :primary,
+                      size: :sm,
+                      disabled: true
+                    ) %>
+                  </span>
+                <% else %>
+                  <%= render DS::Button.new(
+                    text: t("transactions.show.merge_duplicate"),
+                    href: merge_duplicate_transaction_path(@entry.transaction),
+                    variant: :primary,
+                    size: :sm,
+                    data: { turbo_method: :post, turbo_frame: "_top" }
+                  ) %>
+                <% end %>
                 <%= render DS::Button.new(
                   text: t("transactions.show.keep_both"),
                   href: dismiss_duplicate_transaction_path(@entry.transaction),
