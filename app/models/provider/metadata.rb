@@ -13,6 +13,7 @@ class Provider
       coinbase:       { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CB", logo_bg: "bg-blue-500" },
       binance:        { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "BI", logo_bg: "bg-yellow-600" },
       kraken:         { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "KR", logo_bg: "bg-violet-600" },
+      bitstamp:       { region: "Global",  kind: "Crypto",     maturity: :beta,   logo_text: "BS", logo_bg: "bg-green-600" },
       snaptrade:      { region: "US / CA", kinds: %w[Investment],      maturity: :beta,   logo_text: "ST", logo_bg: "bg-green-600" },
       ibkr:           { region: "Global",  kinds: %w[Investment],      maturity: :beta,   logo_text: "IB", logo_bg: "bg-red-600" },
       indexa_capital: { region: "ES",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "IC", logo_bg: "bg-red-600" },
