@@ -54,13 +54,13 @@ class Loan < ApplicationRecord
   def monthly_payment
     return unless term_months && interest_rate && rate_type == "fixed"
 
-    balance_cents = original_balance.amount
+    balance_amount = original_balance.amount
     months        = term_months
     currency      = account.currency
 
-    return Money.new(0, currency) if balance_cents.zero? || months.zero?
+    return Money.new(0, currency) if balance_amount.zero? || months.zero?
 
-    balance = BigDecimal(balance_cents)
+    balance = BigDecimal(balance_amount)
     rate    = BigDecimal(interest_rate) / 1200
 
     payment =
