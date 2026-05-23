@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -71,12 +71,22 @@ jobs:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
+  play-store:
+    name: Upload Android to Google Play
+    if: ${{ needs.build.outputs.has_app_release_aab == 'true' }}
+    needs: [build, prepare_release]
+    uses: ./.github/workflows/google-play-upload.yml
+    with:
+      notes: "Mobile release ${{ needs.prepare_release.outputs.tag_name }}"
+      track: internal
+    secrets: inherit
+
   testflight:
     name: Upload iOS to TestFlight
-    needs: [build, release]
+    needs: [build, prepare_release]
     uses: ./.github/workflows/ios-testflight.yml
     with:
-      notes: "Mobile release ${{ needs.release.outputs.tag_name }}"
+      notes: "Mobile release ${{ needs.prepare_release.outputs.tag_name }}"
     secrets: inherit
 
   release:
@@ -102,13 +112,13 @@ jobs:
           echo "Extracted version: $VERSION"
 
       - name: Download Android APK artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: app-release-apk
           path: ${{ runner.temp }}/mobile-artifacts
 
       - name: Download iOS build artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: ios-build-unsigned
           path: ${{ runner.temp }}/ios-build
@@ -160,13 +170,23 @@ jobs:
             exit 1
           fi
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          mapfile -d '' -t RELEASE_ASSETS < <(
+            find "${{ runner.temp }}/release-assets" -maxdepth 1 -type f -print0
+          )
+
+          if [[ "${#RELEASE_ASSETS[@]}" -eq 0 ]]; then
+            echo "::error::No release assets were produced"
+            exit 1
+          fi
 
           cat > /tmp/release-notes.md <<NOTES
           ## Mobile-Only Release: ${VERSION}
@@ -184,20 +204,61 @@ jobs:
           # Strip heredoc indentation
           sed -i 's/^          //' /tmp/release-notes.md
 
-          PRERELEASE_FLAG=""
+          RELEASE_ARGS=(
+            "--repo"
+            "$REPO"
+            "--title"
+            "$TAG"
+            "--notes-file"
+            /tmp/release-notes.md
+          )
           if [[ "$TAG" == *"alpha"* ]] || [[ "$TAG" == *"beta"* ]] || [[ "$TAG" == *"rc"* ]]; then
-            PRERELEASE_FLAG="--prerelease"
+            RELEASE_ARGS+=("--prerelease")
           fi
 
-          gh release create "$TAG" \
-            --repo "${{ github.repository }}" \
-            --title "$TAG" \
-            --notes-file /tmp/release-notes.md \
-            $PRERELEASE_FLAG \
-            ${{ runner.temp }}/release-assets/*
+          if release_view_output="$(gh release view "$TAG" --repo "$REPO" 2>&1)"; then
+            is_immutable="$(gh release view "$TAG" --repo "$REPO" --json isImmutable --jq '.isImmutable')"
+            existing_assets="$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name')"
+            echo "Release ${TAG} already exists. Updating metadata."
+            gh release edit "$TAG" "${RELEASE_ARGS[@]}"
+
+            if [[ "$is_immutable" == "true" ]]; then
+              echo "Release is immutable. Verifying existing release assets are already present."
+              missing_assets=0
+              for asset in "${RELEASE_ASSETS[@]}"; do
+                asset_name="$(basename "$asset")"
+                if ! grep -Fxq "$asset_name" <<<"$existing_assets"; then
+                  echo "::error::Immutable release ${TAG} is missing asset: ${asset_name}"
+                  missing_assets=1
+                fi
+              done
+
+              if [[ "$missing_assets" != "0" ]]; then
+                echo "::error::Release assets cannot be changed on immutable releases. Recreate the release to update assets."
+                exit 1
+              fi
+
+              echo "Immutable release already has required assets. Skipping asset upload."
+              exit 0
+            fi
+          else
+            if ! echo "$release_view_output" | grep -Eiq "(not found|404)"; then
+              echo "::error::Failed to inspect existing release ${TAG}."
+              echo "$release_view_output"
+              exit 1
+            fi
+
+            echo "Creating release ${TAG} with attached assets."
+            gh release create "$TAG" "${RELEASE_ARGS[@]}" "${RELEASE_ASSETS[@]}"
+            exit 0
+          fi
+
+          for asset in "${RELEASE_ASSETS[@]}"; do
+            gh release upload "$TAG" "$asset" --repo "$REPO" --clobber
+          done
 
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: gh-pages
           path: gh-pages

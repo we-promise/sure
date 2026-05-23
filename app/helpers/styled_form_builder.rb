@@ -89,6 +89,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     @template.render(
       DS::Button.new(
         text: value,
+        type: "submit",
         data: (options[:data] || {}).merge({ turbo_submits_with: "Submitting..." }),
         full_width: true
       )

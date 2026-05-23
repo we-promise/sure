@@ -1,12 +1,12 @@
 <%= content_for :page_title, t(".title") %>
 
-<div class="bg-container rounded-xl shadow-border-xs p-4">
-  <div class="mb-6">
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
+  <div>
     <p class="text-sm text-secondary"><%= t(".description") %></p>
   </div>
 
   <!-- Filters -->
-  <div class="mb-6">
+  <div>
     <%= form_with url: admin_users_path, method: :get, class: "flex gap-4 items-end flex-wrap" do |f| %>
       <div class="w-full md:w-auto">
         <%= f.label :role, t(".filters.role"), class: "block text-sm font-medium text-primary mb-1" %>
@@ -33,7 +33,7 @@
   </div>
 
   <!-- Summary: trials expiring in next 7 days -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <div class="bg-container-inset rounded-lg p-4">
       <div class="flex items-center gap-2 mb-2">
         <%= icon "calendar-clock", class: "w-5 h-5 text-secondary" %>
@@ -95,7 +95,7 @@
                     <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-primary">
+                <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
                   <% users.each do |user| %>
                     <tr>
                       <td class="px-4 py-3">
@@ -137,7 +137,7 @@
                   <% end %>
                 </tbody>
                 <% if pending_invitations.any? %>
-                  <tbody class="divide-y divide-primary border-t border-dashed border-primary">
+                  <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 border-t border-dashed border-primary">
                     <% pending_invitations.each do |invitation| %>
                       <tr class="bg-red-50/30 dark:bg-red-950/20">
                         <td class="px-4 py-3">

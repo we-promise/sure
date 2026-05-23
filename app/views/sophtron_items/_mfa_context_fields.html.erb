@@ -1,0 +1,6 @@
+<%= hidden_field_tag :accountable_type, @accountable_type %>
+<%= hidden_field_tag :account_id, @account_id %>
+<%= hidden_field_tag :return_to, @return_to %>
+<%= hidden_field_tag :manual_sync, @manual_sync_flow if @manual_sync_flow.present? %>
+<%= hidden_field_tag :sync_id, @manual_sync_id if @manual_sync_id.present? %>
+<%= hidden_field_tag :sophtron_account_id, @manual_sync_sophtron_account_id if @manual_sync_sophtron_account_id.present? %>

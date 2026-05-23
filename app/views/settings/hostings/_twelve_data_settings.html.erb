@@ -45,42 +45,38 @@
                 limit: number_with_delimiter(@twelve_data_usage.data.limit),
                 percentage: number_to_percentage(@twelve_data_usage.data.utilization, precision: 1)) %>
         </p>
-        <div class="w-52 h-1.5 bg-gray-100 rounded-2xl">
+        <div class="w-52 h-1.5 bg-surface-inset rounded-2xl">
           <div class="h-full bg-green-500 rounded-2xl"
                style="width: <%= [@twelve_data_usage.data.utilization, 2].max %>%;"></div>
         </div>
       </div>
-      <div class="bg-gray-100 rounded-md px-1.5 py-0.5 w-fit">
+      <div class="bg-surface-inset rounded-md px-1.5 py-0.5 w-fit">
         <p class="text-xs font-medium text-secondary uppercase">
           <%= t(".plan", plan: @twelve_data_usage.data.plan) %>
         </p>
       </div>
 
       <% if @plan_restricted_securities.present? %>
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
-          <div class="flex items-start gap-2">
-            <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5") %>
-            <div class="text-sm">
-              <p class="font-medium text-amber-800"><%= t(".plan_upgrade_warning_title") %></p>
-              <p class="text-amber-700 mt-1"><%= t(".plan_upgrade_warning_description") %></p>
-              <ul class="mt-2 space-y-1">
-                <% @plan_restricted_securities.each do |security| %>
-                  <li class="text-amber-700">
-                    <span class="font-medium"><%= security[:ticker] %></span>
-                    <% if security[:name].present? %>
-                      <span class="text-amber-600">(<%= security[:name] %>)</span>
-                    <% end %>
-                    <span class="text-amber-600">— <%= t(".requires_plan", plan: security[:required_plan]) %></span>
-                  </li>
-                <% end %>
-              </ul>
-              <p class="mt-2">
-                <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener noreferrer" class="text-amber-800 underline font-medium">
-                  <%= t(".view_pricing") %>
-                </a>
-              </p>
-            </div>
-          </div>
+        <div class="mt-4">
+          <%= render DS::Alert.new(title: t(".plan_upgrade_warning_title"), variant: :warning) do %>
+            <p><%= t(".plan_upgrade_warning_description") %></p>
+            <ul class="space-y-1">
+              <% @plan_restricted_securities.each do |security| %>
+                <li>
+                  <span class="font-medium text-primary"><%= security[:ticker] %></span>
+                  <% if security[:name].present? %>
+                    <span class="text-secondary">(<%= security[:name] %>)</span>
+                  <% end %>
+                  <span class="text-secondary">— <%= t(".requires_plan", plan: security[:required_plan]) %></span>
+                </li>
+              <% end %>
+            </ul>
+            <p>
+              <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener noreferrer" class="text-link underline font-medium">
+                <%= t(".view_pricing") %>
+              </a>
+            </p>
+          <% end %>
         </div>
       <% end %>
     </div>

@@ -45,7 +45,7 @@
     <%= button_to t("holdings.show.market_data_sync_button"),
         sync_prices_holding_path(@holding),
         method: :post,
-        class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+        class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover",
         data: { loading_button_target: "button" },
         form: { data: {
           controller: "loading-button",

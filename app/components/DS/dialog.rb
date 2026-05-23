@@ -2,7 +2,11 @@ class DS::Dialog < DesignSystemComponent
   renders_one :header, ->(title: nil, subtitle: nil, custom_header: false, **opts, &block) do
     content_tag(:header, class: "px-4 flex flex-col gap-2", **opts) do
       title_div = content_tag(:div, class: "flex items-center justify-between gap-2") do
-        title = content_tag(:h2, title, class: class_names("font-medium text-primary", drawer? ? "text-lg" : "")) if title
+        # `id: title_id` lets the host `<dialog>` reference the title via
+        # `aria-labelledby` so AT users hear the title when focus lands
+        # in the dialog. `content_tag("h#{heading_level}", ...)` builds an
+        # h2/h3/etc based on the caller's `heading_level:`.
+        title = content_tag("h#{heading_level}", title, id: title_id, class: class_names("font-medium text-primary", drawer? ? "text-lg" : "")) if title
         close_icon = close_button unless custom_header
         safe_join([ title, close_icon ].compact)
       end
@@ -33,7 +37,7 @@ class DS::Dialog < DesignSystemComponent
     end
   end
 
-  attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :disable_click_outside, :opts, :responsive, :scrollable
+  attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :disable_click_outside, :opts, :responsive, :scrollable, :heading_level, :title_id
 
   VARIANTS = %w[modal drawer].freeze
   WIDTHS = {
@@ -42,8 +46,13 @@ class DS::Dialog < DesignSystemComponent
     lg: "lg:max-w-[700px]",
     full: "lg:max-w-full"
   }.freeze
+  VALID_HEADING_LEVELS = (1..6).freeze
 
-  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, disable_click_outside: false, responsive: false, scrollable: true, **opts)
+  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, disable_click_outside: false, responsive: false, scrollable: true, heading_level: 2, **opts)
+    unless heading_level.is_a?(Integer) && VALID_HEADING_LEVELS.cover?(heading_level)
+      raise ArgumentError, "heading_level must be an Integer between 1 and 6, got: #{heading_level.inspect}"
+    end
+
     @variant = variant.to_sym
     @auto_open = auto_open
     @reload_on_close = reload_on_close
@@ -54,6 +63,8 @@ class DS::Dialog < DesignSystemComponent
     @disable_click_outside = disable_click_outside
     @responsive = responsive
     @scrollable = scrollable
+    @heading_level = heading_level
+    @title_id = "dialog-title-#{SecureRandom.hex(4)}"
     @opts = opts
   end
 
@@ -133,8 +144,8 @@ class DS::Dialog < DesignSystemComponent
       variant: "icon",
       class: classes,
       icon: "x",
-      title: I18n.t("common.close"),
-      aria_label: I18n.t("common.close"),
+      title: I18n.t("ds.dialog.close"),
+      aria_label: I18n.t("ds.dialog.close"),
       data: { action: "DS--dialog#close" }
     )
   end

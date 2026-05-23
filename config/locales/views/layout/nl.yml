@@ -3,6 +3,7 @@ nl:
   layouts:
     application:
       privacy_mode: Privacymodus in-/uitschakelen
+      skip_to_main: Ga naar hoofdinhoud
       nav:
         assistant: Assistent
         budgets: Budgetten

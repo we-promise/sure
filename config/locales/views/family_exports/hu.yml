@@ -1,0 +1,43 @@
+---
+hu:
+  family_exports:
+    access_denied: Hozzáférés megtagadva
+    create:
+      success: Az exportálás elindult. Hamarosan letöltheted.
+    delete_confirmation: Biztosan törlöd ezt az exportot? Ez a művelet nem vonható vissza.
+    delete_failed_confirmation: Biztosan törlöd ezt a sikertelen exportot?
+    destroy:
+      success: Az export sikeresen törölve
+    export_not_ready: Az export még nem áll készen a letöltésre
+    exporting: Exportálás folyamatban...
+    new:
+      dialog_title: Adataid exportálása
+      dialog_subtitle: Töltsd le az összes pénzügyi adatodat
+      whats_included: "Mi kerül bele:"
+      accounts_and_balances: Összes számla és egyenleg
+      transaction_history: Tranzakciótörténet
+      investment_trades: Befektetési ügyletek
+      categories_tags_rules: Kategóriák, címkék és szabályok
+      note_label: Megjegyzés
+      note_description: Ez az export tartalmazza az összes adatodat, de csak egy részük importálható vissza a CSV importálás funkcióval. Számlák, tranzakciók (kategóriával és címkékkel) és kereskedések importálása támogatott. Más számlaadat nem importálható, csak nyilvántartás céljából szerepel.
+      cancel: Mégse
+      export_data: Adatok exportálása
+    index:
+      title: Exportok
+      new: Új export
+    table:
+      title: Exportok
+      header:
+        date: Dátum
+        filename: Fájlnév
+        status: Állapot
+        actions: Műveletek
+      row:
+        status:
+          in_progress: Folyamatban
+          complete: Kész
+          failed: Sikertelen
+        actions:
+          delete: Törlés
+          download: Letöltés
+      empty: Még nincsenek exportok.

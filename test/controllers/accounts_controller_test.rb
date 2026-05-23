@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
+
   setup do
     sign_in @user = users(:family_admin)
     @account = accounts(:depository)
@@ -9,11 +11,99 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get accounts_url
     assert_response :success
+    assert_select "p.ml-auto.privacy-sensitive"
   end
 
   test "should get show" do
     get account_url(@account)
     assert_response :success
+  end
+
+  test "show lazily loads statement tab data unless statements tab is active" do
+    AccountStatement::Coverage.expects(:for_year).never
+    AccountStatement.expects(:reconciliation_statuses_for).never
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "select[name='statement_year']", count: 0
+    statements_path = account_path(@account, tab: "statements")
+    assert_select "turbo-frame[src='#{statements_path}']"
+  end
+
+  test "statements tab shows coverage and upload for statement managers with account write access" do
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file][accept='.pdf,.csv,.xlsx']"
+    assert_select "select[name='statement_year']"
+    assert_select "p", text: I18n.l(Date.current.prev_month.beginning_of_month, format: "%b %Y")
+  end
+
+  test "statements tab lazy frame returns matching frame content" do
+    frame_id = dom_id(@account, :statements_tab)
+
+    get account_url(@account, tab: "statements"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "select[name='statement_year']"
+    assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
+  end
+
+  test "statements tab filters historical coverage by year" do
+    account = Account.create!(
+      family: @user.family,
+      owner: @user,
+      name: "Historical Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: account,
+      file: uploaded_file(filename: "historical.csv", content_type: "text/csv")
+    )
+    statement.update!(period_start_on: Date.new(2024, 2, 1), period_end_on: Date.new(2024, 2, 29))
+
+    travel_to Date.new(2026, 5, 6) do
+      get account_url(account, tab: "statements")
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2026"
+      assert_select "p", text: "May 2026"
+      assert_select "p", text: "Not expected"
+
+      get account_url(account, tab: "statements", statement_year: 2024)
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2024"
+      assert_select "p", text: "Jan 2024"
+      assert_select "p", text: "Feb 2024"
+      assert_select "p", text: "Covered"
+      assert_select "p", text: "Missing"
+      assert_select "p", text: "Not expected"
+    end
+  end
+
+  test "statements tab hides upload for read only account access" do
+    sign_in users(:family_member)
+
+    get account_url(accounts(:credit_card), tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file]", count: 0
+  end
+
+  test "account activity marks trade amounts as privacy-sensitive" do
+    trade_entry = entries(:trade)
+    expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do
@@ -35,6 +125,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href*='page=2'][href*='tab=activity']"
     assert_select "a[href*='page=2'][href*='tab=holdings']", count: 0
+  end
+
+  test "account activity constrains long category labels before the amount on wide screens" do
+    category = categories(:food_and_drink)
+    category.update!(name: "Super Long Category Name That Should Stop Before The Amount On Wide Screens Too")
+
+    entry = @account.entries.create!(
+      name: "Wide category verification",
+      date: Date.current,
+      amount: 187.65,
+      currency: @account.currency,
+      entryable: Transaction.new(category: category)
+    )
+
+    get account_url(@account, tab: "activity")
+
+    assert_response :success
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}.min-w-0"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}.overflow-hidden"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.block"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.w-full"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.overflow-hidden"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} [data-testid='category-name']"
+    assert_select "div.hidden.md\\:flex.min-w-0"
   end
 
   test "should sync account" do

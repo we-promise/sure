@@ -44,6 +44,34 @@ class MercuryAccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "same account_id can be linked under different mercury_items in the same family" do
+    item_a_2 = MercuryItem.create!(
+      family: @family_a,
+      name: "Family A Second Mercury",
+      token: "token_a_2",
+      base_url: "https://api-sandbox.mercury.com/api/v1",
+      status: "good"
+    )
+
+    MercuryAccount.create!(
+      mercury_item: @item_a,
+      account_id: "shared_merc_acc_1",
+      name: "Checking",
+      currency: "USD",
+      current_balance: 5000
+    )
+
+    assert_difference "MercuryAccount.count", 1 do
+      MercuryAccount.create!(
+        mercury_item: item_a_2,
+        account_id: "shared_merc_acc_1",
+        name: "Checking",
+        currency: "USD",
+        current_balance: 5000
+      )
+    end
+  end
+
   test "same account_id cannot appear twice under the same mercury_item" do
     MercuryAccount.create!(
       mercury_item: @item_a,

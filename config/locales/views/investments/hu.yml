@@ -1,0 +1,189 @@
+---
+hu:
+  investments:
+    edit:
+      edit: '%{account} szerkesztése'
+    form:
+      none: Nincs
+      subtype_prompt: Válassz befektetéstípust
+    new:
+      title: Add meg a számlaegyenleget
+    show:
+      chart_title: Teljes értéke
+    subtypes:
+      brokerage:
+        short: Brókerzámla
+        long: Brókerzámla
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Traditional IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 Plan
+        long: 529 oktatási megtakarítási terv
+      hsa:
+        short: HSA
+        long: Egészségmegtakarítási számla
+      ugma:
+        short: UGMA
+        long: UGMA letéti számla
+      utma:
+        short: UTMA
+        long: UTMA letéti számla
+      isa:
+        short: ISA
+        long: Individual Savings Account
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension
+      workplace_pension_uk:
+        short: Nyugdíjalap
+        long: Munkahelyi nyugdíjalap
+      rrsp:
+        short: RRSP
+        long: Regisztrált nyugdíj-megtakarítási terv
+      tfsa:
+        short: TFSA
+        long: Adómentes megtakarítási számla
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pillar 3a
+        long: Magánnyugdíj (3a pillér)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      pension:
+        short: Nyugdíjalap
+        long: Nyugdíjalap
+      retirement:
+        short: Nyugdíj
+        long: Nyugdíjszámla
+      mutual_fund:
+        short: Befektetési alap
+        long: Befektetési alap
+      angel:
+        short: Angyal
+        long: Angyal-befektetés
+      nps:
+        short: NPS
+        long: Nemzeti Nyugdíjrendszer
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Indiai részvények
+        long: Indiai részvények (Demat)
+      indian_equity:
+        short: Indiai tőke
+        long: Indiai tőke
+      indian_etf:
+        short: Indiai ETF
+        long: Indiai ETF
+      life_insurance:
+        short: Életbiztosítás
+        long: Életbiztosítás
+      ppf:
+        short: PPF
+        long: Közszféra megtakarítási alap
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: Nemzeti megtakarítási igazolás
+      scss:
+        short: SCSS
+        long: Idősek megtakarítási rendszere
+      fd:
+        short: FD
+        long: Lekötött betét
+      rd:
+        short: RD
+        long: Ismétlődő betét
+      pomis:
+        short: POMIS
+        long: Postai havi jövedelmi program
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: Arany ETF
+        long: Arany ETF
+      gold_mf:
+        short: Arany befektetési alap
+        long: Arany befektetési alap
+      sgb:
+        short: SGB
+        long: Szuverén aranykötvény
+      g_sec:
+        short: G-Sec
+        long: Állampapírok
+      sdl:
+        short: SDL
+        long: Állami fejlesztési kötvények
+      corporate_bond:
+        short: Vállalati kötvény
+        long: Vállalati kötvény
+      infrastructure_bond:
+        short: Infrastrukturális kötvény
+        long: Infrastrukturális kötvény
+      tax_free_bond:
+        short: Adómentes kötvény
+        long: Adómentes kötvény
+      gold:
+        short: Arany
+        long: Arany (fizikai vagy digitális)
+      trust:
+        short: Bizalmi alap
+        long: Bizalmi alap
+      other:
+        short: Egyéb
+        long: Egyéb befektetés
+    value_tooltip:
+      cash: Készpénz
+      holdings: Portfólió
+      total: Portfólió egyenlege
+      total_value_tooltip: A teljes portfólió egyenlege a brókerzámlán lévő készpénz (kereskedésre rendelkezésre álló) és a portfólió aktuális piaci értékének összege.

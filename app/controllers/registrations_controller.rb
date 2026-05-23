@@ -6,7 +6,6 @@ class RegistrationsController < ApplicationController
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
-  before_action :claim_invite_code, only: :create, if: :invite_code_required?
   before_action :validate_password_requirements, only: :create
 
   def new
@@ -29,10 +28,10 @@ class RegistrationsController < ApplicationController
       @user.role = User.role_for_new_family_creator
     end
 
-    if @user.save
-      @invitation&.update!(accepted_at: Time.current)
-      @session = create_session_for(@user)
+    if signup_with_invite_claim!
       redirect_to root_path, notice: t(".success")
+    elsif @invite_code_invalid
+      redirect_to new_registration_path, alert: t("registrations.create.invalid_invite_code")
     else
       render :new, status: :unprocessable_entity, alert: t(".failure")
     end
@@ -55,10 +54,30 @@ class RegistrationsController < ApplicationController
       specific_param ? params[specific_param] : params
     end
 
-    def claim_invite_code
-      unless InviteCode.claim! params[:user][:invite_code]
-        redirect_to new_registration_path, alert: t("registrations.create.invalid_invite_code")
+    # Keep save+claim atomic so failed signups never burn valid invite codes.
+    def signup_with_invite_claim!
+      invite_code = user_params[:invite_code]
+      @invite_code_invalid = invite_code_required? && invite_code.blank?
+      return false if @invite_code_invalid
+
+      success = false
+
+      ActiveRecord::Base.transaction do
+        unless @user.save
+          raise ActiveRecord::Rollback
+        end
+
+        if invite_code_required? && !InviteCode.claim!(invite_code)
+          @invite_code_invalid = true
+          raise ActiveRecord::Rollback
+        end
+
+        @invitation&.update!(accepted_at: Time.current)
+        @session = create_session_for(@user)
+        success = true
       end
+
+      success
     end
 
     def validate_password_requirements

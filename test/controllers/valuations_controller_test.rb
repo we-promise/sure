@@ -50,4 +50,31 @@ class ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 22000, @entry.amount
     assert_equal "Test notes", @entry.notes
   end
+
+  test "confirm_create with blank amount returns unprocessable entity" do
+    account = accounts(:investment)
+
+    post confirm_create_valuations_url, params: {
+      entry: {
+        amount: "",
+        date: Date.current.to_s,
+        account_id: account.id
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("valuations.errors.amount_required"), response.body
+  end
+
+  test "confirm_update with blank amount returns unprocessable entity" do
+    post confirm_update_valuation_url(@entry), params: {
+      entry: {
+        amount: "",
+        date: Date.current.to_s
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("valuations.errors.amount_required"), response.body
+  end
 end

@@ -1,0 +1,8 @@
+---
+en:
+  chat:
+    errors:
+      rate_limited: "The AI provider is rate limited right now. Please try again in a few minutes."
+      temporarily_unavailable: "The AI provider is temporarily unavailable right now. Please try again in a few minutes."
+      misconfigured: "The AI provider is not configured correctly. Please contact your administrator."
+      default: "Failed to generate a response. Please try again."

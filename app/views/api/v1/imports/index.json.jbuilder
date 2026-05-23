@@ -8,6 +8,9 @@ json.data do
     json.account_id import.account_id
     json.rows_count import.rows_count
     json.error import.error if import.error.present?
+    json.status_detail do
+      json.partial! "status_detail", import: import, include_validation_stats: false
+    end
   end
 end
 

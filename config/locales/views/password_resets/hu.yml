@@ -1,0 +1,15 @@
+---
+hu:
+  password_resets:
+    disabled: A jelszó-visszaállítás a Sure-n keresztül le van tiltva. Kérjük, állítsd vissza a jelszavadat az identitásszolgáltatódon keresztül.
+    sso_only_user: A fiókod egyszeri bejelentkezést használ hitelesítéshez. Kérjük, lépj kapcsolatba a rendszergazdával a hitelesítési adatok kezeléséhez.
+    edit:
+      title: Jelszó visszaállítása
+    new:
+      requested: Kérjük, ellenőrizd az e-mailedet, ahol megtalálod a jelszó-visszaállításhoz szükséges linket.
+      submit: Jelszó visszaállítása
+      title: Jelszó visszaállítása
+      back: Vissza
+    update:
+      invalid_token: Érvénytelen token.
+      success: A jelszavad sikeresen visszaállítva.

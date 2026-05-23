@@ -1,0 +1,24 @@
+<div class="flex flex-wrap items-center gap-2.5 mt-5 mb-3">
+  <%= render DS::SearchInput.new(
+    class: "flex-1 min-w-[200px]",
+    placeholder: t("settings.providers.search_filters.placeholder"),
+    aria_label: t("settings.providers.search_filters.aria_label"),
+    data: {
+      providers_filter_target: "input",
+      action: "input->providers-filter#filter"
+    }
+  ) %>
+  <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
+    <% %w[all bank crypto investment].each do |kind| %>
+      <% active = kind == "all" %>
+      <button type="button"
+              data-providers-filter-target="chip"
+              data-action="click->providers-filter#selectChip"
+              data-kind="<%= kind %>"
+              aria-pressed="<%= active %>"
+              class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100 <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
+        <%= t("settings.providers.search_filters.chips.#{kind}") %>
+      </button>
+    <% end %>
+  </div>
+</div>

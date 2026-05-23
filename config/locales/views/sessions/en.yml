@@ -16,6 +16,8 @@ en:
       sso_provider_unavailable: "The SSO provider is currently unavailable. Please try again later or contact an administrator."
       sso_invalid_response: "Received an invalid response from the SSO provider. Please try again."
       sso_failed: "Single sign-on authentication failed. Please try again."
+    mobile_sso_start:
+      redirecting_html: "Redirecting to sign in... <a href=\"%{url}\">Click here</a> if not redirected."
     new:
       email: Email address
       email_placeholder: you@example.com

@@ -1,0 +1,5 @@
+---
+hu:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} meghívott, hogy csatlakozz a háztartásához a %{product_name} alkalmazásban!"
