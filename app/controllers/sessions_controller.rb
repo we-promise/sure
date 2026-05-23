@@ -183,7 +183,12 @@ class SessionsController < ApplicationController
 
       # MFA check: If user has MFA enabled, require verification
       if user.otp_required?
+        # Mirror the local-password MFA handoff so verify_code's TTL + attempt
+        # limit are actually enforced for OIDC logins (otherwise mfa_started_at
+        # is absent and the 5-min TTL check is silently skipped).
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
         reset_session_preserving_pending_invitation # FIX-01 + preserve invitation token

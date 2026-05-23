@@ -73,11 +73,30 @@ module Authentication
     # pre-login. `reset_session` clears everything by default, which would drop
     # a legitimate pending invitation before `accept_pending_invitation_for`
     # could use it.
-    def reset_session_preserving_pending_invitation
-      pending_invitation = session[:pending_invitation_token]
+    # Keys preserved across a privilege-change `reset_session`:
+    # - pending_invitation_token: must survive so accept_pending_invitation_for
+    #   can still honour an invite that the user followed before signing in.
+    # - id_token_hint / sso_login_provider: required for RP-initiated federated
+    #   logout. Set on OIDC sign-in BEFORE the privilege-change reset (so the
+    #   provider data exists to be preserved here). Without preserving them,
+    #   federated logout falls back to local-only, breaking IdP single sign-out.
+    SESSION_KEYS_PRESERVED_ON_RESET = %i[
+      pending_invitation_token
+      id_token_hint
+      sso_login_provider
+    ].freeze
+
+    def reset_session_preserving_handoff
+      preserved = SESSION_KEYS_PRESERVED_ON_RESET.each_with_object({}) do |k, h|
+        v = session[k]
+        h[k] = v if v.present?
+      end
       reset_session
-      session[:pending_invitation_token] = pending_invitation if pending_invitation
+      preserved.each { |k, v| session[k] = v }
     end
+
+    # Backwards-compatible alias. Prefer `reset_session_preserving_handoff`.
+    alias_method :reset_session_preserving_pending_invitation, :reset_session_preserving_handoff
 
     def create_session_for(user)
       session = user.sessions.create!

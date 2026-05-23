@@ -20,7 +20,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:openid_connect] = nil
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
@@ -29,7 +29,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
+      }.compact,
+      credentials: id_token ? { id_token: id_token } : {}
     })
   end
 
@@ -180,7 +181,40 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to verify_mfa_path
     assert_equal @user.id, session[:mfa_user_id]
+    # Invariant: OIDC MFA handoff must set TTL + attempt counter so verify_code
+    # actually enforces them (otherwise the 5-min TTL is silently skipped).
+    assert session[:mfa_started_at].present?, "OIDC MFA handoff must set mfa_started_at for TTL enforcement"
+    assert_equal 0, session[:mfa_attempts]
     assert_not Session.exists?(user_id: @user.id)
+  end
+
+  test "OIDC logout hints survive MFA verification (federated logout works post-MFA)" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "fake-id-token-for-rp-logout"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert_equal "fake-id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    # After privilege-change reset_session, OIDC logout hints must still be
+    # present so destroy can redirect to the IdP for RP-initiated logout.
+    assert_equal "fake-id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
   end
 
   test "redirects to account linking when no OIDC identity exists" do
