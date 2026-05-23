@@ -8,6 +8,12 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+  LEVERAGE_BANDS = {
+  conservative: 0..4,
+  moderate: 4..8,
+  high: 8..
+  }.freeze
+
   before_validation :set_default_start_date, on: :create
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
@@ -186,6 +192,13 @@ class Loan < ApplicationRecord
     return unless dp&.positive?
 
     original_balance.to_f.fdiv(dp)
+  end
+
+  def leverage_band
+    ratio = initial_leverage_ratio
+    return unless ratio
+
+    LEVERAGE_BANDS.find { |_, range| range.cover?(ratio) }&.first
   end
 
   class << self

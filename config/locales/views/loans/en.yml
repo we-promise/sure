@@ -56,6 +56,10 @@ en:
         unknown: Unknown
         already_paid_html: "You have already repaid %{percentage} of your loan"
         initial_leverage: Initial leverage
+        leverage_bands:
+          conservative: Defensive
+          moderate: Moderate
+          high: Aggressive
         debt_over_down_payment: Debt / down payment
         total_cost: Total cost
         principal: Principal

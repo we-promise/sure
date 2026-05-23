@@ -71,26 +71,27 @@
     <% end %>
 
     <%= summary_card title: t(".initial_leverage") do %>
-      <% if (ratio = loan.initial_leverage_ratio).present? %>
-        <% color =
-          if ratio < 4
-            "text-success"
-          elsif ratio < 8
-            "text-accent"
-          else
-            "text-destructive"
-          end
-        %>
+      <% if (band = loan.leverage_band) %>
+        <% ratio = loan.initial_leverage_ratio %>
+        <% color = {
+            conservative: "text-success",
+            moderate:     "text-accent",
+            high:         "text-destructive"
+          }.fetch(band) %>
         <div class="text-2xl font-semibold <%= color %>">
           <%= number_with_precision(ratio, precision: 1) %>x
         </div>
-        <div class="text-xs text-secondary">
+        <div class="text-xs font-medium <%= color %> mt-0.5">
+          <%= t(".leverage_bands.#{band}") %>
+        </div>
+        <div class="text-xs text-secondary mt-1">
           <%= t(".debt_over_down_payment") %>
         </div>
       <% else %>
         <%= t(".unknown") %>
       <% end %>
     <% end %>
+
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -53,6 +53,10 @@ fr:
         unknown: Inconnu
         already_paid_html: "Vous avez déjà remboursé %{percentage} de votre prêt"
         initial_leverage: Effet de levier initial
+        leverage_bands:
+          conservative: Défensif
+          moderate: Modéré
+          high: Aggressif        
         debt_over_down_payment: Dette / apport
         total_cost: Coût total
         principal: Capital
