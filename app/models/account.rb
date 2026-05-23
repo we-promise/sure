@@ -85,17 +85,25 @@ class Account < ApplicationRecord
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
 
   def subtype
-    return self[:subtype] if self[:subtype].present?
-    return nil unless association(:accountable).loaded?
+    if association(:accountable).loaded?
+      return association(:accountable).target&.subtype
+    end
 
-    association(:accountable).target&.subtype
+    return self[:subtype] if self[:subtype].present?
+
+    return @subtype_from_accountable if defined?(@subtype_from_accountable)
+
+    @subtype_from_accountable = accountable&.subtype
   end
 
   def subtype=(value)
     self[:subtype] = value
+    remove_instance_variable(:@subtype_from_accountable) if defined?(@subtype_from_accountable)
 
     if association(:accountable).loaded? && (target = association(:accountable).target)
-      target.subtype = value if target.respond_to?(:subtype=)
+      if target.respond_to?(:subtype=) && (value.present? || target.subtype.blank?)
+        target.subtype = value
+      end
     end
   end
 
