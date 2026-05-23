@@ -31,7 +31,7 @@ class DS::Menu < DesignSystemComponent
 
   renders_many :items, DS::MenuItem
 
-  VARIANTS = %i[icon button].freeze
+  VARIANTS = %i[icon icon_sm button].freeze
 
   def initialize(variant: "icon", placement: "bottom-end", offset: 12, icon_vertical: false, no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil)
     @variant = variant.to_sym
@@ -45,5 +45,23 @@ class DS::Menu < DesignSystemComponent
     @menu_id = "menu-#{SecureRandom.hex(4)}"
 
     raise ArgumentError, "Invalid variant: #{@variant}. DS::Menu is for action lists only; use DS::Popover for mixed content (forms, pickers, account dropdowns)." unless VARIANTS.include?(@variant)
+  end
+
+  # `:icon_sm` renders the dropdown trigger as a 32x32 icon button (DS::Button
+  # `size: :sm`) instead of the default 44x44 `:md`. Use for action menus
+  # embedded in dense lists (e.g. the category dropdown row trigger) where the
+  # 44x44 enhanced-touch-target trigger introduced in #1840 makes every row
+  # ~8px taller and the cumulative list height regresses visibly.
+  #
+  # Trade-off: the `sm` icon button is 32x32, which meets WCAG 2.5.8 AA
+  # (24x24) but not 2.5.5 AAA enhanced (44x44). Acceptable for compact
+  # dropdown rows that aren't primary touch surfaces; do not use on
+  # standalone toolbar / row-action triggers where 44x44 should remain.
+  def icon_only?
+    variant == :icon || variant == :icon_sm
+  end
+
+  def icon_button_size
+    variant == :icon_sm ? "sm" : "md"
   end
 end

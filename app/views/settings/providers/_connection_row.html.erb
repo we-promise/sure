@@ -6,7 +6,7 @@
   border_class  =
     case status
     when :warn then "border border-warning/25"
-    when :err  then "border border-destructive/25"
+    when :err  then "border border-destructive-subtle"
     else            "border border-transparent"
     end
   sync_action   = entry[:partial].present? ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: last_synced) : nil
