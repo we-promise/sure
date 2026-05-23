@@ -1,6 +1,11 @@
 # "Materializes" holdings (similar to a DB materialized view, but done at the app level)
 # into a series of records we can easily query and join with other data.
 class Holding::Materializer
+  # Chunk upserts so the intermediate attribute-hash arrays
+  # (holdings_to_upsert_with_cost / _without_cost) don't sit in memory
+  # alongside the full @holdings collection. Reduces peak RSS during sync.
+  PERSIST_BATCH_SIZE = 2_000
+
   def initialize(account, strategy:, security_ids: nil)
     @account = account
     @strategy = strategy
@@ -28,9 +33,11 @@ class Holding::Materializer
     # than the account or the reverse-calculated holdings.
     cleanup_stale_calculated_rows_on_latest_provider_snapshot
 
-    # Reload holdings association to clear any cached stale data
-    # This ensures subsequent Balance calculations see the fresh holdings
-    account.holdings.reload
+    # Clear the holdings association cache (without eagerly reloading) so subsequent
+    # Balance calculations rebuild from the freshly-persisted rows on demand. Using
+    # `reset` instead of `reload` avoids materializing the entire collection here when
+    # the next consumer (Balance::SyncCache) will iterate it anyway.
+    account.holdings.reset
 
     @holdings
   end
@@ -74,9 +81,16 @@ class Holding::Materializer
           incoming_source: "calculated"
         )
 
-        base_attrs = holding.attributes
-          .slice("date", "currency", "qty", "price", "amount", "security_id")
-          .merge("account_id" => account.id, "updated_at" => current_time)
+        base_attrs = {
+          "date" => holding.date,
+          "currency" => holding.currency,
+          "qty" => holding.qty,
+          "price" => holding.price,
+          "amount" => holding.amount,
+          "security_id" => holding.security_id,
+          "account_id" => account.id,
+          "updated_at" => current_time
+        }
 
         if existing&.cost_basis_locked?
           # For locked holdings, preserve ALL cost_basis fields
@@ -113,17 +127,17 @@ class Holding::Materializer
       end
 
       # Upsert with cost_basis updates
-      if holdings_to_upsert_with_cost.any?
+      holdings_to_upsert_with_cost.each_slice(PERSIST_BATCH_SIZE) do |slice|
         account.holdings.upsert_all(
-          holdings_to_upsert_with_cost,
+          slice,
           unique_by: %i[account_id security_id date currency]
         )
       end
 
       # Upsert without cost_basis (preserves existing)
-      if holdings_to_upsert_without_cost.any?
+      holdings_to_upsert_without_cost.each_slice(PERSIST_BATCH_SIZE) do |slice|
         account.holdings.upsert_all(
-          holdings_to_upsert_without_cost,
+          slice,
           unique_by: %i[account_id security_id date currency]
         )
       end
