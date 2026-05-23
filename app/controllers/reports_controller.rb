@@ -380,10 +380,12 @@ class ReportsController < ApplicationController
       trades = apply_entry_filters(trades)
 
       # Get sort parameters
-      sort_by = params[:sort_by].presence || "amount"
-      sort_direction = params[:sort_direction].presence || "desc"
-      sort_by = "amount" unless %w[amount count].include?(sort_by)
-      sort_direction = "desc" unless %w[asc desc].include?(sort_direction)
+      sort_by = %w[amount count].include?(params[:sort_by]) ? params[:sort_by] : "amount"
+      sort_direction = %w[asc desc].include?(params[:sort_direction]) ? params[:sort_direction] : "desc"
+      sort_logic = ->(item) do
+        value = (sort_by == "count") ? item[:count] : item[:total]
+        sort_direction == "asc" ? value : -value
+      end
 
       # Group by category (tracking parent relationship) and type
       # Structure: { [parent_category_id, type] => { parent_data, subcategories: { subcategory_id => data } } }
@@ -450,18 +452,12 @@ class ReportsController < ApplicationController
 
       # Convert to array and sort subcategories
       result = grouped_data.values.map do |parent_data|
-        subcategories = parent_data[:subcategories].values.sort_by do |s|
-          value = (sort_by == "count") ? s[:count] : s[:total]
-          sort_direction == "asc" ? value : -value
-        end
+        subcategories = parent_data[:subcategories].values.sort_by(&sort_logic)
         parent_data.merge(subcategories: subcategories)
       end
 
       # Sort by the chosen key with the specified direction
-      result.sort_by do |g|
-        value = (sort_by == "count") ? g[:count] : g[:total]
-        sort_direction == "asc" ? value : -value
-      end
+      result.sort_by(&sort_logic)
     end
 
     def build_investment_metrics
@@ -471,7 +467,6 @@ class ReportsController < ApplicationController
       return { has_investments: false } unless investment_accounts.any?
 
       period_totals = investment_statement.totals(period: @period)
-
       {
         has_investments: true,
         portfolio_value: investment_statement.portfolio_value_money,
