@@ -1,22 +1,22 @@
 <%# locals: (color: nil, pulse: false) %>
-
-<%
-  def badge_classes(c, p)
-    classes = case c
-              when "success"
-                "bg-green-500/5 text-green-500"
-              when "error"
-                "bg-red-500/5 text-red-500"
-              when "warning"
-                "bg-orange-500/5 text-orange-500"
-              else
-                "bg-gray-500/5 text-secondary"
-              end
-
-    p ? "#{classes} animate-pulse" : classes
-  end
+<%#
+  Thin shim over DS::Pill: maps the shared/_badge string color values
+  (`success` / `error` / `warning` / nil) to semantic tones and renders
+  the yielded block as the pill label. `pulse: true` wraps the pill in
+  an `animate-pulse` span (DS::Pill itself doesn't support pulse).
 %>
-
-<span class="inline-flex items-center px-2 py-0.5 rounded-full ring ring-alpha-black-50 text-xs <%= badge_classes(color, pulse) %>">
-  <%= yield %>
-</span>
+<%
+  tone = case color
+         when "success" then :success
+         when "error"   then :error
+         when "warning" then :warning
+         else                :neutral
+         end
+  label = yield
+  pill = render DS::Pill.new(label: label, tone: tone, marker: false, show_dot: false)
+%>
+<% if pulse %>
+  <span class="animate-pulse inline-flex"><%= pill %></span>
+<% else %>
+  <%= pill %>
+<% end %>

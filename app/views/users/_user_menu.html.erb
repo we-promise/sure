@@ -3,19 +3,20 @@
 <% intro_mode = local_assigns.fetch(:intro_mode, false) %>
 
 <div data-testid="user-menu">
-  <%= render DS::Menu.new(
-        variant: "avatar",
+  <%# `DS::Popover` (not `DS::Menu`) because the panel includes a
+      decorative profile header alongside the action items — `role="menu"`
+      would restrict AT users to menuitem-only navigation and hide the
+      user-info block. %>
+  <%= render DS::Popover.new(
+        variant: intro_mode ? "icon" : "avatar",
         avatar_url: user.profile_image&.variant(:small)&.url,
         initials: user.initials,
         placement: placement,
-        offset: offset
-      ) do |menu| %>
-    <% if intro_mode %>
-      <% menu.with_button do %>
-        <%= render DS::Button.new(variant: "icon", icon: "settings", data: { DS__menu_target: "button" }) %>
-      <% end %>
-    <% end %>
-    <%= menu.with_header do %>
+        offset: offset,
+        icon: "settings",
+        aria_label: t(".aria_label", default: "Open account menu")
+      ) do |popover| %>
+    <%= popover.with_header do %>
       <div class="px-4 py-3 flex items-center gap-3">
         <div class="w-9 h-9 shrink-0">
           <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials, lazy: true %>
@@ -32,7 +33,7 @@
       <% if self_hosted? %>
         <div class="px-4 py-3 border-t border-tertiary">
           <p class="text-sm">
-            <span class="font-medium text-primary">Version:</span>
+            <span class="font-medium text-primary"><%= t(".version") %>:</span>
             <%= link_to Sure.version.to_release_tag, "https://github.com/we-promise/sure/releases/tag/#{Sure.version.to_release_tag}", target: "_blank", class: "hover:underline" %>
 
             <% if Sure.commit_sha.present? %>
@@ -43,21 +44,27 @@
       <% end %>
     <% end %>
 
-    <% menu.with_item(
-      variant: "link",
-      text: "Settings",
-      icon: "settings",
-      href: intro_mode ? settings_profile_path : accounts_path(return_to: request.fullpath)
-    ) %>
-    <% menu.with_item(variant: "link", text: "Changelog", icon: "box", href: changelog_path) %>
+    <% popover.with_custom_content do %>
+      <%# `roving: false` keeps these items in the normal Tab order. The parent
+          `DS::Popover` has no arrow-key roving handler and is not a `role="menu"`
+          container, so the default `tabindex="-1"` would skip every item. %>
+      <%= render DS::MenuItem.new(
+        variant: "link",
+        roving: false,
+        text: t(".settings"),
+        icon: "settings",
+        href: intro_mode ? settings_profile_path : accounts_path(return_to: request.fullpath)
+      ) %>
+      <%= render DS::MenuItem.new(variant: "link", roving: false, text: t(".changelog"), icon: "box", href: changelog_path) %>
 
-    <% if self_hosted? && !intro_mode %>
-      <% menu.with_item(variant: "link", text: "Feedback", icon: "megaphone", href: feedback_path) %>
+      <% if self_hosted? && !intro_mode %>
+        <%= render DS::MenuItem.new(variant: "link", roving: false, text: t(".feedback"), icon: "megaphone", href: feedback_path) %>
+      <% end %>
+      <%= render DS::MenuItem.new(variant: "link", roving: false, text: t(".contact"), icon: "message-square-more", href: "https://discord.gg/36ZGBsxYEK", target: "_blank", rel: "noopener noreferrer") %>
+
+      <%= render DS::MenuItem.new(variant: "divider") %>
+
+      <%= render DS::MenuItem.new(variant: "button", roving: false, text: t(".log_out"), icon: "log-out", href: session_path(Current.session), method: :delete) %>
     <% end %>
-    <% menu.with_item(variant: "link", text: "Contact", icon: "message-square-more", href: "https://discord.gg/36ZGBsxYEK", target: "_blank", rel: "noopener noreferrer") %>
-
-    <% menu.with_item(variant: "divider") %>
-
-    <% menu.with_item(variant: "button", text: "Log out", icon: "log-out", href: session_path(Current.session), method: :delete) %>
   <% end %>
 </div>

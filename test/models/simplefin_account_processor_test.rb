@@ -64,6 +64,32 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("50000"), acct.reload.balance
   end
 
+  # Many banks (and most mortgage feeds) report the loan principal
+  # outstanding as a positive number from the bank's books. The old
+  # liability path ran every Loan through OverpaymentAnalyzer +
+  # normalize_liability_balance, and the latter's fallback for
+  # `:unknown` classifications returned `-observed`, flipping a
+  # bank-reported `+50000` into `-50000`. That bug made loans _add_ to
+  # net worth instead of subtracting, so this test pins the corrected
+  # behaviour.
+  test "preserves positive provider balance for loan liabilities" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Mortgage",
+      account_id: "loan_2",
+      currency: "USD",
+      account_type: "mortgage",
+      current_balance: BigDecimal("50000")
+    )
+
+    acct = accounts(:loan)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("50000"), acct.reload.balance
+  end
+
   test "positive provider balance (overpayment) becomes negative for credit card liabilities" do
     sfin_acct = SimplefinAccount.create!(
       simplefin_item: @item,

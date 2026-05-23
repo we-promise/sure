@@ -13,13 +13,25 @@ class DS::Toggle < DesignSystemComponent
 
   def label_classes
     class_names(
-       "block w-9 h-5 cursor-pointer",
-       "rounded-full bg-gray-100 theme-dark:bg-gray-700",
-       "transition-colors duration-300",
+       "relative block w-9 h-5 cursor-pointer",
+       # `bg-toggle-track` lifts the dark-mode off-track to gray-700 so the
+       # switch keeps WCAG 1.4.11 contrast against the surrounding
+       # bg-container (gray-900). `bg-surface-inset` resolves to gray-800
+       # in dark mode and dropped to ~1.5:1 against the container,
+       # making the toggle nearly invisible inside modals.
+       "rounded-full bg-toggle-track",
+       # `motion-safe:` gates the bg + thumb-translate transitions on
+       # `prefers-reduced-motion`; reduced-motion users get a snap.
+       "motion-safe:transition-colors motion-safe:duration-300",
        "after:content-[''] after:block after:bg-white after:absolute after:rounded-full",
        "after:top-0.5 after:left-0.5 after:w-4 after:h-4",
-       "after:transition-transform after:duration-300 after:ease-in-out",
-       "peer-checked:bg-green-600 peer-checked:after:translate-x-4",
+       "motion-safe:after:transition-transform motion-safe:after:duration-300 motion-safe:after:ease-in-out",
+       "peer-checked:bg-success peer-checked:after:translate-x-4",
+       # Focus ring driven from the sr-only input via `peer-focus-visible:`.
+       # Offset places the ring outside the track so it lands on the
+       # surrounding chrome regardless of theme.
+       "peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2",
+       "peer-focus-visible:ring-alpha-black-300 theme-dark:peer-focus-visible:ring-alpha-white-300",
        "peer-disabled:opacity-70 peer-disabled:cursor-not-allowed"
     )
   end

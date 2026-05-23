@@ -27,6 +27,7 @@ class TransactionsController < ApplicationController
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
+    Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
@@ -62,6 +63,8 @@ class TransactionsController < ApplicationController
                                          10.days.from_now.to_date,
                                          Date.current)
                                   .includes(:merchant)
+
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
 
   def clear_filter
@@ -106,7 +109,7 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
-      flash[:notice] = "Transaction created"
+      flash[:notice] = t(".created")
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account) }
@@ -134,12 +137,15 @@ class TransactionsController < ApplicationController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later
 
+      notes_changed = @entry.saved_change_to_notes?
+
       # Reload to ensure fresh state for turbo stream rendering
       @entry.reload
 
       respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
+        format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
+          in_split_group = helpers.in_split_group?(@entry, params[:grouped])
           render turbo_stream: [
             turbo_stream.replace(
               dom_id(@entry, :header),
@@ -151,9 +157,18 @@ class TransactionsController < ApplicationController
               partial: "entries/protection_indicator",
               locals: { entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) }
             ),
-            turbo_stream.replace(@entry),
+            (turbo_stream.replace(
+              dom_id(@entry, :notes),
+              partial: "transactions/notes",
+              locals: { entry: @entry, can_annotate: can_annotate_entry? }
+            ) if params[:entry]&.key?(:notes) && notes_changed),
+            turbo_stream.replace(
+              dom_id(@entry),
+              partial: "entries/entry",
+              locals: { entry: @entry, in_split_group: in_split_group }
+            ),
             *flash_notification_stream_items
-          ]
+          ].compact
         end
       end
     else
@@ -173,7 +188,9 @@ class TransactionsController < ApplicationController
     end
 
     redirect_to transactions_path
-  rescue ActiveRecord::RecordNotDestroyed, ActiveRecord::RecordInvalid => e
+  rescue ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid,
+         ActiveRecord::RecordNotDestroyed, ActiveRecord::Deadlocked,
+         ActiveRecord::LockWaitTimeout => e
     Rails.logger.error("Failed to merge duplicate transaction #{params[:id]}: #{e.message}")
     flash[:alert] = t("transactions.merge_duplicate.failure")
     redirect_to transactions_path
@@ -439,6 +456,7 @@ class TransactionsController < ApplicationController
       nature = entry_params.delete(:nature)
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
+      entry_params.delete(:date) if entry_params[:date].blank?
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d

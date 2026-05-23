@@ -1,6 +1,8 @@
 class Depository < ApplicationRecord
   include Accountable
 
+  DEFAULT_SUBTYPE = "checking"
+
   SUBTYPES = {
     "checking" => { short: "Checking", long: "Checking" },
     "savings" => { short: "Savings", long: "Savings" },
@@ -10,10 +12,6 @@ class Depository < ApplicationRecord
   }.freeze
 
   class << self
-    def display_name
-      "Cash"
-    end
-
     def color
       "#875BF7"
     end

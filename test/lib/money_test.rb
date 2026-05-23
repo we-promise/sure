@@ -159,6 +159,15 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "TW$1,000.12", Money.new(1000.12, :twd).format(locale: :"zh-TW")
   end
 
+  test "formats correctly for Hungarian locale" do
+    # Hungarian uses space as thousands delimiter, comma as decimal separator, symbol after number
+    # HUF has 0 decimal places (no fillér)
+    assert_equal "1 000 Ft", Money.new(1000, :huf).format(locale: :hu)
+    # Non-HUF currencies keep their own precision
+    assert_equal "1 000,12 $", Money.new(1000.12, :usd).format(locale: :hu)
+    assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :hu)
+  end
+
   test "all supported locales can format money without errors" do
     # Ensure all supported locales from LanguagesHelper::SUPPORTED_LOCALES work
     supported_locales = LanguagesHelper::SUPPORTED_LOCALES

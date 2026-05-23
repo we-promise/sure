@@ -4,7 +4,7 @@
   <% end %>
 
   <div class="form-group row">
-    <%= f.label :name, class: "col-sm-2 col-form-label font-weight-bold" %>
+    <%= f.label :name, class: "col-sm-2 col-form-label font-bold" %>
     <div class="col-sm-10">
       <%= f.text_field :name, class: "form-control #{ 'is-invalid' if application.errors[:name].present? }", required: true %>
       <%= doorkeeper_errors_for application, :name %>
@@ -12,7 +12,7 @@
   </div>
 
   <div class="form-group row">
-    <%= f.label :redirect_uri, class: "col-sm-2 col-form-label font-weight-bold" %>
+    <%= f.label :redirect_uri, class: "col-sm-2 col-form-label font-bold" %>
     <div class="col-sm-10">
       <%= f.text_area :redirect_uri, class: "form-control #{ 'is-invalid' if application.errors[:redirect_uri].present? }" %>
       <%= doorkeeper_errors_for application, :redirect_uri %>
@@ -29,7 +29,7 @@
   </div>
 
   <div class="form-group row">
-    <%= f.label :confidential, class: "col-sm-2 form-check-label font-weight-bold" %>
+    <%= f.label :confidential, class: "col-sm-2 form-check-label font-bold" %>
     <div class="col-sm-10">
       <%= f.check_box :confidential, class: "checkbox #{ 'is-invalid' if application.errors[:confidential].present? }" %>
       <%= doorkeeper_errors_for application, :confidential %>
@@ -40,7 +40,7 @@
   </div>
 
   <div class="form-group row">
-    <%= f.label :scopes, class: "col-sm-2 col-form-label font-weight-bold" %>
+    <%= f.label :scopes, class: "col-sm-2 col-form-label font-bold" %>
     <div class="col-sm-10">
       <%= f.text_field :scopes, class: "form-control #{ 'has-error' if application.errors[:scopes].present? }" %>
       <%= doorkeeper_errors_for application, :scopes %>

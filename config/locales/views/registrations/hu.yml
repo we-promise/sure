@@ -1,0 +1,31 @@
+---
+hu:
+  helpers:
+    label:
+      user:
+        invite_code: Meghívókód
+    submit:
+      user:
+        create: Folytatás
+  registrations:
+    closed: A regisztráció jelenleg szünetel.
+    create:
+      failure: Hiba történt a regisztráció során.
+      invalid_invite_code: Érvénytelen meghívókód, kérjük, próbáld újra.
+      success: Sikeresen regisztráltál.
+    new:
+      invitation_message: "%{inviter} meghívott, hogy csatlakozz %{role} szerepkörben"
+      join_family_title: Csatlakozz a(z) %{family} %{moniker} fiókhoz
+      role_admin: rendszergazda
+      role_guest: vendég
+      role_member: tag
+      submit: Fiók létrehozása
+      title: Hozd létre a fiókodat
+      welcome_body: A kezdéshez létre kell hoznod egy új fiókot. Ezután az alkalmazáson belül további beállításokat is elvégezhetsz.
+      welcome_title: Üdvözöl az önállóan üzemeltetett %{product_name}!
+      password_placeholder: Add meg a jelszavadat
+      password_requirements:
+        length: Legalább 8 karakter
+        case: Nagy- és kisbetűk vegyesen
+        number: Egy szám (0–9)
+        special: "Egy speciális karakter (!, @, #, $, %, stb.)"

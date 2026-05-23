@@ -33,11 +33,11 @@ class AccountOrder
   end
 
   def label
-    ORDERS.dig(key, :label)
+    I18n.t("account_order.#{key}.label", default: ORDERS.dig(key, :label))
   end
 
   def label_short
-    ORDERS.dig(key, :label_short)
+    I18n.t("account_order.#{key}.label_short", default: ORDERS.dig(key, :label_short))
   end
 
   def sql_order

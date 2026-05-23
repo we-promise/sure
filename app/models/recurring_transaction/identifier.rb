@@ -10,14 +10,20 @@ class RecurringTransaction
     def identify_recurring_patterns
       three_months_ago = 3.months.ago.to_date
 
-      # Get all transactions from the last 3 months
+      # Skip transfer-kind transactions: they're one half of a Transfer pair, so grouping them
+      # under their single account would produce incoherent recurring "patterns" that don't
+      # represent the underlying account-pair flow. Recurring transfers are tracked on a
+      # different shape (RecurringTransaction with destination_account_id). Filtering at the
+      # SQL level avoids loading and discarding transfer entries for a busy family.
       entries_with_transactions = family.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction")
         .where("entries.date >= ?", three_months_ago)
+        .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
         .includes(:entryable)
         .to_a
 
-      # Group by merchant (if present) or name, along with amount (preserve sign) and currency
+      # Group by merchant (if present) or name, along with amount (preserve sign) and currency.
       grouped_transactions = entries_with_transactions
         .select { |entry| entry.entryable.is_a?(Transaction) }
         .group_by do |entry|
@@ -140,9 +146,17 @@ class RecurringTransaction
       recurring_patterns.size
     end
 
-    # Update variance for existing manual recurring transactions
+    # Update variance for existing manual recurring transactions.
+    #
+    # Transfer rows (destination_account_id present) are skipped: their
+    # variance / occurrence tracking would need pair-detection across
+    # both endpoints rather than the single-account name/merchant match
+    # the helper performs. Issue #1590 tracks the proper Cleaner-aware
+    # matching for recurring transfers.
     def update_manual_recurring_transactions(since_date)
-      family.recurring_transactions.where(manual: true, status: "active").find_each do |recurring|
+      family.recurring_transactions
+            .where(manual: true, status: "active", destination_account_id: nil)
+            .find_each do |recurring|
         # Find matching transactions in the recent period
         matching_entries = RecurringTransaction.find_matching_transaction_entries(
           family: family,

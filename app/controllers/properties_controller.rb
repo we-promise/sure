@@ -10,7 +10,12 @@ class PropertiesController < ApplicationController
 
   def create
     @account = Current.family.accounts.create!(
-      property_params.merge(currency: Current.family.currency, balance: 0, status: "draft", owner: Current.user)
+      property_params.merge(
+        balance: 0,
+        status: "draft",
+        owner: Current.user,
+        currency: property_params[:currency].presence || Current.family.currency
+      )
     )
     @account.auto_share_with_family! if Current.family.share_all_by_default?
 
@@ -39,9 +44,14 @@ class PropertiesController < ApplicationController
   end
 
   def update_balances
-    result = @account.set_current_balance(balance_params[:balance].to_d)
+    result = nil
+    Account.transaction do
+      @account.update!(currency: balance_params[:currency]) if balance_params[:currency].present?
+      result = @account.set_current_balance(balance_params[:balance].to_d)
+      raise ActiveRecord::Rollback unless result.success?
+    end
 
-    if result.success?
+    if result&.success?
       @success_message = "Balance updated successfully."
 
       if @account.active?
@@ -50,7 +60,7 @@ class PropertiesController < ApplicationController
         redirect_to address_property_path(@account)
       end
     else
-      @error_message = result.error_message
+      @error_message = result&.error_message
       render :balances, status: :unprocessable_entity
     end
   end
@@ -93,6 +103,7 @@ class PropertiesController < ApplicationController
       params.require(:account)
             .permit(
               :name,
+              :currency,
               :accountable_type,
               :institution_name,
               :institution_domain,

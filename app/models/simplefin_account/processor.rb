@@ -80,57 +80,90 @@ class SimplefinAccount::Processor
 
       balance = observed
       if is_liability
-        # 1) Try transaction-history heuristic when enabled
-        begin
-          result = SimplefinAccount::Liabilities::OverpaymentAnalyzer
-            .new(simplefin_account, observed_balance: observed)
-            .call
+        # Loans report principal outstanding as a positive balance from the
+        # bank's perspective. The OverpaymentAnalyzer is designed for credit-
+        # like liabilities (where charges/payments distinguish debt vs.
+        # credit) and returns :unknown for loans with no transaction
+        # history, which then falls through to a fallback that negates the
+        # observed value — inverting the meaning so the loan ends up
+        # _adding_ to net worth instead of subtracting from it. Trust the
+        # bank's sign for Loans and skip the heuristic.
+        if account.accountable_type == "Loan"
+          balance = observed.abs
+          Rails.logger.info(
+            "SimpleFIN liability sign: classification=loan sfa=#{simplefin_account.id}"
+          )
+          Rails.logger.debug(
+            "SimpleFIN liability sign (loan) amounts: sfa=#{simplefin_account.id} " \
+            "observed=#{observed.to_s('F')} stored=#{balance.to_s('F')}"
+          )
+          Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
+            category: "simplefin",
+            message: "liability_sign=loan",
+            data: { sfa_id: simplefin_account.id }
+          )) rescue nil
+        else
+          # 1) Try transaction-history heuristic when enabled
+          begin
+            result = SimplefinAccount::Liabilities::OverpaymentAnalyzer
+              .new(simplefin_account, observed_balance: observed)
+              .call
 
-          case result.classification
-          when :credit
-            balance = -observed.abs
-            Rails.logger.info(
-              "SimpleFIN overpayment heuristic: classified as credit for sfa=#{simplefin_account.id}, " \
-              "observed=#{observed.to_s('F')} metrics=#{result.metrics.slice(:charges_total, :payments_total, :tx_count).inspect}"
-            )
-            Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
-              category: "simplefin",
-              message: "liability_sign=credit",
-              data: { sfa_id: simplefin_account.id, observed: observed.to_s("F") }
-            )) rescue nil
-          when :debt
-            balance = observed.abs
-            Rails.logger.info(
-              "SimpleFIN overpayment heuristic: classified as debt for sfa=#{simplefin_account.id}, " \
-              "observed=#{observed.to_s('F')} metrics=#{result.metrics.slice(:charges_total, :payments_total, :tx_count).inspect}"
-            )
-            Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
-              category: "simplefin",
-              message: "liability_sign=debt",
-              data: { sfa_id: simplefin_account.id, observed: observed.to_s("F") }
-            )) rescue nil
-          else
-            # 2) Fall back to existing sign-only logic (log unknown for observability)
-            begin
-              obs = {
-                reason: result.reason,
-                tx_count: result.metrics[:tx_count],
-                charges_total: result.metrics[:charges_total],
-                payments_total: result.metrics[:payments_total],
-                observed: observed.to_s("F")
-              }.compact
-              Rails.logger.info("SimpleFIN overpayment heuristic: unknown; falling back #{obs.inspect}")
-            rescue
-              # no-op
+            case result.classification
+            when :credit
+              balance = -observed.abs
+              Rails.logger.info(
+                "SimpleFIN overpayment heuristic: classified as credit for sfa=#{simplefin_account.id} " \
+                "tx_count=#{result.metrics[:tx_count]}"
+              )
+              Rails.logger.debug(
+                "SimpleFIN overpayment heuristic (credit) amounts: sfa=#{simplefin_account.id} " \
+                "observed=#{observed.to_s('F')} metrics=#{result.metrics.slice(:charges_total, :payments_total, :tx_count).inspect}"
+              )
+              Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
+                category: "simplefin",
+                message: "liability_sign=credit",
+                data: { sfa_id: simplefin_account.id }
+              )) rescue nil
+            when :debt
+              balance = observed.abs
+              Rails.logger.info(
+                "SimpleFIN overpayment heuristic: classified as debt for sfa=#{simplefin_account.id} " \
+                "tx_count=#{result.metrics[:tx_count]}"
+              )
+              Rails.logger.debug(
+                "SimpleFIN overpayment heuristic (debt) amounts: sfa=#{simplefin_account.id} " \
+                "observed=#{observed.to_s('F')} metrics=#{result.metrics.slice(:charges_total, :payments_total, :tx_count).inspect}"
+              )
+              Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
+                category: "simplefin",
+                message: "liability_sign=debt",
+                data: { sfa_id: simplefin_account.id }
+              )) rescue nil
+            else
+              # 2) Fall back to existing sign-only logic (log unknown for observability)
+              begin
+                Rails.logger.info(
+                  "SimpleFIN overpayment heuristic: unknown for sfa=#{simplefin_account.id} " \
+                  "reason=#{result.reason} tx_count=#{result.metrics[:tx_count]}; falling back"
+                )
+                Rails.logger.debug(
+                  "SimpleFIN overpayment heuristic (unknown) amounts: sfa=#{simplefin_account.id} " \
+                  "observed=#{observed.to_s('F')} " \
+                  "charges_total=#{result.metrics[:charges_total]} payments_total=#{result.metrics[:payments_total]}"
+                )
+              rescue
+                # no-op
+              end
+              balance = normalize_liability_balance(observed, bal, avail)
             end
+          rescue NameError
+            # Analyzer not loaded; keep legacy behavior
+            balance = normalize_liability_balance(observed, bal, avail)
+          rescue => e
+            Rails.logger.warn("SimpleFIN overpayment heuristic error for sfa=#{simplefin_account.id}: #{e.class} - #{e.message}")
             balance = normalize_liability_balance(observed, bal, avail)
           end
-        rescue NameError
-          # Analyzer not loaded; keep legacy behavior
-          balance = normalize_liability_balance(observed, bal, avail)
-        rescue => e
-          Rails.logger.warn("SimpleFIN overpayment heuristic error for sfa=#{simplefin_account.id}: #{e.class} - #{e.message}")
-          balance = normalize_liability_balance(observed, bal, avail)
         end
       end
 

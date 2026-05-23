@@ -15,6 +15,7 @@ class EnableBankingAccount::Transactions::Processor
     Rails.logger.info "EnableBankingAccount::Transactions::Processor - Processing #{total_count} transactions for enable_banking_account #{enable_banking_account.id}"
 
     imported_count = 0
+    skipped_count = 0
     failed_count = 0
     errors = []
 
@@ -22,8 +23,65 @@ class EnableBankingAccount::Transactions::Processor
       Account::ProviderImportAdapter.new(enable_banking_account.current_account)
     end
 
+    # Pre-fetch external_ids that must not be re-imported.
+    # One query per category per sync; O(1) Set lookup per transaction — avoids N+1.
+    excluded_ids = if enable_banking_account.current_account
+      account_id = enable_banking_account.current_account.id
+
+      # 1. Manually merged: pending entries the user explicitly merged into a posted transaction.
+      #    Uses a lateral join to extract merged_from_external_id from the manual_merge JSON
+      #    (handles both Array current format and legacy Hash format via jsonb_typeof).
+      manually_merged_ids = Transaction.joins(:entry)
+                                       .where(entries: { account_id: account_id })
+                                       .where("transactions.extra ? 'manual_merge'")
+                                       .joins(
+                                         Arel.sql(<<~SQL.squish)
+                                           CROSS JOIN LATERAL jsonb_array_elements(
+                                             CASE jsonb_typeof(transactions.extra->'manual_merge')
+                                             WHEN 'array'  THEN transactions.extra->'manual_merge'
+                                             WHEN 'object' THEN jsonb_build_array(transactions.extra->'manual_merge')
+                                             ELSE '[]'::jsonb
+                                             END
+                                           ) AS merge_elem
+                                         SQL
+                                       )
+                                       .pluck(Arel.sql("merge_elem->>'merged_from_external_id'"))
+                                       .compact
+                                       .to_set
+
+      # 2. Auto-claimed: pending entries that were automatically matched to a booked transaction
+      #    by the amount/date heuristic. Their old external_ids are stored in
+      #    extra["auto_claimed_pending_ids"] so they are not re-imported as new pending entries
+      #    on subsequent syncs (the stored raw payload still contains the old pending data).
+      auto_claimed_ids = Transaction.joins(:entry)
+                                    .where(entries: { account_id: account_id })
+                                    .where("transactions.extra ? 'auto_claimed_pending_ids'")
+                                    .joins(
+                                      Arel.sql(<<~SQL.squish)
+                                        CROSS JOIN LATERAL jsonb_array_elements_text(
+                                          transactions.extra->'auto_claimed_pending_ids'
+                                        ) AS claimed_id
+                                      SQL
+                                    )
+                                    .pluck(Arel.sql("claimed_id"))
+                                    .compact
+                                    .to_set
+
+      manually_merged_ids | auto_claimed_ids
+    else
+      Set.new
+    end
+
     enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
       begin
+        ext_id = EnableBankingEntry::Processor.compute_external_id(transaction_data)
+
+        if ext_id && excluded_ids.include?(ext_id)
+          Rails.logger.info("EnableBankingAccount::Transactions::Processor - Skipping re-import of manually merged pending transaction: #{ext_id}")
+          skipped_count += 1
+          next
+        end
+
         result = EnableBankingEntry::Processor.new(
           transaction_data,
           enable_banking_account: enable_banking_account,
@@ -56,6 +114,7 @@ class EnableBankingAccount::Transactions::Processor
       success: failed_count == 0,
       total: total_count,
       imported: imported_count,
+      skipped: skipped_count,
       failed: failed_count,
       errors: errors
     }

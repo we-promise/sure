@@ -59,19 +59,61 @@ en:
       no_accounts_found: No accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
+      no_institution_connected: Please connect a bank institution with Sophtron first.
+    connect:
+      cancel: Cancel
+      captcha: Captcha
+      connect: Connect
+      institution_search_label: Institution
+      institution_search_placeholder: Search by bank name
+      no_institutions: No matching institutions found.
+      password: Password
+      search: Search
+      search_too_short: Enter at least two characters to search.
+      title: Connect Sophtron Institution
+      username: Username
+    connect_institution:
+      api_error: "Sophtron connection failed: %{message}"
+      missing_parameters: Select an institution and enter your bank login credentials.
+    connection_status:
+      api_error: "API connection error: %{message}"
+      attempt: "Attempt %{attempt} of %{max}"
+      check_again: Check again
+      failed: Sophtron could not complete this institution connection.
+      failed_timeout: Sophtron timed out while the institution was completing login.
+      timeout: Sophtron did not finish connecting within the expected time. You can check again, or try reconnecting later.
+      title: Connecting Sophtron
+      waiting: Sophtron is still connecting to your institution.
+    mfa:
+      captcha: Captcha text
+      captcha_alt: Sophtron captcha
+      phone_confirmed: I confirmed by phone
+      submit: Submit
+      title: Sophtron Verification
+      token: Verification code
+    submit_mfa:
+      api_error: "Verification failed: %{message}"
+      invalid_security_answers: Security answers are missing or too long.
+      unknown_challenge: Unknown Sophtron verification step.
     sophtron_item:
       accounts_need_setup: Accounts need setup
+      automatic_sync: Use automatic sync
       delete: Delete connection
       deletion_in_progress: deletion in progress...
       error: Error
       no_accounts_description: This connection has no linked accounts yet.
       no_accounts_title: No accounts
+      manual_sync: Manual sync
+      manual_sync_action: Require manual sync
+      manual_sync_action_for: "Require manual sync for %{institution}"
+      automatic_sync_for: "Use automatic sync for %{institution}"
       setup_action: Set Up New Accounts
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Sophtron accounts."
       setup_needed: New accounts ready to set up
       status: "Synced %{timestamp} ago"
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
+      sync_now: Sync now
       syncing: Syncing...
       total: Total
       unlinked: Unlinked
@@ -95,6 +137,7 @@ en:
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
       no_credentials_configured: "Please configure your Sophtron API User ID and Access Key first in Provider Settings."
+      no_institution_connected: Please connect a bank institution with Sophtron first.
       no_name_placeholder: "(No name)"
       title: Select Sophtron Accounts
     select_existing_account:
@@ -109,8 +152,10 @@ en:
       no_accounts_found: No Sophtron accounts found. Please check your API key configuration.
       no_access_key: Sophtron Access key is not configured. Please configure it in Settings.
       no_user_id: Sophtron User ID is not configured. Please configure it in Settings.
+      no_institution_connected: Please connect a bank institution with Sophtron first.
       no_name_placeholder: "(No name)"
       title: "Link %{account_name} with Sophtron"
+      unexpected_error: "An unexpected error occurred"
     link_existing_account:
       account_already_linked: This account is already linked to a provider
       api_error: "API connection error"
@@ -119,6 +164,7 @@ en:
       sophtron_account_already_linked: This Sophtron account is already linked to another account
       sophtron_account_not_found: Sophtron account not found
       missing_parameters: Missing required parameters
+      no_institution_connected: Please connect a bank institution with Sophtron first.
       success: "Successfully linked %{account_name} with Sophtron"
     setup_accounts:
       account_type_label: "Account Type:"
@@ -129,6 +175,7 @@ en:
       no_accounts_to_setup: "No Accounts to Set Up"
       no_access_key: "Sophtron Access key is not configured. Please check your connection settings."
       no_user_id: "Sophtron User ID is not configured. Please check your connection settings."
+      no_institution_connected: "Sophtron institution is not connected yet."
       account_types:
         skip: Skip this account
         depository: Checking or Savings Account
@@ -163,7 +210,20 @@ en:
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
     sync:
+      already_running: Sophtron manual sync is already in progress.
+      api_error: "Sophtron manual sync failed: %{message}"
+      failed: Sophtron manual sync failed
+      no_linked_accounts: This Sophtron institution does not have any linked accounts to sync.
+      processing_failed: Sophtron manual sync could not process the refreshed transactions.
       success: Sync started
+    toggle_manual_sync:
+      success_disabled: Sophtron institution will sync automatically.
+      success_enabled: Sophtron institution now requires manual sync.
+    manual_sync_complete:
+      close: Close
+      description: Account balances will finish updating in the background.
+      message: Transactions were downloaded after Sophtron verification.
+      title: Sophtron Sync Started
     sophtron_setup_required:
       title: Sophtron Setup Required
       message: >
@@ -179,13 +239,19 @@ en:
     api_error:  
       title: "Sophtron Connection Error"  
       unable_to_connect: "Unable to connect to Sophtron"  
+      institution_unable_to_connect: "Unable to connect to the institution"
       common_issues_title: "Common Issues:"  
       incorrect_user_id: "Incorrect User ID: Verify your User ID in Provider Settings"  
       invalid_access_key: "Invalid Access Key: Check your Access Key in Provider Settings"  
       expired_credentials: "Expired Credentials: Generate a new User ID and Access Key from Sophtron"  
       network_issue: "Network Issue: Check your internet connection"  
       service_down: "Service Down: Sophtron API may be temporarily unavailable"  
+      bad_credentials: "Bank credentials: Check the username and password are correct"
+      verification_code: "Verification code: Make sure the latest code was entered before it expired"
+      institution_timeout: "Institution timeout: The bank login page did not finish in time"
+      unsupported_mfa: "MFA support: Sophtron may not support this institution's current verification flow"
       check_provider_settings: "Check Provider Settings"  
+      try_again: "Try connecting again"
     select_option: "Select %{type}"  
     subtype: "subtype"  
     type: "type"
@@ -194,12 +260,12 @@ en:
       setup_instructions:
         step_1_html: 'Visit <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> to obtain your API credentials'
         step_2: "Copy your User ID and Access Key from your Sophtron account settings"
-        step_3: "Paste the credentials below and click Save to enable Sophtron bank data sync"
+        step_3: "Paste the credentials below and click Save; Sure will create or reuse your Sophtron Customer ID automatically"
       field_descriptions_title: "Field descriptions:"
       field_descriptions:
         user_id_html: "<strong>User ID:</strong> Your Sophtron User ID credential"
         access_key_html: "<strong>Access Key:</strong> Your Sophtron Access Key credential"
-        base_url_html: "<strong>Base URL:</strong> The Sophtron API endpoint URL (usually provided by Sophtron)"
+        base_url_html: "<strong>Base URL:</strong> The Sophtron API endpoint URL, usually https://api.sophtron.com/api"
       fields:
         user_id:
           label: "User ID"
@@ -211,13 +277,11 @@ en:
           placeholder_edit: "••••••••"
         base_url:
           label: "Base URL"
-          placeholder: "https://api.sophtron.com/v2"
+          placeholder: "https://api.sophtron.com/api"
       save: "Save Configuration"
       update: "Update Configuration"
-      status:
-        configured_html: 'Configured and ready to use. Visit the <a href="%{accounts_path}" class="link">Accounts</a> tab to manage and set up accounts.'
-        not_configured: "Not configured"
     syncer:
+      manual_sync_required: "Manual Sophtron sync is required for this institution; skipping those accounts during automated sync."
       importing_accounts: "Importing accounts from Sophtron..."
       checking_account_configuration: "Checking account configuration..."
       accounts_need_setup: "%{count} account(s) need setup"
@@ -226,3 +290,24 @@ en:
     sophtron_entry:
       processor:
         unknown_transaction: "Unknown transaction"
+    render_connection_timeout:
+      timeout: "Connection timed out. Please try again."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "Cannot link %{count} account with blank name"
+        other: "Cannot link %{count} accounts with blank names"
+      partial_invalid: "Linked %{created_count} account(s). %{already_linked_count} already linked, %{invalid_count} had invalid names."
+      partial_success: "Linked %{created_count} account(s). %{already_linked_count} account(s) were already linked."
+      success:
+        one: "Successfully linked %{count} account."
+        other: "Successfully linked %{count} accounts."
+      all_already_linked:
+        one: "The selected account is already linked"
+        other: "All %{count} selected accounts are already linked"
+      link_failed: "Failed to link accounts"
+    start_manual_sync:
+      already_running: "A sync is already in progress."
+      no_linked_accounts: "No linked accounts available to sync."
+      api_error: "API error: %{message}"
+    start_manual_sync_for_account:
+      failed: "Failed to sync account"

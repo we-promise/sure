@@ -140,14 +140,14 @@ class Rule < ApplicationRecord
       return if new_record? && !actions.empty?
 
       if actions.reject(&:marked_for_destruction?).empty?
-        errors.add(:base, "must have at least one action")
+        errors.add(:base, :min_actions)
       end
     end
 
     def no_duplicate_actions
       action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
 
-      errors.add(:base, "Rule cannot have duplicate actions #{action_types.inspect}") if action_types.uniq.count != action_types.count
+      errors.add(:base, :duplicate_actions, types: action_types.inspect) if action_types.uniq.count != action_types.count
     end
 
     # Validation: To keep rules simple and easy to understand, we don't allow nested compound conditions.
@@ -157,7 +157,7 @@ class Rule < ApplicationRecord
       conditions.each do |condition|
         if condition.compound?
           if condition.sub_conditions.any? { |sub_condition| sub_condition.compound? }
-            errors.add(:base, "Compound conditions cannot be nested")
+            errors.add(:base, :nested_conditions)
           end
         end
       end

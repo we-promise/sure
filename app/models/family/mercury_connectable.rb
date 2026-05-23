@@ -23,6 +23,6 @@ module Family::MercuryConnectable
   end
 
   def has_mercury_credentials?
-    mercury_items.where.not(token: nil).exists?
+    mercury_items.active.any?(&:credentials_configured?)
   end
 end

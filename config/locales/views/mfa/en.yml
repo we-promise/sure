@@ -31,8 +31,15 @@ en:
       verify_title: 2. Enter Verification Code
     verify:
       description: Enter the code from your authenticator app to continue
+      or: or
       page_title: Verify Two-Factor Authentication
       title: Two-Factor Authentication
       verify_button: Verify
+      webauthn_button: Use passkey or security key
+      webauthn_unsupported: This browser does not support passkeys or security keys.
     verify_code:
       invalid_code: Invalid authentication code. Please try again.
+    verify_webauthn:
+      invalid_credential: Could not verify that passkey or security key. Please try again.
+    webauthn_options:
+      unavailable: No passkeys or security keys are available for this account.

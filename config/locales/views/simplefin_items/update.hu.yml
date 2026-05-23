@@ -1,0 +1,7 @@
+hu:
+  simplefin_items:
+    update:
+      success: "A SimpleFIN kapcsolat frissítve."
+      errors:
+        blank_token: 'Hiányzó SimpleFIN hozzáférési token. Kérjük, adj meg egy tokent, vagy a folytatáshoz használd a „Meglévő számlák összekapcsolása" lehetőséget.'
+        update_failed: "Nem sikerült frissíteni a SimpleFIN kapcsolatot: %{message}"

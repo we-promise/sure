@@ -2,6 +2,8 @@ class DemoFamilyRefreshJob < ApplicationJob
   queue_as :scheduled
 
   def perform
+    return unless Rails.application.config.app_mode.managed?
+
     period_end = Time.current
     period_start = period_end - 24.hours
 

@@ -174,4 +174,51 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert children.first.split_child?
     refute @entry.split_child?
   end
+
+  test "split! creates child entries with excluded: true when specified" do
+    splits = [
+      { name: "Part 1", amount: 50, category_id: nil, excluded: true },
+      { name: "Part 2", amount: 50, category_id: nil, excluded: false }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal 2, children.size
+    assert children.first.excluded?
+    refute children.last.excluded?
+  end
+
+  test "split! properly casts excluded from string values" do
+    splits = [
+      { name: "Part 1", amount: 50, category_id: nil, excluded: "true" },
+      { name: "Part 2", amount: 50, category_id: nil, excluded: "false" }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert children.first.excluded?
+    refute children.last.excluded?
+  end
+
+  test "excluded split children are excluded from balance calculations" do
+    @entry.split!([
+      { name: "Part 1", amount: 50, category_id: nil, excluded: true },
+      { name: "Part 2", amount: 50, category_id: nil, excluded: false }
+    ])
+
+    # Parent is always excluded for splits
+    assert @entry.reload.excluded?
+
+    # Excluded child should be filtered out by where(excluded: false)
+    excluded_child = @entry.child_entries.find { |c| c.name == "Part 1" }
+    non_excluded_child = @entry.child_entries.find { |c| c.name == "Part 2" }
+
+    assert excluded_child.excluded?
+    refute non_excluded_child.excluded?
+
+    # where(excluded: false) should only include the non-excluded child
+    visible_entries = Entry.where(id: @entry.child_entries.map(&:id)).where(excluded: false)
+    assert_includes visible_entries.pluck(:id), non_excluded_child.id
+    refute_includes visible_entries.pluck(:id), excluded_child.id
+  end
 end

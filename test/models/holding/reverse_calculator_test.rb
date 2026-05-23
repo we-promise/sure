@@ -158,6 +158,84 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  # cost_basis_for
+
+  test "cost_basis_for returns nil when there are no buy trades" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    calc = calculator_with_trades(security)
+
+    assert_nil cost_basis_for(calc, security, Date.current)
+  end
+
+  test "cost_basis_for returns nil for dates before the first buy" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date = 5.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+    end
+
+    assert_nil cost_basis_for(calc, security, buy_date - 1)
+  end
+
+  test "cost_basis_for returns weighted average cost on buy date" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date = 5.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+    end
+
+    assert_in_delta 100.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
+  end
+
+  test "cost_basis_for carries forward to dates between buys" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    first_buy  = 10.days.ago.to_date
+    second_buy = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: first_buy)
+      create_trade(security, account: @account, qty: 5,  price: 130, date: second_buy)
+    end
+
+    # Between the two buys, cost basis is from the first buy only
+    assert_in_delta 100.0, cost_basis_for(calc, security, first_buy + 1).to_f, 1e-6
+    assert_in_delta 100.0, cost_basis_for(calc, security, second_buy - 1).to_f, 1e-6
+
+    # After second buy: WAC = (10*100 + 5*130) / 15 = 110.0
+    assert_in_delta 110.0, cost_basis_for(calc, security, second_buy).to_f, 1e-6
+    assert_in_delta 110.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
+  test "cost_basis_for accumulates multiple buys on the same date" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date = 5.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+      create_trade(security, account: @account, qty: 5,  price: 130, date: buy_date)
+    end
+
+    # WAC = (10*100 + 5*130) / 15 = 110.0 — not the intermediate value after only the first trade
+    assert_in_delta 110.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
+  end
+
+  test "cost_basis_for ignores sell trades" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date  = 10.days.ago.to_date
+    sell_date = 5.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10,  price: 100, date: buy_date)
+      create_trade(security, account: @account, qty: -5,  price: 120, date: sell_date)
+    end
+
+    # Sell does not change cost basis
+    assert_in_delta 100.0, cost_basis_for(calc, security, sell_date).to_f, 1e-6
+    assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
@@ -202,6 +280,18 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     # Brokerage Cash: $5,000
     # Holdings Value: $15,000
     # Total Balance: $20,000
+    def calculator_with_trades(security)
+      yield if block_given?
+      snapshot = OpenStruct.new(to_h: { security.id => 10 })
+      calc = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot)
+      calc.send(:precompute_cost_basis)
+      calc
+    end
+
+    def cost_basis_for(calc, security, date)
+      calc.send(:cost_basis_for, security.id, date)
+    end
+
     def load_today_portfolio
       @account.update!(cash_balance: 5000)
 

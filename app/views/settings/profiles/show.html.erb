@@ -8,7 +8,7 @@
       <%= form.email_field :email, placeholder: t(".email"), label: t(".email") %>
 
       <% if @user.unconfirmed_email.present? %>
-        <p class="mt-2 text-sm text-gray-600">
+        <p class="mt-2 text-sm text-secondary">
           You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or <%= link_to "request a new confirmation email", resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary" %>.
         </p>
       <% end %>
@@ -19,19 +19,19 @@
       </div>
 
       <div class="flex justify-end mt-4">
-        <%= render DS::Button.new(text: t(".save"), class: "md:w-auto w-full justify-center") %>
+        <%= render DS::Button.new(text: t(".save"), type: :submit, class: "md:w-auto w-full justify-center") %>
       </div>
     </div>
   <% end %>
 <% end %>
 
 <% unless Current.user.ui_layout_intro? %>
-  <%= settings_section title: family_moniker == "Group" ? t(".group_title", default: "Group") : t(".household_title"), subtitle: t(".household_subtitle", moniker_plural: family_moniker_plural_downcase, moniker: family_moniker_downcase) do %>
+  <%= settings_section title: Current.family&.moniker == "Group" ? t(".group_title", default: "Group") : t(".household_title"), subtitle: t(".household_subtitle", moniker_plural: family_moniker_plural_downcase, moniker: family_moniker_downcase) do %>
     <div class="space-y-4">
       <%= styled_form_with model: Current.user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
         <%= form.fields_for :family do |family_fields| %>
-          <% name_label = family_moniker == "Group" ? t(".group_form_label", default: "Group name") : t(".household_form_label") %>
-          <% name_placeholder = family_moniker == "Group" ? t(".group_form_input_placeholder", default: "Enter group name") : t(".household_form_input_placeholder") %>
+          <% name_label = Current.family&.moniker == "Group" ? t(".group_form_label", default: "Group name") : t(".household_form_label") %>
+          <% name_placeholder = Current.family&.moniker == "Group" ? t(".group_form_input_placeholder", default: "Enter group name") : t(".household_form_input_placeholder") %>
           <%= family_fields.text_field :name,
                 placeholder: name_placeholder,
                 label: name_label,
@@ -50,7 +50,7 @@
             </div>
             <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
             <div class="rounded-md bg-surface px-1.5 py-0.5">
-              <p class="uppercase text-secondary font-medium text-xs"><%= user.role %></p>
+              <p class="uppercase text-secondary font-medium text-xs"><%= t("users.roles.#{user.role}", default: user.role.humanize) %></p>
             </div>
             <% if Current.user.admin? && user != Current.user %>
               <div class="ml-auto">
@@ -70,7 +70,7 @@
             <div class="flex gap-2 items-center justify-between bg-container p-4 border border-alpha-black-25 rounded-lg">
               <div class="flex gap-2 items-center">
                 <div class="w-9 h-9 shrink-0">
-                  <div class="fg-inverse w-full h-full bg-surface-inset rounded-full flex items-center justify-center text-lg uppercase"><%= invitation.email[0] %></div>
+                  <div class="text-inverse w-full h-full bg-surface-inset rounded-full flex items-center justify-center text-lg uppercase"><%= invitation.email[0] %></div>
                 </div>
                 <div class="flex">
                   <p class="text-primary font-medium text-sm"><%= invitation.email %></p>
@@ -88,8 +88,8 @@
                                readonly
                                autocomplete="off"
                                value="<%= accept_invitation_url(invitation.token) %>"
-                               class="text-sm bg-gray-50 px-2 py-1 rounded border border-secondary w-72">
-                    <button data-action="clipboard#copy" class="text-secondary hover:text-gray-700">
+                               class="text-sm bg-surface-inset px-2 py-1 rounded border border-secondary w-72">
+                    <button data-action="clipboard#copy" class="text-secondary hover:text-primary">
                       <span data-clipboard-target="iconDefault">
                         <%= icon "copy" %>
                       </span>

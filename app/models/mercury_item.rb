@@ -168,7 +168,7 @@ class MercuryItem < ApplicationRecord
   end
 
   def credentials_configured?
-    token.present?
+    token.to_s.strip.present?
   end
 
   # F-08: SSRF hardening — see BaseUrlAllowlistable.

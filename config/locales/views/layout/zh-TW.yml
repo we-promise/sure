@@ -3,6 +3,7 @@ zh-TW:
   layouts:
     application:
       privacy_mode: 切換隱私模式
+      skip_to_main: 跳至主要內容
       nav:
         assistant: 助手
         budgets: 預算

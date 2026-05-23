@@ -6,8 +6,12 @@ class SettingsTest < ApplicationSystemTestCase
 
     # Base settings available to all users
     @settings_links = [
-      [ "Accounts", accounts_path ],
-      [ "Bank Sync", settings_bank_sync_path ],
+      [ "Accounts", accounts_path ]
+    ]
+
+    @settings_links << [ "Bank sync", settings_providers_path ] if @user.admin?
+
+    @settings_links += [
       [ "Preferences", settings_preferences_path ],
       [ "Profile Info", settings_profile_path ],
       [ "Security", settings_security_path ],
@@ -22,6 +26,8 @@ class SettingsTest < ApplicationSystemTestCase
 
     # Add admin settings if user is admin
     if @user.admin?
+      merchants_index = @settings_links.index([ "Merchants", family_merchants_path ])
+      @settings_links.insert(merchants_index + 1, [ "Statement Vault", account_statements_path ])
       @settings_links += [
         [ "AI Prompts", settings_ai_prompts_path ],
         [ "API Key", settings_api_key_path ]
@@ -36,7 +42,7 @@ class SettingsTest < ApplicationSystemTestCase
       assert_current_path accounts_path, ignore_query: true
 
       @settings_links.each do |name, path|
-        click_link name
+        click_link name, match: :first
         assert_selector "h1", text: name
         assert_current_path path
       end
@@ -48,9 +54,10 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"
-    click_link "Self-Hosting"
+    click_link "Self-Hosting", match: :first
     assert_current_path settings_hosting_path
     assert_selector "h1", text: "Self-Hosting"
     find("select#setting_onboarding_state").select("Invite-only")
@@ -87,15 +94,18 @@ class SettingsTest < ApplicationSystemTestCase
       # Assert that admin-only settings are not present in the navigation
       assert_no_selector "li", text: "AI Prompts"
       assert_no_selector "li", text: "API Key"
+      assert_no_selector "li", text: "Bank sync"
+      assert_no_selector "li", text: "Statement Vault"
     end
   end
 
   private
 
     def open_settings_from_sidebar
-      within "div[data-testid=user-menu]" do
-        find("button").click
+      user_menu = find("div[data-testid=user-menu]", match: :first, visible: :visible)
+      within user_menu do
+        find("[data-DS--popover-target='button']", match: :first).click
+        click_link "Settings", match: :first
       end
-      click_link "Settings"
     end
 end

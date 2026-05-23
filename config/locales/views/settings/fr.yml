@@ -159,8 +159,10 @@ fr:
       general_section_title: Général
       imports_label: Importations
       exports_label: Exportations
+      llm_usage_label: Utilisation LLM
       logout: Se déconnecter
       merchants_label: Marchands
+      providers_label: Fournisseurs
       guides_label: Guides
       other_section_title: Plus
       preferences_label: Préférences
@@ -169,6 +171,7 @@ fr:
       rules_label: Règles
       security_label: Sécurité
       self_hosting_label: Auto-hébergement
+      statement_vault_label: Coffre des relevés
       tags_label: Étiquettes
       transactions_section_title: Transactions
       whats_new_label: Dernières nouvelles
@@ -202,8 +205,6 @@ fr:
         syncing: Synchronisation…
         sync: Synchroniser
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
-        status_connected: Coinbase est connecté et synchronise vos avoirs en crypto.
-        status_not_connected: Non connecté. Saisissez vos identifiants API ci-dessus pour commencer.
       binance_panel:
         setup_instructions: "Pour connecter Binance, créez une clé API en lecture seule :"
         step1_html: 'Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestion des API Binance</a>'
@@ -221,8 +222,6 @@ fr:
         syncing: Synchronisation…
         sync: Synchroniser
         disconnect_confirm: "Êtes-vous sûr(e) de vouloir déconnecter Binance ?"
-        status_connected: Binance connecté
-        status_not_connected: Binance non connecté
       enable_banking_panel:
         callback_url_instruction: "Pour l'URL de rappel, utilisez %{callback_url}."
         connection_error: Erreur de connexion

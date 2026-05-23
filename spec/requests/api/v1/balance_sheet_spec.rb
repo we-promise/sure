@@ -48,6 +48,8 @@ RSpec.describe 'API V1 Balance Sheet', type: :request do
       end
 
       response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
         let(:'X-Api-Key') { 'invalid-key' }
 
         run_test!

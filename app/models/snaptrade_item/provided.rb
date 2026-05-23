@@ -160,13 +160,14 @@ module SnaptradeItem::Provided
     return [] unless credentials_configured? && user_registered?
 
     all_users = list_all_users
-    all_users.reject { |uid| uid == snaptrade_user_id }
+    all_users.select { |uid| uid != snaptrade_user_id && uid.start_with?("family_#{family_id}_") }
   end
 
   # Delete an orphaned SnapTrade user and all their connections
   def delete_orphaned_user(user_id)
     return false unless credentials_configured?
     return false if user_id == snaptrade_user_id # Don't delete current user
+    return false unless user_id.start_with?("family_#{family_id}_")
 
     snaptrade_provider.delete_user(user_id: user_id)
     true

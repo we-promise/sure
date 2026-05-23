@@ -1,6 +1,8 @@
 class LunchflowItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
+  DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
@@ -154,6 +156,8 @@ class LunchflowItem < ApplicationRecord
   end
 
   # F-08: SSRF hardening — see BaseUrlAllowlistable.
+  # Same pattern adopted upstream in mercury_item.rb; replaces the ad-hoc
+  # `effective_base_url` validation that lunchflow had before this PR.
   include BaseUrlAllowlistable
   allowed_base_urls "https://lunchflow.app/api/v1"
 end

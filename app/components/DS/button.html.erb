@@ -4,7 +4,7 @@
   <% end %>
 
   <% unless icon_only? %>
-    <%= text %>
+    <span class="min-w-0 truncate"><%= text %></span>
   <% end %>
 
   <% if icon && icon_position == :right %>

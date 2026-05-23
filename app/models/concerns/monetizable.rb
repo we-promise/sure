@@ -7,7 +7,7 @@ module Monetizable
         define_method("#{field}_money") do |**args|
           value = self.send(field, **args)
 
-          return nil if value.nil? || monetizable_currency.nil?
+          return nil if value.blank? || monetizable_currency.nil?
 
           Money.new(value, monetizable_currency)
         end
