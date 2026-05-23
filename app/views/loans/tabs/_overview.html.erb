@@ -14,32 +14,28 @@
         <div class="flex items-center justify-between gap-4">
           <div class="text-sm text-secondary">
             <%= t(".already_paid_html",
-                  percentage: number_to_percentage(percentage, precision: 1)) %>
+                  percentage: tag.span(number_to_percentage(percentage, precision: 1),class: "font-medium text-amber-500")) %>
           </div>
 
-          <!-- Cercle -->
           <div class="relative w-16 h-16">
-            <svg viewBox="0 0 64 64" class="w-full h-full -rotate-90">
-              <!-- Cercle background -->
+            <svg viewBox="0 0 64 64" class="w-full h-full -rotate-90" aria-hidden="true">
               <circle
                 cx="32"
                 cy="32"
                 r="28"
                 stroke-width="6"
-                stroke="#3f3f46"
                 fill="none"
+                stroke="currentColor"
+                class="text-gray-200 dark:text-gray-700"
               />
-              
-              <!-- Cercle progression -->
               <circle
                 cx="32"
                 cy="32"
                 r="28"
                 stroke-width="6"
                 stroke-linecap="round"
-                stroke="#f59e0b"
                 fill="none"
-                class="transition-all duration-500"
+                class=" stroke-amber-500 transition-all duration-500"
                 stroke-dasharray="<%= 2 * Math::PI * 28 %>"
                 stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.balance_paid_ratio) %>"
               />
