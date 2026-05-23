@@ -258,6 +258,36 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_equal 0, @family.entries.count
   end
 
+  test "session mode rejects invalid account accountable types" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson([
+        {
+          type: "Account",
+          data: {
+            id: "acct-invalid",
+            name: "Invalid Account",
+            balance: "100.00",
+            currency: "USD",
+            accountable_type: "Kernel"
+          }
+        }
+      ]),
+      filename: "accounts.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.failed?
+    assert_equal 0, @family.accounts.count
+    assert_equal "invalid_import_record", session.imports.first.error_details["code"]
+    assert_equal "Account", session.imports.first.error_details["record_type"]
+    assert_equal "accountable_type", session.imports.first.error_details["field"]
+    assert_equal "Kernel", session.imports.first.error_details["value"]
+  end
+
   test "chunk upload is idempotent by sequence and checksum" do
     session = @family.import_sessions.create!
     content = build_ndjson(entity_records)

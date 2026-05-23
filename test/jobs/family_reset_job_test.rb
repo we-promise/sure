@@ -42,6 +42,34 @@ class FamilyResetJobTest < ActiveJob::TestCase
     assert_equal 0, @family.imports.reload.count
   end
 
+  test "reset leaves another family's imports and mappings untouched" do
+    other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
+    other_category = other_family.categories.create!(name: "Other Category")
+    other_session = other_family.import_sessions.create!(expected_chunks: 1)
+    other_import = other_session.imports.create!(
+      family: other_family,
+      type: "SureImport",
+      sequence: 1
+    )
+    other_mapping = other_session.source_mappings.create!(
+      family: other_family,
+      source_type: "Category",
+      source_id: "source-category-1",
+      target: other_category
+    )
+
+    @family.import_sessions.create!(expected_chunks: 1)
+    @plaid_provider.stubs(:remove_item)
+
+    FamilyResetJob.perform_now(@family)
+
+    assert ImportSession.exists?(other_session.id)
+    assert Import.exists?(other_import.id)
+    assert ImportSourceMapping.exists?(other_mapping.id)
+    assert Category.exists?(other_category.id)
+    assert_equal other_category, other_mapping.reload.target
+  end
+
   test "resets family data even when Plaid credentials are invalid" do
     # Use existing plaid item from fixtures
     plaid_item = plaid_items(:one)

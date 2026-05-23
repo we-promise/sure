@@ -982,6 +982,98 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_empty explicit_empty_child.transaction.tags
   end
 
+  test "session transaction reimport only replaces current family taggings" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    account = @family.accounts.create!(
+      name: "Session Checking",
+      accountable: Depository.new,
+      balance: 100,
+      currency: "USD"
+    )
+    original_tag = @family.tags.create!(name: "Original")
+    replacement_tag = @family.tags.create!(name: "Replacement")
+    entry = account.entries.create!(
+      date: Date.parse("2024-01-01"),
+      amount: -10,
+      currency: "USD",
+      name: "Original transaction",
+      source: "sure_import_session:#{session.id}",
+      external_id: "Transaction:txn-1",
+      entryable: Transaction.new(kind: "standard")
+    )
+    transaction = entry.entryable
+    transaction.taggings.create!(tag: original_tag)
+
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_session = other_family.import_sessions.create!(expected_chunks: 1)
+    other_account = other_family.accounts.create!(
+      name: "Other Checking",
+      accountable: Depository.new,
+      balance: 100,
+      currency: "USD"
+    )
+    other_tag = other_family.tags.create!(name: "Other Original")
+    other_entry = other_account.entries.create!(
+      date: Date.parse("2024-01-01"),
+      amount: -10,
+      currency: "USD",
+      name: "Other transaction",
+      source: "sure_import_session:#{other_session.id}",
+      external_id: "Transaction:txn-1",
+      entryable: Transaction.new(kind: "standard")
+    )
+    other_transaction = other_entry.entryable
+    other_transaction.taggings.create!(tag: other_tag)
+
+    other_session.source_mappings.create!(
+      family: other_family,
+      source_type: "Transaction",
+      source_id: "txn-1",
+      target: other_transaction
+    )
+
+    session.source_mappings.create!(
+      family: @family,
+      source_type: "Account",
+      source_id: "acct-1",
+      target: account
+    )
+    session.source_mappings.create!(
+      family: @family,
+      source_type: "Tag",
+      source_id: "tag-1",
+      target: replacement_tag
+    )
+    session.source_mappings.create!(
+      family: @family,
+      source_type: "Transaction",
+      source_id: "txn-1",
+      target: transaction
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          tag_ids: [ "tag-1" ],
+          date: "2024-02-01",
+          amount: "-12.34",
+          currency: "USD",
+          name: "Updated transaction"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_equal [ "Replacement" ], transaction.reload.tags.map(&:name)
+    assert_equal "Updated transaction", entry.reload.name
+    assert_equal [ "Other Original" ], other_transaction.reload.tags.map(&:name)
+    assert_equal "Other transaction", other_entry.reload.name
+  end
+
   test "imports trades with securities" do
     ndjson = build_ndjson([
       {
@@ -1746,6 +1838,61 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     category = @family.categories.find_by(name: "Coffee")
     assert_not_nil category
     assert_equal category.id, action.value
+  end
+
+  test "session rule reimport only replaces current family conditions and actions" do
+    rule = @family.rules.build(name: "Original Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "old")
+    rule.actions.build(action_type: "auto_categorize")
+    rule.save!
+
+    other_family = Family.create!(name: "Other Rules Family", currency: "USD")
+    other_rule = other_family.rules.build(name: "Other Rule", resource_type: "transaction", active: true)
+    other_rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "other-old")
+    other_rule.actions.build(action_type: "auto_categorize")
+    other_rule.save!
+
+    other_session = other_family.import_sessions.create!(expected_chunks: 1)
+    other_session.source_mappings.create!(
+      family: other_family,
+      source_type: "Rule",
+      source_id: "rule-1",
+      target: other_rule
+    )
+
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.source_mappings.create!(
+      family: @family,
+      source_type: "Rule",
+      source_id: "rule-1",
+      target: rule
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: "rule-1",
+          name: "Updated Rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "new" }
+          ],
+          actions: [
+            { action_type: "set_transaction_name", value: "Renamed" }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_equal [ "new" ], rule.reload.conditions.map(&:value)
+    assert_equal [ "set_transaction_name" ], rule.actions.map(&:action_type)
+    assert_equal [ "other-old" ], other_rule.reload.conditions.map(&:value)
+    assert_equal [ "auto_categorize" ], other_rule.actions.map(&:action_type)
   end
 
   test "imports rules from normalized operand value refs" do
