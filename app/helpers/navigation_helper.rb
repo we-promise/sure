@@ -25,7 +25,7 @@ module NavigationHelper
     def intro_nav_items
       [
         { name: t("layouts.application.nav.home"), path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
-        { name: "Intro", path: intro_path, icon: "sparkles", icon_custom: false, active: page_active?(intro_path) }
+        { name: t("layouts.application.nav.intro"), path: intro_path, icon: "sparkles", icon_custom: false, active: page_active?(intro_path) }
       ]
     end
 end
