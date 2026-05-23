@@ -4,9 +4,10 @@
 JEMALLOC="/usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2"
 if [ -f "$JEMALLOC" ] && [ -z "${DISABLE_JEMALLOC}" ]; then
   export LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}$JEMALLOC"
-  echo "jemalloc enabled (LD_PRELOAD=$LD_PRELOAD)"
 else
-  echo "jemalloc disabled (DISABLE_JEMALLOC=${DISABLE_JEMALLOC:-unset}, jemalloc present=$([ -f "$JEMALLOC" ] && echo yes || echo no))"
+  [ -n "${DISABLE_JEMALLOC}" ] \
+    && echo "WARNING: jemalloc disabled via DISABLE_JEMALLOC" \
+    || echo "WARNING: jemalloc not found at $JEMALLOC, skipping"
 fi
 
 # If running the rails server then create or migrate existing database
