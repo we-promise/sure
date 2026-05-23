@@ -21,9 +21,8 @@
 
   <% dialog.with_body do %>
     <% if @entry.transaction.pending? %>
-      <div class="mb-3 p-3 rounded-lg border border-warning bg-warning/5 flex items-start gap-2">
-        <%= icon "clock", size: "sm", color: "warning" %>
-        <p class="text-sm text-secondary"><%= t("splits.new.pending_warning") %></p>
+      <div class="mb-3">
+        <%= render DS::Alert.new(variant: :warning, message: t("splits.new.pending_warning")) %>
       </div>
     <% end %>
     <%= form_with(

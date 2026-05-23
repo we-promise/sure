@@ -29,14 +29,20 @@
               </div>
               <div class="flex items-center gap-2 mt-3">
                 <% if @entry.split_parent? %>
-                  <span title="<%= t("transactions.show.merge_split_parent_blocked") %>">
+                  <div class="inline-flex items-center gap-1.5">
                     <%= render DS::Button.new(
                       text: t("transactions.show.merge_duplicate"),
                       variant: :primary,
                       size: :sm,
                       disabled: true
                     ) %>
-                  </span>
+                    <%= render DS::Tooltip.new(
+                      text: t("transactions.show.merge_split_parent_blocked"),
+                      icon: "info",
+                      size: "sm",
+                      color: "warning"
+                    ) %>
+                  </div>
                 <% else %>
                   <%= render DS::Button.new(
                     text: t("transactions.show.merge_duplicate"),
