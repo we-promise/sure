@@ -1,4 +1,14 @@
 class Balance::BaseCalculator
+  BalanceData = Struct.new(
+    :account, :date, :currency, :balance, :cash_balance,
+    :start_cash_balance, :start_non_cash_balance,
+    :cash_inflows, :cash_outflows,
+    :non_cash_inflows, :non_cash_outflows,
+    :cash_adjustments, :non_cash_adjustments,
+    :net_market_flows, :flows_factor,
+    keyword_init: true
+  )
+
   attr_reader :account
 
   def initialize(account)
@@ -118,10 +128,10 @@ class Balance::BaseCalculator
     end
 
     def build_balance(date:, **args)
-      Balance.new(
-        account_id: account.id,
-        currency: account.currency,
+      BalanceData.new(
+        account: account,
         date: date,
+        currency: account.currency,
         balance: args[:balance],
         cash_balance: args[:cash_balance],
         start_cash_balance: args[:start_cash_balance] || 0,
