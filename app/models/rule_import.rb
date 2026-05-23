@@ -52,10 +52,11 @@ class RuleImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
-    csv_rows.each do |row|
+    csv_rows.each.with_index(1) do |row, index|
       normalized_row = normalize_rule_row(row)
 
       rows.create!(
+        source_row_number: index,
         name: normalized_row[:name].to_s.strip,
         resource_type: normalized_row[:resource_type].to_s.strip,
         active: parse_boolean(normalized_row[:active]),
@@ -114,7 +115,7 @@ class RuleImport < Import
 
       # Validate resource type
       unless resource_type == "transaction"
-        errors.add(:base, "Unsupported resource type: #{resource_type}")
+        errors.add(:base, :unsupported_resource_type, resource_type: resource_type)
         raise ActiveRecord::RecordInvalid.new(self)
       end
 
@@ -123,13 +124,13 @@ class RuleImport < Import
         conditions_data = parse_json_safely(row.conditions, "conditions")
         actions_data = parse_json_safely(row.actions, "actions")
       rescue JSON::ParserError => e
-        errors.add(:base, "Invalid JSON in conditions or actions: #{e.message}")
+        errors.add(:base, :invalid_json, message: e.message)
         raise ActiveRecord::RecordInvalid.new(self)
       end
 
       # Validate we have at least one action
       if actions_data.empty?
-        errors.add(:base, "Rule must have at least one action")
+        errors.add(:base, :min_actions)
         raise ActiveRecord::RecordInvalid.new(self)
       end
 

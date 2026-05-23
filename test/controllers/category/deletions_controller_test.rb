@@ -4,11 +4,14 @@ class Category::DeletionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
     @category = categories(:food_and_drink)
+    ensure_tailwind_build
   end
 
   test "new" do
     get new_category_deletion_url(@category)
     assert_response :success
+    assert_select "turbo-frame#modal"
+    assert_select "turbo-frame#modal button span.min-w-0.truncate", text: /Delete "Food & Drink" and leave uncategorized/
   end
 
   test "create with replacement" do

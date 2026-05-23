@@ -37,8 +37,6 @@ es:
       alternative_auth: "O usa la autenticación por usuario/contraseña en su lugar..."
       save_button: "Guardar configuración"
       update_button: "Actualizar configuración"
-      status_configured_html: "Configurado y listo para usar. Visita la pestaña de <a href=\"%{accounts_path}\" class=\"link\">Cuentas</a> para gestionar y configurar tus cuentas."
-      status_not_configured: "No configurado"
       fields:
         api_token:
           label: "Token de API"

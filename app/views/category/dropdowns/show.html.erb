@@ -51,7 +51,7 @@
           <%= button_to transaction_path(@transaction.entry),
                       method: :patch,
                       data: { turbo_frame: dom_id(@transaction.entry) },
-                      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: nil } } },
+                      params: { grouped: params[:grouped], entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: nil } } },
                       class: "flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-2 hover:bg-container-inset-hover" do %>
             <%= icon("minus") %>
 
@@ -65,7 +65,7 @@
                   data: { turbo_frame: "modal" } do %>
             <%= icon("refresh-cw") %>
 
-            <p>Match transfer/payment</p>
+            <p><%= t(".match_transfer") %></p>
           <% end %>
         <% end %>
 
@@ -85,6 +85,7 @@
                         method: :patch,
                         data: { controller: "auto-submit-form" } do |f| %>
               <%= f.hidden_field "entry[excluded]", value: !@transaction.entry.excluded %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
               <%= f.check_box "entry[excluded]",
                           checked: @transaction.entry.excluded,
                           class: "checkbox checkbox--light",
@@ -92,7 +93,7 @@
             <% end %>
           </div>
 
-          <p>One-time <%= @transaction.entry.amount.negative? ? "income" : "expense" %></p>
+          <p><%= t(".one_time", type: @transaction.entry.amount.negative? ? t(".income") : t(".expense")) %></p>
 
           <span class="text-orange-500 ml-auto">
             <%= icon("asterisk", color: "current") %>

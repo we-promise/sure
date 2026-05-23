@@ -1,5 +1,6 @@
 one:
   import: transaction
+  source_row_number: 1
   date: 01/01/2024
   amount: 100
   currency: USD

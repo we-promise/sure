@@ -1,0 +1,42 @@
+<%
+  card    = "rounded-lg border border-secondary bg-container p-3 space-y-1.5"
+  label   = "text-xs font-medium text-primary"
+  meta    = "text-xs text-secondary font-mono"
+%>
+<div class="bg-surface min-h-screen p-6 space-y-10">
+  <header>
+    <h2 class="text-2xl font-semibold text-primary">Effects</h2>
+    <p class="text-sm text-secondary">Shadow and border-radius tokens.</p>
+  </header>
+
+  <section class="space-y-3">
+    <h3 class="text-lg font-medium text-primary">Shadows</h3>
+    <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+      <% shadows.each do |s| %>
+        <div class="<%= card %>">
+          <div class="h-16 w-full rounded-md bg-container" style="box-shadow: var(<%= s[:var] %>)"></div>
+          <p class="<%= label %>"><%= s[:var] %></p>
+          <p class="<%= meta %> truncate"><%= s[:light_raw] %></p>
+          <% if s[:dark_raw] %>
+            <p class="<%= meta %> truncate text-subdued">dark: <%= s[:dark_raw] %></p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <h3 class="text-lg font-medium text-primary">Border radius</h3>
+    <div class="grid gap-3 grid-cols-2 sm:grid-cols-4">
+      <% radii.each do |r| %>
+        <div class="<%= card %>">
+          <div class="flex items-center justify-center bg-surface rounded p-4">
+            <div class="size-12 bg-inverse" style="border-radius: <%= r[:value] %>"></div>
+          </div>
+          <p class="<%= label %>"><%= r[:var] %></p>
+          <p class="<%= meta %>"><%= r[:value] %></p>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</div>

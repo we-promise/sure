@@ -1,5 +1,5 @@
-<%= render DS::Dialog.new(scrollable: false) do |dialog| %>
-  <% dialog.with_header(title: "New transaction") %>
+<%= render DS::Dialog.new(scrollable: false, content_class: "lg:max-h-none lg:overflow-y-auto") do |dialog| %>
+  <% dialog.with_header(title: t(".new_transaction")) %>
   <% dialog.with_body do %>
     <%= render "form", entry: @entry, categories: @categories %>
   <% end %>

@@ -48,6 +48,7 @@ gem "skylight", groups: [ :production ]
 
 # Active Storage
 gem "aws-sdk-s3", "~> 1.208.0", require: false
+gem "google-cloud-storage", "~> 1.59", require: false
 gem "image_processing", ">= 1.2"
 
 # Other
@@ -81,6 +82,7 @@ gem "snaptrade", "~> 2.0"
 gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
+gem "webauthn", "~> 3.4"
 gem "activerecord-import"
 gem "rubyzip", "~> 2.3"
 gem "pdf-reader", "~> 2.12"

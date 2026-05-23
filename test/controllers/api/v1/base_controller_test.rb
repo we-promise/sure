@@ -60,6 +60,23 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_equal @user.email, response_body["user"]
   end
 
+  test "should reject revoked access token" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+    access_token.revoke
+
+    get "/api/v1/test", params: {}, headers: {
+      "Authorization" => "Bearer #{access_token.token}"
+    }
+
+    assert_response :unauthorized
+    response_body = JSON.parse(response.body)
+    assert_equal "unauthorized", response_body["error"]
+  end
+
   test "should reject invalid access token" do
     get "/api/v1/test", params: {}, headers: {
       "Authorization" => "Bearer invalid_token"

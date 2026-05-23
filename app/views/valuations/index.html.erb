@@ -4,7 +4,7 @@
       <%= tag.h2 t(".valuations"), class: "font-medium text-lg" %>
       <%= link_to new_valuation_path(@account),
                   data:  { turbo_frame: dom_id(@account.entries.valuations.new) },
-                  class: "flex gap-1 font-medium items-center bg-gray-50 text-primary p-2 rounded-lg" do %>
+                  class: "flex gap-1 font-medium items-center bg-surface-inset text-primary p-2 rounded-lg" do %>
         <span class="text-primary">
           <%= icon("plus", color: "current") %>
         </span>

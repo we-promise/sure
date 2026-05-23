@@ -3,6 +3,7 @@ pl:
   layouts:
     application:
       privacy_mode: Przełącz tryb prywatności
+      skip_to_main: Przejdź do głównej treści
       nav:
         assistant: Asystent
         budgets: Budżety

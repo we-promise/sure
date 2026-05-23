@@ -54,12 +54,12 @@
         <%= button_to t(".disconnect_button"),
               disconnect_external_assistant_settings_hosting_path,
               method: :delete,
-              class: "bg-red-600 fg-inverse text-sm font-medium rounded-lg px-4 py-2 whitespace-nowrap",
+              class: "bg-red-600 text-inverse text-sm font-medium rounded-lg px-4 py-2 whitespace-nowrap",
               data: { turbo_confirm: {
                 title: t(".confirm_disconnect.title"),
                 body: t(".confirm_disconnect.body"),
                 accept: t(".disconnect_button"),
-                acceptClass: "w-full bg-red-600 fg-inverse rounded-xl text-center p-[10px] border mb-2"
+                acceptClass: "w-full bg-red-600 text-inverse rounded-xl text-center p-[10px] border mb-2"
               }} %>
       </div>
     <% end %>

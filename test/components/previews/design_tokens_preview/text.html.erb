@@ -1,0 +1,36 @@
+<%
+  card        = "rounded-lg border border-secondary bg-container p-3 space-y-2"
+  meta        = "text-xs text-secondary font-mono"
+  light_ctx   = "rounded p-3 bg-surface"
+  dark_ctx    = "rounded p-3 bg-gray-900"
+%>
+<div class="bg-surface min-h-screen p-6 space-y-6">
+  <header>
+    <h2 class="text-2xl font-semibold text-primary">Text &amp; foregrounds</h2>
+    <p class="text-sm text-secondary">
+      <code class="font-mono">text-*</code> utilities. Each example renders the literal class on a light <em>and</em> a dark surface so utilities meant for inverse contexts show their intended state.
+    </p>
+  </header>
+
+  <div class="grid gap-3 grid-cols-1 lg:grid-cols-2">
+    <% utilities.each do |u| %>
+      <div class="<%= card %>">
+        <div class="grid grid-cols-2 gap-2">
+          <div class="<%= light_ctx %>">
+            <p class="text-sm font-medium <%= u[:name] %>">Quick brown fox</p>
+          </div>
+          <div class="<%= dark_ctx %>">
+            <p class="text-sm font-medium <%= u[:name] %>">Quick brown fox</p>
+          </div>
+        </div>
+        <div class="space-y-0.5">
+          <p class="text-xs font-medium text-primary"><%= u[:name] %></p>
+          <p class="<%= meta %> truncate"><%= u[:light_resolved] || u[:light_value] %></p>
+          <% if u[:dark_value] %>
+            <p class="<%= meta %> truncate text-subdued">dark: <%= u[:dark_resolved] || u[:dark_value] %></p>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

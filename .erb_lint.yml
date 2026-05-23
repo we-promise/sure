@@ -7,3 +7,71 @@ linters:
       Style/StringLiterals:
         Enabled: true
         EnforcedStyle: double_quotes
+  DeprecatedClasses:
+    enabled: true
+    addendum: "Design tokens live in design/tokens/sure.tokens.json; semantic utilities are documented in app/assets/tailwind/sure-design-system.css."
+    rule_set:
+      - suggestion: "Use text-primary, text-secondary, text-subdued, text-inverse, text-link, or a semantic color token (text-success, text-warning, text-destructive)."
+        deprecated:
+          - 'text-gray-50'
+          - 'text-gray-100'
+          - 'text-gray-200'
+          - 'text-gray-500'
+          - 'text-gray-600'
+          - 'text-gray-700'
+          - 'text-gray-800'
+          - 'text-gray-900'
+          - 'text-white'
+      - suggestion: "Use bg-container, bg-container-inset, bg-surface, bg-surface-inset, bg-inverse, button-bg-primary, button-bg-secondary, or one of their hover variants."
+        deprecated:
+          - 'bg-gray-50'
+          - 'bg-gray-100'
+          - 'bg-gray-200'
+          - 'bg-gray-500'
+          - 'bg-gray-600'
+          - 'bg-gray-700'
+          - 'bg-gray-800'
+          - 'bg-gray-900'
+          - 'bg-white'
+      - suggestion: "Use border-primary, border-secondary, border-tertiary, border-subdued, border-inverse, or border-destructive."
+        deprecated:
+          - 'border-gray-200'
+          - 'border-gray-300'
+          - 'border-gray-500'
+          - 'border-gray-700'
+          - 'border-gray-900'
+          - 'border-white'
+      # Custom @utility tokens (bg-inverse, text-inverse, text-primary, etc.) do
+      # NOT support Tailwind's `/N` opacity modifier syntax — modifiers like
+      # `text-inverse/70` silently compile to nothing. Use `opacity-N` on the
+      # parent element, or migrate the token to `@theme --color-X` in
+      # design/tokens/sure.tokens.json so Tailwind auto-generates the
+      # color-mix pipeline. See #1653.
+      - suggestion: "Custom @utility tokens drop `/N` opacity modifiers silently. Use `opacity-N` instead, or migrate the token to @theme in design/tokens/sure.tokens.json (see #1653)."
+        deprecated:
+          - 'text-inverse\/\d+'
+          - 'bg-inverse\/\d+'
+          - 'bg-inverse-hover\/\d+'
+          - 'border-inverse\/\d+'
+          - 'text-primary\/\d+'
+          - 'text-secondary\/\d+'
+          - 'text-subdued\/\d+'
+          - 'border-primary\/\d+'
+          - 'border-secondary\/\d+'
+          - 'border-subdued\/\d+'
+          - 'border-destructive\/\d+'
+          - 'border-solid\/\d+'
+          - 'button-bg-primary\/\d+'
+          - 'button-bg-primary-hover\/\d+'
+          - 'button-bg-secondary\/\d+'
+          - 'button-bg-secondary-hover\/\d+'
+          - 'button-bg-secondary-strong\/\d+'
+          - 'button-bg-secondary-strong-hover\/\d+'
+          - 'button-bg-disabled\/\d+'
+          - 'button-bg-destructive\/\d+'
+          - 'button-bg-destructive-hover\/\d+'
+          - 'button-bg-ghost-hover\/\d+'
+          - 'button-bg-outline-hover\/\d+'
+          - 'tab-item-active\/\d+'
+          - 'tab-item-hover\/\d+'
+          - 'tab-bg-group\/\d+'

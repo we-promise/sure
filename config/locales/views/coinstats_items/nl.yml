@@ -43,8 +43,6 @@ nl:
       configure: Configureren
       update_configuration: Opnieuw configureren
       default_name: CoinStats Verbinding
-      status_configured_html: Klaar voor gebruik
-      status_not_configured: Niet geconfigureerd
     coinstats_item:
       deletion_in_progress: Crypto wallet gegevens worden verwijderd…
       provider_name: CoinStats

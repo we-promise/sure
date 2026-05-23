@@ -3,12 +3,35 @@
   header_description t(".description")
 %>
 
+<% if @user&.webauthn_enabled? %>
+  <div class="space-y-3 mt-4 md:mt-0" data-controller="webauthn-authentication"
+       data-webauthn-authentication-options-url-value="<%= webauthn_options_mfa_path %>"
+       data-webauthn-authentication-verify-url-value="<%= verify_webauthn_mfa_path %>"
+       data-webauthn-authentication-unsupported-message-value="<%= t(".webauthn_unsupported") %>"
+       data-webauthn-authentication-error-fallback-value="<%= t("mfa.verify_webauthn.invalid_credential") %>">
+    <%= render DS::Button.new(
+      text: t(".webauthn_button"),
+      variant: "secondary",
+      icon: "fingerprint",
+      full_width: true,
+      type: "button",
+      data: { action: "webauthn-authentication#authenticate" }
+    ) %>
+    <p class="text-sm text-destructive" role="alert" aria-live="assertive" aria-atomic="true" aria-hidden="true" hidden data-webauthn-authentication-target="error"></p>
+    <div class="flex items-center gap-3">
+      <div class="border-t border-primary flex-1"></div>
+      <span class="text-xs text-secondary"><%= t(".or") %></span>
+      <div class="border-t border-primary flex-1"></div>
+    </div>
+  </div>
+<% end %>
+
 <%= styled_form_with url: verify_mfa_path, method: :post, class: "space-y-4 mt-4 md:mt-0", data: { turbo: false } do |form| %>
   <%= form.text_field :code,
     required: true,
     autofocus: true,
     autocomplete: "one-time-code",
-    type: "number",
+    type: "text",
     label: t(".page_title") %>
 
   <%= form.submit t(".verify_button") %>

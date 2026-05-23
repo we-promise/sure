@@ -1,0 +1,15 @@
+<%# locals: (status:) %>
+<%
+  tone = case status.to_s.to_sym
+         when :ok  then :success
+         when :warn then :warning
+         when :err  then :error
+         else :neutral
+         end
+%>
+<%= render DS::Pill.new(
+  label: t("settings.providers.status.#{status}"),
+  tone: tone,
+  marker: false,
+  size: :sm
+) %>

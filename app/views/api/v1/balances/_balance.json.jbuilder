@@ -1,0 +1,49 @@
+# frozen_string_literal: true
+
+json.id balance.id
+json.date balance.date
+json.currency balance.currency
+json.flows_factor balance.flows_factor
+
+json.balance format_money(balance.balance_money)
+json.balance_cents money_to_minor_units(balance.balance_money)
+json.cash_balance format_money(balance.cash_balance_money)
+json.cash_balance_cents money_to_minor_units(balance.cash_balance_money)
+
+json.start_cash_balance format_money(balance.start_cash_balance_money)
+json.start_cash_balance_cents money_to_minor_units(balance.start_cash_balance_money)
+json.start_non_cash_balance format_money(balance.start_non_cash_balance_money)
+json.start_non_cash_balance_cents money_to_minor_units(balance.start_non_cash_balance_money)
+json.start_balance format_money(balance.start_balance_money)
+json.start_balance_cents money_to_minor_units(balance.start_balance_money)
+
+json.cash_inflows format_money(balance.cash_inflows_money)
+json.cash_inflows_cents money_to_minor_units(balance.cash_inflows_money)
+json.cash_outflows format_money(balance.cash_outflows_money)
+json.cash_outflows_cents money_to_minor_units(balance.cash_outflows_money)
+json.non_cash_inflows format_money(balance.non_cash_inflows_money)
+json.non_cash_inflows_cents money_to_minor_units(balance.non_cash_inflows_money)
+json.non_cash_outflows format_money(balance.non_cash_outflows_money)
+json.non_cash_outflows_cents money_to_minor_units(balance.non_cash_outflows_money)
+json.net_market_flows format_money(balance.net_market_flows_money)
+json.net_market_flows_cents money_to_minor_units(balance.net_market_flows_money)
+json.cash_adjustments format_money(balance.cash_adjustments_money)
+json.cash_adjustments_cents money_to_minor_units(balance.cash_adjustments_money)
+json.non_cash_adjustments format_money(balance.non_cash_adjustments_money)
+json.non_cash_adjustments_cents money_to_minor_units(balance.non_cash_adjustments_money)
+
+json.end_cash_balance format_money(balance.end_cash_balance_money)
+json.end_cash_balance_cents money_to_minor_units(balance.end_cash_balance_money)
+json.end_non_cash_balance format_money(balance.end_non_cash_balance_money)
+json.end_non_cash_balance_cents money_to_minor_units(balance.end_non_cash_balance_money)
+json.end_balance format_money(balance.end_balance_money)
+json.end_balance_cents money_to_minor_units(balance.end_balance_money)
+
+json.account do
+  json.id balance.account.id
+  json.name balance.account.name
+  json.account_type balance.account.accountable_type&.underscore
+end
+
+json.created_at balance.created_at.iso8601
+json.updated_at balance.updated_at.iso8601

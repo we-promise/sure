@@ -13,13 +13,19 @@ class MercuryItemsController < ApplicationController
   # Preload Mercury accounts in background (async, non-blocking)
   def preload_accounts
     begin
-      # Check if family has credentials
-      unless Current.family.has_mercury_credentials?
+      account_flow = mercury_item_account_flow_context
+      mercury_item = account_flow[:mercury_item]
+      unless mercury_item
+        render json: mercury_item_selection_error_payload(account_flow[:credentialed_items])
+        return
+      end
+
+      unless mercury_item.credentials_configured?
         render json: { success: false, error: "no_credentials", has_accounts: false }
         return
       end
 
-      cache_key = "mercury_accounts_#{Current.family.id}"
+      cache_key = mercury_accounts_cache_key(mercury_item)
 
       # Check if already cached
       cached_accounts = Rails.cache.read(cache_key)
@@ -29,8 +35,7 @@ class MercuryItemsController < ApplicationController
         return
       end
 
-      # Fetch from API
-      mercury_provider = Provider::MercuryAdapter.build_provider(family: Current.family)
+      mercury_provider = mercury_item.mercury_provider
 
       unless mercury_provider.present?
         render json: { success: false, error: "no_api_token", has_accounts: false }
@@ -58,28 +63,21 @@ class MercuryItemsController < ApplicationController
   # Fetch available accounts from Mercury API and show selection UI
   def select_accounts
     begin
-      # Check if family has Mercury credentials configured
-      unless Current.family.has_mercury_credentials?
-        if turbo_frame_request?
-          # Render setup modal for turbo frame requests
-          render partial: "mercury_items/setup_required", layout: false
-        else
-          # Redirect for regular requests
-          redirect_to settings_providers_path,
-                     alert: t(".no_credentials_configured",
-                            default: "Please configure your Mercury API token first in Provider Settings.")
-        end
+      account_flow = mercury_item_account_flow_context
+      @mercury_item = account_flow[:mercury_item]
+      unless @mercury_item
+        render_mercury_item_selection_failure(credentialed_items: account_flow[:credentialed_items])
         return
       end
 
-      cache_key = "mercury_accounts_#{Current.family.id}"
+      cache_key = mercury_accounts_cache_key(@mercury_item)
 
       # Try to get cached accounts first
       @available_accounts = Rails.cache.read(cache_key)
 
       # If not cached, fetch from API
       if @available_accounts.nil?
-        mercury_provider = Provider::MercuryAdapter.build_provider(family: Current.family)
+        mercury_provider = @mercury_item.mercury_provider
 
         unless mercury_provider.present?
           redirect_to settings_providers_path, alert: t(".no_api_token",
@@ -95,12 +93,8 @@ class MercuryItemsController < ApplicationController
         Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
       end
 
-      # Filter out already linked accounts
-      mercury_item = Current.family.mercury_items.first
-      if mercury_item
-        linked_account_ids = mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
-        @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-      end
+      linked_account_ids = @mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
+      @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
 
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
@@ -139,13 +133,16 @@ class MercuryItemsController < ApplicationController
       return
     end
 
-    # Create or find mercury_item for this family
-    mercury_item = Current.family.mercury_items.first_or_create!(
-      name: "Mercury Connection"
-    )
+    account_flow = mercury_item_account_flow_context
+    mercury_item = account_flow[:mercury_item]
+
+    unless mercury_item
+      redirect_to settings_providers_path, alert: t(".select_connection", default: "Choose a Mercury connection before linking accounts.")
+      return
+    end
 
     # Fetch account details from API
-    mercury_provider = Provider::MercuryAdapter.build_provider(family: Current.family)
+    mercury_provider = mercury_item.mercury_provider
     unless mercury_provider.present?
       redirect_to new_account_path, alert: t(".no_api_token")
       return
@@ -259,29 +256,22 @@ class MercuryItemsController < ApplicationController
       return
     end
 
-    # Check if family has Mercury credentials configured
-    unless Current.family.has_mercury_credentials?
-      if turbo_frame_request?
-        # Render setup modal for turbo frame requests
-        render partial: "mercury_items/setup_required", layout: false
-      else
-        # Redirect for regular requests
-        redirect_to settings_providers_path,
-                   alert: t(".no_credentials_configured",
-                          default: "Please configure your Mercury API token first in Provider Settings.")
-      end
+    account_flow = mercury_item_account_flow_context
+    @mercury_item = account_flow[:mercury_item]
+    unless @mercury_item
+      render_mercury_item_selection_failure(credentialed_items: account_flow[:credentialed_items])
       return
     end
 
     begin
-      cache_key = "mercury_accounts_#{Current.family.id}"
+      cache_key = mercury_accounts_cache_key(@mercury_item)
 
       # Try to get cached accounts first
       @available_accounts = Rails.cache.read(cache_key)
 
       # If not cached, fetch from API
       if @available_accounts.nil?
-        mercury_provider = Provider::MercuryAdapter.build_provider(family: Current.family)
+        mercury_provider = @mercury_item.mercury_provider
 
         unless mercury_provider.present?
           redirect_to settings_providers_path, alert: t(".no_api_token",
@@ -302,12 +292,8 @@ class MercuryItemsController < ApplicationController
         return
       end
 
-      # Filter out already linked accounts
-      mercury_item = Current.family.mercury_items.first
-      if mercury_item
-        linked_account_ids = mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
-        @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-      end
+      linked_account_ids = @mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
+      @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
 
       if @available_accounts.empty?
         redirect_to accounts_path, alert: t(".all_accounts_already_linked")
@@ -343,6 +329,9 @@ class MercuryItemsController < ApplicationController
       return
     end
 
+    account_flow = mercury_item_account_flow_context
+    mercury_item = account_flow[:mercury_item]
+
     @account = Current.family.accounts.find(account_id)
 
     # Check if account is already linked
@@ -351,13 +340,13 @@ class MercuryItemsController < ApplicationController
       return
     end
 
-    # Create or find mercury_item for this family
-    mercury_item = Current.family.mercury_items.first_or_create!(
-      name: "Mercury Connection"
-    )
+    unless mercury_item
+      redirect_to settings_providers_path, alert: t(".select_connection", default: "Choose a Mercury connection before linking accounts.")
+      return
+    end
 
     # Fetch account details from API
-    mercury_provider = Provider::MercuryAdapter.build_provider(family: Current.family)
+    mercury_provider = mercury_item.mercury_provider
     unless mercury_provider.present?
       redirect_to accounts_path, alert: t(".no_api_token")
       return
@@ -423,7 +412,7 @@ class MercuryItemsController < ApplicationController
 
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
-        @mercury_items = Current.family.mercury_items.ordered
+        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
         render turbo_stream: [
           turbo_stream.replace(
             "mercury-providers-panel",
@@ -454,10 +443,15 @@ class MercuryItemsController < ApplicationController
   end
 
   def update
-    if @mercury_item.update(mercury_item_params)
+    permitted_params = mercury_item_params
+    expire_accounts_cache = mercury_accounts_cache_sensitive_update?(permitted_params)
+
+    if @mercury_item.update(permitted_params)
+      Rails.cache.delete(mercury_accounts_cache_key(@mercury_item)) if expire_accounts_cache
+
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
-        @mercury_items = Current.family.mercury_items.ordered
+        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
         render turbo_stream: [
           turbo_stream.replace(
             "mercury-providers-panel",
@@ -750,7 +744,67 @@ class MercuryItemsController < ApplicationController
     end
 
     def mercury_item_params
-      params.require(:mercury_item).permit(:name, :sync_start_date, :token, :base_url)
+      permitted = params.require(:mercury_item).permit(:name, :sync_start_date, :token, :base_url)
+      permitted.delete(:token) if @mercury_item&.persisted? && permitted[:token].blank?
+      permitted
+    end
+
+    def mercury_items_with_credentials
+      Current.family.mercury_items.active.ordered.select(&:credentials_configured?)
+    end
+
+    def mercury_item_account_flow_context
+      credentialed_items = mercury_items_with_credentials
+      mercury_item = nil
+
+      if params[:mercury_item_id].present?
+        mercury_item = credentialed_items.find { |item| item.id.to_s == params[:mercury_item_id].to_s }
+      elsif credentialed_items.one?
+        mercury_item = credentialed_items.first
+      end
+
+      {
+        mercury_item: mercury_item,
+        credentialed_items: credentialed_items
+      }
+    end
+
+    def mercury_accounts_cache_key(mercury_item)
+      "mercury_accounts_#{Current.family.id}_#{mercury_item.id}"
+    end
+
+    def mercury_accounts_cache_sensitive_update?(permitted_params)
+      permitted_params.key?(:token) || permitted_params.key?(:base_url)
+    end
+
+    def mercury_item_selection_error_payload(credentialed_items)
+      if mercury_item_selection_required?(credentialed_items)
+        {
+          success: false,
+          error: "select_connection",
+          error_message: t(".select_connection", default: "Choose a Mercury connection before loading accounts."),
+          has_accounts: nil
+        }
+      else
+        { success: false, error: "no_credentials", has_accounts: false }
+      end
+    end
+
+    def render_mercury_item_selection_failure(credentialed_items:)
+      if mercury_item_selection_required?(credentialed_items)
+        redirect_to settings_providers_path,
+                    alert: t(".select_connection", default: "Choose a Mercury connection in Provider Settings.")
+      elsif turbo_frame_request?
+        render partial: "mercury_items/setup_required", layout: false
+      else
+        redirect_to settings_providers_path,
+                    alert: t(".no_credentials_configured",
+                             default: "Please configure your Mercury API token first in Provider Settings.")
+      end
+    end
+
+    def mercury_item_selection_required?(credentialed_items)
+      credentialed_items.count > 1 && params[:mercury_item_id].blank?
     end
 
     # Sanitize return_to parameter to prevent XSS attacks

@@ -63,11 +63,14 @@ class SsoProviderTester
           )
         end
 
-        # Check if issuer matches
-        if discovery["issuer"] != provider.issuer && discovery["issuer"] != provider.issuer.chomp("/")
+        # Check if issuer matches exactly. OIDC discovery requires the configured
+        # issuer string to be identical to the issuer returned by the provider.
+        if discovery["issuer"] != provider.issuer
+          hint = trailing_slash_hint(provider.issuer, discovery["issuer"])
+
           return Result.new(
             success?: false,
-            message: "Issuer mismatch: expected #{provider.issuer}, got #{discovery["issuer"]}",
+            message: [ "Issuer mismatch: expected #{provider.issuer}, got #{discovery["issuer"]}", hint ].compact.join(". "),
             details: { expected: provider.issuer, actual: discovery["issuer"] }
           )
         end
@@ -203,5 +206,11 @@ class SsoProviderTester
 
     def faraday_client
       @faraday_client ||= Faraday.new(ssl: self.class.faraday_ssl_options)
+    end
+
+    def trailing_slash_hint(expected, actual)
+      return unless expected.to_s.chomp("/") == actual.to_s.chomp("/")
+
+      "trailing slash mismatch. This usually means the issuer URL differs only by a trailing slash. Update the configured issuer to exactly match the discovery document"
     end
 end
