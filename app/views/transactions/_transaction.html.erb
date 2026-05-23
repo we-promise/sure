@@ -109,10 +109,13 @@
 
                     <%# Scheduled (future-dated) indicator — does not affect today's balance %>
                     <% if entry.date.future? %>
-                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.scheduled_tooltip") %>">
-                        <%= icon "calendar-clock", size: "sm", color: "current" %>
-                        <%= t("transactions.transaction.scheduled") %>
-                      </span>
+                      <%= render DS::Pill.new(
+                        label: t("transactions.transaction.scheduled"),
+                        tone: :neutral,
+                        marker: false,
+                        icon: "calendar-clock",
+                        title: t("transactions.transaction.scheduled_tooltip")
+                      ) %>
                     <% end %>
 
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
