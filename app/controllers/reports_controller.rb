@@ -291,7 +291,6 @@ class ReportsController < ApplicationController
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance
-
       {
         current_income: current_income,
         income_change: income_change,
