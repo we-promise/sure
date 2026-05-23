@@ -362,10 +362,6 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
-  def pending_split_parent?
-    split_parent? && entryable.is_a?(Transaction) && transaction.pending?
-  end
-
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
