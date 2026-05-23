@@ -6,16 +6,16 @@ fr:
     subtypes:
       mortgage:
         short: Immobilier
-        long: Prêt immobilier
+        long: Prêt Immobilier
       student:
         short: Étudiant
-        long: Prêt étudiant
+        long: Prêt Étudiant
       auto:
         short: Auto
-        long: Prêt automobile
+        long: Prêt Automobile
       other:
         short: Autre
-        long: Autre prêt
+        long: Autre Prêt
     form:
       down_payment: Apport
       interest_rate: Taux d'intérêt
@@ -51,7 +51,7 @@ fr:
           variable: Variable
           adjustable: Révisable
         unknown: Inconnu
-        already_paid_html: "Vous avez déjà remboursé <span class=\"font-medium text-amber-500\">%{percentage}</span> de votre prêt"
+        already_paid_html: "Vous avez déjà remboursé %{percentage} de votre prêt"
         initial_leverage: Effet de levier initial
         debt_over_down_payment: Dette / apport
         total_cost: Coût total

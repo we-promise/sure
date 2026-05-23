@@ -26,8 +26,8 @@ en:
       rate_type: Rate type
       insurance_rate_type: Insurance rate type
       insurance_rate_type_options:
-        level_term: Level term
-        decreasing_life: Decreasing life
+        level_term: Level Term
+        decreasing_life: Decreasing Life
       term_months: Term (months)
       term_months_placeholder: '360'
       subtype: Subtype
@@ -41,11 +41,11 @@ en:
       
     tabs:
       overview:
-        interest_rate: Interest Rate
-        monthly_payment: Monthly Payment
+        interest_rate: Interest rate
+        monthly_payment: Monthly payment
         not_applicable: N/A
-        original_principal: Original Principal
-        remaining_principal: Remaining Principal
+        original_principal: Original principal
+        remaining_principal: Remaining principal
         repayment_progress: Repayment progress
         term: Term
         type: Type
@@ -54,10 +54,10 @@ en:
           variable: Variable
           adjustable: Adjustable
         unknown: Unknown
-        already_paid_html: "You have already repaid <span class=\"font-medium text-amber-500\">%{percentage}</span> of your loan"
-        initial_leverage: Initial Leverage
+        already_paid_html: "You have already repaid %{percentage} of your loan"
+        initial_leverage: Initial leverage
         debt_over_down_payment: Debt / down payment
-        total_cost: Total Cost
+        total_cost: Total cost
         principal: Principal
         interest: Interest
         insurance: Insurance
