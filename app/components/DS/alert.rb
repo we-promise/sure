@@ -38,7 +38,7 @@ class DS::Alert < DesignSystemComponent
       when :warning
         "bg-warning/10 border-warning/20"
       when :error, :destructive
-        "bg-destructive/10 border-destructive/20"
+        "bg-destructive/10 border-destructive-subtle"
       end
 
       "#{base_classes} #{variant_classes}"
