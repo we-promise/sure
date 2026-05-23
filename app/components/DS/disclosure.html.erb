@@ -1,13 +1,21 @@
 <%= tag.details class: details_classes, open: open, **details_opts do %>
   <%= tag.summary class: summary_classes do %>
     <% if summary_content? %>
-      <%# `<summary>` is `display: list-item`, so a flex inner div would
-          shrink-wrap to content width and any `justify-between` inside
-          the slot has nothing to distribute. Wrap in a `w-full` block
-          so caller-supplied flex rows stretch across the card. %>
-      <div class="w-full">
+      <% if variant == :default %>
+        <%# `:default` summary is already `flex justify-between`, so
+            caller-provided sibling divs get distributed directly.
+            Wrapping would collapse them into a single flex child and
+            kill the justify-between distribution. %>
         <%= summary_content %>
-      </div>
+      <% else %>
+        <%# Non-default summaries are `list-item` (no flex), so a flex
+            caller div would shrink-wrap to content width and any
+            `justify-between` inside has nothing to distribute. Wrap
+            in `w-full` so caller flex rows stretch across the card. %>
+        <div class="w-full">
+          <%= summary_content %>
+        </div>
+      <% end %>
     <% else %>
       <div class="flex items-center gap-3">
         <% if align == :left %>
