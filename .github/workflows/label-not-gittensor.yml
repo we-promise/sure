@@ -39,7 +39,7 @@ jobs:
             const users = new Set(parseList(process.env.GITTENSOR_USERS, 'GITTENSOR_USERS'));
             const exceptions = new Set(parseList(process.env.GITTENSOR_EXCEPTIONS, 'GITTENSOR_EXCEPTIONS'));
 
-            if (!users.has(author) || exceptions.has(author)) {
+            if (users.has(author) || exceptions.has(author)) {
               core.info(`No label needed for @${author}.`);
               return;
             }
