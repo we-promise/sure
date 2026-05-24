@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@import "./maybe-design-system.css";
+@import "./sure-design-system.css";
 
 @import "./geist-font.css";
 @import "./geist-mono-font.css";
@@ -56,7 +56,7 @@
   }
 
   .hw-combobox__label {
-    @apply block text-xs text-gray-500 peer-disabled:text-gray-400;
+    @apply block text-xs text-secondary peer-disabled:text-subdued;
   }
   
   .hw-combobox__option {
@@ -155,12 +155,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #d6d6d6;
+    background: var(--color-gray-300);
     border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #a6a6a6;
+    background: var(--color-gray-400);
   }  
 }
 
@@ -170,12 +170,12 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d6d6d6;
+    background: var(--color-gray-300);
     border-radius: 10px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: #a6a6a6;
+    background: var(--color-gray-400);
   }
 }
 
@@ -202,4 +202,31 @@
 
 .turbo-progress-bar {
   margin-top: env(safe-area-inset-top);
+}
+
+.table-divider {
+  position: relative;
+}
+
+.table-divider {
+  background-image: linear-gradient(
+    to right,
+    transparent 1rem,
+    var(--color-alpha-black-100) 1rem,
+    var(--color-alpha-black-100) calc(100% - 1rem),
+    transparent calc(100% - 1rem)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: bottom;
+}
+
+[data-theme="dark"] .table-divider {
+  background-image: linear-gradient(
+    to right,
+    transparent 1rem,
+    var(--color-alpha-white-200) 1rem,
+    var(--color-alpha-white-200) calc(100% - 1rem),
+    transparent calc(100% - 1rem)
+  );
 }

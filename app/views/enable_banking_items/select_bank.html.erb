@@ -3,7 +3,7 @@
     <% dialog.with_header(title: t(".title", default: "Select Your Bank")) %>
 
     <% dialog.with_body do %>
-      <div class="space-y-4">
+      <div class="space-y-4" data-controller="bank-search">
         <p class="text-sm text-secondary">
           <%= t(".description", default: "Choose the bank you want to connect to your account.") %>
         </p>
@@ -15,29 +15,52 @@
         <% end %>
 
         <% if @aspsps.present? %>
+          <%# Search input — filters list client-side via Stimulus %>
+          <input
+            type="text"
+            placeholder="<%= t(".search_placeholder", default: "Search for your bank...") %>"
+            data-bank-search-target="input"
+            data-action="input->bank-search#filter"
+            class="w-full px-3 py-2 text-sm rounded-md border border-primary bg-container-inset text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+            autocomplete="off"
+            aria-label="<%= t(".search_label", default: "Search for your bank") %>"
+            autofocus>
+
           <div class="space-y-2 max-h-80 overflow-y-auto">
             <% @aspsps.each do |aspsp| %>
-              <%= button_to authorize_enable_banking_item_path(@enable_banking_item),
-                            method: :post,
-                            params: { aspsp_name: aspsp[:name], new_connection: @new_connection },
-                            class: "w-full flex items-center gap-4 p-3 rounded-lg border border-primary bg-container hover:bg-subtle transition-colors text-left",
-                            data: { turbo: false } do %>
-                <% if aspsp[:logo].present? %>
-                  <img src="<%= aspsp[:logo] %>" alt="<%= aspsp[:name] %>" class="w-10 h-10 rounded object-contain">
-                <% else %>
-                  <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
-                    <%= icon "building-bank", class: "w-5 h-5 text-gray-400" %>
-                  </div>
-                <% end %>
-                <div class="flex-1">
-                  <p class="font-medium text-sm text-primary"><%= aspsp[:name] %></p>
-                  <% if aspsp[:bic].present? %>
-                    <p class="text-xs text-secondary">BIC: <%= aspsp[:bic] %></p>
+              <div data-bank-search-target="item" data-bank-name="<%= aspsp[:name].to_s.downcase(:fold) %>">
+                <%= button_to authorize_enable_banking_item_path(@enable_banking_item),
+                              method: :post,
+                              params: { aspsp_name: aspsp[:name], new_connection: @new_connection },
+                              class: "w-full flex items-center gap-4 p-3 rounded-lg border border-primary bg-container hover:bg-subtle transition-colors text-left",
+                              data: { turbo: false } do %>
+                  <% if aspsp[:logo].present? %>
+                    <img src="<%= aspsp[:logo] %>" alt="<%= aspsp[:name] %>" class="w-10 h-10 rounded object-contain">
+                  <% else %>
+                    <div class="w-10 h-10 rounded bg-container-inset flex items-center justify-center">
+                      <%= icon "building-bank", class: "w-5 h-5 text-tertiary" %>
+                    </div>
                   <% end %>
-                </div>
-                <%= icon "chevron-right", class: "w-5 h-5 text-secondary" %>
-              <% end %>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="font-medium text-sm text-primary"><%= aspsp[:name] %></p>
+                      <% if aspsp[:beta] %>
+                        <span class="text-xs font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full flex-shrink-0">
+                          <%= t(".beta_label", default: "Beta") %>
+                        </span>
+                      <% end %>
+                    </div>
+                    <% if aspsp[:bic].present? %>
+                      <p class="text-xs text-secondary truncate">BIC: <%= aspsp[:bic] %></p>
+                    <% end %>
+                  </div>
+                  <%= icon "chevron-right", class: "w-5 h-5 text-secondary flex-shrink-0" %>
+                <% end %>
+              </div>
             <% end %>
+            <div data-bank-search-target="emptyState" class="hidden py-4 text-center text-sm text-secondary">
+              <%= t(".no_search_results", default: "No banks match your search.") %>
+            </div>
           </div>
         <% else %>
           <div class="text-center py-8">

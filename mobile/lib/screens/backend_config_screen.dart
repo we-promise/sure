@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import '../models/custom_proxy_header.dart';
 import '../services/api_config.dart';
+import '../services/custom_proxy_headers_service.dart';
+import '../widgets/custom_proxy_headers_editor.dart';
 
 class BackendConfigScreen extends StatefulWidget {
   final VoidCallback? onConfigSaved;
@@ -17,8 +20,10 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   final _urlController = TextEditingController();
   bool _isLoading = false;
   bool _isTesting = false;
+  bool _hasLoadedConfig = false;
   String? _errorMessage;
   String? _successMessage;
+  List<CustomProxyHeader> _customHeaders = [];
 
   @override
   void initState() {
@@ -33,16 +38,27 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   }
 
   Future<void> _loadSavedUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedUrl = prefs.getString('backend_url');
-    final urlToShow = (savedUrl != null && savedUrl.isNotEmpty)
-        ? savedUrl
-        : ApiConfig.baseUrl;
-
-    if (mounted) {
-      setState(() {
-        _urlController.text = urlToShow;
-      });
+    String urlToShow = ApiConfig.baseUrl;
+    List<CustomProxyHeader> headers = const [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUrl = prefs.getString('backend_url');
+      headers = await CustomProxyHeadersService.instance.loadHeaders();
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        urlToShow = savedUrl;
+      }
+    } catch (e, stack) {
+      // Swallow storage failures so the screen still becomes interactive with
+      // sensible defaults; the user can re-enter and re-save.
+      debugPrint('BackendConfigScreen: failed to load saved config: $e\n$stack');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _urlController.text = urlToShow;
+          _customHeaders = headers;
+          _hasLoadedConfig = true;
+        });
+      }
     }
   }
 
@@ -55,6 +71,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       _successMessage = null;
     });
 
+    final previousHeaders = ApiConfig.customProxyHeaders;
     try {
       // Normalize base URL by removing trailing slashes
       final normalizedUrl = _urlController.text.trim().replaceAll(
@@ -62,10 +79,14 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         '',
       );
 
+      // Apply the unsaved edits only for the duration of this probe so the
+      // test reflects what the user is about to save. Restored in `finally`.
+      ApiConfig.setCustomProxyHeaders(_customHeaders);
+
       // Check /sessions/new page to verify it's a Sure backend
       final sessionsUrl = Uri.parse('$normalizedUrl/sessions/new');
       final sessionsResponse = await http
-          .get(sessionsUrl, headers: {'Accept': 'text/html'})
+          .get(sessionsUrl, headers: ApiConfig.htmlHeaders())
           .timeout(
             const Duration(seconds: 10),
             onTimeout: () {
@@ -98,6 +119,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         });
       }
     } finally {
+      ApiConfig.setCustomProxyHeaders(previousHeaders);
       if (mounted) {
         setState(() {
           _isTesting = false;
@@ -124,6 +146,10 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       // Save URL to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('backend_url', normalizedUrl);
+
+      // Save custom proxy headers
+      await CustomProxyHeadersService.instance.saveHeaders(_customHeaders);
+      ApiConfig.setCustomProxyHeaders(_customHeaders);
 
       // Update ApiConfig
       ApiConfig.setBaseUrl(normalizedUrl);
@@ -333,6 +359,41 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   ),
                   validator: _validateUrl,
                   onFieldSubmitted: (_) => _saveAndContinue(),
+                ),
+                const SizedBox(height: 24),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.http_outlined),
+                  title: const Text('Custom proxy headers'),
+                  subtitle: Text(
+                    _customHeaders.isEmpty
+                        ? 'Optional headers for a reverse proxy or auth gateway'
+                        : '${_customHeaders.length} configured',
+                  ),
+                  children: [
+                    const SizedBox(height: 8),
+                    if (_hasLoadedConfig)
+                      CustomProxyHeadersEditor(
+                        initialHeaders: _customHeaders,
+                        onChanged: (headers) {
+                          setState(() => _customHeaders = headers);
+                        },
+                      )
+                    else
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Headers are sent by the app with API requests. External browser SSO pages may not receive them.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 

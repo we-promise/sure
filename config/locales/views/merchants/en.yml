@@ -34,6 +34,9 @@ en:
         merchant: Merchant
         actions: Actions
         source: Source
+    family_merchant:
+      edit: Edit
+      delete: Delete
     merchant:
       confirm_accept: Delete merchant
       confirm_body: Are you sure you want to delete this merchant? Removing this merchant
@@ -52,7 +55,9 @@ en:
     new:
       title: New merchant
     perform_merge:
-      success: Successfully merged %{count} merchants
+      success:
+        one: Successfully merged %{count} merchant
+        other: Successfully merged %{count} merchants
       no_merchants_selected: No merchants selected to merge
       target_not_found: Target merchant not found
       invalid_merchants: Invalid merchants selected

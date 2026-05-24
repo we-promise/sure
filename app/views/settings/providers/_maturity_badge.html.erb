@@ -1,0 +1,10 @@
+<%# locals: (label:) %>
+<% if label %>
+  <%= render DS::Pill.new(
+    label: label,
+    tone: :neutral,
+    marker: false,
+    show_dot: false,
+    size: :sm
+  ) %>
+<% end %>

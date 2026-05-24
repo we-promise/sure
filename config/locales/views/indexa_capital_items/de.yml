@@ -39,8 +39,6 @@ de:
       alternative_auth: "Oder nutzen Sie Benutzername/Passwort-Anmeldung..."
       save_button: "Konfiguration speichern"
       update_button: "Konfiguration aktualisieren"
-      status_configured_html: "Konfiguriert und einsatzbereit. Besuchen Sie die Registerkarte <a href=\"%{accounts_path}\" class=\"link\">Konten</a>, um Konten zu verwalten und einzurichten."
-      status_not_configured: "Nicht konfiguriert"
       fields:
         api_token:
           label: "API-Token"

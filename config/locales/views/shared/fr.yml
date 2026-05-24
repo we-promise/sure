@@ -1,17 +1,5 @@
 ---
 fr:
-  breadcrumbs:
-    home: Accueil
-    dashboard: Tableau de bord
-    accounts: Comptes
-    merchants: Marchands
-    categories: Catégories
-    tags: Étiquettes
-    rules: Règles
-    transactions: Transactions
-    budgets: Budgets
-    imports: Importations
-    chats: Assistant
   shared:
     confirm_modal:
       accept: Confirmer
@@ -20,7 +8,14 @@ fr:
       title: Êtes-vous sûr ?
     money_field:
       label: Montant
+    exchange_rate_tabs:
+      calculate_rate_tab: Calculer le taux FX
+      convert_tab: Convertir avec le taux FX
+      destination_amount: Montant de destination
+      exchange_rate: Taux de change
+      exchange_rate_help: Choisissez comment entrer le montant.
     syncing_notice:
       syncing: Synchronisation des données de compte...
+    require_admin: "Seuls les administrateurs peuvent effectuer cette action"
     trend_change:
       no_change: "pas de changement"

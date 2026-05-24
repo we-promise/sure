@@ -73,6 +73,10 @@ class QifImport < Import
     account.present? && super
   end
 
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    account.present? && super
+  end
+
   # Returns true if import! will move the opening anchor back to cover transactions
   # that predate the current anchor date. Used to show a notice in the confirm step.
   def will_adjust_opening_anchor?
@@ -162,8 +166,9 @@ class QifImport < Import
     def generate_transaction_rows
       transactions = QifParser.parse(raw_file_str, date_format: qif_date_format)
 
-      mapped_rows = transactions.map do |trn|
+      mapped_rows = transactions.map.with_index(1) do |trn, index|
         {
+          source_row_number:       index,
           date:                   trn.date.to_s,
           amount:                 trn.amount.to_s,
           currency:               default_currency.to_s,
@@ -189,11 +194,12 @@ class QifImport < Import
     def generate_investment_rows
       inv_transactions = QifParser.parse_investment_transactions(raw_file_str, date_format: qif_date_format)
 
-      mapped_rows = inv_transactions.map do |trn|
+      mapped_rows = inv_transactions.map.with_index(1) do |trn, index|
         if QifParser::TRADE_ACTIONS.include?(trn.action)
           qty = trade_qty_for(trn.action, trn.qty)
 
           {
+            source_row_number:       index,
             date:                   trn.date.to_s,
             ticker:                 trn.security_ticker.to_s,
             qty:                    qty.to_s,
@@ -210,6 +216,7 @@ class QifImport < Import
           }
         else
           {
+            source_row_number:       index,
             date:                   trn.date.to_s,
             amount:                 trn.amount.to_s,
             currency:               default_currency.to_s,

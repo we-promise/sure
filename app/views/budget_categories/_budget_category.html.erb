@@ -1,4 +1,4 @@
-<%# locals: (budget_category:) %>
+<%# locals: (budget_category:, show_budget_meta: true) %>
 
 <%= turbo_frame_tag dom_id(budget_category), class: "flex-1 min-w-0 block" do %>
   <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group block w-full px-4 py-2 bg-container", data: { turbo_frame: "drawer" } do %>
@@ -49,7 +49,7 @@
         <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
           <% bar_color = budget_category.over_budget? ? "bg-red-500" : (budget_category.near_limit? ? "bg-yellow-500" : "bg-green-500") %>
           <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
-               style="width: <%= budget_category.bar_width_percent %>%"></div>
+            style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
         </div>
       </div>
 
@@ -61,15 +61,26 @@
             <%= format_money(budget_category.actual_spending_money) %>
           </span>
         </div>
+        <% if show_budget_meta %>
         <div class="whitespace-nowrap w-full sm:w-auto inline-flex items-center gap-1">
           <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
           <span class="font-medium text-primary privacy-sensitive">
             <%= format_money(budget_category.budgeted_spending_money) %>
           </span>
           <% if budget_category.inherits_parent_budget? %>
-            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-500/5 text-secondary"><%= t("reports.budget_performance.shared") %></span>
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-tint-5 text-secondary"><%= t("reports.budget_performance.shared") %></span>
           <% end %>
         </div>
+        <% if budget_category.suggested_daily_spending.present? %>
+          <% daily_info = budget_category.suggested_daily_spending %>
+          <div class="w-full sm:w-auto text-xs text-subdued">
+            <%= t("reports.budget_performance.suggested_daily",
+              amount: daily_info[:amount].format,
+              days: daily_info[:days_remaining])
+            %>
+          </div>
+        <% end %>
+        <% end %>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>
             <span class="text-sm text-secondary"><%= t("reports.budget_performance.remaining") %>:</span>
@@ -84,18 +95,6 @@
           <% end %>
         </div>
       </div>
-
-      <%# Suggested Daily Limit (if remaining days in month) %>
-      <% if budget_category.suggested_daily_spending.present? %>
-        <% daily_info = budget_category.suggested_daily_spending %>
-        <div class="py-2">
-          <p class="text-xs text-subdued break-words">
-            <%= t("reports.budget_performance.suggested_daily",
-                  amount: daily_info[:amount].format,
-                  days: daily_info[:days_remaining]) %>
-          </p>
-        </div>
-      <% end %>
 
     <% else %>
       <%# Uninitialized budget - show simple view %>

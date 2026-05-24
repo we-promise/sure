@@ -44,6 +44,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         selected: selected_value,
         placeholder: placeholder,
         searchable: options.fetch(:searchable, false),
+        menu_placement: options[:menu_placement],
         variant: options.fetch(:variant, :simple),
         include_blank: options[:include_blank],
         label: options[:label],
@@ -88,6 +89,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     @template.render(
       DS::Button.new(
         text: value,
+        type: "submit",
         data: (options[:data] || {}).merge({ turbo_submits_with: "Submitting..." }),
         full_width: true
       )

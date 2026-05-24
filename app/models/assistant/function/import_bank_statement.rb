@@ -155,7 +155,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       account_holder: result[:account_holder],
       message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. Review and publish when ready."
     }
-  rescue Provider::ProviderError, Faraday::Error, Timeout::Error, RuntimeError => e
+  rescue Provider::Error, Faraday::Error, Timeout::Error, RuntimeError => e
     Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
     Rails.logger.error(e.backtrace.first(10).join("\n"))
     {

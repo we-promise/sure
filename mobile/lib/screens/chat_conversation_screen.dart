@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
+import '../constants/suggested_questions.dart';
 import '../widgets/typing_indicator.dart';
 
 class _SendMessageIntent extends Intent {
@@ -33,6 +35,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   ChatProvider? _chatProvider;
   bool _listenerAdded = false;
+  bool _isSendInFlight = false;
 
   @override
   void initState() {
@@ -67,7 +70,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   void _onChatChanged() {
     if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage) {
+    if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage || chatProvider.isPolling) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scrollToBottom();
       });
@@ -82,6 +85,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         curve: Curves.easeOut,
       );
     }
+  }
+
+  Future<void> _sendSuggestedQuestion(String question) async {
+    if (!mounted) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    if (chatProvider.isSendingMessage || chatProvider.isWaitingForResponse) return;
+    _messageController.text = question;
+    await _sendMessage();
   }
 
   Future<void> _loadChat({bool forceRefresh = false}) async {
@@ -119,9 +130,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   Future<void> _sendMessage() async {
+    if (_isSendInFlight) return;
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
+    setState(() => _isSendInFlight = true);
 
+    try {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
@@ -181,6 +195,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         );
       }
     });
+    } finally {
+      if (mounted) setState(() => _isSendInFlight = false);
+    }
   }
 
   Future<void> _editTitle() async {
@@ -314,31 +331,55 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             );
           }
 
-          final messages = chatProvider.currentChat?.messages ?? [];
+          final allMessages = chatProvider.currentChat?.messages ?? [];
+          // While waiting for the AI response, hide the last (partial/streaming)
+          // assistant message so the typing indicator shows instead of partial content.
+          // The full response is revealed once polling detects stable content.
+          final messages = chatProvider.isWaitingForResponse
+              ? allMessages.where((m) {
+                  return !(m.isAssistant && m == allMessages.lastOrNull);
+                }).toList()
+              : allMessages;
+          final firstName =
+              Provider.of<AuthProvider>(context, listen: true).user?.firstName;
 
           return Column(
             children: [
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length +
-                      (chatProvider.isWaitingForResponse ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == messages.length) {
-                      return const _TypingIndicatorBubble();
-                    }
-                    return _MessageBubble(
-                      message: messages[index],
-                      formatTime: _formatTime,
-                    );
-                  },
-                ),
+                child: messages.isEmpty &&
+                        !chatProvider.isLoading &&
+                        !chatProvider.isSendingMessage &&
+                        !chatProvider.isWaitingForResponse
+                    ? _EmptyState(
+                        firstName: firstName,
+                        isSending: false,
+                        onQuestionTap: _sendSuggestedQuestion,
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: messages.length +
+                            (chatProvider.isWaitingForResponse ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == messages.length) {
+                            return const _TypingIndicatorBubble();
+                          }
+                          return _MessageBubble(
+                            message: messages[index],
+                            formatTime: _formatTime,
+                          );
+                        },
+                      ),
               ),
 
               // Message input
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  16 + MediaQuery.paddingOf(context).bottom,
+                ),
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   boxShadow: [
@@ -358,7 +399,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     actions: <Type, Action<Intent>>{
                       _SendMessageIntent: CallbackAction<_SendMessageIntent>(
                         onInvoke: (_) {
-                          if (!chatProvider.isSendingMessage) _sendMessage();
+                          if (!_isSendInFlight && !chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse && !chatProvider.isPolling) _sendMessage();
                           return null;
                         },
                       ),
@@ -386,7 +427,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
-                          onPressed: chatProvider.isSendingMessage
+                          onPressed: (_isSendInFlight || chatProvider.isSendingMessage || chatProvider.isWaitingForResponse || chatProvider.isPolling)
                               ? null
                               : _sendMessage,
                           color: colorScheme.primary,
@@ -413,6 +454,22 @@ class _MessageBubble extends StatelessWidget {
     required this.message,
     required this.formatTime,
   });
+
+  /// Builds the markdown stylesheet once per render context instead of inline,
+  /// avoiding redundant TextStyle allocations per message bubble.
+  MarkdownStyleSheet _markdownStyle(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+      p: TextStyle(color: color),
+      strong: TextStyle(color: color, fontWeight: FontWeight.bold),
+      em: TextStyle(color: color, fontStyle: FontStyle.italic),
+      listBullet: TextStyle(color: color),
+      h1: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+      h2: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold),
+      h3: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold),
+      code: TextStyle(color: color, fontFamily: 'monospace'),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -455,14 +512,27 @@ class _MessageBubble extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        message.content,
-                        style: TextStyle(
-                          color: isUser
-                              ? colorScheme.onPrimary
-                              : colorScheme.onSurfaceVariant,
+                      if (isUser)
+                        Text(
+                          message.content,
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                          ),
+                        )
+                      else
+                        MarkdownBody(
+                          data: message.content,
+                          selectable: false,
+                          softLineBreak: true,
+                          styleSheet: _markdownStyle(context),
+                          sizedImageBuilder: (config) {
+                            // Block remote images to prevent unsolicited network requests.
+                            if (config.uri.scheme == 'http' || config.uri.scheme == 'https') {
+                              return const SizedBox.shrink();
+                            }
+                            return Image.asset(config.uri.toString());
+                          },
                         ),
-                      ),
                       if (message.toolCalls != null &&
                           message.toolCalls!.isNotEmpty)
                         Padding(
@@ -510,6 +580,58 @@ class _MessageBubble extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String? firstName;
+  final bool isSending;
+  final void Function(String) onQuestionTap;
+
+  const _EmptyState({
+    required this.firstName,
+    required this.isSending,
+    required this.onQuestionTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final name = (firstName ?? '').trim();
+    final greeting = name.isNotEmpty ? 'Hi $name, how can I help?' : 'How can I help?';
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 32),
+        Text(
+          greeting,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        ...suggestedQuestions.map(
+          (q) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: OutlinedButton.icon(
+              onPressed: isSending ? null : () => onQuestionTap(q.text),
+              icon: Icon(q.icon, size: 20),
+              label: Text(q.text, textAlign: TextAlign.left),
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundColor: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

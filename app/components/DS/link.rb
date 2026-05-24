@@ -5,8 +5,14 @@ class DS::Link < DS::Buttonish
 
   VARIANTS = VARIANTS.reverse_merge(
     default: {
-      container_classes: "",
-      icon_classes: "fg-gray"
+      # Underline + `text-link` so the link is distinguishable by more
+      # than color alone (WCAG 1.4.1). Focus ring uses the established
+      # alpha-ring DS pattern (also used by DS::Toggle, DS::Tooltip,
+      # provider_card, form-field) so theming stays centralized.
+      container_classes: "text-link underline underline-offset-2 hover:no-underline " \
+                         "focus-visible:ring-2 focus-visible:ring-alpha-black-300 " \
+                         "theme-dark:focus-visible:ring-alpha-white-300",
+      icon_classes: "text-secondary"
     }
   ).freeze
 
@@ -18,10 +24,46 @@ class DS::Link < DS::Buttonish
       data = data.merge(turbo_frame: frame)
     end
 
+    # External link hardening: `target="_blank"` without `rel="noopener"`
+    # exposes window.opener to the new tab (reverse-tabnabbing). Always
+    # set `noopener noreferrer` when we send the user off-tab. Authors
+    # can override by passing `rel:` explicitly.
+    if merged_opts[:target].to_s == "_blank"
+      merged_opts[:rel] ||= "noopener noreferrer"
+    end
+
+    # Icon-only links have no visible text node, so screen readers fall
+    # back to announcing the href. Derive a humanized fallback from the
+    # icon key so AT users hear *something* meaningful; explicit
+    # `aria: { label: }` on the caller still wins. Mirrors DS::Button.
+    #
+    # When the link also opens in a new tab, fold the cue into the
+    # generated `aria-label` itself — `aria-label` overrides the
+    # descendant accessible name, so the sr-only "(opens in new tab)"
+    # span in the template would otherwise be masked.
+    if icon_only? && icon.present?
+      aria = (merged_opts[:aria] || {}).symbolize_keys
+      if aria[:label].blank? && merged_opts[:"aria-label"].blank?
+        label = icon.to_s.tr("-_", " ").humanize
+        if merged_opts[:target].to_s == "_blank"
+          label = "#{label} #{I18n.t("ds.link.opens_in_new_tab", default: "(opens in new tab)")}"
+        end
+        aria[:label] = label
+        merged_opts[:aria] = aria
+      end
+    end
+
     merged_opts.merge(
       class: class_names(container_classes, extra_classes),
       data: data
     )
+  end
+
+  # Render an sr-only suffix when the link opens in a new tab so AT
+  # users hear "(opens in new tab)" — visual is a separate concern
+  # (callers can render a `external-link` icon if they want a glyph).
+  def opens_in_new_tab?
+    opts[:target].to_s == "_blank"
   end
 
   private

@@ -25,7 +25,7 @@
         }} %>
 
       <% if %w[buy sell].include?(type) %>
-        <% if Security.provider.present? %>
+        <% if Security.providers.any? %>
           <div class="form-field combobox">
             <%= form.combobox :ticker,
                             securities_path(country_code: Current.family.country),
@@ -51,7 +51,7 @@
       <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>
 
       <% unless %w[buy sell].include?(type) %>
-        <%= form.money_field :amount, label: t(".amount"), value: model.amount, required: true %>
+        <%= form.money_field :amount, label: t(".amount"), value: model.amount, required: true, default_currency: account&.currency %>
       <% end %>
 
       <% if %w[deposit withdrawal].include?(type) %>
@@ -60,8 +60,8 @@
 
       <% if %w[buy sell].include?(type) %>
         <%= form.number_field :qty, label: t(".qty"), placeholder: "10", min: 0.000000000000000001, step: "any", required: true %>
-        <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true %>
-        <%= form.money_field :fee, label: t(".fee"), step: "any", min: 0 %>
+        <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true, default_currency: account&.currency %>
+        <%= form.money_field :fee, label: t(".fee"), step: "any", min: 0, default_currency: account&.currency %>
       <% end %>
     </div>
 

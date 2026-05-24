@@ -3,12 +3,18 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../providers/categories_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
+import '../services/biometric_service.dart';
 import '../services/preferences_service.dart';
 import '../services/user_service.dart';
 import 'log_viewer_screen.dart';
+import '../models/custom_proxy_header.dart';
+import '../services/api_config.dart';
+import '../services/custom_proxy_headers_service.dart';
+import '../widgets/custom_proxy_headers_editor.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,12 +28,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _appVersion;
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
+  bool _biometricSupported = false;
+  bool _biometricEnabled = false;
+  bool _isTogglingBiometric = false;
+  List<CustomProxyHeader> _customHeaders = [];
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
     _loadAppVersion();
+    _loadBiometricState();
+    _loadCustomHeaders();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final supported = await BiometricService.instance.isDeviceSupported();
+    final enabled = await PreferencesService.instance.getBiometricEnabled();
+    if (!supported && enabled) {
+      await PreferencesService.instance.setBiometricEnabled(false);
+    }
+    if (mounted) {
+      setState(() {
+        _biometricSupported = supported;
+        _biometricEnabled = supported && enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (_isTogglingBiometric) return;
+    setState(() => _isTogglingBiometric = true);
+    try {
+      if (value) {
+        final success = await BiometricService.instance.authenticate(
+          reason: 'Verify biometric to enable app lock',
+        );
+        if (!mounted) return;
+        if (!success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric authentication failed.')),
+          );
+          return;
+        }
+      }
+      await PreferencesService.instance.setBiometricEnabled(value);
+      if (mounted) setState(() => _biometricEnabled = value);
+    } finally {
+      if (mounted) setState(() => _isTogglingBiometric = false);
+    }
   }
 
   Future<void> _loadAppVersion() async {
@@ -42,11 +91,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    final value = await PreferencesService.instance.getGroupByType();
+    final groupByType = await PreferencesService.instance.getGroupByType();
     if (mounted) {
       setState(() {
-        _groupByType = value;
+        _groupByType = groupByType;
       });
+    }
+  }
+
+  Future<void> _loadCustomHeaders() async {
+    try {
+      final headers = await CustomProxyHeadersService.instance.loadHeaders();
+      if (mounted) {
+        setState(() => _customHeaders = headers);
+      }
+    } catch (e, stack) {
+      debugPrint('SettingsScreen: failed to load custom headers: $e\n$stack');
+      // Keep the existing _customHeaders state so the screen remains usable.
     }
   }
 
@@ -83,6 +144,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         log.info('Settings', 'Clearing all local data...');
         await offlineStorage.clearAllData();
+        if (context.mounted) {
+          Provider.of<CategoriesProvider>(context, listen: false).clear();
+        }
         log.info('Settings', 'Local data cleared successfully');
 
         if (context.mounted) {
@@ -164,6 +228,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (result['success'] == true) {
         await OfflineStorageService().clearAllData();
+        if (context.mounted) {
+          Provider.of<CategoriesProvider>(context, listen: false).clear();
+        }
 
         if (!context.mounted) return;
 
@@ -266,6 +333,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed == true && context.mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.logout();
+    }
+  }
+
+  Future<void> _showCustomHeadersDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final latestHeaders = await CustomProxyHeadersService.instance.loadHeaders();
+    if (!mounted) return;
+
+    setState(() => _customHeaders = latestHeaders);
+    var draftHeaders = List<CustomProxyHeader>.from(latestHeaders);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Custom proxy headers'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CustomProxyHeadersEditor(
+                    initialHeaders: draftHeaders,
+                    onChanged: (headers) => draftHeaders = headers,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Headers are sent by the app with API requests. External browser SSO pages may not receive them.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.pop(context, true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (saved != true) return;
+
+    try {
+      await CustomProxyHeadersService.instance.saveHeaders(draftHeaders);
+      ApiConfig.setCustomProxyHeaders(draftHeaders);
+      if (!mounted) return;
+      setState(() => _customHeaders = draftHeaders);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Custom proxy headers saved')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save custom proxy headers: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -433,6 +573,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const Divider(),
 
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Connection',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.http_outlined),
+            title: const Text('Custom proxy headers'),
+            subtitle: Text(
+              _customHeaders.isEmpty
+                  ? 'Optional headers for a reverse proxy or auth gateway'
+                  : '${_customHeaders.length} configured',
+            ),
+            onTap: _showCustomHeadersDialog,
+          ),
+
+          const Divider(),
+
           // Data Management Section
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -453,6 +618,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Remove all cached transactions and accounts'),
             onTap: () => _handleClearLocalData(context),
           ),
+
+          if (_biometricSupported) ...[
+            const Divider(),
+
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Security',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.fingerprint),
+              title: const Text('Biometric Lock'),
+              subtitle: const Text('Require biometric authentication when resuming the app'),
+              value: _biometricEnabled,
+              onChanged: _isTogglingBiometric ? null : _toggleBiometric,
+            ),
+          ],
 
           const Divider(),
 

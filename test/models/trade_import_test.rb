@@ -10,6 +10,38 @@ class TradeImportTest < ActiveSupport::TestCase
     Security.stubs(:provider).returns(@provider)
   end
 
+  test "csv_template uses ISO dates" do
+    first_row = @import.csv_template.first
+
+    assert_equal "2024-05-15", first_row["date*"]
+  end
+
+  test "generates rows from legacy quantity header with template labels" do
+    import_csv = <<~CSV
+      date,ticker,quantity,price,account_name
+      2024-05-15,AAPL,10,150.00,Trading Account
+    CSV
+
+    @import.update!(
+      raw_file_str: import_csv,
+      date_col_label: "date*",
+      ticker_col_label: "ticker*",
+      qty_col_label: "qty*",
+      price_col_label: "price*",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d",
+      signage_convention: "inflows_positive"
+    )
+
+    @import.generate_rows_from_csv
+    row = @import.rows.reload.first
+
+    assert row.valid?
+    assert_equal "Trading Account", row.account
+    assert_equal "10", row.qty
+    assert_equal BigDecimal("1500"), row.signed_amount
+  end
+
   test "imports trades and accounts" do
     aapl_resolver = mock
     googl_resolver = mock

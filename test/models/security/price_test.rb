@@ -6,9 +6,8 @@ class Security::PriceTest < ActiveSupport::TestCase
 
   setup do
     @provider = mock
-    Security.stubs(:provider).returns(@provider)
-
     @security = securities(:aapl)
+    @security.stubs(:price_data_provider).returns(@provider)
   end
 
   test "finds single security price in DB" do

@@ -2,8 +2,8 @@
 
 <div class="flex flex-col gap-2">
   <%= form.text_field :name,
-                  label: "Name",
-                  placeholder: "Vacation home",
+                  label: t(".name_label"),
+                  placeholder: t(".name_placeholder"),
                   required: true %>
 
   <%= form.hidden_field :accountable_type, value: "Property" %>
@@ -11,24 +11,24 @@
   <%= form.fields_for :accountable do |property_form| %>
     <%= property_form.select :subtype,
                 Property::SUBTYPES.map { |k, v| [v[:long], k] },
-                { prompt: "Select type", label: "Property type" }, required: true %>
+                { prompt: t(".subtype_prompt"), label: t(".property_type_label") }, required: true %>
 
     <div class="flex items-center gap-2">
       <%= property_form.number_field :year_built,
-                    label: "Year Built (optional)",
-                    placeholder: "1990",
+                    label: t(".year_built_label"),
+                    placeholder: t(".year_built_placeholder"),
                     min: 1500,
                     max: Time.current.year %>
     </div>
 
     <div class="flex items-center gap-2">
       <%= property_form.number_field :area_value,
-                      label: "Area (optional)",
-                      placeholder: "1200",
+                      label: t(".area_label"),
+                      placeholder: t(".area_placeholder"),
                       min: 0 %>
       <%= property_form.select :area_unit,
-                      [["Square Feet", "sqft"], ["Square Meters", "sqm"]],
-                      { label: "Area Unit" } %>
+                      [[t(".square_feet"), "sqft"], [t(".square_meters"), "sqm"]],
+                      { label: t(".area_unit_label") } %>
     </div>
   <% end %>
 

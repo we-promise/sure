@@ -1,18 +1,20 @@
 module DS
   class Select < ViewComponent::Base
-    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :options
+    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :menu_placement, :options
 
     VARIANTS = %i[simple logo badge].freeze
+    MENU_PLACEMENTS = %w[auto down up].freeze
     HEX_COLOR_REGEX = /\A#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\z/
     RGB_COLOR_REGEX = /\Argb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)\z/
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, menu_placement: :auto, **options)
       @form = form
       @method = method
       @placeholder = placeholder
       @variant = variant
       @searchable = searchable
+      @menu_placement = normalize_menu_placement(menu_placement)
       @options = options
 
       normalized_items = normalize_items(items)
@@ -60,6 +62,11 @@ module DS
     end
 
     private
+
+      def normalize_menu_placement(value)
+        normalized = value.to_s.downcase
+        MENU_PLACEMENTS.include?(normalized) ? normalized : "auto"
+      end
 
       def normalize_items(collection)
         collection.map do |item|

@@ -1,0 +1,9 @@
+---
+hu:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Nemrég kérted az e-mail címed megváltoztatását. Kattints az alábbi gombra a változtatás megerősítéséhez.
+      cta: E-mail-változtatás megerősítése
+      expiry_notice: Ez a link %{hours} óra múlva lejár.
+      greeting: Szia!
+      subject: '%{product_name}: E-mail-változtatás megerősítése'

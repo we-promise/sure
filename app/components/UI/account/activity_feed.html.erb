@@ -54,7 +54,7 @@
               data: { controller: "auto-submit-form" } do |form| %>
         <div class="flex gap-2 mb-4">
           <div class="grow">
-            <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:ring-gray-100 focus-within:border-gray-900">
+            <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:border-primary">
               <%= helpers.icon("search") %>
 
               <%= hidden_field_tag :account_id, account.id %>
@@ -67,8 +67,8 @@
             </div>
           </div>
 
-          <%= render DS::Menu.new(variant: "button", no_padding: true) do |menu| %>
-            <% menu.with_button(
+          <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
+            <% popover.with_button(
               id: "activity-status-filter-button",
               type: "button",
               text: t("accounts.show.activity.filter"),
@@ -76,7 +76,7 @@
               icon: "list-filter"
             ) %>
 
-            <% menu.with_custom_content do %>
+            <% popover.with_custom_content do %>
               <div class="p-3 space-y-3 min-w-[160px]">
                 <p class="text-xs font-medium text-secondary uppercase"><%= t("accounts.show.activity.status") %></p>
                 <div class="flex items-center gap-3">

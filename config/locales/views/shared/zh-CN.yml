@@ -8,6 +8,12 @@ zh-CN:
       title: 确定要执行此操作？
     money_field:
       label: 金额
+    exchange_rate_tabs:
+      calculate_rate_tab: 计算汇率
+      convert_tab: 用汇率转换
+      destination_amount: 目标金额
+      exchange_rate: 汇率
+      exchange_rate_help: 选择如何输入金额。
     syncing_notice:
       syncing: 账户数据同步中...
     transaction_tabs:

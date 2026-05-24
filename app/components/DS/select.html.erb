@@ -1,36 +1,47 @@
 <%# locals: form:, method:, collection:, options: {} %>
 
-<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-select-menu-placement-value="<%= menu_placement %>" data-action="dropdown:select->form-dropdown#onSelect">
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body">
-        <%= form.label method, options[:label], class: "form-field__label" if options[:label].present? %>
+        <%= form.label method, options[:label], class: "form-field__label", id: "#{method}_label" if options[:label].present? %>
         <%= form.hidden_field method,
             value: @selected_value,
             data: {
               "form-dropdown-target": "input",
-              "auto-submit-target": "auto"
+              "auto-submit-target": "auto",
+              **(options.dig(:html_options, :data) || {})
             } %>
+        <%# `aria-expanded` reflects MENU open/closed state — managed by the
+            select controller's openMenu/close. Init as "false"; previously
+            this incorrectly mirrored whether a value was selected.
+
+            `aria-labelledby` points at BOTH the visible label and the
+            trigger button itself so AT users hear "<label> <selected
+            value>" — referencing only the label would override the
+            button's text node and suppress the current value. %>
         <button type="button"
+                id="<%= method %>_trigger"
                 class="form-field__input w-full"
                 data-select-target="button"
                 data-action="click->select#toggle"
                 aria-haspopup="listbox"
-                aria-expanded="<%= @selected_value.present? ? "true" : "false" %>"
-                aria-labelledby="<%= "#{method}_label" %>">
+                aria-expanded="false"
+                <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>
           <%= selected_item&.dig(:label) || @placeholder %>
         </button>
     </div>
   </div>
   <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
     <% if searchable %>
-      <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
-        <input type="search"
-               placeholder="<%= t("helpers.select.search_placeholder") %>"
-               autocomplete="off"
-               class="bg-container text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
-               data-list-filter-target="input"
-               data-action="list-filter#filter">
-        <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+      <div class="flex items-center bg-container border border-secondary rounded-lg mb-1 focus-within:ring-4 focus-within:ring-alpha-black-200 theme-dark:focus-within:ring-alpha-white-300 transition-shadow">
+        <%= render DS::SearchInput.new(
+          variant: :embedded,
+          placeholder: t("helpers.select.search_placeholder"),
+          data: {
+            list_filter_target: "input",
+            action: "input->list-filter#filter input->select#syncTabindex"
+          }
+        ) %>
       </div>
     <% end %>
     <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto"
@@ -39,10 +50,14 @@
         <% is_selected = item[:value] == selected_value %>
         <% obj = item[:object] %>
 
-        <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+        <%# Roving tabindex: selected option is in tab order (`0`); others
+            are reachable only via ArrowUp/Down (`-1`). WAI-ARIA APG
+            listbox keyboard pattern. %>
+        <div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
               role="option"
-              tabindex="0"
+              tabindex="<%= is_selected ? "0" : "-1" %>"
               aria-selected="<%= is_selected %>"
+              data-select-target="option"
               data-action="click->select#select"
               data-value="<%= item[:value] %>"
               data-filter-name="<%= item[:label] %>">

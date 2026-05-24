@@ -11,16 +11,18 @@
       <div class="col-span-8 flex items-center gap-3 lg:gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
                         class: "checkbox checkbox--light hidden lg:block",
-                        data: { id: entry.id, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
+                        data: { id: entry.id, entry_type: entry.entryable_type, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
 
         <div class="flex items-center gap-3">
           <%= render DS::FilledIcon.new(icon: icon, size: "md", hex_color: color, rounded: true) %>
 
           <div class="truncate text-primary">
-            <%= link_to entry.name,
-                        entry_path(entry),
-                        data: { turbo_frame: "drawer", turbo_prefetch: false },
-                        class: "hover:underline" %>
+            <%= link_to(
+                  valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name,
+                  entry_path(entry),
+                  data: { turbo_frame: "drawer", turbo_prefetch: false },
+                  class: "hover:underline"
+                ) %>
           </div>
         </div>
       </div>

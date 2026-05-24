@@ -1,0 +1,16 @@
+<div class="subtype-select hidden" data-type="<%= account_type %>">
+  <% if subtype_config[:options].present? %>
+    <%= label_tag "account_subtypes[#{brex_account.id}]", subtype_config[:label],
+                 class: "block text-sm font-medium text-primary mb-2" %>
+    <% selected_value = "" %>
+    <% if account_type == "Depository" %>
+      <% selected_value = default_brex_depository_subtype(brex_account.name) %>
+    <% end %>
+    <% prompt_key = account_type == "Depository" ? "subtype" : "type" %>
+    <%= select_tag "account_subtypes[#{brex_account.id}]",
+                  options_for_select([[t("brex_items.subtype_select.placeholder.#{prompt_key}"), ""]] + subtype_config[:options], selected_value),
+                  { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" } %>
+  <% else %>
+    <p class="text-sm text-secondary"><%= subtype_config[:message] %></p>
+  <% end %>
+</div>

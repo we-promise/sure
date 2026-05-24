@@ -7,11 +7,19 @@ fr:
       success: Transfert supprimé
     form:
       amount: Montant
+      calculate_rate_tab: Calculer le taux de change
+      convert_tab: Convertir avec taux de change
       date: Date
+      destination_amount: Montant de destination
+      destination_amount_display: "Montant de destination : %{amount}"
+      exchange_rate: Taux de change
+      exchange_rate_display: "Taux de change : %{rate}"
+      exchange_rate_help: Choisissez comment saisir le montant du transfert.
       expense: Dépense
       from: De
       income: Revenu
       select_account: Sélectionner un compte
+      source_amount: Montant source
       submit: Créer le transfert
       to: Vers
       transfer: Transfert

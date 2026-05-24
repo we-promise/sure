@@ -39,6 +39,8 @@ if rails_env == "production"
 end
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
+# The bind host is controlled via the Rails-native `BINDING` env var (set to
+# `0.0.0.0` in containers, or `::` for IPv6 dual-stack). See docs/hosting/docker.md.
 port ENV.fetch("PORT") { 3000 }
 
 # Specifies the `environment` that Puma will run in.

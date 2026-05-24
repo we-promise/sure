@@ -2,6 +2,9 @@ require "test_helper"
 require "socket"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  DEFAULT_VIEWPORT_WIDTH = 1400
+  DEFAULT_VIEWPORT_HEIGHT = 1400
+
   setup do
     Capybara.default_max_wait_time = 5
 
@@ -14,6 +17,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       Capybara.always_include_port = true
       Capybara.app_host = "http://#{app_host}:#{server_port}"
     end
+
+    reset_viewport
   end
 
   if ENV["SELENIUM_REMOTE_URL"].present?
@@ -31,10 +36,52 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
     driven_by :selenium_remote_chrome, screen_size: [ 1400, 1400 ]
   else
-    driven_by :selenium, using: ENV["CI"].present? ? :headless_chrome : ENV.fetch("E2E_BROWSER", :chrome).to_sym, screen_size: [ 1400, 1400 ]
+    requested_browser = ENV["E2E_BROWSER"].presence&.to_sym
+    local_browser = case requested_browser
+    when :headless_chrome then :chrome
+    when :headless_firefox then :firefox
+    else requested_browser || :chrome
+    end
+
+    headless = ENV["CI"].present? || requested_browser.in?([ :headless_chrome, :headless_firefox ]) || ENV["DISPLAY"].blank?
+
+    Capybara.register_driver :selenium_local_chrome do |app|
+      options = case local_browser
+      when :firefox
+        Selenium::WebDriver::Firefox::Options.new.tap do |firefox_options|
+          firefox_options.add_argument("--width=1400")
+          firefox_options.add_argument("--height=1400")
+          firefox_options.add_argument("-headless") if headless
+        end
+      else
+        Selenium::WebDriver::Chrome::Options.new.tap do |chrome_options|
+          chrome_options.add_argument("--window-size=1400,1400")
+          chrome_options.add_argument("--headless=new") if headless
+          chrome_options.add_argument("--no-sandbox")
+          chrome_options.add_argument("--disable-dev-shm-usage")
+        end
+      end
+
+      Capybara::Selenium::Driver.new(
+        app,
+        browser: local_browser,
+        options: options
+      )
+    end
+
+    driven_by :selenium_local_chrome, screen_size: [ 1400, 1400 ]
+  end
+
+  def teardown
+    reset_viewport
+    super
   end
 
   private
+
+    def reset_viewport
+      page.current_window.resize_to(DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT) if page&.current_window
+    end
 
     def sign_in(user)
       visit new_session_path
@@ -64,5 +111,19 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       within "[data-testid='#{testid}']" do
         yield
       end
+    end
+
+    # Interact with DS::Select custom dropdown components.
+    # DS::Select renders as a button + listbox — not a native <select> — so
+    # Capybara's built-in `select(value, from:)` does not work with it.
+    def select_ds(label_text, record)
+      field_label = find("label", exact_text: label_text)
+      container = field_label.ancestor("div.relative")
+      container.find("button").click
+      if container.has_selector?("input[type='search']", visible: true)
+        container.find("input[type='search']", visible: true).set(record.name)
+      end
+      listbox = container.find("[role='listbox']", visible: true)
+      listbox.find("[role='option'][data-value='#{record.id}']", visible: true).click
     end
 end

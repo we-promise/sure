@@ -8,6 +8,12 @@ nb:
       title: Er du sikker?
     money_field:
       label: Beløp
+    exchange_rate_tabs:
+      calculate_rate_tab: Beregn FX-kurs
+      convert_tab: Konverter med FX-kurs
+      destination_amount: Beløp for destinasjon
+      exchange_rate: Vekslingskurs
+      exchange_rate_help: Velg hvordan du vil fylle inn beløpet.
     syncing_notice:
       syncing: Synkroniserer kontodata...
     trend_change:
