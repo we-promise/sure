@@ -25,6 +25,7 @@ en:
       refresh_hint: "Once you've configured Redis, refresh this page to continue."
       refresh_page: Refresh Page
     changelog:
+      no_release_notes: No release notes available
       title: What's new
     privacy:
       title: Privacy Policy

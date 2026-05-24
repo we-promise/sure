@@ -102,12 +102,19 @@ module AccountableResource
 
     # Sanitize return_to parameter to prevent XSS/open-redirect attacks.
     # Only allow internal relative paths (single leading "/"), and reject any scheme/host.
-    # Accepts return_to from either the top-level params or nested account_params.
+    # Accepts return_to from either the top-level params or nested account_params;
+    # top-level wins if both are set (the account-form flow passes return_to inside
+    # the account namespace, but top-level callers should always take precedence).
     def safe_return_to_path
       raw = params[:return_to].presence || params.dig(:account, :return_to).presence
       return nil if raw.blank?
 
       return_to = raw.to_s
+
+      # Reject backslash-containing paths: browsers (and some Rails normalizers)
+      # treat "/\evil.com" or "/%5Cevil.com" as "//evil.com" → cross-origin
+      # redirect. Strip them at the source rather than try to canonicalize.
+      return nil if return_to.include?("\\") || return_to.include?("%5C") || return_to.include?("%5c")
 
       # Reject protocol-relative URLs like "//evil.example.com/path" that browsers
       # treat as cross-origin even though they pass a naive start_with?("/") check.
