@@ -93,7 +93,7 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
 
   test "category status reflects over_budget helper" do
     budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month, user: @user)
-    food_bc = budget.budget_categories.find { |bc| bc.category.name == "Food & Drink" }
+    food_bc = budget.budget_categories.find { |bc| bc.category == categories(:food_and_drink) }
     food_bc.update!(budgeted_spending: 100)
 
     BudgetCategory.any_instance.stubs(:actual_spending).returns(150)
