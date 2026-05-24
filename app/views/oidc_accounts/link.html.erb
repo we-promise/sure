@@ -3,12 +3,11 @@
 %>
 
 <% if @user_exists %>
-  <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-    <h3 class="text-sm font-medium text-yellow-800 mb-2"><%= t("oidc_accounts.link.verify_heading") %></h3>
-    <p class="text-sm text-yellow-700">
+  <div class="mb-6">
+    <%= render DS::Alert.new(title: t("oidc_accounts.link.verify_heading"), variant: :warning) do %>
       <% email_suffix = @pending_auth["email"].present? ? t("oidc_accounts.link.email_suffix_html", email: @pending_auth["email"]) : "" %>
-      <%= t("oidc_accounts.link.verify_description_html", provider: @pending_auth["provider"], email_suffix: email_suffix).html_safe %>
-    </p>
+      <p><%= t("oidc_accounts.link.verify_description_html", provider: @pending_auth["provider"], email_suffix: email_suffix).html_safe %></p>
+    <% end %>
   </div>
 
   <%= styled_form_with url: create_link_oidc_account_path, class: "space-y-4", data: { turbo: false } do |form| %>
@@ -26,18 +25,17 @@
                             placeholder: t("oidc_accounts.link.password_placeholder"),
                             autocomplete: "current-password" %>
 
-    <div class="text-sm text-gray-600 mt-2">
+    <div class="text-sm text-secondary mt-2">
       <p><%= t("oidc_accounts.link.verify_hint") %></p>
     </div>
 
     <%= form.submit t("oidc_accounts.link.submit_link") %>
   <% end %>
 <% else %>
-  <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-    <h3 class="text-sm font-medium text-blue-800 mb-2"><%= t("oidc_accounts.link.create_heading") %></h3>
-    <p class="text-sm text-blue-700">
-      <%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %>
-    </p>
+  <div class="mb-6">
+    <%= render DS::Alert.new(title: t("oidc_accounts.link.create_heading"), variant: :info) do %>
+      <p><%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %></p>
+    <% end %>
   </div>
 
   <div class="space-y-4">
