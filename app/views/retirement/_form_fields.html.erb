@@ -45,7 +45,15 @@
     <div>
       <label for="retirement_config_pension_system" class="block text-sm font-medium text-secondary mb-1"><%= t(".pension_system") %></label>
       <%= f.select :pension_system,
-            RetirementConfig::PENSION_SYSTEMS.keys.map { |k| [t("retirement.pension_systems.#{k}", default: k.humanize), k] },
+            grouped_options_for_select(
+              RetirementConfig::PENSION_SYSTEM_GROUPS.map do |group_key, systems|
+                [
+                  t("retirement.pension_system_groups.#{group_key}"),
+                  systems.map { |k| [ t("retirement.pension_systems.#{k}", default: k.humanize), k ] }
+                ]
+              end,
+              f.object&.pension_system
+            ),
             {},
             class: "form-select w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2",
             data: { pension_system_target: "select", action: "change->pension-system#toggle" } %>

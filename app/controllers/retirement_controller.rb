@@ -9,7 +9,9 @@ class RetirementController < ApplicationController
   def setup
     @retirement_config = Current.family.retirement_config || Current.family.build_retirement_config(
       birth_year: 1990,
-      currency: Current.family.currency
+      currency: Current.family.currency,
+      country: Current.family.country,
+      pension_system: RetirementConfig.suggest_pension_system(Current.family.country)
     )
   end
 

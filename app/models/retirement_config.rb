@@ -1,6 +1,6 @@
 class RetirementConfig < ApplicationRecord
   PENSION_SYSTEMS = {
-    "custom"    => { calculator: "RetirementConfig::PensionCalculator::Base" },
+    "custom"    => { calculator: "RetirementConfig::PensionCalculator::Custom" },
     "de_grv"    => { calculator: "RetirementConfig::PensionCalculator::DeGrv" },
     "us_ss"     => { calculator: "RetirementConfig::PensionCalculator::UsSocialSecurity" },
     "uk_sp"     => { calculator: "RetirementConfig::PensionCalculator::UkStatePension" },
@@ -8,7 +8,26 @@ class RetirementConfig < ApplicationRecord
     "es_ss"     => { calculator: "RetirementConfig::PensionCalculator::EsSocialSecurity" }
   }.freeze
 
+  PENSION_SYSTEM_GROUPS = {
+    "europe"         => %w[de_grv fr_regime es_ss],
+    "united_kingdom" => %w[uk_sp],
+    "north_america"  => %w[us_ss],
+    "other"          => %w[custom]
+  }.freeze
+
+  COUNTRY_TO_PENSION_SYSTEM = {
+    "DE" => "de_grv", "AT" => "de_grv",
+    "US" => "us_ss",  "CA" => "us_ss",
+    "GB" => "uk_sp",
+    "FR" => "fr_regime",
+    "ES" => "es_ss"
+  }.freeze
+
   SAFE_WITHDRAWAL_RATE = 0.04
+
+  def self.suggest_pension_system(country)
+    COUNTRY_TO_PENSION_SYSTEM.fetch(country.to_s.upcase, "custom")
+  end
 
   belongs_to :family
   has_many :pension_entries, dependent: :destroy
@@ -36,12 +55,7 @@ class RetirementConfig < ApplicationRecord
     current_age >= retirement_age
   end
 
-  # Delegates pension estimation to the active calculator
   def estimated_monthly_pension
-    if pension_system == "custom"
-      return latest_pension_entry&.projected_monthly_pension || 0
-    end
-
     pension_calculator.estimated_monthly_pension
   end
 

@@ -41,6 +41,12 @@ fr:
       no_entries: Aucune entrée de pension
       no_entries_hint: Ajoutez des entrées de vos relevés de pension pour suivre votre progression
       setup_required: Veuillez d'abord configurer la planification de retraite
+      uk_progress_title: Progression de la Pension d'État
+      uk_qualifying_years: Années de Qualification (NI)
+      uk_years_remaining:
+        zero: "Toutes les années atteintes — Pension d'État complète !"
+        one: "%{count} an de plus pour la Pension d'État complète"
+        other: "%{count} ans de plus pour la Pension d'État complète"
     form_fields: &retirement_form_fields_fr
       personal_section: Informations Personnelles
       birth_year: Année de Naissance
@@ -92,6 +98,11 @@ fr:
       pension_entry_added: Entrée de pension ajoutée avec succès
     destroy_pension_entry:
       pension_entry_removed: Entrée de pension supprimée
+    pension_system_groups:
+      europe: Europe
+      united_kingdom: Royaume-Uni
+      north_america: Amérique du Nord
+      other: Autre
     pension_systems:
       de_grv: Pension Légale Allemande (GRV)
       us_ss: Sécurité Sociale Américaine

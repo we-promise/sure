@@ -41,6 +41,12 @@ en:
       no_entries: No pension entries yet
       no_entries_hint: Add entries from your pension statements to track your progress
       setup_required: Please set up retirement planning first
+      uk_progress_title: State Pension Progress
+      uk_qualifying_years: Qualifying Years (NI)
+      uk_years_remaining:
+        zero: All qualifying years reached — full State Pension!
+        one: "%{count} more year needed for full State Pension"
+        other: "%{count} more years needed for full State Pension"
     form_fields: &retirement_form_fields_en
       personal_section: Personal Information
       birth_year: Birth Year
@@ -98,6 +104,11 @@ en:
       pension_entry_added: Pension entry added successfully
     destroy_pension_entry:
       pension_entry_removed: Pension entry removed
+    pension_system_groups:
+      europe: Europe
+      united_kingdom: United Kingdom
+      north_america: North America
+      other: Other
     pension_systems:
       de_grv: German Statutory Pension (GRV)
       us_ss: US Social Security

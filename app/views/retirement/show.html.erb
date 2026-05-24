@@ -135,6 +135,27 @@
   </div>
 </div>
 
+<%# System-specific progress (UK State Pension) %>
+<% if @retirement_config.pension_system == "uk_sp" %>
+  <% qualifying_years = @retirement_config.pension_param("qualifying_years").to_i %>
+  <% target_years = 35 %>
+  <div class="bg-container shadow-border-xs rounded-lg p-6 mb-8">
+    <h2 class="text-lg font-medium text-primary mb-4"><%= t(".uk_progress_title") %></h2>
+    <div class="space-y-3">
+      <div class="flex justify-between text-sm">
+        <span class="text-secondary"><%= t(".uk_qualifying_years") %></span>
+        <span class="text-primary font-medium"><%= qualifying_years %> / <%= target_years %></span>
+      </div>
+      <div class="w-full bg-surface-inset rounded-full h-3">
+        <div class="bg-primary h-3 rounded-full transition-all" style="width: <%= [ (qualifying_years.to_f / target_years * 100), 100 ].min.round %>%"></div>
+      </div>
+      <p class="text-xs text-secondary">
+        <%= t(".uk_years_remaining", count: [ target_years - qualifying_years, 0 ].max) %>
+      </p>
+    </div>
+  </div>
+<% end %>
+
 <%# Pension History %>
 <div class="bg-container shadow-border-xs rounded-lg p-6">
   <h2 class="text-lg font-medium text-primary mb-4"><%= t(".pension_history") %></h2>

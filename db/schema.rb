@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_09_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1063,10 +1063,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
   create_table "pension_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "retirement_config_id", null: false
     t.date "recorded_at", null: false
-    t.decimal "current_points", precision: 8, scale: 4, null: false
+    t.decimal "current_points", precision: 8, scale: 4
     t.decimal "current_monthly_pension", precision: 19, scale: 4
     t.decimal "projected_monthly_pension", precision: 19, scale: 4
     t.text "notes"
+    t.jsonb "data", null: false, default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["retirement_config_id", "recorded_at"], name: "index_pension_entries_on_retirement_config_id_and_recorded_at", unique: true
@@ -1173,9 +1174,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.decimal "inflation_pct", precision: 5, scale: 2, null: false, default: "2.0"
     t.decimal "tax_rate_pct", precision: 5, scale: 2, null: false, default: "26.38"
     t.decimal "current_monthly_savings", precision: 19, scale: 4, null: false, default: "0.0"
-    t.integer "contribution_start_year"
-    t.decimal "expected_annual_points", precision: 5, scale: 2
-    t.decimal "rentenwert", precision: 8, scale: 2
+    t.jsonb "pension_params", null: false, default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_retirement_configs_on_family_id", unique: true

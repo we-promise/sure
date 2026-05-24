@@ -41,6 +41,12 @@ de:
       no_entries: Noch keine Renteneinträge vorhanden
       no_entries_hint: Füge Einträge aus deiner Renteninformation hinzu, um deinen Rentenfortschritt zu verfolgen
       setup_required: Bitte richte zuerst die Ruhestandsplanung ein
+      uk_progress_title: Rentenanspruch Fortschritt
+      uk_qualifying_years: Anspruchsjahre (NI)
+      uk_years_remaining:
+        zero: Alle Anspruchsjahre erreicht — volle State Pension!
+        one: "Noch %{count} Jahr für die volle State Pension"
+        other: "Noch %{count} Jahre für die volle State Pension"
     form_fields: &retirement_form_fields_de
       personal_section: Persönliche Angaben
       birth_year: Geburtsjahr
@@ -98,6 +104,11 @@ de:
       pension_entry_added: Renteneintrag erfolgreich hinzugefügt
     destroy_pension_entry:
       pension_entry_removed: Renteneintrag entfernt
+    pension_system_groups:
+      europe: Europa
+      united_kingdom: Vereinigtes Königreich
+      north_america: Nordamerika
+      other: Sonstiges
     pension_systems:
       de_grv: Deutsche Gesetzliche Rentenversicherung (GRV)
       us_ss: US-Sozialversicherung
