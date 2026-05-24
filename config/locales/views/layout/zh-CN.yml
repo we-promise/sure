@@ -9,6 +9,7 @@ zh-CN:
         assistant: 智能助手
         budgets: 预算管理
         home: 首页
+        intro: 介绍
         reports: 财务报告
         transactions: 交易记录
     auth:

@@ -8,6 +8,7 @@ pt-BR:
         assistant: Assistente
         budgets: Orçamentos
         home: Início
+        intro: Introdução
         reports: Relatórios
         transactions: Transações
     auth.sign_up:

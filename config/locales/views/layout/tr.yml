@@ -8,6 +8,7 @@ tr:
         assistant: Asistan
         budgets: Bütçeler
         home: Ana Sayfa
+        intro: Giriş
         reports: Raporlar
         transactions: İşlemler
     auth:
