@@ -94,7 +94,12 @@ class Rack::Attack
     if request.path == "/api/v1/auth/login" && request.post?
       email    = LoginRequestFields.read(request, "email")
       otp_code = LoginRequestFields.read(request, "otp_code")
-      email.to_s.downcase.strip if email.is_a?(String) && otp_code.is_a?(String) && otp_code.present?
+      # Accept String OR Integer otp_code — JSON clients may send the 6-digit
+      # code as a numeric literal (e.g. {"otp_code": 123456}), which the
+      # previous String-only guard let bypass the throttle entirely.
+      if email.is_a?(String) && (otp_code.is_a?(String) || otp_code.is_a?(Integer)) && otp_code.to_s.strip.present?
+        email.downcase.strip
+      end
     end
   end
 
