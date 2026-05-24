@@ -102,7 +102,7 @@ The following variables tighten security when running outside a local network. S
 | Variable | Purpose |
 |---|---|
 | `RAILS_MASTER_KEY` | Decrypts Rails encrypted credentials. Required — the app refuses to boot in production without it (or a `config/master.key` file). |
-| `SIDEKIQ_WEB_USERNAME` + `SIDEKIQ_WEB_PASSWORD` | Basic-auth credentials guarding `/sidekiq`. The Web UI is mounted only when both are set. |
+| `SIDEKIQ_WEB_USERNAME` + `SIDEKIQ_WEB_PASSWORD` | Basic-auth credentials guarding `/sidekiq`. The Web UI route is always mounted; when either variable is blank, every authentication attempt is denied — no more guessable `sure/sure` fallback. Set both to enable access. |
 | `ALLOWED_ORIGINS` | Comma-separated CORS allow-list for browser/mobile clients (e.g. `https://app.example.com,https://staging.example.com`). |
 | `APP_DOMAIN` | Single-host fallback for CORS when `ALLOWED_ORIGINS` is unset, and DNS-rebinding `config.hosts` allow-list. |
 | `ALLOWED_HOSTS` | Comma-separated alternative to `APP_DOMAIN` for DNS-rebinding protection when you serve multiple hostnames. |

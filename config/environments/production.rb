@@ -127,7 +127,10 @@ Rails.application.configure do
   #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
   # ]
   # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Helm charts (and most k8s/Docker setups) probe `/up` over the pod IP or
+  # localhost, neither of which match APP_DOMAIN — so without this exclusion
+  # liveness/readiness probes fail with HTTP 403 once config.hosts is set.
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
   # set REDIS_URL for Sidekiq to use Redis
   config.active_job.queue_adapter = :sidekiq
