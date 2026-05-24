@@ -99,7 +99,7 @@
     <%= summary_card title: t(".total_cost") do %>
       <% if loan.total_cost.present? %>
 
-        <div class="font-semibold">
+        <div>
           <%= format_money(loan.total_cost) %>
         </div>
 
@@ -129,7 +129,7 @@
       <% if loan.monthly_payment.present? && breakdown.present? %>
         <% monthly_payment = breakdown[:principal] + breakdown[:interest] + breakdown[:insurance] %>
 
-        <div class="font-semibold">
+        <div>
           <%= format_money(monthly_payment) %>
         </div>
 
