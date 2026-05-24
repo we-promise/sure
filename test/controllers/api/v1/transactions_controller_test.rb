@@ -3,6 +3,8 @@
 require "test_helper"
 
 class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -49,6 +51,30 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert response_data["pagination"].key?("per_page")
     assert response_data["pagination"].key?("total_count")
     assert response_data["pagination"].key?("total_pages")
+  end
+
+  test "index avoids per-transaction transfer queries" do
+    from_account = @family.accounts.first
+    to_account = @family.accounts.second || @family.accounts.create!(
+      name: "Second Account",
+      balance: 0,
+      currency: @family.currency,
+      accountable: Depository.new
+    )
+
+    create_transfer(from_account: from_account, to_account: to_account, amount: 10)
+    baseline_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    5.times { create_transfer(from_account: from_account, to_account: to_account, amount: 10) }
+    expanded_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    assert_operator expanded_queries - baseline_queries, :<=, 5
   end
 
   test "should get index with read-only API key" do
@@ -761,6 +787,19 @@ end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
+    end
+
+    def count_db_queries(&block)
+      queries = 0
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        return if payload[:cached]
+        return if payload[:name].in?(%w[SCHEMA TRANSACTION])
+
+        queries += 1
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+      queries
     end
 
     # Validates agent-friendly numeric fields: type, sign invariants
