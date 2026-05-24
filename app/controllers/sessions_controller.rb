@@ -191,7 +191,9 @@ class SessionsController < ApplicationController
         session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
-        reset_session_preserving_pending_invitation # FIX-01 + preserve invitation token
+        # OIDC sign-in: preserve the id_token_hint / sso_login_provider just
+        # set above so RP-initiated federated logout works at /sessions#destroy.
+        reset_session_preserving_handoff(preserve_oidc_handoff: true)
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path

@@ -80,15 +80,26 @@ module Authentication
     #   logout. Set on OIDC sign-in BEFORE the privilege-change reset (so the
     #   provider data exists to be preserved here). Without preserving them,
     #   federated logout falls back to local-only, breaking IdP single sign-out.
-    SESSION_KEYS_PRESERVED_ON_RESET = %i[
-      pending_invitation_token
-      id_token_hint
-      sso_login_provider
-    ].freeze
-    private_constant :SESSION_KEYS_PRESERVED_ON_RESET
+    # pending_invitation_token must survive every privilege-change reset so
+    # accept_pending_invitation_for can still honour an invite that the user
+    # followed before signing in.
+    SESSION_KEY_ALWAYS_PRESERVED = :pending_invitation_token
 
-    def reset_session_preserving_handoff
-      preserved = SESSION_KEYS_PRESERVED_ON_RESET.each_with_object({}) do |k, h|
+    # id_token_hint / sso_login_provider are only meaningful for federated
+    # logout, and must NOT survive a local sign-in. Otherwise, if a prior
+    # OIDC session leaked these keys into the cookie (e.g. via an out-of-band
+    # password-reset that destroyed only the DB session row), a subsequent
+    # local login would inherit the stale OIDC metadata and SessionsController
+    # #destroy would incorrectly attempt RP-initiated federated logout for a
+    # local session.
+    SESSION_KEYS_OIDC_HANDOFF = %i[id_token_hint sso_login_provider].freeze
+    private_constant :SESSION_KEY_ALWAYS_PRESERVED, :SESSION_KEYS_OIDC_HANDOFF
+
+    def reset_session_preserving_handoff(preserve_oidc_handoff: false)
+      keys = [ SESSION_KEY_ALWAYS_PRESERVED ]
+      keys += SESSION_KEYS_OIDC_HANDOFF if preserve_oidc_handoff
+
+      preserved = keys.each_with_object({}) do |k, h|
         v = session[k]
         h[k] = v if v.present?
       end
@@ -96,7 +107,8 @@ module Authentication
       preserved.each { |k, v| session[k] = v }
     end
 
-    # Backwards-compatible alias. Prefer `reset_session_preserving_handoff`.
+    # Backwards-compatible alias. Defaults to NOT preserving OIDC handoff keys
+    # (matches the safe behaviour expected for local sign-ins).
     alias_method :reset_session_preserving_pending_invitation, :reset_session_preserving_handoff
 
     def create_session_for(user)
@@ -104,7 +116,10 @@ module Authentication
       cookies.signed.permanent[:session_token] = {
         value: session.id,
         httponly: true,
-        secure: Rails.env.production?,
+        # Use force_ssl rather than env name so staging/preview environments
+        # that already enforce HTTPS automatically get a Secure cookie without
+        # having to enumerate environment names.
+        secure: Rails.application.config.force_ssl,
         same_site: :lax
       }
       session

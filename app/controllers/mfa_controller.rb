@@ -144,9 +144,11 @@ class MfaController < ApplicationController
       session.delete(:mfa_user_id)
       session.delete(:mfa_attempts)
       session.delete(:mfa_started_at)
-      # reset_session clears the mfa_* keys (and everything else) — keep the
-      # pending invitation token so post-MFA login can still honour the invite.
-      reset_session_preserving_pending_invitation # FIX-01 / PT-003
+      # Preserve federated-logout metadata only if this MFA flow originated
+      # from an OIDC sign-in (which sets sso_login_provider before redirecting
+      # to verify_mfa_path). Local MFA flows must NOT inherit stale OIDC keys.
+      came_from_oidc = session[:sso_login_provider].present?
+      reset_session_preserving_handoff(preserve_oidc_handoff: came_from_oidc) # FIX-01 / PT-003
       @session = create_session_for(user)
       flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
     end
