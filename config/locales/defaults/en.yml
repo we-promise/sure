@@ -1,5 +1,9 @@
 ---
 en:
+  shared:
+    sync_toast:
+      message: "Your data has been updated"
+      refresh: "Refresh now"
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
