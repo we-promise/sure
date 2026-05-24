@@ -8,13 +8,15 @@
 
   <div class="space-y-1 flex-1">
     <p class="text-primary text-sm font-medium"><%= t("shared.sync_toast.message") %></p>
-    <button class="text-xs text-info underline hover:opacity-80 transition-opacity"
+    <button type="button" class="text-xs text-info underline hover:opacity-80 transition-opacity"
             data-action="click->sync-toast#refresh">
       <%= t("shared.sync_toast.refresh") %>
     </button>
   </div>
 
   <div class="absolute -top-2 -right-2">
-    <%= icon "x", class: "p-0.5 hidden group-hover:inline-block border border-alpha-black-50 border-solid rounded-lg bg-container text-subdued cursor-pointer", data: { action: "click->element-removal#remove" } %>
+    <button type="button" class="p-0.5 hidden group-hover:inline-block border border-alpha-black-50 border-solid rounded-lg bg-container text-subdued cursor-pointer" aria-label="<%= t('defaults.common.close') %>" data-action="click->element-removal#remove">
+      <%= icon "x" %>
+    </button>
   </div>
 </div>
