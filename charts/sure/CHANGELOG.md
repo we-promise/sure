@@ -5,7 +5,7 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.1] - 2026-05-31]
 
 ### Changed
 - Bumped `pipelock.image.tag` from `2.2.0` to `2.5.0`. Picks up three releases of scanner, federation, and audit work — see the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/blob/main/CHANGELOG.md) for the full surface.
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `asserts.tpl` guard that fails `helm template`/`helm install` when `pipelock.mcpToolPolicy.enabled=true` is paired with an empty `rules` list, surfacing the pipelock validation error at render time instead of container startup.
 - README: CI scan status badge for the pipelock workflow.
 
-## [0.6.9-alpha] - 2026-03-24
+## [0.6.9] - 2026-03-31
 
 ### Changed
 - Bumped `pipelock.image.tag` from `1.5.0` to `2.0.0`
@@ -64,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Renamed `_asserts.tpl` to `asserts.tpl` — Helm's `_` prefix convention prevented guards from executing
 
-## [0.6.7-alpha] - 2026-01-10
+## [0.6.7] - 2026-01-31
 
 ### Added
 - **Redis Sentinel support for Sidekiq high availability**: Application now automatically detects and configures Sidekiq to use Redis Sentinel when `redisOperator.mode=sentinel` and `redisOperator.sentinel.enabled=true`
