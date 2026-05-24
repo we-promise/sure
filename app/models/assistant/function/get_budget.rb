@@ -159,12 +159,16 @@ class Assistant::Function::GetBudget < Assistant::Function
     def parse_month(raw)
       return nil if raw.blank?
 
-      [ "%Y-%m", "%b-%Y" ].each do |fmt|
-        return Date.strptime(raw, fmt)
-      rescue ArgumentError
-        next
+      # Date.strptime ignores trailing characters, so guard with strict anchors first.
+      fmt = case raw
+      when /\A\d{4}-\d{2}\z/         then "%Y-%m"
+      when /\A[A-Za-z]{3}-\d{4}\z/   then "%b-%Y"
       end
 
+      raise Assistant::Error, "Invalid month: #{raw}. Use YYYY-MM or MMM-YYYY." if fmt.nil?
+
+      Date.strptime(raw, fmt)
+    rescue ArgumentError
       raise Assistant::Error, "Invalid month: #{raw}. Use YYYY-MM or MMM-YYYY."
     end
 

@@ -81,6 +81,14 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects month strings with trailing characters" do
+    [ "2026-05-01", "2026-05foo", "may-2026foo" ].each do |raw|
+      assert_raises(Assistant::Error, "Expected #{raw.inspect} to be rejected") do
+        @function.call("month" => raw)
+      end
+    end
+  end
+
   test "nests subcategories under their parent" do
     result = @function.call({})
     categories = result[:months].first[:categories]
