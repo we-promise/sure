@@ -156,6 +156,78 @@ class InvestmentStatement
     )
   end
 
+  def period_return_trend(period: Period.current_month)
+    currency = family.currency
+    account_ids = investment_account_ids
+    return nil if account_ids.empty?
+
+    absolute_return = ActiveRecord::Base.connection.select_value(
+      ActiveRecord::Base.sanitize_sql_array([
+        <<~SQL.squish,
+          SELECT COALESCE(SUM(b.net_market_flows * COALESCE(er.rate, 1)), 0)
+          FROM balances b
+          JOIN accounts a ON a.id = b.account_id
+          LEFT JOIN exchange_rates er ON (
+            er.date = b.date
+            AND er.from_currency = b.currency
+            AND er.to_currency = :currency
+          )
+          WHERE a.id IN (:account_ids)
+            AND a.family_id = :family_id
+            AND a.status IN ('draft', 'active')
+            AND b.date BETWEEN :start_date AND :end_date
+        SQL
+        {
+          currency: currency,
+          account_ids: account_ids,
+          family_id: family.id,
+          start_date: period.date_range.begin,
+          end_date: period.date_range.end
+        }
+      ])
+    ).to_d
+
+    period_start = period.date_range.begin
+    foreign_currencies = investment_accounts.map(&:currency).compact.uniq.reject { |c| c == currency }
+    period_start_rates = ExchangeRate.rates_for(foreign_currencies, to: currency, date: period_start)
+
+    # Single query for all accounts' most recent pre-period balance (strict < to avoid
+    # double-counting the first day's net_market_flows in both the denominator and absolute_return)
+    start_balance_rows = ActiveRecord::Base.connection.select_all(
+      ActiveRecord::Base.sanitize_sql_array([
+        <<~SQL.squish,
+          SELECT b.end_balance, a.currency
+          FROM accounts a
+          INNER JOIN balances b ON b.account_id = a.id AND b.currency = a.currency
+          INNER JOIN (
+            SELECT b2.account_id, MAX(b2.date) AS max_date
+            FROM balances b2
+            INNER JOIN accounts a2 ON a2.id = b2.account_id
+            WHERE b2.account_id IN (:account_ids)
+              AND b2.currency = a2.currency
+              AND b2.date < :period_start
+            GROUP BY b2.account_id
+          ) latest ON latest.account_id = b.account_id AND b.date = latest.max_date
+          WHERE a.id IN (:account_ids)
+            AND a.family_id = :family_id
+        SQL
+        { account_ids: account_ids, period_start: period_start, family_id: family.id }
+      ])
+    )
+
+    start_value = start_balance_rows.sum do |row|
+      numeric = row["end_balance"].to_d
+      row["currency"] == currency ? numeric : numeric * (period_start_rates[row["currency"]] || 1)
+    end
+
+    return nil if start_value.zero?
+
+    Trend.new(
+      current: Money.new(start_value + absolute_return, currency),
+      previous: Money.new(start_value, currency)
+    )
+  end
+
   # Day change across portfolio, summed in family currency
   def day_change
     changes = current_holdings.to_a.filter_map do |h|
