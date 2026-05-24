@@ -28,7 +28,7 @@
 
           <div class="space-y-2 max-h-80 overflow-y-auto">
             <% @aspsps.each do |aspsp| %>
-              <div data-bank-search-target="item" data-bank-name="<%= aspsp[:name].to_s.downcase(:fold) %>">
+              <div data-bank-search-target="item" data-bank-search="<%= [ aspsp[:name], aspsp[:bic] ].compact_blank.join(" ").downcase(:fold) %>">
                 <%= button_to authorize_enable_banking_item_path(@enable_banking_item),
                               method: :post,
                               params: { aspsp_name: aspsp[:name], new_connection: @new_connection },
