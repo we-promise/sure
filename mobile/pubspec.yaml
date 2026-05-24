@@ -26,6 +26,7 @@ dependencies:
   package_info_plus: ^8.0.0
   local_auth: ^2.3.0
   flutter_markdown: ^0.7.2
+  posthog_flutter: ^5.24.2
 
 dev_dependencies:
   flutter_test:

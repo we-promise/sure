@@ -17,10 +17,12 @@ import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
 import 'services/preferences_service.dart';
+import 'services/posthog_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.initialize();
+  await PostHogService.initialize();
 
   // Add initial log entry
   LogService.instance.info('App', 'Sure app starting...');

@@ -67,6 +67,20 @@ static String _baseUrl = 'http://localhost:3000';
 static String _baseUrl = 'https://your-sure-server.com';
 ```
 
+### 6. (Optional) Configure PostHog Session Recording
+
+PostHog is configured with **compile-time** Dart defines (not `.env`):
+
+```bash
+flutter run \
+  --dart-define=POSTHOG_API_KEY=phc_your_project_key \
+  --dart-define=POSTHOG_HOST=https://us.i.posthog.com
+```
+
+- `POSTHOG_API_KEY` is required to enable PostHog.
+- `POSTHOG_HOST` is optional and defaults to `https://us.i.posthog.com`.
+- If `POSTHOG_API_KEY` is not passed, the app logs that PostHog is disabled and continues normally.
+
 ### 5. Run the App
 
 ```bash
