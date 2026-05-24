@@ -115,6 +115,25 @@ class IbkrAccount::HistoricalBalancesSync
         start_cash_balance     = previous_row ? previous_row[:cash]     : row[:cash]
         start_non_cash_balance = previous_row ? previous_row[:non_cash] : row[:non_cash]
 
+        # Derive market return directly from IBKR's equity data so Period Return
+        # matches IBKR without requiring third-party security price providers.
+        #
+        # nmf = Δnon_cash - net_buy_sell
+        #   Δnon_cash  : change in holdings value per IBKR equity summary (exact)
+        #   net_buy_sell: sum of trade entry amounts converted to base currency
+        #                 (positive = buy, negative = sell; IBKR fx_rate_to_base applied)
+        #
+        # non_cash_adjustments absorbs net_buy_sell so the virtual column
+        # end_non_cash_balance = start + nmf + adjustments stays equal to row[:non_cash].
+        if previous_row
+          net_buy_sell = trade_flows_by_date[row[:date]] || 0
+          nmf          = row[:non_cash] - start_non_cash_balance - net_buy_sell
+          non_cash_adj = net_buy_sell
+        else
+          nmf          = 0
+          non_cash_adj = 0
+        end
+
         {
           account_id: account.id,
           date: row[:date],
@@ -127,13 +146,36 @@ class IbkrAccount::HistoricalBalancesSync
           cash_outflows: 0,
           non_cash_inflows: 0,
           non_cash_outflows: 0,
-          net_market_flows: 0,
+          net_market_flows: nmf,
           cash_adjustments: row[:cash] - start_cash_balance,
-          non_cash_adjustments: row[:non_cash] - start_non_cash_balance,
+          non_cash_adjustments: non_cash_adj,
           flows_factor: 1,
           created_at: current_time,
           updated_at: current_time
         }
+      end
+    end
+
+    # Net value of all trades on each date, in account base currency.
+    # Uses the IBKR-provided fx_rate_to_base stored on each Trade entry so the
+    # conversion is exact and consistent with IBKR's own calculations.
+    # Positive = net buy (cash out), negative = net sell (cash in).
+    def trade_flows_by_date
+      @trade_flows_by_date ||= begin
+        return {} unless account
+
+        account.entries
+          .where(entryable_type: "Trade")
+          .includes(:entryable)
+          .each_with_object(Hash.new(0)) do |entry, flows|
+            custom_rate = entry.entryable.exchange_rate
+            base_amount = Money.new(entry.amount, entry.currency)
+              .exchange_to(account_currency, custom_rate: custom_rate)
+              .amount
+            flows[entry.date] += base_amount
+          rescue Money::ConversionError
+            flows[entry.date] += entry.amount
+          end
       end
     end
 end
