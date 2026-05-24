@@ -2,6 +2,7 @@ require "test_helper"
 
 class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
     SyncJob.stubs(:perform_later)
 
@@ -9,8 +10,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     @akahu_item = AkahuItem.create!(
       family: @family,
       name: "Main Akahu",
-      app_token: "app-token",
-      user_token: "user-token"
+      app_token: "akahu-app-credential",
+      user_token: "akahu-user-credential"
     )
     @akahu_account = @akahu_item.akahu_accounts.create!(
       name: "Akahu Checking",
@@ -73,8 +74,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     second_item = AkahuItem.create!(
       family: @family,
       name: "Secondary Akahu",
-      app_token: "second-app-token",
-      user_token: "second-user-token"
+      app_token: "akahu-app-credential-2",
+      user_token: "akahu-user-credential-2"
     )
 
     AkahuItemsController.any_instance
@@ -92,8 +93,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     second_item = AkahuItem.create!(
       family: @family,
       name: "Secondary Akahu",
-      app_token: "second-app-token",
-      user_token: "second-user-token"
+      app_token: "akahu-app-credential-2",
+      user_token: "akahu-user-credential-2"
     )
     second_item.akahu_accounts.create!(
       name: "Secondary Checking",
@@ -113,8 +114,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     second_item = AkahuItem.create!(
       family: @family,
       name: "Secondary Akahu",
-      app_token: "second-app-token",
-      user_token: "second-user-token"
+      app_token: "akahu-app-credential-2",
+      user_token: "akahu-user-credential-2"
     )
     second_account = second_item.akahu_accounts.create!(
       name: "Secondary Checking",
@@ -142,8 +143,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     second_item = AkahuItem.create!(
       family: @family,
       name: "Secondary Akahu",
-      app_token: "second-app-token",
-      user_token: "second-user-token"
+      app_token: "akahu-app-credential-2",
+      user_token: "akahu-user-credential-2"
     )
     second_item.akahu_accounts.create!(
       name: "Secondary Checking",
@@ -163,7 +164,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "complete account setup hides raw creation errors from users" do
-    raw_message = "raw provider failure with user-token"
+    raw_message = "raw provider failure with akahu-user-credential"
     AkahuItemsController.any_instance
       .stubs(:create_account_from_akahu)
       .raises(ActiveRecord::RecordNotSaved.new(raw_message))

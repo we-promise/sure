@@ -28,14 +28,14 @@ class AkahuItemUnlinkingTest < ActiveSupport::TestCase
     current_item = AkahuItem.create!(
       family: current_family,
       name: "Current Akahu",
-      app_token: "current-app-token",
-      user_token: "current-user-token"
+      app_token: "current-akahu-app-credential",
+      user_token: "current-akahu-user-credential"
     )
     other_item = AkahuItem.create!(
       family: other_family,
       name: "Other Akahu",
-      app_token: "other-app-token",
-      user_token: "other-user-token"
+      app_token: "other-akahu-app-credential",
+      user_token: "other-akahu-user-credential"
     )
 
     current_akahu_account = current_item.akahu_accounts.create!(

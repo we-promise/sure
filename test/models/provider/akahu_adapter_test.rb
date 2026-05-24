@@ -11,14 +11,14 @@ class Provider::AkahuAdapterTest < ActiveSupport::TestCase
     first_item = AkahuItem.create!(
       family: family,
       name: "Main Akahu",
-      app_token: "app-token",
-      user_token: "user-token"
+      app_token: "akahu-app-credential",
+      user_token: "akahu-user-credential"
     )
     second_item = AkahuItem.create!(
       family: family,
       name: "Secondary Akahu",
-      app_token: "second-app-token",
-      user_token: "second-user-token"
+      app_token: "second-akahu-app-credential",
+      user_token: "second-akahu-user-credential"
     )
 
     configs = Provider::AkahuAdapter.connection_configs(family: family)

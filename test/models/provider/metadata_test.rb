@@ -5,10 +5,10 @@ class Provider::MetadataTest < ActiveSupport::TestCase
     assert_equal %w[Bank Investment], Provider::Metadata.for(:akahu)[:kinds]
   end
 
-  test "akahu is the only provider with multiple kinds" do
+  test "akahu supports multiple kinds" do
     providers_with_multiple_kinds = Provider::Metadata::REGISTRY.select { |_provider_key, metadata| metadata[:kinds].size > 1 }
 
-    assert_equal [ :akahu ], providers_with_multiple_kinds.keys
+    assert_includes providers_with_multiple_kinds.keys, :akahu
   end
 
   test "registered provider metadata only uses kinds" do

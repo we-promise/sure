@@ -22,7 +22,7 @@ class Provider::AkahuTest < ActiveSupport::TestCase
       requests << { url: url, headers: headers, query: query }
       responses.shift
     }) do
-      client = Provider::Akahu.new(app_token: "app-token", user_token: "user-token")
+      client = Provider::Akahu.new(app_token: "akahu-app-credential", user_token: "akahu-user-credential")
 
       transactions = client.get_account_transactions(
         account_id: "acc_123",
@@ -34,8 +34,8 @@ class Provider::AkahuTest < ActiveSupport::TestCase
 
     assert_equal 2, requests.size
     assert_match "/accounts/acc_123/transactions", requests.first[:url]
-    assert_equal "Bearer user-token", requests.first[:headers]["Authorization"]
-    assert_equal "app-token", requests.first[:headers]["X-Akahu-Id"]
+    assert_equal "Bearer akahu-user-credential", requests.first[:headers]["Authorization"]
+    assert_equal "akahu-app-credential", requests.first[:headers]["X-Akahu-Id"]
     assert_match "2026-01-01", requests.first[:query][:start]
     assert_equal "next-cursor", requests.second[:query][:cursor]
   end
@@ -45,7 +45,7 @@ class Provider::AkahuTest < ActiveSupport::TestCase
 
     Provider::Akahu.stub(:get, ->(_url, headers:, query: nil) { response }) do
       error = assert_raises Provider::Akahu::AkahuError do
-        Provider::Akahu.new(app_token: "app-token", user_token: "bad-token").get_accounts
+        Provider::Akahu.new(app_token: "akahu-app-credential", user_token: "invalid-credential").get_accounts
       end
 
       assert_equal :unauthorized, error.error_type

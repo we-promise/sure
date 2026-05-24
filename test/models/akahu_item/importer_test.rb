@@ -59,8 +59,8 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
     @akahu_item = AkahuItem.create!(
       family: @family,
       name: "Test Akahu",
-      app_token: "app-token",
-      user_token: "user-token"
+      app_token: "akahu-app-credential",
+      user_token: "akahu-user-credential"
     )
     @akahu_account = AkahuAccount.create!(
       akahu_item: @akahu_item,

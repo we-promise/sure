@@ -5,8 +5,8 @@ class AkahuItem::SyncerTest < ActiveSupport::TestCase
     @akahu_item = AkahuItem.create!(
       family: families(:dylan_family),
       name: "Main Akahu",
-      app_token: "app-token",
-      user_token: "user-token"
+      app_token: "akahu-app-credential",
+      user_token: "akahu-user-credential"
     )
 
     AkahuItem.any_instance.stubs(:perform_post_sync)

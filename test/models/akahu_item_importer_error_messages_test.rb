@@ -5,8 +5,8 @@ class AkahuItemImporterErrorMessagesTest < ActiveSupport::TestCase
     @item = AkahuItem.create!(
       family: families(:dylan_family),
       name: "Test Akahu",
-      app_token: "app-token",
-      user_token: "user-token"
+      app_token: "akahu-app-credential",
+      user_token: "akahu-user-credential"
     )
     @akahu_account = @item.akahu_accounts.create!(
       name: "Test Akahu Account",
@@ -16,7 +16,7 @@ class AkahuItemImporterErrorMessagesTest < ActiveSupport::TestCase
   end
 
   test "pending transaction fetch hides raw exception messages from result errors" do
-    raw_message = "raw pending payload with secret-token"
+    raw_message = "raw pending payload with sensitive-value"
     provider = mock
     provider.stubs(:get_pending_transactions).raises(StandardError.new(raw_message))
 
@@ -30,7 +30,7 @@ class AkahuItemImporterErrorMessagesTest < ActiveSupport::TestCase
   end
 
   test "posted transaction fetch hides raw Akahu error messages from result errors" do
-    raw_message = "raw posted payload with secret-token"
+    raw_message = "raw posted payload with sensitive-value"
     provider = mock
     provider
       .stubs(:get_account_transactions)

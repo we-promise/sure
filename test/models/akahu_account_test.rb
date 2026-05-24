@@ -6,8 +6,8 @@ class AkahuAccountTest < ActiveSupport::TestCase
     @item = AkahuItem.create!(
       family: @family,
       name: "Test Akahu",
-      app_token: "app-token",
-      user_token: "user-token"
+      app_token: "akahu-app-credential",
+      user_token: "akahu-user-credential"
     )
     @account = AkahuAccount.create!(
       akahu_item: @item,
@@ -58,7 +58,7 @@ class AkahuAccountTest < ActiveSupport::TestCase
   end
 
   test "transaction processor hides raw exception messages from result errors" do
-    raw_message = "raw provider payload with secret-token"
+    raw_message = "raw provider payload with sensitive-value"
     AkahuAccount::Transactions::Processor.any_instance
       .stubs(:process)
       .raises(StandardError.new(raw_message))

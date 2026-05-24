@@ -4,6 +4,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
 
     # Ensure provider adapters are loaded for all tests
