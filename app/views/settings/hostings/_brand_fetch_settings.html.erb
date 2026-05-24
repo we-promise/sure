@@ -34,6 +34,7 @@
     <%= form.text_field :brand_fetch_client_id,
                         label: t(".label"),
                         type: "password",
+                        autocomplete: "new-password",
                         placeholder: t(".placeholder"),
                         value: ENV.fetch("BRAND_FETCH_CLIENT_ID", Setting.brand_fetch_client_id),
                         disabled: ENV["BRAND_FETCH_CLIENT_ID"].present?,
