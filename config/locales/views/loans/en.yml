@@ -3,20 +3,21 @@ en:
   loans:
     edit:
       edit: Edit %{account}
-    subtypes:
-      mortgage:
-        short: Mortgage
-        long: Mortgage
-      student:
-        short: Student Loan
-        long: Student Loan
-      auto:
-        short: Auto Loan
-        long: Auto Loan
-      other:
-        short: Other Loan
-        long: Other Loan
+    
     form:
+      subtypes:
+        mortgage:
+          short: Mortgage
+          long: Mortgage
+        student:
+          short: Student Loan
+          long: Student Loan
+        auto:
+          short: Auto Loan
+          long: Auto Loan
+        other:
+          short: Other Loan
+          long: Other Loan
       down_payment: Down payment
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
@@ -24,6 +25,10 @@ en:
       insurance_rate_placeholder: '0.5'
       initial_balance: Original loan balance
       rate_type: Rate type
+      rate_type_options:
+        fixed: Fixed
+        variable: Variable
+        adjustable: Adjustable
       insurance_rate_type: Insurance rate type
       insurance_rate_type_options:
         level_term: Level Term
@@ -31,14 +36,11 @@ en:
       term_months: Term (months)
       term_months_placeholder: '360'
       subtype: Subtype
-      none: None
       subtype_prompt: Select loan type
       none: None
       start_date: Start date
     new:
-      title: Enter loan details
-    overview:
-      
+      title: Enter loan details      
     tabs:
       overview:
         interest_rate: Interest rate

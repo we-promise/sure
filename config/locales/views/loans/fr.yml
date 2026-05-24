@@ -3,20 +3,21 @@ fr:
   loans:
     edit:
       edit: Modifier %{account}
-    subtypes:
-      mortgage:
-        short: Immobilier
-        long: Prêt Immobilier
-      student:
-        short: Étudiant
-        long: Prêt Étudiant
-      auto:
-        short: Auto
-        long: Prêt Automobile
-      other:
-        short: Autre
-        long: Autre Prêt
+    
     form:
+      subtypes:
+        mortgage:
+          short: Immobilier
+          long: Prêt Immobilier
+        student:
+          short: Étudiant
+          long: Prêt Étudiant
+        auto:
+          short: Auto
+          long: Prêt Automobile
+        other:
+          short: Autre
+          long: Autre Prêt
       down_payment: Apport
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5,25'
@@ -24,6 +25,10 @@ fr:
       insurance_rate_placeholder: '0,5'
       initial_balance: Solde initial du prêt
       rate_type: Type de taux
+      rate_type_options:
+        fixed: Fixe
+        variable: Variable
+        adjustable: Révisable
       insurance_rate_type: Type de taux d'assurance
       insurance_rate_type_options:
         level_term: Fixe
@@ -65,8 +70,8 @@ fr:
         payments_made: Paiements effectués
         remaining_payments: Paiements restants
         years:
-            one: "%{count} année"
-            other: "%{count} années"
+          one: "%{count} année"
+          other: "%{count} années"
         months:
           one: "%{count} mois"
           other: "%{count} mois"
