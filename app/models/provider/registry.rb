@@ -65,7 +65,9 @@ class Provider::Registry
       def openai
         access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
 
-        return nil unless access_token.present?
+        # Fall back to Gemini (via its OpenAI-compatible endpoint) when no
+        # OpenAI key is configured — all existing call-sites continue to work.
+        return gemini unless access_token.present?
 
         uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
         model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
@@ -76,6 +78,22 @@ class Provider::Registry
         end
 
         Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      end
+
+      def gemini
+        api_key = ENV["GEMINI_API_KEY"].presence || Setting.gemini_api_key
+
+        return nil unless api_key.present?
+
+        # Gemini exposes an OpenAI-compatible endpoint so we reuse Provider::Openai.
+        # Default model is gemini-2.0-flash; override via Setting or GEMINI_MODEL env var.
+        model = ENV["GEMINI_MODEL"].presence || Setting.gemini_model.presence || "gemini-2.5-flash"
+
+        Provider::Openai.new(
+          api_key,
+          uri_base: "https://generativelanguage.googleapis.com/v1beta/openai/",
+          model: model
+        )
       end
 
       def yahoo_finance
@@ -147,7 +165,7 @@ class Provider::Registry
       when :securities
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public]
       when :llm
-        %i[openai]
+        %i[openai gemini]
       else
         %i[plaid_us plaid_eu github openai]
       end

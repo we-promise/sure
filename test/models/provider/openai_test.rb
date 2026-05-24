@@ -272,6 +272,41 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "Custom OpenAI-compatible (https://custom-api.example.com/v1)", custom_provider.provider_name
   end
 
+  test "chat_response uses configured model for custom providers, ignoring caller-supplied model" do
+    gemini_provider = Provider::Openai.new(
+      "test-gemini-key",
+      uri_base: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      model: "gemini-2.5-flash"
+    )
+
+    # Mocha uses ruby2_keywords internally; by the time the .with block fires,
+    # the kwargs hash has lost its "keyword" flag and arrives as the first
+    # (only) positional element in *args.  Access it via args.first.
+    captured_model = nil
+    gemini_provider.stubs(:generic_chat_response).with { |*args|
+      captured_model = args.first[:model] if args.first.is_a?(Hash)
+      true
+    }
+
+    gemini_provider.chat_response("Hello", model: "gpt-4.1")
+
+    assert_equal "gemini-2.5-flash", captured_model,
+      "Custom provider should use its configured model, not the caller-supplied OpenAI model name"
+  end
+
+  test "chat_response uses caller-supplied model for standard OpenAI provider" do
+    captured_model = nil
+    @subject.stubs(:native_chat_response).with { |*args|
+      captured_model = args.first[:model] if args.first.is_a?(Hash)
+      true
+    }
+
+    @subject.chat_response("Hello", model: "gpt-4o")
+
+    assert_equal "gpt-4o", captured_model,
+      "Standard OpenAI provider should pass through the caller-supplied model"
+  end
+
   test "supported_models_description returns model prefixes for standard provider" do
     expected = "models starting with: gpt-4, gpt-5, o1, o3"
     assert_equal expected, @subject.supported_models_description

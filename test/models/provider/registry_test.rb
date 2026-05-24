@@ -2,9 +2,10 @@ require "test_helper"
 
 class Provider::RegistryTest < ActiveSupport::TestCase
   test "providers filters out nil values when provider is not configured" do
-    # Ensure OpenAI is not configured
-    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
+    # Ensure neither OpenAI nor Gemini is configured
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil, "GEMINI_API_KEY" => nil) do
       Setting.stubs(:openai_access_token).returns(nil)
+      Setting.stubs(:gemini_api_key).returns(nil)
 
       registry = Provider::Registry.for_concept(:llm)
 
@@ -44,6 +45,86 @@ class Provider::RegistryTest < ActiveSupport::TestCase
       assert_nil registry.get_provider(:openai)
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Gemini provider
+  # ---------------------------------------------------------------------------
+
+  test "gemini provider returns a Provider::Openai instance using Gemini base URL" do
+    ClimateControl.modify("GEMINI_API_KEY" => nil, "GEMINI_MODEL" => nil) do
+      Setting.stubs(:gemini_api_key).returns("test-gemini-key")
+      Setting.stubs(:gemini_model).returns(nil)
+
+      provider = Provider::Registry.get_provider(:gemini)
+
+      assert_not_nil provider
+      assert_instance_of Provider::Openai, provider
+      assert provider.custom_provider?, "Gemini provider should report as custom provider"
+    end
+  end
+
+  test "gemini provider uses configured model from Setting" do
+    ClimateControl.modify("GEMINI_API_KEY" => nil, "GEMINI_MODEL" => nil) do
+      Setting.stubs(:gemini_api_key).returns("test-gemini-key")
+      Setting.stubs(:gemini_model).returns("gemini-2.5-pro")
+
+      provider = Provider::Registry.get_provider(:gemini)
+
+      assert_equal "configured model: gemini-2.5-pro", provider.supported_models_description
+    end
+  end
+
+  test "gemini provider uses default model when none configured" do
+    ClimateControl.modify("GEMINI_API_KEY" => nil, "GEMINI_MODEL" => nil) do
+      Setting.stubs(:gemini_api_key).returns("test-gemini-key")
+      Setting.stubs(:gemini_model).returns(nil)
+
+      provider = Provider::Registry.get_provider(:gemini)
+
+      assert_equal "configured model: gemini-2.5-flash", provider.supported_models_description
+    end
+  end
+
+  test "gemini provider returns nil when no API key configured" do
+    ClimateControl.modify("GEMINI_API_KEY" => nil) do
+      Setting.stubs(:gemini_api_key).returns(nil)
+
+      provider = Provider::Registry.get_provider(:gemini)
+
+      assert_nil provider
+    end
+  end
+
+  test "openai falls back to gemini when no OpenAI key is set" do
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil, "GEMINI_API_KEY" => nil, "GEMINI_MODEL" => nil) do
+      Setting.stubs(:openai_access_token).returns(nil)
+      Setting.stubs(:gemini_api_key).returns("test-gemini-key")
+      Setting.stubs(:gemini_model).returns(nil)
+
+      provider = Provider::Registry.get_provider(:openai)
+
+      assert_not_nil provider
+      assert_instance_of Provider::Openai, provider
+      assert provider.custom_provider?, "Fallback Gemini provider should report as custom provider"
+    end
+  end
+
+  test "openai takes priority over gemini when both are configured" do
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil, "OPENAI_URI_BASE" => nil, "OPENAI_MODEL" => nil,
+                          "GEMINI_API_KEY" => nil) do
+      Setting.stubs(:openai_access_token).returns("test-openai-key")
+      Setting.stubs(:openai_uri_base).returns(nil)
+      Setting.stubs(:openai_model).returns(nil)
+      Setting.stubs(:gemini_api_key).returns("test-gemini-key")
+
+      provider = Provider::Registry.get_provider(:openai)
+
+      assert_not_nil provider
+      assert_equal "OpenAI", provider.provider_name
+    end
+  end
+
+  # ---------------------------------------------------------------------------
 
   test "openai provider falls back to Setting when ENV is empty string" do
     # Mock ENV to return empty string (common in Docker/env files)

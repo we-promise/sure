@@ -2,11 +2,23 @@
 <%= settings_section title: t(".ai_assistant") do %>
   <%= render "settings/hostings/assistant_settings" %>
 <% end %>
-<%= settings_section title: t(".general") do %>
-    <div class="space-y-6">
+<%= settings_section title: t(".ai_provider") do %>
+  <p class="text-sm text-secondary mb-6"><%= t(".ai_provider_description") %></p>
+  <div class="space-y-6">
     <%= render "settings/hostings/openai_settings" %>
-    <%= render "settings/hostings/brand_fetch_settings" %>
+    <div class="relative flex items-center py-1">
+      <div class="flex-grow border-t border-secondary"></div>
+      <span class="flex-shrink mx-4 text-xs text-secondary uppercase tracking-wider"><%= t(".ai_provider_or") %></span>
+      <div class="flex-grow border-t border-secondary"></div>
+    </div>
+    <%= render "settings/hostings/gemini_settings" %>
   </div>
+<% end %>
+<%= settings_section title: t(".llm_token_budget") do %>
+  <%= render "settings/hostings/llm_token_budget" %>
+<% end %>
+<%= settings_section title: t(".general") do %>
+  <%= render "settings/hostings/brand_fetch_settings" %>
 <% end %>
 <%= settings_section title: t(".financial_data_providers") do %>
   <div class="space-y-6">

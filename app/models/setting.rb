@@ -10,6 +10,8 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+  field :gemini_api_key, type: :string, default: ENV["GEMINI_API_KEY"]
+  field :gemini_model, type: :string, default: ENV["GEMINI_MODEL"]
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
@@ -70,6 +72,7 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       openai_access_token
+      gemini_api_key
       external_assistant_token
     ].freeze
 

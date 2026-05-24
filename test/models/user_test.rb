@@ -276,6 +276,21 @@ class UserTest < ActiveSupport::TestCase
     Setting.openai_access_token = previous
   end
 
+  test "ai_available? returns true when gemini api key set in settings" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.gemini_api_key
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, GEMINI_API_KEY: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+      Setting.openai_access_token = nil
+      Setting.gemini_api_key = nil
+      assert_not @user.ai_available?
+
+      Setting.gemini_api_key = "gemini-test-key"
+      assert @user.ai_available?
+    end
+  ensure
+    Setting.gemini_api_key = previous
+  end
+
   test "ai_available? returns true when external assistant is configured and family type is external" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token

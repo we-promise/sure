@@ -32,7 +32,7 @@ en:
     ai_consent:
       title: "Enable AI Chats"
       available_description: "AI chat can answer financial questions and provide insights based on your data. To use this feature you'll need to explicitly enable it."
-      unavailable_description_html: "To use the AI assistant, you need to set the <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> environment variable or configure it in the Self-Hosting settings of your instance."
+      unavailable_description_html: "To use the AI assistant, configure an AI provider in the <a href=\"/settings/hosting\" class=\"underline\">Self-Hosting settings</a>. You can use OpenAI (<code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code>) or Google Gemini (<code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">GEMINI_API_KEY</code>)."
       enable_button: "Enable AI Chats"
       disable_note: "Disable anytime. All data sent to our LLM providers is anonymized."
   assistant_messages:

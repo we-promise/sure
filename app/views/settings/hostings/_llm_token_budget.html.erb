@@ -1,0 +1,39 @@
+<div class="space-y-4">
+  <p class="text-secondary text-sm"><%= t(".description") %></p>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+  <%= form.number_field :llm_context_window,
+                        label: t(".context_window_label"),
+                        placeholder: "2048",
+                        value: Setting.llm_context_window,
+                        min: 256,
+                        disabled: ENV["LLM_CONTEXT_WINDOW"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1 mb-3"><%= t(".context_window_help") %></p>
+
+  <%= form.number_field :llm_max_response_tokens,
+                        label: t(".max_response_tokens_label"),
+                        placeholder: "512",
+                        value: Setting.llm_max_response_tokens,
+                        min: 64,
+                        disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1 mb-3"><%= t(".max_response_tokens_help") %></p>
+
+  <%= form.number_field :llm_max_items_per_call,
+                        label: t(".max_items_per_call_label"),
+                        placeholder: "25",
+                        value: Setting.llm_max_items_per_call,
+                        min: 1,
+                        disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".max_items_per_call_help") %></p>
+  <% end %>
+</div>

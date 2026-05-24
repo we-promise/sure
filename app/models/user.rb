@@ -156,7 +156,8 @@ class User < ApplicationRecord
     when "external"
       Assistant::External.available_for?(self)
     else
-      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present? ||
+        ENV["GEMINI_API_KEY"].present? || Setting.gemini_api_key.present?
     end
   end
 

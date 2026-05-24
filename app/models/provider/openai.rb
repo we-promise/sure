@@ -266,13 +266,18 @@ class Provider::Openai < Provider
     user_identifier: nil,
     family: nil
   )
+    # For custom providers (Gemini, Ollama, etc.) always use the configured
+    # model — the caller may pass an OpenAI model name like "gpt-4.1" which
+    # the custom endpoint won't recognise.
+    effective_model = custom_provider? ? @default_model : (model.presence || @default_model)
+
     if supports_responses_endpoint?
       # Native path uses the Responses API which chains history via
       # `previous_response_id`; it does NOT need (and must not receive)
       # inline message history in the input payload.
       native_chat_response(
         prompt: prompt,
-        model: model,
+        model: effective_model,
         instructions: instructions,
         functions: functions,
         function_results: function_results,
@@ -285,7 +290,7 @@ class Provider::Openai < Provider
     else
       generic_chat_response(
         prompt: prompt,
-        model: model,
+        model: effective_model,
         instructions: instructions,
         functions: functions,
         function_results: function_results,

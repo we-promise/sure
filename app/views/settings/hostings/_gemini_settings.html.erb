@@ -1,0 +1,43 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["GEMINI_API_KEY"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+  <%= form.password_field :gemini_api_key,
+                          label: t(".api_key_label"),
+                          placeholder: t(".api_key_placeholder"),
+                          value: (Setting.gemini_api_key.present? ? "********" : nil),
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "text",
+                          disabled: ENV["GEMINI_API_KEY"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".api_key_help_html") %></p>
+
+  <%= form.text_field :gemini_model,
+                      label: t(".model_label"),
+                      placeholder: t(".model_placeholder"),
+                      value: Setting.gemini_model,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["GEMINI_MODEL"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".model_help_html") %></p>
+  <% end %>
+</div>

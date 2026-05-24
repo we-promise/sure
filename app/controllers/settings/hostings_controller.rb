@@ -110,6 +110,11 @@ class Settings::HostingsController < ApplicationController
     update_encrypted_setting(:tiingo_api_key)
     update_encrypted_setting(:eodhd_api_key)
     update_encrypted_setting(:alpha_vantage_api_key)
+    update_encrypted_setting(:gemini_api_key)
+
+    if hosting_params.key?(:gemini_model)
+      Setting.gemini_model = hosting_params[:gemini_model].presence
+    end
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -175,7 +180,7 @@ class Settings::HostingsController < ApplicationController
       end
       parsed = Integer(raw, 10) rescue nil
       if parsed.nil? || parsed < minimum
-        label = t("settings.hostings.openai_settings.#{key}_label")
+        label = t("settings.hostings.llm_token_budget.#{key}_label")
         raise Setting::ValidationError, t(".invalid_llm_budget", field: label, minimum: minimum)
       end
       Setting.public_send("#{key}=", parsed)
@@ -223,7 +228,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :gemini_api_key, :gemini_model, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type
