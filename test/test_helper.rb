@@ -27,6 +27,8 @@ require "rack/test"
 require "tempfile"
 require "uri"
 
+require_relative "support/ci_system_test_timing_plugin" if ENV["CI_SYSTEM_TEST_TIMING"] == "true"
+
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
   config.hook_into :webmock
