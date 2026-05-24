@@ -80,8 +80,12 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       occurrence_count: 1
     )
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      post toggle_auto_post_recurring_transaction_url(other_recurring)
-    end
+    # `StoreLocation` (included via ApplicationController) globally
+    # rescues `ActiveRecord::RecordNotFound` and renders `head :not_found`,
+    # so the exception never bubbles to the test. Assert the rendered
+    # response instead.
+    post toggle_auto_post_recurring_transaction_url(other_recurring)
+    assert_response :not_found
+    assert_not other_recurring.reload.auto_post?
   end
 end

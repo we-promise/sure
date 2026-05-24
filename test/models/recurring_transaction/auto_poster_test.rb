@@ -4,7 +4,14 @@ class RecurringTransaction::AutoPosterTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @account = accounts(:depository)
-    @merchant = merchants(:netflix)
+    # `merchants(:netflix)` collides with the `netflix_subscription`
+    # recurring fixture on the partial unique index
+    # `idx_recurring_txns_acct_merchant`
+    # (family_id, account_id, merchant_id, amount, currency).
+    # `merchants(:one)` is the generic Test merchant — unused by any
+    # recurring fixture — so the helper's `create!` doesn't violate
+    # the index.
+    @merchant = merchants(:one)
   end
 
   def build_due_recurring(**overrides)

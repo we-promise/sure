@@ -4,7 +4,12 @@ class PostDueRecurringTransactionsJobTest < ActiveJob::TestCase
   setup do
     @family = families(:dylan_family)
     @account = accounts(:depository)
-    @merchant = merchants(:netflix)
+    # Use the generic Test merchant rather than `:netflix` — the
+    # `netflix_subscription` fixture already occupies the
+    # (family, account, netflix, 15.99, USD) slot under the partial
+    # unique index `idx_recurring_txns_acct_merchant`, so a second
+    # `create!` with the same combo would PG::UniqueViolation.
+    @merchant = merchants(:one)
   end
 
   def build_recurring(**overrides)
