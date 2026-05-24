@@ -41,6 +41,8 @@ class Balance::SyncCache
         # Mutate the entry in place rather than dup'ing — these instances are scoped to
         # this sync-cache only and never persisted, so avoiding the dup eliminates a
         # large amount of ActiveModel::Attribute allocations during sync.
+        # to_a materializes independent instances; no AR identity map is active during sync,
+        # so callers holding a reference to the same association will never see these mutations.
         new_amount = e.amount_money.exchange_to(
           account.currency,
           date: e.date,
