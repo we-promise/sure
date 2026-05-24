@@ -846,6 +846,15 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = Family::DataImporter.new(@family, ndjson).import!
 
     account = @family.accounts.find_by!(name: "Provider Account")
+    entry = account.entries.find_by!(
+      entryable_type: "Transaction",
+      external_id: "provider-txn-1",
+      source: "simplefin"
+    )
+
+    assert_equal "Provider transaction", entry.name
+    assert_equal BigDecimal("-50.00"), entry.amount
+    assert_equal Date.parse("2024-01-15"), entry.date
     assert_equal 1, account.entries.where(
       entryable_type: "Transaction",
       external_id: "provider-txn-1",

@@ -572,6 +572,7 @@ class Family::DataImporter
 
     def existing_provenance_entry(account, data, entryable_type)
       attributes = entry_provenance_attributes(data)
+      # Both fields are required to avoid false-positive matches across providers.
       return unless attributes[:external_id] && attributes[:source]
 
       account.entries.find_by(attributes.merge(entryable_type: entryable_type))
