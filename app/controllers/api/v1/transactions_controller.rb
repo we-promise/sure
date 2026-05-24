@@ -284,7 +284,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       # Tag filtering
       if params[:tag_ids].present?
         tag_ids = Array(params[:tag_ids])
-        query = query.joins(:tags).where(tags: { id: tag_ids }).distinct
+        query = query.where(
+          id: query.joins(:tags).where(tags: { id: tag_ids }).select(:id)
+        )
       end
 
       # Transaction type filtering (income/expense)
