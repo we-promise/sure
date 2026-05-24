@@ -171,9 +171,18 @@
                     <%= link_to toggle_auto_post_recurring_transaction_path(recurring_transaction),
                         data: { turbo_method: :post },
                         class: "#{recurring_transaction.auto_post? ? 'text-success' : 'text-secondary'} hover:text-primary",
-                        title: auto_post_aria_label,
                         aria: { label: auto_post_aria_label } do %>
-                      <%= icon recurring_transaction.auto_post? ? "calendar-check" : "calendar-clock", size: "sm", color: "current" %>
+                      <%# DS::Tooltip replaces the bare title= attribute so the
+                          hint is keyboard-accessible, touch-reachable, and
+                          consistently styled. `as: :span` keeps the trigger
+                          non-interactive so it nests cleanly inside the link. %>
+                      <%= render DS::Tooltip.new(
+                            text: auto_post_aria_label,
+                            icon: recurring_transaction.auto_post? ? "calendar-check" : "calendar-clock",
+                            size: "sm",
+                            color: "current",
+                            as: :span
+                          ) %>
                     <% end %>
                     <%= link_to toggle_status_recurring_transaction_path(recurring_transaction),
                         data: { turbo_method: :post },
