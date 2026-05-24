@@ -55,4 +55,26 @@ class CategoryTest < ActiveSupport::TestCase
       assert_includes category.errors[:color], "is invalid"
     end
   end
+
+  test "name_with_indent returns the bare name for a parent category" do
+    assert_equal categories(:food_and_drink).name, categories(:food_and_drink).name_with_indent
+  end
+
+  test "name_with_indent prefixes subcategories with NBSP indent" do
+    sub = categories(:subcategory)
+    assert_equal "    #{sub.name}", sub.name_with_indent
+  end
+
+  test "alphabetically_by_hierarchy groups subcategories under their parent" do
+    parent = categories(:food_and_drink)
+    sub = categories(:subcategory)
+
+    ordered = @family.categories.alphabetically_by_hierarchy.to_a
+    parent_index = ordered.index(parent)
+    sub_index = ordered.index(sub)
+
+    assert_not_nil parent_index
+    assert_not_nil sub_index
+    assert sub_index > parent_index, "subcategory should sort after its parent"
+  end
 end

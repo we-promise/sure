@@ -30,7 +30,7 @@
       currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
       
     <%= f.fields_for :entryable do |ef| %>
-      <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category"), variant: :badge, searchable: true } %>
+      <%= ef.collection_select :category_id, categories, :id, :name_with_indent, { prompt: t(".category_prompt"), label: t(".category"), variant: :badge, searchable: true } %>
     <% end %>
     
     <%= f.date_field :date, 
