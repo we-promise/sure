@@ -289,7 +289,15 @@ class AccountsController < ApplicationController
         return
       end
 
-      render partial: "#{@account.accountable_type.downcase.pluralize}/tabs/#{tab}", locals: { account: @account }, layout: false
+      frame_id = helpers.dom_id(@account, "#{tab}_tab")
+      html = view_context.turbo_frame_tag(frame_id) do
+        view_context.render(
+          partial: "#{@account.accountable_type.downcase.pluralize}/tabs/#{tab}",
+          locals: { account: @account }
+        )
+      end
+
+      render html: html, layout: false
     end
 
     def statement_tab_locals
