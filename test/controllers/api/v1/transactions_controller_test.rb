@@ -147,6 +147,34 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should filter transactions by tag_ids without error" do
+    tag = Tag.first
+    tagged_entry = @account.entries.create!(
+      name: "Tagged Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new(tags: [ tag ])
+    )
+
+    @account.entries.create!(
+      name: "Untagged Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get api_v1_transactions_url,
+        params: { tag_ids: [ tag.id ], per_page: 200 },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transaction_ids = response_data["transactions"].map { |t| t["id"] }
+    assert_includes transaction_ids, tagged_entry.transaction.id
+  end
+
   test "should filter disabled account transactions by date range" do
     disabled_transaction = create_disabled_account_transaction(
       name: "Closed Account Date Range",
