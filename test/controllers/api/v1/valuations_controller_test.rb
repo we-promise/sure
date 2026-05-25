@@ -366,9 +366,141 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert valuation_data.key?("notes")
   end
 
+  # ============================================================================
+  # Family-sharing scope tests
+  # ============================================================================
+  #
+  # `family_admin` (Bob) owns every account in `dylan_family`. `family_member`
+  # (Jakob) is shared `depository` (full_control) and `credit_card` (read_only).
+  # Every other account (`other_asset`, `investment`, etc.) is unshared.
+  # `Api::V1::ValuationsController` must scope create/show/update through
+  # `Account.accessible_by` / `Account.writable_by` so a member cannot mutate
+  # an account they cannot see in the UI, and cannot mutate a read-only-shared
+  # account through the API.
+
+  test "should reject create on an unshared family account" do
+    member_key = member_api_key(scopes: [ "read_write" ])
+    unshared_account = accounts(:other_asset) # owned by family_admin, not shared
+
+    assert_no_difference -> { unshared_account.entries.valuations.count } do
+      post api_v1_valuations_url,
+           params: {
+             valuation: {
+               account_id: unshared_account.id,
+               amount: 12_345.67,
+               date: Date.current.to_s
+             }
+           },
+           headers: api_headers(member_key)
+    end
+    assert_response :not_found
+  end
+
+  test "should reject create on a read-only-shared family account" do
+    member_key = member_api_key(scopes: [ "read_write" ])
+    read_only_account = accounts(:credit_card) # shared :read_only with member
+
+    assert_no_difference -> { read_only_account.entries.valuations.count } do
+      post api_v1_valuations_url,
+           params: {
+             valuation: {
+               account_id: read_only_account.id,
+               amount: 100.00,
+               date: Date.current.to_s
+             }
+           },
+           headers: api_headers(member_key)
+    end
+    assert_response :not_found
+  end
+
+  test "should allow create on a full-control-shared family account" do
+    member_key = member_api_key(scopes: [ "read_write" ])
+    shared_account = accounts(:depository) # shared :full_control with member
+
+    assert_difference -> { shared_account.entries.valuations.count }, 1 do
+      post api_v1_valuations_url,
+           params: {
+             valuation: {
+               account_id: shared_account.id,
+               amount: 250.00,
+               date: Date.current.to_s
+             }
+           },
+           headers: api_headers(member_key)
+    end
+    assert_response :created
+  end
+
+  test "should reject show of valuation on an unshared family account" do
+    member_key = member_api_key(scopes: [ "read_write" ])
+    hidden_valuation = accounts(:other_asset).entries.valuations.first ||
+                       accounts(:other_asset).entries.valuations.create!(
+                         date: 5.days.ago.to_date,
+                         amount: 999,
+                         currency: "USD",
+                         name: "Hidden valuation",
+                         entryable: Valuation.new(kind: "reconciliation")
+                       )
+
+    get api_v1_valuation_url(hidden_valuation),
+        headers: api_headers(member_key)
+    assert_response :not_found
+  end
+
+  test "should reject update of valuation on a read-only-shared family account" do
+    member_key = member_api_key(scopes: [ "read_write" ])
+    read_only_account = accounts(:credit_card) # shared :read_only with member
+    entry = read_only_account.entries.valuations.first ||
+            read_only_account.entries.valuations.create!(
+              date: 5.days.ago.to_date,
+              amount: 500,
+              currency: "USD",
+              name: "Existing valuation",
+              entryable: Valuation.new(kind: "reconciliation")
+            )
+
+    original_amount = entry.amount
+    patch api_v1_valuation_url(entry),
+          params: { valuation: { amount: 9_999.99, date: entry.date.to_s } },
+          headers: api_headers(member_key)
+    assert_response :forbidden
+    assert_equal original_amount, entry.reload.amount
+  end
+
+  test "should allow show of valuation on a shared family account" do
+    member_key = member_api_key(scopes: [ "read_write" ])
+    shared_account = accounts(:depository) # shared :full_control with member
+    entry = shared_account.entries.valuations.first ||
+            shared_account.entries.valuations.create!(
+              date: 5.days.ago.to_date,
+              amount: 1_000,
+              currency: "USD",
+              name: "Shared valuation",
+              entryable: Valuation.new(kind: "reconciliation")
+            )
+
+    get api_v1_valuation_url(entry), headers: api_headers(member_key)
+    assert_response :success
+  end
+
   private
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
+    end
+
+    def member_api_key(scopes:)
+      member = users(:family_member)
+      member.api_keys.active.destroy_all
+      key = ApiKey.create!(
+        user: member,
+        name: "Member Test Key #{SecureRandom.hex(4)}",
+        scopes: scopes,
+        source: "web",
+        display_key: "test_member_#{SecureRandom.hex(8)}"
+      )
+      Redis.new.del("api_rate_limit:#{key.id}")
+      key
     end
 end
