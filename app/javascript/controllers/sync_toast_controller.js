@@ -7,7 +7,7 @@ import { Controller } from "@hotwired/stimulus";
 // - If the user is mid-form, the toast stays visible so they can choose when to refresh.
 export default class extends Controller {
   static values = {
-    autoRefreshDelay: { type: Number, default: 500 },
+    autoRefreshDelay: { type: Number, default: 2000 },
   };
 
   connect() {
@@ -28,6 +28,6 @@ export default class extends Controller {
   #userIsInteracting() {
     const el = document.activeElement;
     if (!el || el === document.body || el === document.documentElement) return false;
-    return el.closest("form") !== null;
+    return el.isContentEditable || el.closest("form, dialog, [role='dialog']") !== null;
   }
 }

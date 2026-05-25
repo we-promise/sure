@@ -14,9 +14,9 @@ class Family::SyncCompleteEvent
     # This avoids wiping in-progress form state when a background sync fires.
     # The partial contains no user-scoped data (Current.user is nil here), so
     # each browser re-fetches the page on its own authenticated request.
-    family.broadcast_append_to(
+    family.broadcast_replace_to(
       family,
-      target: "notification-tray",
+      target: "sync-toast",
       partial: "shared/notifications/sync_toast"
     )
 
