@@ -77,4 +77,23 @@ class CategoryTest < ActiveSupport::TestCase
     assert_not_nil sub_index
     assert sub_index > parent_index, "subcategory should sort after its parent"
   end
+
+  test "alphabetically_by_hierarchy places every subcategory immediately after its parent, with no foreign parents interspersed" do
+    parent_a = @family.categories.create!(name: "ZZ Parent A", color: "#111111", lucide_icon: "shapes")
+    parent_b = @family.categories.create!(name: "ZZ Parent B", color: "#222222", lucide_icon: "shapes")
+    a_sub_1 = @family.categories.create!(name: "A-sub-1", color: "#111111", lucide_icon: "shapes", parent: parent_a)
+    a_sub_2 = @family.categories.create!(name: "A-sub-2", color: "#111111", lucide_icon: "shapes", parent: parent_a)
+    b_sub_1 = @family.categories.create!(name: "B-sub-1", color: "#222222", lucide_icon: "shapes", parent: parent_b)
+    b_sub_2 = @family.categories.create!(name: "B-sub-2", color: "#222222", lucide_icon: "shapes", parent: parent_b)
+
+    ordered = @family.categories.alphabetically_by_hierarchy.to_a
+
+    a_slice = ordered.slice(ordered.index(parent_a), 3)
+    b_slice = ordered.slice(ordered.index(parent_b), 3)
+
+    assert_equal [ parent_a, a_sub_1, a_sub_2 ], a_slice,
+      "Parent A and its subs must be consecutive (no Parent B nor its subs interspersed)"
+    assert_equal [ parent_b, b_sub_1, b_sub_2 ], b_slice,
+      "Parent B and its subs must be consecutive (no Parent A nor its subs interspersed)"
+  end
 end
