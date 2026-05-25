@@ -163,12 +163,14 @@ class IbkrAccount::HistoricalBalancesSync
     def trade_flows_by_date
       @trade_flows_by_date ||= if account
         account.entries
+          .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
           .where(entryable_type: "Trade")
+          .where.not(trades: { qty: 0 })
           .includes(:entryable)
           .each_with_object(Hash.new(0)) do |entry, flows|
             custom_rate = entry.entryable.exchange_rate
             base_amount = Money.new(entry.amount, entry.currency)
-              .exchange_to(account_currency, custom_rate: custom_rate)
+              .exchange_to(account_currency, custom_rate: custom_rate, date: entry.date)
               .amount
             flows[entry.date] += base_amount
           rescue Money::ConversionError
