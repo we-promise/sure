@@ -8,6 +8,7 @@ class SnaptradeAccount < ApplicationRecord
     encrypts :raw_transactions_payload
     encrypts :raw_holdings_payload
     encrypts :raw_activities_payload
+    encrypts :raw_balances_payload
   end
 
   belongs_to :snaptrade_item

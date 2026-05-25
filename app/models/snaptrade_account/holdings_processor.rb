@@ -50,7 +50,7 @@ class SnaptradeAccount::HoldingsProcessor
 
         security = Security.cash_for(account, currency: entry[:currency])
 
-        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing #{entry[:currency]} cash holding: #{amount}"
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing #{entry[:currency]} cash holding"
 
         import_adapter.import_holding(
           security: security,
