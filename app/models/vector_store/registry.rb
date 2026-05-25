@@ -24,7 +24,14 @@ class VectorStore::Registry
       explicit = ENV["VECTOR_STORE_PROVIDER"].presence
       return explicit.to_sym if explicit && ADAPTERS.key?(explicit.to_sym)
 
-      # Default: use OpenAI when credentials are available
+      # Default routing:
+      #   - When the configured LLM provider is Anthropic (which has no hosted
+      #     vector store), fall back to the local pgvector adapter. The
+      #     Embeddable concern still pulls embeddings from EMBEDDING_URI_BASE /
+      #     OPENAI_ACCESS_TOKEN — Anthropic users typically point this at
+      #     Voyage AI, a local Ollama instance, or OpenAI embeddings.
+      #   - Otherwise, use OpenAI when credentials are available.
+      return :pgvector if Setting.llm_provider == "anthropic"
       :openai if openai_access_token.present?
     end
 
