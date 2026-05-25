@@ -17,22 +17,24 @@
 <%= tag.details open: open,
                 class: "group bg-container shadow-border-xs rounded-xl #{border_class}",
                 data: details_data do %>
-  <summary class="flex items-center gap-3 min-h-15 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
-    <%= icon "chevron-right", size: "sm", class: "!w-3.5 !h-3.5 text-secondary group-open:rotate-90 transition-transform" %>
-    <div class="flex items-center flex-wrap gap-1 min-w-0 flex-1">
-      <div class="flex items-center gap-2 shrink-0 flex-1">
-        <h3 class="text-sm font-medium text-primary"><%= entry[:title] %></h3>
-        <%= render "settings/providers/maturity_badge", label: maturity_lbl %>
+  <summary class="min-h-15 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
+    <div class="flex items-center gap-3">
+      <%= icon "chevron-right", size: "sm", class: "!w-3.5 !h-3.5 text-secondary group-open:rotate-90 transition-transform" %>
+      <div class="flex items-center flex-wrap gap-2 min-w-0 flex-1">
+        <div class="flex items-center gap-2 shrink-0 flex-1">
+          <h3 class="text-sm font-medium text-primary"><%= entry[:title] %></h3>
+          <%= render "settings/providers/maturity_badge", label: maturity_lbl %>
+        </div>
+        <div class="flex items-center gap-2 shrink-0 group-open:hidden">
+          <% if meta.present? %>
+            <span class="text-xs text-subdued"><%= meta %></span>
+          <% end %>
+          <%= status_pill %>
+        </div>
       </div>
-      <div class="flex items-center gap-2 shrink-0 group-open:hidden">
-        <% if meta.present? %>
-          <span class="text-xs text-subdued"><%= meta %></span>
-        <% end %>
-        <%= status_pill %>
+      <div class="group-open:hidden">
+        <%= sync_action if sync_action %>
       </div>
-    </div>
-    <div class="group-open:hidden">
-      <%= sync_action if sync_action %>
     </div>
   </summary>
   <div class="space-y-4 mt-4 px-4 pb-4">
