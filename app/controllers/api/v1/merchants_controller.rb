@@ -120,7 +120,7 @@ module Api
                status: :unprocessable_entity
       rescue StandardError => e
         Rails.logger.error("API Merchants Import Error: #{e.message}")
-        render json: { error: "internal_server_error", message: "Failed to import merchants" },
+        render json: { error: "internal_server_error", message: "An unexpected error occurred" },
                status: :internal_server_error
       end
 

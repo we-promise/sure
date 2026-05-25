@@ -82,7 +82,26 @@ class MerchantImport < Import
     end
 
     def normalized_headers
-      @normalized_headers ||= csv_headers.to_h { |header| [ normalize_header(header), header ] }
+      @normalized_headers ||= begin
+        result = {}
+        duplicates = []
+
+        csv_headers.each do |header|
+          key = normalize_header(header)
+          if result.key?(key)
+            duplicates << header
+          else
+            result[key] = header
+          end
+        end
+
+        if duplicates.any?
+          errors.add(:base, :duplicate_columns, columns: duplicates.join(", "))
+          raise ActiveRecord::RecordInvalid.new(self)
+        end
+
+        result
+      end
     end
 
     def normalize_header(header)

@@ -5,3 +5,4 @@ en:
       models:
         merchant_import:
           missing_columns: "Missing required columns: %{columns}"
+          duplicate_columns: "Duplicate column names after normalization: %{columns}"
