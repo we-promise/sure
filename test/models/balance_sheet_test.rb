@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BalanceSheetTest < ActiveSupport::TestCase
+  include BalanceTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -44,6 +46,24 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 10000 - 1000, BalanceSheet.new(@family).net_worth
     assert_equal 10000, BalanceSheet.new(@family).assets.total
     assert_equal 1000, BalanceSheet.new(@family).liabilities.total
+  end
+
+  test "net worth series includes disabled accounts to avoid false archive jumps" do
+    period = Period.custom(start_date: Date.current - 1.day, end_date: Date.current)
+    active_account = create_account(balance: 20_000, accountable: Depository.new)
+    disabled_account = create_account(balance: 0, accountable: Depository.new)
+    disabled_account.disable!
+
+    create_balance(account: active_account, date: period.start_date, balance: 10_000)
+    create_balance(account: active_account, date: period.end_date, balance: 20_000)
+    create_balance(account: disabled_account, date: period.start_date, balance: 20_000)
+    create_balance(account: disabled_account, date: period.end_date, balance: 10_000)
+
+    series = BalanceSheet.new(@family).net_worth_series(period: period)
+    values_by_date = series.values.index_by(&:date)
+
+    assert_equal 30_000, values_by_date.fetch(period.start_date).value.amount
+    assert_equal 30_000, values_by_date.fetch(period.end_date).value.amount
   end
 
   test "calculates asset group totals" do

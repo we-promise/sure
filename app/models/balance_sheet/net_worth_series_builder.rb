@@ -22,16 +22,14 @@ class BalanceSheet::NetWorthSeriesBuilder
 
     def visible_account_ids
       @visible_account_ids ||= begin
-        scope = family.accounts.visible
-        scope = scope.included_in_finances_for(user) if user
-        scope.pluck(:id)
+        BalanceSheet::HistoricalAccountScope.ids_for(family, user: user)
       end
     end
 
     def cache_key(period)
       shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       key = [
-        "balance_sheet_net_worth_series",
+        "balance_sheet_net_worth_series_historical",
         user&.id,
         shares_version,
         period.start_date,

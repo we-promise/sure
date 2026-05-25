@@ -39,6 +39,7 @@ class Account < ApplicationRecord
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   scope :visible, -> { where(status: [ "draft", "active" ]) }
+  scope :historical, -> { where(status: [ "draft", "active", "disabled" ]) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
