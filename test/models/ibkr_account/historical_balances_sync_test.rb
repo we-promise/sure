@@ -280,6 +280,39 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
   end
 
+  test "falls back to raw entry amount when Money::ConversionError is raised during FX conversion" do
+    # EUR trade with no exchange_rate stored → custom_rate=nil → ConversionError raised.
+    # Fallback: flows[date] += entry.amount (150 EUR treated as 150 CHF).
+    # nmf = Δnon_cash(200) - fallback(150) = 50; end_non_cash = 2700 unchanged.
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "3000.00" },
+        { report_date: "2026-05-08", total: "3200.00" }
+      ]
+    )
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 500.00)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 3200.00, cash_balance: 500.00)
+
+    security = Security.create!(ticker: "NORATE", name: "No Rate EUR Stock")
+    @account.entries.create!(
+      name: "Buy 100 NORATE",
+      date: Date.new(2026, 5, 8),
+      amount: 150.00,
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 100, price: 1.5, currency: "EUR")
+    )
+
+    Money.any_instance.stubs(:exchange_to).raises(
+      Money::ConversionError.new(from_currency: "EUR", to_currency: "CHF", date: Date.new(2026, 5, 8))
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
+    assert_equal BigDecimal("50"),     day2.net_market_flows
+    assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
+  end
+
   test "net_market_flows equals full non_cash delta when account has no trades" do
     @ibkr_account.update!(
       raw_equity_summary_payload: [
