@@ -70,4 +70,20 @@ class PlaidItemTest < ActiveSupport::TestCase
     end
     assert_predicate @plaid_item.reload, :good?
   end
+
+  test "get_update_link_token tolerates a Plaid::ApiError with a nil/blank response_body" do
+    # Plaid clients have been observed raising ApiError without a response
+    # body (network-layer failures, early aborts). The old JSON.parse would
+    # blow up with TypeError before the rescue could fire; we now coerce
+    # to String so the parse falls back to {} and the error re-raises
+    # cleanly for the controller to handle.
+    Family.any_instance.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 500, response_body: nil)
+    )
+
+    assert_raises(Plaid::ApiError) do
+      @plaid_item.get_update_link_token(webhooks_url: "https://x", redirect_url: "https://x")
+    end
+    assert_predicate @plaid_item.reload, :good?
+  end
 end

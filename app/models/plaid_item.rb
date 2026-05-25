@@ -46,7 +46,7 @@ class PlaidItem < ApplicationRecord
     )
   rescue Plaid::ApiError => e
     error_body = begin
-      JSON.parse(e.response_body)
+      JSON.parse(e.response_body.to_s)
     rescue JSON::ParserError
       {}
     end

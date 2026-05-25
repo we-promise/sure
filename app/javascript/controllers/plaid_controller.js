@@ -128,8 +128,17 @@ export default class extends Controller {
   };
 
   handleExit = (err, metadata) => {
-    // If there was an error during update mode, refresh the page to show latest status
-    if (err && metadata.status === "requires_credentials") {
+    // If there was an error during update mode, refresh the page to show
+    // latest status. Guard `metadata` (Plaid can fire onExit with it
+    // undefined when Link aborts very early) and gate the redirect on
+    // `isUpdateValue` so first-time link failures don't bounce the user
+    // away from whatever page they were on.
+    if (
+      err &&
+      metadata &&
+      metadata.status === "requires_credentials" &&
+      this.isUpdateValue
+    ) {
       window.location.href = "/accounts";
       return;
     }
