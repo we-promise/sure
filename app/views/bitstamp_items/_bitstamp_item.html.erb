@@ -3,7 +3,7 @@
 <%= tag.div id: dom_id(bitstamp_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 w-full">
         <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
         <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
