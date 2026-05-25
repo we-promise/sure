@@ -280,10 +280,12 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
   end
 
-  test "skips entry and absorbs full non_cash delta into nmf when Money::ConversionError is raised" do
+  test "excludes balance row from upsert when Money::ConversionError prevents FX conversion" do
     # EUR trade with no exchange_rate stored → custom_rate=nil → ConversionError raised.
-    # Entry is skipped (not counted in net_buy_sell) rather than using a wrong-currency amount.
-    # nmf = Δnon_cash(200) - skipped(0) = 200; end_non_cash = 2700 unchanged.
+    # The affected date is excluded from the upsert entirely so net_market_flows is not
+    # silently wrong (the trade's value would otherwise flow into market appreciation).
+    # The seeded day2 balance is intentionally different from IBKR's total (3150 vs 3200)
+    # so we can assert the row was not overwritten by sync.
     @ibkr_account.update!(
       raw_equity_summary_payload: [
         { report_date: "2026-05-07", total: "3000.00" },
@@ -291,7 +293,7 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
       ]
     )
     seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 500.00)
-    seed_balance(date: Date.new(2026, 5, 8), balance: 3200.00, cash_balance: 500.00)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 3150.00, cash_balance: 500.00)
 
     security = Security.create!(ticker: "NORATE", name: "No Rate EUR Stock")
     @account.entries.create!(
@@ -308,9 +310,14 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
 
     IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
 
+    # Day 1 is unaffected — still synced normally
+    day1 = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    assert_equal BigDecimal("3000.00"), day1.balance
+
+    # Day 2 was excluded from the upsert — seeded values are preserved, not overwritten
     day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
-    assert_equal BigDecimal("200"),    day2.net_market_flows
-    assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
+    assert_equal BigDecimal("3150.00"), day2.balance          # seeded, not IBKR's 3200
+    assert_equal BigDecimal("0"),       day2.net_market_flows  # seeded, not recomputed
   end
 
   test "net_market_flows equals full non_cash delta when account has no trades" do

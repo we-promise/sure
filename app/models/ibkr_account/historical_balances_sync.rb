@@ -109,8 +109,10 @@ class IbkrAccount::HistoricalBalancesSync
 
     def balance_rows
       current_time = Time.current
+      trade_flows_by_date  # ensure @failed_fx_dates is populated before iterating
 
-      normalized_rows.each_with_index.map do |row, index|
+      normalized_rows.each_with_index.filter_map do |row, index|
+        next if @failed_fx_dates.include?(row[:date])
         previous_row = index.zero? ? nil : normalized_rows[index - 1]
         start_cash_balance     = previous_row ? previous_row[:cash]     : row[:cash]
         start_non_cash_balance = previous_row ? previous_row[:non_cash] : row[:non_cash]
@@ -163,25 +165,29 @@ class IbkrAccount::HistoricalBalancesSync
     # conversion is exact and consistent with IBKR's own calculations.
     # Positive = net buy (cash out), negative = net sell (cash in).
     def trade_flows_by_date
-      @trade_flows_by_date ||= if account
-        account.entries
-          .joins("INNER JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
-          .where.not(trades: { qty: 0 })
-          .includes(:entryable)
-          .each_with_object(Hash.new(0)) do |entry, flows|
-            custom_rate = entry.entryable.exchange_rate
-            base_amount = Money.new(entry.amount, entry.currency)
-              .exchange_to(account_currency, custom_rate: custom_rate, date: entry.date)
-              .amount
-            flows[entry.date] += base_amount
-          rescue Money::ConversionError
-            Rails.logger.warn(
-              "IbkrAccount::HistoricalBalancesSync - No FX rate for #{entry.currency}→#{account_currency} " \
-              "on #{entry.date}; skipping entry from net_buy_sell"
-            )
-          end
-      else
-        {}
+      @trade_flows_by_date ||= begin
+        @failed_fx_dates = []
+        if account
+          account.entries
+            .joins("INNER JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
+            .where.not(trades: { qty: 0 })
+            .includes(:entryable)
+            .each_with_object(Hash.new(0)) do |entry, flows|
+              custom_rate = entry.entryable.exchange_rate
+              base_amount = Money.new(entry.amount, entry.currency)
+                .exchange_to(account_currency, custom_rate: custom_rate, date: entry.date)
+                .amount
+              flows[entry.date] += base_amount
+            rescue Money::ConversionError
+              Rails.logger.warn(
+                "IbkrAccount::HistoricalBalancesSync - No FX rate for #{entry.currency}→#{account_currency} " \
+                "on #{entry.date}; balance row for this date will not be persisted"
+              )
+              @failed_fx_dates << entry.date
+            end
+        else
+          {}
+        end
       end
     end
 end
