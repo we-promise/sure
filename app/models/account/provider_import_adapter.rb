@@ -989,6 +989,7 @@ class Account::ProviderImportAdapter
 
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
+      ex = {} unless ex.is_a?(Hash)
       Transaction::PENDING_PROVIDERS.each do |provider|
         next unless ex.key?(provider)
         next unless ex[provider].is_a?(Hash)
