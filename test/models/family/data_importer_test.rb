@@ -863,6 +863,259 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, result[:entries].count
   end
 
+  test "skips duplicate trade provenance without raising uniqueness errors" do
+    ticker = "DUP#{SecureRandom.hex(3).upcase}"
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Provider Brokerage",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Investment"
+        }
+      },
+      {
+        type: "Trade",
+        data: {
+          id: "trade-1",
+          account_id: "acct-1",
+          date: "2024-01-15",
+          ticker: ticker,
+          qty: "2",
+          price: "100.00",
+          amount: "-200.00",
+          currency: "USD",
+          external_id: "provider-trade-1",
+          source: "plaid"
+        }
+      },
+      {
+        type: "Trade",
+        data: {
+          id: "trade-duplicate",
+          account_id: "acct-1",
+          date: "2024-01-16",
+          ticker: ticker,
+          qty: "3",
+          price: "110.00",
+          amount: "-330.00",
+          currency: "USD",
+          external_id: "provider-trade-1",
+          source: "plaid"
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Provider Brokerage")
+    entry = account.entries.find_by!(
+      entryable_type: "Trade",
+      external_id: "provider-trade-1",
+      source: "plaid"
+    )
+
+    assert_equal "Buy #{ticker}", entry.name
+    assert_equal BigDecimal("-200.00"), entry.amount
+    assert_equal Date.parse("2024-01-15"), entry.date
+    assert_equal 1, account.entries.where(
+      entryable_type: "Trade",
+      external_id: "provider-trade-1",
+      source: "plaid"
+    ).count
+    assert_equal 1, result[:entries].count
+  end
+
+  test "skips duplicate valuation provenance without raising uniqueness errors" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Provider Account",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-1",
+          account_id: "acct-1",
+          date: "2024-01-15",
+          amount: "5000.00",
+          name: "Provider valuation",
+          currency: "USD",
+          external_id: "provider-valuation-1",
+          source: "api"
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-duplicate",
+          account_id: "acct-1",
+          date: "2024-01-16",
+          amount: "5100.00",
+          name: "Duplicate provider valuation",
+          currency: "USD",
+          external_id: "provider-valuation-1",
+          source: "api"
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Provider Account")
+    entry = account.entries.find_by!(
+      entryable_type: "Valuation",
+      external_id: "provider-valuation-1",
+      source: "api"
+    )
+
+    assert_equal "Provider valuation", entry.name
+    assert_equal BigDecimal("5000.00"), entry.amount
+    assert_equal Date.parse("2024-01-15"), entry.date
+    assert_equal 1, account.entries.where(
+      entryable_type: "Valuation",
+      external_id: "provider-valuation-1",
+      source: "api"
+    ).count
+    assert_equal 1, result[:entries].count
+  end
+
+  test "skips cross type provenance conflicts without raising uniqueness errors" do
+    ticker = "XTY#{SecureRandom.hex(3).upcase}"
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Provider Account",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Investment"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          date: "2024-01-15",
+          amount: "-50.00",
+          name: "Provider transaction",
+          currency: "USD",
+          external_id: "provider-shared-1",
+          source: "simplefin"
+        }
+      },
+      {
+        type: "Trade",
+        data: {
+          id: "trade-conflict",
+          account_id: "acct-1",
+          date: "2024-01-16",
+          ticker: ticker,
+          qty: "1",
+          price: "50.00",
+          amount: "-50.00",
+          currency: "USD",
+          external_id: "provider-shared-1",
+          source: "simplefin"
+        }
+      }
+    ])
+
+    result = nil
+    assert_nothing_raised do
+      result = Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    account = @family.accounts.find_by!(name: "Provider Account")
+    assert_equal 1, account.entries.where(
+      external_id: "provider-shared-1",
+      source: "simplefin"
+    ).count
+    assert_equal 1, account.entries.where(
+      entryable_type: "Transaction",
+      external_id: "provider-shared-1",
+      source: "simplefin"
+    ).count
+    assert_equal 0, account.entries.where(
+      entryable_type: "Trade",
+      external_id: "provider-shared-1",
+      source: "simplefin"
+    ).count
+    assert_equal 1, result[:entries].count
+  end
+
+  test "imports same provenance for another account" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Provider Account One",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "acct-2",
+          name: "Provider Account Two",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          date: "2024-01-15",
+          amount: "-50.00",
+          name: "Provider transaction one",
+          currency: "USD",
+          external_id: "provider-shared-1",
+          source: "simplefin"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-2",
+          account_id: "acct-2",
+          date: "2024-01-15",
+          amount: "-60.00",
+          name: "Provider transaction two",
+          currency: "USD",
+          external_id: "provider-shared-1",
+          source: "simplefin"
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 2, @family.accounts.joins(:entries).where(
+      entries: {
+        entryable_type: "Transaction",
+        external_id: "provider-shared-1",
+        source: "simplefin"
+      }
+    ).distinct.count
+    assert_equal 2, result[:entries].count
+  end
+
   test "imports trades with securities" do
     ndjson = build_ndjson([
       {
