@@ -280,6 +280,56 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
   end
 
+  test "net_market_flows equals full non_cash delta when account has no trades" do
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "3000.00" },
+        { report_date: "2026-05-08", total: "3300.00" }
+      ]
+    )
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 500.00)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 3300.00, cash_balance: 500.00)
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    day1 = @account.balances.find_by!(date: Date.new(2026, 5, 7), currency: "CHF")
+    day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
+
+    assert_equal BigDecimal("0"),   day1.net_market_flows
+    assert_equal BigDecimal("300"), day2.net_market_flows
+    assert_equal BigDecimal("2800.00"), day2.end_non_cash_balance
+  end
+
+  test "sell trades reduce net_buy_sell so market loss is isolated in net_market_flows" do
+    # Day 1: total=3000, cash=500, non_cash=2500
+    # Day 2: total=2700, cash=700, non_cash=2000 (Δnon_cash=-500)
+    #   Sell 100 at CHF 1.50: entry.amount=-150 (negative = proceeds received)
+    #   net_buy_sell=-150; nmf = -500 - (-150) = -350 (market caused -350 loss)
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "3000.00" },
+        { report_date: "2026-05-08", total: "2700.00" }
+      ]
+    )
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 500.00)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 2700.00, cash_balance: 700.00)
+
+    security = Security.create!(ticker: "SELL_TEST", name: "Sell Test Stock")
+    @account.entries.create!(
+      name: "Sell 100 SELL_TEST",
+      date: Date.new(2026, 5, 8),
+      amount: -150.00,
+      currency: "CHF",
+      entryable: Trade.new(security: security, qty: -100, price: 1.5, currency: "CHF")
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
+    assert_equal BigDecimal("-350"), day2.net_market_flows
+    assert_equal BigDecimal("2000.00"), day2.end_non_cash_balance
+  end
+
   test "writes balance row with zero total for fully liquidated dates" do
     @ibkr_account.update!(
       raw_equity_summary_payload: [

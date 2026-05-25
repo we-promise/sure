@@ -161,9 +161,7 @@ class IbkrAccount::HistoricalBalancesSync
     # conversion is exact and consistent with IBKR's own calculations.
     # Positive = net buy (cash out), negative = net sell (cash in).
     def trade_flows_by_date
-      @trade_flows_by_date ||= begin
-        return {} unless account
-
+      @trade_flows_by_date ||= if account
         account.entries
           .where(entryable_type: "Trade")
           .includes(:entryable)
@@ -176,6 +174,8 @@ class IbkrAccount::HistoricalBalancesSync
           rescue Money::ConversionError
             flows[entry.date] += entry.amount
           end
+      else
+        {}
       end
     end
 end
