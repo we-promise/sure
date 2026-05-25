@@ -188,37 +188,36 @@ class InvestmentStatement
     ).to_d
 
     period_start = period.date_range.begin
-    foreign_currencies = investment_accounts.map(&:currency).compact.uniq.reject { |c| c == currency }
-    period_start_rates = ExchangeRate.rates_for(foreign_currencies, to: currency, date: period_start)
 
     # Single query for all accounts' most recent pre-period balance (strict < to avoid
-    # double-counting the first day's net_market_flows in both the denominator and absolute_return)
-    start_balance_rows = ActiveRecord::Base.connection.select_all(
+    # double-counting the first day's net_market_flows in both the denominator and absolute_return).
+    # FX conversion is done in SQL (matching absolute_return) so balance rows whose currency
+    # differs from the account's current currency (e.g. after a currency change) are still picked up.
+    start_value = ActiveRecord::Base.connection.select_value(
       ActiveRecord::Base.sanitize_sql_array([
         <<~SQL.squish,
-          SELECT b.end_balance, a.currency
+          SELECT COALESCE(SUM(b.end_balance * COALESCE(er.rate, 1)), 0)
           FROM accounts a
-          INNER JOIN balances b ON b.account_id = a.id AND b.currency = a.currency
+          INNER JOIN balances b ON b.account_id = a.id
+          LEFT JOIN exchange_rates er ON (
+            er.date = :period_start
+            AND er.from_currency = b.currency
+            AND er.to_currency = :currency
+          )
           INNER JOIN (
             SELECT b2.account_id, MAX(b2.date) AS max_date
             FROM balances b2
-            INNER JOIN accounts a2 ON a2.id = b2.account_id
             WHERE b2.account_id IN (:account_ids)
-              AND b2.currency = a2.currency
               AND b2.date < :period_start
             GROUP BY b2.account_id
           ) latest ON latest.account_id = b.account_id AND b.date = latest.max_date
           WHERE a.id IN (:account_ids)
             AND a.family_id = :family_id
+            AND a.status IN ('draft', 'active')
         SQL
-        { account_ids: account_ids, period_start: period_start, family_id: family.id }
+        { account_ids: account_ids, period_start: period_start, family_id: family.id, currency: currency }
       ])
-    )
-
-    start_value = start_balance_rows.sum do |row|
-      numeric = row["end_balance"].to_d
-      row["currency"] == currency ? numeric : numeric * (period_start_rates[row["currency"]] || 1)
-    end
+    ).to_d
 
     return nil if start_value.zero?
 
