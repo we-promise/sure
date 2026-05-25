@@ -72,13 +72,7 @@ class Account::ProviderImportAdapter
           if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
             entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
             if entry_is_pending
-              ex = (entry.transaction.extra || {}).deep_dup
-              Transaction::PENDING_PROVIDERS.each do |p|
-                next unless ex.key?(p)
-                ex[p].delete("pending")
-                ex.delete(p) if ex[p].empty?
-              end
-              entry.transaction.update!(extra: ex)
+              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
           record_skip(entry, skip_reason)
