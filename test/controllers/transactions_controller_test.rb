@@ -439,8 +439,8 @@ end
     get new_transaction_url
 
     assert_response :success
-    refute_includes response.body, accounts(:investment).id
-    refute_includes response.body, accounts(:loan).id
+    refute_includes response.body, accounts(:investment).id.to_s
+    refute_includes response.body, accounts(:loan).id.to_s
   end
 
   test "new with duplicate_entry_id pre-fills form from source transaction" do

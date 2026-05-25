@@ -18,9 +18,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     get new_transfer_url
 
     assert_response :success
-    assert_includes response.body, accounts(:depository).id
-    refute_includes response.body, accounts(:investment).id
-    refute_includes response.body, accounts(:loan).id
+    assert_includes response.body, accounts(:depository).id.to_s
+    refute_includes response.body, accounts(:investment).id.to_s
+    refute_includes response.body, accounts(:loan).id.to_s
   end
 
   test "can create transfers" do
