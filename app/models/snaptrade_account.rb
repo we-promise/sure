@@ -132,17 +132,41 @@ class SnaptradeAccount < ApplicationRecord
 
     Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
 
-    # Find cash balance (usually in USD or account currency)
+    # Find the primary cash balance (account currency → USD → first entry).
+    # The primary entry stays in cash_balance; the full set is persisted so the
+    # processor can surface non-primary-currency cash as holdings (issue #1809).
     cash_entry = data.find { |b| b.dig(:currency, :code) == currency } ||
                  data.find { |b| b.dig(:currency, :code) == "USD" } ||
                  data.first
 
-    if cash_entry
-      cash_value = cash_entry[:cash]
-      Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}"
+    cash_value = cash_entry ? cash_entry[:cash] : cash_balance
+    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}, persisting #{data.size} entrie(s)"
 
-      # Only update cash_balance, preserve current_balance (total account value)
-      update!(cash_balance: cash_value)
+    # Only update cash_balance, preserve current_balance (total account value)
+    update!(cash_balance: cash_value, raw_balances_payload: data)
+  end
+
+  # Cash entries from the last balances snapshot that are NOT the one stored in
+  # cash_balance. The primary entry (account currency → USD → first) lives in
+  # cash_balance; the rest are surfaced as synthetic cash holdings so
+  # multi-currency cash isn't discarded (issue #1809). Excludes the actual
+  # primary currency — including the USD fallback — to avoid double-counting.
+  def non_primary_cash_entries
+    entries = Array(raw_balances_payload).map do |entry|
+      entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
+    end
+
+    primary = entries.find { |b| b.dig(:currency, :code) == currency } ||
+              entries.find { |b| b.dig(:currency, :code) == "USD" } ||
+              entries.first
+    primary_code = primary&.dig(:currency, :code)
+
+    entries.filter_map do |e|
+      code = e.dig(:currency, :code)
+      next if code.blank? || code == primary_code
+      amount = e[:cash]
+      next if amount.blank?
+      { currency: code, amount: amount }
     end
   end
 
