@@ -3,6 +3,11 @@ class Provider::Anthropic::PdfProcessor
 
   TOOL_NAME = "report_document_analysis".freeze
 
+  # Anthropic's native document block accepts PDFs up to 32 MB / 100 pages.
+  # We guard the size limit upstream to avoid base64-encoding a 100 MB blob
+  # in vain (peak heap ~270 MB before the API rejects it).
+  MAX_PDF_BYTES = 32 * 1024 * 1024
+
   attr_reader :client, :model, :pdf_content, :langfuse_trace, :family
 
   def initialize(client, model:, pdf_content:, langfuse_trace: nil, family: nil)
@@ -15,6 +20,10 @@ class Provider::Anthropic::PdfProcessor
 
   def process
     raise Provider::Anthropic::Error, "PDF content is required" if pdf_content.blank?
+    if pdf_content.bytesize > MAX_PDF_BYTES
+      raise Provider::Anthropic::Error,
+            "PDF exceeds Anthropic's 32 MB limit (#{pdf_content.bytesize} bytes)"
+    end
 
     span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
       model: model,
@@ -87,8 +96,8 @@ class Provider::Anthropic::PdfProcessor
               type: "object",
               properties: {
                 institution_name: { type: [ "string", "null" ] },
-                statement_period_start: { type: [ "string", "null" ], description: "YYYY-MM-DD or null" },
-                statement_period_end: { type: [ "string", "null" ], description: "YYYY-MM-DD or null" },
+                statement_period_start: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
+                statement_period_end: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
                 transaction_count: { type: [ "integer", "null" ] },
                 opening_balance: { type: [ "number", "null" ] },
                 closing_balance: { type: [ "number", "null" ] },

@@ -3,6 +3,9 @@ class Provider::Anthropic::BankStatementExtractor
 
   TOOL_NAME = "report_bank_statement".freeze
 
+  # Mirrors Provider::Anthropic::PdfProcessor::MAX_PDF_BYTES.
+  MAX_PDF_BYTES = 32 * 1024 * 1024
+
   attr_reader :client, :model, :pdf_content, :langfuse_trace, :family
 
   def initialize(client:, model:, pdf_content:, langfuse_trace: nil, family: nil)
@@ -15,6 +18,10 @@ class Provider::Anthropic::BankStatementExtractor
 
   def extract
     raise Provider::Anthropic::Error, "PDF content is required" if pdf_content.blank?
+    if pdf_content.bytesize > MAX_PDF_BYTES
+      raise Provider::Anthropic::Error,
+            "PDF exceeds Anthropic's 32 MB limit (#{pdf_content.bytesize} bytes)"
+    end
 
     span = langfuse_trace&.span(name: "extract_bank_statement_api_call", input: {
       model: model,
@@ -33,9 +40,19 @@ class Provider::Anthropic::BankStatementExtractor
     parsed = extract_tool_input(response)
     result = build_result(parsed)
 
+    truncated = stop_reason(response) == :max_tokens
+    if truncated
+      Rails.logger.warn(
+        "[BankStatementExtractor] response truncated by max_tokens — extracted #{result[:transactions].size} " \
+        "transactions but more may be present in the statement. Raise ANTHROPIC_MAX_TOKENS or chunk the PDF."
+      )
+      result[:truncated] = true
+    end
+
     record_usage(model, response.usage, operation: "extract_bank_statement", metadata: {
       pdf_size: pdf_content.bytesize,
-      transaction_count: result[:transactions].size
+      transaction_count: result[:transactions].size,
+      truncated: truncated
     })
 
     span&.end(output: { transaction_count: result[:transactions].size }, usage: usage_hash(response.usage))
@@ -122,6 +139,11 @@ class Provider::Anthropic::BankStatementExtractor
           - Dates in YYYY-MM-DD
           - Use null for any field you cannot read; do not invent values
       INSTRUCTIONS
+    end
+
+    def stop_reason(response)
+      raw = response.respond_to?(:stop_reason) ? response.stop_reason : nil
+      raw.to_s.to_sym if raw
     end
 
     def extract_tool_input(response)

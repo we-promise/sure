@@ -77,6 +77,45 @@ class Provider::Anthropic::BankStatementExtractorTest < ActiveSupport::TestCase
     assert_match(/did not invoke report_bank_statement/i, err.message)
   end
 
+  test "raises before API call when pdf_content exceeds the 32 MB limit" do
+    oversized = "a".b * (Provider::Anthropic::BankStatementExtractor::MAX_PDF_BYTES + 1)
+    client = mock
+    client.expects(:messages).never
+
+    err = assert_raises(Provider::Anthropic::Error) do
+      Provider::Anthropic::BankStatementExtractor.new(
+        client: client,
+        model: "claude-sonnet-4-6",
+        pdf_content: oversized
+      ).extract
+    end
+    assert_match(/exceeds Anthropic's 32 MB limit/i, err.message)
+  end
+
+  test "flags result as truncated when stop_reason is max_tokens" do
+    fake_response = build_response(
+      content: [
+        tool_use_block(
+          id: "toolu_1",
+          name: "report_bank_statement",
+          input: { "transactions" => [ { "date" => "2026-03-05", "description" => "Coffee", "amount" => -4.5 } ] }
+        )
+      ]
+    )
+    fake_response.stop_reason = :max_tokens
+    client = stub_client(fake_response)
+
+    Rails.logger.expects(:warn).with(regexp_matches(/truncated by max_tokens/i))
+
+    result = Provider::Anthropic::BankStatementExtractor.new(
+      client: client,
+      model: "claude-sonnet-4-6",
+      pdf_content: @pdf_content
+    ).extract
+
+    assert_equal true, result[:truncated]
+  end
+
   private
     def stub_client(response)
       messages = mock

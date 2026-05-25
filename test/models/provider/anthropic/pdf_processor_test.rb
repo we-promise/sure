@@ -83,6 +83,21 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/PDF content is required/i, err.message)
   end
 
+  test "raises before any API call when pdf_content exceeds the 32 MB limit" do
+    oversized = "a".b * (Provider::Anthropic::PdfProcessor::MAX_PDF_BYTES + 1)
+    client = mock
+    client.expects(:messages).never
+
+    err = assert_raises(Provider::Anthropic::Error) do
+      Provider::Anthropic::PdfProcessor.new(
+        client,
+        model: "claude-sonnet-4-6",
+        pdf_content: oversized
+      ).process
+    end
+    assert_match(/exceeds Anthropic's 32 MB limit/i, err.message)
+  end
+
   private
     def stub_client(response)
       messages = mock
