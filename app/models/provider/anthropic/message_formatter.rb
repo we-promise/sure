@@ -40,9 +40,19 @@ class Provider::Anthropic::MessageFormatter
   end
 
   private
+    # ToolCall records have no association-level order; enforce
+    # chronological order here so message arrays are deterministic across
+    # replays and Anthropic sees tool_use blocks in the order the model
+    # originally emitted them.
+    def ordered_tool_calls(assistant_message)
+      assistant_message.tool_calls.sort_by { |tc| [ tc.created_at || Time.zone.at(0), tc.id.to_s ] }
+    end
+
     def assistant_history_blocks(assistant_message)
+      tool_calls = ordered_tool_calls(assistant_message).select { |tc| tool_call_id(tc).present? }
+
       blocks = []
-      blocks.concat(assistant_message.tool_calls.map { |tc| tool_use_block_from_record(tc) }) if assistant_message.tool_calls.any?
+      blocks.concat(tool_calls.map { |tc| tool_use_block_from_record(tc) }) if tool_calls.any?
       blocks << { type: "text", text: assistant_message.content.to_s } if assistant_message.content.present?
 
       return [] if blocks.empty?
@@ -51,20 +61,26 @@ class Provider::Anthropic::MessageFormatter
 
       # If the assistant turn used tools, Anthropic requires a user turn with
       # matching tool_result blocks before the next assistant turn.
-      if assistant_message.tool_calls.any?
+      if tool_calls.any?
         result << {
           role: "user",
-          content: assistant_message.tool_calls.map { |tc| tool_result_block_from_record(tc) }
+          content: tool_calls.map { |tc| tool_result_block_from_record(tc) }
         }
       end
 
       result
     end
 
+    # tool_use_id is required; skip tool_calls missing both identifiers
+    # rather than sending `id: nil` and getting rejected by Anthropic.
+    def tool_call_id(tool_call)
+      tool_call.provider_call_id.presence || tool_call.provider_id.presence
+    end
+
     def tool_use_block_from_record(tool_call)
       {
         type: "tool_use",
-        id: tool_call.provider_call_id || tool_call.provider_id,
+        id: tool_call_id(tool_call),
         name: tool_call.function_name,
         input: parse_arguments(tool_call.function_arguments)
       }
@@ -73,7 +89,7 @@ class Provider::Anthropic::MessageFormatter
     def tool_result_block_from_record(tool_call)
       {
         type: "tool_result",
-        tool_use_id: tool_call.provider_call_id || tool_call.provider_id,
+        tool_use_id: tool_call_id(tool_call),
         content: serialize_output(tool_call.function_result)
       }
     end

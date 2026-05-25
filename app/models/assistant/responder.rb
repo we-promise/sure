@@ -79,7 +79,7 @@ class Assistant::Responder
         instructions: instructions,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
-        messages: conversation_history,
+        messages: openai_messages_payload,
         conversation_history: chat_message_records,
         streamer: streamer,
         previous_response_id: previous_response_id,
@@ -119,7 +119,7 @@ class Assistant::Responder
 
     # Raw Message records preceding the current turn — providers that build
     # their own native message shape (Anthropic) consume this directly so they
-    # do not have to round-trip through the OpenAI-shaped `conversation_history`.
+    # do not have to round-trip through the OpenAI-shaped payload below.
     def chat_message_records
       return [] unless chat&.messages
 
@@ -131,7 +131,10 @@ class Assistant::Responder
           .to_a
     end
 
-    def conversation_history
+    # Builds the OpenAI-shaped messages payload (role: "user" | "assistant" |
+    # "tool"; tool_call_id pairing) consumed by Provider::Openai's generic
+    # chat path. Anthropic uses chat_message_records instead.
+    def openai_messages_payload
       messages = []
       return messages unless chat&.messages
 

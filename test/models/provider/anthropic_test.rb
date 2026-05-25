@@ -144,6 +144,64 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_empty response.data.function_requests
   end
 
+  test "chat_response streams text deltas and emits a final response chunk" do
+    final_message = build_anthropic_message(
+      id: "msg_stream",
+      model: @subject_model,
+      text_blocks: [ "Hello world" ],
+      tool_use_blocks: [],
+      usage: { input_tokens: 7, output_tokens: 3 }
+    )
+    # Use ad-hoc subclasses of the SDK event types so the case/when dispatch
+    # inside `stream_chat_response` matches them via `is_a?` without needing
+    # to stub class-level `===` behavior.
+    text_event_cls = Class.new(::Anthropic::Streaming::TextEvent) do
+      def initialize(text:, snapshot:)
+        @text = text
+        @snapshot = snapshot
+      end
+      attr_reader :text, :snapshot
+    end
+    stop_event_cls = Class.new(::Anthropic::Streaming::MessageStopEvent) do
+      def initialize(message:)
+        @message = message
+      end
+      attr_reader :message
+    end
+    events = [
+      text_event_cls.new(text: "Hello ", snapshot: "Hello "),
+      text_event_cls.new(text: "world", snapshot: "Hello world"),
+      stop_event_cls.new(message: final_message)
+    ]
+
+    fake_stream = mock
+    fake_stream.stubs(:each).multiple_yields(*events.map { |e| [ e ] })
+    fake_stream.stubs(:accumulated_message).returns(final_message)
+
+    messages = mock
+    messages.stubs(:stream).returns(fake_stream)
+    client = mock
+    client.stubs(:messages).returns(messages)
+    @subject.instance_variable_set(:@client, client)
+
+    collected = []
+    response = @subject.chat_response(
+      "hi",
+      model: @subject_model,
+      streamer: ->(chunk) { collected << chunk }
+    )
+
+    assert response.success?
+    text_chunks = collected.select { |c| c.type == "output_text" }
+    response_chunks = collected.select { |c| c.type == "response" }
+
+    assert_equal 2, text_chunks.size
+    assert_equal [ "Hello ", "world" ], text_chunks.map(&:data)
+    assert_equal 1, response_chunks.size
+    assert_equal "msg_stream", response_chunks.first.data.id
+    assert_equal 10, response_chunks.first.usage["total_tokens"]
+  end
+
   test "chat_response surfaces tool_use blocks as function_requests" do
     fake_client = stub_anthropic_client_with(
       build_anthropic_message(

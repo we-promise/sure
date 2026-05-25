@@ -162,13 +162,11 @@ class User < ApplicationRecord
   end
 
   def openai_configured?
-    ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    Provider::Openai.configured?
   end
 
   def anthropic_configured?
-    ENV["ANTHROPIC_ACCESS_TOKEN"].present? ||
-      ENV["ANTHROPIC_API_KEY"].present? ||
-      Setting.anthropic_access_token.present?
+    Provider::Anthropic.configured?
   end
 
   def ai_enabled?

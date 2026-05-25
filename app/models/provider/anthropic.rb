@@ -32,6 +32,11 @@ class Provider::Anthropic < Provider
 
     @client = ::Anthropic::Client.new(**client_options)
     @base_url = base_url
+
+    if custom_endpoint? && model.blank?
+      raise Error, "Model is required when using a custom Anthropic-compatible endpoint"
+    end
+
     @default_model = model.presence || DEFAULT_MODEL
   end
 
@@ -76,6 +81,8 @@ class Provider::Anthropic < Provider
   end
 
   def supports_pdf_processing?(model: @default_model)
+    return true if custom_endpoint?
+
     VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
   end
 
@@ -120,10 +127,19 @@ class Provider::Anthropic < Provider
         user_identifier: user_identifier
       )
 
+      partial_usage_recorded = false
+
       begin
         parsed, usage =
           if streamer.present?
-            stream_chat_response(streamer: streamer, request_params: request_params)
+            stream_chat_response(
+              streamer: streamer,
+              request_params: request_params,
+              on_partial: ->(partial_usage) {
+                record_llm_usage(family: family, model: model, operation: "chat", usage: partial_usage)
+                partial_usage_recorded = true
+              }
+            )
           else
             sync_chat_response(request_params: request_params)
           end
@@ -147,7 +163,7 @@ class Provider::Anthropic < Provider
           error: e,
           trace: trace
         )
-        record_llm_usage(family: family, model: model, operation: "chat", error: e)
+        record_llm_usage(family: family, model: model, operation: "chat", error: e) unless partial_usage_recorded
         raise
       end
     end
@@ -167,22 +183,31 @@ class Provider::Anthropic < Provider
       [ parsed, usage ]
     end
 
-    def stream_chat_response(streamer:, request_params:)
+    def stream_chat_response(streamer:, request_params:, on_partial: nil)
       final_message = nil
       stream = client.messages.stream(**request_params)
 
-      stream.each do |event|
-        case event
-        when ::Anthropic::Streaming::TextEvent
-          streamer.call(
-            Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: event.text, usage: nil)
-          )
-        when ::Anthropic::Streaming::MessageStopEvent
-          final_message = event.message
+      # If `stream.each` raises mid-iteration (network drop, client abort),
+      # we still want to surface whatever tokens accumulated so the cost
+      # ledger doesn't lose partial-output billing.
+      begin
+        stream.each do |event|
+          case event
+          when ::Anthropic::Streaming::TextEvent
+            streamer.call(
+              Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: event.text, usage: nil)
+            )
+          when ::Anthropic::Streaming::MessageStopEvent
+            final_message = event.message
+          end
         end
+      rescue => mid_stream_error
+        partial = safe_accumulated_message(stream)
+        on_partial&.call(build_usage_hash(partial&.usage)) if partial
+        raise mid_stream_error
       end
 
-      final_message ||= stream.accumulated_message
+      final_message ||= safe_accumulated_message(stream)
       parsed = ChatParser.new(final_message).parsed
       usage = build_usage_hash(final_message.usage)
 
@@ -191,6 +216,12 @@ class Provider::Anthropic < Provider
       )
 
       [ parsed, usage ]
+    end
+
+    def safe_accumulated_message(stream)
+      stream.accumulated_message
+    rescue StandardError
+      nil
     end
 
     def build_usage_hash(raw_usage)
@@ -217,7 +248,7 @@ class Provider::Anthropic < Provider
     def langfuse_client
       return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
 
-      @langfuse_client = Langfuse.new
+      @langfuse_client ||= Langfuse.new
     end
 
     def create_langfuse_trace(name:, input:, session_id: nil, user_identifier: nil)
