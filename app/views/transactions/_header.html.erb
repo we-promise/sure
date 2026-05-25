@@ -19,13 +19,16 @@
     </h3>
     <div class="flex items-center gap-2">
       <span class="text-sm text-secondary">
-        <%= I18n.l(entry.date, format: :long) %>
+        <%= entry.date ? I18n.l(entry.date, format: :long) : "—" %>
       </span>
       <% if entry.transaction.pending? %>
-        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
-          <%= icon "clock", size: "sm", color: "current" %>
-          <%= t("transactions.transaction.pending") %>
-        </span>
+        <%= render DS::Pill.new(
+          label: t("transactions.transaction.pending"),
+          tone: :neutral,
+          marker: false,
+          icon: "clock",
+          title: t("transactions.transaction.pending_tooltip")
+        ) %>
       <% end %>
     </div>
   </div>

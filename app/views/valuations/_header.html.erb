@@ -19,6 +19,6 @@
   </div>
 
   <span class="text-sm text-secondary">
-    <%= I18n.l(entry.date, format: :long) %>
+    <%= entry.date ? I18n.l(entry.date, format: :long) : "—" %>
   </span>
 <% end %>
