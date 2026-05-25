@@ -280,10 +280,10 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
   end
 
-  test "falls back to raw entry amount when Money::ConversionError is raised during FX conversion" do
+  test "skips entry and absorbs full non_cash delta into nmf when Money::ConversionError is raised" do
     # EUR trade with no exchange_rate stored → custom_rate=nil → ConversionError raised.
-    # Fallback: flows[date] += entry.amount (150 EUR treated as 150 CHF).
-    # nmf = Δnon_cash(200) - fallback(150) = 50; end_non_cash = 2700 unchanged.
+    # Entry is skipped (not counted in net_buy_sell) rather than using a wrong-currency amount.
+    # nmf = Δnon_cash(200) - skipped(0) = 200; end_non_cash = 2700 unchanged.
     @ibkr_account.update!(
       raw_equity_summary_payload: [
         { report_date: "2026-05-07", total: "3000.00" },
@@ -309,7 +309,7 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
 
     day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
-    assert_equal BigDecimal("50"),     day2.net_market_flows
+    assert_equal BigDecimal("200"),    day2.net_market_flows
     assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
   end
 

@@ -130,6 +130,8 @@ class IbkrAccount::HistoricalBalancesSync
           nmf          = row[:non_cash] - start_non_cash_balance - net_buy_sell
           non_cash_adj = net_buy_sell
         else
+          # First-day row has no prior period to diff against, so both values are
+          # intentionally zero — not a bug, just an unavoidable bootstrap constraint.
           nmf          = 0
           non_cash_adj = 0
         end
@@ -163,8 +165,7 @@ class IbkrAccount::HistoricalBalancesSync
     def trade_flows_by_date
       @trade_flows_by_date ||= if account
         account.entries
-          .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
-          .where(entryable_type: "Trade")
+          .joins("INNER JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
           .where.not(trades: { qty: 0 })
           .includes(:entryable)
           .each_with_object(Hash.new(0)) do |entry, flows|
@@ -174,14 +175,10 @@ class IbkrAccount::HistoricalBalancesSync
               .amount
             flows[entry.date] += base_amount
           rescue Money::ConversionError
-            if entry.currency.to_s.upcase != account_currency
-              Rails.logger.warn(
-                "IbkrAccount::HistoricalBalancesSync - No FX rate for #{entry.currency}→#{account_currency} " \
-                "on #{entry.date}; using unconverted #{entry.currency} amount #{entry.amount} " \
-                "for entry #{entry.id} (account #{account.id})"
-              )
-            end
-            flows[entry.date] += entry.amount
+            Rails.logger.warn(
+              "IbkrAccount::HistoricalBalancesSync - No FX rate for #{entry.currency}→#{account_currency} " \
+              "on #{entry.date}; skipping entry from net_buy_sell"
+            )
           end
       else
         {}
