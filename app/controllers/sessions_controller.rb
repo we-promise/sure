@@ -71,7 +71,7 @@ class SessionsController < ApplicationController
       else
         log_super_admin_override_login(user)
         @session = skylight_instrument("create_session_for") { create_session_for(user) }
-        flash[:notice] = t("invitations.accept_choice.joined_household") if skylight_instrument("accept_pending_invitation_for") { accept_pending_invitation_for(user) }
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for_instrumented(user)
         redirect_to root_path
       end
     else
@@ -334,6 +334,10 @@ class SessionsController < ApplicationController
       return yield unless defined?(Skylight)
 
       Skylight.instrument(category: "app.sessions", title:, &block)
+    end
+
+    def accept_pending_invitation_for_instrumented(user)
+      skylight_instrument("accept_pending_invitation_for") { accept_pending_invitation_for(user) }
     end
 
     def demo_host_match?(demo)
