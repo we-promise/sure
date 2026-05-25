@@ -79,7 +79,11 @@ class UI::AccountPage < ApplicationComponent
     when :holdings, :overview
       return render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account if tab == active_tab
 
-      turbo_frame_tag tab_frame_id(tab), src: helpers.account_path(account, tab: tab), loading: :lazy
+      turbo_frame_tag(
+        helpers.account_tab_panel_frame_id(account: account, tab: tab),
+        src: helpers.account_path(account, tab: tab),
+        loading: :lazy
+      )
     when :statements
       render_statement_tab
     end
@@ -97,10 +101,6 @@ class UI::AccountPage < ApplicationComponent
 
   def statement_tab_frame_id
     dom_id(account, :statements_tab)
-  end
-
-  def tab_frame_id(tab)
-    dom_id(account, "#{tab}_tab")
   end
 
   def statement_tab_locals

@@ -276,7 +276,7 @@ class AccountsController < ApplicationController
 
       case @tab
       when "holdings", "overview"
-        frame_id == helpers.dom_id(@account, "#{@tab}_tab")
+        frame_id == helpers.account_tab_panel_frame_id(account: @account, tab: @tab.to_sym)
       else
         false
       end
@@ -289,15 +289,9 @@ class AccountsController < ApplicationController
         return
       end
 
-      frame_id = helpers.dom_id(@account, "#{tab}_tab")
-      html = view_context.turbo_frame_tag(frame_id) do
-        view_context.render(
-          partial: "#{@account.accountable_type.downcase.pluralize}/tabs/#{tab}",
-          locals: { account: @account }
-        )
-      end
-
-      render html: html, layout: false
+      frame_id = helpers.account_tab_panel_frame_id(account: @account, tab: tab)
+      partial_path = "#{@account.accountable_type.downcase.pluralize}/tabs/#{tab}"
+      render partial: "accounts/show/tab_panel_frame", locals: { frame_id: frame_id, partial_path: partial_path, account: @account }, layout: false
     end
 
     def statement_tab_locals

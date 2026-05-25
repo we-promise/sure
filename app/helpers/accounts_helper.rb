@@ -45,4 +45,8 @@ module AccountsHelper
       sidebar_active_account_id
     ]
   end
+
+  def account_tab_panel_frame_id(account:, tab:)
+    dom_id(account, "#{tab}_tab")
+  end
 end
