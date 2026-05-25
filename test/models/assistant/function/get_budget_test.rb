@@ -39,12 +39,39 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
   end
 
   test "returns N+1 months sorted oldest first when prior_months is set" do
+    current_start = Date.current.beginning_of_month
+    2.times do |i|
+      prior_start = current_start << (i + 1)
+      Budget.create!(
+        family: @family,
+        start_date: prior_start,
+        end_date: prior_start.end_of_month,
+        currency: @family.currency
+      )
+    end
+
     result = @function.call("prior_months" => 2)
 
     assert_equal 3, result[:months].length
     starts = result[:months].map { |m| m[:period][:start_date] }
     assert_equal starts.sort, starts
-    assert_equal Date.current.beginning_of_month, starts.last
+    assert_equal current_start, starts.last
+  end
+
+  test "does not bootstrap budgets for prior_months that do not exist" do
+    initial_count = Budget.count
+
+    result = @function.call("prior_months" => 3)
+
+    assert_equal initial_count, Budget.count, "no prior budgets should be created as a side effect"
+    assert_equal 1, result[:months].length
+    assert_equal 3, result[:months_unavailable]
+  end
+
+  test "clamps prior_months above MAX_PRIOR_MONTHS" do
+    result = @function.call("prior_months" => 99)
+    considered = result[:months].length + (result[:months_unavailable] || 0)
+    assert_operator considered, :<=, Assistant::Function::GetBudget::MAX_PRIOR_MONTHS + 1
   end
 
   test "accepts YYYY-MM month format" do
