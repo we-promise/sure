@@ -301,6 +301,20 @@ class Entry < ApplicationRecord
     excluded? || user_modified? || import_locked?
   end
 
+  # Bulk-marks the entries of the given transactions as user-modified so a
+  # later provider sync won't overwrite them (issue #1977). Used by merchant
+  # merge/convert/unlink flows, which reassign merchant_id directly on
+  # transactions and must protect that manual change from being reverted.
+  #
+  # @param transaction_ids [Array<String>] Transaction (entryable) ids
+  # @return [void]
+  def self.mark_user_modified_for_transactions!(transaction_ids)
+    ids = Array(transaction_ids).compact
+    return if ids.empty?
+
+    where(entryable_type: "Transaction", entryable_id: ids).update_all(user_modified: true)
+  end
+
   # Marks entry as user-modified after manual edit.
   # Called when user edits any field to prevent provider sync from overwriting.
   #
