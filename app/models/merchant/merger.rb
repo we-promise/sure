@@ -44,7 +44,7 @@ class Merchant::Merger
         # Protect the manual reassignment from being reverted on the next
         # provider sync (issue #1977). Must run before the merchant_id update
         # so the scope still matches the source merchant.
-        Entry.mark_user_modified_for_transactions!(scope.pluck(:id))
+        Entry.mark_user_modified_for_transactions!(scope)
 
         # Reassign family's transactions to target
         scope.update_all(merchant_id: target_merchant.id)

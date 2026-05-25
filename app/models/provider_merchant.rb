@@ -19,7 +19,7 @@ class ProviderMerchant < Merchant
 
       # Protect the manual reassignment from being reverted on the next
       # provider sync (issue #1977). Must run before the merchant_id update.
-      Entry.mark_user_modified_for_transactions!(scope.pluck(:id))
+      Entry.mark_user_modified_for_transactions!(scope)
 
       # Update only this family's transactions to point to new merchant
       scope.update_all(merchant_id: family_merchant.id)
@@ -47,7 +47,7 @@ class ProviderMerchant < Merchant
 
     # Protect the manual unlink from being reverted on the next provider sync
     # (issue #1977). Must run before the merchant_id is nulled.
-    Entry.mark_user_modified_for_transactions!(scope.pluck(:id))
+    Entry.mark_user_modified_for_transactions!(scope)
 
     scope.update_all(merchant_id: nil)
 

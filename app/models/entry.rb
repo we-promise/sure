@@ -306,13 +306,23 @@ class Entry < ApplicationRecord
   # merge/convert/unlink flows, which reassign merchant_id directly on
   # transactions and must protect that manual change from being reverted.
   #
-  # @param transaction_ids [Array<String>] Transaction (entryable) ids
+  # Accepts a Transaction relation (preferred — the selection runs as a
+  # subquery so large merges/unlinks don't materialize ids or hit SQL
+  # parameter limits) or an explicit array of ids.
+  #
+  # @param transactions [ActiveRecord::Relation, Array<String>] Transactions or their ids
   # @return [void]
-  def self.mark_user_modified_for_transactions!(transaction_ids)
-    ids = Array(transaction_ids).compact
-    return if ids.empty?
+  def self.mark_user_modified_for_transactions!(transactions)
+    entryable_ids =
+      if transactions.is_a?(ActiveRecord::Relation)
+        transactions.select(:id)
+      else
+        ids = Array(transactions).compact.uniq
+        return if ids.empty?
+        ids
+      end
 
-    where(entryable_type: "Transaction", entryable_id: ids).update_all(user_modified: true)
+    where(entryable_type: "Transaction", entryable_id: entryable_ids).update_all(user_modified: true)
   end
 
   # Marks entry as user-modified after manual edit.
