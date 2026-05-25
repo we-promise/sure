@@ -92,6 +92,13 @@ class LlmUsage < ApplicationRecord
   def self.infer_provider(model)
     return "openai" if model.blank?
 
+    # Bedrock + Vertex prefix model IDs with "anthropic." regardless of
+    # whether the Claude family is in the local PRICING map. Attribute them
+    # to the Anthropic provider so cost-ledger filtering by provider is
+    # correct even when we can't compute a per-token rate (custom endpoints
+    # bill via their own provider, not Anthropic directly).
+    return "anthropic" if model.start_with?("anthropic.", "anthropic/")
+
     # Check each provider to see if they have pricing for this model
     PRICING.each do |provider_name, provider_pricing|
       # Try exact match first

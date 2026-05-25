@@ -12,6 +12,22 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_equal "openai", LlmUsage.infer_provider("gpt-5")
   end
 
+  test "infer_provider attributes Bedrock and Vertex prefixed IDs to anthropic" do
+    assert_equal "anthropic", LlmUsage.infer_provider("anthropic.claude-sonnet-4-5-20250929-v1:0")
+    assert_equal "anthropic", LlmUsage.infer_provider("anthropic.claude-opus-4-20250514-v1:0")
+    assert_equal "anthropic", LlmUsage.infer_provider("anthropic/claude-3-5-sonnet@20240620")
+  end
+
+  test "calculate_cost returns nil for Bedrock IDs (no per-token rate stored)" do
+    # Bedrock bills through AWS not Anthropic — we don't store a per-MTok rate,
+    # but the row must still attribute to anthropic for provider filtering.
+    assert_nil LlmUsage.calculate_cost(
+      model: "anthropic.claude-sonnet-4-5-20250929-v1:0",
+      prompt_tokens: 1000,
+      completion_tokens: 500
+    )
+  end
+
   test "calculate_cost returns Anthropic pricing for Claude models" do
     cost = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 1_000_000, completion_tokens: 100_000)
 

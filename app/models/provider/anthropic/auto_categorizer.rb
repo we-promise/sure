@@ -77,7 +77,7 @@ class Provider::Anthropic::AutoCategorizer
                   category_name: {
                     type: [ "string", "null" ],
                     description: "Matched category name from the user's categories, or null when uncertain.",
-                    enum: [ *user_categories.map { |c| c[:name] }, nil ]
+                    enum: user_categories.map { |c| c[:name] }
                   }
                 },
                 required: [ "transaction_id", "category_name" ],
