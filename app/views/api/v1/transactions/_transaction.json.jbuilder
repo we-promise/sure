@@ -60,15 +60,24 @@ end
 # Transfer information (if this transaction is part of a transfer)
 if transaction.transfer.present?
   json.transfer do
-    json.id transaction.transfer.id
-    json.amount transaction.transfer.amount_abs.format
-    json.currency transaction.transfer.inflow_transaction.entry.currency
+    transfer = transaction.transfer
+    is_inflow = transfer.inflow_transaction_id == transaction.id
+    json.id transfer.id
+    amount_abs = is_inflow ? transaction.entry.amount_money.abs : transfer.amount_abs
+    json.amount amount_abs.format
+
+    inflow_currency = if is_inflow
+      transaction.entry.currency
+    else
+      transfer.inflow_transaction.entry.currency
+    end
+    json.currency inflow_currency
 
     # Other transaction in the transfer
-    if transaction.transfer.inflow_transaction == transaction
-      other_transaction = transaction.transfer.outflow_transaction
+    other_transaction = if is_inflow
+      transfer.outflow_transaction
     else
-      other_transaction = transaction.transfer.inflow_transaction
+      transfer.inflow_transaction
     end
 
     if other_transaction.present?
