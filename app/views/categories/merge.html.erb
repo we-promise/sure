@@ -1,0 +1,30 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with url: perform_merge_categories_path, method: :post, class: "space-y-4" do |f| %>
+      <%= f.collection_select :target_id,
+            @categories,
+            :id, :name_with_parent,
+            { prompt: t(".select_target"), label: t(".target_label") },
+            { required: true } %>
+
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-primary"><%= t(".sources_label") %></p>
+        <div class="space-y-1 border border-secondary rounded-lg p-2">
+          <% @categories.each do |category| %>
+            <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+              <%= check_box_tag "source_ids[]", category.id, false, class: "rounded border-secondary" %>
+              <span class="text-sm text-primary"><%= category.name_with_parent %></span>
+            </label>
+          <% end %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".sources_hint") %></p>
+      </div>
+
+      <%= render DS::Button.new(
+        text: t(".submit"),
+        full_width: true
+      ) %>
+    <% end %>
+  <% end %>
+<% end %>
