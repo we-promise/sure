@@ -74,6 +74,7 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       openai_access_token
+      anthropic_access_token
       external_assistant_token
     ].freeze
 

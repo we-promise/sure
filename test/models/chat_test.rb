@@ -62,6 +62,29 @@ class ChatTest < ActiveSupport::TestCase
     end
   end
 
+  test "default_model returns claude when LLM_PROVIDER=anthropic and Anthropic is configured" do
+    Provider::Anthropic.stubs(:configured?).returns(true)
+    Setting.stubs(:llm_provider).returns("anthropic")
+
+    assert_equal Provider::Anthropic::DEFAULT_MODEL, Chat.default_model
+  end
+
+  test "default_model falls back to OpenAI when Anthropic is preferred but unconfigured" do
+    Provider::Anthropic.stubs(:configured?).returns(false)
+    Provider::Openai.stubs(:configured?).returns(true)
+    Setting.stubs(:llm_provider).returns("anthropic")
+
+    assert_equal Provider::Openai::DEFAULT_MODEL, Chat.default_model
+  end
+
+  test "default_model uses Anthropic when OpenAI is unconfigured" do
+    Provider::Anthropic.stubs(:configured?).returns(true)
+    Provider::Openai.stubs(:configured?).returns(false)
+    Setting.stubs(:llm_provider).returns("openai")
+
+    assert_equal Provider::Anthropic::DEFAULT_MODEL, Chat.default_model
+  end
+
   test "creates with configured model when OPENAI_MODEL env is set" do
     prompt = "Test prompt"
 

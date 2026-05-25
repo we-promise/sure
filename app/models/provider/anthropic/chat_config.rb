@@ -74,10 +74,14 @@ class Provider::Anthropic::ChatConfig
 
     # OpenAI strict schemas frequently include `additionalProperties: false`, which
     # Anthropic also accepts. The shapes are otherwise JSON Schema 2020-12 compatible.
-    # `strict` is OpenAI-only and must not be forwarded.
+    # `strict` is OpenAI-only and must not be forwarded — strip both symbol and
+    # string keys so we don't leak it when a caller hands us a JSON-decoded hash.
     def anthropic_input_schema(schema)
       schema = schema.deep_dup
-      schema.delete(:strict) if schema.is_a?(Hash)
+      if schema.is_a?(Hash)
+        schema.delete(:strict)
+        schema.delete("strict")
+      end
       schema
     end
 end

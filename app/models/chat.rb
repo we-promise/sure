@@ -53,9 +53,18 @@ class Chat < ApplicationRecord
 
     # Returns the default AI model to use for chats.
     # Resolved from the configured llm_provider so installs that swap providers
-    # don't have to manually update every chat default.
+    # don't have to manually update every chat default. Falls through to a
+    # provider that actually has credentials configured, otherwise the chosen
+    # provider's classes would later raise "no LLM provider supports model …"
+    # even when the other provider is configured.
     def default_model
-      if Setting.llm_provider == "anthropic"
+      prefers_anthropic = Setting.llm_provider == "anthropic"
+
+      if prefers_anthropic && Provider::Anthropic.configured?
+        Provider::Anthropic.effective_model.presence || Setting.anthropic_model
+      elsif Provider::Openai.configured?
+        Provider::Openai.effective_model.presence || Setting.openai_model
+      elsif Provider::Anthropic.configured?
         Provider::Anthropic.effective_model.presence || Setting.anthropic_model
       else
         Provider::Openai.effective_model.presence || Setting.openai_model

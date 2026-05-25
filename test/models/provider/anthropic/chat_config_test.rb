@@ -65,4 +65,30 @@ class Provider::Anthropic::ChatConfigTest < ActiveSupport::TestCase
     # Anthropic schemas must not carry the OpenAI-specific `strict` flag.
     req[:tools].each { |t| assert_not t[:input_schema].key?(:strict) }
   end
+
+  test "strips both symbol and string-keyed `strict` flags from input_schema" do
+    config = Provider::Anthropic::ChatConfig.new(
+      prompt: "hi",
+      functions: [
+        {
+          name: "fn_with_string_strict",
+          description: "schema arrived from JSON.parse with string keys",
+          params_schema: {
+            "type" => "object",
+            "properties" => {},
+            "required" => [],
+            "additionalProperties" => false,
+            "strict" => true
+          },
+          strict: true
+        }
+      ]
+    )
+
+    req = config.build_request(model: "claude-sonnet-4-6")
+
+    schema = req[:tools].first[:input_schema]
+    assert_not schema.key?(:strict)
+    assert_not schema.key?("strict")
+  end
 end

@@ -31,6 +31,20 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_not @subject.supports_model?("gpt-4.1")
   end
 
+  test "supports_model? bypasses the prefix gate for custom endpoints" do
+    custom = Provider::Anthropic.new(
+      "test-token",
+      base_url: "https://bedrock.example.com/anthropic",
+      model: "anthropic.claude-sonnet-4-5-20250929-v1:0"
+    )
+
+    # Bedrock-shaped IDs start with "anthropic", not "claude" — would fail the
+    # default prefix check, but custom endpoints must accept any model.
+    assert custom.supports_model?("anthropic.claude-sonnet-4-5-20250929-v1:0")
+    assert custom.supports_model?("claude-opus-4@20250514")
+    assert custom.supports_model?("any-string-the-endpoint-accepts")
+  end
+
   test "supported_models_description returns prefixes for standard provider" do
     assert_equal "models starting with: claude", @subject.supported_models_description
   end
@@ -40,9 +54,25 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_not @subject.supports_pdf_processing?(model: "gpt-4o")
   end
 
-  test "effective_model defers to ENV when set" do
+  test "effective_model defers to ENV when set without consulting Setting" do
     ClimateControl.modify("ANTHROPIC_MODEL" => "claude-haiku-4-5") do
+      Setting.expects(:anthropic_model).never
       assert_equal "claude-haiku-4-5", Provider::Anthropic.effective_model
+    end
+  end
+
+  test "configured? reflects ENV and Setting presence" do
+    ClimateControl.modify("ANTHROPIC_ACCESS_TOKEN" => nil, "ANTHROPIC_API_KEY" => nil) do
+      Setting.stubs(:anthropic_access_token).returns(nil)
+      assert_not Provider::Anthropic.configured?
+
+      Setting.stubs(:anthropic_access_token).returns("sk-ant-x")
+      assert Provider::Anthropic.configured?
+    end
+
+    ClimateControl.modify("ANTHROPIC_API_KEY" => "sk-ant-y") do
+      Setting.stubs(:anthropic_access_token).returns(nil)
+      assert Provider::Anthropic.configured?
     end
   end
 
@@ -65,6 +95,31 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_not response.success?
     assert_kind_of Provider::Anthropic::Error, response.error
     assert_match(/rate limit/i, response.error.message)
+  end
+
+  test "chat_response accepts messages: kwarg passed by Responder without raising" do
+    # The OpenAI-shaped `messages:` array is passed alongside `conversation_history:`
+    # for cross-provider parity. Anthropic ignores it but must still accept it as
+    # a keyword argument — historical regression that broke the first chat turn.
+    fake_client = stub_anthropic_client_with(
+      build_anthropic_message(
+        id: "msg_kw",
+        model: @subject_model,
+        text_blocks: [ "ok" ],
+        tool_use_blocks: [],
+        usage: { input_tokens: 1, output_tokens: 1 }
+      )
+    )
+    @subject.instance_variable_set(:@client, fake_client)
+
+    response = @subject.chat_response(
+      "hi",
+      model: @subject_model,
+      messages: [ { role: "user", content: "hi" } ],
+      conversation_history: []
+    )
+
+    assert response.success?
   end
 
   test "chat_response returns parsed ChatResponse on success" do

@@ -12,8 +12,17 @@ class Provider::Anthropic < Provider
   VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
 
   def self.effective_model
-    configured_model = ENV.fetch("ANTHROPIC_MODEL", Setting.anthropic_model)
+    # Use ENV[].presence rather than ENV.fetch(KEY, default) so the Setting
+    # lookup is only performed when the ENV var is actually absent — otherwise
+    # the default arg is evaluated eagerly on every call.
+    configured_model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
     configured_model.presence || DEFAULT_MODEL
+  end
+
+  def self.configured?
+    ENV["ANTHROPIC_ACCESS_TOKEN"].present? ||
+      ENV["ANTHROPIC_API_KEY"].present? ||
+      Setting.anthropic_access_token.present?
   end
 
   def initialize(access_token, base_url: nil, model: nil)
@@ -27,6 +36,12 @@ class Provider::Anthropic < Provider
   end
 
   def supports_model?(model)
+    # Custom endpoints (Bedrock, Vertex, or other Anthropic-compatible proxies)
+    # use their own model-ID conventions — e.g. Bedrock IDs look like
+    # `anthropic.claude-sonnet-4-5-20250929-v1:0`. Mirror the OpenAI provider
+    # and bypass the prefix gate when the caller has wired a custom base_url.
+    return true if custom_endpoint?
+
     DEFAULT_ANTHROPIC_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
   end
 
@@ -78,6 +93,7 @@ class Provider::Anthropic < Provider
     instructions: nil,
     functions: [],
     function_results: [],
+    messages: nil,
     conversation_history: [],
     streamer: nil,
     previous_response_id: nil,
