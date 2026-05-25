@@ -120,6 +120,47 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
                  json_response["data"]["stats"]["unassigned_mappings_count"]
   end
 
+  test "should show Sure import verification" do
+    sure_import = @family.imports.create!(type: "SureImport")
+    sure_import.ndjson_file.attach(
+      io: StringIO.new(build_ndjson([
+        { type: "Account", data: {
+          id: "account-1",
+          name: "API Verified Checking",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        } },
+        { type: "Valuation", data: {
+          id: "valuation-1",
+          account_id: "account-1",
+          date: "2024-01-14",
+          amount: "100.00",
+          currency: "USD",
+          kind: "opening_anchor"
+        } }
+      ])),
+      filename: "sure.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    sure_import.sync_ndjson_rows_count!
+    sure_import.publish
+
+    get api_v1_import_url(sure_import), headers: api_headers(@api_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    verification = json_response.dig("data", "verification")
+
+    assert_equal 1, verification.dig("expected_record_counts", "accounts")
+    assert_equal 1, verification.dig("expected_record_counts", "valuations")
+    assert_equal "matched", verification.dig("readback", "status")
+    assert_equal 1, verification.dig("readback", "actual_delta_counts", "accounts")
+    assert_equal 1, verification.dig("readback", "actual_delta_counts", "valuations")
+    assert_equal 0, verification.dig("readback", "checked_counts", "balances")
+    assert_empty verification.dig("readback", "mismatches")
+  end
+
   test "should list sanitized import row diagnostics" do
     get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(@read_only_api_key)
 
@@ -988,6 +1029,56 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes data["required_headers"], "Amount"
   end
 
+  test "should apply Actual defaults before preflight header validation" do
+    actual_content = [
+      "Account,Date,Payee,Notes,Category_Group,Category,Amount,Split_Amount,Cleared",
+      "Checking Account,2024-01-01,Coffee Shop,Morning coffee,Food,Coffee,-4.25,0,Cleared"
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "ActualImport",
+             raw_file_content: actual_content
+           },
+           headers: api_headers(@read_only_api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal "ActualImport", data["type"]
+    assert_equal true, data["valid"]
+    assert_empty data["missing_required_headers"]
+    assert_includes data["required_headers"], "Date"
+    assert_includes data["required_headers"], "Amount"
+  end
+
+  test "should not overwrite explicit Actual preflight column mappings with defaults" do
+    actual_content = [
+      "Booked On,Value,Payee",
+      "2024-01-01,-4.25,Coffee Shop"
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "ActualImport",
+             raw_file_content: actual_content,
+             date_col_label: "Booked On",
+             amount_col_label: "Value"
+           },
+           headers: api_headers(@read_only_api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal true, data["valid"]
+    assert_equal [ "Booked On", "Value" ], data["required_headers"]
+    assert_empty data["missing_required_headers"]
+  end
+
   test "should not overwrite explicit Mint preflight column mappings with defaults" do
     mint_content = [
       "Posted On,Value,Description",
@@ -1132,6 +1223,10 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def build_ndjson(records)
+      records.map(&:to_json).join("\n")
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }

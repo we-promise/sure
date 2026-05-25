@@ -34,13 +34,13 @@ zh-TW:
         rows_label: 資料列
         unassigned_account: 需要為未分配的資料列建立新帳戶嗎？
       show:
-        account_mapping_description: 將匯入檔案中的帳戶對應到 Maybe 現有的帳戶。您也可以新增帳戶，或暫時不進行分類。
+        account_mapping_description: 將匯入檔案中的帳戶對應到 %{product_name} 現有的帳戶。您也可以新增帳戶，或暫時不進行分類。
         account_mapping_title: 分配您的帳戶
-        account_type_mapping_description: 將匯入檔案中的帳戶類型對應到 Maybe 的帳戶類型
+        account_type_mapping_description: 將匯入檔案中的帳戶類型對應到 %{product_name} 的帳戶類型
         account_type_mapping_title: 分配您的帳戶類型
-        category_mapping_description: 將匯入檔案中的類別對應到 Maybe 現有的類別。您也可以新增類別，或暫時不進行分類。
+        category_mapping_description: 將匯入檔案中的類別對應到 %{product_name} 現有的類別。您也可以新增類別，或暫時不進行分類。
         category_mapping_title: 分配您的類別
-        tag_mapping_description: 將匯入檔案中的標籤對應到 Maybe 現有的標籤。您也可以新增標籤，或暫時不進行分類。
+        tag_mapping_description: 將匯入檔案中的標籤對應到 %{product_name} 現有的標籤。您也可以新增標籤，或暫時不進行分類。
         tag_mapping_title: 分配您的標籤
     uploads:
       show:

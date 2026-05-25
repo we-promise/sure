@@ -10,7 +10,7 @@
     <%# In the future, this will be a dropdown with different AI models %>
     <%= f.hidden_field :ai_model, value: default_ai_model %>
 
-    <%= f.text_area :content, placeholder: "Ask anything ...", value: message_hint,
+    <%= f.text_area :content, placeholder: t(".placeholder"), value: message_hint,
                   class: "w-full border-0 focus:ring-0 text-sm resize-none px-1 bg-transparent",
                   data: { chat_target: "input", action: "input->chat#autoResize keydown->chat#handleInputKeyDown" },
                   rows: 1 %>
@@ -27,5 +27,5 @@
     </div>
   <% end %>
 
-  <p class="text-xs text-secondary">AI responses are informational only. Not financial advice!</p>
+  <p class="text-xs text-secondary"><%= t(".disclaimer") %></p>
 </div>

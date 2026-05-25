@@ -115,13 +115,13 @@
         </div>
 
         <% if [:monthly, :quarterly, :ytd].include?(@period_type) %>
-          <%= render DS::Menu.new(variant: "button") do |menu| %>
-            <% menu.with_button class: "flex items-center gap-1 hover:bg-alpha-black-25 cursor-pointer rounded-md p-2" do %>
+          <%= render DS::Popover.new(variant: "button") do |popover| %>
+            <% popover.with_button class: "flex items-center gap-1 hover:bg-alpha-black-25 cursor-pointer rounded-md p-2" do %>
               <span class="text-primary font-medium text-lg lg:text-base"><%= @nav[:label] %></span>
               <%= icon("chevron-down") %>
             <% end %>
 
-            <% menu.with_custom_content do %>
+            <% popover.with_custom_content do %>
               <%= render "reports/period_picker", period_type: @period_type, start_date: @start_date %>
             <% end %>
           <% end %>

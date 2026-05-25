@@ -51,6 +51,7 @@ class User < ApplicationRecord
   validates :password, length: { minimum: 8 }, allow_nil: true
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
+  normalizes :locale, with: ->(locale) { locale.presence }
 
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
@@ -363,6 +364,10 @@ class User < ApplicationRecord
 
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
+  end
+
+  def preview_features_enabled?
+    preferences&.dig("preview_features_enabled") == true
   end
 
   def update_transactions_preferences(prefs)

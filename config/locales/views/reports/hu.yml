@@ -18,6 +18,21 @@ hu:
         from: Kezdő dátum
         to: Záró dátum
       showing_period: "Adatok megjelenítése: %{start} – %{end}"
+      previous_period: "Előző időszak"
+      next_period: "Következő időszak"
+      today: "Ma"
+      period_label:
+        quarterly: "N%{quarter} %{year}"
+        ytd: "ÉTD %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "N%{quarter} %{year}"
+        ytd: "ÉTD %{year}"
+      previous_year: "Előző év"
+      next_year: "Következő év"
+      previous_decade: "Előző évtized"
+      next_decade: "Következő évtized"
     invalid_date_range: "A záró dátum nem lehet korábbi a kezdő dátumnál. A dátumok fel lettek cserélve."
     summary:
       total_income: Összes bevétel
@@ -118,10 +133,10 @@ hu:
       title: Nettó vagyon
       current_net_worth: Jelenlegi nettó vagyon
       period_change: Időszaki változás
-      assets_vs_liabilities: Eszközök vs. kötelezettségek
-      total_assets: Eszközök
+      assets_vs_liabilities: Vagyon vs. kötelezettségek
+      total_assets: Vagyon
       total_liabilities: Kötelezettségek
-      no_assets: Nincsenek eszközök
+      no_assets: Nincs vagyon
       no_liabilities: Nincsenek kötelezettségek
     investment_performance:
       title: Befektetési teljesítmény
@@ -155,8 +170,11 @@ hu:
       title: Befektetési pénzáramlás
       description: Kövesd nyomon a befektetési számláidra be- és onnan kiáramló pénzt
       contributions: Befizetések
+      contributions_description: Befektetésekbe befizetett összeg
       withdrawals: Kivétek
+      withdrawals_description: Befektetésekből kivett összeg
       net_flow: Nettó pénzáramlás
+      net_flow_description: Teljes nettó változás
     google_sheets_instructions:
       title_with_key: "✅ URL másolása Google Sheetshez"
       title_no_key: "⚠️ API-kulcs szükséges"
@@ -190,7 +208,7 @@ hu:
         title: Nettó vagyon
         current_balance: Jelenlegi egyenleg
         this_period: ebben az időszakban
-        assets: Eszközök
+        assets: Vagyon
         liabilities: Kötelezettségek
         no_liabilities: Nincsenek kötelezettségek
       trends:

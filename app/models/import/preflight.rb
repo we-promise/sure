@@ -313,9 +313,9 @@ class Import::Preflight
     end
 
     def apply_import_defaults(import)
-      return unless import.is_a?(MintImport)
+      return unless import.class.respond_to?(:default_column_mappings)
 
-      MintImport.default_column_mappings.each do |attribute, value|
+      import.class.default_column_mappings.each do |attribute, value|
         import.public_send("#{attribute}=", value) if import.public_send(attribute).blank?
       end
     end

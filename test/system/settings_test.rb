@@ -104,7 +104,7 @@ class SettingsTest < ApplicationSystemTestCase
     def open_settings_from_sidebar
       user_menu = find("div[data-testid=user-menu]", match: :first, visible: :visible)
       within user_menu do
-        find("[data-DS--menu-target='button']", match: :first).click
+        find("[data-DS--popover-target='button']", match: :first).click
         click_link "Settings", match: :first
       end
     end
