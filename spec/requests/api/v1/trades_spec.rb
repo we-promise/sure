@@ -197,6 +197,51 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
+      response '403', 'forbidden - api key missing read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:read_only_api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Read Key',
+            key: key,
+            scopes: %w[read],
+            source: 'mobile'
+          )
+        end
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+
+        run_test!
+      end
+
+      response '401', 'unauthorized - missing api key' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '422', 'invalid date format' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: 'invalid-date',
+              qty: 10,
+              price: 50,
+              type: 'buy',
+              security_id: security.id
+            }
+          }
+        end
+
+        run_test!
+      end
+
       response '422', 'account does not support trades' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -500,6 +545,33 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { trade.id }
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '403', 'forbidden - api key missing read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:read_only_api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Read Key',
+            key: key,
+            scopes: %w[read],
+            source: 'mobile'
+          )
+        end
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+
+        run_test!
+      end
+
       response '404', 'trade not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -518,6 +590,33 @@ RSpec.describe 'API V1 Trades', type: :request do
         schema '$ref' => '#/components/schemas/DeleteResponse'
 
         let(:id) { trade.id }
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { trade.id }
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '403', 'forbidden - api key missing read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:read_only_api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Read Key',
+            key: key,
+            scopes: %w[read],
+            source: 'mobile'
+          )
+        end
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
 
         run_test!
       end

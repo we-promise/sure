@@ -145,6 +145,49 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
      assert_match(/Withdrawal/, body["name"])
    end
 
+  test "create withdrawal without amount returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "withdrawal",
+        date: Date.current
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create withdrawal with transfer_account_id creates linked transfer" do
+    depository = accounts(:depository)
+
+    assert_difference "Transfer.count", 1 do
+      post "/api/v1/trades",
+        params: { trade: {
+          account_id: @investment_account.id,
+          type: "withdrawal",
+          date: Date.current,
+          amount: 500.00,
+          currency: "USD",
+          transfer_account_id: depository.id
+        } },
+        headers: api_headers(read_write_api_key)
+    end
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert body["id"].present?
+    assert body["outflow_transaction"]["account"]["id"].present?
+    assert body["outflow_transaction"]["account"]["account_type"].present?
+
+    transfer = Transfer.joins(outflow_transaction: :entry)
+                       .where(entries: { account_id: @investment_account.id })
+                       .last
+
+    assert transfer, "Transfer should exist linking accounts"
+    assert_equal depository.id, transfer.inflow_transaction.entry.account_id, "Inflow should be to depository"
+    assert_equal @investment_account.id, transfer.outflow_transaction.entry.account_id, "Outflow should come from investment"
+  end
+
   test "create deposit without amount returns 422" do
     post "/api/v1/trades",
       params: { trade: {
@@ -189,13 +232,33 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create interest returns 201" do
+       post "/api/v1/trades",
+         params: { trade: {
+           account_id: @investment_account.id,
+           type: "interest",
+           date: Date.current,
+           amount: 25.00,
+           currency: "USD"
+         } },
+         headers: api_headers(read_write_api_key)
+
+       assert_response :created
+       body = JSON.parse(response.body)
+       assert body["id"].present?
+       assert_equal "Interest", body["investment_activity_label"]
+     end
+
+  test "create interest with explicit ticker returns 201" do
+    security = Security.create!(ticker: "INTSEC", name: "Interest Security", country_code: "US")
+
     post "/api/v1/trades",
       params: { trade: {
         account_id: @investment_account.id,
         type: "interest",
         date: Date.current,
         amount: 25.00,
-        currency: "USD"
+        currency: "USD",
+        security_id: security.id
       } },
       headers: api_headers(read_write_api_key)
 
@@ -489,25 +552,54 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should reject update with invalid date format" do
-    security = Security.create!(ticker: "UPDID", name: "Update Invalid Date", country_code: "US")
+     security = Security.create!(ticker: "UPDID", name: "Update Invalid Date", country_code: "US")
+     post "/api/v1/trades",
+       params: { trade: {
+         account_id: @investment_account.id,
+         type: "buy",
+         date: Date.current,
+         qty: 5,
+         price: 100,
+         currency: "USD",
+         security_id: security.id
+       } },
+       headers: api_headers(read_write_api_key)
+     assert_response :created
+     trade_id = JSON.parse(response.body)["id"]
+
+     put api_v1_trade_url(trade_id),
+            params: { trade: { date: "invalid" } },
+            headers: api_headers(read_write_api_key)
+     assert_response :unprocessable_entity
+   end
+
+  test "should update dividend trade with valid parameters" do
     post "/api/v1/trades",
       params: { trade: {
         account_id: @investment_account.id,
-        type: "buy",
+        type: "dividend",
         date: Date.current,
-        qty: 5,
-        price: 100,
+        amount: 25.50,
         currency: "USD",
-        security_id: security.id
+        ticker: "AAPL|XNAS"
       } },
       headers: api_headers(read_write_api_key)
     assert_response :created
     trade_id = JSON.parse(response.body)["id"]
 
+    update_params = {
+      trade: {
+        notes: "Updated dividend notes"
+      }
+    }
+
     put api_v1_trade_url(trade_id),
-      params: { trade: { date: "invalid" } },
+      params: update_params,
       headers: api_headers(read_write_api_key)
-    assert_response :unprocessable_entity
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal "Updated dividend notes", response_data["notes"]
   end
 
   # DESTROY action tests
