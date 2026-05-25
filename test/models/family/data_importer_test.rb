@@ -1558,7 +1558,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           amount: "100.00",
           name: "Transfer to savings",
           currency: "USD",
-          kind: "funds_movement"
+          kind: "standard"
         }
       },
       {
@@ -1570,7 +1570,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           amount: "-100.00",
           name: "Transfer from checking",
           currency: "USD",
-          kind: "funds_movement"
+          kind: "standard"
         }
       },
       {
@@ -1625,6 +1625,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Confirmed by user", transfer.notes
     assert_equal "Transfer from checking", transfer.inflow_transaction.entry.name
     assert_equal "Transfer to savings", transfer.outflow_transaction.entry.name
+    assert_equal "funds_movement", transfer.inflow_transaction.kind
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
 
     rejected_transfer = RejectedTransfer
       .joins(inflow_transaction: :entry)

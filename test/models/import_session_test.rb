@@ -5,6 +5,21 @@ class ImportSessionTest < ActiveSupport::TestCase
     @family = families(:empty)
   end
 
+  test "job requires import session" do
+    error = assert_raises(ArgumentError) do
+      ImportSessionJob.perform_now(nil)
+    end
+
+    assert_equal "ImportSessionJob requires an import_session", error.message
+  end
+
+  test "job publishes import session" do
+    import_session = @family.import_sessions.create!
+    import_session.expects(:publish).once
+
+    ImportSessionJob.perform_now(import_session)
+  end
+
   test "publishes ordered chunks with source mappings across files" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(
@@ -162,6 +177,28 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_no_match(/secret/, session.error_details.to_json)
   end
 
+  test "publish stores generic error details for unexpected import failures" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    importer_factory = ->(*) { raise StandardError, "redis://secret.local/0" }
+
+    Family::DataImporter.stub(:new, importer_factory) do
+      session.publish
+    end
+
+    assert session.reload.failed?
+    assert_equal "Import session failed.", session.imports.first.error
+    assert_equal "import_failed", session.error_details["code"]
+    assert_equal "Import session failed.", session.error_details["message"]
+    assert_no_match(/secret/, session.error_details.to_json)
+  end
+
   test "publish later requires the exact expected chunk sequences" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(
@@ -170,21 +207,31 @@ class ImportSessionTest < ActiveSupport::TestCase
       filename: "entities.ndjson",
       content_type: "application/x-ndjson"
     )
-    session.attach_chunk!(
-      sequence: 3,
-      content: build_ndjson(transaction_records),
-      filename: "transactions.ndjson",
-      content_type: "application/x-ndjson"
-    )
 
     error = assert_raises(ImportSession::ConflictError) do
       session.publish_later
     end
 
     expected_message = "import session chunks do not match expected sequences " \
-                       "(missing sequences: 2; unexpected sequences: 3)"
+                       "(missing sequences: 2)"
     assert_equal expected_message, error.message
     assert session.reload.pending?
+  end
+
+  test "chunk upload rejects sequences beyond the expected chunk count" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+
+    error = assert_raises(ImportSession::ConflictError) do
+      session.attach_chunk!(
+        sequence: 2,
+        content: build_ndjson(entity_records),
+        filename: "entities.ndjson",
+        content_type: "application/x-ndjson"
+      )
+    end
+
+    assert_equal "sequence exceeds expected_chunks", error.message
+    assert_empty session.imports
   end
 
   test "publish later restores status and records enqueue failures" do
@@ -197,16 +244,34 @@ class ImportSessionTest < ActiveSupport::TestCase
     )
 
     ImportSessionJob.stub(:perform_later, ->(_import_session) { raise StandardError, "queue offline" }) do
-      error = assert_raises(StandardError) do
+      error = assert_raises(ImportSession::EnqueueError) do
         session.publish_later
       end
 
-      assert_equal "queue offline", error.message
+      assert_equal "Import session could not be queued.", error.message
     end
 
     assert session.reload.pending?
     assert_equal "import_enqueue_failed", session.error_details["code"]
     assert_equal "Import session could not be queued.", session.error_details["message"]
+  end
+
+  test "publish later syncs chunk row counts before enforcing row limit" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records + transaction_records),
+      filename: "session.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.imports.update_all(rows_count: 0)
+
+    SureImport.stub(:max_row_count, 1) do
+      assert_raises(Import::MaxRowCountExceededError) { session.publish_later }
+    end
+
+    assert session.reload.pending?
+    assert_equal 5, session.imports.reload.first.rows_count
   end
 
   test "fails loudly when a later chunk references a missing source id" do
@@ -520,6 +585,23 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_not import.valid?
     assert_includes import.errors[:client_chunk_id], "is too long (maximum is 255 characters)"
 
+    import.sequence = 0
+    import.checksum = "short"
+
+    assert_not import.valid?
+    assert_includes import.errors[:sequence], "must be greater than 0"
+    assert_includes import.errors[:checksum], "is the wrong length (should be 64 characters)"
+
+    other_family = Family.create!(name: "Other Import Family", currency: "USD", locale: "en")
+    import.import_session = other_family.import_sessions.build
+    import.sequence = nil
+    import.checksum = nil
+
+    assert_not import.valid?
+    assert_includes import.errors[:import_session], "must belong to your family"
+    assert_includes import.errors[:sequence], "must be present for import session chunks"
+    assert_includes import.errors[:checksum], "must be present for import session chunks"
+
     mapping = @family.import_source_mappings.build(
       import_session: @family.import_sessions.build,
       source_type: "x" * 65,
@@ -531,6 +613,74 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_not mapping.valid?
     assert_includes mapping.errors[:source_type], "is too long (maximum is 64 characters)"
     assert_includes mapping.errors[:source_id], "is too long (maximum is 255 characters)"
+
+    mapping.source_type = "Unsupported"
+    mapping.source_id = "acct-1"
+
+    assert_not mapping.valid?
+    assert_includes mapping.errors[:source_type], "is not included in the list"
+
+    mapping.source_type = "Account"
+    mapping.target_type = "Unsupported"
+
+    assert_not mapping.valid?
+    assert_includes mapping.errors[:target_type], "is not included in the list"
+  end
+
+  test "client idempotency keys are stripped before validation" do
+    session = @family.import_sessions.create!(client_session_id: "  session-1  ")
+    import = @family.imports.create!(type: "SureImport", client_chunk_id: "  chunk-1  ")
+    category = @family.categories.create!(name: "Mapping Category")
+    mapping = session.source_mappings.create!(
+      family: @family,
+      source_type: "Category",
+      source_id: "  cat-1  ",
+      target: category
+    )
+
+    assert_equal "session-1", session.client_session_id
+    assert_equal "chunk-1", import.client_chunk_id
+    assert_equal "cat-1", mapping.source_id
+  end
+
+  test "session status payloads must remain JSON objects" do
+    session = @family.import_sessions.build(summary: [], error_details: "failed")
+    import = @family.imports.build(type: "SureImport", summary: [], error_details: "failed")
+
+    assert_not session.valid?
+    assert_includes session.errors[:summary], "must be an object"
+    assert_includes session.errors[:error_details], "must be an object"
+
+    assert_not import.valid?
+    assert_includes import.errors[:summary], "must be an object"
+    assert_includes import.errors[:error_details], "must be an object"
+  end
+
+  test "source mappings must belong to the same family as their import session" do
+    other_family = Family.create!(name: "Other Mapping Family", currency: "USD", locale: "en")
+    mapping = other_family.import_source_mappings.build(
+      import_session: @family.import_sessions.build,
+      source_type: "Account",
+      source_id: "acct-1",
+      target: @family.accounts.build(name: "Session Checking")
+    )
+
+    assert_not mapping.valid?
+    assert_includes mapping.errors[:family], "must match import session"
+  end
+
+  test "source mapping targets must not cross family boundaries" do
+    other_family = Family.create!(name: "Other Mapping Target Family", currency: "USD", locale: "en")
+    mapping = @family.import_source_mappings.build(
+      import_session: @family.import_sessions.build,
+      source_type: " Account ",
+      source_id: "acct-1",
+      target: other_family.accounts.build(name: "Other Checking")
+    )
+
+    assert_not mapping.valid?
+    assert_equal "Account", mapping.source_type
+    assert_includes mapping.errors[:target], "must belong to your family"
   end
 
   private

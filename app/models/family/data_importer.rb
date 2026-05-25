@@ -701,8 +701,35 @@ class Family::DataImporter
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
+        apply_transfer_transaction_kinds!(transfer)
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
+    end
+
+    def apply_transfer_transaction_kinds!(transfer)
+      destination_account = transfer.inflow_transaction.entry.account
+      outflow_kind = imported_transfer_outflow_kind(transfer)
+      outflow_attrs = { kind: outflow_kind }
+      if outflow_kind == "investment_contribution" && transfer.outflow_transaction.category_id.blank?
+        outflow_attrs[:category] = destination_account.family.investment_contributions_category
+      end
+
+      transfer.outflow_transaction.update!(outflow_attrs)
+      transfer.inflow_transaction.update!(kind: "funds_movement")
+    end
+
+    def imported_transfer_outflow_kind(transfer)
+      source_account = transfer.outflow_transaction.entry.account
+      destination_account = transfer.inflow_transaction.entry.account
+      return "loan_payment" if destination_account.loan?
+      return "cc_payment" if destination_account.liability?
+      return "investment_contribution" if investment_account?(destination_account) && !investment_account?(source_account)
+
+      "funds_movement"
+    end
+
+    def investment_account?(account)
+      account.investment? || account.crypto?
     end
 
     def import_rejected_transfers(records)

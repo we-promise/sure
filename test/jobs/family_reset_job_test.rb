@@ -14,7 +14,8 @@ class FamilyResetJobTest < ActiveJob::TestCase
     import_session.imports.create!(
       family: @family,
       type: "SureImport",
-      sequence: 1
+      sequence: 1,
+      checksum: "a" * 64
     )
     import_session.source_mappings.create!(
       family: @family,
@@ -49,7 +50,8 @@ class FamilyResetJobTest < ActiveJob::TestCase
     other_import = other_session.imports.create!(
       family: other_family,
       type: "SureImport",
-      sequence: 1
+      sequence: 1,
+      checksum: "b" * 64
     )
     other_mapping = other_session.source_mappings.create!(
       family: other_family,

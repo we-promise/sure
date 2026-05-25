@@ -54,6 +54,17 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
+  test "rejects malformed expected chunk counts" do
+    assert_no_difference("ImportSession.count") do
+      post api_v1_import_sessions_url,
+           params: { type: "SureImport", expected_chunks: "2abc" },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
   test "requires authentication for session creation" do
     post api_v1_import_sessions_url, params: { type: "SureImport" }
 
@@ -131,6 +142,17 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "bad_request", JSON.parse(response.body)["error"]
   end
 
+  test "rejects malformed chunk sequence values" do
+    session = build_import_session
+
+    post chunks_api_v1_import_session_url(session),
+         params: { sequence: "1abc", raw_file_content: build_ndjson(entity_records) },
+         headers: api_headers(@api_key)
+
+    assert_response :conflict
+    assert_equal "import_session_conflict", JSON.parse(response.body)["error"]
+  end
+
   test "shows import session with read scope" do
     session = build_import_session
 
@@ -181,6 +203,32 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :conflict
     assert_equal "import_session_conflict", JSON.parse(response.body)["error"]
+  end
+
+  test "returns stable error when publish cannot enqueue" do
+    session = build_import_session
+    session.attach_chunk!(
+      sequence: 1,
+      content: build_ndjson(entity_records),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 2,
+      content: build_ndjson(transaction_records),
+      filename: "transactions.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    ImportSessionJob.stub(:perform_later, ->(_import_session) { raise StandardError, "redis://secret.local/0" }) do
+      post publish_api_v1_import_session_url(session), headers: api_headers(@api_key)
+    end
+
+    assert_response :service_unavailable
+    body = JSON.parse(response.body)
+    assert_equal "import_enqueue_failed", body["error"]
+    assert_equal "Import session could not be queued.", body["message"]
+    assert_no_match(/secret/, response.body)
   end
 
   test "does not expose another family's import session" do

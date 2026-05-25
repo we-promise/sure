@@ -2,6 +2,7 @@ require "digest"
 
 class ImportSession < ApplicationRecord
   ConflictError = Class.new(StandardError)
+  EnqueueError = Class.new(StandardError)
 
   IMPORT_TYPES = %w[SureImport].freeze
   STATUSES = %w[pending importing complete failed].freeze
@@ -22,13 +23,15 @@ class ImportSession < ApplicationRecord
   validates :import_type, inclusion: { in: IMPORT_TYPES }
   validates :client_session_id, uniqueness: { scope: :family_id }, allow_blank: true
   validates :client_session_id, length: { maximum: 255 }, allow_blank: true
+  normalizes :client_session_id, with: ->(value) { value.strip.presence }
   validates :expected_chunks,
             numericality: { only_integer: true, greater_than: 0 },
             allow_nil: true
+  validate :payloads_are_json_objects
 
   def self.create_or_find_for!(family:, import_type:, client_session_id:, expected_chunks:)
     import_type = import_type.presence || "SureImport"
-    expected_chunks = expected_chunks.present? ? expected_chunks.to_i : nil
+    expected_chunks = normalize_positive_integer(expected_chunks)
     unless IMPORT_TYPES.include?(import_type)
       session = new(import_type: import_type)
       session.errors.add(:import_type, "must be SureImport")
@@ -69,9 +72,17 @@ class ImportSession < ApplicationRecord
     existing
   end
 
+  def self.normalize_positive_integer(value)
+    return if value.blank?
+
+    Integer(value, exception: false) || 0
+  end
+  private_class_method :normalize_positive_integer
+
   def attach_chunk!(sequence:, content:, filename:, content_type:, client_chunk_id: nil)
-    sequence = sequence.to_i
+    sequence = self.class.send(:normalize_positive_integer, sequence)
     raise ConflictError, "sequence must be a positive integer" unless sequence.positive?
+    raise ConflictError, "sequence exceeds expected_chunks" if expected_chunks.present? && sequence > expected_chunks
 
     checksum = Digest::SHA256.hexdigest(content)
     normalized_client_chunk_id = client_chunk_id.presence
@@ -149,12 +160,12 @@ class ImportSession < ApplicationRecord
     previous_status = nil
     should_enqueue = false
 
+    sync_chunk_row_counts!
+
     with_lock do
       return if complete? || importing?
 
-      raise Import::MaxRowCountExceededError if row_count_exceeded?
-      raise ConflictError, "import session has no chunks" unless imports.exists?
-      validate_expected_chunk_sequences!
+      validate_publishable_chunks!
 
       previous_status = status
       update!(status: :importing, error_details: {})
@@ -172,7 +183,8 @@ class ImportSession < ApplicationRecord
           update!(status: previous_status, error_details: enqueue_error_details)
         end
       end
-      raise
+      Rails.logger.error("ImportSession enqueue failed import_session_id=#{id} exception=#{error.class}")
+      raise EnqueueError, "Import session could not be queued."
     end
   end
 
@@ -198,19 +210,19 @@ class ImportSession < ApplicationRecord
   end
 
   def aggregate_chunk_summaries
-    imports.each_with_object({}) do |import, totals|
+    imports.reload.each_with_object({}) do |import, totals|
       merge_summary!(totals, import.summary || {})
     end
   end
 
   private
     def prepare_for_publish!
+      sync_chunk_row_counts!
+
       with_lock do
         return false if complete?
 
-        raise Import::MaxRowCountExceededError if row_count_exceeded?
-        raise ConflictError, "import session has no chunks" unless imports.exists?
-        validate_expected_chunk_sequences!
+        validate_publishable_chunks!
 
         update!(status: :importing, error_details: {}) unless importing?
         true
@@ -308,7 +320,7 @@ class ImportSession < ApplicationRecord
     rescue => error
       import.update!(
         status: :failed,
-        error: error.message,
+        error: public_error_message_for(error),
         error_details: error_details_for(error),
         summary: failed_summary_for(error)
       )
@@ -317,6 +329,19 @@ class ImportSession < ApplicationRecord
 
     def row_count_exceeded?
       imports.sum(:rows_count) > SureImport.max_row_count
+    end
+
+    def validate_publishable_chunks!
+      raise ConflictError, "import session has no chunks" unless imports.exists?
+      raise Import::MaxRowCountExceededError if row_count_exceeded?
+      validate_expected_chunk_sequences!
+    end
+
+    def sync_chunk_row_counts!
+      raise ConflictError, "import session has no chunks" unless imports.exists?
+      imports.reload.each(&:sync_ndjson_rows_count!)
+    rescue ActiveStorage::FileNotFoundError
+      raise ConflictError, "import session chunks are incomplete"
     end
 
     def validate_expected_chunk_sequences!
@@ -338,7 +363,7 @@ class ImportSession < ApplicationRecord
     def error_details_for(error)
       details = {
         "code" => error.respond_to?(:code) ? error.code : "import_failed",
-        "message" => error.message
+        "message" => public_error_message_for(error)
       }
 
       if error.respond_to?(:details)
@@ -346,6 +371,12 @@ class ImportSession < ApplicationRecord
       end
 
       details
+    end
+
+    def public_error_message_for(error)
+      return error.message if error.respond_to?(:code)
+
+      "Import session failed."
     end
 
     def enqueue_error_details
@@ -385,5 +416,10 @@ class ImportSession < ApplicationRecord
           "failed" => 1
         }
       }
+    end
+
+    def payloads_are_json_objects
+      errors.add(:summary, "must be an object") unless summary.is_a?(Hash)
+      errors.add(:error_details, "must be an object") unless error_details.is_a?(Hash)
     end
 end

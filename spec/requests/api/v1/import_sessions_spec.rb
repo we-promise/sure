@@ -396,6 +396,28 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
         run_test!
       end
 
+      response '503', 'enqueue failed' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        before do
+          import_session.attach_chunk!(
+            sequence: 1,
+            client_chunk_id: 'docs-entities',
+            content: entity_ndjson,
+            filename: 'entities.ndjson',
+            content_type: 'application/x-ndjson'
+          )
+        end
+
+        around do |example|
+          ImportSessionJob.stub(:perform_later, ->(_import_session) { raise StandardError, 'queue offline' }) do
+            example.run
+          end
+        end
+
+        run_test!
+      end
+
       response '404', 'import session not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

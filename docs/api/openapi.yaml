@@ -4972,6 +4972,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '503':
+          description: enqueue failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: import session not found
           content:
