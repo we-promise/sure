@@ -174,6 +174,13 @@ class IbkrAccount::HistoricalBalancesSync
               .amount
             flows[entry.date] += base_amount
           rescue Money::ConversionError
+            if entry.currency.to_s.upcase != account_currency
+              Rails.logger.warn(
+                "IbkrAccount::HistoricalBalancesSync - No FX rate for #{entry.currency}→#{account_currency} " \
+                "on #{entry.date}; using unconverted #{entry.currency} amount #{entry.amount} " \
+                "for entry #{entry.id} (account #{account.id})"
+              )
+            end
             flows[entry.date] += entry.amount
           end
       else
