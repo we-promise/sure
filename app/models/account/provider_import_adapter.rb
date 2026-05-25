@@ -44,12 +44,42 @@ class Account::ProviderImportAdapter
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
 
+      # Determine early whether the incoming transaction is pending — needed by both
+      # the protection check (pending→booked bypass) and the auto-claim path below.
+      incoming_pending = false
+      if extra.is_a?(Hash)
+        pending_extra = extra.with_indifferent_access
+        incoming_pending =
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
+      end
+
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
       # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
       if entry.persisted?
         skip_reason = determine_skip_reason(entry)
         if skip_reason
+          # Pending→booked bypass: even for protected entries, clear the stale pending flag
+          # when the provider delivers a booked version of the same transaction.
+          # Some ASPSPs (e.g. Revolut Italy via Enable Banking) reuse the same transaction_id
+          # for pending and booked, so the entry is found by external_id rather than going
+          # through the auto-claim path. Without this, a user who categorised a pending entry
+          # (setting user_modified=true) would see the pending badge stuck forever.
+          if !incoming_pending && entry.entryable.is_a?(Transaction)
+            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+            if entry_is_pending
+              ex = (entry.transaction.extra || {}).deep_dup
+              Transaction::PENDING_PROVIDERS.each do |p|
+                next unless ex.key?(p)
+                ex[p].delete("pending")
+                ex.delete(p) if ex[p].empty?
+              end
+              entry.transaction.update!(extra: ex)
+            end
+          end
           record_skip(entry, skip_reason)
           return entry
         end
@@ -74,17 +104,6 @@ class Account::ProviderImportAdapter
           entry = duplicate
           entry.assign_attributes(external_id: external_id, source: source)
         end
-      end
-
-      # If still a new entry and this is a POSTED transaction, check for matching pending transactions
-      incoming_pending = false
-      if extra.is_a?(Hash)
-        pending_extra = extra.with_indifferent_access
-        incoming_pending =
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
       end
 
       if entry.new_record? && !incoming_pending
@@ -131,6 +150,24 @@ class Account::ProviderImportAdapter
             end
             entry.transaction.extra = ex
           end
+        end
+      end
+
+      # Pending→booked for same-external-id providers (non-protected path).
+      # For ASPSPs like Revolut Italy that reuse the same transaction_id for pending and
+      # booked, the auto-claim path above is skipped (entry.persisted? from the start).
+      # If extra is nil (no FX, no MCC) the deep-merge block later is skipped too, so we
+      # must clear the stale pending flag here before the final save.
+      # (The auto-claim path already clears it in-memory, so this is a no-op there.)
+      if !incoming_pending && entry.entryable.is_a?(Transaction)
+        if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+          ex = (entry.transaction.extra || {}).deep_dup
+          Transaction::PENDING_PROVIDERS.each do |p|
+            next unless ex.key?(p)
+            ex[p].delete("pending")
+            ex.delete(p) if ex[p].empty?
+          end
+          entry.transaction.extra = ex
         end
       end
 
