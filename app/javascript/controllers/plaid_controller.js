@@ -131,6 +131,20 @@ export default class extends Controller {
     // If there was an error during update mode, refresh the page to show latest status
     if (err && metadata.status === "requires_credentials") {
       window.location.href = "/accounts";
+      return;
+    }
+
+    // Promote Plaid's own error payload to the console so a silent modal
+    // close still leaves a breadcrumb (issue #1792). Plaid Link's own UI
+    // is responsible for showing a message inside the modal when this
+    // fires; backend link-token failures are handled server-side via the
+    // PlaidItemsController rescue + flash.
+    if (err && err.error_code) {
+      console.error(
+        "Plaid Link exited with error",
+        err.error_code,
+        err.display_message || err.error_message
+      );
     }
   };
 
