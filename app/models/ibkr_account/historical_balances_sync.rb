@@ -11,8 +11,11 @@ class IbkrAccount::HistoricalBalancesSync
     return unless account.present?
     return if normalized_rows.empty?
 
+    rows = balance_rows
+    return if rows.empty?
+
     account.balances.upsert_all(
-      balance_rows,
+      rows,
       unique_by: %i[account_id date currency]
     )
   end
