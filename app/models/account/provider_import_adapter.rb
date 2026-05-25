@@ -62,13 +62,14 @@ class Account::ProviderImportAdapter
       if entry.persisted?
         skip_reason = determine_skip_reason(entry)
         if skip_reason
-          # Pending→booked bypass: even for protected entries, clear the stale pending flag
+          # Pending→booked bypass for user_modified entries: clear the stale pending flag
           # when the provider delivers a booked version of the same transaction.
           # Some ASPSPs (e.g. Revolut Italy via Enable Banking) reuse the same transaction_id
           # for pending and booked, so the entry is found by external_id rather than going
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
-          if !incoming_pending && entry.entryable.is_a?(Transaction)
+          # Excluded and import_locked entries are intentionally left untouched.
+          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
             entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
             if entry_is_pending
               ex = (entry.transaction.extra || {}).deep_dup
