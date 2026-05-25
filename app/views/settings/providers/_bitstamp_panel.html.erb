@@ -54,13 +54,15 @@
 
           <div class="mt-4 space-y-4">
             <div class="flex flex-wrap items-center gap-2">
-              <%= button_to sync_bitstamp_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                            disabled: item.syncing? do %>
-                <%= icon "refresh-cw", size: "sm" %>
-                <%= t("settings.providers.bitstamp_panel.sync") %>
-              <% end %>
+              <%= render DS::Button.new(
+                    variant: :ghost,
+                    size: :sm,
+                    icon: "refresh-cw",
+                    text: t("settings.providers.bitstamp_panel.sync"),
+                    href: sync_bitstamp_item_path(item),
+                    method: :post,
+                    disabled: item.syncing?
+                  ) %>
 
               <%= render DS::Link.new(
                 text: t("settings.providers.bitstamp_panel.setup_accounts"),
@@ -70,13 +72,15 @@
                 frame: :modal
               ) %>
 
-              <%= button_to bitstamp_item_path(item),
-                            method: :delete,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                            data: { turbo_confirm: t("settings.providers.bitstamp_panel.disconnect_confirm", name: item.name) } do %>
-                <%= icon "trash-2", size: "sm" %>
-                <%= t("settings.providers.bitstamp_panel.disconnect") %>
-              <% end %>
+              <%= render DS::Button.new(
+                    variant: :destructive,
+                    size: :sm,
+                    icon: "trash-2",
+                    text: t("settings.providers.bitstamp_panel.disconnect"),
+                    href: bitstamp_item_path(item),
+                    method: :delete,
+                    data: { turbo_confirm: t("settings.providers.bitstamp_panel.disconnect_confirm", name: item.name) }
+                  ) %>
             </div>
 
             <%= styled_form_with model: item,
