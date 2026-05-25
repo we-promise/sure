@@ -174,7 +174,16 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:anthropic_base_url)
-      Setting.anthropic_base_url = hosting_params[:anthropic_base_url].presence
+      raw_base_url = hosting_params[:anthropic_base_url].to_s.strip
+      if raw_base_url.blank?
+        Setting.anthropic_base_url = nil
+      else
+        parsed = URI.parse(raw_base_url) rescue nil
+        unless parsed.is_a?(URI::HTTP)
+          raise Setting::ValidationError, t(".invalid_anthropic_base_url")
+        end
+        Setting.anthropic_base_url = raw_base_url
+      end
     end
 
     if hosting_params.key?(:anthropic_model)

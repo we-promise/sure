@@ -101,6 +101,28 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejects non-URL anthropic base_url" do
+    with_self_hosting do
+      Setting.anthropic_base_url = nil
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "not-a-url" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Anthropic Base URL must be an http/, flash[:alert])
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "clears anthropic base_url when blank value submitted" do
+    with_self_hosting do
+      Setting.anthropic_base_url = "https://bedrock.example.com"
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "" } }
+
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
   test "can update llm_provider to anthropic" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { llm_provider: "anthropic" } }
