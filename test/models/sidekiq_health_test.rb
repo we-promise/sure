@@ -124,14 +124,20 @@ class SidekiqHealthTest < ActiveSupport::TestCase
       stub_sidekiq(processes: [ fresh_process ], queues: [ fake_queue ])
 
       first = SidekiqHealth.current
-      # If `current` re-queried Redis, raising from ProcessSet on the
-      # second call would surface. The cached snapshot should still be
-      # returned and stay `healthy?`.
-      Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("would explode"))
+      assert first.healthy?
+
+      # If `current` re-queried Redis on the second call, raising from
+      # ProcessSet would propagate through `load_state!`'s rescue and
+      # flip `reason` to `:redis_unreachable`. The cached snapshot
+      # should be returned instead — still healthy. We don't compare
+      # object identity here: ActiveSupport::Cache::MemoryStore
+      # Marshals values by default, so the second `fetch` returns an
+      # `==`-equal but not `equal?`-identical instance.
+      Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("would explode if re-queried"))
       second = SidekiqHealth.current
 
-      assert_same first, second
       assert second.healthy?
+      assert_nil second.reason
     end
   end
 
