@@ -22,7 +22,7 @@
       <p><%= @all_family_merchants.count %></p>
     </div>
 
-    <% if @pagy_family_merchants.count > 0 || @family_merchants.any? %>
+    <% if @all_family_merchants.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
           <table class="w-full">
@@ -88,7 +88,7 @@
       </div>
     <% end %>
 
-    <% if @pagy_provider_merchants.count > 0 || @provider_merchants.any? %>
+    <% if @all_provider_merchants.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
           <table class="w-full">
