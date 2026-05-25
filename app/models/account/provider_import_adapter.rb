@@ -985,14 +985,16 @@ class Account::ProviderImportAdapter
     }
   end
 
-  def clear_pending_flags_from_extra(extra)
-    ex = (extra || {}).deep_dup
-    Transaction::PENDING_PROVIDERS.each do |provider|
-      next unless ex.key?(provider)
-      next unless ex[provider].is_a?(Hash)
-      ex[provider].delete("pending")
-      ex.delete(provider) if ex[provider].empty?
+  private
+
+    def clear_pending_flags_from_extra(extra)
+      ex = (extra || {}).deep_dup
+      Transaction::PENDING_PROVIDERS.each do |provider|
+        next unless ex.key?(provider)
+        next unless ex[provider].is_a?(Hash)
+        ex[provider].delete("pending")
+        ex.delete(provider) if ex[provider].empty?
+      end
+      ex
     end
-    ex
-  end
 end
