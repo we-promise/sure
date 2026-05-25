@@ -382,4 +382,41 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal [ provider_holding.id, second_provider_holding.id ].sort, account.current_holdings.pluck(:id).sort
     assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
   end
+
+  test "on account destroyed cascade transfer destroyed" do
+    outflow_account = @family.accounts.create!({
+      owner: @admin,
+      name: "test_account_outflow",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+    inflow_account = @family.accounts.create!({
+      owner: @admin,
+      name: "test_account_inflow",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+
+    transfer = create_transfer(
+      from_account: outflow_account,
+      to_account: inflow_account,
+      amount: 50
+    )
+
+    outflow_transaction = transfer.outflow_transaction
+
+    outflow_transaction.reload
+    assert_equal "funds_movement", outflow_transaction.kind
+
+    inflow_account.destroy!
+
+    assert_raises(ActiveRecord::RecordNotFound) { transfer.reload }
+
+    outflow_transaction.reload
+    assert_equal "standard", outflow_transaction.kind
+  end
 end

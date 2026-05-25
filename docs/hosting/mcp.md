@@ -231,7 +231,7 @@ Pipelock provides:
 - **Tool poisoning detection**: Prevents malicious tool call sequences
 - **Policy enforcement**: Block or warn on suspicious patterns
 
-See the [Pipelock documentation](pipelock.md) and the example configuration in `compose.example.pipelock.yml` for setup instructions.
+See the [Pipelock documentation](pipelock.md) and the example configuration in `compose.example.ai.yml` for setup instructions.
 
 ### Network Security
 
