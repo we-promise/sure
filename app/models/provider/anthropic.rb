@@ -66,18 +66,86 @@ class Provider::Anthropic < Provider
     @base_url.present?
   end
 
-  # Batch operations land in PR2 — keep the LlmConcept contract honest by
-  # surfacing a clear error if a caller routes here too early.
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
-    raise Error, "auto_categorize not yet implemented for Provider::Anthropic"
+    with_provider_response do
+      raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
+      if user_categories.blank?
+        family_id = family&.id || "unknown"
+        Rails.logger.error("Cannot auto-categorize transactions for family #{family_id}: no categories available")
+        raise Error, "No categories available for auto-categorization"
+      end
+
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "anthropic.auto_categorize",
+        input: { transactions: transactions, user_categories: user_categories }
+      )
+
+      result = AutoCategorizer.new(
+        client,
+        model: effective_model,
+        transactions: transactions,
+        user_categories: user_categories,
+        langfuse_trace: trace,
+        family: family
+      ).auto_categorize
+
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
   end
 
   def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
-    raise Error, "auto_detect_merchants not yet implemented for Provider::Anthropic"
+    with_provider_response do
+      raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
+
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "anthropic.auto_detect_merchants",
+        input: { transactions: transactions, user_merchants: user_merchants }
+      )
+
+      result = AutoMerchantDetector.new(
+        client,
+        model: effective_model,
+        transactions: transactions,
+        user_merchants: user_merchants,
+        langfuse_trace: trace,
+        family: family
+      ).auto_detect_merchants
+
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
   end
 
   def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
-    raise Error, "enhance_provider_merchants not yet implemented for Provider::Anthropic"
+    with_provider_response do
+      raise Error, "Too many merchants to enhance. Max is 25 per request." if merchants.size > 25
+
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "anthropic.enhance_provider_merchants",
+        input: { merchants: merchants }
+      )
+
+      result = ProviderMerchantEnhancer.new(
+        client,
+        model: effective_model,
+        merchants: merchants,
+        langfuse_trace: trace,
+        family: family
+      ).enhance_merchants
+
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
   end
 
   def supports_pdf_processing?(model: @default_model)
@@ -345,8 +413,10 @@ class Provider::Anthropic < Provider
         prompt_tokens: prompt_tokens,
         completion_tokens: completion_tokens,
         total_tokens: total_tokens,
+        cache_creation_tokens: usage["cache_creation_input_tokens"],
+        cache_read_tokens: usage["cache_read_input_tokens"],
         estimated_cost: estimated_cost,
-        metadata: usage.slice("cache_creation_input_tokens", "cache_read_input_tokens").compact
+        metadata: {}
       )
     rescue => e
       Rails.logger.error("Failed to record LLM usage: #{e.message}")

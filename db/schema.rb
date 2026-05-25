@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -498,7 +498,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.index ["provider_key"], name: "index_debug_log_entries_on_provider_key"
     t.index ["source"], name: "index_debug_log_entries_on_source"
     t.index ["user_id"], name: "index_debug_log_entries_on_user_id"
-    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying, 'info'::character varying, 'warn'::character varying, 'error'::character varying]::text[])", name: "chk_debug_log_entries_level"
+    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying::text, 'info'::character varying::text, 'warn'::character varying::text, 'error'::character varying::text])", name: "chk_debug_log_entries_level"
   end
 
   create_table "depositories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1063,6 +1063,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "cache_creation_tokens"
+    t.integer "cache_read_tokens"
     t.index ["family_id", "created_at"], name: "index_llm_usages_on_family_id_and_created_at"
     t.index ["family_id", "operation"], name: "index_llm_usages_on_family_id_and_operation"
     t.index ["family_id"], name: "index_llm_usages_on_family_id"

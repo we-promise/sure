@@ -37,6 +37,15 @@ class LlmUsage < ApplicationRecord
     "google" => {
       "gemini-2.5-pro" => { prompt: 1.25, completion: 10.00 },
       "gemini-2.5-flash" => { prompt: 0.3, completion: 2.50 }
+    },
+    # Anthropic pricing per 1M tokens (Claude 4.x family, as of May 2026)
+    # Source: https://www.anthropic.com/pricing
+    "anthropic" => {
+      "claude-opus-4-7" => { prompt: 15.00, completion: 75.00 },
+      "claude-opus-4-6" => { prompt: 15.00, completion: 75.00 },
+      "claude-sonnet-4-6" => { prompt: 3.00, completion: 15.00 },
+      "claude-sonnet-4-5" => { prompt: 3.00, completion: 15.00 },
+      "claude-haiku-4-5" => { prompt: 1.00, completion: 5.00 }
     }
   }.freeze
 
