@@ -1,0 +1,145 @@
+require "test_helper"
+
+class Provider::AnthropicTest < ActiveSupport::TestCase
+  include LLMInterfaceTest
+
+  setup do
+    @subject = @anthropic = Provider::Anthropic.new(
+      ENV.fetch("ANTHROPIC_API_KEY", "test-anthropic-token")
+    )
+    @subject_model = "claude-sonnet-4-6"
+  end
+
+  test "provider_name returns Anthropic for standard provider" do
+    assert_equal "Anthropic", @subject.provider_name
+  end
+
+  test "provider_name returns custom info for custom base_url" do
+    custom = Provider::Anthropic.new(
+      "test-token",
+      base_url: "https://bedrock.example.com/anthropic",
+      model: "claude-opus-4-7"
+    )
+
+    assert_equal "Custom Anthropic-compatible (https://bedrock.example.com/anthropic)", custom.provider_name
+  end
+
+  test "supports_model? returns true for claude prefix" do
+    assert @subject.supports_model?("claude-sonnet-4-6")
+    assert @subject.supports_model?("claude-opus-4-7")
+    assert @subject.supports_model?("claude-haiku-4-5")
+    assert_not @subject.supports_model?("gpt-4.1")
+  end
+
+  test "supported_models_description returns prefixes for standard provider" do
+    assert_equal "models starting with: claude", @subject.supported_models_description
+  end
+
+  test "supports_pdf_processing? true for claude models" do
+    assert @subject.supports_pdf_processing?(model: "claude-sonnet-4-6")
+    assert_not @subject.supports_pdf_processing?(model: "gpt-4o")
+  end
+
+  test "effective_model defers to ENV when set" do
+    ClimateControl.modify("ANTHROPIC_MODEL" => "claude-haiku-4-5") do
+      assert_equal "claude-haiku-4-5", Provider::Anthropic.effective_model
+    end
+  end
+
+  test "effective_model falls back to default when nothing set" do
+    ClimateControl.modify("ANTHROPIC_MODEL" => nil) do
+      Setting.stubs(:anthropic_model).returns(nil)
+      assert_equal Provider::Anthropic::DEFAULT_MODEL, Provider::Anthropic.effective_model
+    end
+  end
+
+  test "chat_response wraps Anthropic SDK errors in Provider::Anthropic::Error" do
+    fake_client = mock
+    @subject.instance_variable_set(:@client, fake_client)
+    messages = mock
+    fake_client.stubs(:messages).returns(messages)
+    messages.expects(:create).raises(StandardError.new("rate limit exceeded"))
+
+    response = @subject.chat_response("hi", model: @subject_model)
+
+    assert_not response.success?
+    assert_kind_of Provider::Anthropic::Error, response.error
+    assert_match(/rate limit/i, response.error.message)
+  end
+
+  test "chat_response returns parsed ChatResponse on success" do
+    fake_client = stub_anthropic_client_with(
+      build_anthropic_message(
+        id: "msg_abc",
+        model: @subject_model,
+        text_blocks: [ "Hello there." ],
+        tool_use_blocks: [],
+        usage: { input_tokens: 12, output_tokens: 5 }
+      )
+    )
+    @subject.instance_variable_set(:@client, fake_client)
+
+    response = @subject.chat_response("hi", model: @subject_model)
+
+    assert response.success?
+    assert_equal "msg_abc", response.data.id
+    assert_equal @subject_model, response.data.model
+    assert_equal 1, response.data.messages.size
+    assert_equal "Hello there.", response.data.messages.first.output_text
+    assert_empty response.data.function_requests
+  end
+
+  test "chat_response surfaces tool_use blocks as function_requests" do
+    fake_client = stub_anthropic_client_with(
+      build_anthropic_message(
+        id: "msg_xyz",
+        model: @subject_model,
+        text_blocks: [],
+        tool_use_blocks: [ { id: "toolu_1", name: "get_net_worth", input: { currency: "USD" } } ],
+        usage: { input_tokens: 20, output_tokens: 8 }
+      )
+    )
+    @subject.instance_variable_set(:@client, fake_client)
+
+    response = @subject.chat_response(
+      "What is my net worth?",
+      model: @subject_model,
+      functions: [ {
+        name: "get_net_worth",
+        description: "Gets a user's net worth",
+        params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+        strict: true
+      } ]
+    )
+
+    assert response.success?
+    assert_equal 1, response.data.function_requests.size
+
+    req = response.data.function_requests.first
+    assert_equal "toolu_1", req.call_id
+    assert_equal "get_net_worth", req.function_name
+    assert_equal({ currency: "USD" }.to_json, req.function_args)
+  end
+
+  private
+    def stub_anthropic_client_with(message)
+      messages = mock
+      messages.stubs(:create).returns(message)
+      client = mock
+      client.stubs(:messages).returns(messages)
+      client
+    end
+
+    def build_anthropic_message(id:, model:, text_blocks:, tool_use_blocks:, usage:)
+      OpenStruct.new(
+        id: id,
+        model: model,
+        content: text_blocks.map { |t| OpenStruct.new(type: :text, text: t) } +
+                 tool_use_blocks.map { |t| OpenStruct.new(type: :tool_use, id: t[:id], name: t[:name], input: t[:input]) },
+        usage: OpenStruct.new(
+          input_tokens: usage[:input_tokens],
+          output_tokens: usage[:output_tokens]
+        )
+      )
+    end
+end

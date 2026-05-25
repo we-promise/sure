@@ -260,6 +260,7 @@ class Provider::Openai < Provider
     functions: [],
     function_results: [],
     messages: nil,
+    conversation_history: [],
     streamer: nil,
     previous_response_id: nil,
     session_id: nil,

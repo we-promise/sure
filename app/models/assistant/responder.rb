@@ -80,6 +80,7 @@ class Assistant::Responder
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
         messages: conversation_history,
+        conversation_history: chat_message_records,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
@@ -114,6 +115,20 @@ class Assistant::Responder
 
     def chat
       @chat ||= message.chat
+    end
+
+    # Raw Message records preceding the current turn — providers that build
+    # their own native message shape (Anthropic) consume this directly so they
+    # do not have to round-trip through the OpenAI-shaped `conversation_history`.
+    def chat_message_records
+      return [] unless chat&.messages
+
+      chat.messages
+          .where(type: [ "UserMessage", "AssistantMessage" ], status: "complete")
+          .where.not(id: message.id)
+          .includes(:tool_calls)
+          .ordered
+          .to_a
     end
 
     def conversation_history

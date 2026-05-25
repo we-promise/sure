@@ -1,0 +1,320 @@
+class Provider::Anthropic < Provider
+  include LlmConcept
+
+  # Subclass so errors caught in this provider are raised as Provider::Anthropic::Error
+  Error = Class.new(Provider::Error)
+
+  # Supported Anthropic model prefixes
+  DEFAULT_ANTHROPIC_MODEL_PREFIXES = %w[claude].freeze
+  DEFAULT_MODEL = "claude-sonnet-4-6"
+
+  # All Claude 3.5+ and 4.x models accept native document content blocks.
+  VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
+
+  def self.effective_model
+    configured_model = ENV.fetch("ANTHROPIC_MODEL", Setting.anthropic_model)
+    configured_model.presence || DEFAULT_MODEL
+  end
+
+  def initialize(access_token, base_url: nil, model: nil)
+    client_options = { api_key: access_token }
+    client_options[:base_url] = base_url if base_url.present?
+    client_options[:timeout] = ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
+
+    @client = ::Anthropic::Client.new(**client_options)
+    @base_url = base_url
+    @default_model = model.presence || DEFAULT_MODEL
+  end
+
+  def supports_model?(model)
+    DEFAULT_ANTHROPIC_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
+  end
+
+  def provider_name
+    custom_endpoint? ? "Custom Anthropic-compatible (#{@base_url})" : "Anthropic"
+  end
+
+  def supported_models_description
+    if custom_endpoint?
+      "configured model: #{@default_model}"
+    else
+      "models starting with: #{DEFAULT_ANTHROPIC_MODEL_PREFIXES.join(', ')}"
+    end
+  end
+
+  def custom_endpoint?
+    @base_url.present?
+  end
+
+  # Batch operations land in PR2 — keep the LlmConcept contract honest by
+  # surfacing a clear error if a caller routes here too early.
+  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
+    raise Error, "auto_categorize not yet implemented for Provider::Anthropic"
+  end
+
+  def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
+    raise Error, "auto_detect_merchants not yet implemented for Provider::Anthropic"
+  end
+
+  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
+    raise Error, "enhance_provider_merchants not yet implemented for Provider::Anthropic"
+  end
+
+  def supports_pdf_processing?(model: @default_model)
+    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
+  end
+
+  def process_pdf(pdf_content:, model: "", family: nil)
+    raise Error, "process_pdf not yet implemented for Provider::Anthropic"
+  end
+
+  def extract_bank_statement(pdf_content:, model: "", family: nil)
+    raise Error, "extract_bank_statement not yet implemented for Provider::Anthropic"
+  end
+
+  def chat_response(
+    prompt,
+    model:,
+    instructions: nil,
+    functions: [],
+    function_results: [],
+    conversation_history: [],
+    streamer: nil,
+    previous_response_id: nil,
+    session_id: nil,
+    user_identifier: nil,
+    family: nil
+  )
+    with_provider_response do
+      chat_config = ChatConfig.new(
+        prompt: prompt,
+        instructions: instructions,
+        functions: functions,
+        function_results: function_results,
+        conversation_history: conversation_history,
+        default_max_tokens: default_max_tokens
+      )
+
+      request_params = chat_config.build_request(model: model)
+
+      trace = create_langfuse_trace(
+        name: "anthropic.chat_response",
+        input: { messages: request_params[:messages], system: request_params[:system_] },
+        session_id: session_id,
+        user_identifier: user_identifier
+      )
+
+      begin
+        parsed, usage =
+          if streamer.present?
+            stream_chat_response(streamer: streamer, request_params: request_params)
+          else
+            sync_chat_response(request_params: request_params)
+          end
+
+        log_langfuse_generation(
+          name: "chat_response",
+          model: model,
+          input: request_params[:messages],
+          output: parsed.messages.map(&:output_text).join("\n"),
+          usage: usage,
+          trace: trace
+        )
+        record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
+
+        parsed
+      rescue => e
+        log_langfuse_generation(
+          name: "chat_response",
+          model: model,
+          input: request_params[:messages],
+          error: e,
+          trace: trace
+        )
+        record_llm_usage(family: family, model: model, operation: "chat", error: e)
+        raise
+      end
+    end
+  end
+
+  private
+    attr_reader :client
+
+    def default_max_tokens
+      ENV.fetch("ANTHROPIC_MAX_TOKENS", 4096).to_i
+    end
+
+    def sync_chat_response(request_params:)
+      raw = client.messages.create(**request_params)
+      parsed = ChatParser.new(raw).parsed
+      usage = build_usage_hash(raw.usage)
+      [ parsed, usage ]
+    end
+
+    def stream_chat_response(streamer:, request_params:)
+      final_message = nil
+      stream = client.messages.stream(**request_params)
+
+      stream.each do |event|
+        case event
+        when ::Anthropic::Streaming::TextEvent
+          streamer.call(
+            Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: event.text, usage: nil)
+          )
+        when ::Anthropic::Streaming::MessageStopEvent
+          final_message = event.message
+        end
+      end
+
+      final_message ||= stream.accumulated_message
+      parsed = ChatParser.new(final_message).parsed
+      usage = build_usage_hash(final_message.usage)
+
+      streamer.call(
+        Provider::LlmConcept::ChatStreamChunk.new(type: "response", data: parsed, usage: usage)
+      )
+
+      [ parsed, usage ]
+    end
+
+    def build_usage_hash(raw_usage)
+      return {} unless raw_usage
+
+      input = raw_usage.input_tokens.to_i
+      output = raw_usage.output_tokens.to_i
+      hash = {
+        "input_tokens" => input,
+        "output_tokens" => output,
+        "total_tokens" => input + output
+      }
+
+      if raw_usage.respond_to?(:cache_creation_input_tokens) && raw_usage.cache_creation_input_tokens
+        hash["cache_creation_input_tokens"] = raw_usage.cache_creation_input_tokens
+      end
+      if raw_usage.respond_to?(:cache_read_input_tokens) && raw_usage.cache_read_input_tokens
+        hash["cache_read_input_tokens"] = raw_usage.cache_read_input_tokens
+      end
+
+      hash
+    end
+
+    def langfuse_client
+      return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
+
+      @langfuse_client = Langfuse.new
+    end
+
+    def create_langfuse_trace(name:, input:, session_id: nil, user_identifier: nil)
+      return unless langfuse_client
+
+      langfuse_client.trace(
+        name: name,
+        input: input,
+        session_id: session_id,
+        user_id: user_identifier,
+        environment: Rails.env
+      )
+    rescue => e
+      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.full_message}")
+      nil
+    end
+
+    def log_langfuse_generation(name:, model:, input:, trace:, output: nil, usage: nil, error: nil)
+      return unless langfuse_client
+
+      generation = trace&.generation(
+        name: name,
+        model: model,
+        input: input
+      )
+
+      if error
+        generation&.end(
+          output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
+          level: "ERROR"
+        )
+        upsert_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      else
+        generation&.end(output: output, usage: usage)
+        upsert_langfuse_trace(trace: trace, output: output)
+      end
+    rescue => e
+      Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
+    end
+
+    def upsert_langfuse_trace(trace:, output:, level: nil)
+      return unless langfuse_client && trace&.id
+
+      payload = { id: trace.id, output: output }
+      payload[:level] = level if level.present?
+
+      langfuse_client.trace(**payload)
+    rescue => e
+      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.message}\n#{e.full_message}")
+      nil
+    end
+
+    def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)
+      return unless family
+
+      if error.present?
+        http_status_code = extract_http_status_code(error)
+
+        family.llm_usages.create!(
+          provider: "anthropic",
+          model: model,
+          operation: operation,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+          estimated_cost: nil,
+          metadata: {
+            error: safe_error_message(error),
+            http_status_code: http_status_code
+          }
+        )
+        return
+      end
+
+      return unless usage
+
+      prompt_tokens = usage["input_tokens"] || 0
+      completion_tokens = usage["output_tokens"] || 0
+      total_tokens = usage["total_tokens"] || (prompt_tokens + completion_tokens)
+
+      estimated_cost = LlmUsage.calculate_cost(
+        model: model,
+        prompt_tokens: prompt_tokens,
+        completion_tokens: completion_tokens
+      )
+
+      family.llm_usages.create!(
+        provider: "anthropic",
+        model: model,
+        operation: operation,
+        prompt_tokens: prompt_tokens,
+        completion_tokens: completion_tokens,
+        total_tokens: total_tokens,
+        estimated_cost: estimated_cost,
+        metadata: usage.slice("cache_creation_input_tokens", "cache_read_input_tokens").compact
+      )
+    rescue => e
+      Rails.logger.error("Failed to record LLM usage: #{e.message}")
+    end
+
+    def extract_http_status_code(error)
+      if error.respond_to?(:status)
+        error.status
+      elsif error.respond_to?(:http_status)
+        error.http_status
+      elsif safe_error_message(error) =~ /(\d{3})/
+        $1.to_i
+      end
+    end
+
+    def safe_error_message(error)
+      error&.message
+    rescue => e
+      "(message unavailable: #{e.class})"
+    end
+end

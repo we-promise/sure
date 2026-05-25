@@ -10,6 +10,10 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+  field :anthropic_access_token, type: :string, default: ENV["ANTHROPIC_ACCESS_TOKEN"].presence || ENV["ANTHROPIC_API_KEY"]
+  field :anthropic_model, type: :string, default: ENV["ANTHROPIC_MODEL"]
+  field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
+  field :llm_provider, type: :string, default: ENV.fetch("LLM_PROVIDER", "openai")
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track

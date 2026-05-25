@@ -51,10 +51,15 @@ class Chat < ApplicationRecord
       prompt.first(80)
     end
 
-    # Returns the default AI model to use for chats
-    # Priority: AI Config > Setting
+    # Returns the default AI model to use for chats.
+    # Resolved from the configured llm_provider so installs that swap providers
+    # don't have to manually update every chat default.
     def default_model
-      Provider::Openai.effective_model.presence || Setting.openai_model
+      if Setting.llm_provider == "anthropic"
+        Provider::Anthropic.effective_model.presence || Setting.anthropic_model
+      else
+        Provider::Openai.effective_model.presence || Setting.openai_model
+      end
     end
   end
 
