@@ -25,6 +25,8 @@
   --color-container-inset: var(--color-gray-50);
   --color-container-inset-hover: var(--color-gray-100);
   --color-nav-indicator: var(--color-black);
+  --color-toggle-track: var(--color-gray-100);
+  --color-destructive-subtle: var(--color-red-200);
   --color-gray-25: #FAFAFA;
   --color-gray-50: #F7F7F7;
   --color-gray-100: #F0F0F0;
@@ -224,6 +226,8 @@
     --color-container-inset: var(--color-gray-800);
     --color-container-inset-hover: var(--color-gray-700);
     --color-nav-indicator: var(--color-white);
+    --color-toggle-track: var(--color-gray-700);
+    --color-destructive-subtle: var(--color-red-800);
     --budget-unused-fill: var(--color-gray-500);
     --budget-unallocated-fill: var(--color-gray-700);
     --shadow-xs: 0px 1px 2px 0px --alpha(var(--color-white) / 8%);

@@ -55,7 +55,7 @@
             <% if enable_banking_item.requires_update? %>
               <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),
                             method: :post,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-inverse bg-warning hover:opacity-90 transition-colors",
                             data: { turbo: false } do %>
                 <%= icon "refresh-cw", size: "sm" %>
                 <%= t(".update") %>
