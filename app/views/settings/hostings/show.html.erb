@@ -4,7 +4,9 @@
 <% end %>
 <%= settings_section title: t(".general") do %>
     <div class="space-y-6">
+    <%= render "settings/hostings/llm_provider_selector" %>
     <%= render "settings/hostings/openai_settings" %>
+    <%= render "settings/hostings/anthropic_settings" %>
     <%= render "settings/hostings/brand_fetch_settings" %>
   </div>
 <% end %>

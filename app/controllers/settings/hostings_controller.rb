@@ -166,6 +166,28 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    if hosting_params.key?(:anthropic_access_token)
+      token_param = hosting_params[:anthropic_access_token].to_s.strip
+      unless token_param.blank? || token_param == "********"
+        Setting.anthropic_access_token = token_param
+      end
+    end
+
+    if hosting_params.key?(:anthropic_base_url)
+      Setting.anthropic_base_url = hosting_params[:anthropic_base_url].presence
+    end
+
+    if hosting_params.key?(:anthropic_model)
+      Setting.anthropic_model = hosting_params[:anthropic_model].presence
+    end
+
+    if hosting_params.key?(:llm_provider)
+      provider = hosting_params[:llm_provider].to_s
+      if %w[openai anthropic].include?(provider)
+        Setting.llm_provider = provider
+      end
+    end
+
     LLM_BUDGET_MINIMUMS.each do |key, minimum|
       next unless hosting_params.key?(key)
       raw = hosting_params[key].to_s.strip
@@ -206,6 +228,8 @@ class Settings::HostingsController < ApplicationController
     # be wiped because the view reads from the unchanged Setting.* values.
     @openai_uri_base_input = hosting_params[:openai_uri_base] if hosting_params.key?(:openai_uri_base)
     @openai_model_input = hosting_params[:openai_model] if hosting_params.key?(:openai_model)
+    @anthropic_base_url_input = hosting_params[:anthropic_base_url] if hosting_params.key?(:anthropic_base_url)
+    @anthropic_model_input = hosting_params[:anthropic_model] if hosting_params.key?(:anthropic_model)
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
@@ -229,7 +253,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

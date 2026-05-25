@@ -74,6 +74,51 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update anthropic access token when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "sk-ant-test" } }
+
+      assert_equal "sk-ant-test", Setting.anthropic_access_token
+    end
+  end
+
+  test "ignores redacted anthropic token placeholder" do
+    with_self_hosting do
+      Setting.anthropic_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "********" } }
+
+      assert_equal "previous-token", Setting.anthropic_access_token
+    end
+  end
+
+  test "can update anthropic base_url and model" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "https://bedrock.example.com", anthropic_model: "claude-opus-4-7" } }
+
+      assert_equal "https://bedrock.example.com", Setting.anthropic_base_url
+      assert_equal "claude-opus-4-7", Setting.anthropic_model
+    end
+  end
+
+  test "can update llm_provider to anthropic" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { llm_provider: "anthropic" } }
+
+      assert_equal "anthropic", Setting.llm_provider
+    end
+  end
+
+  test "rejects unknown llm_provider values" do
+    with_self_hosting do
+      Setting.llm_provider = "openai"
+
+      patch settings_hosting_url, params: { setting: { llm_provider: "bogus" } }
+
+      assert_equal "openai", Setting.llm_provider
+    end
+  end
+
   test "can update openai uri base and model together when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1", openai_model: "gpt-4" } }

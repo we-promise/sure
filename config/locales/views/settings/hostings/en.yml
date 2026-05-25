@@ -90,6 +90,28 @@ en:
         title: Brand Fetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
+      llm_provider_selector:
+        title: AI Provider
+        description: Choose which LLM powers chat, transaction categorization, merchant detection, and PDF processing.
+        env_configured_message: Successfully configured through the LLM_PROVIDER environment variable.
+        provider_label: Active LLM provider
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Switching providers takes effect on the next chat or batch operation. Make sure the chosen provider's credentials are configured below.
+        data_retention_heading: Data handling
+        data_retention_openai: "OpenAI: API inputs are not used to train models by default. Standard retention is 30 days for trust & safety."
+        data_retention_anthropic: "Anthropic: API inputs are not used to train models by default. Standard retention is 30 days for trust & safety."
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
+        env_configured_message: Successfully configured through environment variables.
+        access_token_label: API Key
+        access_token_placeholder: Enter your Anthropic API key
+        base_url_label: Base URL (Optional)
+        base_url_placeholder: "https://api.anthropic.com (default)"
+        model_label: Default Model (Optional)
+        model_placeholder: "claude-sonnet-4-6 (default)"
+        model_help: Used for chat and PDF processing. Batch operations (categorize, merchant detection) default to Haiku for cost.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.

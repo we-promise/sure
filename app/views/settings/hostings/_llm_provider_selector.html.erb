@@ -1,0 +1,38 @@
+<div class="space-y-3">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["LLM_PROVIDER"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-3",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <%= form.select :llm_provider,
+                    options_for_select(
+                      [
+                        [ t(".provider_openai"), "openai" ],
+                        [ t(".provider_anthropic"), "anthropic" ]
+                      ],
+                      Setting.llm_provider
+                    ),
+                    { label: t(".provider_label") },
+                    { disabled: ENV["LLM_PROVIDER"].present?,
+                      data: { "auto-submit-form-target": "auto" } } %>
+    <p class="text-xs text-secondary"><%= t(".provider_help") %></p>
+  <% end %>
+
+  <div class="rounded-md border border-secondary p-3 bg-surface-secondary text-xs text-secondary space-y-2">
+    <p class="font-medium text-primary"><%= t(".data_retention_heading") %></p>
+    <p><%= t(".data_retention_openai") %></p>
+    <p><%= t(".data_retention_anthropic") %></p>
+  </div>
+</div>
