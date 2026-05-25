@@ -74,7 +74,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
 
-    assert_operator expanded_queries - baseline_queries, :<=, 5
+    assert_equal baseline_queries, expanded_queries
   end
 
   test "should get index with read-only API key" do
@@ -157,7 +157,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       entryable: Transaction.new(tags: [ tag ])
     )
 
-    @account.entries.create!(
+    untagged_entry = @account.entries.create!(
       name: "Untagged Transaction",
       amount: 12.34,
       currency: "USD",
@@ -173,6 +173,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     transaction_ids = response_data["transactions"].map { |t| t["id"] }
     assert_includes transaction_ids, tagged_entry.transaction.id
+    assert_not_includes transaction_ids, untagged_entry.transaction.id
   end
 
   test "should filter disabled account transactions by date range" do

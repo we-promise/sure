@@ -27,14 +27,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     transactions_query = transactions_query.includes(
       { entry: :account },
       :category, :merchant, :tags,
-      transfer_as_outflow: {
-        inflow_transaction: { entry: :account },
-        outflow_transaction: { entry: :account }
-      },
-      transfer_as_inflow: {
-        inflow_transaction: { entry: :account },
-        outflow_transaction: { entry: :account }
-      }
+      transfer_as_outflow: { inflow_transaction: { entry: :account } },
+      transfer_as_inflow: { outflow_transaction: { entry: :account } }
     ).reverse_chronological
 
     # Handle pagination with Pagy
