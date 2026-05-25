@@ -139,12 +139,7 @@ class Account::ProviderImportAdapter
           # exclude it from re-import (preventing the old pending from being recreated on the
           # next sync when the stored raw payload still contains the pending transaction data).
           if entry.entryable.is_a?(Transaction)
-            ex = (entry.transaction.extra || {}).deep_dup
-            Transaction::PENDING_PROVIDERS.each do |provider|
-              next unless ex.key?(provider)
-              ex[provider].delete("pending")
-              ex.delete(provider) if ex[provider].empty?
-            end
+            ex = clear_pending_flags_from_extra(entry.transaction.extra)
             if old_pending_external_id.present?
               existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
               ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
@@ -162,13 +157,7 @@ class Account::ProviderImportAdapter
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
         if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-          ex = (entry.transaction.extra || {}).deep_dup
-          Transaction::PENDING_PROVIDERS.each do |p|
-            next unless ex.key?(p)
-            ex[p].delete("pending")
-            ex.delete(p) if ex[p].empty?
-          end
-          entry.transaction.extra = ex
+          entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
         end
       end
 
@@ -1000,5 +989,15 @@ class Account::ProviderImportAdapter
       external_id: entry.external_id,
       account_name: entry.account.name
     }
+  end
+
+  def clear_pending_flags_from_extra(extra)
+    ex = (extra || {}).deep_dup
+    Transaction::PENDING_PROVIDERS.each do |provider|
+      next unless ex.key?(provider)
+      ex[provider].delete("pending")
+      ex.delete(provider) if ex[provider].empty?
+    end
+    ex
   end
 end
