@@ -169,9 +169,9 @@ class Period
   end
 
   def interval
-    if days > 1825 # 5 years
+    if end_date > start_date.advance(years: 5)   # more than 5 calendar years → monthly
       "1 month"
-    elsif days > 366
+    elsif end_date > start_date.advance(years: 1) # more than 1 calendar year → weekly
       "1 week"
     else
       "1 day"
