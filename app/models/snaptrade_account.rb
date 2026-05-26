@@ -133,12 +133,10 @@ class SnaptradeAccount < ApplicationRecord
 
     Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
 
-    # Find the primary cash balance (account currency → USD → first entry).
-    # The primary entry stays in cash_balance; the full set is persisted so the
-    # processor can surface non-primary-currency cash as holdings (issue #1809).
-    cash_entry = data.find { |b| b.dig(:currency, :code) == currency } ||
-                 data.find { |b| b.dig(:currency, :code) == "USD" } ||
-                 data.first
+    # The primary entry (account currency → USD → first) stays in cash_balance;
+    # the full set is persisted so the processor can surface non-primary-currency
+    # cash as holdings (issue #1809).
+    cash_entry = primary_cash_entry(data)
 
     cash_value = cash_entry ? cash_entry[:cash] : cash_balance
     Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}, persisting #{data.size} entrie(s)"
@@ -157,10 +155,7 @@ class SnaptradeAccount < ApplicationRecord
       entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
     end
 
-    primary = entries.find { |b| b.dig(:currency, :code) == currency } ||
-              entries.find { |b| b.dig(:currency, :code) == "USD" } ||
-              entries.first
-    primary_code = primary&.dig(:currency, :code)
+    primary_code = primary_cash_entry(entries)&.dig(:currency, :code)
 
     entries.filter_map do |e|
       code = e.dig(:currency, :code)
@@ -182,6 +177,15 @@ class SnaptradeAccount < ApplicationRecord
   end
 
   private
+
+    # Selects the primary cash entry from a list of indifferent-access balance
+    # hashes: account currency first, then USD, then the first entry. Shared by
+    # upsert_balances! and non_primary_cash_entries so both stay in sync.
+    def primary_cash_entry(entries)
+      entries.find { |b| b.dig(:currency, :code) == currency } ||
+        entries.find { |b| b.dig(:currency, :code) == "USD" } ||
+        entries.first
+    end
 
     # Enqueue a background job to clean up the SnapTrade connection
     # This runs asynchronously after the record is destroyed to avoid

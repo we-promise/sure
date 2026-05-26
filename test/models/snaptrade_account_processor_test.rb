@@ -326,9 +326,12 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
   test "upsert_balances! persists all entries and keeps the primary currency in cash_balance" do
     @snaptrade_account.update!(currency: "USD")
 
+    # Primary (USD) is intentionally NOT first so this asserts the
+    # account-currency selection actually resolves it via dig(:currency, :code)
+    # on the string-keyed payload — not the `entries.first` fallback.
     @snaptrade_account.upsert_balances!([
-      { "currency" => { "code" => "USD" }, "cash" => "1500.00" },
-      { "currency" => { "code" => "EUR" }, "cash" => "800.00" }
+      { "currency" => { "code" => "EUR" }, "cash" => "800.00" },
+      { "currency" => { "code" => "USD" }, "cash" => "1500.00" }
     ])
 
     @snaptrade_account.reload
