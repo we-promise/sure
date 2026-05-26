@@ -316,15 +316,15 @@ class Budget < ApplicationRecord
     end
 
     def net_totals
-      @net_totals ||= income_statement.net_category_totals(period: period)
+      @net_totals ||= income_statement.net_category_totals(period: period, for_budget: true)
     end
 
     def expense_totals
-      @expense_totals ||= income_statement.expense_totals(period: period)
+      @expense_totals ||= income_statement.expense_totals(period: period, for_budget: true)
     end
 
     def income_totals
-      @income_totals ||= income_statement.income_totals(period: period)
+      @income_totals ||= income_statement.income_totals(period: period, for_budget: true)
     end
 
     def expense_totals_by_category

@@ -179,17 +179,27 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000
   end
 
-  test "excludes one-time transactions from income statement calculations" do
-    # Create a one-time transaction
-    one_time_transaction = create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
+  test "includes one-time transactions in income statement totals and reports" do
+    create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # NOW WORKING: Excludes one-time transactions correctly after refactoring
-    assert_equal 4, totals.transactions_count # Only original 4 transactions
+    assert_equal 5, totals.transactions_count
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(900, @family.currency), totals.expense_money
+    assert_equal Money.new(1150, @family.currency), totals.expense_money
+
+    expense_totals = income_statement.expense_totals(period: Period.last_30_days)
+    assert_equal 200 + 300 + 400 + 250, expense_totals.total
+  end
+
+  test "excludes one-time transactions from budget-scoped period totals" do
+    create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
+
+    income_statement = IncomeStatement.new(@family)
+    expense_totals = income_statement.expense_totals(period: Period.last_30_days, for_budget: true)
+
+    assert_equal 200 + 300 + 400, expense_totals.total
   end
 
   test "excludes payment transactions from income statement calculations" do
