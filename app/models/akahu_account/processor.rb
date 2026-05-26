@@ -1,6 +1,8 @@
 class AkahuAccount::Processor
   include CurrencyNormalizable
 
+  SanitizedProcessingError = Class.new(StandardError)
+
   attr_reader :akahu_account
 
   def initialize(akahu_account)
@@ -16,7 +18,7 @@ class AkahuAccount::Processor
     process_account!
     process_transactions
   rescue StandardError => e
-    Rails.logger.error "AkahuAccount::Processor - Failed to process account #{akahu_account.id}: #{e.message}"
+    Rails.logger.error "AkahuAccount::Processor - Failed to process account akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
     report_exception(e, "account")
     raise
   end
@@ -42,14 +44,26 @@ class AkahuAccount::Processor
       AkahuAccount::Transactions::Processor.new(akahu_account).process
     rescue => e
       report_exception(e, "transactions")
-      { success: false, failed: 1, errors: [ { error: e.message } ] }
+      Rails.logger.error "AkahuAccount::Processor - Failed to process transactions akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
+      { success: false, failed: 1, errors: [ { error: I18n.t("akahu_item.errors.account_processing_failed") } ] }
     end
 
     def report_exception(error, context)
-      Sentry.capture_exception(error) do |scope|
+      safe_error = SanitizedProcessingError.new("Akahu account processing failed")
+
+      Sentry.capture_exception(safe_error) do |scope|
         scope.set_tags(
           akahu_account_id: akahu_account.id,
-          context: context
+          context: context,
+          error_class: error.class.name
+        )
+        scope.set_context(
+          "akahu_account_processor",
+          {
+            akahu_account_id: akahu_account.id,
+            context: context,
+            error_class: error.class.name
+          }
         )
       end
     end

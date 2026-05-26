@@ -8,7 +8,7 @@ class CreateAkahuItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.string :institution_domain
       t.string :institution_url
       t.string :institution_color
-      t.string :status, default: "good"
+      t.string :status, default: "good", null: false
       t.boolean :scheduled_for_deletion, default: false, null: false
       t.boolean :pending_account_setup, default: false, null: false
       t.date :sync_start_date
@@ -16,8 +16,6 @@ class CreateAkahuItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :raw_institution_payload
       t.text :app_token
       t.text :user_token
-      t.string :base_url, default: "https://api.akahu.io/v1"
-
       t.timestamps
     end
 

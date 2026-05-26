@@ -5,7 +5,9 @@ module AkahuItem::Unlinking
     results = []
 
     akahu_accounts.find_each do |provider_account|
-      links = AccountProvider.where(provider_type: "AkahuAccount", provider_id: provider_account.id).to_a
+      links = AccountProvider.joins(:account)
+                             .where(provider: provider_account, accounts: { family_id: family_id })
+                             .to_a
       link_ids = links.map(&:id)
       result = {
         provider_account_id: provider_account.id,
@@ -18,8 +20,10 @@ module AkahuItem::Unlinking
 
       begin
         ActiveRecord::Base.transaction do
-          Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil) if link_ids.any?
-          links.each(&:destroy!)
+          links.each do |link|
+            Holding.where(account_id: link.account_id, account_provider_id: link.id).update_all(account_provider_id: nil)
+            link.destroy!
+          end
         end
       rescue StandardError => e
         Rails.logger.warn(

@@ -34,7 +34,7 @@ class AkahuAccount < ApplicationRecord
   end
 
   def suggested_subtype
-    AKAHU_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.fetch(:subtype)
+    AKAHU_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.[](:subtype)
   end
 
   def upsert_akahu_snapshot!(account_snapshot)
@@ -47,7 +47,7 @@ class AkahuAccount < ApplicationRecord
     display_name = if connection[:name].present? && snapshot[:name].present?
       "#{connection[:name]} - #{snapshot[:name]}"
     else
-      snapshot[:name].presence || connection[:name].presence || "Akahu account"
+      snapshot[:name].presence || connection[:name].presence || I18n.t("akahu_account.fallback")
     end
 
     assign_attributes(
@@ -56,7 +56,7 @@ class AkahuAccount < ApplicationRecord
       balance_limit: balance[:limit],
       currency: parse_currency(balance[:currency]) || "NZD",
       name: display_name,
-      account_id: (snapshot[:_id].presence || snapshot[:id].presence).to_s,
+      account_id: snapshot[:_id].presence || snapshot[:id].presence,
       formatted_account: snapshot[:formatted_account].presence || payment_details[:account_number],
       account_status: snapshot[:status],
       account_type: snapshot[:type],

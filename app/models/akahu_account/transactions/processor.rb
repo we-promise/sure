@@ -7,7 +7,7 @@ class AkahuAccount::Transactions::Processor
 
   def process
     unless akahu_account.raw_transactions_payload.present?
-      Rails.logger.info "AkahuAccount::Transactions::Processor - No transactions in raw_transactions_payload for akahu_account #{akahu_account.id}"
+      Rails.logger.info "AkahuAccount::Transactions::Processor - No Akahu transactions available to process"
       pruned_count = prune_stale_pending_entries([])
       return { success: true, total: 0, imported: 0, failed: 0, pruned_pending: pruned_count, errors: [] }
     end

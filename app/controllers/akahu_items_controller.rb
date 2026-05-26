@@ -23,7 +23,7 @@ class AkahuItemsController < ApplicationController
 
   def create
     @akahu_item = Current.family.akahu_items.build(akahu_item_params)
-    @akahu_item.name ||= "Akahu Connection"
+    @akahu_item.name = t("akahu_items.provider_panel.default_connection_name") if @akahu_item.name.blank?
 
     if @akahu_item.save
       @akahu_item.sync_later
@@ -47,8 +47,7 @@ class AkahuItemsController < ApplicationController
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   rescue => e
     Rails.logger.warn("Akahu unlink during destroy failed: #{e.class} - #{e.message}")
-    @akahu_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success"), status: :see_other
+    redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
   end
 
   def sync
@@ -61,8 +60,8 @@ class AkahuItemsController < ApplicationController
   end
 
   def preload_accounts
-    akahu_item = credentialed_akahu_item
-    return render json: { success: false, error: "no_credentials", has_accounts: false } unless akahu_item
+    akahu_item = requested_akahu_item
+    return render json: { success: false, error: "no_credentials", has_accounts: false } unless akahu_item.credentials_configured?
 
     error = fetch_akahu_accounts_from_api(akahu_item)
     render json: { success: error.blank?, error_message: error, has_accounts: akahu_item.akahu_accounts.exists? }
@@ -71,9 +70,9 @@ class AkahuItemsController < ApplicationController
   def select_accounts
     @accountable_type = params[:accountable_type] || "Depository"
     @return_to = safe_return_to_path
-    @akahu_item = credentialed_akahu_item
+    @akahu_item = requested_akahu_item
 
-    unless @akahu_item
+    unless @akahu_item.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
@@ -88,15 +87,15 @@ class AkahuItemsController < ApplicationController
   end
 
   def link_accounts
-    akahu_item = credentialed_akahu_item
-    unless akahu_item
+    akahu_item = requested_akahu_item
+    unless akahu_item.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
     selected_ids = Array(params[:account_ids]).compact_blank
     if selected_ids.empty?
-      redirect_to select_accounts_akahu_items_path(accountable_type: params[:accountable_type], return_to: safe_return_to_path), alert: t(".no_accounts_selected")
+      redirect_to select_accounts_akahu_items_path(akahu_item_id: akahu_item.id, accountable_type: params[:accountable_type], return_to: safe_return_to_path), alert: t(".no_accounts_selected")
       return
     end
 
@@ -123,7 +122,7 @@ class AkahuItemsController < ApplicationController
     if created_accounts.any?
       redirect_to safe_return_to_path || accounts_path, notice: t(".success", count: created_accounts.count)
     else
-      redirect_to select_accounts_akahu_items_path(accountable_type: account_type), alert: t(".link_failed")
+      redirect_to select_accounts_akahu_items_path(akahu_item_id: akahu_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
     end
   end
 
@@ -135,8 +134,8 @@ class AkahuItemsController < ApplicationController
       return
     end
 
-    @akahu_item = credentialed_akahu_item
-    unless @akahu_item
+    @akahu_item = requested_akahu_item
+    unless @akahu_item.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
@@ -153,7 +152,13 @@ class AkahuItemsController < ApplicationController
 
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
-    akahu_item = Current.family.akahu_items.active.find(params[:akahu_item_id])
+    akahu_item = requested_akahu_item
+
+    unless akahu_item.credentials_configured?
+      redirect_to settings_providers_path, alert: t("akahu_items.select_existing_account.no_credentials_configured")
+      return
+    end
+
     akahu_account = akahu_item.akahu_accounts.find(params[:akahu_account_id])
 
     if account.account_providers.exists?
@@ -227,7 +232,7 @@ class AkahuItemsController < ApplicationController
     redirect_to accounts_path, status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
     Rails.logger.error("Akahu account setup failed: #{e.class} - #{e.message}")
-    redirect_to accounts_path, alert: t(".creation_failed", error: e.message), status: :see_other
+    redirect_to accounts_path, alert: t(".creation_failed"), status: :see_other
   end
 
   private
@@ -237,7 +242,7 @@ class AkahuItemsController < ApplicationController
     end
 
     def akahu_item_params
-      params.require(:akahu_item).permit(:name, :sync_start_date, :app_token, :user_token, :base_url)
+      params.require(:akahu_item).permit(:name, :sync_start_date, :app_token, :user_token)
     end
 
     def update_params
@@ -247,8 +252,8 @@ class AkahuItemsController < ApplicationController
       permitted
     end
 
-    def credentialed_akahu_item
-      Current.family.akahu_items.active.ordered.find(&:credentials_configured?)
+    def requested_akahu_item
+      Current.family.akahu_items.active.find_by!(id: params[:akahu_item_id])
     end
 
     def fetch_akahu_accounts_from_api(akahu_item)
@@ -267,11 +272,11 @@ class AkahuItemsController < ApplicationController
 
       nil
     rescue Provider::Akahu::AkahuError => e
-      Rails.logger.error("Akahu API error: #{e.message}")
-      t("akahu_items.setup_accounts.api_error", message: e.message)
+      Rails.logger.error("Akahu API error while fetching accounts: #{e.class}: #{e.message}")
+      t("akahu_items.setup_accounts.api_error")
     rescue StandardError => e
       Rails.logger.error("Unexpected error fetching Akahu accounts: #{e.class}: #{e.message}")
-      t("akahu_items.setup_accounts.api_error", message: e.message)
+      t("akahu_items.setup_accounts.api_error")
     end
 
     def create_account_from_akahu(akahu_account, account_type)
@@ -333,14 +338,17 @@ class AkahuItemsController < ApplicationController
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
-      return_to = params[:return_to].to_s
+      return_to = params[:return_to].to_s.strip
       uri = URI.parse(return_to)
       return nil if uri.scheme.present? || uri.host.present?
       return nil if return_to.start_with?("//")
       return nil unless return_to.start_with?("/")
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
+
+      Rails.application.routes.recognize_path(uri.path, method: :get)
 
       return_to
-    rescue URI::InvalidURIError
+    rescue URI::InvalidURIError, ActionController::RoutingError
       nil
     end
 end

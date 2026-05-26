@@ -11,23 +11,9 @@ class Provider::AkahuAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_akahu?
 
-    [ {
-      key: "akahu",
-      name: "Akahu",
-      description: "Connect New Zealand bank accounts via Akahu",
-      can_connect: true,
-      new_account_path: ->(accountable_type, return_to) {
-        Rails.application.routes.url_helpers.select_accounts_akahu_items_path(
-          accountable_type: accountable_type,
-          return_to: return_to
-        )
-      },
-      existing_account_path: ->(account_id) {
-        Rails.application.routes.url_helpers.select_existing_account_akahu_items_path(
-          account_id: account_id
-        )
-      }
-    } ]
+    family.akahu_items.active.ordered.select(&:credentials_configured?).map do |akahu_item|
+      connection_config_for(akahu_item)
+    end
   end
 
   def self.build_provider(family: nil, akahu_item_id: nil)
@@ -38,10 +24,31 @@ class Provider::AkahuAdapter < Provider::Base
 
     Provider::Akahu.new(
       app_token: akahu_item.app_token,
-      user_token: akahu_item.user_token,
-      base_url: akahu_item.effective_base_url
+      user_token: akahu_item.user_token
     )
   end
+
+  def self.connection_config_for(akahu_item)
+    path_params = ->(extra = {}) { extra.merge(akahu_item_id: akahu_item.id) }
+
+    {
+      key: "akahu_#{akahu_item.id}",
+      name: akahu_item.name.presence || I18n.t("providers.akahu.name"),
+      description: I18n.t("providers.akahu.description"),
+      can_connect: true,
+      new_account_path: ->(accountable_type, return_to) {
+        Rails.application.routes.url_helpers.select_accounts_akahu_items_path(
+          path_params.call(accountable_type: accountable_type, return_to: return_to)
+        )
+      },
+      existing_account_path: ->(account_id) {
+        Rails.application.routes.url_helpers.select_existing_account_akahu_items_path(
+          path_params.call(account_id: account_id)
+        )
+      }
+    }
+  end
+  private_class_method :connection_config_for
 
   def provider_name
     "akahu"

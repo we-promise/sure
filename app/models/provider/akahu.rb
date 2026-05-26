@@ -3,16 +3,14 @@ class Provider::Akahu
   extend SslConfigurable
 
   DEFAULT_BASE_URL = "https://api.akahu.io/v1".freeze
-
   headers "User-Agent" => "Sure Finance Akahu Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
-  attr_reader :app_token, :user_token, :base_url
+  attr_reader :app_token, :user_token
 
-  def initialize(app_token:, user_token:, base_url: DEFAULT_BASE_URL)
+  def initialize(app_token:, user_token:)
     @app_token = app_token.to_s.strip
     @user_token = user_token.to_s.strip
-    @base_url = base_url.presence || DEFAULT_BASE_URL
 
     raise AkahuError.new("Akahu app token is required", :configuration_error) if @app_token.blank?
     raise AkahuError.new("Akahu user token is required", :configuration_error) if @user_token.blank?
@@ -115,7 +113,7 @@ class Provider::Akahu
     end
 
     def endpoint_url(path)
-      "#{base_url.to_s.chomp("/")}/#{path}"
+      "#{DEFAULT_BASE_URL}/#{path}"
     end
 
     def auth_headers
@@ -161,7 +159,7 @@ class Provider::Akahu
       when 204
         {}
       when 400
-        raise AkahuError.new("Bad request to Akahu API: #{response.body}", :bad_request)
+        raise AkahuError.new("Bad request to Akahu API (#{response_diagnostics(response)})", :bad_request)
       when 401
         raise AkahuError.new("Invalid Akahu user token", :unauthorized)
       when 403
@@ -173,9 +171,13 @@ class Provider::Akahu
       when 500..599
         raise AkahuError.new("Akahu server error (#{response.code}). Please try again later.", :server_error)
       else
-        Rails.logger.error "Akahu API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-        raise AkahuError.new("Failed to fetch Akahu data: #{response.code} #{response.message}", :fetch_failed)
+        Rails.logger.error "Akahu API: Unexpected response status=#{response.code}"
+        raise AkahuError.new("Failed to fetch Akahu data", :fetch_failed)
       end
+    end
+
+    def response_diagnostics(response)
+      "status=#{response.code}"
     end
 
     def parse_response_body(response)
@@ -183,7 +185,7 @@ class Provider::Akahu
 
       JSON.parse(response.body, symbolize_names: true)
     rescue JSON::ParserError => e
-      Rails.logger.error "Akahu API: Failed to parse response: #{e.message}"
+      Rails.logger.error "Akahu API: Failed to parse response: #{e.class}"
       raise AkahuError.new("Failed to parse Akahu API response", :parse_error)
     end
 

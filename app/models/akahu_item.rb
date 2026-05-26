@@ -18,8 +18,6 @@ class AkahuItem < ApplicationRecord
   validates :name, presence: true
   validates :app_token, :user_token, presence: true, on: :create
 
-  before_validation :set_default_base_url
-
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
@@ -49,13 +47,13 @@ class AkahuItem < ApplicationRecord
     akahu_accounts.joins(:account).merge(Account.visible).map do |akahu_account|
       result = AkahuAccount::Processor.new(akahu_account).process
       if result.is_a?(Hash) && result.with_indifferent_access[:success] == false
-        { akahu_account_id: akahu_account.id, success: false, error: processor_error_message(result), result: result }
+        { akahu_account_id: akahu_account.id, success: false, error: I18n.t("akahu_item.errors.account_processing_failed") }
       else
         { akahu_account_id: akahu_account.id, success: true, result: result }
       end
     rescue => e
-      Rails.logger.error "AkahuItem #{id} - Failed to process account #{akahu_account.id}: #{e.message}"
-      { akahu_account_id: akahu_account.id, success: false, error: e.message }
+      Rails.logger.error "AkahuItem #{id} - Failed to process account #{akahu_account.id}: #{e.class} - #{e.message}"
+      { akahu_account_id: akahu_account.id, success: false, error: I18n.t("akahu_item.errors.account_processing_failed") }
     end
   end
 
@@ -70,8 +68,8 @@ class AkahuItem < ApplicationRecord
       )
       { account_id: account.id, success: true }
     rescue => e
-      Rails.logger.error "AkahuItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-      { account_id: account.id, success: false, error: e.message }
+      Rails.logger.error "AkahuItem #{id} - Failed to schedule sync for account #{account.id}: #{e.class} - #{e.message}"
+      { account_id: account.id, success: false, error: I18n.t("akahu_item.errors.account_sync_schedule_failed") }
     end
   end
 
@@ -90,11 +88,11 @@ class AkahuItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts.zero?
-      "No accounts found"
+      I18n.t("akahu_item.sync_status.no_accounts")
     elsif unlinked_count.zero?
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("akahu_item.sync_status.all_synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t("akahu_item.sync_status.partial", linked: linked_count, unlinked: unlinked_count)
     end
   end
 
@@ -125,38 +123,15 @@ class AkahuItem < ApplicationRecord
     institutions = connected_institutions
     case institutions.count
     when 0
-      "No institutions connected"
+      I18n.t("akahu_item.institution_summary.none")
     when 1
-      institutions.first["name"].presence || "1 institution"
+      institutions.first["name"].presence || I18n.t("akahu_item.institution_summary.one")
     else
-      "#{institutions.count} institutions"
+      I18n.t("akahu_item.institution_summary.count", count: institutions.count)
     end
   end
 
   def credentials_configured?
     app_token.present? && user_token.present?
   end
-
-  def effective_base_url
-    base_url.presence || Provider::Akahu::DEFAULT_BASE_URL
-  end
-
-  private
-
-    def processor_error_message(result)
-      data = result.with_indifferent_access
-      errors = Array(data[:errors]).filter_map do |error|
-        if error.is_a?(Hash)
-          error.with_indifferent_access[:error].presence
-        else
-          error.to_s.presence
-        end
-      end
-
-      data[:error].presence || errors.to_sentence.presence || "Account processing failed"
-    end
-
-    def set_default_base_url
-      self.base_url = Provider::Akahu::DEFAULT_BASE_URL if base_url.blank?
-    end
 end

@@ -15,6 +15,7 @@
                         method: :post,
                         data: { turbo_frame: "_top" },
                         class: "space-y-4" do %>
+            <%= hidden_field_tag :akahu_item_id, @akahu_item.id %>
             <%= hidden_field_tag :accountable_type, @accountable_type %>
             <%= hidden_field_tag :return_to, @return_to %>
 

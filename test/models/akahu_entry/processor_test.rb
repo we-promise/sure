@@ -51,6 +51,7 @@ class AkahuEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "NZD", entry.currency
     assert_equal Date.new(2026, 1, 15), entry.date
     assert_equal "Coffee Shop", entry.name
+    assert_equal "COFFEE SHOP | Reference: REF | Particulars: PART | Code: CODE | Other account: 12-3456-0000000-00", entry.notes
 
     transaction = entry.entryable
     assert_equal false, transaction.pending?

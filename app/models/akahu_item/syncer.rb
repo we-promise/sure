@@ -1,6 +1,8 @@
 class AkahuItem::Syncer
   include SyncStats::Collector
 
+  SafeSyncError = Class.new(StandardError)
+
   class SyncError < StandardError
     attr_reader :sync_errors
 
@@ -59,8 +61,10 @@ class AkahuItem::Syncer
     collect_health_stats(sync, errors: e.sync_errors)
     raise
   rescue => e
-    collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
-    raise
+    safe_message = I18n.t("akahu_item.errors.sync_failed")
+    Rails.logger.error "AkahuItem::Syncer - Unexpected sync error: #{e.class}"
+    collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
+    raise SafeSyncError.new(safe_message), cause: nil
   end
 
   def perform_post_sync

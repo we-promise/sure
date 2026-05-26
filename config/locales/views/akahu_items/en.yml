@@ -1,5 +1,40 @@
 ---
 en:
+  providers:
+    akahu:
+      name: Akahu
+      description: Connect New Zealand bank accounts via Akahu
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu Connection
+  akahu_account:
+    fallback: Akahu account
+  akahu_entry:
+    notes:
+      reference: Reference
+      particulars: Particulars
+      code: Code
+      other_account: Other account
+  akahu_item:
+    errors:
+      account_processing_failed: Could not sync Akahu account
+      account_sync_schedule_failed: Could not schedule Akahu account sync
+      pending_transactions_failed: Could not fetch Akahu pending transactions
+      transactions_failed: Could not fetch Akahu transactions
+      sync_failed: Could not sync Akahu connection
+    sync_status:
+      no_accounts: No accounts found
+      all_synced:
+        one: 1 account synced
+        other: "%{count} accounts synced"
+      partial: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: No institutions connected
+      one: 1 institution
+      count:
+        one: 1 institution
+        other: "%{count} institutions"
   akahu_items:
     provider_panel:
       default_connection_name: Akahu Connection
@@ -13,8 +48,6 @@ en:
       user_token_label: User Token
       user_token_placeholder: Paste your Akahu user token
       keep_user_token_placeholder: Leave blank to keep the existing user token
-      base_url_label: Base URL
-      base_url_placeholder: https://api.akahu.io/v1
       setup_accounts: Setup accounts
       syncing: Syncing...
       sync: Sync
@@ -26,6 +59,7 @@ en:
       success: Akahu connection updated.
     destroy:
       success: Scheduled Akahu connection for deletion.
+      unlink_failed: Could not disconnect Akahu connection
     select_accounts:
       title: Link Akahu accounts
       description: Choose the Akahu accounts to add.
@@ -57,7 +91,7 @@ en:
       title: Set Up Akahu Accounts
       subtitle: Choose how each Akahu account should appear in Sure.
       no_credentials: Configure Akahu credentials first.
-      api_error: "Akahu API error: %{message}"
+      api_error: Could not fetch Akahu accounts.
       fetch_failed: Could not fetch accounts
       no_accounts_to_setup: No accounts to set up
       all_accounts_linked: All Akahu accounts are already linked.
@@ -78,7 +112,7 @@ en:
         other: "Created %{count} Akahu accounts."
       all_skipped: No Akahu accounts were created.
       no_accounts: No Akahu accounts were selected.
-      creation_failed: "Could not create Akahu accounts: %{error}"
+      creation_failed: Could not create Akahu accounts.
     akahu_item:
       deletion_in_progress: Deletion in progress
       syncing: Syncing

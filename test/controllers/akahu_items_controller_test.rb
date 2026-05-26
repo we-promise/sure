@@ -68,4 +68,112 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
   end
+
+  test "preload accounts uses requested Akahu connection" do
+    second_item = AkahuItem.create!(
+      family: @family,
+      name: "Secondary Akahu",
+      app_token: "second-app-token",
+      user_token: "second-user-token"
+    )
+
+    AkahuItemsController.any_instance
+      .expects(:fetch_akahu_accounts_from_api)
+      .with(second_item)
+      .returns(nil)
+
+    get preload_accounts_akahu_items_url, params: { akahu_item_id: second_item.id }, as: :json
+
+    assert_response :success
+    assert_equal false, JSON.parse(response.body)["has_accounts"]
+  end
+
+  test "select accounts uses requested Akahu connection" do
+    second_item = AkahuItem.create!(
+      family: @family,
+      name: "Secondary Akahu",
+      app_token: "second-app-token",
+      user_token: "second-user-token"
+    )
+    second_item.akahu_accounts.create!(
+      name: "Secondary Checking",
+      account_id: "acc_secondary",
+      currency: "NZD"
+    )
+    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+
+    get select_accounts_akahu_items_url, params: { akahu_item_id: second_item.id, accountable_type: "Depository" }
+
+    assert_response :success
+    assert_includes response.body, "Secondary Checking"
+    refute_includes response.body, "Akahu Checking"
+  end
+
+  test "link accounts uses requested Akahu connection" do
+    second_item = AkahuItem.create!(
+      family: @family,
+      name: "Secondary Akahu",
+      app_token: "second-app-token",
+      user_token: "second-user-token"
+    )
+    second_account = second_item.akahu_accounts.create!(
+      name: "Secondary Checking",
+      account_id: "acc_secondary",
+      currency: "NZD",
+      current_balance: 42
+    )
+
+    assert_difference "Account.count", 1 do
+      assert_difference "AccountProvider.count", 1 do
+        post link_accounts_akahu_items_url, params: {
+          akahu_item_id: second_item.id,
+          account_ids: [ second_account.id ],
+          accountable_type: "Depository"
+        }
+      end
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal second_account.id, AccountProvider.order(:created_at).last.provider_id
+    assert_nil @akahu_account.reload.current_account
+  end
+
+  test "select existing account uses requested Akahu connection" do
+    second_item = AkahuItem.create!(
+      family: @family,
+      name: "Secondary Akahu",
+      app_token: "second-app-token",
+      user_token: "second-user-token"
+    )
+    second_item.akahu_accounts.create!(
+      name: "Secondary Checking",
+      account_id: "acc_secondary",
+      currency: "NZD"
+    )
+    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+
+    get select_existing_account_akahu_items_url, params: {
+      account_id: @account.id,
+      akahu_item_id: second_item.id
+    }
+
+    assert_response :success
+    assert_includes response.body, "Secondary Checking"
+    refute_includes response.body, "Akahu Checking"
+  end
+
+  test "complete account setup hides raw creation errors from users" do
+    raw_message = "raw provider failure with user-token"
+    AkahuItemsController.any_instance
+      .stubs(:create_account_from_akahu)
+      .raises(ActiveRecord::RecordNotSaved.new(raw_message))
+
+    post complete_account_setup_akahu_item_url(@akahu_item), params: {
+      account_types: { @akahu_account.id.to_s => "Depository" }
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("akahu_items.complete_account_setup.creation_failed"), flash[:alert]
+    refute_includes flash[:alert], raw_message
+  end
 end

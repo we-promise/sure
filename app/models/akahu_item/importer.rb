@@ -43,13 +43,13 @@ class AkahuItem::Importer
       { items: items }
     rescue Provider::Akahu::AkahuError => e
       mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
-      Rails.logger.error "AkahuItem::Importer - Akahu API error: #{e.message}"
+      Rails.logger.error "AkahuItem::Importer - Akahu API error: #{e.error_type}"
       nil
     rescue JSON::ParserError => e
-      Rails.logger.error "AkahuItem::Importer - Failed to parse Akahu API response: #{e.message}"
+      Rails.logger.error "AkahuItem::Importer - Failed to parse Akahu API response: #{e.class}"
       nil
     rescue => e
-      Rails.logger.error "AkahuItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"
+      Rails.logger.error "AkahuItem::Importer - Unexpected error fetching accounts: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
       nil
     end
@@ -103,9 +103,10 @@ class AkahuItem::Importer
       end
 
       { success: true, by_account: by_account }
-    rescue Provider::Akahu::AkahuError => e
-      Rails.logger.warn "AkahuItem::Importer - Failed to fetch pending transactions: #{e.message}"
-      { success: false, by_account: Hash.new { |hash, key| hash[key] = [] }, error: e.message }
+    rescue Provider::Akahu::AkahuError, JSON::ParserError, StandardError => e
+      error_label = e.respond_to?(:error_type) ? e.error_type : e.class.name
+      Rails.logger.warn "AkahuItem::Importer - Failed to fetch pending transactions: #{error_label}"
+      { success: false, by_account: Hash.new { |hash, key| hash[key] = [] }, error: I18n.t("akahu_item.errors.pending_transactions_failed") }
     end
 
     def import_transactions(pending_result)
@@ -126,7 +127,7 @@ class AkahuItem::Importer
         end
       rescue => e
         stats[:failed] += 1
-        Rails.logger.error "AkahuItem::Importer - Failed to fetch/store transactions for account #{akahu_account.account_id}: #{e.message}"
+        Rails.logger.error "AkahuItem::Importer - Failed to fetch/store transactions for Akahu account #{akahu_account.id}: #{e.class}"
       end
 
       stats
@@ -134,7 +135,7 @@ class AkahuItem::Importer
 
     def fetch_and_store_transactions(akahu_account, pending_transactions, pending_refresh_succeeded:)
       start_date = determine_sync_start_date(akahu_account)
-      Rails.logger.info "AkahuItem::Importer - Fetching transactions for account #{akahu_account.account_id} from #{start_date}"
+      Rails.logger.info "AkahuItem::Importer - Fetching transactions for Akahu account #{akahu_account.id} from #{start_date}"
 
       posted_transactions = akahu_provider.get_account_transactions(
         account_id: akahu_account.account_id,
@@ -150,27 +151,28 @@ class AkahuItem::Importer
 
       { success: true, transactions_count: Array(posted_transactions).count + Array(pending_transactions).count }
     rescue Provider::Akahu::AkahuError => e
-      Rails.logger.error "AkahuItem::Importer - Akahu API error for account #{akahu_account.id}: #{e.message}"
-      { success: false, transactions_count: 0, error: e.message }
+      Rails.logger.error "AkahuItem::Importer - Akahu API error for account #{akahu_account.id}: #{e.error_type}"
+      { success: false, transactions_count: 0, error: I18n.t("akahu_item.errors.transactions_failed") }
     rescue JSON::ParserError => e
-      Rails.logger.error "AkahuItem::Importer - Failed to parse transaction response for account #{akahu_account.id}: #{e.message}"
+      Rails.logger.error "AkahuItem::Importer - Failed to parse transaction response for account #{akahu_account.id}: #{e.class}"
       { success: false, transactions_count: 0, error: "Failed to parse response" }
     rescue => e
-      Rails.logger.error "AkahuItem::Importer - Unexpected error fetching transactions for account #{akahu_account.id}: #{e.class} - #{e.message}"
+      Rails.logger.error "AkahuItem::Importer - Unexpected error fetching transactions for account #{akahu_account.id}: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
-      { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
+      { success: false, transactions_count: 0, error: I18n.t("akahu_item.errors.transactions_failed") }
     end
 
     def store_transactions(akahu_account, posted_transactions:, pending_transactions:, replace_pending:)
       existing_transactions = akahu_account.raw_transactions_payload.to_a
       existing_posted_transactions = existing_transactions.reject { |tx| pending_transaction?(tx) }
       existing_posted_keys = existing_posted_transactions.map { |tx| transaction_storage_key(tx.with_indifferent_access) }.compact.to_set
+      seen_posted_keys = existing_posted_keys.dup
 
       new_posted_transactions = posted_transactions.select do |tx|
         next false unless tx.is_a?(Hash)
 
         key = transaction_storage_key(tx.with_indifferent_access)
-        key.present? && !existing_posted_keys.include?(key)
+        key.present? && seen_posted_keys.add?(key)
       end
 
       current_pending_keys = Set.new
@@ -178,7 +180,9 @@ class AkahuItem::Importer
         next false unless tx.is_a?(Hash)
 
         key = transaction_storage_key(tx.with_indifferent_access)
-        key.present? && current_pending_keys.add?(key)
+        next false if key.blank?
+
+        key.start_with?("id:") ? current_pending_keys.add?(key) : true
       end
 
       final_transactions = if replace_pending

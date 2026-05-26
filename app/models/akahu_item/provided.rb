@@ -6,8 +6,7 @@ module AkahuItem::Provided
 
     Provider::Akahu.new(
       app_token: app_token,
-      user_token: user_token,
-      base_url: effective_base_url
+      user_token: user_token
     )
   end
 

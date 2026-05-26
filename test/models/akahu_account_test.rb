@@ -56,4 +56,45 @@ class AkahuAccountTest < ActiveSupport::TestCase
     assert_equal "Depository", @account.suggested_account_type
     assert_equal "savings", @account.suggested_subtype
   end
+
+  test "transaction processor hides raw exception messages from result errors" do
+    raw_message = "raw provider payload with secret-token"
+    AkahuAccount::Transactions::Processor.any_instance
+      .stubs(:process)
+      .raises(StandardError.new(raw_message))
+
+    AccountProvider.create!(account: accounts(:investment), provider: @account)
+    result = @item.process_accounts.first
+
+    assert_equal false, result[:success]
+    assert_equal I18n.t("akahu_item.errors.account_processing_failed"), result[:error]
+    refute_includes result.inspect, raw_message
+  end
+
+  test "process accounts sanitizes failed processor result payload" do
+    raw_message = "raw provider failure with account number 12-3456"
+    AkahuAccount::Processor.any_instance.stubs(:process).returns(
+      success: false,
+      error: raw_message,
+      result: {
+        success: false,
+        total: 1,
+        imported: 0,
+        failed: 1,
+        pruned_pending: 0,
+        errors: []
+      },
+      errors: [ { error: raw_message } ]
+    )
+
+    AccountProvider.create!(account: accounts(:investment), provider: @account)
+    result = @item.process_accounts.first
+
+    assert_equal @account.id, result[:akahu_account_id]
+    assert_equal false, result[:success]
+    assert_equal I18n.t("akahu_item.errors.account_processing_failed"), result[:error]
+    refute result.key?(:result)
+    refute result.key?(:errors)
+    refute_includes result.inspect, raw_message
+  end
 end

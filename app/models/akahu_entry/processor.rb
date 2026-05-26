@@ -122,10 +122,10 @@ class AkahuEntry::Processor
       meta = meta_data
       parts = []
       parts << data[:description] if data[:description].present? && data[:description] != name
-      parts << "Reference: #{meta[:reference]}" if meta[:reference].present?
-      parts << "Particulars: #{meta[:particulars]}" if meta[:particulars].present?
-      parts << "Code: #{meta[:code]}" if meta[:code].present?
-      parts << "Other account: #{meta[:other_account]}" if meta[:other_account].present?
+      parts << "#{t('akahu_entry.notes.reference')}: #{meta[:reference]}" if meta[:reference].present?
+      parts << "#{t('akahu_entry.notes.particulars')}: #{meta[:particulars]}" if meta[:particulars].present?
+      parts << "#{t('akahu_entry.notes.code')}: #{meta[:code]}" if meta[:code].present?
+      parts << "#{t('akahu_entry.notes.other_account')}: #{meta[:other_account]}" if meta[:other_account].present?
       parts.presence&.join(" | ")
     end
 
@@ -160,8 +160,8 @@ class AkahuEntry::Processor
       # Sure stores expenses as positive and income as negative.
       -parsed_amount
     rescue ArgumentError => e
-      Rails.logger.error "Failed to parse Akahu transaction amount: #{data[:amount].inspect} - #{e.message}"
-      raise
+      Rails.logger.error "Failed to parse Akahu transaction amount: #{e.class}"
+      raise ArgumentError, "Invalid transaction amount"
     end
 
     def currency
@@ -180,12 +180,12 @@ class AkahuEntry::Processor
       when Date
         value
       else
-        Rails.logger.error("Akahu transaction has invalid date value: #{value.inspect}")
-        raise ArgumentError, "Invalid date format: #{value.inspect}"
+        Rails.logger.error("Akahu transaction has invalid date value")
+        raise ArgumentError, "Invalid date format"
       end
     rescue ArgumentError, TypeError => e
-      Rails.logger.error("Failed to parse Akahu transaction date '#{value}': #{e.message}")
-      raise ArgumentError, "Unable to parse transaction date: #{value.inspect}"
+      Rails.logger.error("Failed to parse Akahu transaction date: #{e.class}")
+      raise ArgumentError, "Unable to parse transaction date"
     end
 
     def extra_metadata
@@ -229,6 +229,10 @@ class AkahuEntry::Processor
 
     def meta_data
       @meta_data ||= data[:meta].is_a?(Hash) ? data[:meta].with_indifferent_access : {}
+    end
+
+    def t(key, **options)
+      I18n.t(key, **options)
     end
 
     def log_invalid_currency(currency_value)
