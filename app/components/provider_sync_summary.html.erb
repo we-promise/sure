@@ -123,7 +123,7 @@
             <% if error_details.any? %>
               <details class="mt-1">
                 <summary class="text-xs cursor-pointer text-secondary hover:text-primary"><%= t("provider_sync_summary.health.view_error_details") %></summary>
-                <div class="mt-1 pl-2 border-l-2 border-destructive space-y-1">
+                <div class="mt-1 pl-2 border-l-2 border-destructive-subtle space-y-1">
                   <% error_details.each do |detail| %>
                     <p class="text-xs text-destructive">
                       <% if detail["name"].present? %><strong><%= detail["name"] %>:</strong> <% end %><%= detail["message"] %>

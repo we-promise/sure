@@ -118,9 +118,13 @@
           <% investment_metrics[:gains_by_tax_treatment].each do |treatment, data| %>
             <div class="bg-container-inset rounded-lg p-4 space-y-3 flex-1 min-w-64">
               <div class="flex items-center justify-between">
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= tax_treatment_badge_classes(treatment) %>" title="<%= t("accounts.tax_treatment_descriptions.#{treatment}") %>">
-                  <%= t("accounts.tax_treatments.#{treatment}") %>
-                </span>
+                <%= render DS::Pill.new(
+                  label: t("accounts.tax_treatments.#{treatment}"),
+                  tone: tax_treatment_pill_tone(treatment),
+                  marker: false,
+                  show_dot: false,
+                  title: t("accounts.tax_treatment_descriptions.#{treatment}")
+                ) %>
                 <span class="text-sm font-semibold text-primary privacy-sensitive">
                   <%= format_money(data[:total_gain]) %>
                 </span>
