@@ -85,6 +85,74 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
     assert_includes messages[2][:content].first[:content], "99"
   end
 
+  # Confirms the round-trip flagged in PR #1983 review: an Anthropic tool_use
+  # block returned by the model → ChatFunctionRequest → ToolCall::Function
+  # persisted on the AssistantMessage → MessageFormatter rebuild on the next
+  # turn produces an Anthropic-compatible history where tool_use_id pairs back
+  # to the original block.
+  test "ChatParser → ToolCall::Function → MessageFormatter round-trips tool_use_id" do
+    anthropic_response = OpenStruct.new(
+      id: "msg_abc",
+      model: "claude-sonnet-4-6",
+      content: [
+        OpenStruct.new(type: :tool_use, id: "toolu_round_trip", name: "get_net_worth", input: { "currency" => "USD" })
+      ]
+    )
+
+    parsed = Provider::Anthropic::ChatParser.new(anthropic_response).parsed
+    function_request = parsed.function_requests.first
+
+    persisted_tool_call = ToolCall::Function.from_function_request(
+      function_request,
+      { "amount" => 12345, "currency" => "USD" }
+    )
+
+    assistant = stub_assistant_message("Your net worth is $12,345.", tool_calls: [ persisted_tool_call ])
+    history = [ stub_user_message("net worth?"), assistant ]
+
+    rebuilt = Provider::Anthropic::MessageFormatter.new(prompt: "follow-up", conversation_history: history).build
+
+    tool_use_block = rebuilt[1][:content].find { |b| b[:type] == "tool_use" }
+    tool_result_block = rebuilt[2][:content].first
+
+    assert_equal "toolu_round_trip", tool_use_block[:id]
+    assert_equal "toolu_round_trip", tool_result_block[:tool_use_id]
+    assert_equal({ "currency" => "USD" }, tool_use_block[:input])
+    assert_equal({ "amount" => 12345, "currency" => "USD" }.to_json, tool_result_block[:content])
+  end
+
+  test "renders multi-tool assistant turn with all pairings preserved" do
+    tool_a = stub_tool_call(
+      id: "toolu_a",
+      name: "get_accounts",
+      arguments: {},
+      result: [ { "id" => 1, "name" => "Checking" } ]
+    )
+    tool_b = stub_tool_call(
+      id: "toolu_b",
+      name: "get_holdings",
+      arguments: {},
+      result: [ { "ticker" => "VTI", "qty" => 10 } ]
+    )
+    assistant = stub_assistant_message("Looked up your accounts and holdings.", tool_calls: [ tool_a, tool_b ])
+
+    messages = Provider::Anthropic::MessageFormatter.new(
+      prompt: "follow-up",
+      conversation_history: [ stub_user_message("accounts and holdings?"), assistant ]
+    ).build
+
+    tool_uses = messages[1][:content].select { |b| b[:type] == "tool_use" }
+    tool_results = messages[2][:content]
+
+    assert_equal 2, tool_uses.size
+    assert_equal 2, tool_results.size
+    assert_equal [ "toolu_a", "toolu_b" ], tool_uses.map { |b| b[:id] }
+    assert_equal [ "toolu_a", "toolu_b" ], tool_results.map { |b| b[:tool_use_id] }
+    # Anthropic requires the user turn to follow the assistant turn that used tools
+    assert_equal "assistant", messages[1][:role]
+    assert_equal "user", messages[2][:role]
+  end
+
   test "parses string arguments and nil outputs gracefully" do
     formatter = Provider::Anthropic::MessageFormatter.new(
       prompt: "go",
