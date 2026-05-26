@@ -439,6 +439,8 @@ end
     get new_transaction_url
 
     assert_response :success
+    assert_includes response.body, accounts(:depository).id.to_s
+    assert_includes response.body, accounts(:credit_card).id.to_s
     refute_includes response.body, accounts(:investment).id.to_s
     refute_includes response.body, accounts(:loan).id.to_s
   end
