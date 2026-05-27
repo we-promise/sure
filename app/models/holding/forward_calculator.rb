@@ -92,7 +92,13 @@ class Holding::ForwardCalculator
         begin
           converted_price = trade_price.exchange_to(account.currency, date: trade_entry.date, custom_rate: trade.exchange_rate).amount
         rescue Money::ConversionError
-          converted_price = trade.price
+          Rails.logger.warn(
+            "Holding::ForwardCalculator: FX conversion failed for trade #{trade.id} " \
+            "(#{trade.currency}→#{account.currency}, date: #{trade_entry.date}, " \
+            "custom_rate: #{trade.exchange_rate.inspect}). " \
+            "Excluding trade from cost basis to avoid mixing currencies."
+          )
+          next
         end
 
         tracker[:total_cost] += converted_price * trade.qty

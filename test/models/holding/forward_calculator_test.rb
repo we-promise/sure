@@ -154,6 +154,28 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "cost_basis is nil and trade is skipped when FX conversion fails" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST3", name: "EUR Stock 3")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      # No exchange rate for buy_date and no custom_rate — conversion will fail
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR", account: @account)
+
+      calculated = nil
+      assert_nothing_raised { calculated = Holding::ForwardCalculator.new(@account).calculate }
+
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+      assert_nil today_holding.cost_basis,
+        "cost_basis must be nil when FX conversion fails (trade excluded to avoid mixing currencies)"
+    end
+  end
+
   test "cost_basis uses provider-supplied exchange_rate when present" do
     travel_to Date.new(2025, 6, 1) do
       eur_stock = Security.create!(ticker: "EURST2", name: "EUR Stock 2")
