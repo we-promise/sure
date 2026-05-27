@@ -236,6 +236,62 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
+  # Cost basis FX: trade-date rate must be used, not today's rate
+  test "cost_basis uses trade-date exchange rate for foreign-currency buy" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST", name: "EUR Stock")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 10, price: 100, amount: 1000, currency: "EUR")
+
+      # EUR/USD was 1.10 on trade date; today it is 1.50 — cost basis must use 1.10
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: buy_date,     rate: 1.10)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR", account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 10 })
+      calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+
+      # cost_basis per share = 100 EUR × 1.10 (trade-date rate) = 110 USD
+      assert_in_delta 110.0, today_holding.cost_basis.to_f, 0.01,
+        "cost_basis must use the trade-date FX rate (1.10), not today's rate (1.50)"
+    end
+  end
+
+  test "cost_basis uses provider-supplied exchange_rate when present" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST2", name: "EUR Stock 2")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 10, price: 100, amount: 1000, currency: "EUR")
+
+      # DB has a different rate — the provider-supplied rate (1.20) must win
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: buy_date,     rate: 1.10)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR",
+                   exchange_rate: 1.20, account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 10 })
+      calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+
+      # cost_basis per share = 100 EUR × 1.20 (provider rate) = 120 USD
+      assert_in_delta 120.0, today_holding.cost_basis.to_f, 0.01,
+        "cost_basis must prefer the provider-supplied exchange_rate over the DB lookup"
+    end
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|

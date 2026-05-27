@@ -87,10 +87,10 @@ class Holding::ForwardCalculator
         security_id = trade.security_id
         tracker = @cost_basis_tracker[security_id]
 
-        # Convert trade price to account currency if needed
+        # Convert trade price to account currency using the trade-date rate
         trade_price = Money.new(trade.price, trade.currency)
         begin
-          converted_price = trade_price.exchange_to(account.currency).amount
+          converted_price = trade_price.exchange_to(account.currency, date: trade_entry.date, custom_rate: trade.exchange_rate).amount
         rescue Money::ConversionError
           converted_price = trade.price
         end

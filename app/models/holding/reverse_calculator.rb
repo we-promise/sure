@@ -90,7 +90,7 @@ class Holding::ReverseCalculator
         security_id = trade.security_id
         trade_price = Money.new(trade.price, trade.currency)
         begin
-          converted_price = trade_price.exchange_to(account.currency).amount
+          converted_price = trade_price.exchange_to(account.currency, date: trade_entry.date, custom_rate: trade.exchange_rate).amount
         rescue Money::ConversionError
           converted_price = trade.price
         end
