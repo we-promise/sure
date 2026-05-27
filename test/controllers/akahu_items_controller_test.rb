@@ -57,17 +57,108 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "retirement", created_account.accountable.subtype
   end
 
-  test "link existing account rejects protocol-relative return paths" do
-    assert_difference "AccountProvider.count", 1 do
-      post link_existing_account_akahu_items_url, params: {
+  test "select accounts rejects unsafe return paths" do
+    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+
+    unsafe_return_paths.each do |return_to|
+      get select_accounts_akahu_items_url, params: {
+        akahu_item_id: @akahu_item.id,
+        accountable_type: "Depository",
+        return_to: return_to
+      }
+
+      assert_response :success
+      assert_select %(input[name="return_to"]) do |fields|
+        assert fields.first["value"].blank?
+      end
+    end
+  end
+
+  test "select existing account rejects unsafe return paths" do
+    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+
+    unsafe_return_paths.each do |return_to|
+      get select_existing_account_akahu_items_url, params: {
         account_id: @account.id,
         akahu_item_id: @akahu_item.id,
-        akahu_account_id: @akahu_account.id,
-        return_to: "//evil.example/accounts"
+        return_to: return_to
+      }
+
+      assert_response :success
+      assert_select %(input[name="return_to"]) do |fields|
+        assert fields.first["value"].blank?
+      end
+    end
+  end
+
+  test "select existing account preserves safe local return path" do
+    return_to = "/accounts?tab=manual"
+    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+
+    get select_existing_account_akahu_items_url, params: {
+      account_id: @account.id,
+      akahu_item_id: @akahu_item.id,
+      return_to: return_to
+    }
+
+    assert_response :success
+    assert_select %(input[name="return_to"][value="#{return_to}"])
+  end
+
+  test "link accounts rejects unsafe return path on no selection redirect" do
+    post link_accounts_akahu_items_url, params: {
+      akahu_item_id: @akahu_item.id,
+      accountable_type: "Depository",
+      return_to: "https://evil.example/accounts"
+    }
+
+    assert_redirected_to select_accounts_akahu_items_path(
+      akahu_item_id: @akahu_item.id,
+      accountable_type: "Depository",
+      return_to: nil
+    )
+  end
+
+  test "link accounts rejects unsafe return path after linking" do
+    @akahu_account.update!(current_balance: 10)
+
+    assert_difference "AccountProvider.count", 1 do
+      post link_accounts_akahu_items_url, params: {
+        akahu_item_id: @akahu_item.id,
+        account_ids: [ @akahu_account.id ],
+        accountable_type: "Depository",
+        return_to: "https://evil.example/accounts"
       }
     end
 
     assert_redirected_to accounts_path
+  end
+
+  test "link existing account rejects unsafe return paths" do
+    unsafe_return_paths.each_with_index do |return_to, index|
+      account = @family.accounts.create!(
+        name: "Manual Checking #{index}",
+        balance: 0,
+        currency: "NZD",
+        accountable: Depository.new
+      )
+      akahu_account = @akahu_item.akahu_accounts.create!(
+        name: "Akahu Checking #{index}",
+        account_id: "acc_unsafe_#{index}",
+        currency: "NZD"
+      )
+
+      assert_difference "AccountProvider.count", 1 do
+        post link_existing_account_akahu_items_url, params: {
+          account_id: account.id,
+          akahu_item_id: @akahu_item.id,
+          akahu_account_id: akahu_account.id,
+          return_to: return_to
+        }
+      end
+
+      assert_redirected_to accounts_path
+    end
   end
 
   test "preload accounts uses requested Akahu connection" do
@@ -177,4 +268,23 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("akahu_items.complete_account_setup.creation_failed"), flash[:alert]
     refute_includes flash[:alert], raw_message
   end
+
+  private
+
+    def unsafe_return_paths
+      [
+        "https://evil.example/accounts",
+        "http://evil.example/accounts",
+        "//evil.example/accounts",
+        "\\evil.example/accounts",
+        "/\\evil.example/accounts",
+        "/%2fevil.example/accounts",
+        "/%2Fevil.example/accounts",
+        "/%5cevil.example/accounts",
+        "/%5Cevil.example/accounts",
+        "/\naccounts",
+        "/ accounts",
+        "   "
+      ]
+    end
 end
