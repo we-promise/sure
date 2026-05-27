@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Provider::Anthropic::AutoCategorizerTest < ActiveSupport::TestCase
   setup do
