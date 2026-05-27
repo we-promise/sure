@@ -6,6 +6,68 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Debug event log"
+        subtitle: "Meaningful operational events for super admins. Newest first."
+        empty: "No debug events found."
+        missing_value: "-"
+        filters:
+          all: "All"
+          category: "Category"
+          level: "Level"
+          source: "Source"
+          provider: "Provider"
+          start_date: "From"
+          end_date: "To"
+          family_id: "Family ID"
+          account_id: "Account ID"
+          user_id: "User ID"
+          account_provider_id: "Account provider ID"
+          submit: "Filter"
+          reset: "Reset"
+        table:
+          time: "Time"
+          level: "Level"
+          category: "Category"
+          source: "Source"
+          message: "Message"
+          context: "Context"
+          metadata: "Metadata"
+          view_metadata: "View"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
+    llm_usages:
+      show:
+        page_title: "LLM Usage & Costs"
+        subtitle: "Track your AI usage and estimated costs"
+        start_date: "Start Date"
+        end_date: "End Date"
+        filter: "Filter"
+        total_requests: "Total Requests"
+        total_tokens: "Total Tokens"
+        prompt: "prompt"
+        completion: "completion"
+        total_cost: "Total Cost"
+        avg_cost_per_request: "Avg Cost/Request"
+        based_on_requests: "Based on %{with_cost} of %{total} requests with cost data"
+        cost_by_operation: "Cost by Operation"
+        cost_by_model: "Cost by Model"
+        recent_usage: "Recent Usage"
+        col_date: "Date"
+        col_operation: "Operation"
+        col_model: "Model"
+        col_tokens: "Tokens"
+        col_cost: "Cost"
+        failed: "Failed"
+        no_usage_data: "No usage data found for the selected period"
+        cost_estimates_title: "About Cost Estimates"
+        cost_estimates_description: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
       show:
         page_title: AI Prompts
@@ -26,6 +88,17 @@ en:
         page_title: Payments
         subscription_subtitle: Update your credit card details
         subscription_title: Manage contributions
+        currently_on_plan: "Currently on the"
+        trialing: "Currently using the open demo of %{product_name}"
+        trial_days_left:
+          one: "Data will be deleted in %{count} day"
+          other: "Data will be deleted in %{count} days"
+        not_contributing_prefix: "You are currently"
+        not_contributing_emphasis: "not contributing"
+        contributions_note: "Contributions to %{product_name} will show here."
+        manage: "Manage"
+        choose_level: "Choose level"
+        payment_via_stripe: "Payment via Stripe"
     appearances:
       show:
         page_title: Appearance
@@ -58,6 +131,7 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        translations_notice: Please note, we are still working on translations for various languages.
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
@@ -80,6 +154,9 @@ en:
         sharing_default_label: Default sharing for new accounts
         sharing_shared: Share with all members
         sharing_private: Keep private by default
+        preview:
+          title: Enable preview features
+          description: Opt in to in-progress features tagged preview or canary.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -162,8 +239,10 @@ en:
       general_section_title: General
       imports_label: Imports
       exports_label: Exports
+      llm_usage_label: LLM Usage
       logout: Logout
       merchants_label: Merchants
+      providers_label: Providers
       guides_label: Guides
       other_section_title: More
       preferences_label: Preferences
@@ -172,12 +251,16 @@ en:
       rules_label: Rules
       security_label: Security
       self_hosting_label: Self-Hosting
+      sso_providers_label: SSO Providers
+      statement_vault_label: Statement Vault
       tags_label: Tags
       transactions_section_title: Transactions
+      users_label: Users
       whats_new_label: What's new
       api_keys_label: API Key
       appearance_label: Appearance
-      bank_sync_label: Bank Sync
+      bank_sync_label: Bank sync
+      debug_label: Debug
     settings_nav_link_large:
       next: Next
       previous: Back
@@ -187,11 +270,81 @@ en:
       choose_label: (optional)
       change: Change photo
     providers:
-      show:
-        coinbase_title: Coinbase
+      update:
+        updated_successfully: Provider settings updated successfully
+        no_changes: No changes were made
+      not_authorized: Not authorized
+      bank_sync:
+        page_title: Bank sync
+        lede: Connect external accounts so transactions, balances and holdings flow into Sure automatically.
+      status:
+        ok: Connected
+        warn: Action needed
+        err: Error
+        off: Not configured
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
+      setup_steps:
+        eyebrow: Setup
+        need_help: "Need help?"
+      connect: Connect
+      groups:
+        your_connections: Your connections
+        available: Available
+        empty_available: All available providers are connected.
+      health_strip:
+        connected: connected
+        needs_attention: needs attention
+        accounts_syncing: accounts syncing
+        last_synced: Last synced %{time} ago
+      meta:
+        sync_error: Sync error
+        no_recent_sync: Sync overdue
+        registration_needed: Registration needed
+        reconsent_required: Re-consent required
+        reconsent_needed:
+          one: Re-consent needed in 1 day
+          other: Re-consent needed in %{count} days
+        last_synced: Synced %{time} ago
+      sync_all: Sync all
+      sync_all_in_progress: Syncing all connected providers…
+      sync_all_recently: Sync already in progress. Try again in a moment.
+      sync_provider: Sync now
+      sync_provider_in_progress: Sync started.
+      recently_synced: Synced recently. Try again in a moment.
+      taglines:
+        simplefin: Connect US bank accounts via the open SimpleFIN protocol.
+        lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
+        enable_banking: Sync European bank accounts via PSD2 open banking.
+        coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        mercury: Sync your Mercury business banking accounts automatically.
+        brex: Sync Brex cash and corporate card activity with read-only access.
+        coinbase: Import your Coinbase crypto holdings and track performance.
+        binance: Sync your Binance spot balances using a read-only API key.
+        kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
+        indexa_capital: Track your Indexa Capital automated investment portfolio.
+        sophtron: Connect US & Canadian banks and utilities.
+        plaid: Connect thousands of US financial institutions via Plaid.
+        plaid_eu: Connect European financial institutions via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Search providers
+        placeholder: Search providers
+        chips:
+          all: All
+          bank: Banks
+          crypto: Crypto
+          investment: Investments
+      empty_filter: No providers match your filter.
+      clear_filter: Clear filters
       encryption_error:
-        title: Encryption Configuration Required
-        message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.
+        title: Encryption keys missing
+        message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
+      provider_form:
+        save_and_connect: "Save and connect"
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
@@ -205,15 +358,14 @@ en:
         syncing: Syncing...
         sync: Sync
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
-        status_connected: Coinbase is connected and syncing your crypto holdings.
-        status_not_connected: Not connected. Enter your API credentials above to get started.
       binance_panel:
         setup_instructions: "To connect Binance, create a read-only API key:"
         step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
         step2: "Create a new API key with Enable Reading permission only"
         step3: "Paste your API Key and Secret below"
-        no_withdraw_warning: "Warning: do NOT enable withdrawal permissions"
-        ip_hint_title: "IP Whitelisting Required"
+        no_withdraw_title: "Read-only key only"
+        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key. Sure only needs read access."
+        ip_hint_title: "IP whitelisting required"
         ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
         ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
         api_key_label: API Key
@@ -227,8 +379,136 @@ en:
         sync_start_date_label: "Import data from"
         sync_start_date_help: "Select how far back to fetch historical trades."
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
-        status_connected: Binance connected
-        status_not_connected: Binance not connected
+      kraken_panel:
+        step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
+        step2: "Create an API key with Query Funds and Query Closed Orders & Trades only."
+        step3: "Paste the API key and private key below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant trading, cancellation, withdrawal, export, ledger, Earn, staking, or transfer permissions. Sure only imports balances, holdings, and spot trade fills."
+        default_connection_name: Kraken
+        add_connection: Add Kraken connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main Kraken
+        api_key_label: API Key
+        api_key_placeholder: Paste your Kraken API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: Private Key
+        api_secret_placeholder: Paste your Kraken private key
+        keep_api_secret_placeholder: Leave blank to keep the existing private key
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
+        step_1_html: "Go to %{link} and grab your developer credentials."
+        step_2: "Pick your country and paste the Application ID + Client Certificate below."
+        step_3: "Save, then use Add Connection to link your bank."
+        config_locked_title: "Configuration locked"
+        config_locked_message: "Disconnect all linked banks before changing these credentials."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Enter application ID"
+        application_id_placeholder_update: "Enter new ID to update"
+        client_certificate_label: "Client Certificate (with Private Key)"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+        connected_bank: "Connected Bank"
+        session_expires: "Session expires: %{date}"
+        unknown: "Unknown"
+        connection: "Connection"
+        session_expired_reconnect: "Session expired - reconnect"
+        configured: "Configured"
+        ready_to_link: "Ready to link accounts"
+        sync: "Sync"
+        reconnect: "Reconnect"
+        connect_bank: "Connect bank"
+        remove: "Remove"
+        remove_confirm: "Are you sure you want to remove this connection?"
+        add_connection: "Add Connection"
+        syncing: "Syncing"
+        select_country: "Select country..."
+        country_label: "Country"
+      lunchflow_panel:
+        step_1_html: "Go to %{link} and create an API key."
+        step_2: "Paste your key below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        api_key_label: "API Key"
+        api_key_placeholder_new: "Paste API key here"
+        api_key_placeholder_update: "Enter new API key to update"
+        base_url_label: "Base URL (Optional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+      simplefin_panel:
+        step_1_html: "Go to %{link} for a one-time setup token."
+        step_2: "Paste the token below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        setup_token_label: "Setup Token"
+        setup_token_placeholder: "Paste SimpleFIN setup token"
+        save_and_connect: "Save and connect"
+      plaid_panel:
+        step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
+        step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
+        step_3: "Paste your credentials below and connect."
+      plaid_eu_panel:
+        step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."
+      not_found: Provider not found.
+      sync_provider_no_items: No connections available to sync.
+      ibkr_panel:
+        steps:
+          step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
+          step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
+          step_3: 'Name your query (e.g., "Sure Sync"), then review the Flex Query details below and enable the listed sections, fields, and configuration options.'
+          step_4: 'Save the query, note your "Query ID", then use the gear icon in the "Flex Web Service Configuration" section to generate an access Token.'
+          step_5: "Paste your Query ID and Token below, save the configuration, then head to Accounts to link discovered IBKR accounts."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sections, fields, and configuration
+          summary: Expand to see the exact sections, fields, and settings your IBKR Activity Flex Query must include.
+          sections_heading: Enable these sections and fields
+          configuration_heading: Set these query options
+        sections:
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report:"
+          cash_report_options: "Options: None"
+          cash_report_fields: "Fields: Currency, Ending Cash"
+          cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Options: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base:"
+          net_asset_value_options: "Options: None"
+          net_asset_value_fields: "Fields: Currency, Report Date, Total"
+          open_positions: "Open Positions:"
+          open_positions_options: "Options: Summary"
+          open_positions_fields: "Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Trades:"
+          trades_options: "Options: Execution"
+          trades_fields: "Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Models: Optional"
+          format: "Format: XML"
+          period: "Period: Last 365 Calendar Days"
+          date_format: "Date Format: yyyy-MM-dd"
+          time_format: "Time Format: HH:mm:ss"
+          date_time_separator: "Date/Time Separator: ; (semi-colon)"
+          profit_and_loss: "Profit and Loss: Default"
+          all_other_options: 'All other configuration options: "No"'
+        report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
+        sync: Sync
+        disconnect_confirm: Disconnect Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Enter your IBKR Flex Query ID
+        query_id_placeholder_existing: Leave blank to keep the current Query ID
+        token_label: Token
+        token_placeholder_new: Enter your IBKR Flex Web Service Token
+        token_placeholder_existing: Leave blank to keep the current Token
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "%{summary}. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.

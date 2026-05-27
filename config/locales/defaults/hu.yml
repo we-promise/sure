@@ -138,13 +138,10 @@ hu:
   number:
     currency:
       format:
-        delimiter: ''
+        delimiter: " "
         format: "%n %u"
-        precision: 0
+        precision: 2
         separator: ","
-        significant: true
-        strip_insignificant_zeros: true
-        unit: Ft
     format:
       delimiter: " "
       precision: 2
