@@ -4,13 +4,17 @@ class MessagesController < ApplicationController
   before_action :set_chat
 
   def create
-    @message = UserMessage.create!(
+    @message = UserMessage.new(
       chat: @chat,
       content: message_params[:content],
       ai_model: message_params[:ai_model].presence || Chat.default_model
     )
 
-    redirect_to chat_path(@chat, thinking: true)
+    if @message.save
+      redirect_to chat_path(@chat, thinking: true)
+    else
+      redirect_to chat_path(@chat), alert: @message.errors.full_messages.to_sentence
+    end
   end
 
   private
