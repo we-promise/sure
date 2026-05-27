@@ -1,0 +1,6 @@
+status,source_file,target_file,key_path,english_value,zh_value
+updated_batch1,config/locales/defaults/en.yml,config/locales/defaults/zh-CN.yml,(full file updated),,
+updated_batch1,config/locales/breadcrumbs/en.yml,config/locales/breadcrumbs/zh-CN.yml,(full file updated),,
+updated_batch1,config/locales/doorkeeper.en.yml,config/locales/doorkeeper.zh-CN.yml,(full file updated),,
+updated_batch1,config/locales/mailers/invitation_mailer/en.yml,config/locales/mailers/invitation_mailer/zh-CN.yml,invite_email.subject,,
+updated_batch1,config/locales/mailers/pdf_import_mailer/en.yml,config/locales/mailers/pdf_import_mailer/zh-CN.yml,next_steps.subject,,
