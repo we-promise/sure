@@ -16,7 +16,7 @@ zh-CN:
         other: 以及 %{count} 个操作
       action_label_to: 将 %{label} 设置为 %{value}
       all_past_and_future: 所有过去和未来的 %{resource}
-      on_or_after: %{resource} 在 %{date} 当日或之后
+      on_or_after: "%{resource} 在 %{date} 当日或之后"
     form:
       rule_name_label: 规则名称（可选）
       rule_name_placeholder: 为此规则输入名称

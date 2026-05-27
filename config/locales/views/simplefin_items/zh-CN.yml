@@ -63,15 +63,15 @@ zh-CN:
       activity:
         recent:
           one: 1 笔交易 • 最近于 %{when}
-          other: %{count} 笔交易 • 最近于 %{when}
-        dormant: %{days} 天内无活动
+          other: "%{count} 笔交易 • 最近于 %{when}"
+        dormant: "%{days} 天内无活动"
         empty:  এখনও未导入交易
         likely_closed: 无近期活动且余额为零——这可能是已关闭或已替换的卡片
         today: 今天
         yesterday: 昨天
         days_ago:
           one: 1 天前
-          other: %{count} 天前
+          other: "%{count} 天前"
       stale_accounts:
         title: 不再属于 SimpleFIN 的账户
         description: 这些账户仍存在于您的数据库中，但已不再由 SimpleFIN 提供。这种情况可能发生在上游账户配置变更时。
@@ -80,8 +80,8 @@ zh-CN:
         action_move: 将交易移动到：
         action_skip: 暂时跳过
         transaction_count:
-          one: %{count} 笔交易
-          other: %{count} 笔交易
+          one: "%{count} 笔交易"
+          other: "%{count} 笔交易"
     complete_account_setup:
       all_skipped: 所有账户都已跳过。未创建任何账户。
       no_accounts: 没有可设置的账户。
@@ -90,8 +90,8 @@ zh-CN:
         other: 成功创建 %{count} 个 SimpleFIN 账户！您的交易和持仓正在后台导入。
       stale_accounts_processed: 过期账户：已删除 %{deleted} 个，已移动 %{moved} 个。
       stale_accounts_errors:
-        one: %{count} 个过期账户操作失败，请查看日志了解详情。
-        other: %{count} 个过期账户操作失败，请查看日志了解详情。
+        one: "%{count} 个过期账户操作失败，请查看日志了解详情。"
+        other: "%{count} 个过期账户操作失败，请查看日志了解详情。"
     simplefin_item:
       add_new: 添加新连接
       confirm_accept: 删除连接
@@ -155,4 +155,4 @@ zh-CN:
     stale_pending_status:
       message:
         one: 1 笔待处理交易早于 %{days} 天
-        other: %{count} 笔待处理交易早于 %{days} 天
+        other: "%{count} 笔待处理交易早于 %{days} 天"

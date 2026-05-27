@@ -28,7 +28,7 @@ zh-CN:
     set_default:
       depository_only: 只有现金和信用卡账户才能设为默认。
     destroy:
-      success: %{type} 账户已安排删除
+      success: "%{type} 账户已安排删除"
       cannot_delete_linked: 无法删除已连接的账户，请先取消连接。
       failed: 资源删除失败，请稍后再试。
     empty:
@@ -118,7 +118,7 @@ zh-CN:
       success: 已更新 %{type} 账户
     sidebar:
       missing_data: 缺少历史数据
-      missing_data_description: %{product} 使用第三方提供商获取历史汇率、证券价格等数据。这些数据是计算准确历史账户余额所必需的。
+      missing_data_description: "%{product} 使用第三方提供商获取历史汇率、证券价格等数据。这些数据是计算准确历史账户余额所必需的。"
       configure_providers: 请在此配置您的提供商。
       tabs:
         all: 全部

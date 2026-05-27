@@ -193,7 +193,7 @@ zh-CN:
           other: 还剩 %{count} 笔未分类交易
         transaction_count:
           one: 1 笔交易
-          other: %{count} 笔交易
+          other: "%{count} 笔交易"
         transactions_hint: 取消勾选可排除交易，或直接在该行中为其分配其他分类。
         assign_category: 分配分类
         assign_category_prompt: → 分配
@@ -212,7 +212,7 @@ zh-CN:
       create:
         categorized:
           one: 1 笔交易已分类
-          other: %{count} 笔交易已分类
+          other: "%{count} 笔交易已分类"
         rule_creation_failed: 交易已分类，但规则无法创建（可能已存在）。
       entry_row:
         include_checkbox: 包含 %{name}

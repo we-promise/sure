@@ -74,7 +74,7 @@ zh-CN:
       provider_disabled_warning: 价格更新已暂停——%{provider} 提供商已禁用。请切换到下方其他提供商，或在设置中重新启用。
       truncated_history_warning: 价格历史仅从 %{date} 起可用。更早日期在所选提供商中没有数据——这可能是因为该资产在您的交易日期之后才上市，或者该提供商当前方案只提供有限的历史窗口。
       switch_provider_label: 切换提供商
-      switch_provider_description: %{provider} 已禁用。请从其他已启用的提供商中搜索此证券。
+      switch_provider_description: "%{provider} 已禁用。请从其他已启用的提供商中搜索此证券。"
       switch_provider_button: 切换
       no_security_provider: 尚未配置证券提供商。无法搜索证券。
       security_remapped_label: 证券已重新映射

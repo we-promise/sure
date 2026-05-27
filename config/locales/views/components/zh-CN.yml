@@ -144,15 +144,15 @@ zh-CN:
           other: 有 %{count} 条可能的重复记录需要查看
         view_duplicate_suggestions: 查看建议的重复项
         stale_pending:
-          one: %{count} 笔过期待处理交易（已从预算中排除）
-          other: %{count} 笔过期待处理交易（已从预算中排除）
+          one: "%{count} 笔过期待处理交易（已从预算中排除）"
+          other: "%{count} 笔过期待处理交易（已从预算中排除）"
         view_stale_pending: 查看受影响账户
         stale_pending_count:
           one: "%{count} 笔交易"
           other: "%{count} 笔交易"
         stale_unmatched:
-          one: %{count} 笔待处理交易需要手动审核
-          other: %{count} 笔待处理交易需要手动审核
+          one: "%{count} 笔待处理交易需要手动审核"
+          other: "%{count} 笔待处理交易需要手动审核"
         view_stale_unmatched: 查看需要审核的交易
         stale_unmatched_count:
           one: "%{count} 笔交易"

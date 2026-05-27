@@ -22,13 +22,13 @@ zh-CN:
       next_period: 下一周期
       today: 今天
       period_label:
-        quarterly: %{year} 年第 %{quarter} 季度
-        ytd: %{year} 年初至今
-        past_year: %{year}
-        last_6_months: %{start} – %{end}
+        quarterly: "%{year} 年第 %{quarter} 季度"
+        ytd: "%{year} 年初至今"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
       period_picker:
-        quarter: %{year} 年第 %{quarter} 季度
-        ytd: %{year} 年初至今
+        quarter: "%{year} 年第 %{quarter} 季度"
+        ytd: "%{year} 年初至今"
       previous_year: 上一年
       next_year: 下一年
       previous_decade: 上一个十年
@@ -120,8 +120,8 @@ zh-CN:
         income: 收入
         uncategorized: 未分类
         entries:
-          one: %{count} 条记录
-          other: %{count} 条记录
+          one: "%{count} 条记录"
+          other: "%{count} 条记录"
         percentage: 占总计百分比
       pagination:
         showing:
@@ -155,14 +155,14 @@ zh-CN:
       realized_gains: 已实现收益
       total_gains: 总收益
       taxable_realized_note: 这些收益可能需要纳税
-      no_data: -
+      no_data: "-"
       view_details: 查看详情
       holdings_count:
-        one: %{count} 个持仓
-        other: %{count} 个持仓
+        one: "%{count} 个持仓"
+        other: "%{count} 个持仓"
       sells_count:
-        one: %{count} 笔卖出
-        other: %{count} 笔卖出
+        one: "%{count} 笔卖出"
+        other: "%{count} 笔卖出"
       holdings: 持仓
       sell_trades: 卖出交易
       and_more: 还有 %{count} 项

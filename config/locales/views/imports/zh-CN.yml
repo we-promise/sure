@@ -20,7 +20,7 @@ zh-CN:
         tag_name_col: 标签名称
         txn_count:
           one: 1 笔交易
-          other: %{count} 笔交易
+          other: "%{count} 笔交易"
         split_warning_title: 检测到拆分交易
         split_warning_description: 此 QIF 文件包含拆分交易。当前尚不支持拆分，因此每笔拆分交易将作为一笔完整金额、无分类的单笔交易导入。各个拆分明细不会被保留。
         split_badge: 拆分
@@ -141,7 +141,7 @@ zh-CN:
       mappings:
         create_account: 创建账户
         csv_mapping_label: CSV 中的 %{mapping}
-        sure_mapping_label: %{product_name} 中的 %{mapping}
+        sure_mapping_label: "%{product_name} 中的 %{mapping}"
         no_accounts: 您还没有任何账户。请创建一个账户，用于 CSV 中未分配的行，或者返回清理步骤并提供一个我们可以使用的账户名称。
         rows_label: 行
         unassigned_account: 是否需要为未分配的行创建新账户？

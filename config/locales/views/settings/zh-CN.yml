@@ -12,7 +12,7 @@ zh-CN:
         title: 调试事件日志
         subtitle: 面向超级管理员的有意义操作事件，最新优先。
         empty: 未找到调试事件。
-        missing_value: -
+        missing_value: "-"
         filters:
           all: 全部
           category: 分类
@@ -132,7 +132,7 @@ zh-CN:
         month_start_day_hint: 设置预算月份的起始日期（例如发薪日）
         month_start_day_warning: 您的预算和月度累计计算将使用此自定义起始日，而不是每月 1 日。
         translations_notice: 请注意，我们仍在完善多种语言的翻译。
-        currencies_title: %{moniker} 货币
+        currencies_title: "%{moniker} 货币"
         currencies_subtitle: 选择哪些货币会显示在您的 %{moniker} 金额字段中
         base_currency_label: 基础货币
         base_currency_badge: 基础货币
@@ -149,7 +149,7 @@ zh-CN:
           one: 已选择 %{count} 项
           other: 已选择 %{count} 项
         save_currencies: 保存货币
-        sharing_title: %{moniker} 共享
+        sharing_title: "%{moniker} 共享"
         sharing_subtitle: 控制您的 %{moniker} 中账户如何共享
         sharing_default_label: 新账户的默认共享方式
         sharing_shared: 与所有成员共享
@@ -303,7 +303,7 @@ zh-CN:
         reconsent_required: 需要重新授权
         reconsent_needed:
           one: 1 天后需要重新授权
-          other: %{count} 天后需要重新授权
+          other: "%{count} 天后需要重新授权"
         last_synced: 于 %{time} 前同步
       sync_all: 全部同步
       sync_all_in_progress: 正在同步所有已连接的提供商…
