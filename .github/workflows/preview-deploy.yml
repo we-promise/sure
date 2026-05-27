@@ -21,6 +21,14 @@ jobs:
       contents: read
       pull-requests: write
       deployments: write
+    env:
+      # Defense-in-depth: pull `github.event.*` expressions out of shell
+      # and JS contexts so a future copy/paste of one of these step
+      # bodies onto a user-controlled string (branch name, PR title,
+      # commit message) doesn't open a command-injection path into a
+      # workflow that carries CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
     steps:
       - name: Wait for PR CI to pass
@@ -80,8 +88,8 @@ jobs:
       - name: Configure preview files for this PR
         working-directory: workers/preview
         run: |
-          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" wrangler.toml
-          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" src/index.ts
+          sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" wrangler.toml
+          sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" src/index.ts
           cat wrangler.toml
 
       - name: Delete existing preview container app before redeploy
@@ -91,7 +99,7 @@ jobs:
         working-directory: workers/preview
         run: |
           set -euo pipefail
-          CONTAINER_NAME="sure-preview-${{ github.event.pull_request.number }}-railscontainer"
+          CONTAINER_NAME="sure-preview-${PR_NUMBER}-railscontainer"
           echo "Looking for stale preview container app: $CONTAINER_NAME"
 
           CONTAINER_ID=$(npx wrangler containers list --json | jq -r --arg NAME "$CONTAINER_NAME" '
@@ -113,7 +121,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: workers/preview
         run: |
-          WORKER_NAME="sure-preview-${{ github.event.pull_request.number }}"
+          WORKER_NAME="sure-preview-${PR_NUMBER}"
           echo "Ensuring fresh preview deployment for $WORKER_NAME"
           npx wrangler delete --name "$WORKER_NAME" --force || echo "Existing preview not found; continuing"
 
@@ -126,7 +134,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.payload.pull_request.head.sha,
-              environment: `preview-pr-${{ github.event.pull_request.number }}`,
+              environment: `preview-pr-${process.env.PR_NUMBER}`,
               auto_merge: false,
               required_contexts: [],
               description: 'PR Preview Deployment'
@@ -140,11 +148,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}
         run: |
-          npx wrangler deploy --var "PR_NUMBER:${{ github.event.pull_request.number }}"
+          npx wrangler deploy --var "PR_NUMBER:${PR_NUMBER}"
 
           # Get the deployment URL
-          PREVIEW_URL="https://sure-preview-${{ github.event.pull_request.number }}.${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev"
+          PREVIEW_URL="https://sure-preview-${PR_NUMBER}.${CLOUDFLARE_WORKERS_SUBDOMAIN}.workers.dev"
           echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Warm preview container
@@ -172,9 +181,13 @@ jobs:
       - name: Comment on PR
         if: success()
         uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         with:
           script: |
-            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const previewUrl = process.env.PREVIEW_URL;
+            const issueNumber = Number(process.env.PR_NUMBER);
+            const headSha = process.env.HEAD_SHA;
             const commentBody = `## 🚀 Preview Deployment Ready
 
             Your preview environment has been deployed to Cloudflare Containers with the PR's Docker image.
@@ -185,13 +198,13 @@ jobs:
             > 💤 The container will sleep after 30 minutes of inactivity and wake on the next request.
 
             ---
-            <sub>Deployed from commit ${{ github.event.pull_request.head.sha }}</sub>`;
+            <sub>Deployed from commit ${headSha}</sub>`;
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: ${{ github.event.pull_request.number }}
+              issue_number: issueNumber
             });
 
             const botComment = comments.find(comment =>
@@ -210,7 +223,7 @@ jobs:
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: ${{ github.event.pull_request.number }},
+                issue_number: issueNumber,
                 body: commentBody
               });
             }
@@ -218,7 +231,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v6
         with:
-          name: preview-cleanup-pr-${{ github.event.pull_request.number }}
+          name: preview-cleanup-pr-${{ env.PR_NUMBER }}
           path: |
             workers/preview/wrangler.toml
           retention-days: 2
