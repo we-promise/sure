@@ -1,0 +1,281 @@
+---
+zh-CN:
+  onboardings:
+    header:
+      sign_out: 退出登录
+      setup: 设置
+      preferences: 偏好设置
+      goals: 目标
+      start: 开始
+    logout:
+      sign_out: 退出登录
+    show:
+      title: 让我们先设置您的账户
+      subtitle: 先从最基础的开始，我们先设置您的个人资料。
+      first_name: 名字
+      first_name_placeholder: 名字
+      last_name: 姓氏
+      last_name_placeholder: 姓氏
+      group_name: 组名称
+      group_name_placeholder: 组名称
+      household_name: 家庭名称
+      household_name_placeholder: 家庭名称
+      moniker_prompt: "您将使用 %{product_name} 与……"
+      moniker_family: 家庭成员（仅自己，或与伴侣、孩子等一起使用）
+      moniker_group: 一群人（公司、俱乐部、协会或其他任何类型）
+      country: 国家/地区
+      submit: 继续
+    preferences:
+      title: 配置您的偏好设置
+      subtitle: 让我们来配置您的偏好。
+      example: 示例账户
+      preview: 根据偏好预览数据的显示方式。
+      color_theme: 配色主题
+      theme_system: 系统
+      theme_light: 浅色
+      theme_dark: 深色
+      locale: 语言
+      currency: 货币
+      date_format: 日期格式
+      submit: 完成
+    goals:
+      title: 您使用这里的目的是什么？
+      subtitle: 请选择一个或多个您希望使用 %{product_name} 作为个人财务工具实现的目标。
+      unified_accounts: 在一个地方查看我的所有账户
+      cashflow: 理解现金流和支出
+      budgeting: 管理财务计划和预算
+      partner: 与伴侣一起管理财务
+      investments: 跟踪投资
+      ai_insights: 让 AI 帮我理解财务状况
+      optimization: 分析并优化账户
+      reduce_stress: 减轻财务压力或焦虑
+      submit: 下一步
+    trial:
+      title: 试用 Sure 45 天
+      data_deletion: 数据届时将被删除
+      description_html: 从今天开始，您可以充分了解这款产品。<br/>如果您喜欢它，可以通过自托管或贡献来继续在这里使用。
+      try_button: 试用 Sure 45 天
+      continue_trial: 继续试用
+      upgrade: 升级
+      how_it_works: 这里的运作方式
+      today: 今天
+      today_description: 您将在我们的 AWS 上免费使用 Sure 45 天。
+      in_40_days: 40 天后（%{date}）
+      in_40_days_description: 我们会提醒您导出数据。
+      in_45_days: 45 天后（%{date}）
+      in_45_days_description: 我们将删除您的数据——想继续使用 Sure，请贡献支持！
+  preview:
+    not_enabled: 此功能处于预览状态。请在“设置 → 偏好设置”中启用预览功能后再试。
+  layouts:
+    application:
+      privacy_mode: 切换隐私模式
+      skip_to_main: 跳转到主要内容
+      nav:
+        assistant: 助手
+        budgets: 预算
+        home: 主页
+        reports: 报表
+        transactions: 交易
+    auth:
+      existing_account: 已经有账户？
+      no_account: 还没有 %{product_name} 账户？
+      sign_in: 登录
+      sign_up: 创建账户
+    shared:
+      footer:
+        privacy_policy: 隐私政策
+        terms_of_service: 服务条款
+      confirm_dialog:
+        are_you_sure: 您确定吗？
+        cannot_be_undone: 此操作无法撤销。
+        confirm: 确认
+    trial:
+      open_demo: 打开演示
+      data_deleted_in_days: 数据将在 %{days} 天后删除
+      contribute: 贡献支持
+  admin:
+    unauthorized: 您无权访问此区域。
+    users:
+      index:
+        title: 用户管理
+        description: 管理您实例中的用户角色。超级管理员可以访问 SSO 提供商设置和用户管理。
+        section_title: 家庭 / 组
+        you: （您）
+        trial_ends_at: 试用结束于
+        not_available: 不适用
+        no_users: 未找到用户。
+        unnamed_family: 未命名家庭/组
+        no_subscription: 无订阅
+        family_summary: "%{members} 名成员 · %{accounts} 个账户 · %{transactions} 笔交易"
+        filters:
+          role: 角色
+          role_all: 所有角色
+          trial_status: 试用状态
+          trial_all: 全部
+          trial_expiring_soon: 7 天内到期
+          trial_trialing: 试用中
+          submit: 筛选
+        summary:
+          trials_expiring_7_days: 未来 7 天内到期的试用
+        table:
+          user: 用户
+          trial_ends_at: 试用结束
+          family_accounts: 家庭账户
+          family_transactions: 家庭交易
+          last_login: 上次登录
+          session_count: 会话数
+          never: 从未
+          role: 角色
+        role_descriptions_title: 角色说明
+        roles:
+          guest: 访客
+          member: 成员
+          admin: 管理员
+          super_admin: 超级管理员
+        role_descriptions:
+          guest: 以助手优先的体验为主，并为入门流程保留有意限制的权限。
+          member: 基本用户权限。可管理自己的账户、交易和设置。
+          admin: 家庭管理员。可访问 API 密钥、导入和 AI 提示词等高级设置。
+          super_admin: 实例管理员。可管理 SSO 提供商、用户角色，并可代为登录用户进行支持。
+        invitations:
+          pending_label: 已邀请（待处理）
+          expires: 于 %{date} 过期
+          delete: 删除
+          delete_all: 全部删除
+      update:
+        success: 用户角色更新成功。
+        failure: 更新用户角色失败。
+    sso_providers:
+      index:
+        page_title: SSO 提供商
+        title: SSO 提供商
+        description: 管理您实例的单点登录认证提供商。
+        restart_required: 更改需要重启服务器后才会生效。
+        configured_providers: 已配置的提供商
+        add_provider: 添加提供商
+        no_providers_title: 尚无 SSO 提供商
+        no_providers_message: 目前还没有配置任何 SSO 提供商。
+        note: 对 SSO 提供商的更改需要重启服务器后才会生效。或者启用 AUTH_PROVIDERS_SOURCE=db 功能标志以从数据库动态加载提供商。
+        enabled: 已启用
+        disabled: 已禁用
+        edit: 编辑
+        enable: 启用
+        disable: 禁用
+        delete: 删除
+        configuration_mode: 配置模式
+        db_backed_providers: 数据库提供商
+        db_backed_providers_description: 从数据库加载提供商，而不是 YAML 配置
+        db_backed_providers_help_html: 设置 <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code> 以启用数据库提供商。这允许无需重启服务器即可修改。
+        table:
+          name: 名称
+          strategy: 策略
+          status: 状态
+          issuer: 签发方
+          actions: 操作
+          enabled: 已启用
+          disabled: 已禁用
+        legacy_providers_title: 环境配置的提供商
+        legacy_providers_notice: 这些提供商通过环境变量或 YAML 配置，无法在此界面中管理。若要在此管理，请启用 AUTH_PROVIDERS_SOURCE=db 并将它们重新创建为数据库提供商。
+        env_configured: 环境/YAML
+      new:
+        title: 添加 SSO 提供商
+        description: 配置一个新的单点登录认证提供商
+      edit:
+        title: 编辑 SSO 提供商
+        description: 更新 %{label} 的配置
+      create:
+        success: SSO 提供商创建成功。
+      update:
+        success: SSO 提供商更新成功。
+      destroy:
+        success: SSO 提供商删除成功。
+        confirm: 确定要删除此提供商吗？此操作无法撤销。
+      toggle:
+        success_enabled: SSO 提供商已成功启用。
+        success_disabled: SSO 提供商已成功禁用。
+        confirm_enable: 确定要启用此提供商吗？
+        confirm_disable: 确定要禁用此提供商吗？
+      form:
+        basic_information: 基本信息
+        oauth_configuration: OAuth/OIDC 配置
+        strategy_label: 策略
+        strategy_help: 要使用的认证策略
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        strategy_google_oauth2: Google OAuth2
+        strategy_github: GitHub
+        name_label: 名称
+        name_placeholder: 例如：keycloak、authentik
+        name_help: 唯一标识符（仅限小写字母、数字和下划线）
+        label_label: 按钮标签
+        label_placeholder: 例如：使用 Keycloak 登录
+        label_help: 显示给用户的按钮文字
+        icon_label: 图标（可选）
+        icon_placeholder: 例如：key、shield
+        icon_help: 登录按钮的 Lucide 图标名称
+        enabled_label: 启用此提供商
+        enabled_help: 启用后，用户可以使用此提供商登录
+        issuer_label: Issuer URL
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
+        issuer_help: OIDC issuer URL（会验证 .well-known/openid-configuration）
+        client_id_label: Client ID
+        client_id_placeholder: your-client-id
+        client_id_help: 来自身份提供商的 OAuth client ID
+        client_secret_label: Client Secret
+        client_secret_placeholder_new: your-client-secret
+        client_secret_placeholder_existing: ••••••••
+        client_secret_help: OAuth client secret（在数据库中加密存储）
+        client_secret_help_existing: 留空以保留现有密钥
+        redirect_uri_label: 回调 URL
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        redirect_uri_help: 在身份提供商中配置此 URL
+        saml_sp_callback_url_label: SP 回调 URL（ACS URL）
+        saml_sp_callback_url_help: 在 IdP 中将此 URL 配置为 Assertion Consumer Service URL
+        copy_button: 复制
+        cancel: 取消
+        submit: 保存提供商
+        create_provider: 创建提供商
+        update_provider: 更新提供商
+        errors_title:
+          one: 一个错误阻止了此提供商被保存：
+          other: "%{count} 个错误阻止了此提供商被保存："
+        provisioning_title: 用户配置
+        default_role_label: 新用户的默认角色
+        default_role_help: 通过即时（JIT）SSO 账户配置创建的用户将被分配此角色。默认为成员。
+        role_guest: 访客
+        role_member: 成员
+        role_admin: 管理员
+        role_super_admin: 超级管理员
+        role_mapping_title: 组到角色映射（可选）
+        role_mapping_help: 将 IdP 组/声明映射到应用角色。用户将分配到最高匹配角色。留空则使用上面的默认角色。
+        super_admin_groups: 超级管理员组
+        admin_groups: 管理员组
+        guest_groups: 访客组
+        member_groups: 成员组
+        groups_help: 以逗号分隔的 IdP 组名列表。使用 * 匹配所有组。
+        advanced_title: 高级 OIDC 设置
+        scopes_label: 自定义范围
+        scopes_help: 以空格分隔的 OIDC scopes 列表。留空则使用默认值（openid email profile）。添加 'groups' 可获取组声明。
+        prompt_label: 认证提示
+        prompt_default: 默认（由 IdP 决定）
+        prompt_login: 强制登录（重新认证）
+        prompt_consent: 强制同意（重新授权）
+        prompt_select_account: 选择账户（选择账号）
+        prompt_none: 无提示（静默认证）
+        prompt_help: 控制 IdP 在认证时如何提示用户。
+        test_connection: 测试连接
+        saml_configuration: SAML 配置
+        idp_metadata_url: IdP 元数据 URL
+        idp_metadata_url_help: 您的 IdP 的 SAML 元数据 URL。如果提供，其余 SAML 设置将自动配置。
+        manual_saml_config: 手动配置（如果不使用元数据 URL）
+        manual_saml_help: 仅当您的 IdP 不提供元数据 URL 时才使用这些设置。
+        idp_sso_url: IdP SSO URL
+        idp_slo_url: IdP SLO URL（可选）
+        idp_certificate: IdP 证书
+        idp_certificate_help: PEM 格式的 X.509 证书。如果不使用元数据 URL，则必填。
+        idp_cert_fingerprint: 证书指纹（替代）
+        name_id_format: NameID 格式
+        name_id_email: 邮箱地址（默认）
+        name_id_persistent: 持久
+        name_id_transient: 临时
+        name_id_unspecified: 未指定

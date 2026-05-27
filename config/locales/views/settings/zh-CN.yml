@@ -335,3 +335,174 @@ zh-CN:
           bank: 银行
           crypto: 加密资产
           investment: 投资
+      empty_filter: 没有提供商匹配您的筛选条件。
+      clear_filter: 清除筛选
+      encryption_error:
+        title: 缺少加密密钥
+        message: 银行同步需要配置 Active Record 加密。请在 Rails 凭据或环境变量中设置 primary_key、deterministic_key 和 key_derivation_salt。
+      provider_form:
+        save_and_connect: 保存并连接
+      coinbase_panel:
+        setup_instructions: 连接 Coinbase：
+        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API 设置</a>
+        step2: 创建一个仅具备只读权限的新 API key（查看账户、查看交易）
+        step3: 复制您的 API key 和 API secret 并粘贴到下方
+        api_key_label: API Key
+        api_key_placeholder: 输入您的 Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: 输入您的 Coinbase API secret
+        connect_button: 连接 Coinbase
+        syncing: 正在同步...
+        sync: 同步
+        disconnect_confirm: 确定要断开此 Coinbase 连接吗？同步的账户会变为手动账户。
+      binance_panel:
+        setup_instructions: 连接 Binance，请创建一个只读 API key：
+        step1_html: '前往 <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API 管理</a>'
+        step2: 创建一个仅启用读取权限的新 API key
+        step3: 将您的 API Key 和 Secret 粘贴到下方
+        no_withdraw_title: 仅限只读密钥
+        no_withdraw_body: 创建 Binance API key 时不要启用提币权限。Sure 只需要读取权限。
+        ip_hint_title: 需要 IP 白名单
+        ip_hint_body: 将应用服务器的出口 IP 添加到 Binance API Key 白名单：
+        ip_hint_contact_admin: 请联系您的管理员获取应用服务器的出口 IP 地址。
+        api_key_label: API Key
+        api_key_placeholder: 粘贴您的 Binance API Key
+        api_secret_label: API Secret
+        api_secret_placeholder: 粘贴您的 Binance API Secret
+        connect_button: 连接 Binance
+        syncing: 正在同步...
+        sync: 同步
+        disconnect_confirm: 确定要断开 Binance 吗？
+      kraken_panel:
+        step1_html: '前往 <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API 设置</a>'
+        step2: 仅创建一个具备 Query Funds 和 Query Closed Orders & Trades 权限的 API key。
+        step3: 将 API key 和私钥粘贴到下方。
+        read_only_title: 仅限只读交易所同步
+        read_only_body: 不要授予交易、撤单、提币、导出、账本、Earn、质押或转账权限。Sure 只导入余额、持仓和现货成交。
+        default_connection_name: Kraken
+        add_connection: 添加 Kraken 连接
+        update_connection: 更新连接
+        connection_name_label: 连接名称
+        connection_name_placeholder: Main Kraken
+        api_key_label: API Key
+        api_key_placeholder: 粘贴您的 Kraken API key
+        keep_api_key_placeholder: 留空以保留现有 API key
+        api_secret_label: Private Key
+        api_secret_placeholder: 粘贴您的 Kraken private key
+        keep_api_secret_placeholder: 留空以保留现有 private key
+        setup_accounts: 设置账户
+        syncing: 正在同步...
+        sync: 同步
+        disconnect: 断开连接
+        disconnect_confirm: 确定要断开 %{name} 吗？
+      enable_banking_panel:
+        callback_url_instruction: 回调 URL 请使用 %{callback_url}。
+        connection_error: 连接错误
+        step_1_html: 前往 %{link} 并获取您的开发者凭据。
+        step_2: 选择您的国家/地区，并将 Application ID + Client Certificate 粘贴到下方。
+        step_3: 保存后使用“添加连接”链接您的银行。
+        config_locked_title: 配置已锁定
+        config_locked_message: 在更改这些凭据之前，请先断开所有已连接的银行。
+        application_id_label: Application ID
+        application_id_placeholder_new: 输入 application ID
+        application_id_placeholder_update: 输入新 ID 以更新
+        client_certificate_label: Client Certificate（包含 Private Key）
+        save_and_connect: 保存并连接
+        update_connection: 更新连接
+        connected_bank: 已连接的银行
+        session_expires: 会话过期时间：%{date}
+        unknown: 未知
+        connection: 连接
+        session_expired_reconnect: 会话已过期 - 重新连接
+        configured: 已配置
+        ready_to_link: 准备链接账户
+        sync: 同步
+        reconnect: 重新连接
+        connect_bank: 连接银行
+        remove: 移除
+        remove_confirm: 确定要移除此连接吗？
+        add_connection: 添加连接
+        syncing: 正在同步
+        select_country: 选择国家/地区...
+        country_label: 国家/地区
+      lunchflow_panel:
+        step_1_html: 前往 %{link} 并创建一个 API key。
+        step_2: 将您的 key 粘贴到下方并连接。
+        step_3: 然后前往账户，将同步到账户进行关联。
+        api_key_label: API Key
+        api_key_placeholder_new: 在此粘贴 API key
+        api_key_placeholder_update: 输入新的 API key 以更新
+        base_url_label: Base URL（可选）
+        base_url_placeholder: https://lunchflow.app/api/v1（默认）
+        save_and_connect: 保存并连接
+        update_connection: 更新连接
+      simplefin_panel:
+        step_1_html: 前往 %{link} 获取一次性设置令牌。
+        step_2: 将令牌粘贴到下方并连接。
+        step_3: 然后前往账户，将同步到账户进行关联。
+        setup_token_label: Setup Token
+        setup_token_placeholder: 粘贴 SimpleFIN setup token
+        save_and_connect: 保存并连接
+      plaid_panel:
+        step_1_html: 打开 %{link} 并复制您的 Client ID 和 Secret Key。
+        step_2: 选择环境。测试请使用 sandbox，真实账户请使用 production。
+        step_3: 将凭据粘贴到下方并连接。
+      plaid_eu_panel:
+        step_1_html: 打开 %{link} 并复制您的 EU Client ID 和 Secret Key。
+      not_found: 未找到提供商。
+      sync_provider_no_items: 没有可同步的连接。
+      ibkr_panel:
+        steps:
+          step_1: 在您的 IBKR Client Portal 中，前往“Performance & Reports” > “Flex Queries”。
+          step_2: 在“Activity Flex Query”区域点击“+”图标创建一个新查询。
+          step_3: 为查询命名（例如“Sure Sync”），然后查看下方的 Flex Query 详情并启用列出的部分、字段和配置选项。
+          step_4: 保存查询，记下您的“Query ID”，然后使用“Flex Web Service Configuration”区域中的齿轮图标生成访问 Token。
+          step_5: 将您的 Query ID 和 Token 粘贴到下方，保存配置，然后前往账户以链接发现的 IBKR 账户。
+        flex_query_details:
+          eyebrow: Flex Query
+          title: 部分、字段与配置
+          summary: 展开以查看您的 IBKR Activity Flex Query 必须包含的精确部分、字段和设置。
+          sections_heading: 启用这些部分和字段
+          configuration_heading: 设置这些查询选项
+        sections:
+          account_information: 账户信息：Account ID、Currency
+          cash_report: 现金报表：
+          cash_report_options: 选项：无
+          cash_report_fields: 字段：Currency、Ending Cash
+          cash_transactions: 现金交易：
+          cash_transactions_options: 选项：Dividends、Deposits & Withdrawals、Detail
+          cash_transactions_fields: 字段：Amount、Conid、Currency、FX Rate To Base、Report Date、Transaction ID、Type
+          change_in_position_value_summary: 仓位价值变动汇总：Currency、End Of Period Value
+          net_asset_value: 基础币种下的净资产值（NAV）：
+          net_asset_value_options: 选项：无
+          net_asset_value_fields: 字段：Currency、Report Date、Total
+          open_positions: 未平仓位：
+          open_positions_options: 选项：Summary
+          open_positions_fields: 字段：Asset Class、Conid、Cost Basis Price、Currency、FX Rate To Base、Mark Price、Quantity、Report Date、Security ID、Security ID Type、Side、Symbol
+          trades: 交易：
+          trades_options: 选项：Execution
+          trades_fields: 字段：Asset Class、Buy/Sell、Conid、Currency、FX Rate To Base、IB Commission、IB Commission Currency、Quantity、Symbol、Trade Date、Trade ID、TradePrice、Transaction ID
+        configuration:
+          models: Models：可选
+          format: Format：XML
+          period: Period：最近 365 个自然日
+          date_format: Date Format：yyyy-MM-dd
+          time_format: Time Format：HH:mm:ss
+          date_time_separator: Date/Time Separator：；（分号）
+          profit_and_loss: Profit and Loss：默认
+          all_other_options: 其他所有配置选项：“No”
+        report_window_note: IBKR Flex reports 受您在 IBKR 中配置的查询窗口限制。Sure 将从此报告导入完整的当前持仓，以及最多最近 365 天的活动。
+        sync: 同步
+        disconnect_confirm: 断开 Interactive Brokers？
+        query_id_label: Query ID
+        query_id_placeholder_new: 输入您的 IBKR Flex Query ID
+        query_id_placeholder_existing: 留空以保留当前 Query ID
+        token_label: Token
+        token_placeholder_new: 输入您的 IBKR Flex Web Service Token
+        token_placeholder_existing: 留空以保留当前 Token
+        save_configuration: 保存配置
+        update_configuration: 更新配置
+        status_configured_prefix: "%{summary}。请访问"
+        accounts_tab: 账户
+        status_configured_suffix: 标签页以管理已发现的账户。
+        not_configured: 未配置。
