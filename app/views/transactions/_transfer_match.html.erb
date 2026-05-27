@@ -6,11 +6,21 @@
       <%= icon "link-2", size: "sm", class: "text-secondary" %>
     </span>
   <% elsif transaction.transfer.pending? %>
-    <span class="hidden lg:inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
-      <%= t("transactions.transfer_match.auto_matched") %>
+    <span class="hidden lg:inline">
+      <%= render DS::Pill.new(
+        label: t("transactions.transfer_match.auto_matched"),
+        tone: :neutral,
+        marker: false,
+        show_dot: false
+      ) %>
     </span>
-    <span class="inline-flex lg:hidden items-center rounded-full bg-surface-inset px-2 py-0.5 text-xs font-medium text-secondary">
-      <%= t("transactions.transfer_match.auto_matched_short") %>
+    <span class="inline lg:hidden">
+      <%= render DS::Pill.new(
+        label: t("transactions.transfer_match.auto_matched_short"),
+        tone: :neutral,
+        marker: false,
+        show_dot: false
+      ) %>
     </span>
 
     <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
