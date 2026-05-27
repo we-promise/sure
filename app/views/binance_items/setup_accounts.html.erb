@@ -33,6 +33,18 @@
           </div>
         </div>
 
+        <div class="bg-surface border border-primary p-4 rounded-lg space-y-3">
+          <p class="text-sm font-medium text-primary"><%= t(".historical_import") %></p>
+          <div class="field">
+            <%= form.label :sync_start_date, t("settings.providers.binance_panel.sync_start_date_label"), class: "label" %>
+            <%= form.date_field :sync_start_date,
+                                value: @binance_item.sync_start_date || (Date.current - 1.year),
+                                max: Date.current,
+                                class: "input" %>
+            <p class="help-text mt-1 text-xs text-secondary"><%= t("settings.providers.binance_panel.sync_start_date_help") %></p>
+          </div>
+        </div>
+
         <% if @binance_accounts.empty? %>
           <div class="text-center py-8">
             <p class="text-secondary"><%= t(".no_accounts") %></p>
@@ -69,7 +81,7 @@
                       <%= binance_account.currency %>
                     </p>
                   </div>
-                  <div class="text-right flex-shrink-0">
+                  <div class="text-right shrink-0">
                     <p class="text-sm font-medium text-primary">
                       <%= number_with_delimiter(binance_account.current_balance || 0, delimiter: ",") %>
                     </p>
