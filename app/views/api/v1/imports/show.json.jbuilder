@@ -44,6 +44,8 @@ json.data do
     json.unassigned_mappings_count mapping_counts[:unassigned_mappings_count]
   end
 
+  json.verification @import.verification_payload if @import.is_a?(SureImport)
+
   # Only show a subset of rows for preview if needed, or link to a separate rows endpoint
   # json.sample_rows @import.rows.limit(5)
 end

@@ -21,6 +21,7 @@ en:
       member: Member
       super_admin: Super admin
     user_menu:
+      aria_label: Open account menu
       version: Version
       settings: Settings
       changelog: Changelog

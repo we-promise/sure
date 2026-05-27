@@ -921,6 +921,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_191902) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
+    t.jsonb "expected_record_counts", default: {}, null: false
+    t.jsonb "readback_verification", default: {}, null: false
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 

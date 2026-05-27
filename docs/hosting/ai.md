@@ -450,13 +450,18 @@ Pipelock scans for prompt injection, DLP violations, and tool poisoning. The ext
 
 **`NO_PROXY` behavior (Helm/Kubernetes only):** The Helm chart's env template sets `NO_PROXY` to include `.svc.cluster.local` and other internal domains. This means in-cluster agent URLs (like `http://agent.namespace.svc.cluster.local:18789`) bypass the forward proxy and go directly. If your agent is in-cluster, its traffic won't be forward-proxy scanned (but MCP callbacks from the agent are still scanned by the reverse proxy). Docker Compose deployments use a different `NO_PROXY` set; check your compose file for the exact values.
 
-**`mcpToolPolicy` note:** The Helm chart's `pipelock.mcpToolPolicy.enabled` defaults to `true`. If you haven't defined any policy rules, disable it:
+**`mcpToolPolicy` note:** The Helm chart's `pipelock.mcpToolPolicy.enabled` defaults to `false`. Pipelock rejects an enabled tool policy with no rules, so the chart ships it off by default. To turn it on, define at least one rule and set `enabled: true`:
 
 ```yaml
 # Helm values
 pipelock:
   mcpToolPolicy:
-    enabled: false
+    enabled: true
+    action: warn
+    rules:
+      - name: example
+        toolPattern: "^shell$"
+        action: block
 ```
 
 See the [Pipelock documentation](https://github.com/luckyPipewrench/pipelock) for tool policy configuration details.

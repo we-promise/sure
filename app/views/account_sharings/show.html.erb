@@ -46,7 +46,7 @@
             <% end %>
           </div>
           <div class="flex justify-end">
-            <%= render DS::Button.new(text: t(".save"), class: "md:w-auto w-full justify-center") %>
+            <%= render DS::Button.new(text: t(".save"), type: :submit, class: "md:w-auto w-full justify-center") %>
           </div>
         <% end %>
       <% else %>
@@ -83,7 +83,7 @@
               </div>
             </div>
             <div class="flex justify-end">
-              <%= render DS::Button.new(text: t(".save"), class: "md:w-auto w-full justify-center") %>
+              <%= render DS::Button.new(text: t(".save"), type: :submit, class: "md:w-auto w-full justify-center") %>
             </div>
           <% end %>
         </div>
