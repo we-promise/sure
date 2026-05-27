@@ -2,8 +2,8 @@
 <div data-controller="list-filter">
   <%= render DS::SearchInput.new(
         variant: :embedded,
-        placeholder: "Filter tags",
-        aria_label: "Filter tags",
+        placeholder: t(".filter_tags"),
+        aria_label: t(".filter_tags"),
         data: {
           list_filter_target: "input",
           action: "input->list-filter#filter"
