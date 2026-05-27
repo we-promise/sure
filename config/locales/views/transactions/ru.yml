@@ -121,7 +121,6 @@ ru:
     mark_recurring_title: Повторяющаяся операция
     potential_duplicate_title: Обнаружен возможный дубликат
     potential_duplicate_description: Эта ожидающая операция может быть такой же, как и проведенная ниже. Если это так, объедините их, чтобы избежать двойного учета.
-    merge_duplicate: Да, объединить их
     keep_both: Нет, оставить обе
     split_parent_row:
       split_label: "Разделить"
