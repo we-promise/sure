@@ -1,0 +1,8 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "Категория '%{name}' не может быть своей собственной родительской категорией"
+          missing_columns: "Отсутствуют необходимые столбцы: %{columns}"

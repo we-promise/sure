@@ -2,185 +2,61 @@
 ca:
   settings:
     hostings:
-      alpha_vantage_settings:
-        description: Introdueix la clau API d'Alpha Vantage. Admet ETF europeus a
-          London Stock Exchange, XETRA i altres mercats.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn
-          ALPHA_VANTAGE_API_KEY.
-        label: Clau API
-        no_health_check_note: La comprovació de l'estat de la connexió no està disponible
-          per a aquest proveïdor a causa del límit estricte de sol·licituds.
-        placeholder: Introdueix aquí la teva clau API d'Alpha Vantage
-        rate_limit_warning: El nivell gratuït d'Alpha Vantage està limitat a 25 crides
-          d'API al dia. Útil com a proveïdor complementari per a ETF europeus no disponibles
-          en altres proveïdors.
-        show_details: "(mostra detalls)"
-        step_1_html: Visita <a href="https://www.alphavantage.co/support/#api-key"
-          target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a>
-          i obté la teva clau API gratuïta.
-        step_2: Copia la clau API i enganxa-la a sota.
-        title: Alpha Vantage
-      assistant_settings:
-        agent_id_help: Encamina cap a un agent específic quan el proveïdor n'allotja
-          diversos. Deixa-ho en blanc per al predeterminat.
-        agent_id_label: ID de l'agent (opcional)
-        agent_id_placeholder: main (predeterminat)
-        confirm_disconnect:
-          body: Això eliminarà l'URL desat, el token i l'ID de l'agent, i canviarà
-            a l'assistent integrat. Pots reconnectar més tard introduint credencials
-            noves.
-          title: Desconnectar l'assistent extern?
-        description: Tria com respon l'assistent del xat. Integrat utilitza el teu
-          proveïdor d'LLM configurat directament. Extern delega en un agent d'IA remot
-          que pot retrucar a les eines financeres de Sure via MCP.
-        disconnect_button: Desconnecta
-        disconnect_description: Elimina la connexió a l'assistent extern i torna a
-          l'assistent integrat.
-        disconnect_title: Connexió externa
-        env_configured_external: Configurat correctament mitjançant variables d'entorn.
-        env_notice: El tipus d'assistent està fixat a '%{type}' mitjançant la variable
-          d'entorn ASSISTANT_TYPE.
-        external_configured: Configurat
-        external_not_configured: No configurat. Introdueix l'URL i el token a sota,
-          o estableix les variables d'entorn EXTERNAL_ASSISTANT_URL i EXTERNAL_ASSISTANT_TOKEN.
-        external_status: Endpoint de l'assistent extern
-        title: Assistent d'IA
-        token_help: El token d'autenticació proporcionat pel teu agent extern. S'envia
-          com a Bearer token a cada sol·licitud.
-        token_label: Token d'API
-        token_placeholder: Introdueix el token del teu proveïdor d'agent
-        type_builtin: Integrat (LLM directe)
-        type_external: Extern (agent remot)
-        type_label: Tipus d'assistent
-        url_help: L'URL complet de l'endpoint d'API del teu agent. El teu proveïdor
-          d'agent te'l donarà.
-        url_label: URL de l'endpoint
-        url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
         description: Introdueix el Client ID proporcionat per Brand Fetch
-        env_configured_message: Has configurat correctament el teu Client ID de Brand
-          Fetch mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
-        high_res_description: Quan està activat, els logotips es recuperaran amb resolució
-          120×120 en lloc de 40×40. Això proporciona imatges més nítides en pantalles
-          d'alta densitat.
-        high_res_label: Activa logotips d'alta resolució
         label: Client ID
         placeholder: Introdueix aquí el teu Client ID
-        setup_step_1_html: Visita <a href="https://brandfetch.com/developers" target="_blank"
-          rel="noopener noreferrer" class="underline">brandfetch.com</a> i crea un
-          compte de desenvolupador gratuït de Brand Fetch.
-        setup_step_2_html: Ves a la pàgina <a href="https://developers.brandfetch.com/dashboard/logo-api"
-          target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
-        setup_step_3: Toca la icona de l'ull a la secció "Your Client ID" per revelar
-          el teu Client ID i enganxa'l a sota.
-        show_details: "(mostra detalls)"
-        title: Configuració de Brand Fetch
+        title: Brand Fetch
       clear_cache:
-        cache_cleared: La memòria cau de dades s'ha netejat. Pot trigar uns instants
+        cache_cleared: La memòria cau de dades s'ha netejat. Això pot trigar uns instants
           a completar-se.
-      disconnect_external_assistant:
-        external_assistant_disconnected: Assistent extern desconnectat
-      ensure_super_admin_for_onboarding:
-        not_authorized: No estàs autoritzat/da a fer aquesta acció
-      eodhd_settings:
-        description: Introdueix el token d'API proporcionat per EODHD. Admet ETF europeus
-          a LSE, XETRA i altres mercats internacionals.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn
-          EODHD_API_KEY.
-        label: Token d'API
-        placeholder: Introdueix aquí el teu token d'API d'EODHD
-        rate_limit_warning: El nivell gratuït d'EODHD està limitat a 20 crides d'API
-          al dia. Útil com a proveïdor complementari per a ETF europeus no disponibles
-          en altres proveïdors.
-        show_details: "(mostra detalls)"
-        step_1_html: Visita <a href="https://eodhd.com/register" target="_blank" rel="noopener
-          noreferrer" class="underline">eodhd.com</a> i crea un compte gratuït.
-        step_2_html: Ves al teu <a href="https://eodhd.com/cp/dashboard" target="_blank"
-          rel="noopener noreferrer" class="underline">tauler</a> per trobar el teu
-          token d'API.
-        step_3: Copia el teu token d'API i enganxa'l a sota.
-        title: EODHD
       invite_code_settings:
-        default_family_description: Posa els nous usuaris en aquesta família/grup
-          només si no tenen invitació.
-        default_family_none: Cap (crear nova família)
-        default_family_title: Família predeterminada per a nous usuaris
-        description: Controla com es registra la gent a la teva instància de %{product}.
+        description: Cada nou usuari que s'uneixi a la teva instància de %{product}
+          només ho podrà fer mitjançant un codi d'invitació
         email_confirmation_description: Quan està activat, els usuaris hauran de confirmar
           el seu correu electrònic quan el canviïn.
         email_confirmation_title: Requereix confirmació de correu electrònic
-        generate_tokens: Genera un nou codi
+        generate_tokens: Genera nou codi
         generated_tokens: Codis generats
         states:
           closed: Tancat
           invite_only: Només per invitació
           open: Obert
-        title: Inici de sessió
-      not_authorized: No estàs autoritzat/da a fer aquesta acció
+        title: Requereix codi d'invitació per registrar-se
+      not_authorized: No estàs autoritzat/da per realitzar aquesta acció
       openai_settings:
         access_token_label: Token d'accés
         access_token_placeholder: Introdueix aquí el teu token d'accés
-        budget_description: S'aplica a totes les crides d'LLM — historial de xat,
-          autocategorització, detecció de comerç i processament de PDF. Els valors
-          predeterminats són conservadors per a models locals amb context reduït.
-          Augmenta'ls per a models al núvol amb finestres de context més grans.
-        budget_heading: Pressupost de tokens
-        context_window_help: 'Tokens totals que el model acceptarà. Per defecte: 2048
-          — puja a 8192+ per a OpenAI al núvol o models locals amb context gran.'
-        context_window_label: Finestra de context (opcional)
         description: Introdueix el token d'accés i, opcionalment, configura un proveïdor
-          compatible amb OpenAI personalitzat
+          OpenAI compatible personalitzat
         env_configured_message: Configurat correctament mitjançant variables d'entorn.
         json_mode_auto: Auto (recomanat)
         json_mode_help: El mode estricte funciona millor amb models de pensament (qwen-thinking,
-          deepseek-reasoner). El mode None funciona millor amb models estàndard (llama,
-          mistral, gpt-oss).
-        json_mode_json_object: Objecte JSON
+          deepseek-reasoner). El mode None funciona millor amb models estàndard (llama, mistral,
+          gpt-oss).
+        json_mode_json_object: JSON Object
         json_mode_label: Mode JSON
-        json_mode_none: Cap (millor per a models estàndard)
-        json_mode_strict: Estricte (millor per a models de pensament)
-        max_items_per_call_help: 'Límit superior per als lots d''autocategorització
-          / detecció de comerç. Per defecte: 25. Els lots més grans es divideixen
-          automàticament per encabir-se a la finestra de context.'
-        max_items_per_call_label: Màxim d'elements per lot (opcional)
-        max_response_tokens_help: 'Tokens reservats per a la resposta del model. Per
-          defecte: 512. Redueix per alliberar espai per a un historial més llarg.'
-        max_response_tokens_label: Màxim de tokens de resposta (opcional)
+        json_mode_none: None (millor per models estàndard)
+        json_mode_strict: Estrict (millor per models de pensament)
         model_label: Model (opcional)
         model_placeholder: gpt-4.1 (per defecte)
         title: OpenAI
         uri_base_label: URL base de l'API (opcional)
         uri_base_placeholder: https://api.openai.com/v1 (per defecte)
       provider_selection:
-        binance_public_hint: gratuït, sense clau API — només cripto (BTC, ETH, etc.)
-        description: Tria un únic proveïdor per obtenir tipus de canvi de divisa.
-        env_configured_message: La selecció de proveïdor està desactivada perquè hi
-          ha variables d'entorn configurades. Per activar la selecció aquí, elimina
-          aquestes variables d'entorn de la teva configuració.
-        exchange_rate_description: Tria un únic proveïdor per obtenir tipus de canvi
-          de divisa.
-        exchange_rate_provider_label: Proveïdor de tipus de canvi
-        exchange_rate_title: Proveïdor de tipus de canvi
-        mfapi_hint: gratuït, sense clau API — només fons mutus indis
+        description: Tria quin servei utilitzar per obtenir tipus de canvi i preus de
+          valors. Yahoo Finance és gratuït i no requereix clau API. Twelve Data
+          requereix una clau API gratuïta però pot oferir més cobertura de dades.
+        env_configured_message: La selecció de proveïdor està inhabilitada perquè les variables
+          d'entorn (EXCHANGE_RATE_PROVIDER o SECURITIES_PROVIDER) estan configurades. Per habilitar
+          la selecció aquí, elimina aquestes variables d'entorn de la teva configuració.
+        exchange_rate_provider_label: Proveïdor de Tipus de Canvi
         providers:
-          alpha_vantage: Alpha Vantage
-          binance_public: Binance
-          eodhd: EODHD
-          mfapi: MFAPI.in
-          tiingo: Tiingo
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
-        requires_api_key: requereix clau API
-        requires_api_key_alpha_vantage: requereix clau API, límit de 25 crides/dia
-        requires_api_key_eodhd: requereix clau API, límit de 20 crides/dia
-        securities_description: Activa un o més proveïdors per obtenir preus d'accions,
-          ETF i fons d'inversió. En cercar, es consulten tots els proveïdors activats
-          i es combinen els resultats.
-        securities_title: Proveïdors de valors
-        twelve_data_hint: requereix clau API, 800 crèdits/dia
-        yahoo_finance_hint: gratuït, no cal clau API
+        securities_provider_label: Proveïdor de Valors (Preus d'Accions)
+        title: Selecció de Proveïdor
       show:
-        ai_assistant: Assistent d'IA
         clear_cache: Neteja la memòria cau de dades
         clear_cache_warning: Netejar la memòria cau de dades eliminarà tots els tipus
           de canvi, preus de valors, saldos de comptes i altres dades. Això no eliminarà
@@ -189,82 +65,50 @@ ca:
           body: Segur que vols netejar la memòria cau de dades? Això eliminarà tots
             els tipus de canvi, preus de valors, saldos de comptes i altres dades.
             Aquesta acció no es pot desfer.
-          title: Netejar la memòria cau de dades?
+          title: Neteja la memòria cau de dades?
         danger_zone: Zona perillosa
-        financial_data_providers: Proveïdors de dades financeres
-        general: Configuració general
+        financial_data_providers: Proveïdors de Dades Financeres
+        general: Serveis externs
         invites: Codis d'invitació
-        sync_settings: Configuració de sincronització
-        title: Self hosting
-      sync_auto_sync_scheduler!:
-        scheduler_sync_failed: La configuració s'ha desat, però no s'ha pogut actualitzar
-          la planificació de sincronització. Torna-ho a provar o revisa els registres
-          del servidor.
+        sync_settings: Configuració de Sincronització
+        title: Autoallotjament
       sync_settings:
         auto_sync_description: Quan està activat, tots els comptes es sincronitzaran
-          automàticament cada dia a l'hora especificada.
+          automàticament diàriament a l'hora especificada.
         auto_sync_label: Activa la sincronització automàtica
-        auto_sync_time_description: Especifica l'hora del dia en què s'ha de produir
+        auto_sync_time_description: Especifica l'hora del dia quan hauria de produir-se
           la sincronització automàtica.
         auto_sync_time_label: Hora de sincronització (HH:MM)
-        env_configured_message: Aquesta configuració està desactivada perquè una variable
-          d'entorn del proveïdor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING)
-          està establerta. Elimina-la per activar aquesta opció.
-        include_pending_description: Quan està activat, les transaccions pendents
-          (no liquidades) s'importaran i es reconciliaran automàticament quan es publiquin.
-          Desactiva-ho si el teu banc proporciona dades pendents poc fiables.
+        env_configured_message: Aquesta configuració està inhabilitada perquè una variable
+          d'entorn del proveïdor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING) està configurada. Elimina
+          per habilitar aquesta configuració.
+        include_pending_description: Quan està activat, les transaccions pendents (no liquidades)
+          s'importaran i es reconciliaran automàticament quan es publiquin. Inhabilita si
+          el teu banc proporciona dades pendents no fiables.
         include_pending_label: Inclou transaccions pendents
-      tiingo_settings:
-        description: Introdueix el token d'API proporcionat per Tiingo. El nivell
-          gratuït admet 50 símbols únics per hora amb més de 30 anys d'historial.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn
-          TIINGO_API_KEY.
-        label: Token d'API
-        placeholder: Introdueix aquí el teu token d'API de Tiingo
-        show_details: "(mostra detalls)"
-        step_1_html: Visita <a href="https://www.tiingo.com" target="_blank" rel="noopener
-          noreferrer" class="underline">tiingo.com</a> i crea un compte gratuït.
-        step_2_html: Ves a la pàgina <a href="https://www.tiingo.com/account/api/token"
-          target="_blank" rel="noopener noreferrer" class="underline">Token d'API</a>.
-        step_3: Copia el teu token d'API i enganxa'l a sota.
-        title: Tiingo
       twelve_data_settings:
-        api_calls_used: "%{used} / %{limit} crides diàries d'API utilitzades (%{percentage})"
+        api_calls_used: "%{used} / %{limit} crides diàries a l'API utilitzades (%{percentage})"
         description: Introdueix la clau API proporcionada per Twelve Data
         env_configured_message: Configurat correctament mitjançant la variable d'entorn
           TWELVE_DATA_API_KEY.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API
         plan: Pla %{plan}
-        plan_upgrade_warning_description: Els següents símbols de la teva cartera
-          no poden sincronitzar preus amb el teu pla actual de Twelve Data.
-        plan_upgrade_warning_title: Alguns símbols requereixen un pla de pagament
-        requires_plan: requereix el pla %{plan}
-        show_details: "(mostra detalls)"
-        step_1_html: Visita <a href="https://twelvedata.com/register" target="_blank"
-          rel="noopener noreferrer" class="underline">twelvedata.com</a> i crea un
-          compte de desenvolupador gratuït de Twelve Data.
-        step_2_html: Ves a la pàgina <a href="https://twelvedata.com/account/api-keys"
-          target="_blank" rel="noopener noreferrer" class="underline">claus d'API</a>.
-        step_3: Revela la teva Secret Key i enganxa-la a sota.
         title: Twelve Data
-        view_pricing: Veure preus de Twelve Data
       update:
         failure: Valor de configuració invàlid
-        invalid_llm_budget: "%{field} ha de ser un nombre enter ≥ %{minimum}."
-        invalid_onboarding_state: Estat d'inici de sessió invàlid
-        invalid_sync_time: Format d'hora de sincronització invàlid. Utilitza el format
-          HH:MM (p. ex., 02:30).
-        scheduler_sync_failed: La configuració s'ha desat, però no s'ha pogut actualitzar
-          la planificació de sincronització. Torna-ho a provar o revisa els registres
-          del servidor.
+        invalid_onboarding_state: Estat d'incorporació invàlid
+        invalid_sync_time: Format d'hora de sincronització invàlid. Utilitza el format HH:MM (p. ex.,
+          02:30).
+        scheduler_sync_failed: S'ha desat la configuració, però no s'ha pogut actualitzar el programa de sincronització.
+          Torna-ho a provar o revisa els registres del servidor.
         success: Configuració actualitzada
       yahoo_finance_settings:
         connection_failed: No s'ha pogut connectar amb Yahoo Finance
-        description: Yahoo Finance ofereix accés gratuït a preus d'accions, tipus
-          de canvi i dades financeres sense necessitat de clau API.
+        description: Yahoo Finance ofereix accés gratuït a preus d'accions, tipus de canvi
+          i dades financeres sense requerir clau API.
         status_active: Yahoo Finance està actiu i funcionant
         status_inactive: La connexió a Yahoo Finance ha fallat
         title: Yahoo Finance
-        troubleshooting: Comprova la connexió a Internet i la configuració del tallafoc.
-          És possible que Yahoo Finance estigui temporalment no disponible.
+        troubleshooting: Comprova la connexió a Internet i la configuració del tallafocs. És possible que
+          Yahoo Finance estigui temporalment no disponible.

@@ -1,0 +1,60 @@
+---
+ru:
+  valuations:
+    confirmation_contents:
+      this_will: "Это %{action_verb} стоимость счёта на"
+      to_colon: "до:"
+      total_account_value: Общая стоимость счёта
+      holdings_value: Стоимость активов
+      brokerage_cash: Брокерский счёт
+      account_balance: баланс счёта
+      credit_card_balance: баланс кредитной карты
+      loan_balance: баланс по кредиту
+      property_value: стоимость недвижимости
+      vehicle_value: стоимость транспортного средства
+      crypto_balance: баланс криптовалюты
+      asset_value: стоимость актива
+      liability_balance: баланс обязательств
+      balance: баланс
+      "on": "на"
+      to: "до"
+      recalculate_notice: "Все будущие операции и балансы будут пересчитаны на основе этого %{change_or_update}."
+      change: изменение
+      update: обновление
+    create:
+      account_updated: Счёт обновлён
+    update:
+      account_updated: Счёт обновлён
+      entry_updated: Запись обновлена
+    errors:
+      amount_required: Требуется указать сумму
+    form:
+      amount: Сумма
+      submit: Добавить обновление баланса
+    header:
+      balance: Баланс
+    index:
+      change: изменение
+      date: дата
+      new_entry: Новая запись
+      no_valuations: Оценок для этого счёта пока нет
+      valuations: Стоимость
+      value: стоимость
+    new:
+      title: Новый баланс
+    show:
+      amount: Сумма
+      amount_label: Стоимость счёта на дату
+      date_label: Дата
+      delete: Удалить
+      delete_subtitle: Это действие нельзя отменить
+      delete_title: Удалить запись
+      details: Подробности
+      name_label: Название
+      name_placeholder: Введите название для этой записи
+      note_label: Заметки
+      note_placeholder: Добавьте любые дополнительные детали об этой записи
+      overview: Обзор
+      settings: Настройки
+      opening_balance: "Начальный баланс"
+      update_value: Обновить стоимость

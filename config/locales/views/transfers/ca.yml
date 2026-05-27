@@ -7,43 +7,25 @@ ca:
       success: Transferència eliminada
     form:
       amount: Import
-      calculate_rate_tab: Calcula la taxa de canvi
-      convert_tab: Converteix amb la taxa de canvi
       date: Data
-      destination_amount: Import rebut
-      destination_amount_display: 'Import rebut: %{amount}'
-      exchange_rate: Taxa de canvi
-      exchange_rate_display: 'Taxa de canvi: %{rate}'
-      exchange_rate_help: Tria com introduir l'import de la transferència.
       expense: Despesa
       from: Des de
       income: Ingrés
       select_account: Selecciona un compte
-      source_amount: Import enviat
       submit: Crea transferència
-      to: A
+      to: Fins a
       transfer: Transferència
     new:
       title: Nova transferència
     show:
-      amount: Import
-      category: Categoria
-      date: Data
       delete: Elimina transferència
-      delete_subtitle: Això elimina la transferència. No s'eliminaran les transaccions
+      delete_subtitle: Això eliminarà la transferència. No s'eliminaran les transaccions
         associades.
       delete_title: Vols eliminar la transferència?
       details: Detalls
-      from: Des de
-      mark_recurring: Marca com a recurrent
-      mark_recurring_subtitle: Fes el seguiment d'aquesta transferència com a patró
-        recurrent al feed de properes i a la pàgina de recurrents.
-      mark_recurring_title: Marca la transferència com a recurrent
       note_label: Notes
       note_placeholder: Afegeix una nota a aquesta transferència
       overview: Resum
       settings: Configuració
-      to: A
-      uncategorized: Sense categoria
     update:
       success: Transferència actualitzada

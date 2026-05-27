@@ -1,31 +1,6 @@
 ---
 en:
   mercury_items:
-    api_error:
-      title: Mercury Connection Error
-      unable_to_connect: Unable to connect to Mercury
-      common_issues: "Common Issues:"
-      invalid_api_token_label: Invalid API Token
-      invalid_api_token_desc: Check your API token in Provider Settings
-      expired_credentials_label: Expired Credentials
-      expired_credentials_desc: Generate a new API token from Mercury
-      insufficient_permissions_label: Insufficient Permissions
-      insufficient_permissions_desc: Ensure your token has read-only access
-      network_issue_label: Network Issue
-      network_issue_desc: Check your internet connection
-      service_down_label: Service Down
-      service_down_desc: Mercury API may be temporarily unavailable
-      check_provider_settings: Check Provider Settings
-    setup_required:
-      title: Mercury Setup Required
-      api_token_not_configured: API Token Not Configured
-      api_token_description: Before you can link Mercury accounts, you need to configure your Mercury API token.
-      setup_steps_title: "Setup Steps:"
-      setup_step_1_html: "Go to <strong>Settings > Providers</strong>"
-      setup_step_2_html: "Find the <strong>Mercury</strong> section"
-      setup_step_3: Enter your Mercury API token
-      setup_step_4: Return here to link your accounts
-      go_to_provider_settings: Go to Provider Settings
     create:
       success: Mercury connection created successfully
     destroy:
@@ -48,7 +23,6 @@ en:
       no_api_token: Mercury API token not found. Please configure it in Provider Settings.
       partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names"
       partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
-      select_connection: Choose a Mercury connection before linking accounts.
       success:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
@@ -68,33 +42,6 @@ en:
       syncing: Syncing...
       total: Total
       unlinked: Unlinked
-    provider_panel:
-      add_connection: Add Mercury connection
-      base_url_label: Base URL (optional)
-      base_url_placeholder: https://api.mercury.com/api/v1 (default)
-      connection_name_label: Connection name
-      connection_name_placeholder: Business checking
-      default_connection_name: Mercury Connection
-      disconnect_confirm: "Disconnect %{name}?"
-      instructions:
-        copy_token_html: "Copy the <strong>full token</strong> (including the <code>secret-token:</code> prefix) and add it as a named connection below"
-        create_token: Create a new API token with "Read Only" access
-        open_tokens: Go to Settings > Developer > API Tokens
-        sign_in_html: "Visit %{link} and log in to the account you want to connect"
-        whitelist_ip_html: "<strong>Important:</strong> Add your server's IP address to the token's whitelist"
-      keep_token_placeholder: Leave blank to keep the current token
-      sandbox_note_html: "Use a separate named connection for each Mercury login/API token you want to sync. For sandbox testing, use <code>https://api-sandbox.mercury.com/api/v1</code> as the Base URL. Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard."
-      setup_accounts: Set up accounts
-      setup_title: "Setup instructions:"
-      sync: Sync
-      token_label: Token
-      token_placeholder: Paste token here
-      update_connection: Update connection
-    provider_connection:
-      default_description: Connect to your bank via Mercury
-      default_name: Mercury
-      description: "Connect using %{name}"
-      name: "Mercury - %{name}"
     select_accounts:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
@@ -106,7 +53,6 @@ en:
       no_api_token: Mercury API token is not configured. Please configure it in Settings.
       no_credentials_configured: Please configure your Mercury API token first in Provider Settings.
       no_name_placeholder: "(No name)"
-      select_connection: Choose a Mercury connection in Provider Settings.
       title: Select Mercury Accounts
     select_existing_account:
       account_already_linked: This account is already linked to a provider
@@ -121,7 +67,6 @@ en:
       no_api_token: Mercury API token is not configured. Please configure it in Settings.
       no_credentials_configured: Please configure your Mercury API token first in Provider Settings.
       no_name_placeholder: "(No name)"
-      select_connection: Choose a Mercury connection in Provider Settings.
       title: "Link %{account_name} with Mercury"
     link_existing_account:
       account_already_linked: This account is already linked to a provider
@@ -131,7 +76,6 @@ en:
       mercury_account_not_found: Mercury account not found
       missing_parameters: Missing required parameters
       no_api_token: Mercury API token not found. Please configure it in Provider Settings.
-      select_connection: Choose a Mercury connection before linking accounts.
       success: "Successfully linked %{account_name} with Mercury"
     setup_accounts:
       account_type_label: "Account Type:"
@@ -201,8 +145,3 @@ en:
       success: Sync started
     update:
       success: Mercury connection updated
-    mercury_item_selection_error_payload:
-      select_connection: Choose a Mercury connection before loading accounts.
-    render_mercury_item_selection_failure:
-      select_connection: Choose a Mercury connection in Provider Settings.
-      no_credentials_configured: Please configure your Mercury API token first in Provider Settings.

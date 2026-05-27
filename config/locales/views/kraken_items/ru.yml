@@ -1,0 +1,85 @@
+---
+ru:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Связь с учётной записью на бирже Kraken
+      name: "Kraken - %{name}"
+      description: "Связь с %{name}"
+    create:
+      default_name: Kraken
+      success: Успешно подключено к Kraken. Ваша учётная запись на бирже синхронизируется.
+    update:
+      success: Успешно обновлено подключение к Kraken.
+    destroy:
+      success: Подключение к Kraken запланировано на удаление.
+    select_accounts:
+      select_connection: Выберите подключение к Kraken в настройках провайдера.
+      no_credentials_configured: Добавьте API-учётные данные Kraken перед настройкой счетов.
+    link_accounts:
+      select_connection: Выберите подключение к Kraken перед связыванием счетов.
+    select_existing_account:
+      title: Связать счёт Kraken
+      no_accounts_found: Счета Kraken не найдены.
+      wait_for_sync: Подождите, пока завершится синхронизация с Kraken.
+      check_provider_health: Проверьте, что ваши API-учётные данные Kraken действительны.
+      link: Связать
+      cancel: Отмена
+    link_existing_account:
+      success: Успешно связан с учётной записью Kraken
+      select_connection: Выберите подключение к Kraken перед связыванием счетов.
+      errors:
+        only_manual: Только ручные счета криптобиржи без существующей связи с провайдером могут быть связаны с Kraken
+        invalid_kraken_account: Недействительный счёт Kraken
+        kraken_account_already_linked: Этот счёт Kraken уже связан
+    setup_accounts:
+      title: Импортировать счёт Kraken
+      subtitle: Выберите учётную запись биржи для отслеживания
+      instructions: Kraken импортирует одну объединённую учётную запись криптобиржи для этого подключения, только с активами и спотовыми сделками.
+      no_accounts: Все счета Kraken были импортированы.
+      accounts_count:
+        one: "Доступен %{count} счёт"
+        other: "Доступно %{count} счетов"
+      select_all: Выбрать все
+      import_selected: Импортировать выбранные
+      cancel: Отмена
+      creating: Импортирование...
+    complete_account_setup:
+      success:
+        one: "Импортирован %{count} счёт"
+        other: "Импортировано %{count} счетов"
+      none_selected: Счета не выбраны
+      no_accounts: Нет счетов для импорта
+    kraken_item:
+      provider_name: Kraken
+      syncing: Синхронизация...
+      reconnect: Необходимо обновить учётные данные
+      deletion_in_progress: Удаление...
+      sync_status:
+        no_accounts: Счета не найдены
+        all_synced:
+          one: "Синхронизирован %{count} счёт"
+          other: "Синхронизировано %{count} счетов"
+        partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют настройки"
+      status: "Последняя синхронизация %{timestamp} назад"
+      status_with_summary: "Последняя синхронизация %{timestamp} назад - %{summary}"
+      status_never: Никогда не синхронизировалось
+      delete: Удалить
+      no_accounts_title: Счета не найдены
+      no_accounts_message: Ваша учётная запись на бирже Kraken появится здесь после синхронизации.
+      setup_needed: Счёт готов к импорту
+      setup_description: Импортируйте это подключение Kraken как учётную запись криптобиржи.
+      setup_action: Импортировать счёт
+      import_accounts_menu: Импортировать счёт
+      stale_rate_warning: "Баланс приблизительный, так как точный курс обмена на %{date} был недоступен. Обновится при следующей синхронизации."
+  kraken_item:
+    syncer:
+      checking_credentials: Проверка учётных данных...
+      credentials_invalid: Недействительные API-учётные данные Kraken. Пожалуйста, проверьте ваш API-ключ и секрет.
+      importing_accounts: Импортирование счетов из Kraken...
+      checking_configuration: Проверка конфигурации счёта...
+      accounts_need_setup:
+        one: "%{count} счёт требует настройки"
+        other: "%{count} счетов требуют настройки"
+      processing_accounts: Обработка данных счёта...
+      calculating_balances: Расчёт балансов...

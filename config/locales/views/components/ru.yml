@@ -1,0 +1,162 @@
+---
+ru:
+  UI:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Переключить выбор
+      balance_reconciliation:
+        labels:
+          adjustments: Корректировки
+          buys: Покупки
+          change_in_brokerage_cash: Изменение наличных в брокерском счёте
+          change_in_holdings_market: Изменение активов (рыночная цена)
+          change_in_holdings_trades: Изменение активов (покупки/продажи)
+          charges: Сборы
+          end_balance: Конечный баланс
+          end_principal: Конечный основной долг
+          end_value: Конечная стоимость
+          final_balance: Итоговый баланс
+          final_principal: Итоговый основной долг
+          final_value: Итоговая стоимость
+          market_changes: Рыночные изменения
+          net_cash_flow: Чистый денежный поток
+          net_principal_change: Изменение основного долга
+          net_value_change: Изменение стоимости
+          payments: Платежи
+          sells: Продажи
+          start_balance: Начальный баланс
+          start_principal: Начальный основной долг
+          start_value: Начальная стоимость
+        tooltips:
+          adjustments: Ручные корректировки или другие изменения
+          adjustments_asset: Ручные корректировки стоимости или оценки
+          buys: Покупки криптовалюты в течение дня
+          change_in_brokerage_cash: Чистое изменение наличных от депозитов, снятий и сделок
+          change_in_holdings_market: Изменение стоимости активов из-за рыночных колебаний
+          change_in_holdings_trades: Влияние на активы от покупок и продаж ценных бумаг
+          charges: Новые сборы за день
+          end_balance: Рассчитанный баланс после всех операций
+          end_balance_investment: Рассчитанный баланс после всей активности
+          end_principal: Рассчитанный основной долг после всех операций
+          end_value: Рассчитанная стоимость после всех изменений
+          final_balance: Итоговый баланс счёта за день
+          final_balance_credit: Итоговая задолженность за день
+          final_balance_crypto: Итоговая стоимость криптоактивов за день
+          final_balance_investment: Итоговая стоимость портфеля за день
+          final_principal: Итоговый основной долг за день
+          final_value: Итоговая стоимость активов за день
+          market_changes: Изменения стоимости из-за рыночных колебаний
+          net_cash_flow: Чистое изменение баланса от всех операций за день
+          net_principal_change: Платежи по основному долгу и новые заимствования за день
+          net_value_change: Все изменения стоимости, включая улучшения и амортизацию
+          payments: Платежи по карте за день
+          sells: Продажи криптовалюты в течение дня
+          start_balance: Баланс счёта на начало дня
+          start_balance_credit: Задолженность на начало дня
+          start_balance_crypto: Стоимость криптоактивов на начало дня
+          start_balance_investment: Общая стоимость портфеля на начало дня
+          start_principal: Основной долг на начало дня
+          start_value: Стоимость активов на начало дня
+      chart:
+        no_data_available: "Нет данных"
+        title:
+          balance: Баланс
+          cash_value: Стоимость наличных
+          debt_balance: Баланс задолженности
+          estimated_property_value: Оценочная стоимость недвижимости
+          estimated_vehicle_value: Оценочная стоимость транспортных средств
+          holdings_value: Стоимость активов
+          remaining_principal_balance: Остаток основного долга
+          total_account_value: Общая стоимость счёта
+        views:
+          cash: Наличные
+          holdings: Активы
+          total_value: Общая стоимость
+        vs_available_history: по сравнению с доступной историей
+      activity_date:
+        balance_tooltip: "Баланс на конец дня, после всех операций и корректировок"
+        no_balance_data: "Нет данных о балансе на эту дату"
+  ds:
+    alert:
+      variants:
+        info: Информация
+        success: Успех
+        warning: Предупреждение
+        error: Ошибка
+        destructive: Ошибка
+    pill:
+      aria_label: "%{label}"
+      default_label: Предпросмотр
+    dialog:
+      close: Закрыть
+    popover:
+      avatar_default_label: Открыть меню
+    tooltip:
+      trigger_label: Подробнее
+    link:
+      opens_in_new_tab: (открывается в новой вкладке)
+  provider_sync_summary:
+    title: Сводка синхронизации
+    last_sync: "Последняя синхронизация: %{time_ago} назад"
+    accounts:
+      title: Счета
+      total: "Всего: %{count}"
+      linked: "Связано: %{count}"
+      unlinked: "Не связано: %{count}"
+      institutions: "Учреждения: %{count}"
+    transactions:
+      title: Операции
+      seen: "Просмотрено: %{count}"
+      imported: "Импортировано: %{count}"
+      updated: "Обновлено: %{count}"
+      skipped: "Пропущено: %{count}"
+      fetching: "Получение данных от брокера..."
+      protected:
+        one: "%{count} запись защищена (не перезаписана)"
+        other: "%{count} записей защищено (не перезаписаны)"
+      view_protected: Просмотр защищённых записей
+    skip_reasons:
+      excluded: Исключено
+      user_modified: Изменено пользователем
+      import_locked: Импорт CSV
+      protected: Защищено
+    holdings:
+      title: Активы
+      found: "Найдено: %{count}"
+      processed: "Обработано: %{count}"
+    trades:
+      title: Сделки
+      imported: "Импортировано: %{count}"
+      skipped: "Пропущено: %{count}"
+      fetching: "Получение данных о сделках от брокера..."
+    health:
+      title: Состояние
+      view_error_details: Просмотр деталей ошибок
+      rate_limited: "Ограничение скорости %{time_ago}"
+      recently: недавно
+      errors: "Ошибки: %{count}"
+      pending_reconciled:
+        one: "%{count} дублирующаяся ожидающая операция согласована"
+        other: "%{count} дублирующих ожидающих операций согласованы"
+      view_reconciled: Просмотр согласованных операций
+      duplicate_suggestions:
+        one: "%{count} возможный дубликат требует проверки"
+        other: "%{count} возможных дубликатов требуют проверки"
+      view_duplicate_suggestions: Просмотр предложенных дубликатов
+      stale_pending:
+        one: "%{count} устаревшая ожидающая операция (исключена из бюджетов)"
+        other: "%{count} устаревших ожидающих операций (исключены из бюджетов)"
+      view_stale_pending: Просмотр затронутых счетов
+      stale_pending_count:
+        one: "%{count} операция"
+        other: "%{count} операций"
+      stale_unmatched:
+        one: "%{count} ожидающая операция требует ручной проверки"
+        other: "%{count} ожидающих операций требуют ручной проверки"
+      view_stale_unmatched: Просмотр операций, требующих проверки
+      stale_unmatched_count:
+        one: "%{count} операция"
+        other: "%{count} операций"
+      data_warnings: "Предупреждения о данных: %{count}"
+      notices: "Уведомления: %{count}"
+      view_data_quality: Просмотр качества данных

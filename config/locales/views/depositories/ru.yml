@@ -1,0 +1,26 @@
+---
+ru:
+  depositories:
+    edit:
+      edit: Изменить %{account}
+    form:
+      none: Нет
+      subtype_prompt: Выберите тип счёта
+    new:
+      title: Введите баланс счёта
+    subtypes:
+      cd:
+        long: Депозитный сертификат
+        short: Депозит
+      checking:
+        long: Расчётный счёт
+        short: Расчётный
+      hsa:
+        long: Счёт медицинских сбережений
+        short: Мед. счёт
+      money_market:
+        long: Денежный рынок
+        short: ДР
+      savings:
+        long: Сберегательный счёт
+        short: Сберегательный

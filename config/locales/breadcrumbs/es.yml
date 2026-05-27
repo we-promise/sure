@@ -1,8 +1,6 @@
 ---
 es:
   breadcrumbs:
-    categorize: Categorizar
     exports: Exportaciones
     home: Inicio
     imports: Importaciones
-    transactions: Transacciones

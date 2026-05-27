@@ -15,7 +15,6 @@ en:
       connection_lost_description: This connection is no longer valid. You'll need
         to delete this connection and add it again to continue syncing data.
       delete: Delete
-      deletion_in_progress: (deletion in progress...)
       error: Error occurred while syncing data
       no_accounts_description: We could not load any accounts from this financial
         institution.
@@ -26,12 +25,7 @@ en:
       syncing: Syncing...
       update: Update
     select_existing_account:
-      no_available_accounts: No available Plaid accounts to link. Please connect a new Plaid account first.
       title: "Link %{account_name} to Plaid"
       description: Select a Plaid account to link to your existing account
       cancel: Cancel
       link_account: Link account
-    link_existing_account:
-      invalid_account: Invalid Plaid account selected
-      already_linked: This Plaid account is already linked
-      success: Account successfully linked to Plaid

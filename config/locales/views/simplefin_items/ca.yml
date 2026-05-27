@@ -2,59 +2,39 @@
 ca:
   simplefin_items:
     complete_account_setup:
-      all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
+      all_skipped: S'han ignorat tots els comptes. No s'ha creat cap compte.
       no_accounts: No hi ha comptes per configurar.
       stale_accounts_errors:
-        one: "%{count} acció de compte obsolet ha fallat. Consulta els registres per
-          a més detalls."
-        other: "%{count} accions de comptes obsolets han fallat. Consulta els registres
-          per a més detalls."
-      stale_accounts_processed: 'Comptes obsolets: %{deleted} eliminats, %{moved}
-        moguts.'
-      success:
-        one: S'ha creat correctament %{count} compte SimpleFIN! Les teves transaccions
-          i posicions s'estan important en segon pla.
-        other: S'han creat correctament %{count} comptes SimpleFIN! Les teves transaccions
-          i posicions s'estan important en segon pla.
+        one: "L'acció del compte obsolet ha fallat: %{count}. Consulta els registres per a més detalls."
+        other: "Les accions dels comptes obsolets han fallat: %{count}. Consulta els registres per a més detalls."
+      stale_accounts_processed: 'Comptes obsolets: %{deleted} eliminats, %{moved} moguts.'
+      success: Els comptes SimpleFIN s'han configurat correctament! Les teves transaccions
+        i posicions s'estan important en segon pla.
     create:
       errors:
         blank_token: Introdueix un token de configuració SimpleFIN.
         create_failed: 'No s''ha pogut connectar: %{message}'
-        invalid_token: Token de configuració no vàlid. Comprova que has copiat el
-          token complet des de SimpleFIN Bridge.
+        invalid_token: Token de configuració invàlid. Comprova que has copiat el token
+          complet des de SimpleFIN Bridge.
         token_compromised: El token de configuració pot estar compromès, caducat o
           ja utilitzat. Crea'n un de nou.
-        unexpected: S'ha produït un error inesperat. Torna-ho a provar.
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
+          amb el suport.
       success: Connexió SimpleFIN afegida correctament! Els teus comptes apareixeran
         en breu mentre es sincronitzen en segon pla.
     destroy:
       success: La connexió SimpleFIN s'eliminarà
-    dismiss_replacement_suggestion:
-      dismissed: Suggeriment de substitució descartat
     edit:
-      cancel: Cancel·la
-      connection_needs_update: 'La teva connexió SimpleFIN necessita actualització:'
-      header_subtitle: Obtén un nou token de configuració per reconnectar el teu compte
-        SimpleFIN
       setup_token:
         help_text: El token ha de ser una cadena llarga que comenci amb lletres i
           números
         label: 'Token de configuració SimpleFIN:'
         placeholder: Enganxa aquí el teu token de configuració SimpleFIN...
-      step_1_html: Visita <a href="https://bridge.simplefin.org/simplefin/create"
-        target="_blank" rel="noopener noreferrer" class="text-link hover:text-link
-        underline">SimpleFIN Bridge</a> per crear un nou token de configuració
-      step_2: Copia el token i enganxa'l a continuació
-      step_3: Fes clic a "Actualitza" per restaurar l'accés
-      title: Actualitza la connexió SimpleFIN
-      update: Actualitza
     link_existing_account:
       errors:
-        different_provider: Aquest compte està enllaçat a un altre proveïdor. Desenllaça'l
-          primer d'aquell proveïdor i després enllaça'l a SimpleFIN.
-        invalid_simplefin_account: S'ha seleccionat un compte SimpleFIN no vàlid
-        only_manual: Només els comptes manuals es poden enllaçar
-      success: El compte s'ha enllaçat correctament a SimpleFIN
+        invalid_simplefin_account: S'ha seleccionat un compte SimpleFIN invàlid
+        only_manual: Només es poden enllaçar comptes manuals
+      success: S'ha enllaçat el compte correctament amb SimpleFIN
     new:
       cancel: Cancel·la
       connect: Connecta
@@ -65,117 +45,55 @@ ca:
       message:
         one: "%{count} transacció pendent duplicada conciliada"
         other: "%{count} transaccions pendents duplicades conciliades"
-    replacement_prompt:
-      confirm_body: "“%{account_name}” s'enllaçarà a “%{new_name}”. El teu historial
-        de transaccions es manté; les transaccions futures vindran de la nova targeta."
-      confirm_title: Vols tornar a enllaçar a la nova targeta?
-      description: "“%{account_name}” està enllaçat a “%{old_name}”, que no ha tingut
-        activitat recent i té saldo zero. Una nova targeta, “%{new_name}”, està activa
-        a la mateixa entitat. Torna a enllaçar-la per mantenir l'historial intacte."
-      dismiss_aria: Descarta el suggeriment de substitució
-      relink: Torna a enllaçar a la nova targeta
-      title: La teva targeta de %{institution} pot haver estat substituïda
     select_existing_account:
-      all_accounts_already_linked: Sembla que tots els comptes SimpleFIN ja estan
-        enllaçats.
+      all_accounts_already_linked: Sembla que ja s'han enllaçat tots els comptes de SimpleFIN.
       cancel: Cancel·la
-      check_provider_health: Comprova que la teva connexió SimpleFIN està activa a
-        Configuració → Proveïdors.
+      check_provider_health: Comprova l'estat del proveïdor
       currently_linked_to: 'Actualment enllaçat a: %{account_name}'
       description: Selecciona un compte SimpleFIN per enllaçar-lo al teu compte existent
       link_account: Enllaça el compte
-      no_accounts_found: No s'han trobat comptes SimpleFIN per a %{moniker}.
+      no_accounts_found: No s'han trobat comptes SimpleFIN per a aquesta família.
       title: Enllaça %{account_name} amb SimpleFIN
-      unlink_to_move: Per moure un enllaç, primer desenllaça'l del menú d'accions
-        del compte.
-      wait_for_sync: Si acabes de connectar o sincronitzar, torna-ho a provar després
-        que la sincronització acabi.
+      unlink_to_move: Per moure un enllaç, primer des-enllaça'l del menú d'accions del compte.
+      wait_for_sync: Si acabes de connectar o sincronitzar, torna-ho a provar després que la sincronització completi.
     setup_accounts:
-      account_card:
-        balance: Saldo
-      account_type_checking_savings: Corrent o estalvis
-      account_type_checking_savings_desc: Comptes bancaris habituals
-      account_type_credit_card: Targeta de crèdit
-      account_type_credit_card_desc: Comptes de targeta de crèdit
-      account_type_investment: Inversió
-      account_type_investment_desc: Corredoria, comptes 401(k), IRA
-      account_type_label: 'Tipus de compte:'
-      account_type_loan: Préstec o hipoteca
-      account_type_loan_desc: Comptes de deute
-      account_type_other_asset: Altre actiu
-      account_type_other_asset_desc: Tota la resta
-      activity:
-        days_ago:
-          one: fa 1 dia
-          other: fa %{count} dies
-        dormant: Sense activitat en %{days} dies
-        empty: Encara no s'han importat transaccions
-        likely_closed: Sense activitat recent i saldo zero — pot ser una targeta tancada
-          o substituïda
-        recent:
-          one: 1 transacció • darrera %{when}
-          other: "%{count} transaccions • darrera %{when}"
-        today: avui
-        yesterday: ahir
-      cancel: Cancel·la
-      choose_account_type: 'Tria el tipus de compte correcte per a cada compte SimpleFIN:'
-      create_accounts: Crea comptes
-      creating_accounts: Creant comptes...
-      header_subtitle: Tria els tipus de compte correctes per als teus comptes importats
       stale_accounts:
         action_delete: Elimina el compte i totes les transaccions
         action_move: 'Mou les transaccions a:'
         action_prompt: Què vols fer?
         action_skip: Omet ara
-        description: Aquests comptes existeixen a la teva base de dades, però ja no
-          els ofereix SimpleFIN. Això pot passar quan la configuració del compte canvia
-          al proveïdor.
+        description: Aquests comptes existeixen a la teva base de dades però ja no s'ofereixen
+          per SimpleFIN. Això pot passar quan les configuracions del compte canvien a nivell superior.
         title: Comptes ja no disponibles a SimpleFIN
         transaction_count:
           one: "%{count} transacció"
           other: "%{count} transaccions"
-      title: Configura els teus comptes SimpleFIN
-      transaction_history_description_html: SimpleFIN normalment proporciona <strong>60-90
-        dies</strong> d'historial de transaccions, segons el teu banc. Després de
-        la configuració inicial, les noves transaccions es sincronitzaran automàticament.
-        La disponibilitat de les dades històriques varia segons l'entitat i el tipus
-        de compte.
-      transaction_history_title: 'Historial de transaccions:'
     simplefin_item:
-      accounts_skipped_label: 'Omesos: %{count}'
-      accounts_skipped_tooltip: S'han omès alguns comptes per errors durant la sincronització
-      add_new: Afegeix una connexió nova
+      add_new: Afegeix nova connexió
       confirm_accept: Elimina la connexió
       confirm_body: Això eliminarà permanentment tots els comptes d'aquest grup i
         totes les dades associades.
       confirm_title: Vols eliminar la connexió SimpleFIN?
       delete: Elimina
       deletion_in_progress: "(eliminació en curs...)"
-      duplicate_accounts_skipped: S'han omès alguns comptes perquè eren duplicats
-        — utilitza 'Enllaça comptes existents' per fusionar-los.
+      duplicate_accounts_skipped: S'han omès alguns comptes perquè eren duplicats — utilitza 'Enllaça
+        comptes existents' per fusionar-los.
       error: S'ha produït un error en sincronitzar les dades
-      more_accounts_available:
-        one: "%{count} compte més disponible per configurar"
-        other: "%{count} comptes més disponibles per configurar"
       no_accounts_description: Aquesta connexió encara no té cap compte sincronitzat.
       no_accounts_title: No s'han trobat comptes
-      rate_limited_ago: Límit de velocitat aplicat (fa %{time})
-      rate_limited_recently: Límit de velocitat aplicat recentment
-      reconciled_details_note: "(consulta el resum de la sincronització per a més
-        detalls)"
-      requires_update: Reconnecta
-      setup_accounts_menu: Configura comptes
-      setup_action: Configura els nous comptes
+      reconciled_details_note: "(consulta el resum de la sincronització per a més detalls)"
+      requires_update: Cal tornar a autenticar
+      setup_action: Configura nous comptes
       setup_description: Tria els tipus de compte per als teus nous comptes SimpleFIN
         importats.
-      setup_needed: Nous comptes a punt per configurar
+      setup_needed: Nous comptes llestos per configurar
       stale_pending_accounts: 'a: %{accounts}'
       stale_pending_note: "(exclòs dels pressupostos)"
       status: Darrera sincronització fa %{timestamp}
       status_never: Mai sincronitzat
       status_with_summary: Darrera sincronització fa %{timestamp} • %{summary}
       syncing: Sincronitzant...
-      update: Actualitza
+      update: Actualitza la connexió
     stale_pending_status:
       message:
         one: "%{count} transacció pendent anterior a %{days} dies"
@@ -183,11 +101,12 @@ ca:
     update:
       errors:
         blank_token: Introdueix un token de configuració SimpleFIN.
-        invalid_token: Token de configuració no vàlid. Comprova que has copiat el
-          token complet des de SimpleFIN Bridge.
+        invalid_token: Token de configuració invàlid. Comprova que has copiat el token
+          complet des de SimpleFIN Bridge.
         token_compromised: El token de configuració pot estar compromès, caducat o
           ja utilitzat. Crea'n un de nou.
-        unexpected: S'ha produït un error inesperat. Torna-ho a provar.
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
+          amb el suport.
         update_failed: 'No s''ha pogut actualitzar la connexió: %{message}'
       success: Connexió SimpleFIN actualitzada correctament! Els teus comptes s'estan
         tornant a connectar.

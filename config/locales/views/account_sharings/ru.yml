@@ -1,0 +1,29 @@
+---
+ru:
+  account_sharings:
+    show:
+      title: Совместное использование счёта
+      subtitle: Управляйте тем, кто может видеть и взаимодействовать с этим счётом
+      member: Участник
+      permission: Разрешение
+      shared: Совместно
+      no_members: Нет других участников в вашем %{moniker} для совместного использования
+      permissions:
+        full_control: Полный доступ
+        full_control_description: Может просматривать, редактировать и управлять операциями
+        read_write: Комментирование
+        read_write_description: Может категоризировать, добавлять теги и заметки
+        read_only: Только просмотр
+        read_only_description: Может только просматривать данные счёта
+      save: Сохранить настройки доступа
+      owner_label: "Владелец: %{name}"
+      shared_with_count:
+        one: Совместно с 1 участником
+        other: "Совместно с %{count} участниками"
+      include_in_finances: Включить в мои бюджеты и отчёты
+      exclude_from_finances: Исключить из моих бюджетов и отчётов
+      finance_toggle_description: Учитывать этот счёт в вашей чистой стоимости, бюджетах и отчётах
+    update:
+      success: Настройки доступа обновлены
+      not_owner: Только владелец счёта может управлять доступом
+      finance_toggle_success: Предпочтение включения в финансы обновлено

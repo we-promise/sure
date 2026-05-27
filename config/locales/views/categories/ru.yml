@@ -1,0 +1,52 @@
+---
+ru:
+  categories:
+    bootstrap:
+      success: Стандартные категории успешно созданы
+    category:
+      delete: Удалить категорию
+      edit: Редактировать категорию
+    create:
+      success: Категория успешно создана
+    destroy:
+      success: Категория успешно удалена
+    edit:
+      edit: Редактировать категорию
+    form:
+      placeholder: Название категории
+      name_label: Название
+      unassigned: "(не назначено)"
+      parent_category_label: "Родительская категория (необязательно)"
+      color: Цвет
+      icon: Иконка
+      auto_adjust: авто-настройка.
+      poor_contrast: "Плохой контраст, выберите более тёмный цвет или"
+    destroy_all:
+      success: Все категории удалены
+    index:
+      bootstrap: Использовать стандартные (рекомендуется)
+      categories: Категории
+      categories_expenses: Категории расходов
+      categories_incomes: Категории доходов
+      delete_all: Удалить все
+      empty: Категории не найдены
+      new: Новая категория
+    menu:
+      loading: Загрузка...
+    new:
+      new_category: Новая категория
+    update:
+      success: Категория успешно обновлена
+    virtual:
+      transfer: Перевод
+      payment: Платёж
+      trade: Сделка
+  category:
+    dropdowns:
+      show:
+        bootstrap: Создать стандартные категории
+        empty: Категории не найдены
+        match_transfer: "Соответствие переводу/платежу"
+        one_time: "Одноразовый %{type}"
+        income: "доход"
+        expense: "расход"

@@ -1,0 +1,75 @@
+---
+ru:
+  coinstats_items:
+    create:
+      success: Подключение к CoinStats успешно настроено.
+      default_name: Подключение CoinStats
+      errors:
+        validation_failed: "Ошибка проверки: %{message}."
+    update:
+      success: Подключение к CoinStats успешно обновлено.
+      errors:
+        validation_failed: "Ошибка проверки: %{message}."
+    destroy:
+      success: Подключение к CoinStats запланировано на удаление.
+    link_wallet:
+      success: "%{count} криптокошелёк(ка) успешно подключён(ы)."
+      missing_params: "Отсутствуют необходимые параметры: адрес и блокчейн."
+      failed: Не удалось подключить криптокошелёк.
+      error: "Ошибка подключения криптокошелька: %{message}."
+    link_exchange:
+      success: "%{name} биржа подключена."
+      missing_params: Требуются биржа и учетные данные.
+      invalid_exchange: Выбранная биржа больше не поддерживается.
+      failed: Не удалось подключить биржу.
+      error: "Ошибка подключения биржи: %{message}."
+    new:
+      title: Подключение криптовалюты через CoinStats
+      blockchain_fetch_error: Не удалось загрузить блокчейны. Пожалуйста, попробуйте позже.
+      link_wallet_title: Подключение адреса кошелька
+      link_wallet_description: Отслеживайте кошелёк с самостоятельным хранением или отдельный адрес в блокчейне через CoinStats.
+      address_label: Адрес
+      address_placeholder: Обязательно
+      blockchain_label: Блокчейн
+      blockchain_placeholder: Обязательно
+      blockchain_select_blank: Выберите блокчейн
+      link_wallet_submit: Подключить криптокошелёк
+      link_exchange_title: Подключение API биржи
+      link_exchange_description: Используйте API-ключ биржи только для чтения, чтобы CoinStats мог синхронизировать балансы и операции с Bitvavo, Binance и другими поддерживаемыми биржами.
+      link_exchange_note: Если ваша биржа требует активации API-ключа или подтверждения по электронной почте, завершите этот шаг перед подключением здесь.
+      exchange_select_blank: Выберите биржу
+      exchange_label: Биржа
+      link_exchange_submit: Подключить биржу
+      not_configured_title: Подключение к CoinStats не настроено
+      not_configured_message: Чтобы подключить криптокошелёк или биржу, сначала необходимо настроить подключение к CoinStats.
+      not_configured_step1_html: Перейдите в <strong>Настройки → Провайдеры</strong>
+      not_configured_step2_html: Найдите провайдера <strong>CoinStats</strong>
+      not_configured_step3_html: Следуйте предоставленным <strong>инструкциям по настройке</strong> для завершения конфигурации провайдера
+      go_to_settings: Перейти к настройкам провайдера
+      setup_instructions: "Инструкции по настройке:"
+      step1_html: Посетите <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Панель управления публичным API CoinStats</a>, чтобы получить API-ключ.
+      step2: Введите ваш API-ключ ниже и нажмите Настроить.
+      step3_html: После успешного подключения перейдите на вкладку <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Счета</a>, чтобы настроить ваши криптосчета.
+      api_key_label: API-ключ
+      api_key_placeholder: Обязательно
+      configure: Настроить
+      update_configuration: Перенастроить
+      default_name: Подключение CoinStats
+    coinstats_item:
+      deletion_in_progress: Данные криптокошелька удаляются…
+      provider_name: CoinStats
+      syncing: Синхронизация…
+      sync_status:
+        no_accounts: Криптокошельки не найдены
+        all_synced:
+          one: "Синхронизирован %{count} криптокошелёк"
+          other: "Синхронизировано %{count} криптокошельков"
+        partial_sync: "Синхронизировано %{linked_count} криптокошельков, %{unlinked_count} требуют настройки"
+      reconnect: Переподключить
+      status: Последняя синхронизация %{timestamp} назад
+      status_never: Никогда не синхронизировалось
+      status_with_summary: "Последняя синхронизация %{timestamp} назад • %{summary}"
+      update_api_key: Обновить API-ключ
+      delete: Удалить
+      no_wallets_title: Криптокошельки не подключены
+      no_wallets_message: В настоящее время к CoinStats не подключены криптокошельки.

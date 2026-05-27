@@ -1,0 +1,75 @@
+---
+ru:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Успешно подключено к Binance! Ваш счёт синхронизируется.
+    update:
+      success: Конфигурация Binance успешно обновлена.
+    destroy:
+      success: Подключение к Binance запланировано на удаление.
+    setup_accounts:
+      title: Импортировать счёт Binance
+      subtitle: Выберите портфели для отслеживания
+      instructions: Выберите портфели Binance, которые хотите импортировать. Показаны только портфели с балансами.
+      no_accounts: Все счета импортированы.
+      accounts_count:
+        one: "Доступен %{count} счёт"
+        other: "Доступно %{count} счёта"
+      select_all: Выбрать все
+      import_selected: Импортировать выбранные
+      cancel: Отмена
+      creating: Импортирование...
+    complete_account_setup:
+      success:
+        one: "Импортирован %{count} счёт"
+        other: "Импортировано %{count} счёта"
+      none_selected: Счета не выбраны
+      no_accounts: Нет счетов для импорта
+    binance_item:
+      provider_name: Binance
+      syncing: Синхронизация...
+      reconnect: Требуется обновление данных
+      deletion_in_progress: Удаление...
+      sync_status:
+        no_accounts: Счета не найдены
+        all_synced:
+          one: "Синхронизирован %{count} счёт"
+          other: "Синхронизировано %{count} счёта"
+        partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют настройки"
+      status: "Последняя синхронизация %{timestamp} назад"
+      status_with_summary: "Последняя синхронизация %{timestamp} назад - %{summary}"
+      status_never: Никогда не синхронизировалось
+      update_credentials: Обновить данные
+      delete: Удалить
+      no_accounts_title: Счета не найдены
+      no_accounts_message: Ваш портфель Binance появится здесь после синхронизации.
+      setup_needed: Счёт готов к импорту
+      setup_description: Выберите, какие портфели Binance вы хотите отслеживать.
+      setup_action: Импортировать счёт
+      import_accounts_menu: Импортировать счёт
+      stale_rate_warning: "Баланс приблизительный — точный курс обмена на %{date} недоступен. Обновится при следующей синхронизации."
+    select_existing_account:
+      title: Связать счёт Binance
+      no_accounts_found: Счета Binance не найдены.
+      wait_for_sync: Подождите, пока Binance завершит синхронизацию
+      check_provider_health: Проверьте, действительны ли ваши API-данные Binance
+      currently_linked_to: "В настоящее время связано с: %{account_name}"
+      link: Связать
+      cancel: Отмена
+    link_existing_account:
+      success: Успешно связано с счётом Binance
+      errors:
+        only_manual: Только ручные счета могут быть связаны с Binance
+        invalid_binance_account: Недействительный счёт Binance
+  binance_item:
+    syncer:
+      checking_credentials: Проверка данных...
+      credentials_invalid: Недействительные API-данные. Пожалуйста, проверьте ваш API-ключ и секрет.
+      importing_accounts: Импортирование счетов из Binance...
+      checking_configuration: Проверка конфигурации счёта...
+      accounts_need_setup:
+        one: "%{count} счёт требует настройки"
+        other: "%{count} счёта требуют настройки"
+      processing_accounts: Обработка данных счёта...
+      calculating_balances: Расчёт балансов...

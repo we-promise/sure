@@ -3,16 +3,11 @@ en:
   activerecord:
     attributes:
       import:
-        col_sep: Column separator
-        col_seps:
-          comma: Comma (,)
-          semicolon: Semicolon (;)
         currency: Currency
         number_format: Number Format
     errors:
       models:
         import:
-          duplicate_headers: "CSV headers normalize to duplicate columns: %{columns}"
           attributes:
             raw_file_str:
               invalid_csv_format: is not a valid CSV format
