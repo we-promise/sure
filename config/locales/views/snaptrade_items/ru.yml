@@ -18,9 +18,13 @@ ru:
     complete_account_setup:
       success:
         one: "Успешно связан %{count} счёт."
+        few: "Успешно связаны %{count} счёта."
+        many: "Успешно связано %{count} счетов."
         other: "Успешно связаны %{count} счёта."
       partial_success:
         one: "Связан %{count} счёт. %{failed_count} не удалось связать."
+        few: "Связаны %{count} счёта. %{failed_count} не удалось связать."
+        many: "Связано %{count} счетов. %{failed_count} не удалось связать."
         other: "Связаны %{count} счёта. %{failed_count} не удалось связать."
       link_failed: "Не удалось связать счета: %{errors}"
       no_accounts: "Не выбрано ни одного счёта для связывания."

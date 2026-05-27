@@ -4,4 +4,4 @@ ru:
     errors:
       models:
         simplefin_account:
-          no_balance: "У счёта SimpleFin должен быть либо текущий, либо доступный баланс"
+          no_balance: "У счёта SimpleFIN должен быть либо текущий, либо доступный баланс"

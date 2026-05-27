@@ -28,7 +28,9 @@ ru:
       one: "%{name}"
       count:
         one: "%{count} учреждение"
-        other: "%{count} учреждений"
+        few: "%{count} учреждения"
+        many: "%{count} учреждений"
+        other: "%{count} учреждения"
     sync_status:
       no_accounts: Счета не найдены
       all_synced:

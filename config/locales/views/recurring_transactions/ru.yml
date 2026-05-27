@@ -8,7 +8,9 @@ ru:
     expected_today: "Ожидается сегодня"
     expected_in:
       one: "Ожидается через %{count} день"
-      other: "Ожидается через %{count} дней"
+      few: "Ожидается через %{count} дня"
+      many: "Ожидается через %{count} дней"
+      other: "Ожидается через %{count} дня"
     day_of_month: День %{day} месяца
     identify_patterns: Определить шаблоны
     cleanup_stale: Очистить устаревшие

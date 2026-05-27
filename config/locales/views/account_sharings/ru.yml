@@ -19,6 +19,8 @@ ru:
       owner_label: "Владелец: %{name}"
       shared_with_count:
         one: Совместно с 1 участником
+        few: "Совместно с %{count} участниками"
+        many: "Совместно с %{count} участниками"
         other: "Совместно с %{count} участниками"
       include_in_finances: Включить в мои бюджеты и отчёты
       exclude_from_finances: Исключить из моих бюджетов и отчётов
