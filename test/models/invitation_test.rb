@@ -122,10 +122,6 @@ class InvitationTest < ActiveSupport::TestCase
     assert_includes invitation.errors[:email], "has already been invited to this family"
   end
 
-  # Regression: issue #1689. Accepting an invitation must not silently rehome a
-  # user away from accounts they own. The previous behaviour overwrote
-  # `user.family_id`, orphaning the invitee's owned accounts and locking them
-  # out of their historical data.
   test "accept_for refuses when invitee owns accounts that would be orphaned" do
     owner = users(:empty)
     owner_family = families(:empty)
@@ -148,10 +144,6 @@ class InvitationTest < ActiveSupport::TestCase
     assert owner_family.accounts.exists?, "original family's accounts must remain intact"
   end
 
-  # PR #1896 review (Codex P1 + maintainer): the guard must key off accounts the
-  # invitee *owns*, not every account in their current family. A non-owner
-  # member of a multi-user household orphans nothing by leaving, so they must be
-  # free to accept an invitation elsewhere.
   test "accept_for allows a member who owns no accounts to join another family" do
     member = users(:empty)
     other_owner = users(:sure_support_staff)

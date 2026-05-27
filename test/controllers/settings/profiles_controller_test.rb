@@ -59,17 +59,8 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert User.find(@admin.id)
   end
 
-  # Regression: issue #1689. After a user is rehomed to another family via the
-  # legacy `accept_for` flow, their original family's accounts still carry
-  # `owner_id` pointing at them. Destroying the user now would orphan those
-  # accounts forever and the user could never recover access.
   test "admin cannot destroy a member who owns accounts in another family" do
     other_family = families(:empty)
-    # Simulate the legacy buggy state from issue #1689: the member was rehomed
-    # into the current family by the old invitation flow, but still owns an
-    # account in their previous family. The owner_belongs_to_family validation
-    # would normally reject this, so we bypass it to recreate the orphan-risk
-    # row a pre-fix database can legitimately contain.
     legacy_account = other_family.accounts.create!(
       name: "Legacy savings", balance: 250, currency: "USD",
       accountable: Depository.new

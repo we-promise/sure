@@ -26,9 +26,6 @@ class Settings::ProfilesController < ApplicationController
       return
     end
 
-    # Issue #1689: destroying a user that still owns accounts in another
-    # family (legacy state from a pre-fix invitation rehoming) would orphan
-    # those accounts forever and leave the user with no way to log back in.
     if @user.owned_accounts.where.not(family_id: Current.family.id).exists?
       flash[:alert] = t(".member_owns_other_family_data")
       redirect_to settings_profile_path

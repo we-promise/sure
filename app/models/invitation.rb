@@ -42,16 +42,6 @@ class Invitation < ApplicationRecord
     true
   end
 
-  # Issue #1689: accepting an invitation overwrites `user.family_id`. Any
-  # account the invitee *owns* outside the destination family becomes
-  # unreachable to them afterward (they can no longer switch back to it).
-  # Returns true when accepting would orphan such accounts so callers can
-  # refuse and keep the invitee's data reachable.
-  #
-  # Keys off accounts the invitee owns — NOT every account in their current
-  # family — so a non-owner member is free to join another household. This
-  # mirrors the destroy-path guard in Settings::ProfilesController, which
-  # uses the same `owned_accounts.where.not(family_id: …)` scope.
   def would_orphan_owned_accounts?(user)
     return false if user.blank?
     return false if user.family_id.blank?
