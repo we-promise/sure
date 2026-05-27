@@ -68,7 +68,7 @@ ru:
       accounts_selected: счетов выбрано
       api_error: "Ошибка API: %{message}"
       cancel: Отмена
-      configure_name_in_lunchflow: Невозможно импортировать - пожалуйста, настройте имя счёта в Lunchflow
+      configure_name_in_lunchflow: Невозможно импортировать - пожалуйста, настройте имя счёта в Lunch Flow
       description: Выберите счета, которые вы хотите связать с вашим счётом %{product_name}.
       link_accounts: Связать выбранные счета
       no_accounts_found: Счета не найдены. Пожалуйста, проверьте конфигурацию вашего API-ключа.

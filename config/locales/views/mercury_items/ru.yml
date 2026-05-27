@@ -38,8 +38,10 @@ ru:
     link_accounts:
       all_already_linked:
         one: "Выбранный счёт (%{names}) уже связан"
+        few: "%{count} выбранных счёта уже связаны: %{names}"
+        many: "%{count} выбранных счетов уже связаны: %{names}"
         other: "Все %{count} выбранные счета уже связаны: %{names}"
-      api_error: "Ошибка API: %{message}"
+        api_error: "Ошибка API: %{message}"
       invalid_account_names:
         one: "Невозможно связать счёт с пустым именем"
         other: "Невозможно связать %{count} счетов с пустыми именами"

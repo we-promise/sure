@@ -39,7 +39,9 @@ ru:
       no_accounts: Все счета Kraken были импортированы.
       accounts_count:
         one: "Доступен %{count} счёт"
-        other: "Доступно %{count} счетов"
+        few: "Доступно %{count} счёта"
+        many: "Доступно %{count} счетов"
+        other: "Доступно %{count} счёта"
       select_all: Выбрать все
       import_selected: Импортировать выбранные
       cancel: Отмена

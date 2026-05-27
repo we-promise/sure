@@ -30,7 +30,7 @@ ru:
         label: "Токен настройки SimpleFIN:"
         placeholder: "Вставьте ваш токен настройки SimpleFIN здесь..."
         help_text: "Токен должен быть длинной строкой, начинающейся с букв и цифр"
-      title: Обновить подключение SimpleFin
+      title: Обновить подключение SimpleFIN
       header_subtitle: Получите новый токен настройки для переподключения вашего аккаунта SimpleFIN
       connection_needs_update: "Ваше подключение SimpleFIN нуждается в обновлении:"
       step_1_html: "Посетите <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a>, чтобы создать новый токен настройки"
@@ -39,9 +39,9 @@ ru:
       update: Обновить
       cancel: Отмена
     setup_accounts:
-      title: Настройте ваши счета SimpleFin
+      title: Настройте ваши счета SimpleFIN
       header_subtitle: Выберите правильные типы счетов для импортированных счетов
-      choose_account_type: "Выберите правильный тип для каждого счета SimpleFin:"
+      choose_account_type: "Выберите правильный тип для каждого счета SimpleFIN:"
       account_type_checking_savings: Текущий или Сберегательный
       account_type_checking_savings_desc: Обычные банковские счета
       account_type_credit_card: Кредитная карта
@@ -53,7 +53,7 @@ ru:
       account_type_other_asset: Другой актив
       account_type_other_asset_desc: Всё остальное
       transaction_history_title: "История операций:"
-      transaction_history_description_html: "SimpleFin обычно предоставляет <strong>60-90 дней</strong> истории операций, в зависимости от вашего банка. После первоначальной настройки новые операции будут синхронизироваться автоматически. Доступность исторических данных зависит от учреждения и типа счета."
+      transaction_history_description_html: "SimpleFIN обычно предоставляет <strong>60-90 дней</strong> истории операций, в зависимости от вашего банка. После первоначальной настройки новые операции будут синхронизироваться автоматически. Доступность исторических данных зависит от учреждения и типа счета."
       account_type_label: "Тип счёта:"
       create_accounts: Создать счета
       creating_accounts: Создание счетов...
