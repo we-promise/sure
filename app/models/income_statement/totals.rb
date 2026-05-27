@@ -162,7 +162,7 @@ class IncomeStatement::Totals
     end
 
     def excluded_kinds_sql
-      @excluded_kinds_sql ||= @excluded_kinds.map { |k| "'#{k}'" }.join(", ")
+      @excluded_kinds_sql ||= @excluded_kinds.map { |k| ActiveRecord::Base.connection.quote(k.to_s) }.join(", ")
     end
 
     def validate_date_range!

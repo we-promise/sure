@@ -291,7 +291,7 @@ class Budget < ApplicationRecord
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_totals.total
   end
 
   def actual_income_percent

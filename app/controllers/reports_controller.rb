@@ -356,7 +356,7 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown
       # Base query: all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude transfers and CC payments (matching income_statement report logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -660,7 +660,7 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude transfers and CC payments (matching income_statement report logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -697,7 +697,7 @@ class ReportsController < ApplicationController
       end
 
       # Get all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude transfers and CC payments (matching income_statement report logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
