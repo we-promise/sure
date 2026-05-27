@@ -67,6 +67,63 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.transaction.pending?, "pending flag should still be set on the split parent"
   end
 
+  test "split children inherit pending status from parent" do
+    @entry.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    children.each do |child|
+      assert child.entryable.pending?, "split child should inherit parent's pending status"
+      assert_equal({ "simplefin" => { "pending" => true } }, child.entryable.extra)
+    end
+  end
+
+  test "split children of non-pending parent are not pending" do
+    refute @entry.transaction.pending?, "parent should not be pending"
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    children.each do |child|
+      refute child.entryable.pending?, "split child of non-pending parent should not be pending"
+      assert_equal({}, child.entryable.extra)
+    end
+  end
+
+  test "split children of pending parent are excluded from analytics via excluding_pending" do
+    @entry.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    child_transaction_ids = @entry.child_entries.map(&:entryable_id)
+    pending_children = Transaction.where(id: child_transaction_ids).excluding_pending
+
+    assert_empty pending_children, "pending split children should be excluded by the excluding_pending scope"
+  end
+
+  test "split children inherit pending from plaid provider" do
+    @entry.transaction.update!(extra: { "plaid" => { "pending" => true, "transaction_id" => "abc123" } })
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    children.each do |child|
+      assert child.entryable.pending?, "split child should inherit plaid pending status"
+      # Only the pending flag is copied, not provider-specific metadata like transaction_id
+      assert_equal({ "plaid" => { "pending" => true } }, child.entryable.extra)
+    end
+  end
+
   test "cannot split transfers" do
     transfer = create_transfer(
       from_account: accounts(:depository),

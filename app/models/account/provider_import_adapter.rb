@@ -148,6 +148,21 @@ class Account::ProviderImportAdapter
                 ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
               end
               entry.transaction.extra = ex
+
+              # If this was a split parent, clear the inherited pending flags from all children
+              # so they appear in analytics and drop the pending badge once the parent books.
+              if entry.split_parent?
+                entry.child_entries.includes(:entryable).each do |child|
+                  next unless child.entryable.is_a?(Transaction)
+                  child_ex = (child.transaction.extra || {}).deep_dup
+                  Transaction::PENDING_PROVIDERS.each do |provider|
+                    next unless child_ex.key?(provider)
+                    child_ex[provider].delete("pending")
+                    child_ex.delete(provider) if child_ex[provider].empty?
+                  end
+                  child.transaction.update_columns(extra: child_ex, updated_at: Time.current)
+                end
+              end
             end
           end
         end

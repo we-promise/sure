@@ -55,6 +55,11 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
 
     # Children survive intact
     assert_equal child_ids.sort, pending_entry.child_entries.reload.pluck(:id).sort
+
+    # Children's pending flags are also cleared so they appear in analytics
+    pending_entry.child_entries.reload.each do |child|
+      refute child.entryable.pending?, "split child pending flag should be cleared when parent is booked"
+    end
   end
 
   # --- Exact amount, SimpleFIN amount-match (priority 2) ---
@@ -83,6 +88,11 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
     end
 
     assert_equal child_ids.sort, pending_entry.child_entries.reload.pluck(:id).sort
+
+    # Children's pending flags are also cleared so they appear in analytics
+    pending_entry.child_entries.reload.each do |child|
+      refute child.entryable.pending?, "split child pending flag should be cleared when parent is booked"
+    end
   end
 
   # --- Amount mismatch via Plaid pending_transaction_id (tip scenario) ---
