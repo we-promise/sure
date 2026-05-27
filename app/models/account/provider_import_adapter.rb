@@ -738,6 +738,13 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
+      .limit(2)
+      .to_a
+
+    # Only match when there is exactly ONE candidate — multiple same-amount pendings
+    # within the window are ambiguous and must not be auto-claimed, because claiming
+    # the wrong one silently destroys a distinct transaction (issue #2013).
+    return nil if candidates.size != 1
 
     candidates.first
   end
