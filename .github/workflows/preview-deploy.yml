@@ -2,7 +2,7 @@ name: Deploy PR Preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - 'charts/**'
       - 'docs/**'
@@ -10,7 +10,9 @@ on:
 
 jobs:
   deploy-preview:
-    if: contains(github.event.pull_request.labels.*.name, 'preview-cf')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'preview-cf') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview-cf')
     name: Deploy to Cloudflare Containers
     runs-on: ubuntu-latest
     timeout-minutes: 15
