@@ -4,7 +4,7 @@
     <span class="goal-avatar inline-flex items-center justify-center w-11 h-11 rounded-xl font-semibold text-base"
           style="--avatar-color: <%= form.object.color %>;"
           data-color-icon-picker-target="avatar"
-          data-goal-stepper-target="avatarPreview">
+          data-goal-form-target="avatarPreview">
       <% if form.object.icon.present? %>
         <%= icon(form.object.icon, color: "current", size: "md") %>
       <% elsif form.object.name.present? %>

@@ -65,8 +65,7 @@ en:
         completed: Completed
     new:
       heading: New goal
-      step1_subtitle: Step 1 of 2 · Goal details
-      step2_subtitle: Step 2 of 2 · Review & start
+      subtitle: Save toward something specific.
     edit:
       heading: Edit goal
       save: Save changes
@@ -242,46 +241,29 @@ en:
       footer_last_days:
         one: Last pledge matched 1 day ago
         other: "Last pledge matched %{count} days ago"
-    form_stepper:
-      cancel: Cancel
-      continue: Continue
-      back: Back
-      submit: Create goal
+    form:
+      create: Create goal
+      save: Save changes
+      suggested_with_date: "Save {monthly}/mo across {accounts} to hit it on time."
+      suggested_no_date: Set a target date to project a finish line.
       errors:
         name_required: Give your goal a name.
         amount_required: Set a target above zero.
         accounts_required: Pick at least one funding account.
-      step1:
-        label: Goal details
-        heading: What are you saving for?
-        subheading: Give your goal a name and a target. You can change these later.
-        fields:
-          name: Name
-          name_placeholder: Emergency fund, House down payment…
-          target_amount: Target amount
-          target_date: Target date
-          color: Color
-          notes: Notes (optional)
-          notes_summary: Add notes (optional)
-          notes_placeholder: A reminder for future you…
-          funding_accounts: Funding accounts
-          funding_accounts_hint: This goal's balance is the balance of these accounts.
-        subtypes:
-          checking: Checking
-          savings: Savings
-          hsa: HSA
-          cd: CD
-          money_market: Money market
-          other: Other
-      step2:
-        label: Review & start
-        heading: Looks good?
-        subheading: Review your goal and confirm.
-        review:
-          summary_with_date: "{amount} by {date}"
-          summary_no_date: "{amount}"
-          account_count:
-            one: 1 account
-            other: "{count} accounts"
-          suggested_with_date: "Save {monthly}/mo across {accounts} to hit it on time."
-          suggested_no_date: Set a target date to project a finish line.
+      fields:
+        name: Name
+        name_placeholder: Emergency fund, House down payment…
+        target_amount: Target amount
+        target_date: Target date
+        color: Color
+        notes: Notes (optional)
+        notes_placeholder: A reminder for future you…
+        funding_accounts: Funding accounts
+        funding_accounts_hint: This goal's balance is the balance of these accounts.
+      subtypes:
+        checking: Checking
+        savings: Savings
+        hsa: HSA
+        cd: CD
+        money_market: Money market
+        other: Other

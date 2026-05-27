@@ -6,16 +6,14 @@
           <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "md", rounded: true) %>
           <div>
             <h2 class="text-base font-medium text-primary"><%= t(".heading") %></h2>
-            <p class="text-sm text-secondary mt-0.5" data-goal-stepper-modal-subtitle>
-              <%= t(".step1_subtitle") %>
-            </p>
+            <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
           </div>
         </div>
         <%= render DS::Button.new(variant: "icon", icon: "x", title: t("common.close"), aria_label: t("common.close"), data: { action: "DS--dialog#close" }) %>
       </div>
     <% end %>
     <% dialog.with_body do %>
-      <%= render "form_stepper", goal: @goal, linkable_accounts: @linkable_accounts %>
+      <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts %>
     <% end %>
   <% end %>
 <% else %>
@@ -24,11 +22,9 @@
       <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "md", rounded: true) %>
       <div>
         <h1 class="text-xl font-medium text-primary"><%= t(".heading") %></h1>
-        <p class="text-sm text-secondary mt-0.5" data-goal-stepper-modal-subtitle>
-          <%= t(".step1_subtitle") %>
-        </p>
+        <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
       </div>
     </header>
-    <%= render "form_stepper", goal: @goal, linkable_accounts: @linkable_accounts %>
+    <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts %>
   </div>
 <% end %>

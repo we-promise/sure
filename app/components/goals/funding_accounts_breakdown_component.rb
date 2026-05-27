@@ -44,7 +44,7 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   # never blank if a string is missing.
   def accountable_label(account)
     if account.subtype.present?
-      I18n.t("goals.form_stepper.step1.subtypes.#{account.subtype}", default: account.subtype.titleize)
+      I18n.t("goals.form.subtypes.#{account.subtype}", default: account.subtype.titleize)
     else
       type = account.accountable_type.to_s
       I18n.t("accounts.types.#{type.underscore}", default: type.titleize)
