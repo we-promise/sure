@@ -81,7 +81,7 @@ export default class extends Controller {
   updateSuggested() {
     if (!this.hasSuggestedTarget) return;
 
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : NaN;
+    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
     const dateValue = this.hasDateInputTarget ? this.dateInputTarget.value : null;
     const checkedCount = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked).length;
 
