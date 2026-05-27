@@ -18,21 +18,6 @@ en:
         from: From
         to: To
       showing_period: "Showing data from %{start} to %{end}"
-      previous_period: "Previous period"
-      next_period: "Next period"
-      today: "Today"
-      period_label:
-        quarterly: "Q%{quarter} %{year}"
-        ytd: "YTD %{year}"
-        past_year: "%{year}"
-        last_6_months: "%{start} – %{end}"
-      period_picker:
-        quarter: "Q%{quarter} %{year}"
-        ytd: "YTD %{year}"
-      previous_year: "Previous year"
-      next_year: "Next year"
-      previous_decade: "Previous decade"
-      next_decade: "Next decade"
     invalid_date_range: "End date cannot be before start date. The dates have been swapped."
     summary:
       total_income: Total Income
@@ -168,13 +153,10 @@ en:
       and_more: "+%{count} more"
     investment_flows:
       title: Investment Flows
-      description: Track money flowing into and out of your investment accounts through contributions and withdrawals.
+      description: Track money flowing into and out of your investment accounts
       contributions: Contributions
-      contributions_description: Money added to investments
       withdrawals: Withdrawals
-      withdrawals_description: Money withdrawn from investments
       net_flow: Net Flow
-      net_flow_description: Total net change
     google_sheets_instructions:
       title_with_key: "✅ Copy URL for Google Sheets"
       title_no_key: "⚠️ API Key Required"

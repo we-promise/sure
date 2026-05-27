@@ -1,8 +1,0 @@
----
-ca:
-  admin:
-    invitations:
-      destroy:
-        success: Invitació eliminada.
-      destroy_all:
-        success: S'han eliminat totes les invitacions d'aquesta família.

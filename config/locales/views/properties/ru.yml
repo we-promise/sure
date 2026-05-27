@@ -1,0 +1,89 @@
+---
+ru:
+  properties:
+    edit:
+      edit: Редактировать %{account}
+    form:
+      address_line1: Улица
+      address_line1_placeholder: ул. Ленина, 123
+      area: Жилая площадь
+      area_placeholder: '2000'
+      area_unit: Единица измерения
+      country: Страна
+      country_placeholder: РФ
+      locality: Город
+      locality_placeholder: Москва
+      none: Нет
+      postal_code: Почтовый индекс
+      postal_code_placeholder: '101000'
+      region: Область/Регион
+      region_placeholder: МО
+      subtype_prompt: Выберите тип недвижимости
+      year_built: Год постройки
+      year_built_placeholder: '2000'
+    new:
+      title: Ввести данные вручную
+      next: "Далее"
+    address:
+      title: "Ввести данные вручную"
+      address_line1_label: "Адрес, строка 1"
+      address_line1_placeholder: "ул. Ленина, 123"
+      city_label: "Город"
+      city_placeholder: "Москва"
+      state_region_label: "Область/Регион"
+      state_region_placeholder: "МО"
+      postal_code_label: "Почтовый индекс"
+      postal_code_placeholder: "101000"
+      country_label: "Страна"
+      country_placeholder: "Россия"
+      save: "Сохранить"
+    balances:
+      title: "Ввести данные вручную"
+      market_value_label: "Оценочная рыночная стоимость"
+      market_value_tooltip: "Оценочная рыночная стоимость вашей недвижимости. Это число можно найти на сайтах, таких как Zillow или Redfin, и оно никогда не является точным."
+      save: "Сохранить"
+      next: "Далее"
+    overview_fields:
+      name_label: "Название"
+      name_placeholder: "Дом для отпуска"
+      subtype_prompt: "Выберите тип"
+      property_type_label: "Тип недвижимости"
+      year_built_label: "Год постройки (необязательно)"
+      year_built_placeholder: "1990"
+      area_label: "Площадь (необязательно)"
+      area_placeholder: "1200"
+      square_feet: "Квадратные футы"
+      square_meters: "Квадратные метры"
+      area_unit_label: "Единица площади"
+    overview:
+      living_area: Жилая площадь
+      market_value: Рыночная стоимость
+      purchase_price: Цена покупки
+      trend: Тренд
+      unknown: Неизвестно
+      year_built: Год постройки
+    tabs:
+      overview:
+        living_area: Жилая площадь
+        market_value: Рыночная стоимость
+        purchase_price: Цена покупки
+        trend: Тренд
+        unknown: Неизвестно
+        year_built: Год постройки
+        edit_account_details: "Редактировать данные счёта"
+    subtypes:
+      apartment:
+        short: Квартира
+        long: Квартира
+      plot:
+        short: Участок
+        long: Участок / Земля
+      commercial:
+        short: Коммерческая
+        long: Коммерческая недвижимость
+      rented:
+        short: Арендованная
+        long: Арендованная недвижимость
+      agri_land:
+        short: С/х земля
+        long: Сельскохозяйственная земля

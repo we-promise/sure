@@ -1,0 +1,34 @@
+---
+ru:
+  account_order:
+    balance_asc:
+      label: Баланс (по возрастанию)
+      label_short: Баланс ↑
+    balance_desc:
+      label: Баланс (по убыванию)
+      label_short: Баланс ↓
+    name_asc:
+      label: Имя (А-Я)
+      label_short: Имя ↑
+    name_desc:
+      label: Имя (Я-А)
+      label_short: Имя ↓
+  activerecord:
+    attributes:
+      account:
+        balance: Баланс
+        currency: Валюта
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: Имя
+        subtype: Подтип
+    models:
+      account: Счёт
+      account/credit: Кредитная карта
+      account/depository: Банковский счёт
+      account/investment: Инвестиции
+      account/loan: Кредит
+      account/other_asset: Прочий актив
+      account/other_liability: Прочее обязательство
+      account/property: Недвижимость
+      account/vehicle: Транспортное средство

@@ -1,0 +1,12 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: "Для SAML-провайдеров требуется либо URL метаданных IdP, либо URL SSO IdP"
+              saml_cert_required: "Требуется либо сертификат IdP, либо отпечаток сертификата, если не используется URL метаданных"
+              metadata_url_invalid: "URL метаданных IdP должен быть действительным URL"
+              sso_url_invalid: "URL SSO IdP должен быть действительным URL"

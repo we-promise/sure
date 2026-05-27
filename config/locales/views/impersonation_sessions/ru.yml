@@ -1,0 +1,25 @@
+---
+ru:
+  impersonation_sessions:
+    approve:
+      success: Запрос одобрен
+    complete:
+      success: Сеанс завершён
+    create:
+      success: Запрос отправлен пользователю. Ожидание одобрения.
+    join:
+      success: Присоединился к сеансу
+    leave:
+      success: Покинул сеанс
+    reject:
+      success: Запрос отклонён
+    super_admin_bar:
+      super_admin: Супер Админ
+      jobs: Задачи
+      impersonating: Имитация
+      leave: Выйти
+      terminate: Завершить
+      join_a_session: Присоединиться к сеансу
+      join: Присоединиться
+      uuid_placeholder: UUID
+      request_impersonation: Запросить имитацию

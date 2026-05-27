@@ -9,3 +9,4 @@ ca:
       postal_code: Codi postal
       region: Regió
     format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"
+

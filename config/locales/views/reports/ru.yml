@@ -1,0 +1,247 @@
+---
+ru:
+  reports:
+    index:
+      title: Отчёты
+      subtitle: Полный анализ вашего финансового состояния
+      export: Экспорт CSV
+      print_report: Печать отчёта
+      drag_to_reorder: "Перетащите для изменения порядка разделов"
+      toggle_section: "Переключить видимость раздела"
+      periods:
+        monthly: Ежемесячно
+        quarterly: Ежеквартально
+        ytd: С начала года
+        last_6_months: Последние 6 месяцев
+        custom: Пользовательский диапазон
+      date_range:
+        from: С
+        to: По
+      showing_period: "Показаны данные с %{start} по %{end}"
+      previous_period: "Предыдущий период"
+      next_period: "Следующий период"
+      today: "Сегодня"
+      period_label:
+        quarterly: "Квартал %{quarter} %{year}"
+        ytd: "С начала года %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "Квартал %{quarter} %{year}"
+        ytd: "С начала года %{year}"
+      previous_year: "Предыдущий год"
+      next_year: "Следующий год"
+      previous_decade: "Предыдущее десятилетие"
+      next_decade: "Следующее десятилетие"
+    invalid_date_range: "Дата окончания не может быть раньше даты начала. Даты были поменяны местами."
+    summary:
+      total_income: Общий доход
+      total_expenses: Общие расходы
+      net_savings: Чистые сбережения
+      budget_performance: Выполнение бюджета
+      vs_previous: по сравнению с предыдущим периодом
+      income_minus_expenses: Доход минус расходы
+      of_budget_used: от бюджета использовано
+      no_budget_data: Нет данных о бюджете за этот период
+    budget_performance:
+      title: Выполнение бюджета
+      spent: Потрачено
+      budgeted: Запланировано
+      remaining: Остаток
+      over_by: Превышение на
+      shared: общий
+      suggested_daily: "%{amount} рекомендовано в день на оставшиеся %{days} дней"
+      no_budgets: Нет категорий бюджета на этот месяц
+      status:
+        good: В норме
+        warning: Близко к лимиту
+        over: Превышение бюджета
+    trends:
+      title: Тренды и анализ
+      monthly_breakdown: Ежемесячная разбивка
+      month: Месяц
+      income: Доход
+      expenses: Расходы
+      net: Чистый
+      savings_rate: Уровень сбережений
+      current: текущий
+      avg_monthly_income: Средний ежемесячный доход
+      avg_monthly_expenses: Средние ежемесячные расходы
+      avg_monthly_savings: Средние ежемесячные сбережения
+      no_data: Нет данных о трендах
+      spending_patterns: Модели расходов
+      weekday_spending: Расходы в будни
+      weekend_spending: Расходы в выходные
+      total: Итого
+      avg_per_transaction: Среднее за операцию
+      transactions: Операции
+      insight_title: Анализ
+      insight_higher_weekend: "Вы тратите на %{percent}% больше за операцию в выходные, чем в будни"
+      insight_higher_weekday: "Вы тратите на %{percent}% больше за операцию в будни, чем в выходные"
+      insight_similar: "Ваши расходы за операцию схожи в будни и выходные"
+      no_spending_data: Нет данных о расходах за этот период
+    empty_state:
+      title: Нет доступных данных
+      description: Начните отслеживать свои финансы, добавив операции или подключив свои счета, чтобы увидеть полные отчёты
+      add_transaction: Добавить операцию
+      add_account: Добавить счёт
+    transactions_breakdown:
+      title: Разбивка активности
+      no_transactions: Нет активности за выбранный период и фильтры
+      filters:
+        title: Фильтры
+        category: Категория
+        account: Счёт
+        tag: Тег
+        amount_min: Мин. сумма
+        amount_max: Макс. сумма
+        date_range: Диапазон дат
+        all_categories: Все категории
+        all_accounts: Все счета
+        all_tags: Все теги
+        apply: Применить фильтры
+        clear: Очистить фильтры
+      sort:
+        label: Сортировать по
+        date_desc: Дата (сначала новые)
+        amount_desc: Сумма (по убыванию)
+        amount_asc: Сумма (по возрастанию)
+      export:
+        label: Экспорт
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Открыть в Google Sheets
+      table:
+        category: Категория
+        amount: Сумма
+        type: Тип
+        expense: Расходы
+        income: Доход
+        uncategorized: Без категории
+        entries:
+          one: "%{count} запись"
+          other: "%{count} записей"
+        percentage: "% от общего"
+      pagination:
+        showing:
+          one: Показана %{count} запись
+          other: Показано %{count} записей
+        previous: Предыдущая
+        next: Следующая
+    net_worth:
+      title: Чистая стоимость
+      current_net_worth: Текущая чистая стоимость
+      period_change: Изменение за период
+      assets_vs_liabilities: Активы против обязательств
+      total_assets: Активы
+      total_liabilities: Обязательства
+      no_assets: Нет активов
+      no_liabilities: Нет обязательств
+    investment_performance:
+      title: Эффективность инвестиций
+      portfolio_value: Стоимость портфеля
+      total_return: Общая доходность
+      contributions: Взносы за период
+      withdrawals: Изъятия за период
+      top_holdings: Основные активы
+      holding: Актив
+      weight: Доля
+      value: Стоимость
+      return: Доходность
+      accounts: Инвестиционные счета
+      gains_by_tax_treatment: Доходы по налоговому учёту
+      unrealized_gains: Нереализованные доходы
+      realized_gains: Реализованные доходы
+      total_gains: Общие доходы
+      taxable_realized_note: Эти доходы могут облагаться налогами
+      no_data: "-"
+      view_details: Посмотреть детали
+      holdings_count:
+        one: "%{count} актив"
+        other: "%{count} активов"
+      sells_count:
+        one: "%{count} продажа"
+        other: "%{count} продаж"
+      holdings: Активы
+      sell_trades: Продажи
+      and_more: "+%{count} ещё"
+    investment_flows:
+      title: Инвестиционные потоки
+      description: Отслеживайте движение средств в и из ваших инвестиционных счетов через взносы и изъятия.
+      contributions: Взносы
+      contributions_description: Средства, добавленные в инвестиции
+      withdrawals: Изъятия
+      withdrawals_description: Средства, изъятые из инвестиций
+      net_flow: Чистый поток
+      net_flow_description: Общая чистая изменяемость
+    google_sheets_instructions:
+      title_with_key: "✅ Скопируйте URL для Google Sheets"
+      title_no_key: "⚠️ Требуется API-ключ"
+      ready: Ваш URL для CSV (с API-ключом) готов.
+      steps: "Чтобы импортировать в Google Sheets:\n1. Создайте новый Google Sheet\n2. В ячейке A1 введите формулу, показанную ниже\n3. Нажмите Enter"
+      security_warning: "Этот URL включает ваш API-ключ. Держите его в безопасности!"
+      need_key: Чтобы импортировать данные в Google Sheets, вам нужен API-ключ.
+      step1: "Перейдите в Настройки → API-ключи"
+      step2: "Создайте новый API-ключ с разрешением \"чтение\""
+      step3: Скопируйте API-ключ
+      step4: "Добавьте его в этот URL как: ?api_key=YOUR_KEY"
+      example: Пример
+      then_use: Затем используйте полный URL с =IMPORTDATA() в Google Sheets.
+      open_sheets: Открыть Google Sheets
+      go_to_api_keys: Перейти к API-ключам
+      close: Понятно
+    print:
+      document_title: Финансовый отчёт
+      title: Финансовый отчёт
+      generated_on: "Создан %{date}"
+      # Summary section
+      summary:
+        title: Сводка
+        income: Доход
+        expenses: Расходы
+        net_savings: Чистые сбережения
+        budget: Бюджет
+        vs_prior: "%{percent}% по сравнению с предыдущим"
+        of_income: "%{percent}% от дохода"
+        used: использовано
+      # Net Worth section
+      net_worth:
+        title: Чистая стоимость
+        current_balance: Текущий баланс
+        this_period: за этот период
+        assets: Активы
+        liabilities: Обязательства
+        no_liabilities: Нет обязательств
+      # Monthly Trends section
+      trends:
+        title: Ежемесячные тренды
+        month: Месяц
+        income: Доход
+        expenses: Расходы
+        net: Чистый
+        savings_rate: Уровень сбережений
+        average: Среднее
+        current_month_note: "* Текущий месяц (частичные данные)"
+      # Investments section
+      investments:
+        title: Инвестиции
+        portfolio_value: Стоимость портфеля
+        total_return: Общая доходность
+        contributions: Взносы
+        withdrawals: Изъятия
+        this_period: за этот период
+        top_holdings: Основные активы
+        holding: Актив
+        weight: Доля
+        value: Стоимость
+        return: Доходность
+      # Spending by Category section
+      spending:
+        title: Расходы по категориям
+        income: Доход
+        expenses: Расходы
+        category: Категория
+        amount: Сумма
+        percent: "%"
+        more_categories: "+ %{count} ещё категорий"

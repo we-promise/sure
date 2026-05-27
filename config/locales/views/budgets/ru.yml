@@ -1,0 +1,97 @@
+---
+ru:
+  budgets:
+    budget_donut:
+      spent: "Потрачено"
+      new_budget: "Новый бюджет"
+      of_budget: "из %{amount}"
+      unused: "Неиспользовано"
+    budget_header:
+      today: "Сегодня"
+    budget_nav:
+      categories: Категории
+      setup: Настройка
+    over_allocation_warning:
+      over_allocated_message: "Вы перераспределили свой бюджет. Пожалуйста, исправьте распределение."
+      fix_allocations: "Исправить распределение"
+    actuals_summary:
+      income: "Доход"
+      expenses: "Расходы"
+    budgeted_summary:
+      expected_income: "Ожидаемый доход"
+      budgeted: "Запланировано"
+      earned: "%{amount} заработано"
+      over: "%{amount} превышение"
+      left: "%{amount} осталось"
+      spent: "%{amount} потрачено"
+    edit:
+      setup_title: "Настройка бюджета"
+      setup_description: "Введите ваш ежемесячный доход и планируемые расходы ниже, чтобы настроить бюджет."
+      budgeted_spending: "Запланированные расходы"
+      expected_income: "Ожидаемый доход"
+      autosuggest_title: "Автоподсказка дохода и бюджета расходов"
+      autosuggest_description: "Это будет основано на истории операций. ИИ может ошибаться, проверьте перед продолжением."
+      continue: "Продолжить"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: Сумма
+        edit: Редактировать
+        title: Категории
+      on_track_categories:
+        short_title: В пределах
+        title: В пределах
+      over_budget_categories:
+        short_title: Превышение
+        title: Превышение
+      filter:
+        all: Все
+        on_track: В пределах
+        over_budget: Превышение
+      tabs:
+        actual: Фактический
+        budgeted: Запланированный
+    copy_previous_prompt:
+      title: "Настройте ваш бюджет"
+      description: "Вы можете скопировать ваш бюджет из %{source_name} или начать с нуля."
+      copy_button: "Скопировать из %{source_name}"
+      fresh_button: "Начать с нуля"
+    copy_previous:
+      success: "Бюджет скопирован из %{source_name}"
+      no_source: "Не найдено предыдущего бюджета для копирования"
+      already_initialized: "Этот бюджет уже настроен"
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Бюджет превышен на <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: осталось распределить
+      over_set: "> 100% установлено"
+      percent_set: "%{percent} установлено"
+    budget_category_form:
+      monthly_average: "%{amount}/мес среднее"
+      shared_placeholder: Общий
+      shared_title: Оставьте пустым, чтобы использовать бюджет родителя
+    confirm_button:
+      confirm: "Подтвердить"
+    no_categories:
+      oops: "Упс!"
+      no_categories_message: "Вы еще не создали или не назначили категории расходов для ваших операций."
+      use_defaults: "Использовать по умолчанию (рекомендуется)"
+      new_category: "Новая категория"
+    index:
+      title: "Редактировать бюджеты категорий"
+      description: "Настройте бюджеты категорий, чтобы установить лимиты расходов. Нераспределенные средства будут автоматически отнесены к некатегоризированным."
+    show:
+      category: "Категория"
+      overview: "Обзор"
+      spending: "Расходы за %{date}"
+      status: "Статус"
+      overspent: "перерасход"
+      left: "осталось"
+      budgeted: "Запланировано"
+      monthly_average_spending: "Среднемесячные расходы"
+      monthly_median_spending: "Медианные месячные расходы"
+      recent_transactions: "Недавние операции"
+      view_all_transactions: "Просмотреть все операции по категории"
+      no_transactions: "Операции за этот период бюджета не найдены."

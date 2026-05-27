@@ -10,8 +10,6 @@ es:
       rate_type: Tipo de interés
       term_months: Plazo (meses)
       term_months_placeholder: '360'
-      subtype_prompt: Selecciona el tipo de préstamo
-      subtype_none: Ninguno
     new:
       title: Introduce los detalles del préstamo
     overview:

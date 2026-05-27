@@ -1,0 +1,47 @@
+---
+ru:
+  splits:
+    new:
+      title: Разделить операцию
+      description: Разделите эту операцию на несколько записей с разными категориями и суммами.
+      submit: Разделить операцию
+      cancel: Отмена
+      add_row: Добавить разделение
+      remove_row: Удалить
+      remaining: Остаток
+      amounts_must_match: Суммы разделений должны совпадать с исходной суммой операции.
+      name_label: Название
+      name_placeholder: Название разделения
+      amount_label: Сумма
+      category_label: Категория
+      uncategorized: "(без категории)"
+      original_name: "Название:"
+      original_date: "Дата:"
+      original_amount: "Сумма"
+      split_number: "Разделение №%{number}"
+    create:
+      success: Операция успешно разделена
+      not_splittable: Эту операцию нельзя разделить.
+    destroy:
+      success: Операция успешно объединена
+    show:
+      title: Разделённые записи
+      description: Эта операция была разделена на следующие записи.
+      button_title: Разделить операцию
+      button_description: Разделите эту операцию на несколько записей с разными категориями и суммами.
+      button: Разделить
+      unsplit_title: Объединить операцию
+      unsplit_button: Объединить
+      unsplit_confirm: Это удалит все разделённые записи и восстановит исходную операцию.
+    edit:
+      title: Редактировать разделение
+      description: Измените записи разделения для этой операции.
+      submit: Обновить разделение
+      not_split: Эта операция не разделена.
+    update:
+      success: Разделение успешно обновлено
+    child:
+      title: Часть разделения
+      description: Эта запись является частью разделённой операции.
+      edit_split: Редактировать разделение
+      unsplit: Объединить

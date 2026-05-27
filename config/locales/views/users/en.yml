@@ -16,15 +16,3 @@ en:
       unauthorized: You are not authorized to perform this action
     reset_with_sample_data:
       success: Your account has been reset and sample data is being prepared. You’ll see demo data shortly.
-    roles:
-      admin: Admin
-      member: Member
-      super_admin: Super admin
-    user_menu:
-      aria_label: Open account menu
-      version: Version
-      settings: Settings
-      changelog: Changelog
-      feedback: Feedback
-      contact: Contact
-      log_out: Log out

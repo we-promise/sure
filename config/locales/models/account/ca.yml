@@ -1,25 +1,12 @@
 ---
 ca:
-  account_order:
-    balance_asc:
-      label: Saldo (de menor a major)
-      label_short: Saldo ↑
-    balance_desc:
-      label: Saldo (de major a menor)
-      label_short: Saldo ↓
-    name_asc:
-      label: Nom (A-Z)
-      label_short: Nom ↑
-    name_desc:
-      label: Nom (Z-A)
-      label_short: Nom ↓
   activerecord:
     attributes:
       account:
         balance: Saldo
-        currency: Divisa
-        family: "%{moniker}"
-        family_id: "%{moniker}"
+        currency: Moneda
+        family: Família
+        family_id: Família
         name: Nom
         subtype: Subtipus
     models:
@@ -28,7 +15,8 @@ ca:
       account/depository: Compte bancari
       account/investment: Inversió
       account/loan: Préstec
-      account/other_asset: Altre actiu
-      account/other_liability: Altre passiu
+      account/other_asset: Altres actius
+      account/other_liability: Altres passius
       account/property: Immoble
       account/vehicle: Vehicle
+

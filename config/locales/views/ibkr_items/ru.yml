@@ -1,0 +1,92 @@
+---
+ru:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Подключите отчёт Flex Web Service от Interactive Brokers
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Удаление в процессе
+      flex_web_service: Flex Web Service
+      syncing: Синхронизация
+      requires_update: Требуется внимание к учетным данным
+      error: Ошибка
+      synced: Синхронизировано %{time} назад. %{summary}.
+      never_synced: Никогда не синхронизировалось.
+      setup_accounts: Настроить счета
+      delete: Удалить
+      accounts_need_setup: Требуется настройка счетов
+      accounts_need_setup_description: Некоторые счета из IBKR нужно связать с счетами в Sure.
+      no_accounts_discovered: Счета IBKR ещё не обнаружены.
+      no_accounts_discovered_description: Запустите синхронизацию после настройки вашего Flex-запроса для обнаружения счетов.
+    setup_accounts:
+      page_title: Настройка счетов Interactive Brokers
+      dialog_title: Настройте свои счета Interactive Brokers
+      subtitle: Выберите, какие брокерские счета IBKR связать.
+      info_box:
+        title: Импорт Flex Query IBKR
+        items:
+          item_1: Активы с текущими ценами и количествами
+          item_2: Стоимость по каждой позиции
+          item_3: Сделки, дивиденды, комиссии и денежные вклады или снятия
+        warning: Историческая активность ограничена окном отчёта Flex Query
+      status:
+        fetching_accounts: Получение счетов из Interactive Brokers...
+        no_accounts_found_title: Счета не найдены.
+        no_accounts_found_description: Sure не удалось найти счета IBKR в последнем отчёте Flex.
+      available_accounts:
+        title: Доступные счета
+        account_type_investment: Инвестиционный
+        account_summary: "%{account_type} • Баланс: %{balance}"
+        account_id: "ID счёта: %{account_id}"
+      link_existing:
+        description: Или свяжите обнаруженный счёт IBKR с существующим ручным инвестиционным счётом.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Выберите счёт...
+      linked_accounts:
+        title: Уже связаны
+        linked_to_html: "Связан с: %{account}"
+      buttons:
+        refresh: Обновить
+        cancel: Отмена
+        back_to_settings: Назад к настройкам
+        create_selected_accounts: Создать выбранные счета
+        link: Связать
+        done: Готово
+    sync_status:
+      no_accounts: Счета IBKR ещё не обнаружены
+      all_linked:
+        one: 1 счёт связан
+        other: "%{count} счетов связаны"
+      partial: "%{linked} связаны, %{unlinked} требуют настройки"
+    select_existing_account:
+      title: Связать счёт Interactive Brokers
+      no_accounts_available: Нет доступных несвязанных счетов Interactive Brokers.
+      run_sync_hint: "Запустите синхронизацию из Настройки > Провайдеры после обновления вашего Flex-запроса."
+      wait_for_sync: Подождите завершения синхронизации обнаружения счетов.
+      balance: Баланс
+      link: Связать
+      cancel: Отмена
+    create:
+      success: Успешно настроен Interactive Brokers.
+    update:
+      success: Конфигурация Interactive Brokers успешно обновлена.
+    destroy:
+      success: Подключение Interactive Brokers запланировано на удаление.
+    select_accounts:
+      not_configured: Interactive Brokers не настроен.
+    link_existing_account:
+      not_found: Счёт или конфигурация Interactive Brokers не найдены.
+      only_manual_investment: Только ручные инвестиционные счета могут быть связаны с Interactive Brokers.
+      already_linked: Этот счёт Interactive Brokers уже связан.
+      success: Успешно связан с счётом Interactive Brokers.
+      failed: Не удалось связать счёт Interactive Brokers.
+    complete_account_setup:
+      success:
+        one: Успешно создан %{count} счёт Interactive Brokers.
+        other: Успешно создано %{count} счетов Interactive Brokers.
+      none_selected: Счета не были выбраны.
+      none_created: Счета не были созданы.

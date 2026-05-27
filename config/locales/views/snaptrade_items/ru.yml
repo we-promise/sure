@@ -1,0 +1,191 @@
+ru:
+  snaptrade_items:
+    default_name: "Подключение SnapTrade"
+    link_accounts:
+      use_setup_flow: "Используйте процесс настройки счёта вместо этого"
+    create:
+      success: "SnapTrade успешно настроен."
+    update:
+      success: "Конфигурация SnapTrade успешно обновлена."
+    destroy:
+      success: "Подключение SnapTrade запланировано на удаление."
+    connect:
+      decryption_failed: "Не удалось прочитать учетные данные SnapTrade. Пожалуйста, удалите и создайте это подключение заново."
+      connection_failed: "Не удалось подключиться к SnapTrade: %{message}"
+    callback:
+      success: "Брокер подключен! Пожалуйста, выберите, какие счета связать."
+      no_item: "Конфигурация SnapTrade не найдена."
+    complete_account_setup:
+      success:
+        one: "Успешно связан %{count} счёт."
+        other: "Успешно связаны %{count} счёта."
+      partial_success:
+        one: "Связан %{count} счёт. %{failed_count} не удалось связать."
+        other: "Связаны %{count} счёта. %{failed_count} не удалось связать."
+      link_failed: "Не удалось связать счета: %{errors}"
+      no_accounts: "Не выбрано ни одного счёта для связывания."
+    preload_accounts:
+      not_configured: "SnapTrade не настроен."
+    select_accounts:
+      not_configured: "SnapTrade не настроен."
+    select_existing_account:
+      not_found: "Счёт или конфигурация SnapTrade не найдены."
+      title: "Связать со счётом SnapTrade"
+      header: "Связать существующий счёт"
+      subtitle: "Выберите счёт SnapTrade для связывания"
+      no_accounts: "Нет доступных для связывания счетов SnapTrade."
+      connect_hint: "Возможно, сначала нужно подключить брокера."
+      settings_link: "Перейти в настройки провайдера"
+      linking_to: "Связывание со счётом:"
+      balance_label: "Баланс:"
+      link_button: "Связать"
+      cancel_button: "Отмена"
+    link_existing_account:
+      success: "Успешно связан со счётом SnapTrade."
+      failed: "Не удалось связать счёт: %{message}"
+      not_found: "Счёт не найден."
+    connections:
+      unknown_brokerage: "Неизвестный брокер"
+    delete_connection:
+      success: "Подключение успешно удалено. Один слот освобождён."
+      failed: "Не удалось удалить подключение: %{message}"
+      missing_authorization_id: "Отсутствует ID авторизации"
+      api_deletion_failed: "Не удалось удалить подключение из SnapTrade - отсутствуют учетные данные. Подключение может всё ещё существовать в вашем аккаунте SnapTrade."
+    delete_orphaned_user:
+      success: "Осиротевшая регистрация успешно удалена."
+      failed: "Не удалось удалить осиротевшую регистрацию."
+    setup_accounts:
+      title: "Настройка счетов SnapTrade"
+      header: "Настройте ваши счета SnapTrade"
+      subtitle: "Выберите, какие брокерские счета связать"
+      syncing: "Получение ваших счетов..."
+      loading: "Получение счетов из SnapTrade..."
+      loading_hint: "Нажмите Обновить, чтобы проверить наличие счетов."
+      refresh: "Обновить"
+      info_title: "Инвестиционные данные SnapTrade"
+      info_holdings: "Активы с текущими ценами и количествами"
+      info_cost_basis: "Стоимость позиции (если доступно)"
+      info_activities: "История торгов с метками активности (Покупка, Продажа, Дивиденды и т.д.)"
+      info_history: "До 3 лет истории операций"
+      free_tier_note: "Бесплатный тариф SnapTrade позволяет подключить 5 брокеров. Проверьте вашу панель SnapTrade для текущего использования."
+      no_accounts_title: "Счета не найдены"
+      no_accounts_message: "Брокерские счета не найдены. Это может произойти, если вы отменили подключение или ваш брокер не поддерживается."
+      try_again: "Подключить брокера"
+      back_to_settings: "Назад к настройкам"
+      available_accounts: "Доступные счета"
+      balance_label: "Баланс:"
+      account_number: "Счёт:"
+      sync_start_date_label: "Импортировать операции с:"
+      sync_start_date_help: "Оставьте пустым для всей доступной истории"
+      create_button: "Создать выбранные счета"
+      cancel_button: "Отмена"
+      creating: "Создание счетов..."
+      done_button: "Готово"
+      or_link_existing: "Или свяжите с существующим счётом вместо создания нового:"
+      select_account: "Выберите счёт..."
+      link_button: "Связать"
+      linked_accounts: "Уже связаны"
+      linked_to: "Связан с:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} счёт требует настройки"
+        other: "%{count} счёта требуют настройки"
+      deletion_in_progress: "Удаление в процессе..."
+      syncing: "Синхронизация..."
+      requires_update: "Подключение требует обновления"
+      error: "Ошибка синхронизации"
+      status: "Последняя синхронизация %{timestamp} назад - %{summary}"
+      status_never: "Никогда не синхронизировалось"
+      reconnect: "Переподключить"
+      connect_brokerage: "Подключить брокера"
+      add_another_brokerage: "Подключить другого брокера"
+      delete: "Удалить"
+      setup_needed: "Счета требуют настройки"
+      setup_description: "Некоторые счета из SnapTrade нужно связать с счетами Sure."
+      setup_action: "Настроить счета"
+      setup_accounts_menu: "Настроить счета"
+      manage_connections: "Управление подключениями"
+      more_accounts_available:
+        one: "Доступен ещё %{count} счёт для настройки"
+        other: "Доступно ещё %{count} счёта для настройки"
+      no_accounts_title: "Счета не обнаружены"
+      no_accounts_description: "Подключите брокера для импорта ваших инвестиционных счетов."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Подключитесь к вашему брокеру через SnapTrade (поддерживается более 25 брокеров)"
+      description: "SnapTrade подключается к более чем 25 крупным брокерам (Fidelity, Vanguard, Schwab, Robinhood и др.) и предоставляет полную историю торгов с метками активности и стоимостью."
+      setup_title: "Инструкции по настройке:"
+      step_1_html: "Создайте аккаунт на <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Скопируйте ваш Client ID и Consumer Key из панели управления"
+      step_3: "Введите ваши учетные данные ниже и нажмите Сохранить"
+      step_4: "Перейдите на страницу Счета и используйте 'Подключить другого брокера', чтобы связать ваши инвестиционные счета"
+      free_tier_warning: "Бесплатный тариф SnapTrade покрывает 5 подключений брокеров. Обновите на SnapTrade для большего количества."
+      client_id_label: "Client ID"
+      client_id_placeholder: "Введите ваш SnapTrade Client ID"
+      client_id_update_placeholder: "Введите новый Client ID для обновления"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "Введите ваш SnapTrade Consumer Key"
+      consumer_key_update_placeholder: "Введите новый Consumer Key для обновления"
+      save_button: "Сохранить конфигурацию"
+      update_button: "Обновить конфигурацию"
+      status_connected:
+        one: "%{count} счёт из SnapTrade"
+        other: "%{count} счёта из SnapTrade"
+      status_needs_registration: "Учетные данные сохранены. Завершите настройку для подключения брокера."
+      needs_setup:
+        one: "%{count} требует настройки"
+        other: "%{count} требуют настройки"
+      status_ready: "Готово к подключению брокеров"
+      setup_accounts_button: "Настроить счета"
+      connect_button: "Подключить брокера"
+      connected_brokerages: "Подключено:"
+      manage_connections: "Управление подключениями"
+      loading_connections: "Загрузка подключений..."
+      connections_error: "Не удалось загрузить подключения: %{message}"
+      accounts_count:
+        one: "%{count} счёт"
+        other: "%{count} счёта"
+      orphaned_connection: "Осиротевшее подключение (не синхронизировано локально)"
+      needs_linking: "требует связывания"
+      no_connections: "Подключения брокеров не найдены."
+      delete_connection: "Удалить"
+      delete_connection_title: "Удалить подключение брокера?"
+      delete_connection_body: "Это навсегда удалит подключение %{brokerage} из SnapTrade. Все счета этого брокера будут отвязаны. Вам нужно будет переподключиться, чтобы снова синхронизировать эти счета."
+      delete_connection_confirm: "Удалить подключение"
+      orphaned_users_title:
+        one: "%{count} осиротевшая регистрация"
+        other: "%{count} осиротевших регистраций"
+      orphaned_users_description: "Это предыдущие регистрации пользователей SnapTrade, которые занимают ваши слоты подключения. Удалите их, чтобы освободить слоты."
+      orphaned_user: "Осиротевшая регистрация"
+      delete_orphaned_user: "Удалить"
+      delete_orphaned_user_title: "Удалить осиротевшую регистрацию?"
+      delete_orphaned_user_body: "Это навсегда удалит этого осиротевшего пользователя SnapTrade и все их подключения брокеров, освобождая слоты подключения."
+      delete_orphaned_user_confirm: "Удалить регистрацию"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Счета не найдены"
+      synced:
+        one: "%{count} счёт синхронизирован"
+        other: "%{count} счёта синхронизированы"
+      synced_with_setup: "%{linked} синхронизированы, %{unlinked} требуют настройки"
+    institution_summary:
+      none: "Подключённых учреждений нет"
+      count:
+        one: "%{count} учреждение"
+        other: "%{count} учреждений"
+    brokerage_summary:
+      none: "Подключённых брокеров нет"
+      count:
+        one: "%{count} брокер"
+        other: "%{count} брокеров"
+    syncer:
+      discovering: "Поиск счетов..."
+      importing: "Импорт счетов из SnapTrade..."
+      processing: "Обработка активов и операций..."
+      calculating: "Расчёт балансов..."
+      checking_config: "Проверка конфигурации счёта..."
+      needs_setup: "%{count} счёта требуют настройки..."
+      activities_fetching_async: "Операции загружаются в фоновом режиме. Это может занять до минуты для новых подключений брокеров."

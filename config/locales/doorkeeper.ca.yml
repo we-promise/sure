@@ -46,7 +46,7 @@ ca:
         callback_url: URL de retorn
         confidential: Confidencial?
         confidentiality:
-          'no': 'No'
+          'no': No
           'yes': Sí
         name: Nom
         new: Nova aplicació
@@ -68,7 +68,6 @@ ca:
         authorize: Autoritza
         deny: Denega
       error:
-        go_back: Torna enrere
         title: S'ha produït un error
       form_post:
         title: Envia aquest formulari
@@ -77,8 +76,6 @@ ca:
         prompt: Autoritzes %{client_name} a utilitzar el teu compte?
         title: Autorització requerida
       show:
-        authorization_code_label: 'Codi d''autorització:'
-        copy_instructions: Copia aquest codi i enganxa'l a l'aplicació.
         title: Codi d'autorització
     authorized_applications:
       buttons:

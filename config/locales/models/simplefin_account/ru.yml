@@ -1,0 +1,7 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: "У счёта SimpleFin должен быть либо текущий, либо доступный баланс"
