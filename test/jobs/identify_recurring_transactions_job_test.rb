@@ -44,13 +44,14 @@ class IdentifyRecurringTransactionsJobTest < ActiveJob::TestCase
   end
 
   test "skips when a newer scheduled run supersedes this one" do
+    # Rails.cache is NullStore in the test env (writes are no-ops), so we stub
+    # the read directly to simulate a newer scheduled-at landing in the cache
+    # between this job being enqueued and being picked up.
     cache_key = "recurring_transaction_identify:#{@family.id}"
-    Rails.cache.write(cache_key, @scheduled_at + 10, expires_in: 1.minute)
+    Rails.cache.stubs(:read).with(cache_key).returns(@scheduled_at + 10)
 
     RecurringTransaction::Identifier.any_instance.expects(:identify_recurring_patterns).never
 
-    IdentifyRecurringTransactionsJob.new.perform(@family.id, @scheduled_at)
-  ensure
-    Rails.cache.delete("recurring_transaction_identify:#{@family.id}")
+    assert_nil IdentifyRecurringTransactionsJob.new.perform(@family.id, @scheduled_at)
   end
 end
