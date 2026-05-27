@@ -67,8 +67,8 @@ fr:
         principal: Capital
         interest: Intérêt
         insurance: Assurance
-        payments_made: Paiements effectués
-        remaining_payments: Paiements restants
+        months_elapsed: Mensualités écoulées
+        remaining_months: Mensualités restantes
         years:
           one: "%{count} année"
           other: "%{count} années"

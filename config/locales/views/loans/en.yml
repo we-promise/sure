@@ -67,8 +67,8 @@ en:
         principal: Principal
         interest: Interest
         insurance: Insurance
-        payments_made: Payments made
-        remaining_payments: Remaining payments
+        months_elapsed: Months elapsed
+        remaining_months: Remaining months
         years:
           one: "%{count} year"
           other: "%{count} years"
