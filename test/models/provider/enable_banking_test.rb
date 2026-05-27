@@ -61,4 +61,50 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 1, 17), error.corrected_date_from
     assert error.wrong_transactions_period?
   end
+
+  test "start_authorization forwards auth_method when given" do
+    captured_body = nil
+
+    success_response = OpenStruct.new(
+      code: 200,
+      body: { url: "https://api.enablebanking.com/auth/x", authorization_id: "auth_1" }.to_json
+    )
+
+    Provider::EnableBanking.expects(:post).with do |_url, options|
+      captured_body = JSON.parse(options[:body])
+      true
+    end.returns(success_response)
+
+    @provider.start_authorization(
+      aspsp_name: "Handelsbanken",
+      aspsp_country: "SE",
+      redirect_url: "https://example.com/cb",
+      auth_method: "redirect"
+    )
+
+    assert_equal "redirect", captured_body["auth_method"]
+  end
+
+  test "start_authorization omits auth_method when not given" do
+    captured_body = nil
+
+    success_response = OpenStruct.new(
+      code: 200,
+      body: { url: "https://api.enablebanking.com/auth/x", authorization_id: "auth_1" }.to_json
+    )
+
+    Provider::EnableBanking.expects(:post).with do |_url, options|
+      captured_body = JSON.parse(options[:body])
+      true
+    end.returns(success_response)
+
+    @provider.start_authorization(
+      aspsp_name: "Handelsbanken",
+      aspsp_country: "SE",
+      redirect_url: "https://example.com/cb"
+    )
+
+    assert_not captured_body.key?("auth_method"),
+      "Expected auth_method to be absent so EB picks its default for single-method banks"
+  end
 end

@@ -59,30 +59,82 @@ class EnableBankingItem < ApplicationRecord
     end
   end
 
+  # Pick the preferred auth_method from an ASPSP's metadata.
+  #
+  # ASPSPs may expose multiple auth_methods (e.g. Handelsbanken SE returns both
+  # REDIRECT and DECOUPLED). When the caller does not pass `auth_method` to
+  # Enable Banking's POST /auth, EB picks its own default — for several Nordic
+  # banks that default is DECOUPLED, which the Sure web flow does not support.
+  #
+  # Preference order: REDIRECT > EMBEDDED > DECOUPLED. Returns the full method
+  # hash so callers can read both `:name` (to send to EB) and `:approach`
+  # (for the user-facing rejection check).
+  #
+  # When `psu_type` is given, only auth_methods that target that PSU type
+  # (or are PSU-type-agnostic — `psu_type` absent on the method) are
+  # considered. Per EB's schema each AuthMethod is tied to a specific
+  # PSU type, so an ASPSP that supports both personal+business may expose
+  # REDIRECT only for one of them; using a business-only method for a
+  # personal PSU would make EB's `/auth` fail or pick the wrong flow.
+  AUTH_APPROACH_PREFERENCE = %w[REDIRECT EMBEDDED DECOUPLED].freeze
+
+  def self.preferred_auth_method(aspsp_data, psu_type: nil)
+    return nil if aspsp_data.blank?
+
+    methods = Array(
+      aspsp_data.with_indifferent_access[:auth_methods]
+    ).map(&:with_indifferent_access)
+    return nil if methods.empty?
+
+    if psu_type.present?
+      psu_str = psu_type.to_s
+      # Inclusive filter: methods explicitly tied to our PSU type, plus
+      # PSU-type-agnostic methods (no `psu_type` key — legacy catalog entries).
+      methods = methods.select { |m| m[:psu_type].blank? || m[:psu_type].to_s == psu_str }
+      # No fallback to the unfiltered list: an empty result here means the
+      # ASPSP only exposes methods for other PSU types, and sending one of
+      # those to EB would bind a wrong-PSU session and fail. nil tells the
+      # caller to drop `auth_method` so EB picks its own default.
+      return nil if methods.empty?
+    end
+
+    methods.min_by do |m|
+      AUTH_APPROACH_PREFERENCE.index(m[:approach].to_s) || AUTH_APPROACH_PREFERENCE.length
+    end
+  end
+
   # Start the OAuth authorization flow
   # @param aspsp_name [String] Name of the selected ASPSP
   # @param redirect_url [String] Callback URL
   # @param state [String, nil] State parameter (passed through to callback)
   # @param psu_type [String] "personal" or "business"
   # @param aspsp_data [Hash, nil] Full ASPSP object from GET /aspsps (used to store metadata)
+  # @param auth_method [Hash, nil] Selected auth_method hash (from .preferred_auth_method).
+  #   When nil, no auth_method is sent to EB and EB picks its default.
   # @param language [String, nil] Two-letter language code
   # @return [String] Redirect URL for the user
   def start_authorization(aspsp_name:, redirect_url:, state: nil, psu_type: "personal",
-                          aspsp_data: nil, language: nil)
+                          aspsp_data: nil, auth_method: nil, language: nil)
     provider = enable_banking_provider
     raise StandardError.new("Enable Banking provider is not configured") unless provider
 
     validated_psu_type = psu_type
+    selected_method = auth_method&.with_indifferent_access
 
     # Store ASPSP metadata before calling provider so it's available even if auth fails
     if aspsp_data.present?
       aspsp_data = aspsp_data.with_indifferent_access
-      first_auth_method = aspsp_data.dig(:auth_methods, 0) || aspsp_data.dig("auth_methods", 0)
+      # When the caller didn't pass an explicit auth_method (e.g. older callsite,
+      # or the controller's helper returned nil after PSU filtering), fall back
+      # to picking one ourselves — but keep the PSU filter applied. Recomputing
+      # without psu_type here would re-introduce the wrong-PSU bind that the
+      # controller's filter just prevented.
+      selected_method ||= self.class.preferred_auth_method(aspsp_data, psu_type: psu_type)
       aspsp_types = aspsp_data[:psu_types] || []
       update!(
         aspsp_required_psu_headers: aspsp_data[:required_psu_headers] || [],
         aspsp_maximum_consent_validity: aspsp_data[:maximum_consent_validity],
-        aspsp_auth_approach: first_auth_method&.dig(:approach) || first_auth_method&.dig("approach"),
+        aspsp_auth_approach: selected_method&.dig(:approach),
         aspsp_psu_types: aspsp_types
       )
       validated_psu_type = psu_type.present? && aspsp_types.include?(psu_type) ? psu_type : nil
@@ -95,7 +147,8 @@ class EnableBankingItem < ApplicationRecord
       state: state,
       psu_type: validated_psu_type,
       maximum_consent_validity: aspsp_maximum_consent_validity,
-      language: language
+      language: language,
+      auth_method: selected_method&.dig(:name)
     )
 
     attributes = {

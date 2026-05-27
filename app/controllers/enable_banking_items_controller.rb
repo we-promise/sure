@@ -131,40 +131,31 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Re-fetch ASPSP list from provider to avoid session cookie overflow.
-    # We do not store full ASPSP metadata in the session to stay within the 4KB limit;
-    # instead, we re-query the provider here for the final authorization parameters.
-    aspsp_data = nil
     begin
-      provider_for_lookup = @enable_banking_item.enable_banking_provider
-      if provider_for_lookup
-        response = provider_for_lookup.get_aspsps(country: @enable_banking_item.country_code)
-        raw_aspsps = response[:aspsps] || response["aspsps"] || []
-        found = raw_aspsps.find { |a| a[:name] == aspsp_name || a["name"] == aspsp_name }
-        aspsp_data = found&.with_indifferent_access
-      end
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.warn "Enable Banking: could not fetch ASPSP metadata in authorize: #{e.message}"
-    end
+      # Re-fetch ASPSP metadata from provider so we have the full auth_methods list
+      # (we don't store the full payload in the session — too big for the 4KB cookie).
+      # Provider errors are caught by the rescue below — we deliberately don't return
+      # `nil` from a lookup-side rescue, because that would silently regress
+      # multi-method banks like Handelsbanken to EB's DECOUPLED default the moment
+      # EB has a hiccup. Better to surface the EB error to the user.
+      aspsp_data = lookup_aspsp_metadata(@enable_banking_item, aspsp_name)
 
-    # Block DECOUPLED banks — our OAuth redirect flow doesn't support them
-    if aspsp_data.present?
-      # Adjust psu_type if the bank does not support the requested type
-      supported_types = Array(aspsp_data[:psu_types]).map(&:to_s)
-      if supported_types.any? && !supported_types.include?(psu_type)
-        psu_type = supported_types.first
+      selected_auth_method = nil
+      if aspsp_data.present?
+        # Adjust psu_type if the bank does not support the requested type
+        supported_types = Array(aspsp_data[:psu_types]).map(&:to_s)
+        if supported_types.any? && !supported_types.include?(psu_type)
+          psu_type = supported_types.first
+        end
+
+        # Some ASPSPs (e.g. Handelsbanken SE) expose both REDIRECT and DECOUPLED.
+        # Pick a non-DECOUPLED method when one exists and pass it through to EB.
+        # Filter by psu_type since EB's AuthMethod schema is PSU-type-tied.
+        selected_auth_method = EnableBankingItem.preferred_auth_method(aspsp_data, psu_type: psu_type)
+
+        return if reject_if_decoupled_only(selected_auth_method)
       end
 
-      first_method = Array(aspsp_data[:auth_methods]).first
-      approach = first_method&.dig(:approach) || first_method&.dig("approach")
-      if approach == "DECOUPLED"
-        redirect_to settings_providers_path, alert: t(".decoupled_not_supported",
-          default: "This bank uses a separate device authentication method which is not yet supported. Please add this account manually.")
-        return
-      end
-    end
-
-    begin
       target_item = if params[:new_connection] == "true"
         Current.family.enable_banking_items.create!(
           name: "Enable Banking Connection",
@@ -187,6 +178,7 @@ class EnableBankingItemsController < ApplicationController
         state: target_item.id,
         psu_type: psu_type,
         aspsp_data: aspsp_data,
+        auth_method: selected_auth_method,
         language: language
       )
 
@@ -266,7 +258,30 @@ class EnableBankingItemsController < ApplicationController
 
   # Re-authorize an expired session
   def reauthorize
+    # Guard against half-completed initial connections where `aspsp_name` was
+    # never persisted (e.g. EB session creation failed mid-flow). Without this,
+    # the upstream POST /auth call below returns WRONG_REQUEST_PARAMETERS and
+    # the user gets a confusing 422 alert. Steer them to pick a bank instead.
+    if @enable_banking_item.aspsp_name.blank?
+      redirect_to settings_providers_path, alert: t(".no_aspsp",
+        default: "This connection is missing a bank. Please remove it and start a new connection.")
+      return
+    end
+
     begin
+      # Re-query ASPSP metadata so the 90-day reauth picks the same non-DECOUPLED
+      # auth_method that the initial authorize chose. Without this, EB falls back
+      # to its default and silently regresses banks like Handelsbanken to DECOUPLED.
+      aspsp_data = lookup_aspsp_metadata(@enable_banking_item, @enable_banking_item.aspsp_name)
+      psu_type = @enable_banking_item.psu_type || "personal"
+      selected_auth_method = EnableBankingItem.preferred_auth_method(aspsp_data, psu_type: psu_type)
+
+      # Mirror the authorize-action guard: a bank that previously offered a
+      # non-DECOUPLED method may have changed its EB catalog entry to DECOUPLED-only
+      # between connect and reauth. Without this, we'd hand the user an EB URL the
+      # web flow can't complete.
+      return if aspsp_data.present? && reject_if_decoupled_only(selected_auth_method)
+
       language = I18n.locale.to_s.split("-").first
 
       redirect_url = @enable_banking_item.start_authorization(
@@ -274,6 +289,8 @@ class EnableBankingItemsController < ApplicationController
         redirect_url: enable_banking_callback_url,
         state: @enable_banking_item.id,
         psu_type: @enable_banking_item.psu_type || "personal",
+        aspsp_data: aspsp_data,
+        auth_method: selected_auth_method,
         language: language
       )
 
@@ -582,6 +599,43 @@ class EnableBankingItemsController < ApplicationController
 
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
+    end
+
+    # Reject the request with the user-facing decoupled-not-supported alert
+    # when the chosen auth_method is DECOUPLED. Returns true if it redirected
+    # (caller should `return` immediately), false otherwise.
+    #
+    # When `selected_auth_method` is nil — i.e. EB returned no auth_methods at
+    # all (or the field was absent) — we deliberately do NOT reject: EB will
+    # pick a default and the flow may still succeed. Only an explicit DECOUPLED
+    # selection breaks the web UI today.
+    def reject_if_decoupled_only(selected_auth_method)
+      return false if selected_auth_method&.dig(:approach) != "DECOUPLED"
+
+      # Absolute i18n key so the alert resolves the same regardless of which
+      # action (authorize / reauthorize) called us.
+      redirect_to settings_providers_path,
+        alert: t("enable_banking_items.authorize.decoupled_not_supported",
+          default: "This bank only supports a separate-device authentication method which is not yet supported. Please add this account manually.")
+      true
+    end
+
+    # Look up a single ASPSP's metadata from Enable Banking's catalog.
+    # Returns the indifferent-access hash if found, nil if the catalog doesn't
+    # list this ASPSP. Provider errors are intentionally NOT rescued here:
+    # treating "catalog fetch failed" the same as "let EB pick" would silently
+    # regress multi-method banks (e.g. Handelsbanken) to EB's DECOUPLED default
+    # the moment EB has a hiccup. The outer authorize/reauthorize rescue blocks
+    # already render a user-facing alert for EnableBankingError.
+    def lookup_aspsp_metadata(item, aspsp_name)
+      return nil unless aspsp_name.present?
+      provider = item.enable_banking_provider
+      return nil unless provider
+
+      response = provider.get_aspsps(country: item.country_code)
+      raw_aspsps = response[:aspsps] || response["aspsps"] || []
+      found = raw_aspsps.find { |a| a[:name] == aspsp_name || a["name"] == aspsp_name }
+      found&.with_indifferent_access
     end
 
     def enable_banking_item_params

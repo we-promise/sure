@@ -9,7 +9,7 @@ en:
     authorize:
       authorization_failed: "Failed to initiate authorization: %{message}"
       bank_required: Please select a bank.
-      decoupled_not_supported: This bank uses a separate device authentication method which is not yet supported. Please add this account manually.
+      decoupled_not_supported: This bank only supports a separate-device authentication method which is not yet supported. Please add this account manually.
       invalid_redirect: The authorization URL received is invalid. Please try again.
       redirect_uri_not_allowed: Redirect not allowed. Please configure `%{callback_url}` in your Enable Banking app settings.
       unexpected_error: An unexpected error occurred. Please try again.
@@ -100,6 +100,7 @@ en:
       go_to_provider_settings: Go to Provider Settings
     reauthorize:
       invalid_redirect: The authorization URL received is invalid. Please try again.
+      no_aspsp: This connection is missing a bank. Please remove it and start a new connection.
       reauthorization_failed: Reauthorization failed
     select_bank:
       beta_label: Beta
