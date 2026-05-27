@@ -86,7 +86,7 @@
                     <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
                     <p class="text-xs text-secondary"><%= (account.subtype || subtype).titleize %></p>
                   </div>
-                  <span class="text-sm text-primary tabular-nums"><%= Money.new(account.balance, account.currency).format %></span>
+                  <span class="text-sm text-primary tabular-nums privacy-sensitive"><%= Money.new(account.balance, account.currency).format %></span>
                 </label>
               <% end %>
             </div>
@@ -115,11 +115,11 @@
           <%= render DS::FilledIcon.new(variant: :container, icon: "target", size: "lg", rounded: false) %>
           <div class="min-w-0 flex-1">
             <p class="text-base font-medium text-primary truncate" data-goal-stepper-target="reviewName">…</p>
-            <p class="text-sm text-secondary tabular-nums" data-goal-stepper-target="reviewSummary">…</p>
+            <p class="text-sm text-secondary tabular-nums privacy-sensitive" data-goal-stepper-target="reviewSummary">…</p>
           </div>
         </div>
 
-        <p class="text-sm text-primary tabular-nums border-t border-subdued pt-3" data-goal-stepper-target="reviewSuggested">…</p>
+        <p class="text-sm text-primary tabular-nums border-t border-subdued pt-3 privacy-sensitive" data-goal-stepper-target="reviewSuggested">…</p>
       </div>
     </section>
 

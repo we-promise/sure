@@ -46,10 +46,10 @@
   <div class="mt-5">
     <div class="flex items-baseline gap-1.5">
       <span class="text-xl font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format(precision: 0) %></span>
-      <span class="text-xs text-subdued tabular-nums">/ <%= goal.target_amount_money.format(precision: 0) %></span>
+      <span class="text-xs text-subdued tabular-nums privacy-sensitive">/ <%= goal.target_amount_money.format(precision: 0) %></span>
     </div>
     <% if pace_line %>
-      <p class="text-xs text-subdued tabular-nums mt-1"><%= pace_line %></p>
+      <p class="text-xs text-subdued tabular-nums mt-1 privacy-sensitive"><%= pace_line %></p>
     <% end %>
   </div>
 
@@ -58,7 +58,7 @@
       <%= render Goals::AccountStackComponent.new(accounts: linked_accounts, color_map: goal.account_color_map) %>
       <span class="text-xs text-subdued"><%= linked_accounts_count_label %></span>
     </div>
-    <span class="text-xs text-subdued tabular-nums">
+    <span class="text-xs text-subdued tabular-nums <%= "privacy-sensitive" if footer_has_money? %>">
       <%= footer_line %><% if has_pending_pledge? %> · <%= t("goals.goal_card.pending_count", count: pending_pledges_count) %><% end %>
     </span>
   </div>

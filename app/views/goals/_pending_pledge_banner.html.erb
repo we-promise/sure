@@ -10,7 +10,7 @@
     <span class="text-secondary shrink-0 mt-0.5"><%= icon("info", size: "sm") %></span>
     <div class="flex-1 min-w-0">
       <p class="text-primary">
-        <span class="font-medium"><%= title %></span>
+        <span class="font-medium privacy-sensitive"><%= title %></span>
         <span class="text-secondary">· <%= t("goals.show.pending_pledge.pledged_at", time_ago: time_ago_in_words(pledge.created_at)) %></span>
       </p>
       <p class="text-xs text-subdued mt-0.5"><%= t(body_key) %></p>

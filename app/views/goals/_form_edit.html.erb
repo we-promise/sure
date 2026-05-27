@@ -46,7 +46,7 @@
                 <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
                 <p class="text-xs text-secondary"><%= (account.subtype || subtype).titleize %></p>
               </div>
-              <span class="text-sm text-primary tabular-nums"><%= Money.new(account.balance, account.currency).format %></span>
+              <span class="text-sm text-primary tabular-nums privacy-sensitive"><%= Money.new(account.balance, account.currency).format %></span>
             </label>
           <% end %>
         </div>

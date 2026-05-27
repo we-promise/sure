@@ -113,4 +113,8 @@ class Goals::CardComponent < ApplicationComponent
       end
     end
   end
+
+  def footer_has_money?
+    goal.status == :behind && goal.monthly_target_amount
+  end
 end

@@ -5,7 +5,7 @@
     </div>
     <div class="min-w-0 flex-1">
       <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
-      <p class="text-sm text-secondary mt-1"><%= @goal.header_summary %></p>
+      <p class="text-sm text-secondary mt-1 privacy-sensitive"><%= @goal.header_summary %></p>
       <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
         <p class="text-xs text-subdued mt-0.5">
@@ -122,7 +122,7 @@
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
       <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
       <% unless @goal.completed? %>
-        <p class="text-xs text-subdued tabular-nums mt-0.5"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
+        <p class="text-xs text-subdued tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
       <% end %>
       <% unless @goal.completed? || @goal.status == :reached || @goal.paused? || @goal.archived? %>
         <%# Single Record pledge entry point on the page. Pre-filled with the
@@ -149,7 +149,7 @@
         <h2 class="text-lg font-semibold text-primary">
           <%= t(@goal.archived? ? ".inactive.heading_archived" : ".inactive.heading_paused") %>
         </h2>
-        <p class="text-sm text-secondary mt-1 max-w-md tabular-nums">
+        <p class="text-sm text-secondary mt-1 max-w-md tabular-nums privacy-sensitive">
           <%= t(".inactive.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %>
         </p>
       </div>
@@ -159,7 +159,7 @@
           <%= icon("party-popper", size: "2xl", color: "success") %>
         </div>
         <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
-        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".celebration.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %></p>
+        <p class="text-sm text-secondary mt-1 max-w-md privacy-sensitive"><%= t(".celebration.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %></p>
         <% if @goal.may_archive? %>
           <div class="mt-4">
             <%= render DS::Button.new(
@@ -199,7 +199,7 @@
             <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
             <p class="text-xs text-secondary mt-0.5"><%= sanitize @goal.projection_summary %></p>
             <% if @goal.status == :behind && @goal.monthly_target_amount %>
-              <p class="text-xs text-secondary mt-0.5 tabular-nums">
+              <p class="text-xs text-secondary mt-0.5 tabular-nums privacy-sensitive">
                 <%= t("goals.show.catch_up.body", avg: @goal.pace_money.format(precision: 0), required: Money.new(@goal.monthly_target_amount, @goal.currency).format(precision: 0)) %>
               </p>
             <% end %>
