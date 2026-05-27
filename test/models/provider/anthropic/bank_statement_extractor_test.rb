@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Provider::Anthropic::BankStatementExtractorTest < ActiveSupport::TestCase
   setup do
