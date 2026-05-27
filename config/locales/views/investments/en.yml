@@ -100,6 +100,73 @@ en:
       riester:
         short: Riester
         long: Riester-Rente
+      # India
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Indian Stocks
+        long: Indian Stocks (Demat)
+      indian_equity:
+        short: Indian Equity
+        long: Indian Equity
+      indian_etf:
+        short: Indian ETF
+        long: Indian ETF
+      life_insurance:
+        short: Life Insurance
+        long: Life Insurance
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Fixed Deposit
+      rd:
+        short: RD
+        long: Recurring Deposit
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: Gold ETF
+        long: Gold ETF
+      gold_mf:
+        short: Gold MF
+        long: Gold Mutual Fund
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Government Securities (G-Secs)
+      sdl:
+        short: SDL
+        long: State Development Loans (SDLs)
+      corporate_bond:
+        short: Corporate Bond
+        long: Corporate Bond
+      infrastructure_bond:
+        short: Infra Bond
+        long: Infrastructure Bond
+      tax_free_bond:
+        short: Tax-Free Bond
+        long: Tax-Free Bond
       # Generic
       pension:
         short: Pension
@@ -110,6 +177,9 @@ en:
       mutual_fund:
         short: Mutual Fund
         long: Mutual Fund
+      gold:
+        short: Gold
+        long: Gold (physical or digital)
       angel:
         short: Angel
         long: Angel Investment

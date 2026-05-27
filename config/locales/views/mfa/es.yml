@@ -31,8 +31,15 @@ es:
       verify_title: 2. Ingresa el Código de Verificación
     verify:
       description: Ingresa el código de tu aplicación de autenticación para continuar
+      or: o
       page_title: Verificar la Autenticación de Dos Factores
       title: Autenticación de Dos Factores
       verify_button: Verificar
+      webauthn_button: Usar passkey o llave de seguridad
+      webauthn_unsupported: Este navegador no admite passkeys ni llaves de seguridad.
     verify_code:
       invalid_code: Código de autenticación inválido. Por favor, inténtalo de nuevo.
+    verify_webauthn:
+      invalid_credential: No se pudo verificar esa passkey o llave de seguridad. Inténtalo de nuevo.
+    webauthn_options:
+      unavailable: No hay passkeys ni llaves de seguridad disponibles para esta cuenta.

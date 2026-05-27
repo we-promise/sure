@@ -1,0 +1,20 @@
+---
+hu:
+  activerecord:
+    attributes:
+      user:
+        email: E-mail
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        first_name: Keresztnév
+        last_name: Vezetéknév
+        password: Jelszó
+        password_confirmation: Jelszó megerősítése
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: A rendszergazda nem törölheti fiókját, amíg más tagok is vannak. Kérjük, először töröld az összes tagot.
+            profile_image:
+              invalid_file_size: a fájl mérete nem haladhatja meg a %{max_megabytes}MB-ot
