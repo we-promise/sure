@@ -171,6 +171,45 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
     assert_equal "", messages[2][:content].first[:content]
   end
 
+  # Anthropic's tool_use.input MUST be a JSON object (map). If a stored
+  # ToolCall::Function record carries arguments that parse to a scalar or
+  # array (corrupt row, legacy data, OpenAI cross-bleed), the formatter
+  # must coerce them to `{}` so we don't ship an invalid payload.
+  test "coerces non-Hash parsed arguments to empty Hash" do
+    [ '"hello"', "123", "true", "[1,2,3]" ].each do |non_object_json|
+      formatter = Provider::Anthropic::MessageFormatter.new(
+        prompt: "go",
+        function_results: [ {
+          call_id: "toolu_x",
+          name: "noop",
+          arguments: non_object_json,
+          output: nil
+        } ]
+      )
+
+      messages = formatter.build
+
+      assert_equal({}, messages[1][:content].first[:input],
+        "expected empty Hash for arguments=#{non_object_json.inspect}")
+    end
+  end
+
+  test "coerces non-Hash non-String arguments to empty Hash" do
+    formatter = Provider::Anthropic::MessageFormatter.new(
+      prompt: "go",
+      function_results: [ {
+        call_id: "toolu_x",
+        name: "noop",
+        arguments: [ 1, 2, 3 ],
+        output: nil
+      } ]
+    )
+
+    messages = formatter.build
+
+    assert_equal({}, messages[1][:content].first[:input])
+  end
+
   private
     def stub_user_message(content)
       msg = UserMessage.new(content: content, ai_model: "claude-sonnet-4-6")

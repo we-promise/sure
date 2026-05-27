@@ -111,15 +111,21 @@ class Provider::Anthropic::MessageFormatter
       }
     end
 
+    # Anthropic's Messages API requires `tool_use.input` to be a JSON object
+    # (map). Normalize any non-Hash result to `{}` so corrupt or legacy
+    # ToolCall::Function records can't produce a payload Anthropic rejects.
     def parse_arguments(arguments)
-      case arguments
-      when nil then {}
-      when Hash then arguments
-      when String
-        return {} if arguments.blank?
-        JSON.parse(arguments)
-      else arguments
-      end
+      parsed =
+        case arguments
+        when nil then {}
+        when Hash then arguments
+        when String
+          return {} if arguments.blank?
+          JSON.parse(arguments)
+        else arguments
+        end
+
+      parsed.is_a?(Hash) ? parsed : {}
     rescue JSON::ParserError
       {}
     end

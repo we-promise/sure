@@ -262,7 +262,10 @@ class Provider::Anthropic < Provider
         environment: Rails.env
       )
     rescue => e
-      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.full_message}")
+      # Sanitized log (class + message only) — `e.full_message` bundles the
+      # backtrace + cause chain, which on some SDK error types includes the
+      # serialized request/response payload (model output, user prompt).
+      Rails.logger.warn("Langfuse trace creation failed: #{e.class}: #{e.message}")
       nil
     end
 
@@ -286,7 +289,7 @@ class Provider::Anthropic < Provider
         upsert_langfuse_trace(trace: trace, output: output)
       end
     rescue => e
-      Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
+      Rails.logger.warn("Langfuse logging failed: #{e.class}: #{e.message}")
     end
 
     def upsert_langfuse_trace(trace:, output:, level: nil)
@@ -297,7 +300,7 @@ class Provider::Anthropic < Provider
 
       langfuse_client.trace(**payload)
     rescue => e
-      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.message}\n#{e.full_message}")
+      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.class}: #{e.message}")
       nil
     end
 
