@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
   test "builds a single user turn from prompt alone" do

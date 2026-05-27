@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Provider::Anthropic::ChatParserTest < ActiveSupport::TestCase
   test "parses text-only message into ChatResponse with single output_text" do
