@@ -5,6 +5,12 @@ class MenuComponentPreview < ViewComponent::Preview
     end
   end
 
+  def icon_sm
+    render DS::Menu.new(variant: "icon_sm") do |menu|
+      menu_contents(menu)
+    end
+  end
+
   def button
     render DS::Menu.new(variant: "button") do |menu|
       menu.with_button(text: "Open menu", variant: "secondary")

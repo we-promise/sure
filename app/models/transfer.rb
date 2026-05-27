@@ -38,8 +38,16 @@ class Transfer < ApplicationRecord
   # Once transfer is destroyed, we need to mark the denormalized kind fields on the transactions
   def destroy!
     Transfer.transaction do
-      inflow_transaction.update!(kind: "standard")
-      outflow_transaction.update!(kind: "standard")
+      [ inflow_transaction, outflow_transaction ].each do |transaction|
+        next if transaction.nil?
+        next unless Transaction.exists?(transaction.id)
+        begin
+          transaction.update!(kind: "standard")
+        rescue ActiveRecord::RecordNotFound
+        rescue NoMethodError
+          next
+        end
+      end
       super
     end
   end
