@@ -65,7 +65,7 @@ zh-CN:
           one: 1 笔交易 • 最近于 %{when}
           other: "%{count} 笔交易 • 最近于 %{when}"
         dormant: "%{days} 天内无活动"
-        empty:  এখনও未导入交易
+        empty: 尚未导入交易
         likely_closed: 无近期活动且余额为零——这可能是已关闭或已替换的卡片
         today: 今天
         yesterday: 昨天

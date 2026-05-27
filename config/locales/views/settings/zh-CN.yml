@@ -12,7 +12,7 @@ zh-CN:
         title: 调试事件日志
         subtitle: 面向超级管理员的有意义操作事件，最新优先。
         empty: 未找到调试事件。
-        missing_value: "-"
+        missing_value: "—"
         filters:
           all: 全部
           category: 分类

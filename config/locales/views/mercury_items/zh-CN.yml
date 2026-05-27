@@ -73,7 +73,7 @@ zh-CN:
       base_url_label: Base URL（可选）
       base_url_placeholder: https://api.mercury.com/api/v1（默认）
       connection_name_label: 连接名称
-      connection_name_placeholder: Business checking
+      connection_name_placeholder: 企业支票账户
       default_connection_name: Mercury 连接
       disconnect_confirm: "断开 %{name}？"
       instructions:
@@ -155,7 +155,7 @@ zh-CN:
         other_asset: ""
       subtype_messages:
         credit_card: "信用卡将自动设为信用卡账户。"
-        other_asset: "Other Assets 无需额外选项。"
+        other_asset: "其他资产无需额外选项。"
       subtypes:
         depository:
           checking: 支票账户

@@ -180,7 +180,7 @@ zh-CN:
         other_asset: ""
       subtype_messages:
         credit_card: 信用卡将自动设为信用卡账户。
-        other_asset: Other Assets 无需额外选项。
+        other_asset: 其他资产无需额外选项。
         crypto: 加密货币账户将用于跟踪持仓和交易。
       subtypes:
         depository:
