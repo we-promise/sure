@@ -25,20 +25,20 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
           start_non_cash_balance = end_non_cash_balance
           market_value_change = 0
         elsif valuation && valuation.entryable.reconciliation?
-          # Reconciliation waypoint: reset to the known API-reported balance.
-          # These waypoints are created by CurrentBalanceManager when it preserves
-          # a stale current_anchor as a reconciliation before replacing it.
-          # We derive both cash and non-cash from the total to ensure the split
-          # reflects the account's cash ratio on that date.
+          # Reconciliation waypoint: hard-reset the END-of-day balance to the
+          # API-reported value, neutralizing any drift accumulated from missing
+          # transactions between here and the next anchor. The START is still
+          # derived from this day's own flows, so a same-day transaction is
+          # attributed exactly once (and not added on top of the waypoint).
           end_cash_balance = derive_cash_balance_on_date_from_total(
             total_balance: valuation.amount,
             date: date
           )
           end_non_cash_balance = valuation.amount - end_cash_balance
 
-          start_cash_balance = end_cash_balance
-          start_non_cash_balance = end_non_cash_balance
-          market_value_change = 0
+          start_cash_balance = derive_start_cash_balance(end_cash_balance: end_cash_balance, date: date)
+          start_non_cash_balance = derive_start_non_cash_balance(end_non_cash_balance: end_non_cash_balance, date: date)
+          market_value_change = market_value_change_on_date(date, flows)
         else
           start_cash_balance = derive_start_cash_balance(end_cash_balance: end_cash_balance, date: date)
           start_non_cash_balance = derive_start_non_cash_balance(end_non_cash_balance: end_non_cash_balance, date: date)
