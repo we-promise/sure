@@ -726,26 +726,9 @@ class Account::ProviderImportAdapter
     query.order(created_at: :asc).first
   end
 
-  # Finds a pending transaction that likely matches a newly posted transaction
-  # Used to reconcile pending→posted when SimpleFIN gives different IDs for the same transaction
-  #
-  # @param date [Date, String] Posted transaction date
-  # @param amount [BigDecimal, Numeric] Transaction amount (must match exactly)
-  # @param currency [String] Currency code
-  # @param source [String] Provider name (e.g., "simplefin")
-  # @param date_window [Integer] Days to search around the posted date (default: 8)
-  # @return [Entry, nil] The pending entry or nil if not found
   def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
-    # Look for entries that:
-    # 1. Same account (implicit via account.entries)
-    # 2. Same source (simplefin)
-    # 3. Same amount (exact match - this is the strongest signal)
-    # 4. Same currency
-    # 5. Date within window (pending can post days later)
-    # 6. Is a Transaction (not Trade or Valuation)
-    # 7. Has pending=true in transaction.extra["simplefin"]["pending"] or extra["plaid"]["pending"]
     candidates = account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(source: source)
@@ -762,10 +745,7 @@ class Account::ProviderImportAdapter
       .limit(2)
       .to_a
 
-    # Only match when there is exactly ONE candidate — multiple same-amount pendings
-    # within the window are ambiguous and must not be auto-claimed, because claiming
-    # the wrong one silently destroys a distinct transaction (issue #2013).
-    return nil if candidates.size != 1
+    return nil if candidates.size != 1 # ambiguous same-amount pendings must not be auto-claimed (#2013)
 
     candidates.first
   end
