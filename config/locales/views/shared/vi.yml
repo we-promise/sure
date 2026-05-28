@@ -1,0 +1,38 @@
+---
+vi:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis đã được cấu hình đúng! Bây giờ bạn có thể thiết lập ứng dụng Sure của mình."
+  shared:
+    confirm_modal:
+      accept: Xác nhận
+      body_html: "<p>Bạn sẽ không thể hoàn tác quyết định này</p>"
+      cancel: Hủy
+      title: Bạn có chắc không?
+    money_field:
+      label: Số tiền
+    exchange_rate_tabs:
+      calculate_rate_tab: Tính tỷ giá ngoại tệ
+      convert_tab: Chuyển đổi với tỷ giá
+      destination_amount: Số tiền đích
+      exchange_rate: Tỷ giá
+      exchange_rate_help: Chọn cách nhập số tiền.
+    syncing_notice:
+      syncing: Đang đồng bộ dữ liệu tài khoản...
+    require_admin: "Chỉ quản trị viên mới có thể thực hiện hành động này"
+    custom_confirm:
+      default_title: "Bạn có chắc không?"
+      default_body: "Thao tác này không thể hoàn tác."
+      default_btn_text: "Xác nhận"
+    family_moniker:
+      group_plural: Nhóm
+      group_singular: Nhóm
+      plural: Hộ gia đình
+      singular: Hộ gia đình
+    trend_change:
+      no_change: "không thay đổi"
+    cancel: Hủy
+    transaction_tabs:
+      expense: Chi tiêu
+      income: Thu nhập
+      transfer: Chuyển khoản
