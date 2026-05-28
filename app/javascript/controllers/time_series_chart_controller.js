@@ -289,7 +289,7 @@ export default class extends Controller {
       .append("div")
       .attr(
         "class",
-        "bg-container text-sm font-sans absolute p-2 border border-secondary rounded-lg pointer-events-none opacity-0 top-0 privacy-sensitive",
+        "bg-container text-primary text-sm font-sans absolute p-3 rounded-xl shadow-lg shadow-border-xs pointer-events-none opacity-0 top-0 z-50 privacy-sensitive",
       );
   }
 

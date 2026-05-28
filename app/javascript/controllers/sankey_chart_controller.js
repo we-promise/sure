@@ -511,7 +511,7 @@ export default class extends Controller {
       .append("div")
       .attr(
         "class",
-        "bg-gray-700 text-white text-sm p-2 rounded pointer-events-none absolute z-50 top-0",
+        "bg-container text-primary text-sm font-sans absolute p-3 rounded-xl shadow-lg shadow-border-xs pointer-events-none z-50 top-0 privacy-sensitive",
       )
       .style("opacity", 0)
       .style("pointer-events", "none");
