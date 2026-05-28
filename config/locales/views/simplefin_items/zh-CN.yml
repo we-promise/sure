@@ -133,6 +133,7 @@ zh-CN:
       unlink_to_move: 若要移动连接，请先在账户操作菜单中取消其连接。
       all_accounts_already_linked: 所有 SimpleFIN 账户似乎都已连接。
       currently_linked_to: 当前连接到：%{account_name}
+      check_provider_health: 请检查您的 API 凭据和同步状态。
     link_existing_account:
       success: 账户已成功连接到 SimpleFIN
       errors:

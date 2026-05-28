@@ -244,3 +244,46 @@ zh-CN:
       max_rows_exceeded: 您的导入超过了最大行数 %{max}。
     revert:
       started: 导入正在后台回滚。
+    index:
+      title: 导入记录
+      new: 新建导入
+    table:
+      title: 导入记录
+      header:
+        date: 日期
+        operation: 操作
+        status: 状态
+        actions: 操作
+      row:
+        status:
+          in_progress: 进行中
+          uploading: 处理行数据中
+          reverting: 回滚中
+          revert_failed: 回滚失败
+          complete: 已完成
+          failed: 已失败
+        actions:
+          revert: 恢复
+          confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
+          delete: 删除
+          view: 查看
+      empty: 暂无导入记录。
+    new:
+      description: 您可以通过 CSV 手动导入多种类型数据，或使用我们的导入模板（如 Mint 格式）。
+      import_accounts: 导入账户
+      import_categories: 导入分类
+      import_mint: 从 Mint 导入
+      import_portfolio: 导入投资数据
+      import_rules: 导入规则
+      import_transactions: 导入交易记录
+      resume: 继续 %{type}
+      sources: 数据来源
+      title: 新建 CSV 导入
+    ready:
+      description: 以下是发布导入后将添加到您账户的新项目摘要。
+      title: 确认导入数据
+      summary_item_label: 项目
+      summary_count_label: 数量
+      empty_summary: 在此文件中未找到可导入的记录。文件可能为空，或各行不符合预期的导出格式（每行应为包含「type」和「data」键的 JSON 对象，且类型须为本导入支持的类型）。
+      publish_import: 发布导入
+      back_to_imports: 返回导入列表
