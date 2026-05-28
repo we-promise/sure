@@ -292,6 +292,32 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "cost_basis is nil and trade is skipped when FX conversion fails" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST3", name: "EUR Stock 3")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 10, price: 100, amount: 1000, currency: "EUR")
+
+      # No exchange rate for buy_date and no custom_rate — conversion will fail
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR", account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 10 })
+      calculated = nil
+      assert_nothing_raised { calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate }
+
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+      assert_nil today_holding.cost_basis,
+        "cost_basis must be nil when FX conversion fails (trade excluded to avoid mixing currencies)"
+    end
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
