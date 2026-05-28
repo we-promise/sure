@@ -1,4 +1,5 @@
-<%# locals: (param_key:, param_value:) %>
+<%# locals: (param_key:, param_value:, clear_filter_path: nil) %>
+<% clear_filter_path = local_assigns[:clear_filter_path] %>
 <li class="flex items-center gap-1 text-sm border border-secondary rounded-3xl p-1.5">
   <% if param_key == "start_date" || param_key == "end_date" %>
     <div class="flex items-center gap-2">
@@ -46,7 +47,7 @@
     </div>
   <% end %>
 
-  <%= button_to clear_filter_transactions_path(param_key: param_key, param_value: param_value, **request.query_parameters),
+  <%= button_to clear_filter_path || clear_filter_transactions_path(param_key: param_key, param_value: param_value, **request.query_parameters),
         method: :delete,
         data: { turbo: false },
         class: "flex items-center cursor-pointer" do %>
