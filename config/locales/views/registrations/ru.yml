@@ -22,7 +22,7 @@ ru:
       submit: Создать аккаунт
       title: Создайте ваш аккаунт
       welcome_body: Чтобы начать, вам необходимо зарегистрировать новый аккаунт. Затем вы сможете настроить дополнительные параметры в приложении.
-      welcome_title: Добро пожаловать в Self Hosted %{product_name}!
+      welcome_title: Добро пожаловать в %{product_name} (self-hosted)!
       password_placeholder: Введите ваш пароль
       password_requirements:
         length: Минимум 8 символов

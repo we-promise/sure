@@ -1,3 +1,4 @@
+---
 ru:
   subscriptions:
     self_hosted_alert: "%{product_name} недоступен в режиме с собственным хостингом."

@@ -1,3 +1,4 @@
+---
 ru:
   snaptrade_items:
     default_name: "Подключение SnapTrade"
@@ -136,6 +137,8 @@ ru:
       update_button: "Обновить конфигурацию"
       status_connected:
         one: "%{count} счёт из SnapTrade"
+        few: "%{count} счёта из SnapTrade"
+        many: "%{count} счетов из SnapTrade"
         other: "%{count} счёта из SnapTrade"
       status_needs_registration: "Учетные данные сохранены. Завершите настройку для подключения брокера."
       needs_setup:
@@ -150,6 +153,8 @@ ru:
       connections_error: "Не удалось загрузить подключения: %{message}"
       accounts_count:
         one: "%{count} счёт"
+        few: "%{count} счёта"
+        many: "%{count} счетов"
         other: "%{count} счёта"
       orphaned_connection: "Осиротевшее подключение (не синхронизировано локально)"
       needs_linking: "требует связывания"
@@ -159,13 +164,15 @@ ru:
       delete_connection_body: "Это навсегда удалит подключение %{brokerage} из SnapTrade. Все счета этого брокера будут отвязаны. Вам нужно будет переподключиться, чтобы снова синхронизировать эти счета."
       delete_connection_confirm: "Удалить подключение"
       orphaned_users_title:
-        one: "%{count} осиротевшая регистрация"
-        other: "%{count} осиротевших регистраций"
+        one: "%{count} неиспользуемая регистрация"
+        few: "%{count} неиспользуемые регистрации"
+        many: "%{count} неиспользуемых регистраций"
+        other: "%{count} неиспользуемые регистрации"
       orphaned_users_description: "Это предыдущие регистрации пользователей SnapTrade, которые занимают ваши слоты подключения. Удалите их, чтобы освободить слоты."
-      orphaned_user: "Осиротевшая регистрация"
+      orphaned_user: "Неиспользуемая регистрация"
       delete_orphaned_user: "Удалить"
-      delete_orphaned_user_title: "Удалить осиротевшую регистрацию?"
-      delete_orphaned_user_body: "Это навсегда удалит этого осиротевшего пользователя SnapTrade и все их подключения брокеров, освобождая слоты подключения."
+      delete_orphaned_user_title: "Удалить неиспользуемую регистрацию?"
+      delete_orphaned_user_body: "Это навсегда удалит этого неиспользуемого пользователя SnapTrade и все его подключения брокеров, освобождая слоты подключения."
       delete_orphaned_user_confirm: "Удалить регистрацию"
 
   snaptrade_item:
@@ -173,17 +180,23 @@ ru:
       no_accounts: "Счета не найдены"
       synced:
         one: "%{count} счёт синхронизирован"
+        few: "%{count} счёта синхронизированы"
+        many: "%{count} счетов синхронизировано"
         other: "%{count} счёта синхронизированы"
       synced_with_setup: "%{linked} синхронизированы, %{unlinked} требуют настройки"
     institution_summary:
       none: "Подключённых учреждений нет"
       count:
         one: "%{count} учреждение"
+        few: "%{count} учреждения"
+        many: "%{count} учреждений"
         other: "%{count} учреждений"
     brokerage_summary:
       none: "Подключённых брокеров нет"
       count:
         one: "%{count} брокер"
+        few: "%{count} брокера"
+        many: "%{count} брокеров"
         other: "%{count} брокеров"
     syncer:
       discovering: "Поиск счетов..."
