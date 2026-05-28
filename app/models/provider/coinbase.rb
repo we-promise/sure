@@ -131,10 +131,20 @@ class Provider::Coinbase
       results.first(limit)
     end
 
-    # Generate JWT token for CDP API authentication
-    # Uses ES256 (ECDSA P-256) signing — matches what Coinbase CDP issues
+    # Parses a PEM EC private key, normalizing literal \n sequences to real
+    # newlines. Coinbase CDP keys are often stored or pasted as a single-line
+    # string with escaped newlines (e.g. copied directly from the JSON download
+    # file). Both forms are accepted.
+    def parse_ec_private_key(pem)
+      OpenSSL::PKey::EC.new(pem.to_s.gsub('\n', "\n"))
+    end
+
+    # Generate JWT token for CDP API authentication.
+    # Uses ES256 (ECDSA P-256) signing — matches the key format Coinbase CDP
+    # issues. api_secret must be a PEM EC private key
+    # (-----BEGIN EC PRIVATE KEY-----) either with real newlines or literal \n.
     def generate_jwt(method, path)
-      private_key = OpenSSL::PKey::EC.new(api_secret)
+      private_key = parse_ec_private_key(api_secret)
 
       now = Time.now.to_i
       uri = "#{method} api.coinbase.com#{path}"
@@ -157,7 +167,7 @@ class Provider::Coinbase
       }
 
       # Encode header and payload
-      encoded_header  = Base64.urlsafe_encode64(header.to_json, padding: false)
+      encoded_header = Base64.urlsafe_encode64(header.to_json, padding: false)
       encoded_payload = Base64.urlsafe_encode64(payload.to_json, padding: false)
 
       # Sign with ECDSA SHA-256
