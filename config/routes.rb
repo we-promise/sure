@@ -141,6 +141,16 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :onchain_wallet_items, only: [ :create, :update, :destroy ] do
+    collection do
+      post :link_wallet
+    end
+    member do
+      post :sync
+      delete "accounts/:account_id", action: :destroy_account, as: :account
+    end
+  end
+
   resources :enable_banking_items, only: [ :new, :create, :update, :destroy ] do
     collection do
       get :callback
