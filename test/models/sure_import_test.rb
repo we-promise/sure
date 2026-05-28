@@ -271,7 +271,7 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 1, other_family.accounts.count
   end
 
-  test "publish verifies expected zero record types against unexpected readback deltas" do
+  test "publish fails when readback verification reports unexpected record deltas" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
         id: "account-1",
@@ -288,7 +288,8 @@ class SureImportTest < ActiveSupport::TestCase
 
     verification = @import.readback_verification
 
-    assert_equal "complete", @import.status
+    assert_equal "failed", @import.status
+    assert_match(/readback verification mismatch/i, @import.error)
     assert_equal "mismatch", verification["status"]
     assert_equal 0, verification.dig("expected_record_counts", "valuations")
     assert_equal 0, verification.dig("checked_counts", "valuations")
@@ -296,7 +297,7 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal({ "expected" => 0, "actual" => 1 }, verification.dig("mismatches", "valuations"))
   end
 
-  test "publish records mismatch when expected rows are skipped by readback" do
+  test "publish fails when expected rows are skipped during import" do
     attach_ndjson(build_ndjson([
       { type: "Transaction", data: {
         id: "transaction-1",
@@ -311,9 +312,29 @@ class SureImportTest < ActiveSupport::TestCase
     @import.publish
     @import.reload
 
-    assert_equal "complete", @import.status
+    assert_equal "failed", @import.status
+    assert_match(/readback verification mismatch/i, @import.error)
     assert_equal "mismatch", @import.readback_verification["status"]
     assert_equal({ "expected" => 1, "actual" => 0 }, @import.readback_verification.dig("mismatches", "transactions"))
+  end
+
+  test "import! raises when readback verification does not match" do
+    attach_ndjson(build_ndjson([
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2024-01-15",
+        amount: "12.34",
+        name: "Skipped transaction",
+        currency: "USD"
+      } }
+    ]))
+
+    assert_raises(SureImport::ReadbackVerificationMismatchError) do
+      @import.import!
+    end
+
+    assert_equal "mismatch", @import.reload.verification_status
   end
 
   test "failed publish records failed verification without partial mutation" do
