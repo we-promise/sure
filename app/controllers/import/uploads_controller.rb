@@ -50,7 +50,7 @@ class Import::UploadsController < ApplicationController
       content = uploaded.read
       uploaded.rewind
 
-      if ndjson_valid?(content)
+      if SureImport.valid_ndjson_content?(content)
         uploaded.rewind
         @import.ndjson_file.attach(uploaded)
         @import.sync_ndjson_rows_count!
@@ -99,21 +99,6 @@ class Import::UploadsController < ApplicationController
         return false if csv.count == 0
         true
       rescue CSV::MalformedCSVError
-        false
-      end
-    end
-
-    def ndjson_valid?(str)
-      return false if str.blank?
-
-      # Check at least first line is valid NDJSON
-      first_line = str.lines.first&.strip
-      return false if first_line.blank?
-
-      begin
-        record = JSON.parse(first_line)
-        record.key?("type") && record.key?("data")
-      rescue JSON::ParserError
         false
       end
     end

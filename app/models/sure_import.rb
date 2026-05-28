@@ -90,6 +90,40 @@ class SureImport < Import
         false
       end
     end
+
+    def ndjson_validation_errors(content)
+      errors = []
+      nonblank_rows_count = 0
+
+      content.to_s.each_line.with_index(1) do |line, line_number|
+        next if line.strip.empty?
+
+        nonblank_rows_count += 1
+
+        begin
+          record = JSON.parse(line)
+        rescue JSON::ParserError => error
+          errors << "Line #{line_number} is not valid JSON: #{error.message}"
+          next
+        end
+
+        unless record.is_a?(Hash)
+          errors << "Line #{line_number} must be a JSON object."
+          next
+        end
+
+        unless record.key?("type") && record.key?("data")
+          errors << "Line #{line_number} must include type and data."
+        end
+      end
+
+      errors << "No data rows were found." if nonblank_rows_count.zero?
+      errors
+    end
+
+    def valid_ndjson_content?(content)
+      ndjson_validation_errors(content).empty?
+    end
   end
 
   def requires_csv_workflow?

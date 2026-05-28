@@ -353,10 +353,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     def sure_import_validated_attributes(content:, filename:, content_type:)
-      unless SureImport.valid_ndjson_first_line?(content)
+      errors = SureImport.ndjson_validation_errors(content)
+      unless errors.empty?
         render json: {
           error: "invalid_ndjson",
-          message: "Invalid Sure NDJSON content."
+          message: "Invalid Sure NDJSON content.",
+          errors: errors
         }, status: :unprocessable_entity
         return
       end
