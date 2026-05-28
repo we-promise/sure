@@ -174,7 +174,8 @@ export default class extends Controller {
 
   #selectSuggestion(value) {
     this.inputTarget.value = value;
-    this.inputTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    this.inputTarget.dispatchEvent(new Event("input", { bubbles: true }));
+    this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }));
     this.#resetSuggestions();
   }
 
