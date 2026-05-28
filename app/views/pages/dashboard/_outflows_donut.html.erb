@@ -31,7 +31,7 @@
                 <span><%= t("pages.dashboard.outflows_donut.total_outflows") %></span>
               </div>
 
-              <div class="text-3xl font-medium text-primary privacy-sensitive">
+              <div data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap">
                 <%= format_money Money.new(outflows_data[:total], outflows_data[:currency]) %>
               </div>
             </div>
@@ -41,7 +41,7 @@
                 <div class="flex flex-col gap-2 items-center">
                   <p class="text-sm text-secondary"><%= category[:name] %></p>
 
-                  <p class="text-3xl font-medium text-primary privacy-sensitive">
+                  <p data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap">
                     <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %>
                   </p>
 
