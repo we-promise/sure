@@ -13,6 +13,12 @@ class Provider::CoinbaseTest < ActiveSupport::TestCase
   TEST_KEY_MULTILINE = TEST_KEY_SINGLE_LINE.gsub('\n', "\n").freeze
   TEST_API_KEY = "organizations/test-org/apiKeys/test-key-id".freeze
 
+  # JWT base64url parts omit padding — add the correct amount before decoding.
+  def jwt_decode_part(str)
+    pad = (4 - str.length % 4) % 4
+    Base64.urlsafe_decode64(str + ("=" * pad))
+  end
+
   setup do
     @provider = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: TEST_KEY_MULTILINE)
     @provider_escaped = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: TEST_KEY_SINGLE_LINE)
@@ -40,19 +46,19 @@ class Provider::CoinbaseTest < ActiveSupport::TestCase
 
   test "generate_jwt header has alg ES256" do
     jwt = @provider.send(:generate_jwt, "GET", "/v2/user")
-    header = JSON.parse(Base64.urlsafe_decode64(jwt.split(".").first + "=="))
+    header = JSON.parse(jwt_decode_part(jwt.split(".").first))
     assert_equal "ES256", header["alg"]
   end
 
   test "generate_jwt header has kid matching api_key" do
     jwt = @provider.send(:generate_jwt, "GET", "/v2/user")
-    header = JSON.parse(Base64.urlsafe_decode64(jwt.split(".").first + "=="))
+    header = JSON.parse(jwt_decode_part(jwt.split(".").first))
     assert_equal TEST_API_KEY, header["kid"]
   end
 
   test "generate_jwt payload includes required CDP claims" do
     jwt = @provider.send(:generate_jwt, "GET", "/v2/user")
-    payload = JSON.parse(Base64.urlsafe_decode64(jwt.split(".")[1] + "=="))
+    payload = JSON.parse(jwt_decode_part(jwt.split(".")[1]))
 
     assert_equal TEST_API_KEY, payload["sub"]
     assert_equal "cdp", payload["iss"]
