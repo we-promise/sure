@@ -3,7 +3,7 @@
 <% if investment_metrics[:has_investments] %>
   <div class="space-y-6">
     <%# Investment Summary Cards %>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <%# Portfolio Value Card %>
       <div class="bg-container-inset rounded-lg p-4">
         <div class="flex items-center gap-2 mb-3">
@@ -25,6 +25,22 @@
           <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:unrealized_trend].color %>">
             <%= format_money(Money.new(investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
             (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
+          </p>
+        <% else %>
+          <p class="text-xl font-semibold text-secondary"><%= t("reports.investment_performance.no_data") %></p>
+        <% end %>
+      </div>
+
+      <%# Period Return Card %>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <%= icon("bar-chart-2", size: "sm") %>
+          <span class="text-sm text-secondary"><%= t("reports.investment_performance.period_return") %></span>
+        </div>
+        <% if investment_metrics[:period_return_trend] %>
+          <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:period_return_trend].color %>">
+            <%= format_money(Money.new(investment_metrics[:period_return_trend].value, Current.family.currency)) %>
+            (<%= investment_metrics[:period_return_trend].percent_formatted %>)
           </p>
         <% else %>
           <p class="text-xl font-semibold text-secondary"><%= t("reports.investment_performance.no_data") %></p>
@@ -118,9 +134,13 @@
           <% investment_metrics[:gains_by_tax_treatment].each do |treatment, data| %>
             <div class="bg-container-inset rounded-lg p-4 space-y-3 flex-1 min-w-64">
               <div class="flex items-center justify-between">
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= tax_treatment_badge_classes(treatment) %>" title="<%= t("accounts.tax_treatment_descriptions.#{treatment}") %>">
-                  <%= t("accounts.tax_treatments.#{treatment}") %>
-                </span>
+                <%= render DS::Pill.new(
+                  label: t("accounts.tax_treatments.#{treatment}"),
+                  tone: tax_treatment_pill_tone(treatment),
+                  marker: false,
+                  show_dot: false,
+                  title: t("accounts.tax_treatment_descriptions.#{treatment}")
+                ) %>
                 <span class="text-sm font-semibold text-primary privacy-sensitive">
                   <%= format_money(data[:total_gain]) %>
                 </span>

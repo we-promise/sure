@@ -2,17 +2,50 @@
 
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-sm">
-    <div class="mx-auto bg-green-500/5 h-8 w-8 rounded-full flex items-center justify-center">
+    <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
       <%= icon "check", color: "success" %>
     </div>
 
     <div class="text-center space-y-2">
-      <h1 class="font-medium text-primary text-center text-3xl">Import successful</h1>
-      <p class="text-sm text-secondary">Your imported data has been successfully added to the app and is now ready for use.</p>
+      <h1 class="font-medium text-primary text-center text-3xl"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
+    <% if import.is_a?(SureImport) %>
+      <% verification = import_verification_view(import) %>
+
+      <div class="bg-container border border-primary rounded-lg p-4 space-y-3 text-left">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-sm font-medium text-primary"><%= t(".verification.title") %></h2>
+          <span class="text-xs font-medium text-secondary"><%= t(".verification.status.#{verification.status}", default: verification.status.humanize) %></span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p class="text-xs text-secondary"><%= t(".verification.checked") %></p>
+            <p class="font-medium text-primary"><%= number_with_delimiter(verification.checked_total) %></p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t(".verification.mismatches") %></p>
+            <p class="font-medium text-primary"><%= number_with_delimiter(verification.mismatches_count) %></p>
+          </div>
+        </div>
+
+        <% if verification.mismatches? %>
+          <div class="space-y-2">
+            <% verification.mismatches_preview.each do |key, counts| %>
+              <div class="flex items-center justify-between gap-3 text-xs">
+                <span class="text-secondary"><%= key.humanize %></span>
+                <span class="font-medium text-primary"><%= number_with_delimiter(counts["actual"]) %> / <%= number_with_delimiter(counts["expected"]) %></span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
     <%= render DS::Link.new(
-      text: "Back to dashboard",
+      text: t(".back_to_dashboard"),
       variant: "primary",
       full_width: true,
       href: root_path

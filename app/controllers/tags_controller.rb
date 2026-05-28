@@ -36,7 +36,7 @@ class TagsController < ApplicationController
 
   def destroy_all
     Current.family.tags.destroy_all
-    redirect_back_or_to tags_path, notice: "All tags deleted"
+    redirect_back_or_to tags_path, notice: t(".all_deleted")
   end
 
   private

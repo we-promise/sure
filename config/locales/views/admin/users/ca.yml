@@ -3,26 +3,58 @@ ca:
   admin:
     users:
       index:
-        description: Gestiona els rols d'usuari per a la teva instància. Els super administradors poden accedir
-          a la configuració de proveïdors SSO i la gestió d'usuaris.
+        description: Gestiona els rols d'usuari per a la teva instància. Els super
+          administradors poden accedir a la configuració de proveïdors SSO i a la
+          gestió d'usuaris.
+        family_summary: "%{members} membres · %{accounts} comptes · %{transactions}
+          transaccions"
+        filters:
+          role: Rol
+          role_all: Tots els rols
+          submit: Filtra
+          trial_all: Tots
+          trial_expiring_soon: Caduca en 7 dies
+          trial_status: Estat de la prova
+          trial_trialing: En prova
+        invitations:
+          delete: Elimina
+          delete_all: Elimina-ho tot
+          expires: Caduca %{date}
+          pending_label: Convidat (pendent)
+        no_subscription: Sense subscripció
         no_users: No s'han trobat usuaris.
+        not_available: n/d
         role_descriptions:
-          admin: Administrador familiar. Pot accedir a configuracions avançades com claus API,
-            importacions i prompts d'IA.
+          admin: Administrador familiar. Pot accedir a configuracions avançades com
+            claus API, importacions i prompts d'IA.
+          guest: Experiència centrada en l'assistent amb permisos restringits intencionadament
+            per a fluxos d'introducció.
           member: Accés bàsic d'usuari. Pot gestionar els seus propis comptes, transaccions
             i configuracions.
-          super_admin: Administrador d'instància. Pot gestionar proveïdors SSO, rols d'usuari
-            i personificar usuaris per suport.
-        role_descriptions_title: Descripcions de rols
+          super_admin: Administrador d'instància. Pot gestionar proveïdors SSO, rols
+            d'usuari i personificar usuaris per donar suport.
+        role_descriptions_title: Descripcions dels rols
         roles:
           admin: Administrador
+          guest: Convidat
           member: Membre
           super_admin: Super administrador
-        section_title: Usuaris
+        section_title: Famílies / Grups
+        summary:
+          trials_expiring_7_days: Proves que caduquen en els pròxims 7 dies
+        table:
+          family_accounts: Comptes familiars
+          family_transactions: Transaccions familiars
+          last_login: Últim inici de sessió
+          never: Mai
+          role: Rol
+          session_count: Nombre de sessions
+          trial_ends_at: Fi de la prova
+          user: Usuari
         title: Gestió d'usuaris
+        trial_ends_at: Fi de la prova
+        unnamed_family: Família/grup sense nom
         you: "(Tu)"
-        trial_ends_at: Fi de prova
-        not_available: n/a
       update:
         failure: No s'ha pogut actualitzar el rol d'usuari.
-        success: El rol d'usuari s'ha actualitzat correctament.
+        success: Rol d'usuari actualitzat correctament.

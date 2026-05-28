@@ -35,7 +35,7 @@ class TradesController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to account_path(@account) }
       end
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_entity, formats: [ :html ]
     end
   end
 
@@ -69,7 +69,7 @@ class TradesController < ApplicationController
         end
       end
     else
-      render :show, status: :unprocessable_entity
+      render :show, status: :unprocessable_entity, formats: [ :html ]
     end
   end
 

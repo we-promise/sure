@@ -50,21 +50,6 @@ module SettingsHelper
     render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta, actions: actions, badge: badge }
   end
 
-  def status_pill_classes(status)
-    pill = "bg-surface-inset text-primary"
-
-    case status.to_s.to_sym
-    when :ok
-      { dot: "bg-success", pill: pill }
-    when :warn
-      { dot: "bg-warning", pill: pill }
-    when :err
-      { dot: "bg-destructive", pill: pill }
-    else
-      { dot: "bg-gray-400", pill: pill }
-    end
-  end
-
   def provider_summary(provider_key)
     key = provider_key.to_s.downcase
 
