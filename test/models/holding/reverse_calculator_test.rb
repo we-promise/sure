@@ -319,7 +319,20 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
       snapshot = OpenStruct.new(to_h: { eur_stock.id => 30 })
       calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
 
+      first_buy_holding = calculated.find { |h| h.date == first_buy && h.security == eur_stock }
+      assert_in_delta 110.0, first_buy_holding.cost_basis.to_f, 0.01,
+        "cost_basis should be valid (110 USD = 100 EUR × 1.10) before the FX failure on #{failed_buy}"
+
+      failed_date_holding = calculated.find { |h| h.date == failed_buy && h.security == eur_stock }
+      assert_nil failed_date_holding.cost_basis,
+        "cost_basis should be nil starting from the FX failure date"
+
+      later_date_holding = calculated.find { |h| h.date == later_buy && h.security == eur_stock }
+      assert_nil later_date_holding.cost_basis,
+        "cost_basis should remain nil even for dates with successful conversions after the failure"
+
       today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+      assert_equal 30, today_holding.qty, "qty should still be calculated despite nil cost_basis"
       assert_nil today_holding.cost_basis,
         "cost_basis must be nil after FX failure even when a later buy converts successfully"
     end
