@@ -1,0 +1,71 @@
+<%= turbo_frame_tag "modal" do %>
+  <% item = @onchain_wallet_item || Current.family.onchain_wallet_items.active.first %>
+  <% has_ethereum_credentials = item&.credentials_configured? %>
+  <% selected_chain = local_assigns[:selected_chain].presence || params[:chain].presence || "bitcoin" %>
+  <% wallet_address = local_assigns[:wallet_address].presence || params[:wallet_address].to_s %>
+
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(
+         title: t(".title"),
+         subtitle: t(".subtitle")
+       ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if local_assigns[:error_message].present? %>
+          <%= render DS::Alert.new(message: local_assigns[:error_message], variant: :error) %>
+        <% end %>
+
+        <% unless has_ethereum_credentials %>
+          <%= render DS::Alert.new(
+                variant: :warning,
+                message: safe_join([
+                  content_tag(:p, t(".ethereum_credentials_title"), class: "font-medium"),
+                  content_tag(:p, safe_join([
+                    t(".ethereum_credentials_prefix"),
+                    link_to(t(".bank_sync_settings"), settings_providers_path, data: { turbo_frame: "_top" }, class: "underline"),
+                    t(".ethereum_credentials_suffix")
+                  ]), class: "mt-1")
+                ])
+              ) %>
+        <% end %>
+
+        <%= form_with url: link_wallet_onchain_wallet_items_path,
+                      method: :post,
+                      data: { turbo: true },
+                      class: "space-y-4" do |form| %>
+          <%= form.hidden_field :source, value: "account_modal" %>
+
+          <div>
+            <%= form.label :chain, t(".chain_label"), class: "block text-sm font-medium text-secondary mb-1" %>
+            <%= form.select :chain,
+                            options_for_select([
+                              [ t(".bitcoin"), "bitcoin" ],
+                              [ t(".ethereum"), "ethereum" ]
+                            ], selected_chain),
+                            {},
+                            class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
+          </div>
+
+          <div>
+            <%= form.label :wallet_address, t(".wallet_address_label"), class: "block text-sm font-medium text-secondary mb-1" %>
+            <%= form.text_field :wallet_address,
+                                value: wallet_address,
+                                placeholder: t(".wallet_address_placeholder"),
+                                class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Button.new(
+                  text: t(".cancel"),
+                  variant: :secondary,
+                  type: "button",
+                  data: { action: "DS--dialog#close" }
+                ) %>
+            <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

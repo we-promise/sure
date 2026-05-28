@@ -50,4 +50,11 @@ class CryptosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "exchange", @account.accountable.subtype
     assert @account.supports_trades?
   end
+
+  test "method selector links On-chain Wallets to wallet modal route" do
+    get new_crypto_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href='#{new_wallet_onchain_wallet_items_path}']", text: /Link with On-chain Wallets/
+  end
 end

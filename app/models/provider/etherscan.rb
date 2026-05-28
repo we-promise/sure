@@ -12,7 +12,12 @@ class Provider::Etherscan
 
   BASE_URL = "https://api.etherscan.io/v2".freeze
   ETHEREUM_CHAIN_ID = "1"
-  MIN_REQUEST_INTERVAL = 1.0 / 3.0
+  # Etherscan's free tier allows 3 req/s. Use a slightly larger interval than
+  # the strict minimum (0.333s) to absorb clock jitter and network timing so we
+  # don't trip the server-side counter at the edge.
+  MIN_REQUEST_INTERVAL = 0.4
+  DEFAULT_MAX_RETRIES = 3
+  DEFAULT_RETRY_BASE_DELAY = 0.5
   ADDRESS_PATTERN = /\A0x[0-9a-fA-F]{40}\z/
   PAGE_LIMIT = 1000
   MAX_PAGES = 20
@@ -22,8 +27,10 @@ class Provider::Etherscan
 
   attr_reader :api_key
 
-  def initialize(api_key:)
+  def initialize(api_key:, max_retries: DEFAULT_MAX_RETRIES, retry_base_delay: DEFAULT_RETRY_BASE_DELAY)
     @api_key = api_key.to_s.strip
+    @max_retries = max_retries
+    @retry_base_delay = retry_base_delay
   end
 
   def valid_address?(address)
@@ -73,13 +80,23 @@ class Provider::Etherscan
     end
 
     def api_get(params)
-      throttle_request
-      response = self.class.get("/api", query: {
-        apikey: api_key,
-        chainid: ETHEREUM_CHAIN_ID,
-        module: "account"
-      }.merge(params))
-      handle_response(response)
+      attempts = 0
+      begin
+        attempts += 1
+        throttle_request
+        response = self.class.get("/api", query: {
+          apikey: api_key,
+          chainid: ETHEREUM_CHAIN_ID,
+          module: "account"
+        }.merge(params))
+        handle_response(response)
+      rescue RateLimitError => e
+        raise if attempts > @max_retries
+        delay = @retry_base_delay * (2**(attempts - 1))
+        Rails.logger.warn "Provider::Etherscan - rate limited (attempt #{attempts}/#{@max_retries}): #{e.message}; sleeping #{delay}s"
+        sleep(delay)
+        retry
+      end
     end
 
     def throttle_request

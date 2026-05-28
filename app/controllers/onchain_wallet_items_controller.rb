@@ -1,8 +1,14 @@
 # frozen_string_literal: true
 
 class OnchainWalletItemsController < ApplicationController
+  include StreamExtensions
+
   before_action :require_admin!
-  before_action :set_onchain_wallet_item, only: %i[update destroy sync destroy_account]
+  before_action :set_onchain_wallet_item, only: %i[update destroy manage sync destroy_wallet destroy_account edit_wallet update_wallet]
+
+  def new_wallet
+    @onchain_wallet_item = Current.family.onchain_wallet_items.active.first
+  end
 
   def create
     item = Current.family.onchain_wallet_items.build(onchain_wallet_item_params)
@@ -32,6 +38,9 @@ class OnchainWalletItemsController < ApplicationController
     redirect_to settings_providers_path, notice: "Scheduled On-chain Wallets connection for deletion.", status: :see_other
   end
 
+  def manage
+  end
+
   def sync
     @onchain_wallet_item.sync_later unless @onchain_wallet_item.syncing?
     redirect_back_or_to settings_providers_path, notice: "On-chain Wallets sync started.", status: :see_other
@@ -44,13 +53,29 @@ class OnchainWalletItemsController < ApplicationController
     return render_error_response("Choose Bitcoin or Ethereum.") unless chain.in?(OnchainWalletAccount::CHAINS)
     return render_error_response("Wallet address is required.") if address.blank?
 
-    item = Current.family.onchain_wallet_item!
-    if chain == "ethereum" && !item.credentials_configured?
+    item = Current.family.onchain_wallet_items.active.first
+    if chain == "ethereum" && !item&.credentials_configured?
       return render_error_response("Add an Etherscan API key before linking an Ethereum wallet.")
     end
+    item ||= Current.family.onchain_wallet_item!
 
     validate_wallet_address!(item, chain, address)
-    OnchainWalletItem::Importer.new(item).import_wallet!(chain: chain, address: address)
+    importer = OnchainWalletItem::Importer.new(item)
+
+    if chain == "ethereum" && !ethereum_token_review_confirmed?
+      preview = importer.preview_ethereum_wallet(address)
+      token_candidates = preview[:token_holdings].select { |holding| holding[:quantity].positive? }
+      return render_token_review_response(preview, address) if token_candidates.any?
+    end
+
+    if chain == "ethereum"
+      importer.import_ethereum_wallet!(
+        address: address,
+        selected_token_contracts: params[:selected_token_contracts]
+      )
+    else
+      importer.import_wallet!(chain: chain, address: address)
+    end
     item.process_accounts
 
     render_success_response("Wallet linked.")
@@ -61,18 +86,119 @@ class OnchainWalletItemsController < ApplicationController
     render_error_response("Could not link wallet. #{e.message}")
   end
 
-  def destroy_account
-    wallet_account = @onchain_wallet_item.onchain_wallet_accounts.find(params[:account_id])
-    Account.transaction do
-      link_ids = wallet_account.account_provider ? [ wallet_account.account_provider.id ] : []
-      Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil) if link_ids.any?
-      wallet_account.destroy!
+  def edit_wallet
+    @chain = params[:chain].to_s.downcase
+    @old_address = normalized_wallet_address(@chain, params[:wallet_address])
+    @wallet_accounts = @onchain_wallet_item.onchain_wallet_accounts.where(chain: @chain, wallet_address: @old_address).order(:asset_kind, :symbol)
+
+    if @wallet_accounts.empty?
+      return redirect_back_or_to(accounts_path, alert: "Wallet address not found.", status: :see_other)
+    end
+  end
+
+  def update_wallet
+    chain = params[:chain].to_s.downcase
+    old_address = normalized_wallet_address(chain, params[:old_wallet_address])
+    new_address = params[:wallet_address].to_s.strip
+    new_address = new_address.downcase if chain == "ethereum"
+
+    return render_edit_error(chain, old_address, new_address, "Wallet address is required.") if new_address.blank?
+    return render_edit_error(chain, old_address, new_address, "New address is the same as the current address.") if new_address == old_address
+
+    existing_for_old = @onchain_wallet_item.onchain_wallet_accounts.where(chain: chain, wallet_address: old_address)
+    return render_edit_error(chain, old_address, new_address, "Wallet address not found.") if existing_for_old.none?
+
+    if @onchain_wallet_item.onchain_wallet_accounts.where(chain: chain, wallet_address: new_address).exists?
+      return render_edit_error(chain, old_address, new_address, "That address is already linked to this provider.")
     end
 
-    redirect_to settings_providers_path, notice: "Wallet asset disconnected.", status: :see_other
+    validate_wallet_address!(@onchain_wallet_item, chain, new_address)
+
+    importer = OnchainWalletItem::Importer.new(@onchain_wallet_item)
+
+    if chain == "ethereum" && !ethereum_token_review_confirmed?
+      preview = importer.preview_ethereum_wallet(new_address)
+      existing_contracts = existing_for_old.where(asset_kind: "erc20").pluck(:token_contract).map { |contract| contract.to_s.downcase }
+      new_token_candidates = preview[:token_holdings].select { |holding| holding[:quantity].positive? && !existing_contracts.include?(holding[:contract]) }
+      existing_token_accounts = existing_for_old.where(asset_kind: "erc20").to_a
+
+      return render turbo_stream: turbo_stream.replace(
+        "modal",
+        partial: "onchain_wallet_items/wallet_edit_token_review",
+        locals: {
+          onchain_wallet_item: @onchain_wallet_item,
+          chain: chain,
+          old_address: old_address,
+          new_address: new_address,
+          preview: preview,
+          existing_token_accounts: existing_token_accounts,
+          new_token_candidates: new_token_candidates
+        }
+      )
+    end
+
+    selected_existing = Array(params[:selected_existing_token_contracts]).map { |contract| contract.to_s.downcase }
+    selected_new = Array(params[:selected_token_contracts]).map { |contract| contract.to_s.downcase }
+
+    OnchainWalletAccount.transaction do
+      if chain == "ethereum"
+        to_remove = existing_for_old.where(asset_kind: "erc20").reject { |wallet_account| selected_existing.include?(wallet_account.token_contract.to_s.downcase) }
+        remove_wallet_accounts!(to_remove) if to_remove.any?
+      end
+
+      @onchain_wallet_item.onchain_wallet_accounts
+        .where(chain: chain, wallet_address: old_address)
+        .update_all(wallet_address: new_address)
+    end
+
+    if chain == "ethereum"
+      importer.import_ethereum_wallet!(
+        address: new_address,
+        selected_token_contracts: (selected_existing + selected_new).uniq
+      )
+    else
+      importer.import_wallet!(chain: chain, address: new_address)
+    end
+    @onchain_wallet_item.process_accounts
+
+    render_success_response("Wallet address updated.")
+  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, ArgumentError => e
+    render_edit_error(chain, old_address, new_address, e.message)
+  rescue StandardError => e
+    Rails.logger.error("On-chain wallet update failed: #{e.class} - #{e.message}")
+    render_edit_error(chain, old_address, new_address, "Could not update wallet. #{e.message}")
+  end
+
+  def destroy_account
+    wallet_account = @onchain_wallet_item.onchain_wallet_accounts.find(params[:account_id])
+    remove_wallet_accounts!([ wallet_account ])
+
+    redirect_back_or_to accounts_path, notice: "Wallet asset disconnected.", status: :see_other
+  end
+
+  def destroy_wallet
+    wallet_accounts = @onchain_wallet_item.onchain_wallet_accounts.where(
+      chain: params[:chain].to_s.downcase,
+      wallet_address: normalized_wallet_address(params[:chain], params[:wallet_address])
+    )
+    return redirect_back_or_to(accounts_path, alert: "Wallet address not found.", status: :see_other) if wallet_accounts.empty?
+
+    remove_wallet_accounts!(wallet_accounts)
+
+    redirect_back_or_to accounts_path, notice: "Wallet disconnected.", status: :see_other
   end
 
   private
+    def remove_wallet_accounts!(wallet_accounts)
+      accounts = wallet_accounts.is_a?(ActiveRecord::Relation) ? wallet_accounts.to_a : Array(wallet_accounts)
+
+      Account.transaction do
+        link_ids = accounts.filter_map { |wallet_account| wallet_account.account_provider&.id }
+        Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil) if link_ids.any?
+        accounts.each(&:destroy!)
+      end
+    end
+
     def set_onchain_wallet_item
       @onchain_wallet_item = Current.family.onchain_wallet_items.find(params[:id])
     end
@@ -90,7 +216,36 @@ class OnchainWalletItemsController < ApplicationController
       end
     end
 
+    def render_edit_error(chain, old_address, new_address, error_message)
+      wallet_accounts = @onchain_wallet_item.onchain_wallet_accounts.where(chain: chain, wallet_address: old_address).order(:asset_kind, :symbol)
+      render turbo_stream: turbo_stream.replace(
+        "modal",
+        partial: "onchain_wallet_items/wallet_edit_modal",
+        locals: {
+          onchain_wallet_item: @onchain_wallet_item,
+          chain: chain,
+          old_address: old_address,
+          new_address: new_address,
+          wallet_accounts: wallet_accounts,
+          error_message: error_message
+        }
+      ), status: :unprocessable_entity
+    end
+
     def render_error_response(error_message)
+      if account_modal_request?
+        @onchain_wallet_item = Current.family.onchain_wallet_items.active.first
+        return render turbo_stream: turbo_stream.replace(
+          "modal",
+          partial: "onchain_wallet_items/wallet_modal",
+          locals: {
+            error_message: error_message,
+            selected_chain: params[:chain].to_s,
+            wallet_address: params[:wallet_address].to_s
+          }
+        ), status: :unprocessable_entity
+      end
+
       if turbo_frame_request?
         render turbo_stream: turbo_stream.replace(
           "onchain-wallet-providers-panel",
@@ -103,6 +258,10 @@ class OnchainWalletItemsController < ApplicationController
     end
 
     def render_success_response(message)
+      if account_modal_request?
+        return stream_redirect_to(accounts_path, notice: message)
+      end
+
       if turbo_frame_request?
         flash.now[:notice] = message
         render turbo_stream: [
@@ -116,5 +275,31 @@ class OnchainWalletItemsController < ApplicationController
       else
         redirect_to settings_providers_path, notice: message, status: :see_other
       end
+    end
+
+    def account_modal_request?
+      params[:source] == "account_modal" || request.headers["Turbo-Frame"] == "modal"
+    end
+
+    def ethereum_token_review_confirmed?
+      params[:reviewed_tokens] == "1"
+    end
+
+    def render_token_review_response(preview, address)
+      render turbo_stream: turbo_stream.replace(
+        "modal",
+        partial: "onchain_wallet_items/wallet_token_review",
+        locals: {
+          wallet_address: address,
+          preview: preview,
+          token_candidates: preview[:token_holdings].select { |holding| holding[:quantity].positive? }
+        }
+      )
+    end
+
+    def normalized_wallet_address(chain, address)
+      return address.to_s.strip.downcase if chain.to_s.downcase == "ethereum"
+
+      address.to_s.strip
     end
 end

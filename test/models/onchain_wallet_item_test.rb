@@ -27,4 +27,95 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
     item.etherscan_api_key = "key"
     assert item.credentials_configured?
   end
+
+  test "importer estimates current balance from resolved crypto price" do
+    item = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets")
+    security = Security.create!(
+      ticker: "BTCUSD",
+      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
+      price_provider: "binance_public"
+    )
+    security.prices.create!(date: Date.current, price: 50_000, currency: "USD")
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).with("BTC", "BTC").returns(security)
+
+    balance = OnchainWalletItem::Importer.new(item).send(:estimate_current_balance, "BTC", 2)
+
+    assert_equal 100_000.to_d, balance
+  end
+
+  test "importer keeps quantity value path resilient when price lookup fails" do
+    item = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets")
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).raises(StandardError.new("provider down"))
+
+    balance = OnchainWalletItem::Importer.new(item).send(:estimate_current_balance, "BTC", 2)
+
+    assert_equal 0, balance
+  end
+
+  test "ethereum wallet import persists only selected token contracts" do
+    item = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets", etherscan_api_key: "key")
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    selected_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    skipped_contract = "0x1111111111111111111111111111111111111111"
+
+    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: address, contract: selected_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
+      erc20_transfer(address: address, contract: skipped_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(item).import_ethereum_wallet!(
+      address: address,
+      selected_token_contracts: [ selected_contract ]
+    )
+
+    assert item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "native", symbol: "ETH")
+    assert item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "erc20", token_contract: selected_contract)
+    assert_not item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "erc20", token_contract: skipped_contract)
+  end
+
+  test "ethereum provider sync does not import newly discovered token contracts" do
+    item = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets", etherscan_api_key: "key")
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    existing_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    new_contract = "0x1111111111111111111111111111111111111111"
+    item.onchain_wallet_accounts.create!(
+      chain: "ethereum",
+      wallet_address: address,
+      asset_kind: "erc20",
+      token_contract: existing_contract,
+      symbol: "USDC",
+      name: "USD Coin",
+      currency: "USD"
+    )
+
+    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("0")
+    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: address, contract: existing_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
+      erc20_transfer(address: address, contract: new_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(item).import_wallet!(chain: "ethereum", address: address)
+
+    assert item.onchain_wallet_accounts.exists?(token_contract: existing_contract)
+    assert_not item.onchain_wallet_accounts.exists?(token_contract: new_contract)
+  end
+
+  private
+    def erc20_transfer(address:, contract:, symbol:, name:, decimals:, value:)
+      {
+        "contractAddress" => contract,
+        "tokenSymbol" => symbol,
+        "tokenName" => name,
+        "tokenDecimal" => decimals,
+        "value" => value,
+        "from" => "0x0000000000000000000000000000000000000000",
+        "to" => address,
+        "hash" => "#{contract}-hash"
+      }
+    end
 end

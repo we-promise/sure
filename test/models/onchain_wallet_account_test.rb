@@ -55,4 +55,25 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
 
     assert_equal account, wallet_account.reload.current_account
   end
+
+  test "processor updates linked account balance from current balance" do
+    wallet_account = @item.onchain_wallet_accounts.create!(
+      chain: "bitcoin",
+      wallet_address: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080",
+      asset_kind: "native",
+      symbol: "BTC",
+      name: "Bitcoin",
+      currency: "USD",
+      quantity: 1,
+      current_balance: 50_000
+    )
+    account = Account.create_from_onchain_wallet_account(wallet_account)
+    wallet_account.ensure_account_provider!(account)
+    wallet_account.update!(current_balance: 60_000)
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletAccount::Processor.new(wallet_account).process
+
+    assert_equal 60_000.to_d, account.reload.balance
+  end
 end

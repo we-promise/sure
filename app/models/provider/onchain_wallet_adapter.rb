@@ -19,7 +19,7 @@ class Provider::OnchainWalletAdapter < Provider::Base
       description: "Connect Bitcoin and Ethereum wallet addresses",
       can_connect: true,
       new_account_path: ->(_accountable_type, _return_to) {
-        Rails.application.routes.url_helpers.connect_form_settings_providers_path(provider_key: "onchain_wallet")
+        Rails.application.routes.url_helpers.new_wallet_onchain_wallet_items_path
       },
       existing_account_path: nil
     } ]

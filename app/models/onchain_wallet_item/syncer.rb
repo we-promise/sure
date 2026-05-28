@@ -23,12 +23,6 @@ class OnchainWalletItem::Syncer
     sync.update!(status_text: "Processing on-chain wallet accounts") if sync.respond_to?(:status_text)
     onchain_wallet_item.process_accounts
 
-    onchain_wallet_item.schedule_account_syncs(
-      parent_sync: sync,
-      window_start_date: sync.window_start_date,
-      window_end_date: sync.window_end_date
-    )
-
     collect_transaction_stats(sync, account_ids: linked.map { |wallet_account| wallet_account.current_account&.id }.compact, source: "onchain_wallet")
   rescue Provider::Etherscan::AuthenticationError, Provider::Etherscan::RateLimitError => e
     onchain_wallet_item.update!(status: :requires_update)

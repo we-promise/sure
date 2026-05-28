@@ -29,10 +29,6 @@
                        method: is_new_record ? :post : :patch,
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
-    <%= form.text_field :name,
-                        label: t("settings.providers.onchain_wallet_panel.connection_name_label"),
-                        placeholder: t("settings.providers.onchain_wallet_panel.connection_name_placeholder") %>
-
     <%= form.text_field :etherscan_api_key,
                         label: t("settings.providers.onchain_wallet_panel.etherscan_api_key_label"),
                         placeholder: item.credentials_configured? ? t("settings.providers.onchain_wallet_panel.keep_etherscan_key_placeholder") : t("settings.providers.onchain_wallet_panel.etherscan_api_key_placeholder"),
@@ -43,77 +39,5 @@
       <%= form.submit is_new_record ? t("settings.providers.onchain_wallet_panel.save_connection") : t("settings.providers.onchain_wallet_panel.update_connection"),
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
     </div>
-  <% end %>
-
-  <% unless is_new_record %>
-    <div class="border-t border-primary pt-4 space-y-3">
-      <h3 class="flex items-center gap-2 text-sm font-medium text-primary">
-        <%= icon "plus", size: "sm" %>
-        <%= t("settings.providers.onchain_wallet_panel.add_wallet") %>
-      </h3>
-
-      <%= form_with url: link_wallet_onchain_wallet_items_path,
-                    method: :post,
-                    data: { turbo: true },
-                    class: "grid grid-cols-1 md:grid-cols-[160px_1fr_auto] gap-3 items-end" do |form| %>
-        <div>
-          <%= form.label :chain, t("settings.providers.onchain_wallet_panel.chain_label"), class: "block text-sm font-medium text-secondary mb-1" %>
-          <%= form.select :chain,
-                          options_for_select([
-                            [ t("settings.providers.onchain_wallet_panel.bitcoin"), "bitcoin" ],
-                            [ t("settings.providers.onchain_wallet_panel.ethereum"), "ethereum" ]
-                          ]),
-                          {},
-                          class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
-        </div>
-
-        <div>
-          <%= form.label :wallet_address, t("settings.providers.onchain_wallet_panel.wallet_address_label"), class: "block text-sm font-medium text-secondary mb-1" %>
-          <%= form.text_field :wallet_address,
-                              placeholder: t("settings.providers.onchain_wallet_panel.wallet_address_placeholder"),
-                              class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
-        </div>
-
-        <%= form.submit t("settings.providers.onchain_wallet_panel.link_wallet"),
-                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
-      <% end %>
-    </div>
-
-    <% wallet_accounts = item.onchain_wallet_accounts.order(:chain, :wallet_address, :asset_kind, :symbol) %>
-    <% if wallet_accounts.any? %>
-      <div class="space-y-2">
-        <% wallet_accounts.each do |wallet_account| %>
-          <div class="flex items-center justify-between gap-3 rounded-lg border border-primary bg-container p-3">
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-primary truncate">
-                <%= wallet_account.symbol %>
-                <span class="text-secondary font-normal"><%= wallet_account.chain.titleize %></span>
-              </p>
-              <p class="text-xs text-secondary truncate">
-                <%= wallet_account.display_address %> · <%= number_with_delimiter(wallet_account.quantity.to_d.to_s("F")) %>
-              </p>
-            </div>
-
-            <div class="flex items-center gap-2 shrink-0">
-              <%= button_to sync_onchain_wallet_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center justify-center h-8 w-8 text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                            disabled: item.syncing?,
-                            title: t("settings.providers.onchain_wallet_panel.sync") do %>
-                <%= icon "refresh-cw", size: "sm" %>
-              <% end %>
-
-              <%= button_to account_onchain_wallet_item_path(item, wallet_account),
-                            method: :delete,
-                            class: "inline-flex items-center justify-center h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg",
-                            data: { turbo_confirm: t("settings.providers.onchain_wallet_panel.disconnect_confirm", symbol: wallet_account.symbol) },
-                            title: t("settings.providers.onchain_wallet_panel.disconnect") do %>
-                <%= icon "trash-2", size: "sm" %>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
   <% end %>
 </div>

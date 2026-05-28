@@ -42,6 +42,14 @@ class OnchainWalletItem::Importer
     end
   end
 
+  def preview_ethereum_wallet(address)
+    ethereum_wallet_snapshot(address)
+  end
+
+  def import_ethereum_wallet!(address:, selected_token_contracts:)
+    import_ethereum_wallet(address, selected_token_contracts: selected_token_contracts)
+  end
+
   private
     def wallet_keys
       onchain_wallet_item.onchain_wallet_accounts
@@ -87,18 +95,18 @@ class OnchainWalletItem::Importer
       { "address" => address_payload, "transactions_count" => confirmed_txs.size, "mempool_transactions_count" => mempool_txs.size }
     end
 
-    def import_ethereum_wallet(address)
-      provider = onchain_wallet_item.etherscan_provider
-      raise Provider::Etherscan::AuthenticationError, "Etherscan API key is required for Ethereum wallets" unless provider
-
-      balance_wei = provider.get_native_balance(address).to_d
-      normal_transactions = provider.get_normal_transactions(address)
-      token_transfers = provider.get_erc20_transfers(address)
-      token_holdings = token_holdings_from_transfers(token_transfers, address)
+    def import_ethereum_wallet(address, selected_token_contracts: existing_ethereum_token_contracts(address))
+      snapshot = ethereum_wallet_snapshot(address)
+      balance_wei = snapshot[:balance_wei]
+      normal_transactions = snapshot[:normal_transactions]
+      token_transfers = snapshot[:token_transfers]
+      token_holdings = snapshot[:token_holdings]
 
       if balance_wei.zero? && normal_transactions.blank? && token_holdings.none? { |holding| holding[:quantity].positive? }
         raise Provider::Etherscan::InvalidAddressError, "No Ethereum balance, token holdings, or transactions found for this address."
       end
+
+      selected_contracts = Array(selected_token_contracts).map { |contract| contract.to_s.downcase }
 
       eth_quantity = balance_wei / WEI_PER_ETH
       eth_account = upsert_wallet_account(
@@ -120,6 +128,7 @@ class OnchainWalletItem::Importer
 
       token_holdings.each do |holding|
         next unless holding[:quantity].positive?
+        next unless selected_contracts.include?(holding[:contract])
 
         token_account = upsert_wallet_account(
           chain: "ethereum",
@@ -130,7 +139,7 @@ class OnchainWalletItem::Importer
           name: holding[:name],
           decimals: holding[:decimals],
           quantity: holding[:quantity],
-          raw_payload: holding.except(:transfers),
+          raw_payload: holding.except(:transfers, :current_balance),
           raw_transactions_payload: {
             "token_transfers" => holding[:transfers],
             "fetched_at" => Time.current.iso8601
@@ -139,7 +148,34 @@ class OnchainWalletItem::Importer
         ensure_sure_account!(token_account)
       end
 
-      { "native_transactions_count" => normal_transactions.size, "token_transfers_count" => token_transfers.size }
+      {
+        "native_transactions_count" => normal_transactions.size,
+        "token_transfers_count" => token_transfers.size,
+        "tokens_imported_count" => token_holdings.count { |holding| holding[:quantity].positive? && selected_contracts.include?(holding[:contract]) }
+      }
+    end
+
+    def ethereum_wallet_snapshot(address)
+      provider = onchain_wallet_item.etherscan_provider
+      raise Provider::Etherscan::AuthenticationError, "Etherscan API key is required for Ethereum wallets" unless provider
+
+      balance_wei = provider.get_native_balance(address).to_d
+      normal_transactions = provider.get_normal_transactions(address)
+      token_transfers = provider.get_erc20_transfers(address)
+      token_holdings = token_holdings_from_transfers(token_transfers, address)
+
+      if balance_wei.zero? && normal_transactions.blank? && token_holdings.none? { |holding| holding[:quantity].positive? }
+        raise Provider::Etherscan::InvalidAddressError, "No Ethereum balance, token holdings, or transactions found for this address."
+      end
+
+      {
+        balance_wei: balance_wei,
+        eth_quantity: balance_wei / WEI_PER_ETH,
+        eth_current_balance: estimate_current_balance("ETH", balance_wei / WEI_PER_ETH),
+        normal_transactions: normal_transactions,
+        token_transfers: token_transfers,
+        token_holdings: token_holdings
+      }
     end
 
     def upsert_wallet_account(attrs)
@@ -222,9 +258,16 @@ class OnchainWalletItem::Importer
           name: data[:name],
           decimals: data[:decimals],
           quantity: data[:quantity_raw] / (10.to_d**data[:decimals]),
+          current_balance: estimate_current_balance(data[:symbol], data[:quantity_raw] / (10.to_d**data[:decimals])),
           transfers: data[:transfers]
         }
       end
+    end
+
+    def existing_ethereum_token_contracts(address)
+      onchain_wallet_item.onchain_wallet_accounts
+        .where(chain: "ethereum", wallet_address: address.to_s.downcase, asset_kind: "erc20")
+        .pluck(:token_contract)
     end
 
     def bitcoin_transaction_amount(tx, address)
