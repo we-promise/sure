@@ -120,8 +120,6 @@ zh-CN:
     mark_recurring_subtitle: 将此交易跟踪为循环交易。金额差异会根据过去 6 个月的相似交易自动计算。
     mark_recurring_title: 循环交易
     potential_duplicate_title: 检测到可能的重复项
-    potential_duplicate_description: 这笔待处理交易可能与下方已入账交易相同。如果是这样，请合并以避免重复计算。
-    merge_duplicate: 是，合并它们
     keep_both: 不，保留两笔
     split_parent_row:
       split_label: 拆分
@@ -132,18 +130,6 @@ zh-CN:
       payment_confirmed: 付款已确认
       reject_match: 拒绝匹配
       transfer_confirmed: 转账已确认
-    transaction:
-      pending: 待处理
-      pending_tooltip: 待处理交易——入账后可能会变化
-      linked_with_provider: 已与 %{provider} 关联
-      activity_type_tooltip: 投资活动类型
-      possible_duplicate: 重复？
-      potential_duplicate_tooltip: 这可能是另一笔交易的重复项
-      review_recommended: 建议复核
-      review_recommended_tooltip: 金额差异较大——建议复核以确认是否重复
-      split: 拆分
-      split_tooltip: 这笔交易已拆分为多条记录
-      split_child_tooltip: 拆分交易的一部分
     merge_duplicate:
       success: 交易已成功合并
       failure: 无法合并交易

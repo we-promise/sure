@@ -11,13 +11,6 @@ zh-CN:
         read_balances: 查看余额
         write_transactions: 创建交易
     api_keys:
-      create:
-        success: API 密钥创建成功
-      destroy:
-        not_found: 未找到 API 密钥
-        cannot_revoke: 此 API 密钥无法撤销
-        revoked_successfully: API 密钥已成功撤销
-        revoke_failed: 撤销 API 密钥失败
       show:
         title: API 密钥管理
         no_api_key:
