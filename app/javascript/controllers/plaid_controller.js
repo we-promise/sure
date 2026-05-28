@@ -148,7 +148,7 @@ export default class extends Controller {
     // is responsible for showing a message inside the modal when this
     // fires; backend link-token failures are handled server-side via the
     // PlaidItemsController rescue + flash.
-    if (err && err.error_code) {
+    if (err?.error_code) {
       console.error(
         "Plaid Link exited with error",
         err.error_code,
