@@ -1,15 +1,28 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-%w[json yaml].each { |library| require library }
+%w[json pathname yaml].each { |library| require library }
 
 ROOT = File.expand_path("..", __dir__)
 WORKFLOW_PATH = File.join(ROOT, ".github/workflows/preview-deploy.yml")
 LOCKFILE_PATH = File.join(ROOT, "workers/preview/package-lock.json")
 PINNED_ACTION = /\A[^@\s]+@[a-f0-9]{40}\z/
-INLINE_SECRET_EXPRESSION = /\$\{\{\s*secrets\s*\./i
-INLINE_PR_EXPRESSION = /\$\{\{\s*github\s*\.\s*event\s*\.\s*pull_request\s*\./i
+INLINE_SECRET_EXPRESSION = /\$\{\{\s*secrets\s*(?:\.|\[)/i
+INLINE_PR_EXPRESSION = /
+  \$\{\{\s*
+  github\s*
+  (?:\.\s*event|\[\s*['"]event['"]\s*\])\s*
+  (?:\.\s*pull_request|\[\s*['"]pull_request['"]\s*\])
+/ix
 PR_CONTROLLED_WORKDIR = %r{\A(?:pr|workers/preview)(?:/|\z)}
+GITHUB_WORKSPACE_PREFIX = %r{
+  \A
+  (?:
+    \$GITHUB_WORKSPACE |
+    \$\{\{\s*github\s*(?:\.\s*workspace|\[\s*['"]workspace['"]\s*\])\s*\}\}
+  )
+  (?:/|\z)
+}ix
 EXPECTED_PERMISSIONS = { "actions" => "read", "contents" => "read", "pull-requests" => "write", "deployments" => "write" }.freeze
 EXPECTED_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_WORKERS_SUBDOMAIN].freeze
 REQUIRED_PREPARE_LINES = [
@@ -46,10 +59,10 @@ def assert_run_includes(step, *needles)
 end
 
 def normalized_working_directory(value)
-  value.to_s.strip
-       .sub(%r{\A\./}, "")
-       .sub(%r{\A\$GITHUB_WORKSPACE/}, "")
-       .sub(%r{\A\$\{\{\s*github\s*\.\s*workspace\s*\}\}/}i, "")
+  path = value.to_s.strip.sub(GITHUB_WORKSPACE_PREFIX, "")
+  normalized = Pathname.new(path).cleanpath.to_s
+
+  normalized == "." ? "" : normalized
 end
 
 workflow = YAML.safe_load_file(WORKFLOW_PATH, aliases: true)
