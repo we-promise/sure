@@ -14,7 +14,7 @@
         <div class="flex items-center justify-between gap-4">
           <div class="text-sm text-secondary">
             <%= t(".already_paid_html",
-                  percentage: tag.span(number_to_percentage(percentage, precision: 1),class: "font-medium text-amber-500")) %>
+                  percentage: tag.span(number_to_percentage(percentage, precision: 1),class: "font-medium text-warning")) %>
           </div>
 
           <div class="relative w-16 h-16">
@@ -35,7 +35,7 @@
                 stroke-width="6"
                 stroke-linecap="round"
                 fill="none"
-                class=" stroke-amber-500 transition-all duration-500"
+                class="stroke-warning transition-all duration-500"
                 stroke-dasharray="<%= 2 * Math::PI * 28 %>"
                 stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.balance_paid_ratio) %>"
               />
