@@ -49,6 +49,30 @@
                       disabled: ENV["OPENAI_MODEL"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
 
+  <%= form.text_field :openai_chat_model,
+                      label: t(".chat_model_label"),
+                      placeholder: t(".chat_model_placeholder"),
+                      value: Setting.openai_chat_model,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["OPENAI_CHAT_MODEL"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1 mb-3"><%= t(".chat_model_help") %></p>
+
+  <%= form.text_field :openai_background_model,
+                      label: t(".background_model_label"),
+                      placeholder: t(".background_model_placeholder"),
+                      value: Setting.openai_background_model,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["OPENAI_BACKGROUND_MODEL"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1 mb-3"><%= t(".background_model_help") %></p>
+
   <%= form.select :openai_json_mode,
                   options_for_select(
                     [
