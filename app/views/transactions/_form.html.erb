@@ -84,26 +84,28 @@
   </section>
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
-    <%= f.fields_for :entryable do |ef| %>
-      <%= ef.collection_select :merchant_id,
-                Current.family.available_merchants_for(Current.user).alphabetically,
-                :id, :name,
-                { include_blank: t(".none"),
-                  label: t(".merchant_label"),
-                  variant: :logo,
-                  searchable: true,
-                  menu_placement: :auto } %>
-      <%= render DS::TagSelect.new(
-            form: ef,
-            tags: Current.family.tags.alphabetically,
-            selected_ids: ef.object.tag_ids
-          ) %>
-    <% end %>
-    <%= f.text_area :notes,
-                    label: t(".note_label"),
-                    placeholder: t(".note_placeholder"),
-                    rows: 5,
-                    "data-auto-submit-form-target": "auto" %>
+    <section class="space-y-2">
+      <%= f.fields_for :entryable do |ef| %>
+        <%= ef.collection_select :merchant_id,
+                  Current.family.available_merchants_for(Current.user).alphabetically,
+                  :id, :name,
+                  { include_blank: t(".none"),
+                    label: t(".merchant_label"),
+                    variant: :logo,
+                    searchable: true,
+                    menu_placement: :auto } %>
+        <%= render DS::TagSelect.new(
+              form: ef,
+              tags: Current.family.tags.alphabetically,
+              selected_ids: ef.object.tag_ids
+            ) %>
+      <% end %>
+      <%= f.text_area :notes,
+                      label: t(".note_label"),
+                      placeholder: t(".note_placeholder"),
+                      rows: 5,
+                      "data-auto-submit-form-target": "auto" %>
+    </section>
   <% end %>
 
   <section>

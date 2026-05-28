@@ -66,8 +66,6 @@ export default class extends Controller {
       this.updatePosition();
       if (focusOption) {
         this.focusActiveOption();
-      } else {
-        this.searchTarget.focus({ preventScroll: true });
       }
     });
   }
