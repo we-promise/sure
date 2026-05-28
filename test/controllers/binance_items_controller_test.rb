@@ -55,6 +55,47 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Crypto", binance_account.current_account.accountable_type
   end
 
+  test "complete_account_setup updates sync_start_date when provided with a valid past date" do
+    binance_account = @binance_item.binance_accounts.create!(
+      name: "Spot Portfolio",
+      account_type: "spot",
+      currency: "USD",
+      current_balance: 1000.0
+    )
+
+    past_date = (Date.current - 7.days).to_s
+
+    post complete_account_setup_binance_item_url(@binance_item), params: {
+      selected_accounts: [ binance_account.id ],
+      sync_start_date: past_date
+    }
+
+    assert_response :redirect
+    @binance_item.reload
+    assert_equal Date.parse(past_date), @binance_item.sync_start_date
+  end
+
+  test "complete_account_setup rejects a future sync_start_date and sets flash alert" do
+    binance_account = @binance_item.binance_accounts.create!(
+      name: "Spot Portfolio",
+      account_type: "spot",
+      currency: "USD",
+      current_balance: 1000.0
+    )
+
+    future_date = (Date.current + 2.days).to_s
+    original_sync_date = @binance_item.sync_start_date
+
+    post complete_account_setup_binance_item_url(@binance_item), params: {
+      selected_accounts: [ binance_account.id ],
+      sync_start_date: future_date
+    }
+
+    @binance_item.reload
+    assert_nil @binance_item.sync_start_date
+    assert_equal "Sync start date must be a valid date in the past.", flash[:alert]
+  end
+
   test "complete_account_setup with no selection shows message" do
     @binance_item.binance_accounts.create!(
       name: "Spot Portfolio",
