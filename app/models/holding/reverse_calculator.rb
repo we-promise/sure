@@ -82,16 +82,21 @@ class Holding::ReverseCalculator
     def precompute_cost_basis
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
       tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+      invalid_cost_basis = {}
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
         next unless trade.qty > 0
 
         security_id = trade.security_id
+        next if invalid_cost_basis[security_id]
+
         trade_price = Money.new(trade.price, trade.currency)
         begin
           converted_price = trade_price.exchange_to(account.currency, date: trade_entry.date, custom_rate: trade.exchange_rate).amount
         rescue Money::ConversionError
+          invalid_cost_basis[security_id] = true
+          @cost_basis_snapshots[security_id] << [ trade_entry.date, nil ]
           Rails.logger.warn(
             "Holding::ReverseCalculator: FX conversion failed for trade #{trade.id} " \
             "(#{trade.currency}→#{account.currency}, date: #{trade_entry.date}, " \

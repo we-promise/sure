@@ -292,6 +292,39 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "cost_basis is nil for all dates after a failed FX conversion even when a later buy succeeds" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST4", name: "EUR Stock 4")
+      first_buy  = Date.new(2025, 5, 20)
+      failed_buy = Date.new(2025, 5, 27)
+      later_buy  = Date.new(2025, 5, 30)
+
+      Security::Price.create!(security: eur_stock, date: first_buy,   price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: failed_buy,  price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: later_buy,   price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 30, price: 100, amount: 3000, currency: "EUR")
+
+      # first_buy and later_buy have rates; failed_buy does not — it will raise ConversionError
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: first_buy,   rate: 1.10)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: later_buy,   rate: 1.20)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: first_buy,  price: 100, currency: "EUR", account: @account)
+      create_trade(eur_stock, qty: 10, date: failed_buy, price: 100, currency: "EUR", account: @account)
+      create_trade(eur_stock, qty: 10, date: later_buy,  price: 100, currency: "EUR", account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 30 })
+      calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+      assert_nil today_holding.cost_basis,
+        "cost_basis must be nil after FX failure even when a later buy converts successfully"
+    end
+  end
+
   test "cost_basis is nil and trade is skipped when FX conversion fails" do
     travel_to Date.new(2025, 6, 1) do
       eur_stock = Security.create!(ticker: "EURST3", name: "EUR Stock 3")
