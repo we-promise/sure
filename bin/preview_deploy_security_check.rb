@@ -7,6 +7,9 @@ ROOT = File.expand_path("..", __dir__)
 WORKFLOW_PATH = File.join(ROOT, ".github/workflows/preview-deploy.yml")
 LOCKFILE_PATH = File.join(ROOT, "workers/preview/package-lock.json")
 PINNED_ACTION = /\A[^@\s]+@[a-f0-9]{40}\z/
+INLINE_SECRET_EXPRESSION = /\$\{\{\s*secrets\s*\./i
+INLINE_PR_EXPRESSION = /\$\{\{\s*github\s*\.\s*event\s*\.\s*pull_request\s*\./i
+PR_CONTROLLED_WORKDIR = %r{\A(?:pr|workers/preview)(?:/|\z)}
 EXPECTED_PERMISSIONS = { "actions" => "read", "contents" => "read", "pull-requests" => "write", "deployments" => "write" }.freeze
 EXPECTED_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_WORKERS_SUBDOMAIN].freeze
 REQUIRED_PREPARE_LINES = [
@@ -42,6 +45,13 @@ def assert_run_includes(step, *needles)
   script
 end
 
+def normalized_working_directory(value)
+  value.to_s.strip
+       .sub(%r{\A\./}, "")
+       .sub(%r{\A\$GITHUB_WORKSPACE/}, "")
+       .sub(%r{\A\$\{\{\s*github\s*\.\s*workspace\s*\}\}/}i, "")
+end
+
 workflow = YAML.safe_load_file(WORKFLOW_PATH, aliases: true)
 lockfile = JSON.parse(File.read(LOCKFILE_PATH))
 job = workflow.fetch("jobs").fetch("deploy-preview")
@@ -53,20 +63,20 @@ prepare = step!(steps, "Prepare trusted preview deploy workspace")
 deploy = step!(steps, "Deploy to Cloudflare Containers")
 wrangler = lockfile.fetch("packages").fetch("node_modules/wrangler")
 
-{
-  job.fetch("permissions") => EXPECTED_PERMISSIONS,
-  job.dig("concurrency", "group") => "preview-deploy-${{ github.event.pull_request.number }}",
-  job.dig("concurrency", "cancel-in-progress") => true,
-  job.dig("env", "PR_NUMBER") => "${{ github.event.pull_request.number }}",
-  job.dig("env", "HEAD_SHA") => "${{ github.event.pull_request.head.sha }}",
-  pr_checkout.dig("with", "path") => "pr",
-  pr_checkout.dig("with", "persist-credentials") => false,
-  trusted_checkout.dig("with", "ref") => "${{ github.event.pull_request.base.sha }}",
-  trusted_checkout.dig("with", "path") => "trusted",
-  trusted_checkout.dig("with", "persist-credentials") => false,
-  deploy.fetch("env").keys.sort => EXPECTED_SECRET_ENV,
-  wrangler.dig("bin", "wrangler") => "bin/wrangler.js"
-}.each { |actual, expected| assert(actual == expected, "expected #{actual.inspect} to equal #{expected.inspect}") }
+[
+  [ "job permissions", job.fetch("permissions"), EXPECTED_PERMISSIONS ],
+  [ "concurrency group", job.dig("concurrency", "group"), "preview-deploy-${{ github.event.pull_request.number }}" ],
+  [ "concurrency cancellation", job.dig("concurrency", "cancel-in-progress"), true ],
+  [ "PR_NUMBER env", job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
+  [ "HEAD_SHA env", job.dig("env", "HEAD_SHA"), "${{ github.event.pull_request.head.sha }}" ],
+  [ "PR checkout path", pr_checkout.dig("with", "path"), "pr" ],
+  [ "PR checkout credentials", pr_checkout.dig("with", "persist-credentials"), false ],
+  [ "trusted checkout ref", trusted_checkout.dig("with", "ref"), "${{ github.event.pull_request.base.sha }}" ],
+  [ "trusted checkout path", trusted_checkout.dig("with", "path"), "trusted" ],
+  [ "trusted checkout credentials", trusted_checkout.dig("with", "persist-credentials"), false ],
+  [ "deploy secret env", deploy.fetch("env").keys.sort, EXPECTED_SECRET_ENV ],
+  [ "Wrangler binary", wrangler.dig("bin", "wrangler"), "bin/wrangler.js" ]
+].each { |label, actual, expected| assert(actual == expected, "#{label}: expected #{actual.inspect} to equal #{expected.inspect}") }
 
 assert(lockfile.dig("packages", "", "devDependencies", "wrangler"), "Wrangler must stay a root dev dependency")
 assert(lockfile.fetch("lockfileVersion") >= 3, "preview tooling lockfile must preserve npm ci integrity metadata")
@@ -84,9 +94,9 @@ steps.each do |step|
 end
 
 inline_scripts = steps.flat_map { |step| [ run(step), step.dig("with", "script") ] }.compact.join("\n")
-assert(!inline_scripts.include?("${{ secrets."), "secrets must enter scripts through env")
-assert(!inline_scripts.include?("${{ github.event.pull_request."), "PR fields must enter scripts through env")
-assert(steps.none? { |step| step["working-directory"].to_s.match?(%r{\A(pr|workers/preview)(/|\z)}) }, "steps must not run from PR-controlled dirs")
+assert(!inline_scripts.match?(INLINE_SECRET_EXPRESSION), "secrets must enter scripts through env")
+assert(!inline_scripts.match?(INLINE_PR_EXPRESSION), "PR fields must enter scripts through env")
+assert(steps.none? { |step| normalized_working_directory(step["working-directory"]).match?(PR_CONTROLLED_WORKDIR) }, "steps must not run from PR-controlled dirs")
 assert(steps.none? { |step| run(step).include?("npx wrangler") }, "workflow must not use npx wrangler")
 
 prepare_run = assert_run_includes(prepare, *REQUIRED_PREPARE_LINES)
