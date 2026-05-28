@@ -156,7 +156,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
       entry = txn.entry
       {
         name: entry.name,
-		date: entry.date,
+        date: entry.date,
         amount: entry.amount.abs,
         currency: entry.currency,
         formatted_amount: entry.amount_money.abs.format,
