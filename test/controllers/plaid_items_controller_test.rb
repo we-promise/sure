@@ -12,7 +12,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     # should surface that message instead of letting the modal frame render
     # blank.
     plaid_provider = mock
-    Provider::Registry.expects(:plaid_provider_for_region).with(:us).returns(plaid_provider)
+    Provider::Registry.stubs(:plaid_provider_for_region).with(:us).returns(plaid_provider)
 
     error_body = {
       "error_code" => "INVALID_PRODUCT",
@@ -30,7 +30,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "new redirects with generic alert when Plaid raises an unclassified error" do
     plaid_provider = mock
-    Provider::Registry.expects(:plaid_provider_for_region).with(:us).returns(plaid_provider)
+    Provider::Registry.stubs(:plaid_provider_for_region).with(:us).returns(plaid_provider)
 
     plaid_provider.expects(:get_link_token).raises(
       Plaid::ApiError.new(code: 500, response_body: { "error_code" => "INTERNAL_SERVER_ERROR" }.to_json)
