@@ -309,7 +309,7 @@ export default class extends Controller {
     if (!text) return;
 
     const computed = window.getComputedStyle(element);
-    const baseFontSize = parseFloat(computed.fontSize);
+    const baseFontSize = Number.parseFloat(computed.fontSize);
     if (!baseFontSize) return;
 
     // Canvas-based measurement works for hidden elements (segment_<id>
