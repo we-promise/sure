@@ -180,7 +180,14 @@ class InvestmentStatement
   # Investment accounts
   def investment_accounts
     @investment_accounts ||= begin
-      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = family.accounts.visible.with_attached_logo
+                .where(accountable_type: %w[Investment Crypto])
+                .includes(
+                  :accountable,
+                  :plaid_account,
+                  :simplefin_account,
+                  account_providers: :provider
+                )
       scope = scope.included_in_finances_for(user) if user
       scope
     end
