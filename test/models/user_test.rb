@@ -660,6 +660,23 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "custom_role", User.role_for_new_family_creator(fallback_role: "custom_role")
   end
 
+  # Preview features preference tests
+  test "preview_features_enabled? defaults to false" do
+    @user.update!(preferences: {})
+    assert_not @user.preview_features_enabled?
+  end
+
+  test "preview_features_enabled? true only when explicitly true" do
+    @user.update!(preferences: { "preview_features_enabled" => true })
+    assert @user.preview_features_enabled?
+
+    @user.update!(preferences: { "preview_features_enabled" => false })
+    assert_not @user.preview_features_enabled?
+
+    @user.update!(preferences: { "preview_features_enabled" => "yes" })
+    assert_not @user.preview_features_enabled?, "truthy non-boolean should not enable"
+  end
+
   # ActiveStorage attachment cleanup tests
   test "purging a user removes attached profile image" do
     user = users(:family_admin)

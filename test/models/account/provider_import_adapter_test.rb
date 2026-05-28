@@ -926,6 +926,53 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "preserves pending date on subsequent syncs after auto-claim" do
+    # On the first sync the pending date is captured from the pending match.
+    # On subsequent syncs the entry already exists (found by booked external_id),
+    # so pending_match is nil. auto_claimed_pending_ids signals the prior claim
+    # and the stored date must not be overwritten with the booked date.
+    pending_date = Date.today - 3.days
+    booked_date  = Date.today
+
+    @adapter.import_transaction(
+      external_id: "eb_pending_subseq",
+      amount: 75.00,
+      currency: "EUR",
+      date: pending_date,
+      name: "Coffee Shop",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    # First sync: claim the pending entry
+    @adapter.import_transaction(
+      external_id: "eb_booked_subseq",
+      amount: 75.00,
+      currency: "EUR",
+      date: booked_date,
+      name: "Coffee Shop Posted",
+      source: "enable_banking",
+      extra: nil
+    )
+
+    # Simulate a subsequent sync: same booked transaction arrives again
+    assert_no_difference "@account.entries.count" do
+      re_synced = @adapter.import_transaction(
+        external_id: "eb_booked_subseq",
+        amount: 75.00,
+        currency: "EUR",
+        date: booked_date,
+        name: "Coffee Shop Posted",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      re_synced.reload
+      assert_equal pending_date, re_synced.date,
+        "pending date must be preserved on subsequent syncs, not overwritten with booked date"
+    end
+  end
+
   test "does not reconcile when posted transaction has same external_id as pending" do
     # When external_id matches, normal dedup should handle it
     pending_entry = @adapter.import_transaction(
@@ -1397,5 +1444,78 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     # pending1 should still exist as pending
     pending1.reload
     assert_equal "plaid_pending_1", pending1.external_id
+  end
+
+  # =========================================================================
+  # Same-external-id pending → booked (e.g. Revolut Italy via Enable Banking)
+  # Some ASPSPs reuse the same transaction_id for pending and booked, so the
+  # entry is found by find_or_initialize_by (persisted), bypassing auto-claim.
+  # =========================================================================
+
+  test "clears pending flag when same external_id is reused for booked version (not user-modified)" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_same_id_123",
+      amount: 30.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Piero Fiorista",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    assert pending_entry.transaction.pending?, "entry should start as pending"
+
+    # Booked version arrives with the SAME external_id (Revolut Italy behaviour).
+    # extra is nil (no FX, no MCC) so the deep-merge block would normally be skipped.
+    assert_no_difference "@account.entries.count" do
+      booked_entry = @adapter.import_transaction(
+        external_id: "eb_same_id_123",
+        amount: 30.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Piero Fiorista",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      assert_equal pending_entry.id, booked_entry.id, "should update the same entry"
+      assert_not booked_entry.transaction.pending?,
+        "pending flag should be cleared even when extra is nil"
+    end
+  end
+
+  test "clears pending flag when same external_id reused and entry is user-modified (Revolut Italy)" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_same_id_user_mod",
+      amount: 50.0,
+      currency: "EUR",
+      date: Date.today - 3.days,
+      name: "Clean Center",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    assert pending_entry.transaction.pending?, "entry should start as pending"
+
+    # User categorises the pending entry — sets user_modified = true
+    pending_entry.mark_user_modified!
+    assert pending_entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # Booked version with the same external_id arrives — protection check would normally
+    # return early and leave the pending badge intact.
+    assert_no_difference "@account.entries.count" do
+      booked_entry = @adapter.import_transaction(
+        external_id: "eb_same_id_user_mod",
+        amount: 50.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Clean Center",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      assert_equal pending_entry.id, booked_entry.id, "should reference the same entry"
+      booked_entry.reload
+      assert_not booked_entry.transaction.pending?,
+        "pending flag must be cleared even for user-modified entries"
+    end
   end
 end

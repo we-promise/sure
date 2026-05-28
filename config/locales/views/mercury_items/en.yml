@@ -1,6 +1,31 @@
 ---
 en:
   mercury_items:
+    api_error:
+      title: Mercury Connection Error
+      unable_to_connect: Unable to connect to Mercury
+      common_issues: "Common Issues:"
+      invalid_api_token_label: Invalid API Token
+      invalid_api_token_desc: Check your API token in Provider Settings
+      expired_credentials_label: Expired Credentials
+      expired_credentials_desc: Generate a new API token from Mercury
+      insufficient_permissions_label: Insufficient Permissions
+      insufficient_permissions_desc: Ensure your token has read-only access
+      network_issue_label: Network Issue
+      network_issue_desc: Check your internet connection
+      service_down_label: Service Down
+      service_down_desc: Mercury API may be temporarily unavailable
+      check_provider_settings: Check Provider Settings
+    setup_required:
+      title: Mercury Setup Required
+      api_token_not_configured: API Token Not Configured
+      api_token_description: Before you can link Mercury accounts, you need to configure your Mercury API token.
+      setup_steps_title: "Setup Steps:"
+      setup_step_1_html: "Go to <strong>Settings > Providers</strong>"
+      setup_step_2_html: "Find the <strong>Mercury</strong> section"
+      setup_step_3: Enter your Mercury API token
+      setup_step_4: Return here to link your accounts
+      go_to_provider_settings: Go to Provider Settings
     create:
       success: Mercury connection created successfully
     destroy:
@@ -176,3 +201,8 @@ en:
       success: Sync started
     update:
       success: Mercury connection updated
+    mercury_item_selection_error_payload:
+      select_connection: Choose a Mercury connection before loading accounts.
+    render_mercury_item_selection_failure:
+      select_connection: Choose a Mercury connection in Provider Settings.
+      no_credentials_configured: Please configure your Mercury API token first in Provider Settings.

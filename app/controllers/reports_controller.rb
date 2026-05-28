@@ -12,7 +12,7 @@ class ReportsController < ApplicationController
     # Build reports sections for collapsible/reorderable UI
     @reports_sections = build_reports_sections
 
-    @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.reports"), nil ] ]
   end
 
   def print
@@ -471,6 +471,7 @@ class ReportsController < ApplicationController
         has_investments: true,
         portfolio_value: investment_statement.portfolio_value_money,
         unrealized_trend: investment_statement.unrealized_gains_trend,
+        period_return_trend: investment_statement.period_return_trend(period: @period),
         period_contributions: period_totals.contributions,
         period_withdrawals: period_totals.withdrawals,
         top_holdings: investment_statement.top_holdings(limit: 5),

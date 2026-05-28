@@ -90,7 +90,7 @@ class SsoProvider < ApplicationRecord
       idp_sso_url = settings&.dig("idp_sso_url")
 
       if idp_metadata_url.blank? && idp_sso_url.blank?
-        errors.add(:settings, "Either IdP Metadata URL or IdP SSO URL is required for SAML providers")
+        errors.add(:settings, :saml_url_required)
       end
 
       # If using manual config, require certificate
@@ -99,17 +99,17 @@ class SsoProvider < ApplicationRecord
         idp_fingerprint = settings&.dig("idp_cert_fingerprint")
 
         if idp_cert.blank? && idp_fingerprint.blank?
-          errors.add(:settings, "Either IdP Certificate or Certificate Fingerprint is required when not using metadata URL")
+          errors.add(:settings, :saml_cert_required)
         end
       end
 
       # Validate URL formats if provided
       if idp_metadata_url.present? && !valid_url?(idp_metadata_url)
-        errors.add(:settings, "IdP Metadata URL must be a valid URL")
+        errors.add(:settings, :metadata_url_invalid)
       end
 
       if idp_sso_url.present? && !valid_url?(idp_sso_url)
-        errors.add(:settings, "IdP SSO URL must be a valid URL")
+        errors.add(:settings, :sso_url_invalid)
       end
     end
 

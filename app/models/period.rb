@@ -169,9 +169,9 @@ class Period
   end
 
   def interval
-    if days > 1825 # 5 years
+    if end_date > start_date.advance(years: 5)   # more than 5 calendar years → monthly
       "1 month"
-    elsif days > 366
+    elsif end_date > start_date.advance(years: 1) # more than 1 calendar year → weekly
       "1 week"
     else
       "1 day"
@@ -179,24 +179,24 @@ class Period
   end
 
   def label
-    if key_metadata
-      key_metadata.fetch(:label)
+    if key
+      I18n.t("period.#{key}.label", default: key_metadata&.fetch(:label) || "Custom Period")
     else
-      "Custom Period"
+      I18n.t("period.custom.label", default: "Custom Period")
     end
   end
 
   def label_short
-    if key_metadata
-      key_metadata.fetch(:label_short)
+    if key
+      I18n.t("period.#{key}.label_short", default: key_metadata&.fetch(:label_short) || "Custom")
     else
-      "Custom"
+      I18n.t("period.custom.label_short", default: "Custom")
     end
   end
 
   def comparison_label
-    if key_metadata
-      key_metadata.fetch(:comparison_label)
+    if key
+      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}")
     else
       "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
     end

@@ -467,6 +467,7 @@ class Entry < ApplicationRecord
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
             attrs.delete(:date) if entry.split_child?
+            attrs.delete(:entryable_attributes) unless entry.transaction?
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?

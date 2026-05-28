@@ -2,7 +2,10 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+
   before_destroy :capture_account_statement_ids_to_move
+  before_destroy :cleanup_transfers
+
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
@@ -260,7 +263,9 @@ class Account < ApplicationRecord
     end
 
     def create_from_binance_account(binance_account)
-      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+      account = create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+      account.set_opening_anchor_balance(balance: 0)
+      account
     end
 
     def create_from_ibkr_account(ibkr_account)
@@ -283,6 +288,7 @@ class Account < ApplicationRecord
         }
       }
 
+      # Capture the created account in a variable
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
@@ -542,5 +548,13 @@ class Account < ApplicationRecord
         match_confidence: nil,
         updated_at: Time.current
       )
+    end
+
+    def cleanup_transfers
+      transaction_ids = entries.where(entryable_type: "Transaction").pluck(:entryable_id)
+
+      transfers = Transfer.where(inflow_transaction_id: transaction_ids).or(Transfer.where(outflow_transaction_id: transaction_ids))
+
+      transfers.find_each(&:destroy!)
     end
 end

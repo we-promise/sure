@@ -54,6 +54,15 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
+            <% if item.unlinked_accounts_count > 0 %>
+              <%= render DS::Link.new(
+                text: t("binance_items.binance_item.setup_action"),
+                icon: "plus",
+                variant: "primary",
+                href: setup_accounts_binance_item_path(item),
+                frame: :modal
+              ) %>
+            <% end %>
             <%= button_to sync_binance_item_path(item),
                           method: :post,
                           class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
@@ -93,8 +102,7 @@
                           type: :password %>
 
       <div class="flex justify-end">
-        <%= form.submit t("settings.providers.binance_panel.connect_button"),
-                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+        <%= form.submit t("settings.providers.binance_panel.connect_button") %>
       </div>
     <% end %>
   <% end %>

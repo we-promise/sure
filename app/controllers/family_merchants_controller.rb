@@ -2,11 +2,11 @@ class FamilyMerchantsController < ApplicationController
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
-    @breadcrumbs = [ [ "Home", root_path ], [ "Merchants", nil ] ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.merchants"), nil ] ]
 
     # Show all merchants for this family
-    @family_merchants = Current.family.merchants.alphabetically
-    @provider_merchants = Current.family.assigned_merchants_for(Current.user).where(type: "ProviderMerchant").alphabetically
+    @all_family_merchants = Current.family.merchants.alphabetically
+    @all_provider_merchants = Current.family.assigned_merchants_for(Current.user).where(type: "ProviderMerchant").alphabetically
 
     # Show recently unlinked ProviderMerchants (within last 30 days)
     # Exclude merchants that are already assigned to transactions (they appear in provider_merchants)
@@ -14,11 +14,14 @@ class FamilyMerchantsController < ApplicationController
       .where(family: Current.family)
       .recently_unlinked
       .pluck(:merchant_id)
-    assigned_ids = @provider_merchants.pluck(:id)
+    assigned_ids = @all_provider_merchants.pluck(:id)
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
-    @enhanceable_count = @provider_merchants.where(website_url: [ nil, "" ]).count
+    @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
     @llm_available = Provider::Registry.get_provider(:openai).present?
+
+    @pagy_family_merchants, @family_merchants = pagy(@all_family_merchants, page_param: :family_page, limit: safe_per_page)
+    @pagy_provider_merchants, @provider_merchants = pagy(@all_provider_merchants, page_param: :provider_page, limit: safe_per_page)
 
     render layout: "settings"
   end

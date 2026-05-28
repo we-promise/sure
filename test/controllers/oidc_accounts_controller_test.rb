@@ -115,7 +115,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     get :link
     assert_response :success
-    assert_select "h3", text: "Create New Account"
+    assert_select "p", text: /Create New Account/
     assert_select "strong", text: new_user_auth["email"]
   end
 
@@ -128,7 +128,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     get :link
     assert_response :success
 
-    assert_select "h3", text: "Create New Account"
+    assert_select "p", text: /Create New Account/
     # No create account button rendered
     assert_select "button", text: "Create Account", count: 0
     assert_select "p", text: /New account creation via single sign-on is disabled/

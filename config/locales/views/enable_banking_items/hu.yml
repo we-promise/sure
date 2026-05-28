@@ -39,8 +39,53 @@ hu:
       errors:
         only_manual: Csak manuális számlákat lehet összekapcsolni
         invalid_enable_banking_account: Érvénytelen Enable Banking-számla választva
+    enable_banking_item:
+      deletion_in_progress: Törlés folyamatban
+      provider_name: Enable Banking
+      syncing: Szinkronizálás...
+      reconnect: Újracsatlakozás
+      last_synced: Utoljára szinkronizálva %{time} ezelőtt
+      never_synced: Még nem szinkronizált
+      update: Frissítés
+      delete: Törlés
+      setup_needed: Beállítás szükséges
+      setup_needed_description:
+        one: 1 Enable Banking-ből importált számla beállítása szükséges
+        other: "%{count} Enable Banking-ből importált számla beállítása szükséges"
+      set_up_accounts: Számlák beállítása
+      no_accounts_found: Nem található számla
+      no_accounts_found_description: Nem található számla az Enable Banking-ből. Próbálj újra szinkronizálni.
+    select_existing_account:
+      title: Enable Banking-számla összekapcsolása
+      all_linked: Úgy tűnik, minden Enable Banking-számla már össze van kapcsolva.
+      try_after_sync: Ha most csatlakoztál vagy szinkronizáltál, próbálj újra a szinkronizálás befejezése után.
+      unlink_to_move: Másik számla összekapcsolásához először válaszd le a számlán a műveletek menüből.
+      balance: Egyenleg
+      link: Összekapcsolás
+      cancel: Mégse
     new:
       link_enable_banking_title: Enable Banking összekapcsolása
+      session_expired: A munkamenet lejárt – újraengedélyezés szükséges
+      connected_bank: Csatlakoztatott bank
+      session_expires: "Munkamenet lejárata"
+      unknown: Ismeretlen
+      connection: Kapcsolat
+      configured: Konfigurálva
+      ready_to_connect: Kész egy bank csatlakoztatására
+      sync: Szinkronizálás
+      reconnect: Újracsatlakozás
+      connect_bank: Bank csatlakoztatása
+      remove_confirm: Biztosan el szeretnéd távolítani ezt a kapcsolatot?
+      remove: Eltávolítás
+      add_connection: Kapcsolat hozzáadása
+      not_configured: Az Enable Banking kapcsolat nincs konfigurálva
+      not_configured_description: Mielőtt Enable Banking-számlákat kapcsolnál össze, konfigurálnod kell az Enable Banking kapcsolatot.
+      setup_steps_title: "Beállítási lépések:"
+      setup_step_1_html: "Menj a <strong>Beállítások → Szolgáltatók</strong> menübe"
+      setup_step_2_html: "Keresd meg az <strong>Enable Banking</strong> részt"
+      setup_step_3: Add meg az Enable Banking hitelesítő adatait
+      setup_step_4: Térj vissza ide a számlák összekapcsolásához
+      go_to_provider_settings: Ugrás a szolgáltató beállításaihoz
     reauthorize:
       invalid_redirect: A kapott engedélyezési URL érvénytelen. Kérjük, próbáld újra.
       reauthorization_failed: Az újraengedélyezés sikertelen
@@ -56,6 +101,17 @@ hu:
       search_placeholder: Keresd meg a bankod...
       title: Válaszd ki a bankod
     setup_accounts:
+      title: Enable Banking-számlák beállítása
+      header_subtitle: Válaszd ki a megfelelő számlatípusokat az importált számlákhoz
+      choose_account_type: "Válaszd ki az egyes Enable Banking-számlák megfelelő számlatípusát:"
+      historical_data_range: "Historikus adatok tartománya:"
+      sync_start_date_label: "Tranzakciók szinkronizálásának kezdete:"
+      sync_start_date_help: Válaszd meg, milyen messzire nyúljon vissza a tranzakciótörténet szinkronizálása. Legfeljebb 2 év előzmény érhető el.
+      account_type_label: "Számlatípus:"
+      balance: Egyenleg
+      create_accounts: Számlák létrehozása
+      creating_accounts: Számlák létrehozása...
+      cancel: Mégse
       psd2_savings_notice: "Megjegyzés: Egyes szabályozott francia megtakarítási számlákhoz (Livret A, PEL, LEP, LDDS) korlátozott vagy semmilyen hozzáférés nem áll rendelkezésre az Open Banking (PSD2) révén. Ha egy megtakarítási számla hiányzik, manuálisan is hozzáadhatod."
     update:
       success: Az Enable Banking konfiguráció frissítve.

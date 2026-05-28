@@ -11,7 +11,7 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -29,3 +29,4 @@ jobs:
             config/locales/views/reports/
             docs/hosting/ai.md
             app/models/provider/binance.rb
+            workers/preview/package-lock.json

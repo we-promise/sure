@@ -153,6 +153,30 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal fallback_provider, @security.price_data_provider
   end
 
+  test "import_provider_details logs provider metadata failures to debug log" do
+    provider = mock("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.stubs(:fetch_security_info).returns(
+      provider_error_response(Provider::Error.new("metadata unavailable"))
+    )
+
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      @security.import_provider_details
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_metadata_fetch", entry.category
+    assert_equal "warn", entry.level
+    assert_equal "Failed to get security info", entry.message
+    assert_equal "security", entry.source.underscore
+    assert_equal @security.id, entry.metadata["security_id"]
+    assert_equal @security.ticker, entry.metadata["ticker"]
+    assert_equal "metadata unavailable", entry.metadata["provider_error"]
+    assert_equal "twelve_data", entry.provider_key
+  end
+
   # --- provider_status ---
 
   test "provider_status returns provider_unavailable when assigned provider disabled" do

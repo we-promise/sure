@@ -33,7 +33,7 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to settings_profile_path
-    assert_equal "Member removed successfully.", flash[:notice]
+    assert_equal I18n.t("settings.profiles.destroy.member_removed"), flash[:notice]
     assert_raises(ActiveRecord::RecordNotFound) { User.find(@member.id) }
   end
 
@@ -59,6 +59,25 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert User.find(@admin.id)
   end
 
+  test "admin cannot destroy a member who owns accounts in another family" do
+    other_family = families(:empty)
+    legacy_account = other_family.accounts.create!(
+      name: "Legacy savings", balance: 250, currency: "USD",
+      accountable: Depository.new
+    )
+    legacy_account.update_columns(owner_id: @member.id)
+
+    sign_in @admin
+
+    assert_no_difference("User.count") do
+      delete settings_profile_path(user_id: @member)
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("settings.profiles.destroy.member_owns_other_family_data"), flash[:alert]
+    assert User.find(@member.id), "user row must be preserved so historical access can be restored"
+  end
+
   test "admin removing a family member also destroys their invitation" do
     # Create an invitation for the member
     invitation = @admin.family.invitations.create!(
@@ -74,7 +93,7 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to settings_profile_path
-    assert_equal "Member removed successfully.", flash[:notice]
+    assert_equal I18n.t("settings.profiles.destroy.member_removed"), flash[:notice]
     assert_raises(ActiveRecord::RecordNotFound) { User.find(@member.id) }
     assert_raises(ActiveRecord::RecordNotFound) { Invitation.find(invitation.id) }
   end
