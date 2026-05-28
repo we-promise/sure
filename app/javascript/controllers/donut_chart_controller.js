@@ -286,12 +286,18 @@ export default class extends Controller {
   #fitAmountTargets(scope = null) {
     if (!this.hasChartContainerTarget || !this.hasAmountTarget) return;
 
-    const containerWidth = this.chartContainerTarget.getBoundingClientRect().width;
-    if (containerWidth <= 0) return;
+    // The donut SVG uses `preserveAspectRatio="xMidYMid meet"`, so the actual
+    // rendered diameter is the *smaller* of the container's width and height.
+    // Using width alone over-estimates available room in non-square cells
+    // (e.g. the budget show page renders the donut inside a grid column that
+    // grows wider than tall on large viewports).
+    const rect = this.chartContainerTarget.getBoundingClientRect();
+    const containerSize = Math.min(rect.width, rect.height);
+    if (containerSize <= 0) return;
 
     const innerDiameterRatio =
       (this.#viewBoxSize - 2 * this.segmentHeightValue) / this.#viewBoxSize;
-    const availableWidth = containerWidth * innerDiameterRatio * this.#innerRingTextWidthRatio;
+    const availableWidth = containerSize * innerDiameterRatio * this.#innerRingTextWidthRatio;
     if (availableWidth <= 0) return;
 
     const targets = scope
