@@ -6,6 +6,7 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
+    account.account_providers.load # Preload to avoid N+1 queries from linked? checks
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
