@@ -72,4 +72,42 @@ class Balance::WaypointGuiBreakdownTest < ActiveSupport::TestCase
       refute_equal 0, g[:net_flow], "Net cash flow was zeroed on #{date} — transaction hidden"
     end
   end
+
+  # Investment account: reconciliation waypoint on a day with a same-day trade.
+  # End total must match the API-reported waypoint (not waypoint + trade flows).
+  # Cash/non-cash split must be preserved and no double-count on the non-cash side.
+  test "investment reconciliation waypoint with same-day trade is not double-counted" do
+    account = create_account_with_ledger(
+      account: { type: Investment, balance: 20000, cash_balance: 10000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "reconciliation", date: 1.day.ago, balance: 18000 }, # Bank says total was 18000
+        { type: "trade",          date: 1.day.ago, ticker: "AAPL", qty: 10, price: 100 }, # Buy $1000 of AAPL
+        { type: "opening_anchor", date: 3.days.ago, balance: 15000 }
+      ],
+      holdings: [
+        { date: Date.current,      ticker: "AAPL", qty: 10, price: 100, amount: 1000 },
+        { date: 1.day.ago.to_date, ticker: "AAPL", qty: 10, price: 100, amount: 1000 },
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: 0,  price: 100, amount: 0 },
+        { date: 3.days.ago.to_date, ticker: "AAPL", qty: 0,  price: 100, amount: 0 }
+      ]
+    )
+
+    balances = persist_and_load(account).index_by(&:date)
+    waypoint = balances[1.day.ago.to_date]
+
+    # End total must equal the API-reported waypoint — not 18000 + trade flows (which would be 20000).
+    assert_equal 18000, waypoint.end_balance, "Investment waypoint end_balance must equal 18000, not double-count the trade"
+
+    # Cash/non-cash flows from the trade must still be present (not zeroed).
+    assert waypoint.cash_outflows > 0 || waypoint.non_cash_inflows > 0,
+      "Trade flows should be preserved on the waypoint day, not zeroed"
+
+    # A trade moves cash → holdings but doesn't change the total balance, so
+    # the gap day correctly stays at the same total as the waypoint — this is
+    # expected, not a phantom. The key check is that the waypoint day itself
+    # didn't inflate above 18000 by double-counting the trade.
+    gap_day = balances[2.days.ago.to_date]
+    assert_equal 18000, gap_day.end_balance, "Gap day total should equal pre-trade balance (trade doesn't change total)"
+  end
 end
