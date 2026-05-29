@@ -30,6 +30,12 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
+    # Normalize amount to BigDecimal to prevent Float vs BigDecimal comparison failures.
+    # Plaid amounts arrive as JSON floats (e.g. 50.01 as IEEE 754), which compare unequal
+    # to the exact BigDecimal stored in the DB, causing the split-parent amount gate at
+    # line 143 to always misfire for non-terminating binary-fraction amounts.
+    amount = BigDecimal(amount.to_s)
+
     Account.transaction do
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
@@ -62,17 +68,27 @@ class Account::ProviderImportAdapter
       if entry.persisted?
         skip_reason = determine_skip_reason(entry)
         if skip_reason
-          # Pending→booked bypass for user_modified entries: clear the stale pending flag
-          # when the provider delivers a booked version of the same transaction.
-          # Some ASPSPs (e.g. Revolut Italy via Enable Banking) reuse the same transaction_id
-          # for pending and booked, so the entry is found by external_id rather than going
-          # through the auto-claim path. Without this, a user who categorised a pending entry
-          # (setting user_modified=true) would see the pending badge stuck forever.
-          # Excluded and import_locked entries are intentionally left untouched.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
+          # Pending→booked bypass: clear stale pending flags when the provider delivers a booked
+          # version of the same transaction via same-external-id reuse (e.g. Enable Banking/Revolut).
+          # Applies to both user_modified entries (categorised pending) and excluded split parents.
+          # import_locked entries are intentionally left untouched.
+          if %w[user_modified excluded].include?(skip_reason) && !incoming_pending && entry.entryable.is_a?(Transaction)
+            # Acquire row-level lock before checking split state or clearing child flags.
+            # Mirrors the lock! in the auto-claim path; prevents a concurrent split! from
+            # creating children between our split_parent? check and the child-clearing loop.
+            entry.lock!
             entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
             if entry_is_pending
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+
+              # For split parents, also clear the inherited pending flag from every child so
+              # they stop showing the pending badge and re-enter analytics.
+              if entry.split_parent?
+                entry.child_entries.includes(:entryable).each do |child|
+                  next unless child.entryable.is_a?(Transaction)
+                  child.transaction.update_columns(extra: clear_pending_flags_from_extra(child.transaction.extra), updated_at: Time.current)
+                end
+              end
             end
           end
           record_skip(entry, skip_reason)
@@ -123,8 +139,11 @@ class Account::ProviderImportAdapter
         end
 
         if pending_match
-          # Reload to get a consistent DB view in case a concurrent split! just ran.
-          pending_match.reload if pending_match.persisted?
+          # Acquire a row-level lock before inspecting split state or clearing child flags.
+          # Without this, a concurrent split! that runs between our find and our read can
+          # create children from the still-pending parent while we claim it, leaving those
+          # children with permanent pending flags.
+          pending_match.lock! if pending_match.persisted?
 
           # Split-parent pending: only auto-claim when the posted amount matches exactly.
           # If amounts differ (tip adjustment, FX rounding, partial post), fall through so
@@ -781,6 +800,7 @@ class Account::ProviderImportAdapter
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
+      .where(parent_entry_id: nil) # Never match split children; their pending flag is inherited, not authoritative
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
@@ -828,6 +848,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
+      .where(parent_entry_id: nil) # Never match split children; their pending flag is inherited, not authoritative
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
@@ -898,6 +919,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
+      .where(parent_entry_id: nil) # Never match split children; their pending flag is inherited, not authoritative
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true

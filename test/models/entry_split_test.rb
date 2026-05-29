@@ -256,6 +256,27 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_includes scope.pluck(:id), @entry.child_entries.first.id
   end
 
+  test "excluding_split_children scope excludes split children but includes parent" do
+    @entry.split!([
+      { name: "Part 1", amount: 50, category_id: nil },
+      { name: "Part 2", amount: 50, category_id: nil }
+    ])
+    @entry.reload
+
+    child_ids = @entry.child_entries.pluck(:id)
+    scope = Entry.excluding_split_children.where(account: accounts(:depository))
+
+    assert_includes scope.pluck(:id), @entry.id, "split parent should be included"
+    child_ids.each do |id|
+      refute_includes scope.pluck(:id), id, "split child should be excluded"
+    end
+  end
+
+  test "excluded non-split entry is not splittable" do
+    @entry.update!(excluded: true)
+    refute @entry.transaction.splittable?, "excluded non-split entry must not be splittable"
+  end
+
   test "children inherit parent's account, date, and currency" do
     children = @entry.split!([
       { name: "Part 1", amount: 50, category_id: nil },

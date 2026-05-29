@@ -218,4 +218,31 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
     assert_equal 2, pending_entry.child_entries.count
     assert pending_entry.transaction.pending?
   end
+
+  # --- Same-external-id bypass (Enable Banking / Revolut Italy path) clears children ---
+
+  test "clears children's pending flags via same-external-id bypass when excluded split parent receives booked version" do
+    pending_entry = create_split_pending(amount: 60.00, external_id: "eb_bypass_test", source: "enable_banking")
+    child_ids = pending_entry.child_entries.pluck(:id)
+
+    # split! already sets excluded: true; import with same external_id triggers the bypass path
+    assert_no_difference "@account.entries.count" do
+      @adapter.import_transaction(
+        external_id: "eb_bypass_test",
+        amount: 60.00,
+        currency: "USD",
+        date: Date.current,
+        name: "SUPERMARKET",
+        source: "enable_banking"
+        # no pending extra → incoming is booked
+      )
+    end
+
+    pending_entry.transaction.reload
+    refute pending_entry.transaction.pending?, "parent pending flag should be cleared via same-external-id bypass"
+
+    Entry.where(id: child_ids).each do |child|
+      refute child.entryable.pending?, "split child pending flag should be cleared via same-external-id bypass"
+    end
+  end
 end
