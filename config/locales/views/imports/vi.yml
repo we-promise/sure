@@ -31,7 +31,7 @@ vi:
       show:
         not_configured: "Vui lòng cấu hình nhập dữ liệu trước khi tiếp tục."
         description: Chỉnh sửa dữ liệu trong bảng bên dưới. Ô đỏ là không hợp lệ.
-        errors_notice: Dữ liệu của bạn có lỗi. Hover qua lỗi để xem chi tiết.
+        errors_notice: Dữ liệu của bạn có lỗi. Di chuột qua lỗi để xem chi tiết.
         errors_notice_mobile: Dữ liệu của bạn có lỗi. Nhấn vào tooltip lỗi để xem chi tiết.
         title: Làm sạch dữ liệu
         data_cleaned: Dữ liệu của bạn đã được làm sạch

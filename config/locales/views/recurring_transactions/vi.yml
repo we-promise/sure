@@ -53,4 +53,4 @@ vi:
     transfer_marked_as_recurring: Chuyển khoản đã được đánh dấu là định kỳ
     transfer_already_exists: Đã tồn tại chuyển khoản định kỳ cho cặp tài khoản này
     transfer_creation_failed: Không thể tạo chuyển khoản định kỳ. Vui lòng kiểm tra thông tin và thử lại.
-    transfer_feature_disabled: Giao dịch định kỳ đã bị tắt cho hộ gia đình này
+    transfer_feature_disabled: Chuyển khoản định kỳ đã bị tắt cho hộ gia đình này

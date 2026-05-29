@@ -30,7 +30,7 @@ vi:
         label: "Mã thiết lập SimpleFIN:"
         placeholder: "Dán mã thiết lập SimpleFIN của bạn vào đây..."
         help_text: "Mã phải là một chuỗi dài bắt đầu bằng chữ cái và số"
-      title: Cập nhật kết nối SimpleFin
+      title: Cập nhật kết nối SimpleFIN
       header_subtitle: Lấy mã thiết lập mới để kết nối lại tài khoản SimpleFIN của bạn
       connection_needs_update: "Kết nối SimpleFIN của bạn cần được cập nhật:"
       step_1_html: "Truy cập <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> để tạo mã thiết lập mới"
@@ -39,9 +39,9 @@ vi:
       update: Cập nhật
       cancel: Hủy
     setup_accounts:
-      title: Thiết lập tài khoản SimpleFin của bạn
+      title: Thiết lập tài khoản SimpleFIN của bạn
       header_subtitle: Chọn đúng loại tài khoản cho các tài khoản đã nhập
-      choose_account_type: "Chọn đúng loại tài khoản cho mỗi tài khoản SimpleFin:"
+      choose_account_type: "Chọn đúng loại tài khoản cho mỗi tài khoản SimpleFIN:"
       account_type_checking_savings: Tài khoản thanh toán hoặc tiết kiệm
       account_type_checking_savings_desc: Tài khoản ngân hàng thông thường
       account_type_credit_card: Thẻ tín dụng
@@ -53,7 +53,7 @@ vi:
       account_type_other_asset: Tài sản khác
       account_type_other_asset_desc: Tất cả các loại khác
       transaction_history_title: "Lịch sử giao dịch:"
-      transaction_history_description_html: "SimpleFin thường cung cấp <strong>60-90 ngày</strong> lịch sử giao dịch, tùy thuộc vào ngân hàng của bạn. Sau khi thiết lập ban đầu, các giao dịch mới sẽ tự động đồng bộ. Dữ liệu lịch sử có sẵn tùy theo tổ chức và loại tài khoản."
+      transaction_history_description_html: "SimpleFIN thường cung cấp <strong>60-90 ngày</strong> lịch sử giao dịch, tùy thuộc vào ngân hàng của bạn. Sau khi thiết lập ban đầu, các giao dịch mới sẽ tự động đồng bộ. Dữ liệu lịch sử có sẵn tùy theo tổ chức và loại tài khoản."
       account_type_label: "Loại tài khoản:"
       create_accounts: Tạo tài khoản
       creating_accounts: Đang tạo tài khoản...

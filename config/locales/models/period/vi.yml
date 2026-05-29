@@ -30,7 +30,7 @@ vi:
       label: "90 Ngày Qua"
       comparison_label: "so với quý trước"
     current_year:
-      label_short: "NNN"
+      label_short: "NĐN"
       label: "Năm này"
       comparison_label: "so với đầu năm"
     last_365_days:
@@ -38,11 +38,11 @@ vi:
       label: "365 Ngày Qua"
       comparison_label: "so với 1 năm trước"
     last_5_years:
-      label_short: "5N"
+      label_short: "5Năm"
       label: "5 Năm Qua"
       comparison_label: "so với 5 năm trước"
     last_10_years:
-      label_short: "10N"
+      label_short: "10Năm"
       label: "10 Năm Qua"
       comparison_label: "so với 10 năm trước"
     all_time:

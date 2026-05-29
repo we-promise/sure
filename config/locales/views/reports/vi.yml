@@ -23,12 +23,12 @@ vi:
       today: "Hôm nay"
       period_label:
         quarterly: "Q%{quarter} %{year}"
-        ytd: "NNN %{year}"
+        ytd: "Từ đầu năm %{year}"
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
       period_picker:
         quarter: "Q%{quarter} %{year}"
-        ytd: "NNN %{year}"
+        ytd: "Từ đầu năm %{year}"
       previous_year: "Năm trước"
       next_year: "Năm tiếp"
       previous_decade: "Thập kỷ trước"

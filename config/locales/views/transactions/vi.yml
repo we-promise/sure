@@ -121,7 +121,7 @@ vi:
     mark_recurring_title: Giao dịch định kỳ
     potential_duplicate_title: Phát hiện trùng lặp có thể
     potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã đăng bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
-    merge_duplicate: Có, gộp lại
+    merge_duplicate_button: Có, gộp lại
     keep_both: Không, giữ cả hai
     split_parent_row:
       split_label: "Phân chia"
