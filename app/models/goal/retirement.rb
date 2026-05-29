@@ -15,9 +15,23 @@ class Goal::Retirement < Goal
   validate :owner_belongs_to_family
   validate :adjustments_within_limit
 
+  # One retirement plan per user. Bootstrapped on first visit so pension
+  # sources, statements, and bucket entries always have a parent. The
+  # target is derived by the forecast (PR3), so no target_amount here.
+  def self.for_owner(user)
+    find_or_create_by!(user_id: user.id, family_id: user.family_id) do |plan|
+      plan.name = "Retirement"
+      plan.currency = user.family.primary_currency_code
+    end
+  end
+
   def editable_by?(user)
     return false if user.nil?
     user_id == user.id
+  end
+
+  def target_amount_required?
+    false
   end
 
   private

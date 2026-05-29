@@ -1,0 +1,12 @@
+<% content_for :breadcrumbs do %>
+  <%= render "layouts/shared/breadcrumbs", breadcrumbs: [
+    [ t("breadcrumbs.home"), root_path ],
+    [ t("breadcrumbs.retirement"), retirement_path ],
+    [ t("retirement.pension_sources.edit_title"), nil ]
+  ] %>
+<% end %>
+
+<div class="max-w-xl mx-auto space-y-4">
+  <h1 class="text-primary text-xl font-semibold"><%= t("retirement.pension_sources.edit_title") %></h1>
+  <%= render "form", source: @source %>
+</div>

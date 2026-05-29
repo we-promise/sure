@@ -1,26 +1,15 @@
 class RetirementController < ApplicationController
-  include PreviewGateable
-
-  before_action :require_preview_features!
-  before_action :ensure_module_enabled!
-  before_action :load_goal_retirement
+  include RetirementScoped
 
   def show
+    @pension_sources = @plan.pension_sources.order(:start_age)
+    @adjustments = @plan.adjustments.ordered
+    @statements = @plan.statements.chronological.reverse
+    @bucket_account_ids = @plan.retirement_bucket_entries.pluck(:account_id).to_set
+    @bucket_candidates = Current.family.accounts.visible.alphabetically
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.retirement"), nil ]
     ]
   end
-
-  private
-    def ensure_module_enabled!
-      return if Current.family.retirement_enabled?(Current.user)
-      raise ActionController::RoutingError, "Not Found"
-    end
-
-    def load_goal_retirement
-      @goal = Current.family.goals
-                            .where(type: "Goal::Retirement", user_id: Current.user.id)
-                            .first
-    end
 end

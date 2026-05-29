@@ -4,23 +4,150 @@
 
 <div class="space-y-6">
   <header class="space-y-2">
-    <h1 class="text-primary text-2xl font-semibold">
-      <%= t("retirement.show.title") %>
-    </h1>
-    <p class="text-secondary text-sm">
-      <%= t("retirement.show.subtitle") %>
-    </p>
+    <h1 class="text-primary text-2xl font-semibold"><%= t("retirement.show.title") %></h1>
+    <p class="text-secondary text-sm"><%= t("retirement.show.subtitle") %></p>
+    <p class="text-subdued text-xs"><%= t("retirement.show.preview_note") %></p>
   </header>
 
-  <section class="bg-container shadow-border-xs rounded-xl p-8 text-center">
-    <div class="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-surface-inset">
-      <%= icon("sun", size: "lg") %>
+  <%# Pension sources %>
+  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-primary font-medium"><%= t("retirement.show.sources_title") %></h2>
+      <%= link_to t("retirement.show.add_source"), new_retirement_pension_source_path,
+            class: "text-sm font-medium text-primary underline" %>
     </div>
-    <p class="text-primary text-base font-medium mb-2">
-      <%= t("retirement.show.placeholder_heading") %>
-    </p>
-    <p class="text-secondary text-sm max-w-prose mx-auto">
-      <%= t("retirement.show.placeholder_body") %>
-    </p>
+
+    <% if @pension_sources.empty? %>
+      <p class="text-secondary text-sm"><%= t("retirement.show.no_sources") %></p>
+    <% else %>
+      <ul class="divide-y divide-tertiary">
+        <% @pension_sources.each do |source| %>
+          <li class="py-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-primary text-sm font-medium">
+                <%= source.name %>
+                <span class="text-secondary text-xs">· <%= t("retirement.pension_sources.kinds.#{source.kind}") %></span>
+              </p>
+              <p class="text-secondary text-xs">
+                <%= t("retirement.show.starts_at_age", age: source.start_age) %> ·
+                <%= source.country %> ·
+                <%= t("retirement.pension_sources.payout_shapes.#{source.payout_shape}") %>
+              </p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="text-primary text-sm tabular-nums privacy-sensitive">
+                <%= source.amount_money&.format %><span class="text-secondary"><%= t("retirement.show.per_month") %></span>
+              </span>
+              <%= link_to t("retirement.show.edit"), edit_retirement_pension_source_path(source),
+                    class: "text-xs text-secondary underline" %>
+              <%= button_to t("retirement.show.delete"), retirement_pension_source_path(source),
+                    method: :delete, class: "text-xs text-destructive underline",
+                    form: { data: { turbo_confirm: t("retirement.show.delete_confirm") } } %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <%# Adjustments %>
+  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-primary font-medium"><%= t("retirement.show.adjustments_title") %></h2>
+      <%= link_to t("retirement.show.add_adjustment"), new_retirement_adjustment_path,
+            class: "text-sm font-medium text-primary underline" %>
+    </div>
+
+    <% if @adjustments.empty? %>
+      <p class="text-secondary text-sm"><%= t("retirement.show.no_adjustments") %></p>
+    <% else %>
+      <ul class="divide-y divide-tertiary">
+        <% @adjustments.each do |adjustment| %>
+          <li class="py-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-primary text-sm font-medium"><%= adjustment.label %></p>
+              <p class="text-secondary text-xs"><%= t("retirement.show.from_age", age: adjustment.from_age) %></p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="text-primary text-sm tabular-nums privacy-sensitive"><%= adjustment.amount_today_money&.format %></span>
+              <%= link_to t("retirement.show.edit"), edit_retirement_adjustment_path(adjustment),
+                    class: "text-xs text-secondary underline" %>
+              <%= button_to t("retirement.show.delete"), retirement_adjustment_path(adjustment),
+                    method: :delete, class: "text-xs text-destructive underline",
+                    form: { data: { turbo_confirm: t("retirement.show.delete_confirm") } } %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <%# Retirement bucket %>
+  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+    <div>
+      <h2 class="text-primary font-medium"><%= t("retirement.show.bucket_title") %></h2>
+      <p class="text-secondary text-xs"><%= t("retirement.show.bucket_hint") %></p>
+    </div>
+
+    <%= form_with url: retirement_bucket_path, method: :patch, class: "space-y-3" do |form| %>
+      <div class="space-y-2">
+        <% @bucket_candidates.each do |account| %>
+          <label class="flex items-center gap-2 text-sm text-primary">
+            <%= check_box_tag "bucket[account_ids][]", account.id,
+                  @bucket_account_ids.include?(account.id) %>
+            <span><%= account.name %></span>
+            <span class="text-secondary text-xs privacy-sensitive"><%= account.balance_money&.format %></span>
+          </label>
+        <% end %>
+      </div>
+      <%= form.submit t("retirement.show.save_bucket"), class: "text-sm font-medium text-primary underline cursor-pointer" %>
+    <% end %>
+  </section>
+
+  <%# Statement journal %>
+  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-primary font-medium"><%= t("retirement.show.statements_title") %></h2>
+        <p class="text-secondary text-xs"><%= t("retirement.show.statements_subtitle") %></p>
+      </div>
+      <%= link_to t("retirement.show.log_statement"), new_retirement_statement_path,
+            class: "text-sm font-medium text-primary underline" %>
+    </div>
+
+    <% if @statements.empty? %>
+      <p class="text-secondary text-sm"><%= t("retirement.show.no_statements") %></p>
+    <% else %>
+      <table class="w-full text-sm">
+        <thead class="text-secondary text-xs text-left">
+          <tr>
+            <th class="py-2"><%= t("retirement.statements.table.date") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.source") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.points") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.amount") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.age") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.notes") %></th>
+            <th class="py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-tertiary">
+          <% @statements.each do |statement| %>
+            <tr>
+              <td class="py-2 text-primary tabular-nums"><%= I18n.l(statement.received_on) %></td>
+              <td class="py-2 text-secondary"><%= statement.pension_source.name %></td>
+              <td class="py-2 text-secondary tabular-nums"><%= statement.current_points %></td>
+              <td class="py-2 text-primary tabular-nums privacy-sensitive"><%= statement.projected_monthly_amount_money&.format %></td>
+              <td class="py-2 text-secondary tabular-nums"><%= statement.projected_at_age %></td>
+              <td class="py-2 text-secondary"><%= statement.raw_source_doc %></td>
+              <td class="py-2 text-right">
+                <%= button_to t("retirement.show.delete"), retirement_statement_path(statement),
+                      method: :delete, class: "text-xs text-destructive underline",
+                      form: { data: { turbo_confirm: t("retirement.show.delete_confirm") } } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   </section>
 </div>

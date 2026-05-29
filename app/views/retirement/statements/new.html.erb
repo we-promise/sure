@@ -1,0 +1,16 @@
+<% content_for :breadcrumbs do %>
+  <%= render "layouts/shared/breadcrumbs", breadcrumbs: [
+    [ t("breadcrumbs.home"), root_path ],
+    [ t("breadcrumbs.retirement"), retirement_path ],
+    [ t("retirement.statements.new_title"), nil ]
+  ] %>
+<% end %>
+
+<div class="max-w-xl mx-auto space-y-4">
+  <h1 class="text-primary text-xl font-semibold"><%= t("retirement.statements.new_title") %></h1>
+  <% if @pension_sources.empty? %>
+    <p class="text-secondary text-sm"><%= t("retirement.show.no_sources") %></p>
+  <% else %>
+    <%= render "form", statement: @statement, pension_sources: @pension_sources %>
+  <% end %>
+</div>
