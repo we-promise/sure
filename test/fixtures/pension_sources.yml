@@ -1,0 +1,23 @@
+de_grv_bob:
+  goal_retirement: retirement_bob
+  name: German Statutory Pension
+  kind: state
+  country: DE
+  pension_system: de_grv
+  tax_treatment: de_renten
+  payout_shape: monthly_for_life
+  start_age: 67
+  amount: 1510
+  currency: EUR
+
+bav_bob:
+  goal_retirement: retirement_bob
+  name: bAV employer scheme
+  kind: workplace
+  country: DE
+  pension_system: de_bav
+  tax_treatment: de_bav
+  payout_shape: lump_plus_annuity
+  start_age: 65
+  amount: 620
+  currency: EUR

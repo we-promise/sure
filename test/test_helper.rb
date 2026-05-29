@@ -75,6 +75,13 @@ module ActiveSupport
       end
     end
 
+    # Namespaced models whose fixture-set name doesn't match the class by
+    # Rails convention (goal_retirement_statements -> Goal::RetirementStatement,
+    # not GoalRetirementStatement). Without this the loader can't resolve the
+    # goal_retirement association and tries to insert a literal column.
+    set_fixture_class goal_retirement_statements: "Goal::RetirementStatement",
+                      goal_retirement_adjustments: "Goal::RetirementAdjustment"
+
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 

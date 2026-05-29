@@ -73,4 +73,25 @@ class Goal::RetirementTest < ActiveSupport::TestCase
 
     assert retirement.valid?, retirement.errors.full_messages.to_sentence
   end
+
+  test "has pension sources, statements, adjustments, and bucket accounts" do
+    plan = goals(:retirement_bob)
+    assert_includes plan.pension_sources, pension_sources(:de_grv_bob)
+    assert_includes plan.statements, goal_retirement_statements(:grv_2025)
+    assert_includes plan.adjustments, goal_retirement_adjustments(:mortgage_paid_off)
+    assert_includes plan.bucket_accounts, accounts(:investment)
+  end
+
+  test "adjustments are capped at ADJUSTMENTS_LIMIT" do
+    plan = goals(:retirement_bob)
+
+    (plan.adjustments.size...Goal::Retirement::ADJUSTMENTS_LIMIT).each do |i|
+      plan.adjustments.build(from_age: 60, amount_today: -1, currency: "USD", label: "adj #{i}", ordinal: i + 1)
+    end
+    assert plan.valid?, plan.errors.full_messages.to_sentence
+
+    plan.adjustments.build(from_age: 61, amount_today: -1, currency: "USD", label: "over", ordinal: 99)
+    assert_not plan.valid?
+    assert_includes plan.errors.attribute_names, :adjustments
+  end
 end

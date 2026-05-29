@@ -23,3 +23,14 @@ car_paydown:
   target_date: <%= 12.months.from_now.to_date %>
   color: "#e99537"
   state: paused
+
+# STI subtype — owner-scoped retirement plan. Excluded from the savings
+# goal routes (see Goal.savings); reachable only via RetirementController.
+retirement_bob:
+  family: dylan_family
+  user_id: <%= ActiveRecord::FixtureSet.identify(:family_admin, :uuid) %>
+  type: Goal::Retirement
+  name: Bob's Retirement
+  target_amount: 1000000
+  currency: USD
+  state: active

@@ -1,0 +1,17 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        pension_source:
+          attributes:
+            end_age:
+              required_for_fixed_term: is required for a fixed-term payout.
+        retirement_bucket_entry:
+          attributes:
+            account:
+              must_belong_to_family: must belong to the same family as the plan.
+        "goal/retirement":
+          attributes:
+            adjustments:
+              too_many: "can't exceed %{count} per plan."

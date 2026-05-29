@@ -1,0 +1,19 @@
+grv_2023:
+  goal_retirement: retirement_bob
+  pension_source: de_grv_bob
+  received_on: 2023-01-15
+  projected_monthly_amount: 1180
+  projected_currency: EUR
+  projected_at_age: 67
+  current_points: 7.10
+  raw_source_doc: Renteninformation 2023
+
+grv_2025:
+  goal_retirement: retirement_bob
+  pension_source: de_grv_bob
+  received_on: 2025-01-15
+  projected_monthly_amount: 1510
+  projected_currency: EUR
+  projected_at_age: 67
+  current_points: 9.60
+  raw_source_doc: Renteninformation 2025

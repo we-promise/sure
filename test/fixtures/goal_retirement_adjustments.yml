@@ -1,0 +1,7 @@
+mortgage_paid_off:
+  goal_retirement: retirement_bob
+  from_age: 51
+  amount_today: -680
+  currency: USD
+  label: Mortgage paid off
+  ordinal: 0
