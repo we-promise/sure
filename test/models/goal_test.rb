@@ -248,4 +248,17 @@ class GoalTest < ActiveSupport::TestCase
     reloaded = Goal.find(@goal.id)
     assert_equal "goals.show.pledge_just_saved", reloaded.pledge_action_label_key
   end
+
+  test "STI: no Goal rows have NULL type after migration" do
+    assert_equal 0, Goal.where(type: nil).count
+  end
+
+  test "editable_by? base Goal: same family user true, foreign family false, nil false" do
+    same_family_user = users(:family_admin)
+    foreign_user = users(:empty)
+
+    assert @goal.editable_by?(same_family_user)
+    assert_not @goal.editable_by?(foreign_user)
+    assert_not @goal.editable_by?(nil)
+  end
 end

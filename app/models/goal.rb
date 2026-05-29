@@ -1,6 +1,8 @@
 class Goal < ApplicationRecord
   include AASM, Monetizable
 
+  self.inheritance_column = :type
+
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
@@ -397,6 +399,13 @@ class Goal < ApplicationRecord
     pending = open_pledges.sum(:amount).to_d
     delta = [ monthly_target_amount.to_d - pace.to_d - pending, 0 ].max
     Money.new(delta, currency)
+  end
+
+  # Family-scoped default for base Goal records. Subclasses like
+  # Goal::Retirement narrow this to owner-only by overriding.
+  def editable_by?(user)
+    return false if user.nil?
+    family_id == user.family_id
   end
 
   private

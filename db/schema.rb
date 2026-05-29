@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_29_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -53,7 +53,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
     t.string "checksum", limit: 64, null: false
-    t.string "content_sha256"
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
     t.string "institution_name_hint", limit: 200
@@ -70,6 +69,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
     t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
@@ -254,9 +254,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
-    t.boolean "pending_account_setup", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "api_key"
@@ -500,7 +500,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.index ["provider_key"], name: "index_debug_log_entries_on_provider_key"
     t.index ["source"], name: "index_debug_log_entries_on_source"
     t.index ["user_id"], name: "index_debug_log_entries_on_user_id"
-    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying, 'info'::character varying, 'warn'::character varying, 'error'::character varying]::text[])", name: "chk_debug_log_entries_level"
+    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying::text, 'info'::character varying::text, 'warn'::character varying::text, 'error'::character varying::text])", name: "chk_debug_log_entries_level"
   end
 
   create_table "depositories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -719,6 +719,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
     t.datetime "last_sync_all_attempted_at"
+    t.boolean "retirement_disabled", default: false, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -798,11 +799,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+    t.string "type", default: "Goal", null: false
+    t.uuid "user_id"
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
+    t.index ["family_id", "type", "state"], name: "index_goals_on_family_type_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
+    t.index ["user_id", "type"], name: "index_goals_on_user_and_type_retirement", where: "((type)::text = 'Goal::Retirement'::text)"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
-    t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
+    t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "type::text <> 'Goal::Retirement'::text OR user_id IS NOT NULL", name: "chk_goals_retirement_requires_owner"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -838,9 +844,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4
     t.jsonb "institution_metadata"
-    t.jsonb "raw_holdings_payload", default: [], null: false
-    t.jsonb "raw_activities_payload", default: {}, null: false
-    t.jsonb "raw_cash_report_payload", default: [], null: false
+    t.jsonb "raw_holdings_payload", default: []
+    t.jsonb "raw_activities_payload", default: {}
+    t.jsonb "raw_cash_report_payload", default: []
     t.date "report_date"
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
@@ -854,8 +860,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
   create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name"
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
     t.boolean "pending_account_setup", default: false, null: false
     t.jsonb "raw_payload"
     t.string "query_id"
@@ -1977,6 +1983,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "goals", "users", on_delete: :restrict
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
