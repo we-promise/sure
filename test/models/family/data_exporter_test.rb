@@ -384,6 +384,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       rule_data = JSON.parse(rule_lines.first)
       assert_equal "Rule", rule_data["type"]
       assert_equal 1, rule_data["version"]
+      assert_equal @rule.id, rule_data["data"]["id"]
       assert rule_data["data"].key?("name")
       assert rule_data["data"].key?("resource_type")
       assert rule_data["data"].key?("active")

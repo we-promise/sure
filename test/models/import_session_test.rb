@@ -574,6 +574,48 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_equal "(blank)", session.imports.first.error_details["source_id"]
   end
 
+  test "session mode imports rule records exported by Sure packages" do
+    source_family = Family.create!(name: "Rule Export Source", currency: "USD", locale: "en")
+    category = source_family.categories.create!(
+      name: "Exported Category",
+      color: "#00AA00",
+      lucide_icon: "shapes"
+    )
+    source_rule = source_family.rules.build(
+      name: "Exported Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    source_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "Coffee"
+    )
+    source_rule.actions.build(
+      action_type: "set_transaction_category",
+      value: category.id
+    )
+    source_rule.save!
+
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      content: exported_ndjson_for(source_family),
+      filename: "all.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.complete?
+    imported_rule = @family.rules.find_by!(name: "Exported Rule")
+    imported_category = @family.categories.find_by!(name: "Exported Category")
+
+    assert_equal 1, session.summary.dig("rules", "created")
+    assert_equal imported_category.id, imported_rule.actions.first.value
+    assert_source_mapping session, "Rule", source_rule.id, imported_rule
+  end
+
   test "client idempotency keys are bounded before indexed writes" do
     session = @family.import_sessions.build(client_session_id: "x" * 256)
 
@@ -746,6 +788,16 @@ class ImportSessionTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def exported_ndjson_for(family)
+      ndjson = nil
+
+      Zip::File.open_buffer(Family::DataExporter.new(family).generate_export) do |zip|
+        ndjson = zip.read("all.ndjson")
+      end
+
+      ndjson
     end
 
     def assert_source_mapping(session, source_type, source_id, target)
