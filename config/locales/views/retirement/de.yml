@@ -1,0 +1,145 @@
+---
+de:
+  retirement:
+    show:
+      title: Ruhestand
+      subtitle: Plane, wann du aufhören kannst zu arbeiten — und was du dafür brauchst.
+      preview_note: Vorschau — Projektionen sind ein einzelner deterministischer Pfad in heutigem Geld. Das fertige Dashboard folgt in einem späteren Update.
+      active_plan: Aktiver Plan
+      sources_title: Rentenquellen
+      add_source: Quelle hinzufügen
+      no_sources: Noch keine Rentenquellen.
+      starts_at_age: Beginnt mit Alter %{age}
+      per_month: /Mon.
+      adjustments_title: Anpassungen für den Ruhestand
+      add_adjustment: Anpassung hinzufügen
+      no_adjustments: Noch keine Anpassungen.
+      from_age: Ab Alter %{age}
+      bucket_title: Ruhestands-Topf
+      bucket_hint: Wähle die Konten, die deinen Ruhestand finanzieren.
+      save_bucket: Topf speichern
+      statements_title: Renten-Journal
+      statements_subtitle: Jede jährliche Renteninformation, die du erhalten hast — für den Prüfpfad.
+      log_statement: Renteninformation erfassen
+      no_statements: Noch keine Renteninformationen erfasst.
+      delete: Löschen
+      edit: Bearbeiten
+      delete_confirm: Bist du sicher? Das kann nicht rückgängig gemacht werden.
+    update:
+      updated: Plan aktualisiert.
+    kpis:
+      set_birth_year_heading: Gib dein Geburtsjahr an, um Projektionen zu sehen
+      set_birth_year_body: Lege dein Geburtsjahr fest (und passe die Regler unten an), um dein Freiheitsdatum, deinen Coast-FIRE-Punkt und die Reichweite deines Geldes zu projizieren.
+      freedom_date: Freiheitsdatum
+      retire_at_age: Alter %{age}
+      coast_fire: Coast FIRE
+      coast_hint: Hör auf zu sparen und geh trotzdem pünktlich in Rente.
+      not_yet: Noch nicht
+      money_lasts_to: Geld reicht bis
+      age: "Alter %{age}"
+      past_age: "über %{age}"
+      terminal: "~%{amount} am Ende übrig"
+    why:
+      title: Warum dieses Ziel?
+      subtitle: Letzte 12 Monate · 10 % getrimmtes Mittel
+      use_average: Meinen Durchschnitt verwenden
+      last_12: Letzte 12 Monate
+      target: Ziel
+      fi_number: FI-Zahl · 25×
+    glide:
+      title: Vermögensverlauf
+      subtitle: Projizierter Portfoliowert · heutiges Geld · für das monatliche Einkommen in dem Alter darüberfahren
+      covered: Gedeckt
+      portfolio: Portfolio
+      state: Gesetzliche Rente
+      workplace: Betriebliche Altersvorsorge
+      drawdown: Portfolio-Entnahme
+      total: Gesamt / Mon.
+      retire: Rente · Alter
+      coast: Coast · Alter
+    what_if:
+      title: Was-wäre-wenn
+      hint: Bewege einen Regler — die Projektion aktualisiert sich live.
+      save: Plan speichern
+      fields:
+        birth_year: Geburtsjahr
+        retire_age: Renteneintrittsalter
+        target_spend: Zielausgaben / Mon.
+        monthly_savings: Sparen / Mon.
+        real_return_pct: Reale Rendite %
+    pension_sources:
+      new_title: Rentenquelle hinzufügen
+      edit_title: Rentenquelle bearbeiten
+      create:
+        created: Rentenquelle hinzugefügt.
+      update:
+        updated: Rentenquelle aktualisiert.
+      destroy:
+        deleted: Rentenquelle entfernt.
+      kinds:
+        state: Gesetzlich
+        workplace: Betrieblich
+        other: Sonstige
+      payout_shapes:
+        monthly_for_life: Monatlich · lebenslang
+        monthly_fixed_term: Monatlich · befristet
+        lump_sum: Einmalzahlung
+        lump_plus_annuity: Einmalzahlung + Rente
+      form:
+        name: Name
+        kind: Art
+        country: Land
+        pension_system: System
+        tax_treatment: Besteuerung
+        payout_shape: Auszahlung
+        start_age: Startalter
+        end_age: Endalter (befristet)
+        amount: Monatlicher Betrag
+        currency: Währung
+        effective_rate_override: Netto-Satz überschreiben (0–1, optional)
+        save: Quelle speichern
+        cancel: Abbrechen
+    statements:
+      new_title: Renteninformation erfassen
+      create:
+        created: Renteninformation erfasst.
+      destroy:
+        deleted: Renteninformation entfernt.
+      table:
+        date: Datum
+        source: Quelle
+        points: Entgeltpunkte
+        amount: Projiziert
+        age: Mit Alter
+        notes: Notizen
+      form:
+        pension_source: Quelle
+        received_on: Erhalten am
+        projected_monthly_amount: Projizierter Monatsbetrag
+        projected_currency: Währung
+        projected_at_age: Projiziert mit Alter
+        current_points: Entgeltpunkte
+        raw_source_doc: Belegverweis
+        notes: Notizen
+        save: Renteninformation erfassen
+        cancel: Abbrechen
+    adjustments:
+      new_title: Anpassung hinzufügen
+      edit_title: Anpassung bearbeiten
+      create:
+        created: Anpassung hinzugefügt.
+      update:
+        updated: Anpassung aktualisiert.
+      destroy:
+        deleted: Anpassung entfernt.
+      form:
+        label: Bezeichnung
+        amount_today: Monatliche Änderung (heutiges Geld)
+        currency: Währung
+        from_age: Ab Alter
+        to_age: Bis Alter (optional)
+        save: Anpassung speichern
+        cancel: Abbrechen
+    bucket:
+      update:
+        updated: Ruhestands-Topf aktualisiert.

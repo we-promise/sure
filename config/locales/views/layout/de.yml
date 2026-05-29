@@ -9,6 +9,7 @@ de:
         budgets: Budgets
         home: Startseite
         reports: Berichte
+        retirement: Ruhestand
         transactions: Transaktionen
     auth:
       existing_account: Du hast bereits ein Konto?

@@ -1,0 +1,17 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        pension_source:
+          attributes:
+            end_age:
+              required_for_fixed_term: ist für eine befristete Auszahlung erforderlich.
+        retirement_bucket_entry:
+          attributes:
+            account:
+              must_belong_to_family: muss zur selben Familie wie der Plan gehören.
+        "goal/retirement":
+          attributes:
+            adjustments:
+              too_many: "darf %{count} pro Plan nicht überschreiten."
