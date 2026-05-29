@@ -10,14 +10,14 @@ zh-CN:
       area_placeholder: '2000'
       area_unit: 面积单位
       country: 国家
-      country_placeholder: US
+      country_placeholder: 美国
       locality: 城市
-      locality_placeholder: San Francisco
+      locality_placeholder: 旧金山
       none: 无
       postal_code: 邮政编码
       postal_code_placeholder: '94105'
       region: 州/省
-      region_placeholder: CA
+      region_placeholder: 加利福尼亚州
       year_built: 建造年份
       year_built_placeholder: '2000'
     new:
