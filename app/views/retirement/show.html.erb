@@ -187,12 +187,14 @@
     <%= form_with url: retirement_bucket_path, method: :patch, class: "space-y-3" do |form| %>
       <div class="space-y-2">
         <% @bucket_candidates.each do |account| %>
-          <label class="flex items-center gap-2 text-sm text-primary">
-            <%= check_box_tag "bucket[account_ids][]", account.id,
-                  @bucket_account_ids.include?(account.id) %>
-            <span><%= account.name %></span>
-            <span class="text-secondary text-xs privacy-sensitive"><%= account.balance_money&.format %></span>
-          </label>
+          <%= render DS::SelectableCard.new(
+                name: "bucket[account_ids][]",
+                value: account.id,
+                title: account.name,
+                subtitle: account.accountable_type&.underscore&.humanize,
+                amount: account.balance_money&.format,
+                checked: @bucket_account_ids.include?(account.id)
+              ) %>
         <% end %>
       </div>
       <%= form.submit t("retirement.show.save_bucket"), class: "text-sm font-medium text-primary underline cursor-pointer" %>

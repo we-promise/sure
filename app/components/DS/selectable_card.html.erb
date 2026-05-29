@@ -1,0 +1,14 @@
+<label class="block cursor-pointer">
+  <%= check_box_tag name, value, checked, class: "peer sr-only", **opts %>
+  <div class="flex items-center justify-between gap-3 rounded-xl border-2 border-secondary bg-surface-inset p-4 transition-colors peer-checked:border-primary peer-checked:bg-surface peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-gray-400">
+    <div class="min-w-0">
+      <p class="text-primary text-sm font-medium truncate"><%= title %></p>
+      <% if subtitle %>
+        <p class="text-secondary text-xs truncate"><%= subtitle %></p>
+      <% end %>
+    </div>
+    <% if amount %>
+      <span class="text-primary text-sm tabular-nums shrink-0 privacy-sensitive"><%= amount %></span>
+    <% end %>
+  </div>
+</label>
