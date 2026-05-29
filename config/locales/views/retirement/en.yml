@@ -17,6 +17,8 @@ en:
       from_age: From age %{age}
       bucket_title: Retirement bucket
       bucket_hint: Select the accounts that fund your retirement.
+      bucket_count: "%{selected} of %{total} accounts"
+      bucket_counted: "Counted: %{amount}"
       save_bucket: Save bucket
       statements_title: Statement journal
       statements_subtitle: Every annual pension statement you've received — for the audit trail.

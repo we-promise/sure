@@ -17,6 +17,8 @@ de:
       from_age: Ab Alter %{age}
       bucket_title: Ruhestands-Topf
       bucket_hint: Wähle die Konten, die deinen Ruhestand finanzieren.
+      bucket_count: "%{selected} von %{total} Konten"
+      bucket_counted: "Gezählt: %{amount}"
       save_bucket: Topf speichern
       statements_title: Renten-Journal
       statements_subtitle: Jede jährliche Renteninformation, die du erhalten hast — für den Prüfpfad.
