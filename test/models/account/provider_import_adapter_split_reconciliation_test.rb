@@ -62,6 +62,40 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
     end
   end
 
+  # --- Non-terminating binary fraction: the BigDecimal-normalization regression ---
+
+  test "claims pending split parent when Plaid float amount is a non-terminating binary fraction" do
+    # 50.01 is not exactly representable in IEEE 754. Without the BigDecimal(amount.to_s)
+    # normalization at import_transaction's entry point, the gate `pending_match.amount != amount`
+    # compares a Float (50.01) against the exact BigDecimal in the DB and ALWAYS reports a
+    # mismatch — incorrectly skipping the auto-claim and creating a duplicate posted entry.
+    pending_entry = create_split_pending(amount: 50.01, external_id: "plaid_pending_5001", source: "plaid")
+    child_ids = pending_entry.child_entries.pluck(:id)
+
+    assert_no_difference "@account.entries.count", "matching float amount must auto-claim, not duplicate" do
+      result = @adapter.import_transaction(
+        external_id: "plaid_posted_5001",
+        amount: 50.01, # Plaid delivers this as a JSON Float
+        currency: "USD",
+        date: Date.current,
+        name: "STARBUCKS",
+        source: "plaid",
+        pending_transaction_id: "plaid_pending_5001"
+      )
+
+      assert_equal pending_entry.id, result.id, "split parent should be claimed despite float representation"
+      assert_equal "plaid_posted_5001", result.external_id
+      result.transaction.reload
+      refute result.transaction.pending?, "pending flag should be cleared after claim"
+    end
+
+    # Children survive and clear their pending flags
+    assert_equal child_ids.sort, pending_entry.child_entries.reload.pluck(:id).sort
+    pending_entry.child_entries.reload.each do |child|
+      refute child.entryable.pending?, "split child pending flag should be cleared when parent books"
+    end
+  end
+
   # --- Exact amount, SimpleFIN amount-match (priority 2) ---
 
   test "claims pending split parent via SimpleFIN exact amount match" do
@@ -139,6 +173,46 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
     pending_entry.transaction.reload
     assert pending_entry.transaction.has_potential_duplicate?,
            "expected a potential_posted_match suggestion on the split parent"
+  end
+
+  test "stores suggestion via Plaid pending_transaction_id even when pending and posted names differ" do
+    # The authoritative-link (priority 0) path: when Plaid links pending→posted by
+    # pending_transaction_id but the amount differs AND the names diverge (so the fuzzy
+    # name matcher would NOT match), the suggestion must still be stored using the known
+    # link — otherwise the split parent is stranded pending forever and a duplicate posts.
+    pending_entry = create_split_pending(
+      amount: 45.00,
+      external_id: "plaid_pending_namediff",
+      source: "plaid",
+      date: 2.days.ago.to_date
+    )
+    pending_entry.update!(name: "SQ *COFFEE BAR") # pending-side name
+    original_external_id = pending_entry.external_id
+
+    assert_difference "@account.entries.count", 1 do
+      posted = @adapter.import_transaction(
+        external_id: "plaid_posted_namediff",
+        amount: 52.00, # tip
+        currency: "USD",
+        date: Date.current,
+        name: "COFFEE BAR INC", # posted-side name diverges from pending
+        source: "plaid",
+        pending_transaction_id: "plaid_pending_namediff"
+      )
+      assert_not_equal pending_entry.id, posted.id
+    end
+
+    pending_entry.reload
+    assert_equal original_external_id, pending_entry.external_id
+    assert pending_entry.transaction.pending?, "pending flag must remain set"
+    assert pending_entry.split_parent?, "split family must remain intact"
+
+    pending_entry.transaction.reload
+    assert pending_entry.transaction.has_potential_duplicate?,
+           "authoritative-link suggestion must be stored even when names differ"
+    match = pending_entry.transaction.extra["potential_posted_match"]
+    assert_equal "split_parent_amount_mismatch", match["reason"]
+    assert_equal "high", match["confidence"]
   end
 
   # --- Amount mismatch via SimpleFIN (partial post / different amount) ---

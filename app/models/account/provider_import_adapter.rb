@@ -32,8 +32,9 @@ class Account::ProviderImportAdapter
 
     # Normalize amount to BigDecimal to prevent Float vs BigDecimal comparison failures.
     # Plaid amounts arrive as JSON floats (e.g. 50.01 as IEEE 754), which compare unequal
-    # to the exact BigDecimal stored in the DB, causing the split-parent amount gate at
-    # line 143 to always misfire for non-terminating binary-fraction amounts.
+    # to the exact BigDecimal stored in the DB, causing the split-parent amount gate
+    # (pending_match.amount != amount, below) to always misfire for non-terminating
+    # binary-fraction amounts.
     amount = BigDecimal(amount.to_s)
 
     Account.transaction do
@@ -83,12 +84,7 @@ class Account::ProviderImportAdapter
 
               # For split parents, also clear the inherited pending flag from every child so
               # they stop showing the pending badge and re-enter analytics.
-              if entry.split_parent?
-                entry.child_entries.includes(:entryable).each do |child|
-                  next unless child.entryable.is_a?(Transaction)
-                  child.transaction.update_columns(extra: clear_pending_flags_from_extra(child.transaction.extra), updated_at: Time.current)
-                end
-              end
+              clear_split_child_pending_flags(entry)
             end
           end
           record_skip(entry, skip_reason)
@@ -116,6 +112,13 @@ class Account::ProviderImportAdapter
           entry.assign_attributes(external_id: external_id, source: source)
         end
       end
+
+      # When the gate below skips auto-claiming a pending split parent (amount mismatch),
+      # we remember it here so the post-save suggestion path can store a high-confidence
+      # potential_posted_match using the authoritative match we already found — instead of
+      # falling back to fuzzy name matching, which can silently miss when the pending and
+      # posted names differ (e.g. "SQ *MERCHANT" → "MERCHANT INC").
+      skipped_split_parent_match = nil
 
       if entry.new_record? && !incoming_pending
         pending_match = nil
@@ -156,6 +159,7 @@ class Account::ProviderImportAdapter
               "is a split parent with amount #{pending_match.amount}, posted amount=#{amount}. " \
               "Storing potential_posted_match suggestion instead."
             )
+            skipped_split_parent_match = pending_match
             pending_match = nil
             # entry remains a new record; is_new_posted stays true so the fuzzy-suggestion
             # block below fires after save and writes the suggestion onto the split parent.
@@ -179,13 +183,7 @@ class Account::ProviderImportAdapter
 
               # If this was a split parent, clear the inherited pending flags from all children
               # so they appear in analytics and drop the pending badge once the parent books.
-              if entry.split_parent?
-                entry.child_entries.includes(:entryable).each do |child|
-                  next unless child.entryable.is_a?(Transaction)
-                  child_ex = clear_pending_flags_from_extra(child.transaction.extra)
-                  child.transaction.update_columns(extra: child_ex, updated_at: Time.current)
-                end
-              end
+              clear_split_child_pending_flags(entry)
             end
           end
         end
@@ -291,7 +289,24 @@ class Account::ProviderImportAdapter
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
-      if is_new_posted
+      if is_new_posted && skipped_split_parent_match.present?
+        # PRIORITY 0: We already found this split parent via an authoritative match
+        # (Plaid's pending_transaction_id) but skipped the auto-claim because the amount
+        # differs. Store the suggestion directly using that known match so a name change
+        # between pending and posted cannot strand the parent as pending forever.
+        begin
+          store_duplicate_suggestion(
+            pending_entry: skipped_split_parent_match,
+            posted_entry: entry,
+            reason: "split_parent_amount_mismatch",
+            posted_amount: amount,
+            confidence: "high"
+          )
+          Rails.logger.info("Suggested potential duplicate (authoritative link): split parent #{skipped_split_parent_match.id} (#{skipped_split_parent_match.name}, #{skipped_split_parent_match.amount}) may match posted #{entry.name} (#{amount})")
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.warn("Failed to store split-parent duplicate suggestion for entry #{skipped_split_parent_match.id}: #{e.message}")
+        end
+      elsif is_new_posted
         # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
         fuzzy_suggestion = find_pending_transaction_fuzzy(
           date: date,
@@ -950,9 +965,9 @@ class Account::ProviderImportAdapter
   #
   # @param pending_entry [Entry] The pending entry that may be a duplicate
   # @param posted_entry [Entry] The posted entry it may match
-  # @param reason [String] Why this was flagged (e.g., "fuzzy_amount_match", "low_confidence_match")
+  # @param reason [String] Why this was flagged (e.g., "fuzzy_amount_match", "low_confidence_match", "split_parent_amount_mismatch")
   # @param posted_amount [BigDecimal] The posted transaction amount
-  # @param confidence [String] Confidence level: "medium" (≤30% diff) or "low" (>30% diff)
+  # @param confidence [String] Confidence level: "high" (authoritative pending_transaction_id link), "medium" (≤30% diff), or "low" (>30% diff)
   def store_duplicate_suggestion(pending_entry:, posted_entry:, reason:, posted_amount:, confidence: "medium")
     return unless pending_entry&.entryable.is_a?(Transaction)
 
@@ -1048,5 +1063,23 @@ class Account::ProviderImportAdapter
         ex.delete(provider) if ex[provider].empty?
       end
       ex
+    end
+
+    # Clear the inherited pending flag from every split child of +parent_entry+ so they
+    # drop the pending badge and re-enter analytics once the parent books. Uses
+    # update_columns deliberately: only the +extra+ JSON flag is flipped, and we do not
+    # want to re-fire Transaction save callbacks (merchant unlink, sync) for a child whose
+    # only change is losing a pending marker. updated_at is set manually since
+    # update_columns skips automatic timestamping.
+    def clear_split_child_pending_flags(parent_entry)
+      return unless parent_entry.split_parent?
+
+      parent_entry.child_entries.includes(:entryable).each do |child|
+        next unless child.entryable.is_a?(Transaction)
+        child.transaction.update_columns(
+          extra: clear_pending_flags_from_extra(child.transaction.extra),
+          updated_at: Time.current
+        )
+      end
     end
 end
