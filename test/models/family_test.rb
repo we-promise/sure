@@ -234,4 +234,10 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal({ "type" => "financial_document" }, document.metadata)
     assert_equal "vs_test123", family.reload.vector_store_id
   end
+
+  test "retirement_spending_baseline returns Money in the primary currency" do
+    baseline = families(:dylan_family).retirement_spending_baseline(user: users(:family_admin))
+    assert_kind_of Money, baseline
+    assert_equal "USD", baseline.currency.iso_code
+  end
 end
