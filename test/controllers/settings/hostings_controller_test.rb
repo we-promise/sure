@@ -76,9 +76,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "can update anthropic access token when self hosting is enabled" do
     with_self_hosting do
-      patch settings_hosting_url, params: { setting: { anthropic_access_token: "sk-ant-test" } }
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "fake-anthropic-key-for-tests" } }
 
-      assert_equal "sk-ant-test", Setting.anthropic_access_token
+      assert_equal "fake-anthropic-key-for-tests", Setting.anthropic_access_token
     end
   end
 
