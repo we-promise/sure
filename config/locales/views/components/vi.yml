@@ -1,0 +1,162 @@
+---
+vi:
+  UI:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Bật/tắt chọn
+      balance_reconciliation:
+        labels:
+          adjustments: Điều chỉnh
+          buys: Mua vào
+          change_in_brokerage_cash: Thay đổi tiền mặt môi giới
+          change_in_holdings_market: Thay đổi danh mục (giá thị trường)
+          change_in_holdings_trades: Thay đổi danh mục (mua/bán)
+          charges: Phí phát sinh
+          end_balance: Số dư cuối
+          end_principal: Gốc cuối
+          end_value: Giá trị cuối
+          final_balance: Số dư cuối cùng
+          final_principal: Gốc cuối cùng
+          final_value: Giá trị cuối cùng
+          market_changes: Biến động thị trường
+          net_cash_flow: Dòng tiền thuần
+          net_principal_change: Thay đổi gốc thuần
+          net_value_change: Thay đổi giá trị thuần
+          payments: Thanh toán
+          sells: Bán ra
+          start_balance: Số dư đầu
+          start_principal: Gốc đầu
+          start_value: Giá trị đầu
+        tooltips:
+          adjustments: Điều chỉnh thủ công hoặc điều chỉnh khác
+          adjustments_asset: Điều chỉnh giá trị thủ công hoặc thẩm định
+          buys: Mua tiền mã hóa trong ngày
+          change_in_brokerage_cash: Thay đổi tiền mặt thuần từ nạp/rút và giao dịch
+          change_in_holdings_market: Thay đổi giá trị danh mục do biến động giá thị trường
+          change_in_holdings_trades: Tác động đến danh mục từ mua bán chứng khoán
+          charges: Phí phát sinh mới trong ngày
+          end_balance: Số dư tính toán sau tất cả giao dịch
+          end_balance_investment: Số dư tính toán sau tất cả hoạt động
+          end_principal: Gốc tính toán sau tất cả giao dịch
+          end_value: Giá trị tính toán sau tất cả thay đổi
+          final_balance: Số dư tài khoản cuối cùng trong ngày
+          final_balance_credit: Số dư nợ cuối cùng trong ngày
+          final_balance_crypto: Giá trị danh mục tiền mã hóa cuối cùng trong ngày
+          final_balance_investment: Giá trị danh mục đầu tư cuối cùng trong ngày
+          final_principal: Số dư gốc cuối cùng trong ngày
+          final_value: Giá trị tài sản cuối cùng trong ngày
+          market_changes: Thay đổi giá trị do biến động giá thị trường
+          net_cash_flow: Thay đổi số dư thuần từ tất cả giao dịch trong ngày
+          net_principal_change: Thanh toán gốc và khoản vay mới trong ngày
+          net_value_change: Tất cả thay đổi giá trị bao gồm cải thiện và khấu hao
+          payments: Thanh toán thẻ trong ngày
+          sells: Bán tiền mã hóa trong ngày
+          start_balance: Số dư tài khoản đầu ngày
+          start_balance_credit: Số dư nợ đầu ngày
+          start_balance_crypto: Giá trị danh mục tiền mã hóa đầu ngày
+          start_balance_investment: Tổng giá trị danh mục đầu tư đầu ngày
+          start_principal: Số dư gốc đầu ngày
+          start_value: Giá trị tài sản đầu ngày
+      chart:
+        no_data_available: "Không có dữ liệu"
+        title:
+          balance: Số dư
+          cash_value: Giá trị tiền mặt
+          debt_balance: Số dư nợ
+          estimated_property_value: Giá trị bất động sản ước tính
+          estimated_vehicle_value: Giá trị phương tiện ước tính
+          holdings_value: Giá trị danh mục
+          remaining_principal_balance: Số dư gốc còn lại
+          total_account_value: Tổng giá trị tài khoản
+        views:
+          cash: Tiền mặt
+          holdings: Danh mục
+          total_value: Tổng giá trị
+        vs_available_history: so với lịch sử hiện có
+      activity_date:
+        balance_tooltip: "Số dư cuối ngày, sau tất cả giao dịch và điều chỉnh"
+        no_balance_data: "Không có dữ liệu số dư cho ngày này"
+  ds:
+    alert:
+      variants:
+        info: Thông tin
+        success: Thành công
+        warning: Cảnh báo
+        error: Lỗi
+        destructive: Lỗi
+    pill:
+      aria_label: "%{label}"
+      default_label: Xem trước
+    dialog:
+      close: Đóng
+    popover:
+      avatar_default_label: Mở menu
+    tooltip:
+      trigger_label: Thêm thông tin
+    link:
+      opens_in_new_tab: (mở trong tab mới)
+  provider_sync_summary:
+    title: Tóm tắt đồng bộ
+    last_sync: "Đồng bộ lần cuối: %{time_ago} trước"
+    accounts:
+      title: Tài khoản
+      total: "Tổng: %{count}"
+      linked: "Đã liên kết: %{count}"
+      unlinked: "Chưa liên kết: %{count}"
+      institutions: "Tổ chức: %{count}"
+    transactions:
+      title: Giao dịch
+      seen: "Đã thấy: %{count}"
+      imported: "Đã nhập: %{count}"
+      updated: "Đã cập nhật: %{count}"
+      skipped: "Đã bỏ qua: %{count}"
+      fetching: "Đang tải từ sàn giao dịch..."
+      protected:
+        one: "%{count} mục được bảo vệ (không ghi đè)"
+        other: "%{count} mục được bảo vệ (không ghi đè)"
+      view_protected: Xem các mục được bảo vệ
+    skip_reasons:
+      excluded: Đã loại trừ
+      user_modified: Người dùng đã sửa
+      import_locked: Nhập CSV
+      protected: Được bảo vệ
+    holdings:
+      title: Danh mục nắm giữ
+      found: "Tìm thấy: %{count}"
+      processed: "Đã xử lý: %{count}"
+    trades:
+      title: Giao dịch chứng khoán
+      imported: "Đã nhập: %{count}"
+      skipped: "Đã bỏ qua: %{count}"
+      fetching: "Đang tải hoạt động từ sàn giao dịch..."
+    health:
+      title: Tình trạng
+      view_error_details: Xem chi tiết lỗi
+      rate_limited: "Bị giới hạn tốc độ %{time_ago}"
+      recently: gần đây
+      errors: "Lỗi: %{count}"
+      pending_reconciled:
+        one: "%{count} giao dịch chờ trùng lặp đã được đối chiếu"
+        other: "%{count} giao dịch chờ trùng lặp đã được đối chiếu"
+      view_reconciled: Xem giao dịch đã đối chiếu
+      duplicate_suggestions:
+        one: "%{count} giao dịch có thể trùng lặp cần xem xét"
+        other: "%{count} giao dịch có thể trùng lặp cần xem xét"
+      view_duplicate_suggestions: Xem các giao dịch trùng lặp được đề xuất
+      stale_pending:
+        one: "%{count} giao dịch chờ cũ (không tính vào ngân sách)"
+        other: "%{count} giao dịch chờ cũ (không tính vào ngân sách)"
+      view_stale_pending: Xem các tài khoản bị ảnh hưởng
+      stale_pending_count:
+        one: "%{count} giao dịch"
+        other: "%{count} giao dịch"
+      stale_unmatched:
+        one: "%{count} giao dịch chờ cần xem xét thủ công"
+        other: "%{count} giao dịch chờ cần xem xét thủ công"
+      view_stale_unmatched: Xem giao dịch cần xem xét
+      stale_unmatched_count:
+        one: "%{count} giao dịch"
+        other: "%{count} giao dịch"
+      data_warnings: "Cảnh báo dữ liệu: %{count}"
+      notices: "Thông báo: %{count}"
+      view_data_quality: Xem chi tiết chất lượng dữ liệu
