@@ -10,13 +10,21 @@ class SureImport < Import
 
     private
       def build_message
-        return "Sure import readback verification failed with status: #{verification_status}" if mismatches.empty?
+        return I18n.t(
+          "views.imports.errors.readback_verification_failed",
+          status: verification_status,
+          default: "Sure import readback verification failed with status: #{verification_status}"
+        ) if mismatches.empty?
 
         details = mismatches.map do |key, counts|
           "#{key}: expected #{counts['expected']}, actual #{counts['actual']}"
         end.join("; ")
 
-        "Sure import readback verification mismatch (#{details})"
+        I18n.t(
+          "views.imports.errors.readback_verification_mismatch",
+          details: details,
+          default: "Sure import readback verification mismatch (#{details})"
+        )
       end
   end
 
@@ -150,6 +158,8 @@ class SureImport < Import
 
     record_readback_verification!(before_counts:)
     assert_readback_verification_matched!
+  rescue ReadbackVerificationMismatchError
+    raise
   rescue => error
     record_failed_readback_verification!(before_counts:, error:)
     raise

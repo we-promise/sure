@@ -290,6 +290,9 @@ en:
       title: Reverting import failed
       description: Please try again
       try_again: Try again
+    errors:
+      readback_verification_failed: "Sure import readback verification failed with status: %{status}"
+      readback_verification_mismatch: "Sure import readback verification mismatch (%{details})"
     date_format:
       heading: Date format
       description: "The date format was auto-detected from your file. Change it if dates look incorrect."
