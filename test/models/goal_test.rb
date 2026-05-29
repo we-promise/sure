@@ -261,4 +261,15 @@ class GoalTest < ActiveSupport::TestCase
     assert_not @goal.editable_by?(foreign_user)
     assert_not @goal.editable_by?(nil)
   end
+
+  test "savings scope excludes retirement subtype" do
+    retirement = Goal::Retirement.create!(
+      family: @family, owner: users(:family_admin),
+      name: "Retire", target_amount: 1_000_000, currency: "USD"
+    )
+
+    savings_ids = Goal.savings.pluck(:id)
+    assert_includes savings_ids, @goal.id
+    assert_not_includes savings_ids, retirement.id
+  end
 end

@@ -32,6 +32,12 @@ class Goal < ApplicationRecord
   scope :active_first, lambda {
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
   }
+  # Savings goals only — the base Goal type. STI subtypes such as
+  # Goal::Retirement have their own surfaces (RetirementController) and
+  # must NOT be reachable through the shared goal/pledge routes, where
+  # any preview-enabled family member could otherwise view, edit, or
+  # delete another member's owner-scoped retirement plan.
+  scope :savings, -> { where(type: "Goal") }
 
   def self.advisory_lock_key_for(family_id)
     Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
