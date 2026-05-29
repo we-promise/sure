@@ -1413,6 +1413,60 @@ class Demo::Generator
       seed_matched_pledge_demo_for_wedding!(wedding_goal, currency, primary) if wedding_goal && primary
 
       puts "   ✅ Seeded #{goals.size} goals"
+
+      generate_retirement!(family)
+    end
+
+    # A fully-populated Goal::Retirement (DE-flavoured) so the retirement
+    # dashboard renders with real numbers in the demo. Owner-scoped to the
+    # family admin. Idempotent + best-effort (never breaks demo generation).
+    def generate_retirement!(family)
+      return if family.goals.where(type: "Goal::Retirement").exists?
+
+      owner = family.users.order(:created_at).first
+      return unless owner
+
+      currency = family.primary_currency_code
+      plan = Goal::Retirement.create!(
+        family: family, owner: owner, name: "Retirement", currency: currency, state: "active",
+        retirement_params: {
+          "birth_year" => Date.current.year - 40, "retire_age" => 55,
+          "monthly_savings" => 2000, "target_spend" => 3000, "real_return_pct" => 5
+        }
+      )
+
+      grv = plan.pension_sources.create!(
+        name: "German Statutory Pension", kind: "state", country: "DE",
+        pension_system: "de_grv", tax_treatment: "de_renten", payout_shape: "monthly_for_life",
+        start_age: 67, amount: 1510, currency: "EUR"
+      )
+      plan.pension_sources.create!(
+        name: "bAV — employer scheme", kind: "workplace", country: "DE",
+        pension_system: "de_bav", tax_treatment: "de_bav", payout_shape: "lump_plus_annuity",
+        start_age: 65, amount: 620, currency: "EUR", params: { "lump_amount" => 30_000 }
+      )
+
+      [
+        [ Date.new(2023, 1, 15), 1180, 7.10, "Renteninformation 2023" ],
+        [ Date.new(2024, 1, 15), 1350, 8.40, "Renteninformation 2024" ],
+        [ Date.new(2025, 1, 15), 1510, 9.60, "Renteninformation 2025" ]
+      ].each do |received_on, amount, points, doc|
+        plan.statements.create!(
+          pension_source: grv, received_on: received_on, projected_monthly_amount: amount,
+          projected_currency: "EUR", projected_at_age: 67, current_points: points, raw_source_doc: doc
+        )
+      end
+
+      plan.adjustments.create!(label: "Mortgage paid off", amount_today: -680, currency: currency, from_age: 51, ordinal: 0)
+      plan.adjustments.create!(label: "Higher healthcare cost", amount_today: 220, currency: currency, from_age: 65, ordinal: 1)
+
+      family.accounts.where(accountable_type: "Investment").visible.order(:created_at).first(2).each do |account|
+        plan.retirement_bucket_entries.create!(account: account)
+      end
+
+      puts "   ✅ Seeded retirement plan"
+    rescue StandardError => e
+      puts "   ⚠️  Skipped retirement seed: #{e.message}"
     end
 
     # Bind one matched pledge on the Wedding fund to a real recent demo
