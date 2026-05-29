@@ -1,0 +1,32 @@
+<%# locals: (plan:) %>
+<div id="retirement_kpis" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <% forecast = plan.forecast %>
+  <% if forecast.nil? %>
+    <div class="sm:col-span-3 bg-container shadow-border-xs rounded-xl p-5">
+      <p class="text-primary text-sm font-medium"><%= t("retirement.kpis.set_birth_year_heading") %></p>
+      <p class="text-secondary text-sm"><%= t("retirement.kpis.set_birth_year_body") %></p>
+    </div>
+  <% else %>
+    <div class="bg-container shadow-border-xs rounded-xl p-5">
+      <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.freedom_date") %></p>
+      <p class="text-primary text-2xl font-semibold"><%= plan.freedom_date&.year || "—" %></p>
+      <p class="text-secondary text-xs"><%= t("retirement.kpis.retire_at_age", age: plan.effective_retire_age) %></p>
+    </div>
+
+    <div class="bg-container shadow-border-xs rounded-xl p-5">
+      <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.coast_fire") %></p>
+      <p class="text-primary text-2xl font-semibold"><%= plan.coast_fire_date&.year || t("retirement.kpis.not_yet") %></p>
+      <p class="text-secondary text-xs"><%= t("retirement.kpis.coast_hint") %></p>
+    </div>
+
+    <div class="bg-container shadow-border-xs rounded-xl p-5">
+      <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.money_lasts_to") %></p>
+      <p class="text-primary text-2xl font-semibold">
+        <%= forecast.lasts_past_terminal? ? t("retirement.kpis.past_age", age: forecast.terminal_age) : t("retirement.kpis.age", age: forecast.money_lasts_to_age) %>
+      </p>
+      <p class="text-secondary text-xs privacy-sensitive">
+        <%= t("retirement.kpis.terminal", amount: Money.new(forecast.terminal_value, plan.currency).format(precision: 0)) %>
+      </p>
+    </div>
+  <% end %>
+</div>
