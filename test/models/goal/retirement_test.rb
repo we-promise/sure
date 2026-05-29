@@ -74,6 +74,26 @@ class Goal::RetirementTest < ActiveSupport::TestCase
     assert retirement.valid?, retirement.errors.full_messages.to_sentence
   end
 
+  test "for_owner bootstraps a valid plan without a target_amount" do
+    # family_member has no retirement fixture, so this exercises the
+    # create path (family_admin would just find retirement_bob).
+    member = users(:family_member)
+
+    plan = Goal::Retirement.for_owner(member)
+
+    assert plan.persisted?
+    assert_nil plan.target_amount
+    assert_equal member.id, plan.user_id
+    assert_equal member.family_id, plan.family_id
+  end
+
+  test "for_owner is idempotent (one plan per user)" do
+    member = users(:family_member)
+    first = Goal::Retirement.for_owner(member)
+    second = Goal::Retirement.for_owner(member)
+    assert_equal first.id, second.id
+  end
+
   test "has pension sources, statements, adjustments, and bucket accounts" do
     plan = goals(:retirement_bob)
     assert_includes plan.pension_sources, pension_sources(:de_grv_bob)

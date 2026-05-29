@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_29_120140) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_29_120150) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -822,7 +822,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_29_120140) do
   create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name", null: false
-    t.decimal "target_amount", precision: 19, scale: 4, null: false
+    t.decimal "target_amount", precision: 19, scale: 4
     t.string "currency", null: false
     t.date "target_date"
     t.string "color"
@@ -841,6 +841,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_29_120140) do
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "type::text <> 'Goal'::text OR target_amount IS NOT NULL", name: "chk_goals_savings_requires_target"
     t.check_constraint "type::text <> 'Goal::Retirement'::text OR user_id IS NOT NULL", name: "chk_goals_retirement_requires_owner"
   end
 
