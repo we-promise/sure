@@ -48,21 +48,31 @@
     </div>
 
     <%= form_with url: retirement_path, method: :patch, data: { retirement_what_if_target: "form" }, class: "space-y-3" do |form| %>
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <% [
-          [ "birth_year", @plan.birth_year ],
-          [ "retire_age", @plan.retire_age ],
-          [ "target_spend", @plan.target_spend ],
-          [ "monthly_savings", @plan.monthly_savings ],
-          [ "real_return_pct", @plan.real_return_pct ]
-        ].each do |field, value| %>
-          <label class="text-xs text-secondary space-y-1">
-            <span class="block"><%= t("retirement.what_if.fields.#{field}") %></span>
-            <%= number_field_tag "retirement[#{field}]", value, step: "any",
-                  autocomplete: "off",
-                  class: "form-field__input w-full",
-                  data: { action: "input->retirement-what-if#preview" } %>
-          </label>
+      <% levers = {
+        "retire_age" => { min: 40, max: 75, step: 1 },
+        "target_spend" => { min: 0, max: 20_000, step: 50 },
+        "monthly_savings" => { min: 0, max: 20_000, step: 50 },
+        "real_return_pct" => { min: 0, max: 10, step: 0.1 }
+      } %>
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        <label class="text-xs text-secondary space-y-1">
+          <span class="block"><%= t("retirement.what_if.fields.birth_year") %></span>
+          <%= number_field_tag "retirement[birth_year]", @plan.birth_year, step: 1,
+                autocomplete: "off", class: "form-field__input w-full",
+                data: { action: "input->retirement-what-if#preview" } %>
+        </label>
+
+        <% levers.each do |field, cfg| %>
+          <% value = @plan.public_send(field) %>
+          <div class="space-y-1.5">
+            <label class="text-xs text-secondary block" for="rwi_<%= field %>"><%= t("retirement.what_if.fields.#{field}") %></label>
+            <%= number_field_tag "retirement[#{field}]", value, step: cfg[:step], id: "rwi_#{field}",
+                  autocomplete: "off", class: "form-field__input w-full",
+                  data: { lever: field, action: "input->retirement-what-if#sync" } %>
+            <%= range_field_tag "rwi_#{field}_slider", value, min: cfg[:min], max: cfg[:max], step: cfg[:step],
+                  class: "w-full accent-green-600 cursor-pointer",
+                  data: { lever: field, action: "input->retirement-what-if#sync" } %>
+          </div>
         <% end %>
       </div>
       <%= form.submit t("retirement.what_if.save"), class: "text-sm font-medium text-primary underline cursor-pointer" %>
