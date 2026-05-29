@@ -177,7 +177,7 @@ class EnableBankingItemsController < ApplicationController
       end
 
       # Capture PSU IP for use in background sync PSU headers
-      target_item.update(last_psu_ip: request.remote_ip) if request.remote_ip.present?
+      target_item.record_psu_ip!(request.remote_ip)
 
       language = I18n.locale.to_s.split("-").first
 
@@ -239,7 +239,7 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Refresh PSU IP on callback (user's browser is present here)
-    enable_banking_item.update(last_psu_ip: request.remote_ip) if request.remote_ip.present?
+    enable_banking_item.record_psu_ip!(request.remote_ip)
 
     begin
       enable_banking_item.complete_authorization(code: code)

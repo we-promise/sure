@@ -29,7 +29,7 @@ clean_data:
   cron: "0 3 * * *" # daily at 3:00 AM
   class: "DataCleanerJob"
   queue: "scheduled"
-  description: "Cleans up old data (e.g., expired merchant associations, expired archived exports)"
+  description: "Cleans up old data (e.g., expired merchant associations, expired archived exports, stale Enable Banking PSU IPs)"
 
 clean_debug_log_entries:
   cron: "30 3 * * *" # daily at 3:30 AM
