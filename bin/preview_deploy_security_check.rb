@@ -65,6 +65,11 @@ def normalized_working_directory(value)
   normalized == "." ? "" : normalized
 end
 
+def environment_name(job)
+  environment = job["environment"]
+  environment.is_a?(Hash) ? environment["name"] : environment
+end
+
 workflow = YAML.safe_load_file(WORKFLOW_PATH, aliases: true)
 lockfile = JSON.parse(File.read(LOCKFILE_PATH))
 job = workflow.fetch("jobs").fetch("deploy-preview")
@@ -78,6 +83,7 @@ wrangler = lockfile.fetch("packages").fetch("node_modules/wrangler")
 
 [
   [ "job permissions", job.fetch("permissions"), EXPECTED_PERMISSIONS ],
+  [ "job environment", environment_name(job), "preview" ],
   [ "concurrency group", job.dig("concurrency", "group"), "preview-deploy-${{ github.event.pull_request.number }}" ],
   [ "concurrency cancellation", job.dig("concurrency", "cancel-in-progress"), true ],
   [ "PR_NUMBER env", job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
