@@ -67,11 +67,11 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
       Setting.stubs(:anthropic_access_token).returns(nil)
       assert_not Provider::Anthropic.configured?
 
-      Setting.stubs(:anthropic_access_token).returns("sk-ant-x")
+      Setting.stubs(:anthropic_access_token).returns("fake-token-1")
       assert Provider::Anthropic.configured?
     end
 
-    ClimateControl.modify("ANTHROPIC_API_KEY" => "sk-ant-y") do
+    ClimateControl.modify("ANTHROPIC_API_KEY" => "fake-token-2") do
       Setting.stubs(:anthropic_access_token).returns(nil)
       assert Provider::Anthropic.configured?
     end

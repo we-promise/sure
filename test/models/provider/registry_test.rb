@@ -62,7 +62,7 @@ class Provider::RegistryTest < ActiveSupport::TestCase
   end
 
   test "anthropic provider initializes from ANTHROPIC_API_KEY env" do
-    ClimateControl.modify("ANTHROPIC_API_KEY" => "sk-ant-test", "ANTHROPIC_ACCESS_TOKEN" => nil) do
+    ClimateControl.modify("ANTHROPIC_API_KEY" => "fake-anthropic-key-for-tests", "ANTHROPIC_ACCESS_TOKEN" => nil) do
       Setting.stubs(:anthropic_access_token).returns(nil)
 
       provider = Provider::Registry.get_provider(:anthropic)
@@ -78,7 +78,7 @@ class Provider::RegistryTest < ActiveSupport::TestCase
       "ANTHROPIC_BASE_URL" => "",
       "ANTHROPIC_MODEL" => ""
     ) do
-      Setting.stubs(:anthropic_access_token).returns("sk-ant-from-setting")
+      Setting.stubs(:anthropic_access_token).returns("fake-anthropic-key-from-setting")
       Setting.stubs(:anthropic_base_url).returns(nil)
       Setting.stubs(:anthropic_model).returns(nil)
 
