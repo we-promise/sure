@@ -11,6 +11,28 @@
 
   <%= render "retirement/kpis", plan: @plan %>
 
+  <%# Glide path chart %>
+  <% if @glide.present? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-3">
+      <div>
+        <h2 class="text-primary font-medium"><%= t("retirement.glide.title") %></h2>
+        <p class="text-secondary text-xs"><%= t("retirement.glide.subtitle") %></p>
+      </div>
+      <div class="h-72 w-full privacy-sensitive"
+           data-controller="retirement-glide-chart"
+           data-retirement-glide-chart-data-value="<%= @glide.to_json %>"
+           data-retirement-glide-chart-aria-label-value="<%= t("retirement.glide.title") %>"
+           data-retirement-glide-chart-covered-label-value="<%= t("retirement.glide.covered") %>"
+           data-retirement-glide-chart-portfolio-label-value="<%= t("retirement.glide.portfolio") %>"
+           data-retirement-glide-chart-state-label-value="<%= t("retirement.glide.state") %>"
+           data-retirement-glide-chart-workplace-label-value="<%= t("retirement.glide.workplace") %>"
+           data-retirement-glide-chart-drawdown-label-value="<%= t("retirement.glide.drawdown") %>"
+           data-retirement-glide-chart-total-label-value="<%= t("retirement.glide.total") %>"
+           data-retirement-glide-chart-retire-label-value="<%= t("retirement.glide.retire") %>"
+           data-retirement-glide-chart-coast-label-value="<%= t("retirement.glide.coast") %>"></div>
+    </section>
+  <% end %>
+
   <%# What-if — live recompute on input, persist on save %>
   <section data-controller="retirement-what-if"
            data-retirement-what-if-url-value="<%= forecast_retirement_path %>"

@@ -2,6 +2,7 @@ class RetirementController < ApplicationController
   include RetirementScoped
 
   def show
+    @glide = @plan.glide_payload
     @pension_sources = @plan.pension_sources.order(:start_age)
     @adjustments = @plan.adjustments.ordered
     @statements = @plan.statements.chronological.reverse

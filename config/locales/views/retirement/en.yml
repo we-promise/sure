@@ -38,6 +38,17 @@ en:
       age: "age %{age}"
       past_age: "past %{age}"
       terminal: "~%{amount} left at the end"
+    glide:
+      title: Glide path
+      subtitle: Projected portfolio value · today's money · hover for monthly income at that age
+      covered: Covered
+      portfolio: Portfolio
+      state: State pension
+      workplace: Workplace
+      drawdown: Portfolio drawdown
+      total: Total / mo
+      retire: Retire · age
+      coast: Coast · age
     what_if:
       title: What-if
       hint: Change a lever — the projection updates live.
