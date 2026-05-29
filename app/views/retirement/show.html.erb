@@ -231,6 +231,7 @@
             <th class="py-2"><%= t("retirement.statements.table.date") %></th>
             <th class="py-2"><%= t("retirement.statements.table.source") %></th>
             <th class="py-2"><%= t("retirement.statements.table.points") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.delta") %></th>
             <th class="py-2"><%= t("retirement.statements.table.amount") %></th>
             <th class="py-2"><%= t("retirement.statements.table.age") %></th>
             <th class="py-2"><%= t("retirement.statements.table.notes") %></th>
@@ -243,6 +244,14 @@
               <td class="py-2 text-primary tabular-nums"><%= I18n.l(statement.received_on) %></td>
               <td class="py-2 text-secondary"><%= statement.pension_source.name %></td>
               <td class="py-2 text-secondary tabular-nums"><%= statement.current_points %></td>
+              <td class="py-2 tabular-nums">
+                <% delta = statement.points_delta %>
+                <% if delta.nil? %>
+                  <span class="text-secondary">&mdash;</span>
+                <% else %>
+                  <span class="<%= delta.negative? ? "text-destructive" : "text-success" %>"><%= format("%+.2f", delta) %></span>
+                <% end %>
+              </td>
               <td class="py-2 text-primary tabular-nums privacy-sensitive"><%= statement.projected_monthly_amount_money&.format %></td>
               <td class="py-2 text-secondary tabular-nums"><%= statement.projected_at_age %></td>
               <td class="py-2 text-secondary"><%= statement.raw_source_doc %></td>

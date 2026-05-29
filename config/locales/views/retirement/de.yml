@@ -109,6 +109,7 @@ de:
         date: Datum
         source: Quelle
         points: Entgeltpunkte
+        delta: Δ
         amount: Projiziert
         age: Mit Alter
         notes: Notizen

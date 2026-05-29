@@ -109,6 +109,7 @@ en:
         date: Date
         source: Source
         points: Points
+        delta: Δ
         amount: Projected
         age: At age
         notes: Notes
