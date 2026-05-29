@@ -11,17 +11,21 @@
 
   <%= f.text_field :name, label: t("retirement.pension_sources.form.name"), required: true %>
 
+  <% opt = Struct.new(:value, :label) %>
+  <% loc = ->(prefix, values) { values.map { |v| opt.new(v, t("retirement.pension_sources.#{prefix}.#{v}")) } } %>
+  <% codes = ->(values) { values.map { |v| opt.new(v, v) } } %>
+
   <div class="grid grid-cols-2 gap-3">
-    <%= f.select :kind, PensionSource::KINDS.map { |k| [ t("retirement.pension_sources.kinds.#{k}"), k ] }, { label: t("retirement.pension_sources.form.kind") } %>
-    <%= f.select :country, PensionSource::COUNTRIES, { label: t("retirement.pension_sources.form.country") } %>
+    <%= f.collection_select :kind, loc.call("kinds", PensionSource::KINDS), :value, :label, { label: t("retirement.pension_sources.form.kind") } %>
+    <%= f.collection_select :country, codes.call(PensionSource::COUNTRIES), :value, :label, { label: t("retirement.pension_sources.form.country") } %>
   </div>
 
   <div class="grid grid-cols-2 gap-3">
-    <%= f.select :pension_system, PensionSource::PENSION_SYSTEMS, { label: t("retirement.pension_sources.form.pension_system") } %>
-    <%= f.select :tax_treatment, PensionSource::TAX_TREATMENTS, { label: t("retirement.pension_sources.form.tax_treatment") } %>
+    <%= f.collection_select :pension_system, codes.call(PensionSource::PENSION_SYSTEMS), :value, :label, { label: t("retirement.pension_sources.form.pension_system") } %>
+    <%= f.collection_select :tax_treatment, codes.call(PensionSource::TAX_TREATMENTS), :value, :label, { label: t("retirement.pension_sources.form.tax_treatment") } %>
   </div>
 
-  <%= f.select :payout_shape, PensionSource::PAYOUT_SHAPES.map { |s| [ t("retirement.pension_sources.payout_shapes.#{s}"), s ] }, { label: t("retirement.pension_sources.form.payout_shape") } %>
+  <%= f.collection_select :payout_shape, loc.call("payout_shapes", PensionSource::PAYOUT_SHAPES), :value, :label, { label: t("retirement.pension_sources.form.payout_shape") } %>
 
   <div class="grid grid-cols-2 gap-3">
     <%= f.number_field :start_age, label: t("retirement.pension_sources.form.start_age"), required: true %>
