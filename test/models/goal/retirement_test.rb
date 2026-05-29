@@ -177,4 +177,10 @@ class Goal::RetirementTest < ActiveSupport::TestCase
 
     assert_equal [ { age: source.start_age, amount: 30_000 } ], plan.reload.lump_markers
   end
+
+  test "fi_number is 25x the annual target spend" do
+    plan = goals(:retirement_bob)
+    plan.update!(retirement_params: { "birth_year" => Date.current.year - 40, "target_spend" => 3000 })
+    assert_equal 3000 * 12 * 25, Goal.find(plan.id).fi_number
+  end
 end

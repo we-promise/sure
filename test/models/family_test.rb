@@ -239,5 +239,11 @@ class FamilyTest < ActiveSupport::TestCase
     baseline = families(:dylan_family).retirement_spending_baseline(user: users(:family_admin))
     assert_kind_of Money, baseline
     assert_equal "USD", baseline.currency.iso_code
+    assert_operator baseline.amount, :>=, 0
+  end
+
+  test "trimmed_mean_expense returns a non-negative number" do
+    value = families(:dylan_family).income_statement(user: users(:family_admin)).trimmed_mean_expense
+    assert_operator value, :>=, 0
   end
 end

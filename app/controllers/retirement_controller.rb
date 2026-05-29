@@ -3,6 +3,7 @@ class RetirementController < ApplicationController
 
   def show
     @glide = @plan.glide_payload
+    @baseline = Current.family.retirement_spending_baseline(user: Current.user)
     @pension_sources = @plan.pension_sources.order(:start_age)
     @adjustments = @plan.adjustments.ordered
     @statements = @plan.statements.chronological.reverse

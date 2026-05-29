@@ -78,6 +78,12 @@ class Goal::Retirement < Goal
     target_spend.presence&.to_d || family.retirement_spending_baseline(user: owner).amount
   end
 
+  # The 25× rule of thumb: the portfolio that sustains the target spend at a
+  # 4% withdrawal rate. A tertiary stat next to the spending anchor.
+  def fi_number
+    (target_spend_monthly.to_d * 12 * 25).to_i
+  end
+
   # Sum of selected accounts. v1 assumes the plan currency; cross-currency
   # FX of the bucket is a v1.1 follow-up.
   def bucket_value

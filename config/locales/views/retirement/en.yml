@@ -5,6 +5,7 @@ en:
       title: Retirement
       subtitle: Plan when you can stop working — and what you'll need to get there.
       preview_note: Preview — projections are a single deterministic path in today's money. The polished dashboard arrives in a later update.
+      active_plan: Active plan
       sources_title: Pension sources
       add_source: Add source
       no_sources: No pension sources yet.
@@ -38,6 +39,13 @@ en:
       age: "age %{age}"
       past_age: "past %{age}"
       terminal: "~%{amount} left at the end"
+    why:
+      title: Why this target?
+      subtitle: Trailing 12 months · 10% trimmed mean
+      use_average: Use my average
+      last_12: Last 12 months
+      target: Target
+      fi_number: FI number · 25×
     glide:
       title: Glide path
       subtitle: Projected portfolio value · today's money · hover for monthly income at that age
