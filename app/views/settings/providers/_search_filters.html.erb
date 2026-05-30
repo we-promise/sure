@@ -1,16 +1,13 @@
 <div class="flex flex-wrap items-center gap-2.5 mt-5 mb-3">
-  <div class="relative flex-1 min-w-[200px]">
-    <input type="search"
-           autocomplete="off"
-           data-providers-filter-target="input"
-           data-action="input->providers-filter#filter"
-           aria-label="<%= t("settings.providers.search_filters.aria_label") %>"
-           placeholder="<%= t("settings.providers.search_filters.placeholder") %>"
-           class="block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container focus:ring-gray-500 sm:text-sm">
-    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-      <%= icon "search", class: "text-secondary" %>
-    </div>
-  </div>
+  <%= render DS::SearchInput.new(
+    class: "flex-1 min-w-[200px]",
+    placeholder: t("settings.providers.search_filters.placeholder"),
+    aria_label: t("settings.providers.search_filters.aria_label"),
+    data: {
+      providers_filter_target: "input",
+      action: "input->providers-filter#filter"
+    }
+  ) %>
   <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
     <% %w[all bank crypto investment].each do |kind| %>
       <% active = kind == "all" %>

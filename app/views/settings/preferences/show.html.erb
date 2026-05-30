@@ -137,18 +137,13 @@
                  aria-atomic="true"></p>
             </div>
             <div data-controller="list-filter" class="space-y-3">
-              <div class="relative">
-                <input type="search"
-               autocomplete="off"
-               placeholder="<%= t(".currency_search_placeholder") %>"
-               aria-label="<%= t(".currency_search_placeholder") %>"
-               data-list-filter-target="input"
-               data-action="input->list-filter#filter"
-                class="block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container focus:ring-gray-500 sm:text-sm">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <%= icon("search", class: "text-secondary") %>
-                </div>
-              </div>
+              <%= render DS::SearchInput.new(
+                placeholder: t(".currency_search_placeholder"),
+                data: {
+                  list_filter_target: "input",
+                  action: "input->list-filter#filter"
+                }
+              ) %>
               <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-alpha-black-100 theme-dark:divide-alpha-white-100">
                 <p class="hidden px-4 py-3 text-sm text-secondary" data-list-filter-target="emptyMessage">
                   <%= t(".no_matching_currencies") %>
@@ -192,7 +187,7 @@
             </div>
             <div class="flex justify-end gap-2">
               <%= render DS::Button.new(text: t("shared.cancel"), type: :button, variant: :ghost, data: { action: "DS--dialog#close" }) %>
-              <%= render DS::Button.new(text: t(".save_currencies")) %>
+              <%= render DS::Button.new(text: t(".save_currencies"), type: :submit) %>
             </div>
           <% end %>
         <% end %>

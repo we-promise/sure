@@ -15,8 +15,9 @@ class BinanceItem::Importer
     spot_result   = BinanceItem::SpotImporter.new(binance_item, provider: binance_provider).import
     margin_result = BinanceItem::MarginImporter.new(binance_item, provider: binance_provider).import
     earn_result   = BinanceItem::EarnImporter.new(binance_item, provider: binance_provider).import
+    futures_result = BinanceItem::FuturesImporter.new(binance_item, provider: binance_provider).import
 
-    all_assets = tagged_assets(spot_result) + tagged_assets(margin_result) + tagged_assets(earn_result)
+    all_assets = tagged_assets(spot_result) + tagged_assets(margin_result) + tagged_assets(earn_result) + tagged_assets(futures_result)
 
     return { success: true, assets_imported: 0, total_usd: 0 } if all_assets.empty?
 
@@ -27,13 +28,15 @@ class BinanceItem::Importer
       total_usd: total_usd,
       spot_raw: spot_result[:raw],
       margin_raw: margin_result[:raw],
-      earn_raw: earn_result[:raw]
+      earn_raw: earn_result[:raw],
+      futures_raw: futures_result[:raw]
     )
 
     binance_item.upsert_binance_snapshot!({
       "spot" => spot_result[:raw],
       "margin" => margin_result[:raw],
       "earn" => earn_result[:raw],
+      "futures" => futures_result[:raw],
       "imported_at" => Time.current.iso8601
     })
 
@@ -68,7 +71,7 @@ class BinanceItem::Importer
       0
     end
 
-    def upsert_binance_account(all_assets:, total_usd:, spot_raw:, margin_raw:, earn_raw:)
+    def upsert_binance_account(all_assets:, total_usd:, spot_raw:, margin_raw:, earn_raw:, futures_raw:)
       ba = binance_item.binance_accounts.find_or_initialize_by(account_type: "combined")
 
       ba.assign_attributes(
@@ -80,6 +83,7 @@ class BinanceItem::Importer
           "spot" => spot_raw,
           "margin" => margin_raw,
           "earn" => earn_raw,
+          "futures" => futures_raw,
           "assets" => all_assets.map(&:stringify_keys),
           "fetched_at" => Time.current.iso8601
         }
@@ -90,7 +94,7 @@ class BinanceItem::Importer
     end
 
     def build_institution_metadata(all_assets)
-      %w[spot margin earn].each_with_object({}) do |source, hash|
+      %w[spot margin earn futures].each_with_object({}) do |source, hash|
         source_assets = all_assets.select { |a| a[:source] == source }
         hash[source] = {
           "asset_count" => source_assets.size,

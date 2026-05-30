@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_19_092118) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -924,6 +924,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_092118) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
+    t.uuid "account_statement_id"
+    t.jsonb "expected_record_counts", default: {}, null: false
+    t.jsonb "readback_verification", default: {}, null: false
+    t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -1932,6 +1936,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_092118) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
+  add_foreign_key "imports", "account_statements", on_delete: :nullify
   add_foreign_key "imports", "families"
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"

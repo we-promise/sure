@@ -77,13 +77,13 @@ Enable Pipelock in your Helm values:
 pipelock:
   enabled: true
   image:
-    tag: "2.2.0"
+    tag: "2.5.0"
   mode: balanced
 ```
 
 This creates a separate Deployment, Service, and ConfigMap. The chart auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` into web and worker pods.
 
-Recent pipelock releases add trusted domain allowlisting, MCP tool redirect profiles, enhanced tool poisoning detection (full JSON schema scanning), per-read kill switch preemption, signed action receipts, per-pattern DLP warn mode, and the `pipelock posture verify` / `pipelock session` CLI commands. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
+Recent pipelock releases add the Audit Packet v0 schema and language-portable verifiers (Go/TypeScript/Rust), request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, trusted domain allowlisting, MCP tool redirect profiles, enhanced tool poisoning detection, per-read kill switch preemption, signed action receipts, per-pattern DLP warn mode, learn-and-lock behavioural contracts, the wedge-detection health watchdog, and the `pipelock posture verify` / `pipelock session` / `pipelock doctor` CLI commands. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
 
 ### Exposing MCP to external agents (Kubernetes)
 
@@ -149,6 +149,7 @@ The `pipelock.example.yaml` file (Docker Compose) or ConfigMap (Helm) controls s
 | `trusted_domains` | Allow internal services whose public DNS resolves to private IPs |
 | `forward_proxy` | Outbound HTTPS scanning (tunnel timeouts, idle timeouts) |
 | `dlp` | Data loss prevention (scan env vars, built-in patterns) |
+| `request_body_scanning` | Scan outbound request bodies for prompt-injection and bodies/sensitive headers for DLP (pipelock 2.5+) |
 | `response_scanning` | Scan LLM responses for prompt injection |
 | `mcp_input_scanning` | Scan inbound MCP requests |
 | `mcp_tool_scanning` | Validate tool calls, detect drift |
@@ -156,6 +157,7 @@ The `pipelock.example.yaml` file (Docker Compose) or ConfigMap (Helm) controls s
 | `mcp_session_binding` | Pin tool inventory, detect manipulation |
 | `tool_chain_detection` | Multi-step attack patterns |
 | `websocket_proxy` | WebSocket frame scanning (disabled by default) |
+| `health_watchdog` | Wedge-detection on subsystem heartbeats, returns 503 on stall (pipelock 2.4+) |
 | `logging` | Output format (json/text), verbosity |
 
 For the Helm chart, most sections are configurable via `values.yaml`. For additional sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement), use the `extraConfig` escape hatch:

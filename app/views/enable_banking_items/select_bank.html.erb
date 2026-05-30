@@ -28,7 +28,7 @@
 
           <div class="space-y-2 max-h-80 overflow-y-auto">
             <% @aspsps.each do |aspsp| %>
-              <div data-bank-search-target="item" data-bank-name="<%= aspsp[:name].to_s.downcase(:fold) %>">
+              <div data-bank-search-target="item" data-bank-search="<%= [ aspsp[:name], aspsp[:bic] ].compact_blank.join(" ").downcase(:fold) %>">
                 <%= button_to authorize_enable_banking_item_path(@enable_banking_item),
                               method: :post,
                               params: { aspsp_name: aspsp[:name], new_connection: @new_connection },
@@ -45,9 +45,7 @@
                     <div class="flex items-center gap-2 flex-wrap">
                       <p class="font-medium text-sm text-primary"><%= aspsp[:name] %></p>
                       <% if aspsp[:beta] %>
-                        <span class="text-xs font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                          <%= t(".beta_label", default: "Beta") %>
-                        </span>
+                        <%= render DS::Pill.new(label: t(".beta_label", default: "Beta"), tone: :warning, marker: false) %>
                       <% end %>
                     </div>
                     <% if aspsp[:bic].present? %>
@@ -70,9 +68,12 @@
         <% end %>
 
         <div class="flex justify-end pt-4">
-          <%= link_to t(".cancel", default: "Cancel"), settings_providers_path,
-              class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-              data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+          <%= render DS::Link.new(
+                text: t(".cancel", default: "Cancel"),
+                variant: :secondary,
+                href: settings_providers_path,
+                data: { turbo_frame: "_top", action: "DS--dialog#close" }
+              ) %>
         </div>
       </div>
     <% end %>

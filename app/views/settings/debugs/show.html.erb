@@ -59,7 +59,7 @@
     <% if @debug_log_entries.any? %>
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-surface-default border-b border-primary">
+          <thead class="bg-surface border-b border-primary">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.time") %></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.level") %></th>
@@ -70,7 +70,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.metadata") %></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
             <% @debug_log_entries.each do |entry| %>
               <tr>
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= l(entry.created_at, format: :long) %></td>
@@ -87,10 +87,12 @@
                 </td>
                 <td class="px-4 py-3 text-xs text-secondary align-top">
                   <% if entry.metadata.present? %>
-                    <details>
-                      <summary class="cursor-pointer"><%= t(".table.view_metadata") %></summary>
-                      <pre class="mt-2 whitespace-pre-wrap break-words"><%= JSON.pretty_generate(entry.metadata) %></pre>
-                    </details>
+                    <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
+                      <% disclosure.with_summary_content do %>
+                        <span class="text-xs text-secondary"><%= t(".table.view_metadata") %></span>
+                      <% end %>
+                      <pre class="whitespace-pre-wrap break-words"><%= JSON.pretty_generate(entry.metadata) %></pre>
+                    <% end %>
                   <% else %>
                     <%= t(".missing_value") %>
                   <% end %>

@@ -27,21 +27,27 @@ class UsersController < ApplicationController
       end
     else
       was_ai_enabled = @user.ai_enabled
-      @user.update!(user_params.except(:redirect_to, :delete_profile_image))
-      @user.profile_image.purge if should_purge_profile_image?
+      if @user.update(user_params.except(:redirect_to, :delete_profile_image))
+        @user.profile_image.purge if should_purge_profile_image?
 
-      # Add a special notice if AI was just enabled or disabled
-      notice = if !was_ai_enabled && @user.ai_enabled
-        "AI Assistant has been enabled successfully."
-      elsif was_ai_enabled && !@user.ai_enabled
-        "AI Assistant has been disabled."
+        # Add a special notice if AI was just enabled or disabled
+        notice = if !was_ai_enabled && @user.ai_enabled
+          "AI Assistant has been enabled successfully."
+        elsif was_ai_enabled && !@user.ai_enabled
+          "AI Assistant has been disabled."
+        else
+          t(".success")
+        end
+
+        respond_to do |format|
+          format.html { handle_redirect(notice) }
+          format.json { head :ok }
+        end
       else
-        t(".success")
-      end
-
-      respond_to do |format|
-        format.html { handle_redirect(notice) }
-        format.json { head :ok }
+        respond_to do |format|
+          format.html { redirect_to settings_profile_path, alert: @user.errors.full_messages.to_sentence }
+          format.json { render json: { errors: @user.errors.full_messages }, status: :unprocessable_entity }
+        end
       end
     end
   end
