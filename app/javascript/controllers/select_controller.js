@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { autoUpdate } from "@floating-ui/dom"
 
 export default class extends Controller {
-  static targets = ["button", "menu", "input", "content"]
+  static targets = ["button", "menu", "input", "content", "option"]
   static values = {
     menuPlacement: { type: String, default: "auto" },
     offset: { type: Number, default: 6 }
@@ -70,12 +70,14 @@ export default class extends Controller {
     const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
     if (previousSelected) {
       previousSelected.setAttribute("aria-selected", "false")
+      previousSelected.setAttribute("tabindex", "-1")
       previousSelected.classList.remove("bg-container-inset")
       const prevIcon = previousSelected.querySelector(".check-icon")
       if (prevIcon) prevIcon.classList.add("hidden")
     }
 
     selectedElement.setAttribute("aria-selected", "true")
+    selectedElement.setAttribute("tabindex", "0")
     selectedElement.classList.add("bg-container-inset")
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")
@@ -130,8 +132,66 @@ export default class extends Controller {
 
   handleKeydown(event) {
     if (!this.isOpen) return
-    if (event.key === "Escape") { this.close(); this.buttonTarget.focus() }
-    if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click() }
+    if (event.key === "Escape") { this.close(); this.buttonTarget.focus(); return }
+    if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
+
+    // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
+    // between options (roving tabindex), Home/End jump to first/last.
+    // From the search input, ArrowDown/Up bridge into the visible
+    // options so users can reach the filtered matches; other keys
+    // (typing, caret movement) stay with the input.
+    const fromSearch = event.target.matches('input[type="search"]')
+    const visibleOptions = this.visibleOptions()
+    if (fromSearch) {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return
+      if (visibleOptions.length === 0) return
+      event.preventDefault()
+      const targetIndex = event.key === "ArrowDown" ? 0 : visibleOptions.length - 1
+      this.rovingFocus(visibleOptions, targetIndex)
+      return
+    }
+
+    if (visibleOptions.length === 0) return
+    const currentIndex = visibleOptions.indexOf(event.target)
+    let nextIndex = null
+    switch (event.key) {
+      case "ArrowDown": nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % visibleOptions.length; break
+      case "ArrowUp": nextIndex = currentIndex < 0 ? visibleOptions.length - 1 : (currentIndex - 1 + visibleOptions.length) % visibleOptions.length; break
+      case "Home": nextIndex = 0; break
+      case "End": nextIndex = visibleOptions.length - 1; break
+      default: return
+    }
+    event.preventDefault()
+    this.rovingFocus(visibleOptions, nextIndex)
+  }
+
+  // Roving tabindex helper: makes the target option tabbable (and
+  // focuses it), clears tabindex on every other option in the listbox.
+  rovingFocus(visibleOptions, index) {
+    const all = this.hasOptionTarget ? this.optionTargets : []
+    const target = visibleOptions[index]
+    all.forEach(opt => opt.setAttribute("tabindex", opt === target ? "0" : "-1"))
+    target.focus()
+  }
+
+  // Options the user can currently see — list-filter hides non-matches
+  // by setting `style.display = "none"`. Inline check keeps it cheap.
+  visibleOptions() {
+    const options = this.hasOptionTarget ? this.optionTargets : []
+    return options.filter(opt => opt.style.display !== "none")
+  }
+
+  // After list-filter#filter runs, the option holding tabindex="0" may
+  // be hidden. Promote the first visible option so Tab from the search
+  // input still lands somewhere reachable; if none match, no-op.
+  syncTabindex() {
+    const visible = this.visibleOptions()
+    if (visible.length === 0) return
+    const tabbable = visible.find(opt => opt.getAttribute("tabindex") === "0")
+    if (tabbable) return
+    const all = this.hasOptionTarget ? this.optionTargets : []
+    all.forEach(opt => opt.setAttribute("tabindex", "-1"))
+    visible[0].setAttribute("tabindex", "0")
   }
 
   handleTurboLoad() { if (this.isOpen) this.close() }

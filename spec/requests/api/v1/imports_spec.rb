@@ -286,7 +286,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration and row statistics.'
+      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

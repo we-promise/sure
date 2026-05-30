@@ -1,0 +1,159 @@
+---
+vi:
+  simplefin_items:
+    new:
+      title: Kết nối SimpleFIN
+      setup_token: Mã thiết lập
+      setup_token_placeholder: dán mã thiết lập SimpleFIN của bạn vào đây
+      connect: Kết nối
+      cancel: Hủy
+    create:
+      success: Kết nối SimpleFIN đã được thêm thành công! Các tài khoản của bạn sẽ xuất hiện sau khi đồng bộ trong nền.
+      errors:
+        blank_token: Vui lòng nhập mã thiết lập SimpleFIN.
+        invalid_token: Mã thiết lập không hợp lệ. Vui lòng kiểm tra rằng bạn đã sao chép toàn bộ mã từ SimpleFIN Bridge.
+        token_compromised: Mã thiết lập có thể đã bị xâm phạm, hết hạn hoặc đã được sử dụng. Vui lòng tạo mã mới.
+        create_failed: "Kết nối thất bại: %{message}"
+        unexpected: Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.
+    destroy:
+      success: Kết nối SimpleFIN sẽ được gỡ bỏ
+    update:
+      success: Kết nối SimpleFIN đã được cập nhật thành công! Các tài khoản của bạn đang được kết nối lại.
+      errors:
+        blank_token: Vui lòng nhập mã thiết lập SimpleFIN.
+        invalid_token: Mã thiết lập không hợp lệ. Vui lòng kiểm tra rằng bạn đã sao chép toàn bộ mã từ SimpleFIN Bridge.
+        token_compromised: Mã thiết lập có thể đã bị xâm phạm, hết hạn hoặc đã được sử dụng. Vui lòng tạo mã mới.
+        update_failed: "Cập nhật kết nối thất bại: %{message}"
+        unexpected: Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.
+    edit:
+      setup_token:
+        label: "Mã thiết lập SimpleFIN:"
+        placeholder: "Dán mã thiết lập SimpleFIN của bạn vào đây..."
+        help_text: "Mã phải là một chuỗi dài bắt đầu bằng chữ cái và số"
+      title: Cập nhật kết nối SimpleFIN
+      header_subtitle: Lấy mã thiết lập mới để kết nối lại tài khoản SimpleFIN của bạn
+      connection_needs_update: "Kết nối SimpleFIN của bạn cần được cập nhật:"
+      step_1_html: "Truy cập <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> để tạo mã thiết lập mới"
+      step_2: Sao chép mã và dán vào bên dưới
+      step_3: "Nhấn \"Cập nhật\" để khôi phục quyền truy cập"
+      update: Cập nhật
+      cancel: Hủy
+    setup_accounts:
+      title: Thiết lập tài khoản SimpleFIN của bạn
+      header_subtitle: Chọn đúng loại tài khoản cho các tài khoản đã nhập
+      choose_account_type: "Chọn đúng loại tài khoản cho mỗi tài khoản SimpleFIN:"
+      account_type_checking_savings: Tài khoản thanh toán hoặc tiết kiệm
+      account_type_checking_savings_desc: Tài khoản ngân hàng thông thường
+      account_type_credit_card: Thẻ tín dụng
+      account_type_credit_card_desc: Tài khoản thẻ tín dụng
+      account_type_investment: Đầu tư
+      account_type_investment_desc: "Tài khoản Brokerage, 401(k), IRA"
+      account_type_loan: Vay hoặc thế chấp
+      account_type_loan_desc: Tài khoản nợ
+      account_type_other_asset: Tài sản khác
+      account_type_other_asset_desc: Tất cả các loại khác
+      transaction_history_title: "Lịch sử giao dịch:"
+      transaction_history_description_html: "SimpleFIN thường cung cấp <strong>60-90 ngày</strong> lịch sử giao dịch, tùy thuộc vào ngân hàng của bạn. Sau khi thiết lập ban đầu, các giao dịch mới sẽ tự động đồng bộ. Dữ liệu lịch sử có sẵn tùy theo tổ chức và loại tài khoản."
+      account_type_label: "Loại tài khoản:"
+      create_accounts: Tạo tài khoản
+      creating_accounts: Đang tạo tài khoản...
+      cancel: Hủy
+      account_card:
+        balance: "Số dư"
+      activity:
+        recent:
+          one: "1 giao dịch • mới nhất %{when}"
+          other: "%{count} giao dịch • mới nhất %{when}"
+        dormant: "Không có hoạt động trong %{days} ngày"
+        empty: "Chưa nhập giao dịch nào"
+        likely_closed: "Không có hoạt động gần đây và số dư bằng không — thẻ này có thể đã đóng hoặc bị thay thế"
+        today: "hôm nay"
+        yesterday: "hôm qua"
+        days_ago:
+          one: "1 ngày trước"
+          other: "%{count} ngày trước"
+      stale_accounts:
+        title: "Tài khoản không còn trong SimpleFIN"
+        description: "Các tài khoản này tồn tại trong cơ sở dữ liệu của bạn nhưng không còn được SimpleFIN cung cấp. Điều này có thể xảy ra khi cấu hình tài khoản thay đổi ở phía trên."
+        action_prompt: "Bạn muốn làm gì?"
+        action_delete: "Xóa tài khoản và tất cả giao dịch"
+        action_move: "Chuyển giao dịch sang:"
+        action_skip: "Bỏ qua lúc này"
+        transaction_count:
+          one: "%{count} giao dịch"
+          other: "%{count} giao dịch"
+    complete_account_setup:
+      all_skipped: "Tất cả tài khoản đã bị bỏ qua. Không có tài khoản nào được tạo."
+      no_accounts: "Không có tài khoản nào để thiết lập."
+      success:
+        one: "Đã tạo thành công %{count} tài khoản SimpleFIN! Các giao dịch và tài sản của bạn đang được nhập trong nền."
+        other: "Đã tạo thành công %{count} tài khoản SimpleFIN! Các giao dịch và tài sản của bạn đang được nhập trong nền."
+      stale_accounts_processed: "Tài khoản cũ: %{deleted} đã xóa, %{moved} đã chuyển."
+      stale_accounts_errors:
+        one: "%{count} thao tác tài khoản cũ thất bại. Kiểm tra nhật ký để biết chi tiết."
+        other: "%{count} thao tác tài khoản cũ thất bại. Kiểm tra nhật ký để biết chi tiết."
+    simplefin_item:
+      add_new: Thêm kết nối mới
+      confirm_accept: Xóa kết nối
+      confirm_body: Thao tác này sẽ xóa vĩnh viễn tất cả tài khoản trong nhóm này và tất cả dữ liệu liên quan.
+      confirm_title: Xóa kết nối SimpleFIN?
+      delete: Xóa
+      deletion_in_progress: "(đang xóa...)"
+      error: Đã xảy ra lỗi khi đồng bộ dữ liệu
+      no_accounts_description: Kết nối này chưa có tài khoản nào được đồng bộ.
+      no_accounts_title: Không tìm thấy tài khoản
+      requires_update: Kết nối lại
+      setup_needed: Tài khoản mới sẵn sàng để thiết lập
+      setup_description: Chọn loại tài khoản cho các tài khoản SimpleFIN mới được nhập.
+      setup_action: Thiết lập tài khoản mới
+      setup_accounts_menu: Thiết lập tài khoản
+      more_accounts_available:
+        one: "%{count} tài khoản khác có sẵn để thiết lập"
+        other: "%{count} tài khoản khác có sẵn để thiết lập"
+      accounts_skipped_tooltip: "Một số tài khoản đã bị bỏ qua do lỗi trong quá trình đồng bộ"
+      accounts_skipped_label: "Đã bỏ qua: %{count}"
+      rate_limited_ago: "Bị giới hạn tốc độ (%{time} trước)"
+      rate_limited_recently: "Bị giới hạn tốc độ gần đây"
+      status: Đồng bộ lần cuối %{timestamp} trước
+      status_never: Chưa bao giờ đồng bộ
+      status_with_summary: "Đồng bộ lần cuối %{timestamp} trước • %{summary}"
+      syncing: Đang đồng bộ...
+      update: Cập nhật
+      stale_pending_note: "(loại trừ khỏi ngân sách)"
+      stale_pending_accounts: "trong: %{accounts}"
+      reconciled_details_note: "(xem tóm tắt đồng bộ để biết chi tiết)"
+      duplicate_accounts_skipped: "Một số tài khoản đã bị bỏ qua vì trùng lặp — dùng 'Liên kết tài khoản hiện có' để hợp nhất."
+    select_existing_account:
+      title: "Liên kết %{account_name} với SimpleFIN"
+      description: Chọn tài khoản SimpleFIN để liên kết với tài khoản hiện có của bạn
+      cancel: Hủy
+      link_account: Liên kết tài khoản
+      no_accounts_found: "Không tìm thấy tài khoản SimpleFIN nào cho %{moniker} này."
+      wait_for_sync: Nếu bạn vừa kết nối hoặc đồng bộ, hãy thử lại sau khi quá trình đồng bộ hoàn tất.
+      unlink_to_move: Để chuyển liên kết, trước tiên hãy hủy liên kết từ menu thao tác của tài khoản.
+      all_accounts_already_linked: Tất cả tài khoản SimpleFIN có vẻ đã được liên kết.
+      currently_linked_to: "Hiện đang liên kết với: %{account_name}"
+
+    link_existing_account:
+      success: Tài khoản đã được liên kết thành công với SimpleFIN
+      errors:
+        only_manual: Chỉ tài khoản thủ công mới có thể được liên kết
+        different_provider: Tài khoản này đang liên kết với nhà cung cấp khác. Hãy hủy liên kết từ nhà cung cấp đó trước, sau đó liên kết với SimpleFIN.
+        invalid_simplefin_account: Tài khoản SimpleFIN được chọn không hợp lệ
+    dismiss_replacement_suggestion:
+      dismissed: Đề xuất thay thế đã bị bỏ qua
+    replacement_prompt:
+      title: "Thẻ %{institution} của bạn có thể đã được thay thế"
+      description: '"%{account_name}" được liên kết với "%{old_name}", vốn không có hoạt động gần đây và số dư bằng không. Một thẻ mới, "%{new_name}", hiện đang hoạt động tại cùng tổ chức. Liên kết lại để giữ nguyên lịch sử của bạn.'
+      relink: Liên kết lại với thẻ mới
+      confirm_title: Liên kết lại với thẻ mới?
+      confirm_body: '"%{account_name}" sẽ được liên kết với "%{new_name}". Lịch sử giao dịch vẫn được giữ; các giao dịch tương lai sẽ đến từ thẻ mới.'
+      dismiss_aria: Bỏ qua đề xuất thay thế
+    reconciled_status:
+      message:
+        one: "%{count} giao dịch đang chờ trùng lặp đã được đối soát"
+        other: "%{count} giao dịch đang chờ trùng lặp đã được đối soát"
+    stale_pending_status:
+      message:
+        one: "%{count} giao dịch đang chờ cũ hơn %{days} ngày"
+        other: "%{count} giao dịch đang chờ cũ hơn %{days} ngày"

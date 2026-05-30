@@ -22,6 +22,9 @@ jobs:
       - name: Scan for security vulnerabilities in Ruby dependencies
         run: bin/brakeman --no-pager
 
+      - name: Validate preview deploy workflow hardening
+        run: ruby bin/preview_deploy_security_check.rb
+
   scan_js:
     runs-on: ubuntu-latest
     timeout-minutes: 10
