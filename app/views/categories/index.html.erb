@@ -11,6 +11,14 @@
   <% end %>
 
   <%= render DS::Link.new(
+    text: t(".merge"),
+    variant: "outline",
+    icon: "combine",
+    href: merge_categories_path,
+    frame: :modal
+  ) %>
+
+  <%= render DS::Link.new(
     text: t(".new"),
     variant: "primary",
     icon: "plus",

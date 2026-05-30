@@ -1,97 +1,256 @@
 name: Deploy PR Preview
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-    paths-ignore:
-      - 'charts/**'
-      - 'docs/**'
-      - '*.md'
+  workflow_run:
+    workflows: ["Pull Request"]
+    types: [completed]
+
+permissions:
+  contents: read
 
 jobs:
+  preview-gate:
+    if: |
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    name: Validate preview deployment gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    outputs:
+      artifact_name: ${{ steps.preview.outputs.artifact_name }}
+      head_sha: ${{ steps.preview.outputs.head_sha }}
+      pr_number: ${{ steps.preview.outputs.pr_number }}
+      should_deploy: ${{ steps.preview.outputs.should_deploy }}
+
+    steps:
+      - name: Resolve preview request
+        id: preview
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const workflowRun = context.payload.workflow_run;
+            const runPr = workflowRun.pull_requests?.[0];
+
+            core.setOutput('should_deploy', 'false');
+
+            if (!runPr) {
+              core.info('Workflow run is not associated with a pull request');
+              return;
+            }
+
+            const prNumber = runPr.number;
+            const headSha = workflowRun.head_sha;
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            if (pullRequest.head.sha !== headSha) {
+              core.setFailed(`Workflow run head SHA ${headSha} does not match PR head ${pullRequest.head.sha}`);
+              return;
+            }
+
+            const hasPreviewLabel = pullRequest.labels.some((label) => label.name === 'preview-cf');
+            if (!hasPreviewLabel) {
+              core.info(`PR ${prNumber} does not have the preview-cf label`);
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+            const workflowChanges = files
+              .map((file) => file.filename)
+              .filter((filename) => filename.startsWith('.github/workflows/'));
+
+            if (workflowChanges.length > 0) {
+              core.setFailed(`Preview deployment requires base-trusted workflow definitions; changed workflow files: ${workflowChanges.join(', ')}`);
+              return;
+            }
+
+            const artifactName = `preview-image-pr-${prNumber}-${headSha}`;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: workflowRun.id,
+              per_page: 100,
+            });
+            const artifact = artifacts.find((item) => item.name === artifactName && !item.expired);
+
+            if (!artifact) {
+              core.setFailed(`Pull Request workflow run ${workflowRun.id} did not publish ${artifactName}`);
+              return;
+            }
+
+            core.setOutput('artifact_name', artifactName);
+            core.setOutput('head_sha', headSha);
+            core.setOutput('pr_number', String(prNumber));
+            core.setOutput('should_deploy', 'true');
+
   deploy-preview:
-    if: contains(github.event.pull_request.labels.*.name, 'preview-cf')
+    needs: preview-gate
+    if: needs.preview-gate.outputs.should_deploy == 'true'
     name: Deploy to Cloudflare Containers
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
+    concurrency:
+      group: preview-deploy-${{ needs.preview-gate.outputs.pr_number }}
+      cancel-in-progress: true
+    environment: preview
     permissions:
       actions: read
       contents: read
       pull-requests: write
       deployments: write
+    env:
+      ARTIFACT_NAME: ${{ needs.preview-gate.outputs.artifact_name }}
+      HEAD_SHA: ${{ needs.preview-gate.outputs.head_sha }}
+      PR_NUMBER: ${{ needs.preview-gate.outputs.pr_number }}
 
     steps:
-      - name: Wait for PR CI to pass
-        uses: actions/github-script@v7
+      - name: Checkout trusted preview tooling
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
-          script: |
-            const headSha = context.payload.pull_request.head.sha;
-            const timeoutMs = 10 * 60 * 1000;
-            const pollMs = 15 * 1000;
-            const startedAt = Date.now();
-            let lastState = 'not found';
+          ref: ${{ github.event.repository.default_branch }}
+          path: trusted
+          persist-credentials: false
+          sparse-checkout: |
+            workers/preview
 
-            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      - name: Download preview image artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/preview-image
 
-            while (Date.now() - startedAt < timeoutMs) {
-              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                event: 'pull_request',
-                head_sha: headSha,
-                per_page: 20,
-              });
+      - name: Verify preview image artifact checksum
+        run: |
+          set -euo pipefail
 
-              const prRun = data.workflow_runs.find((run) => run.name === 'Pull Request' && run.head_sha === headSha);
+          image_archive="$RUNNER_TEMP/preview-image/sure-preview-image.tar.gz"
+          checksum_file="$RUNNER_TEMP/preview-image/sure-preview-image.sha256"
 
-              if (prRun) {
-                lastState = `${prRun.status}/${prRun.conclusion ?? 'pending'}`;
-                core.info(`Pull Request workflow ${prRun.id}: ${lastState}`);
+          test -f "$image_archive"
+          test -f "$checksum_file"
 
-                if (prRun.status === 'completed') {
-                  if (prRun.conclusion === 'success') {
-                    return;
-                  }
+          expected_checksum="$(tr -d '[:space:]' < "$checksum_file")"
+          actual_checksum="$(sha256sum "$image_archive" | awk '{print $1}')"
 
-                  core.setFailed(`Pull Request workflow concluded with ${prRun.conclusion}`);
-                  return;
-                }
-              }
-
-              await sleep(pollMs);
-            }
-
-            core.setFailed(`Timed out waiting for Pull Request workflow for ${headSha}. Last state: ${lastState}`);
-
-      - name: Checkout code
-        uses: actions/checkout@v5
+          if [ "$expected_checksum" != "$actual_checksum" ]; then
+            echo "Preview image artifact checksum mismatch" >&2
+            exit 1
+          fi
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: "24"
 
-      - name: Install Wrangler dependencies
-        working-directory: workers/preview
-        run: npm install
-
-      - name: Configure preview files for this PR
-        working-directory: workers/preview
+      - name: Prepare trusted preview deploy workspace
         run: |
-          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" wrangler.toml
-          sed -i "s/\${PR_NUMBER}/${{ github.event.pull_request.number }}/g" src/index.ts
-          cat wrangler.toml
+          set -euo pipefail
+
+          preview_dir="$RUNNER_TEMP/sure-preview-worker"
+          rm -rf "$preview_dir"
+          mkdir -p "$preview_dir"
+
+          cp trusted/workers/preview/package.json "$preview_dir/package.json"
+          cp trusted/workers/preview/package-lock.json "$preview_dir/package-lock.json"
+          cp trusted/workers/preview/tsconfig.json "$preview_dir/tsconfig.json"
+          cp trusted/workers/preview/wrangler.toml "$preview_dir/wrangler.toml"
+          cp -R trusted/workers/preview/src "$preview_dir/src"
+
+          sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" "$preview_dir/wrangler.toml"
+          sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" "$preview_dir/src/index.ts"
+
+          cd "$preview_dir"
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Load preview image artifact
+        run: |
+          set -euo pipefail
+
+          image_archive="$RUNNER_TEMP/preview-image/sure-preview-image.tar.gz"
+          expected_image="sure-preview-pr-${PR_NUMBER}:${HEAD_SHA}"
+
+          gzip -dc "$image_archive" | docker load
+          docker image inspect "$expected_image" >/dev/null
+
+      - name: Push preview image to Cloudflare registry
+        id: image
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          cd "$RUNNER_TEMP/sure-preview-worker"
+          image_tag="sure-preview-pr-${PR_NUMBER}:${HEAD_SHA}"
+          push_log="$RUNNER_TEMP/wrangler-containers-push.log"
+          clean_log="$RUNNER_TEMP/wrangler-containers-push.clean.log"
+
+          ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log"
+          perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$push_log" > "$clean_log"
+          image_ref=$(grep -Eo 'registry\.cloudflare\.com/[^[:space:]]+' "$clean_log" | tail -n 1 | tr -d '\r')
+
+          if [ -z "$image_ref" ]; then
+            echo "Could not find Cloudflare registry image reference in wrangler output" >&2
+            exit 1
+          fi
+
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure trusted preview image reference
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"
+          # Use Node instead of sed so the replacement preserves TOML string syntax.
+          node - "$config_path" <<'NODE'
+          const fs = require('node:fs');
+
+          const configPath = process.argv[2];
+          const imageRef = process.env.IMAGE_REF;
+
+          if (!imageRef || !imageRef.startsWith('registry.cloudflare.com/')) {
+            throw new Error('Expected a Cloudflare registry image reference');
+          }
+
+          const original = fs.readFileSync(configPath, 'utf8');
+          const updated = original.replace(/image = "[^"]+"/, `image = ${JSON.stringify(imageRef)}`);
+          if (updated === original) {
+            throw new Error('Expected wrangler.toml to contain an image entry to rewrite');
+          }
+          fs.writeFileSync(configPath, updated);
+          NODE
+
+          cat "$config_path"
 
       - name: Create GitHub Deployment
         id: deployment
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
+            const prNumber = process.env.PR_NUMBER;
+            const headSha = process.env.HEAD_SHA;
             const deployment = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: context.payload.pull_request.head.sha,
-              environment: `preview-pr-${{ github.event.pull_request.number }}`,
+              ref: headSha,
+              environment: `preview-pr-${prNumber}`,
               auto_merge: false,
               required_contexts: [],
               description: 'PR Preview Deployment'
@@ -101,15 +260,18 @@ jobs:
 
       - name: Deploy to Cloudflare Containers
         id: deploy
-        working-directory: workers/preview
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}
         run: |
-          npx wrangler deploy --var "PR_NUMBER:${{ github.event.pull_request.number }}"
+          set -euo pipefail
+
+          cd "$RUNNER_TEMP/sure-preview-worker"
+          ./node_modules/.bin/wrangler deploy --config wrangler.toml --var "PR_NUMBER:${PR_NUMBER}"
 
           # Get the deployment URL
-          PREVIEW_URL="https://sure-preview-${{ github.event.pull_request.number }}.${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev"
+          PREVIEW_URL="https://sure-preview-${PR_NUMBER}.${CLOUDFLARE_WORKERS_SUBDOMAIN}.workers.dev"
           echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Warm preview container
@@ -121,25 +283,33 @@ jobs:
 
       - name: Update Deployment Status
         if: always() && steps.deployment.outputs.result
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.result }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         with:
           script: |
             const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+            const previewUrl = process.env.PREVIEW_URL || undefined;
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: ${{ steps.deployment.outputs.result }},
+              deployment_id: Number(process.env.DEPLOYMENT_ID),
               state: state,
-              environment_url: state === 'success' ? '${{ steps.deploy.outputs.preview_url }}' : undefined,
+              environment_url: state === 'success' ? previewUrl : undefined,
               description: state === 'success' ? 'Preview deployed successfully' : 'Preview deployment failed'
             });
 
       - name: Comment on PR
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         with:
           script: |
-            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const previewUrl = process.env.PREVIEW_URL;
+            const issueNumber = Number(process.env.PR_NUMBER);
+            const headSha = process.env.HEAD_SHA;
             const commentBody = `## 🚀 Preview Deployment Ready
 
             Your preview environment has been deployed to Cloudflare Containers with the PR's Docker image.
@@ -150,13 +320,13 @@ jobs:
             > 💤 The container will sleep after 30 minutes of inactivity and wake on the next request.
 
             ---
-            <sub>Deployed from commit ${{ github.event.pull_request.head.sha }}</sub>`;
+            <sub>Deployed from commit ${headSha}</sub>`;
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: ${{ github.event.pull_request.number }}
+              issue_number: issueNumber
             });
 
             const botComment = comments.find(comment =>
@@ -175,15 +345,15 @@ jobs:
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: ${{ github.event.pull_request.number }},
+                issue_number: issueNumber,
                 body: commentBody
               });
             }
+
       - name: Store cleanup metadata
         if: success()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: preview-cleanup-pr-${{ github.event.pull_request.number }}
-          path: |
-            workers/preview/wrangler.toml
+          name: preview-cleanup-pr-${{ env.PR_NUMBER }}
+          path: ${{ runner.temp }}/sure-preview-worker/wrangler.toml
           retention-days: 2

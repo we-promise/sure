@@ -1,7 +1,7 @@
 <%# locals: (category:) %>
 <% category ||= Category.uncategorized %>
 
-<div class="min-w-0 w-full">
+<div class="min-w-0">
   <span class="flex w-full items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border focus-visible:outline-none focus-visible:ring-0"
         style="
           background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);

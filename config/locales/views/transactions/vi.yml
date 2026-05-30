@@ -1,0 +1,340 @@
+---
+vi:
+  transactions:
+    bulk_updates:
+      new:
+        cancel: Hủy
+        category_label: Danh mục
+        category_prompt: Chọn danh mục
+        date_label: Ngày
+        header_title: Chỉnh sửa giao dịch
+        merchant_label: Nhà cung cấp
+        merchant_prompt: Chọn nhà cung cấp
+        name_label: Tên
+        name_placeholder: Nhập tên sẽ được áp dụng cho các giao dịch đã chọn
+        none: "(không có)"
+        notes_label: Ghi chú
+        notes_placeholder: Nhập ghi chú sẽ được áp dụng cho các giao dịch đã chọn
+        overview: Tổng quan
+        save: Lưu
+        tags_label: Nhãn
+        transactions_section: Giao dịch
+    unknown_name: Giao dịch không xác định
+    selection_bar:
+      duplicate: Nhân đôi
+      edit: Chỉnh sửa
+      selected: đã chọn
+    form:
+      details: Chi tiết
+      account: Tài khoản
+      account_prompt: Chọn tài khoản
+      amount: Số tiền
+      category: Danh mục
+      category_label: Danh mục
+      category_prompt: Chọn danh mục
+      date: Ngày
+      description: Mô tả
+      description_placeholder: Mô tả giao dịch
+      expense: Chi tiêu
+      income: Thu nhập
+      merchant_label: Nhà cung cấp
+      none: (không có)
+      note_label: Ghi chú
+      note_placeholder: Nhập ghi chú
+      submit: Thêm giao dịch
+      tags_label: Nhãn
+      transfer: Chuyển khoản
+    create:
+      created: Đã tạo giao dịch
+    update:
+      updated: Đã cập nhật giao dịch
+    new:
+      new_transaction: Giao dịch mới
+    show:
+      keep_both: Không, giữ cả hai
+      loan_payment: Thanh toán khoản vay
+      mark_recurring: Đánh dấu là định kỳ
+      mark_recurring_subtitle: Theo dõi giao dịch định kỳ này. Mức biến động được tự động tính từ 6 tháng giao dịch tương tự.
+      mark_recurring_title: Giao dịch định kỳ
+      merge_duplicate: Có, gộp lại
+      potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã đăng bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
+      potential_duplicate_title: Phát hiện trùng lặp có thể
+      transfer: Chuyển khoản
+      account_label: Tài khoản
+      amount: Số tiền
+      category_label: Danh mục
+      date_label: Ngày
+      delete: Xóa
+      delete_subtitle: Thao tác này xóa vĩnh viễn giao dịch, ảnh hưởng số dư lịch sử và không thể hoàn tác.
+      delete_title: Xóa giao dịch
+      details: Chi tiết
+      attachments: Tệp đính kèm
+      exclude: Loại trừ
+      exclude_description: Giao dịch bị loại trừ sẽ bị xóa khỏi tính toán ngân sách và báo cáo.
+      activity_type: Loại hoạt động
+      activity_type_description: Loại hoạt động đầu tư (Mua, Bán, Cổ tức, v.v.). Tự động phát hiện hoặc đặt thủ công.
+      one_time_title: "%{type} một lần"
+      one_time_description: Giao dịch một lần sẽ bị loại trừ khỏi một số tính toán ngân sách và báo cáo.
+      convert_to_trade_title: Chuyển đổi thành giao dịch chứng khoán
+      convert_to_trade_description: Chuyển giao dịch này thành giao dịch Mua hoặc Bán với thông tin chứng khoán để theo dõi danh mục.
+      convert_to_trade_button: Chuyển đổi thành giao dịch
+      transfer_matcher_description: Kết nối giao dịch này với giao dịch đối ứng trong tài khoản khác.
+      pending_duplicate_merger_title: Trùng lặp với giao dịch đã đăng?
+      pending_duplicate_merger_description: Gộp thủ công giao dịch đang chờ này với phiên bản đã đăng.
+      pending_duplicate_merger_button: Mở công cụ gộp
+      merchant_label: Nhà cung cấp
+      name_label: Tên
+      nature: Loại
+      none: "(không có)"
+      note_label: Ghi chú
+      note_placeholder: Nhập ghi chú
+      overview: Tổng quan
+      settings: Cài đặt
+      tags_label: Nhãn
+      tab_transactions: Giao dịch
+      tab_upcoming: Sắp tới
+      uncategorized: "(chưa phân loại)"
+      additional_details: "Thông tin bổ sung"
+      payee: "Người nhận"
+      description: "Mô tả"
+      memo: "Ghi nhớ"
+      provider_extras: "Thông tin nhà cung cấp"
+      transfer_or_debt_payment: "Chuyển khoản hay Thanh toán nợ?"
+      open_matcher: "Mở công cụ khớp"
+      convert: "Chuyển đổi"
+    activity_labels:
+      buy: Mua
+      sell: Bán
+      sweep_in: Chuyển vào
+      sweep_out: Chuyển ra
+      dividend: Cổ tức
+      reinvestment: Tái đầu tư
+      interest: Lãi
+      fee: Phí
+      transfer: Chuyển khoản
+      contribution: Đóng góp
+      withdrawal: Rút tiền
+      exchange: Trao đổi
+      other: Khác
+    mark_recurring: Đánh dấu là định kỳ
+    mark_recurring_subtitle: Theo dõi giao dịch định kỳ này. Mức biến động được tự động tính từ 6 tháng giao dịch tương tự.
+    mark_recurring_title: Giao dịch định kỳ
+    potential_duplicate_title: Phát hiện trùng lặp có thể
+    potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã đăng bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
+    merge_duplicate_button: Có, gộp lại
+    keep_both: Không, giữ cả hai
+    split_parent_row:
+      split_label: "Phân chia"
+    transfer_match:
+      auto_matched: Tự động khớp
+      auto_matched_short: T/K
+      confirm_match: Xác nhận khớp
+      payment_confirmed: Thanh toán đã được xác nhận
+      reject_match: Từ chối khớp
+      transfer_confirmed: Chuyển khoản đã được xác nhận
+    transaction:
+      pending: Đang chờ
+      pending_tooltip: Giao dịch đang chờ — có thể thay đổi khi được đăng
+      linked_with_provider: Liên kết với %{provider}
+      activity_type_tooltip: Loại hoạt động đầu tư
+      possible_duplicate: Trùng lặp?
+      potential_duplicate_tooltip: Đây có thể là giao dịch trùng lặp
+      review_recommended: Xem xét
+      review_recommended_tooltip: Chênh lệch số tiền lớn — nên xem xét để kiểm tra trùng lặp
+      split: Phân chia
+      split_tooltip: Giao dịch này đã được phân chia thành nhiều mục
+      split_child_tooltip: Một phần của giao dịch phân chia
+    merge_duplicate:
+      success: Đã gộp giao dịch thành công
+      failure: Không thể gộp giao dịch
+    dismiss_duplicate:
+      success: Giữ nguyên là các giao dịch riêng biệt
+      failure: Không thể bỏ qua đề xuất trùng lặp
+    pending_duplicate_merge:
+      possible_duplicate: Trùng lặp?
+      possible_duplicate_short: Trùng?
+      review_recommended: Xem xét
+      review_recommended_short: Xem
+      confirm_title: "Gộp với giao dịch đã đăng (%{posted_amount})"
+      reject_title: Giữ nguyên là các giao dịch riêng biệt
+    summary:
+      total_transactions: Tổng giao dịch
+      income: Thu nhập
+      expenses: Chi tiêu
+      inflow: Dòng tiền vào
+      outflow: Dòng tiền ra
+    header:
+      edit_categories: Chỉnh sửa danh mục
+      edit_imports: Chỉnh sửa nhập dữ liệu
+      edit_merchants: Chỉnh sửa nhà cung cấp
+      edit_tags: Chỉnh sửa nhãn
+      import: Nhập
+    index:
+      title: "Giao dịch"
+      transaction: giao dịch
+      transactions: giao dịch
+      import: Nhập
+      new_rule: "Quy tắc mới"
+      edit_rules: "Chỉnh sửa quy tắc"
+      edit_categories: "Chỉnh sửa danh mục"
+      edit_tags: "Chỉnh sửa nhãn"
+      edit_merchants: "Chỉnh sửa nhà cung cấp"
+      edit_imports: "Chỉnh sửa nhập dữ liệu"
+      new_transaction: "Giao dịch mới"
+      categorize_button:
+        one: "Phân loại (1)"
+        other: "Phân loại (%{count})"
+    categorizes:
+      show:
+        exit: "Thoát"
+        skip: "Bỏ qua"
+        remaining:
+          one: "Còn 1 giao dịch chưa phân loại"
+          other: "Còn %{count} giao dịch chưa phân loại"
+        transaction_count:
+          one: "1 giao dịch"
+          other: "%{count} giao dịch"
+        transactions_hint: "Bỏ chọn để loại trừ giao dịch, hoặc gán danh mục khác trực tiếp trong hàng."
+        assign_category: "Gán danh mục"
+        assign_category_prompt: "→ gán"
+        filter_placeholder: "Tìm kiếm danh mục..."
+        col_transaction: "Giao dịch"
+        col_date: "Ngày"
+        col_amount: "Số tiền"
+        col_category: "Danh mục"
+        type_income: "Thu nhập"
+        type_expense: "Chi tiêu"
+        create_rule_label: "Tạo quy tắc phân loại"
+        rule_description_prefix: "Các giao dịch %{type} trong tương lai có tên chứa"
+        rule_description_suffix: "cũng nên được gán danh mục này."
+        no_categories: "Không có danh mục phù hợp"
+        all_done: "Tất cả giao dịch đã được phân loại"
+      create:
+        categorized:
+          one: "1 giao dịch đã được phân loại"
+          other: "%{count} giao dịch đã được phân loại"
+        rule_creation_failed: "Giao dịch đã được phân loại, nhưng không thể tạo quy tắc (có thể đã tồn tại)."
+      entry_row:
+        include_checkbox: "Bao gồm %{name}"
+        assign_category_select: "Gán danh mục cho %{name}"
+    list:
+      drag_drop_title: Thả CSV để nhập
+      drag_drop_subtitle: Tải lên giao dịch trực tiếp
+      transaction: giao dịch
+      transactions: giao dịch
+    toggle_recurring_section: Bật/tắt giao dịch định kỳ sắp tới
+    search:
+      filters:
+        account: Tài khoản
+        date: Ngày
+        type: Loại
+        status: Trạng thái
+        amount: Số tiền
+        category: Danh mục
+        tag: Nhãn
+        merchant: Nhà cung cấp
+    convert_to_trade:
+      title: Chuyển đổi thành giao dịch chứng khoán
+      description: Chuyển giao dịch này thành giao dịch với thông tin chứng khoán
+      date_label: "Ngày:"
+      account_label: "Tài khoản:"
+      amount_label: "Số tiền:"
+      security_label: Chứng khoán
+      security_prompt: Chọn chứng khoán...
+      security_custom: "+ Nhập mã ticker tùy chỉnh"
+      security_not_listed_hint: Không thấy chứng khoán? Chọn "Nhập mã ticker tùy chỉnh" ở cuối danh sách.
+      ticker_placeholder: AAPL
+      ticker_hint: "Nhập mã cổ phiếu/ETF (ví dụ: AAPL, MSFT)"
+      ticker_search_placeholder: Tìm kiếm mã ticker...
+      ticker_search_hint: Tìm theo mã ticker hoặc tên công ty, hoặc nhập mã ticker tùy chỉnh
+      price_mismatch_title: Giá có thể không khớp
+      price_mismatch_message: "Giá của bạn (%{entered_price}/cổ phiếu) khác đáng kể so với giá thị trường hiện tại của %{ticker} (%{market_price}). Nếu có vẻ sai, bạn có thể đã chọn nhầm chứng khoán — thử \"Nhập mã ticker tùy chỉnh\"."
+      quantity_label: Số lượng (Cổ phiếu)
+      quantity_placeholder: ví dụ 20
+      quantity_hint: Số cổ phiếu giao dịch
+      price_label: Giá mỗi cổ phiếu
+      price_placeholder: ví dụ 52.15
+      price_hint: Giá mỗi cổ phiếu (%{currency})
+      qty_or_price_hint: Nhập ít nhất số lượng HOẶC giá. Giá trị còn lại sẽ được tính từ số tiền giao dịch (%{amount}).
+      trade_type_label: Loại giao dịch
+      trade_type_hint: Mua hoặc Bán cổ phiếu của một chứng khoán
+      exchange_label: Sàn giao dịch (Tùy chọn)
+      exchange_placeholder: XNAS
+      exchange_hint: Để trống để tự động phát hiện
+      cancel: Hủy
+      submit: Chuyển đổi thành giao dịch
+      success: Giao dịch đã được chuyển đổi thành giao dịch chứng khoán
+      conversion_note: "Chuyển đổi từ giao dịch: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Chỉ giao dịch trong tài khoản đầu tư mới có thể chuyển đổi
+        already_converted: Giao dịch này đã được chuyển đổi hoặc loại trừ
+        enter_ticker: Vui lòng nhập mã ticker
+        security_not_found: Chứng khoán đã chọn không còn tồn tại. Vui lòng chọn chứng khoán khác.
+        select_security: Vui lòng chọn hoặc nhập chứng khoán
+        enter_qty_or_price: Vui lòng nhập số lượng hoặc giá mỗi cổ phiếu. Giá trị còn lại sẽ được tính từ số tiền giao dịch.
+        invalid_qty_or_price: Số lượng hoặc giá không hợp lệ. Vui lòng nhập giá trị dương hợp lệ.
+        conversion_failed: "Chuyển đổi giao dịch thất bại: %{error}"
+        unexpected_error: "Lỗi không mong muốn trong quá trình chuyển đổi: %{error}"
+    searches:
+      filters:
+        date_filter:
+          start_date: "Ngày bắt đầu"
+          end_date: "Ngày kết thúc"
+        amount_filter:
+          equal_to: Bằng
+          greater_than: Lớn hơn
+          less_than: Nhỏ hơn
+          placeholder: '0'
+        badge:
+          expense: Chi tiêu
+          income: Thu nhập
+          on_or_after: từ ngày %{date} trở đi
+          on_or_before: đến ngày %{date}
+          transfer: Chuyển khoản
+          confirmed: Đã xác nhận
+          pending: Đang chờ
+        type_filter:
+          expense: Chi tiêu
+          income: Thu nhập
+          transfer: Chuyển khoản
+        status_filter:
+          confirmed: Đã xác nhận
+          pending: Đang chờ
+      menu:
+        account_filter: Tài khoản
+        amount_filter: Số tiền
+        apply: Áp dụng
+        cancel: Hủy
+        category_filter: Danh mục
+        clear_filters: Xóa bộ lọc
+        date_filter: Ngày
+        merchant_filter: Nhà cung cấp
+        status_filter: Trạng thái
+        tag_filter: Nhãn
+        type_filter: Loại
+      search:
+        equal_to: bằng
+        greater_than: lớn hơn
+        less_than: nhỏ hơn
+      form:
+        toggle_selection_checkboxes: Bật/tắt tất cả ô chọn
+        search_placeholder: "Tìm kiếm giao dịch ..."
+        filter: "Lọc"
+    attachments:
+      cannot_exceed: "Không được vượt quá %{count} tệp đính kèm mỗi giao dịch"
+      uploaded_one: "Đã tải lên tệp đính kèm thành công"
+      uploaded_many: "Đã tải lên %{count} tệp đính kèm thành công"
+      failed_upload: "Tải lên tệp đính kèm thất bại: %{error}"
+      no_files_selected: "Chưa chọn tệp để tải lên"
+      attachment_deleted: "Đã xóa tệp đính kèm thành công"
+      failed_delete: "Xóa tệp đính kèm thất bại: %{error}"
+      upload_failed: "Tải lên tệp đính kèm thất bại. Vui lòng thử lại hoặc liên hệ hỗ trợ."
+      delete_failed: "Xóa tệp đính kèm thất bại. Vui lòng thử lại hoặc liên hệ hỗ trợ."
+      upload: "Tải lên"
+      no_attachments: "Chưa có tệp đính kèm"
+      select_up_to: "Chọn tối đa %{count} tệp (ảnh hoặc PDF, tối đa %{size}MB mỗi tệp) • %{used}/%{count} đã dùng"
+      files:
+        one: "Tệp (1)"
+        other: "Tệp (%{count})"
+      browse_to_add: "Duyệt để thêm tệp"
+      max_reached: "Đã đạt giới hạn tệp tối đa (%{count}/%{max}). Xóa tệp hiện có để tải lên tệp khác."

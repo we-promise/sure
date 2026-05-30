@@ -1,0 +1,6 @@
+---
+vi:
+  messages:
+    chat_form:
+      placeholder: "Hỏi bất cứ điều gì ..."
+      disclaimer: "Phản hồi của AI chỉ mang tính thông tin. Không phải tư vấn tài chính!"
