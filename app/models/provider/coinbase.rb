@@ -131,27 +131,24 @@ class Provider::Coinbase
       results.first(limit)
     end
 
-    # Generate JWT token for CDP API authentication
-    # Uses Ed25519 signing algorithm
-    def generate_jwt(method, path)
-      # Decode the base64 private key
-      private_key_bytes = Base64.decode64(api_secret)
+    # Accepts PEM with real newlines or escaped \n (common when pasted from Coinbase's JSON download).
+    def parse_ec_private_key(pem)
+      OpenSSL::PKey::EC.new(pem.to_s.gsub('\n', "\n"))
+    end
 
-      # Create Ed25519 signing key
-      signing_key = Ed25519::SigningKey.new(private_key_bytes[0, 32])
+    def generate_jwt(method, path)
+      private_key = parse_ec_private_key(api_secret)
 
       now = Time.now.to_i
       uri = "#{method} api.coinbase.com#{path}"
 
-      # JWT header
       header = {
-        alg: "EdDSA",
+        alg: "ES256",
         kid: api_key,
         nonce: SecureRandom.hex(16),
         typ: "JWT"
       }
 
-      # JWT payload
       payload = {
         sub: api_key,
         iss: "cdp",
@@ -160,14 +157,17 @@ class Provider::Coinbase
         uri: uri
       }
 
-      # Encode header and payload
       encoded_header = Base64.urlsafe_encode64(header.to_json, padding: false)
       encoded_payload = Base64.urlsafe_encode64(payload.to_json, padding: false)
 
-      # Sign
       message = "#{encoded_header}.#{encoded_payload}"
-      signature = signing_key.sign(message)
-      encoded_signature = Base64.urlsafe_encode64(signature, padding: false)
+      der_sig = private_key.sign(OpenSSL::Digest::SHA256.new, message)
+
+      # DER → raw r||s (64 bytes) as required by JWT ES256
+      asn1 = OpenSSL::ASN1.decode(der_sig)
+      r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
+      s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
+      encoded_signature = Base64.urlsafe_encode64(r + s, padding: false)
 
       "#{message}.#{encoded_signature}"
     end
