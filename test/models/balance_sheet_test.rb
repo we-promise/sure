@@ -52,18 +52,38 @@ class BalanceSheetTest < ActiveSupport::TestCase
     period = Period.custom(start_date: Date.current - 1.day, end_date: Date.current)
     active_account = create_account(balance: 20_000, accountable: Depository.new)
     disabled_account = create_account(balance: 0, accountable: Depository.new)
+    pending_deletion_account = create_account(balance: 0, accountable: Depository.new)
     disabled_account.disable!
+    pending_deletion_account.mark_for_deletion!
 
     create_balance(account: active_account, date: period.start_date, balance: 10_000)
     create_balance(account: active_account, date: period.end_date, balance: 20_000)
     create_balance(account: disabled_account, date: period.start_date, balance: 20_000)
     create_balance(account: disabled_account, date: period.end_date, balance: 10_000)
+    create_balance(account: pending_deletion_account, date: period.start_date, balance: 40_000)
+    create_balance(account: pending_deletion_account, date: period.end_date, balance: 80_000)
 
     series = BalanceSheet.new(@family).net_worth_series(period: period)
     values_by_date = series.values.index_by(&:date)
 
     assert_equal 30_000, values_by_date.fetch(period.start_date).value.amount
     assert_equal 30_000, values_by_date.fetch(period.end_date).value.amount
+  end
+
+  test "historical account scope respects shared-account finance settings" do
+    member = users(:new_email)
+    included_account = create_account(balance: 0, accountable: Depository.new)
+    excluded_account = create_account(balance: 0, accountable: Depository.new)
+
+    included_account.disable!
+    excluded_account.disable!
+    included_account.share_with!(member, include_in_finances: true)
+    excluded_account.share_with!(member, include_in_finances: false)
+
+    account_ids = BalanceSheet::HistoricalAccountScope.new(@family, user: member).account_ids
+
+    assert_includes account_ids, included_account.id
+    assert_not_includes account_ids, excluded_account.id
   end
 
   test "calculates asset group totals" do
