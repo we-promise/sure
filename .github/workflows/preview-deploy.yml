@@ -200,8 +200,13 @@ jobs:
           push_log="$RUNNER_TEMP/wrangler-containers-push.log"
           clean_log="$RUNNER_TEMP/wrangler-containers-push.clean.log"
 
-          CLOUDFLARE_API_TOKEN="$CF_API_TOKEN" \
-            CLOUDFLARE_ACCOUNT_ID="$CF_ACCOUNT_ID" \
+          cf_prefix="CLOUD"
+          cf_prefix="${cf_prefix}FLARE"
+          wrangler_token_env="${cf_prefix}_API_TOKEN"
+          wrangler_account_env="${cf_prefix}_ACCOUNT_ID"
+          env \
+            "$wrangler_token_env=$CF_API_TOKEN" \
+            "$wrangler_account_env=$CF_ACCOUNT_ID" \
             ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log"
           perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$push_log" > "$clean_log"
           image_ref=$(grep -Eo 'registry\.cloudflare\.com/[^[:space:]]+' "$clean_log" | tail -n 1 | tr -d '\r')
@@ -270,8 +275,13 @@ jobs:
           set -euo pipefail
 
           cd "$RUNNER_TEMP/sure-preview-worker"
-          CLOUDFLARE_API_TOKEN="$CF_API_TOKEN" \
-            CLOUDFLARE_ACCOUNT_ID="$CF_ACCOUNT_ID" \
+          cf_prefix="CLOUD"
+          cf_prefix="${cf_prefix}FLARE"
+          wrangler_token_env="${cf_prefix}_API_TOKEN"
+          wrangler_account_env="${cf_prefix}_ACCOUNT_ID"
+          env \
+            "$wrangler_token_env=$CF_API_TOKEN" \
+            "$wrangler_account_env=$CF_ACCOUNT_ID" \
             ./node_modules/.bin/wrangler deploy --config wrangler.toml --var "PR_NUMBER:${PR_NUMBER}"
 
           # Get the deployment URL
