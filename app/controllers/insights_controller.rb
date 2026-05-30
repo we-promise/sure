@@ -1,6 +1,11 @@
 class InsightsController < ApplicationController
   before_action :set_insight, only: %i[read dismiss]
 
+  # TODO: insights are generated family-wide by GenerateInsightsJob and are
+  # currently shown to every user in the family. In families that use account
+  # sharing, a limited member could see signals derived from accounts they
+  # don't have access to. Follow-up PR should either generate per user or
+  # filter visible insights against the current user's accessible accounts.
   def index
     @insights = Current.family.insights.visible.by_priority
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("insights.index.title"), nil ] ]
