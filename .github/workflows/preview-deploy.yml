@@ -422,17 +422,19 @@ jobs:
             const previewUrl = process.env.PREVIEW_URL;
             const issueNumber = Number(process.env.PR_NUMBER);
             const headSha = process.env.HEAD_SHA;
-            const commentBody = `## 🚀 Preview Deployment Ready
-
-            Your preview environment has been deployed to Cloudflare Containers with the PR's Docker image.
-
-            **Preview URL:** ${previewUrl}
-
-            > ⏰ This preview is intended to be cleaned up after **24 hours** of the last deployment once the cleanup workflow is live on the default branch.
-            > 💤 The container will sleep after 30 minutes of inactivity and wake on the next request.
-
-            ---
-            <sub>Deployed from commit ${headSha}</sub>`;
+            const commentBody = [
+              '## 🚀 Preview Deployment Ready',
+              '',
+              "Your preview environment has been deployed to Cloudflare Containers with the PR's Docker image.",
+              '',
+              `**Preview URL:** ${previewUrl}`,
+              '',
+              '> ⏰ This preview is intended to be cleaned up after **24 hours** of the last deployment once the cleanup workflow is live on the default branch.',
+              '> 💤 The container will sleep after 30 minutes of inactivity and wake on the next request.',
+              '',
+              '---',
+              `<sub>Deployed from commit ${headSha}</sub>`,
+            ].join('\n');
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
