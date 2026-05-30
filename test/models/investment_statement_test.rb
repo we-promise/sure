@@ -177,6 +177,51 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 3980, trend.previous.amount, 0.001
   end
 
+  test "period_return_trend returns nil when no balance data in period" do
+    period = Period.custom(start_date: 10.years.ago.to_date, end_date: 9.years.ago.to_date)
+    assert_nil @statement.period_return_trend(period: period)
+  end
+
+  test "period_return_trend returns nil when start portfolio value is zero" do
+    account = create_investment_account(balance: 5000)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    # Balance only inside the period — nothing strictly before period_start means start_value = 0
+    account.balances.create!(
+      date: period.date_range.begin,
+      balance: 5000,
+      currency: @family.currency,
+      net_market_flows: 200
+    )
+    assert_nil @statement.period_return_trend(period: period)
+  end
+
+  test "period_return_trend returns Trend with correct absolute and percent return" do
+    account = create_investment_account(balance: 10_500)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+
+    # Pre-period row: start_non_cash_balance drives end_balance (virtual stored column)
+    account.balances.create!(
+      date: period.date_range.begin - 1.day,
+      balance: 10_000,
+      currency: @family.currency,
+      start_non_cash_balance: 10_000,
+      net_market_flows: 0
+    )
+    # In-period row: 500 of market gains
+    account.balances.create!(
+      date: period.date_range.begin,
+      balance: 10_500,
+      currency: @family.currency,
+      start_non_cash_balance: 10_000,
+      net_market_flows: 500
+    )
+
+    trend = @statement.period_return_trend(period: period)
+    assert_not_nil trend
+    assert_in_delta 500, trend.value.amount, 1
+    assert_in_delta 5.0, trend.percent, 0.1
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(

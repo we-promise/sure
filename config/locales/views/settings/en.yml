@@ -160,6 +160,7 @@ en:
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
+        member_owns_other_family_data: This member still owns accounts in another household and cannot be removed. Transfer or remove those accounts first.
         member_removal_failed: There was a problem removing the member.
         member_removed: Member was successfully removed.
         not_authorized: You are not authorized to remove members.
@@ -374,6 +375,9 @@ en:
         connect_button: Connect Binance
         syncing: Syncing...
         sync: Sync
+        historical_import: "Historical Import Settings"
+        sync_start_date_label: "Import data from"
+        sync_start_date_help: "Select how far back to fetch historical trades."
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
       kraken_panel:
         step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'

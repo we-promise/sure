@@ -1,0 +1,53 @@
+---
+vi:
+  admin:
+    users:
+      index:
+        title: "Quản lý người dùng"
+        description: "Quản lý vai trò người dùng cho phiên bản của bạn. Quản trị viên cấp cao có thể truy cập cài đặt nhà cung cấp SSO và quản lý người dùng."
+        section_title: "Gia đình / Nhóm"
+        you: "(Bạn)"
+        trial_ends_at: "Kết thúc dùng thử"
+        not_available: "n/a"
+        no_users: "Không tìm thấy người dùng nào."
+        unnamed_family: "Gia đình/Nhóm chưa đặt tên"
+        no_subscription: "Không có gói đăng ký"
+        family_summary: "%{members} thành viên · %{accounts} tài khoản · %{transactions} giao dịch"
+        filters:
+          role: "Vai trò"
+          role_all: "Tất cả vai trò"
+          trial_status: "Trạng thái dùng thử"
+          trial_all: "Tất cả"
+          trial_expiring_soon: "Hết hạn trong 7 ngày"
+          trial_trialing: "Đang dùng thử"
+          submit: "Lọc"
+        summary:
+          trials_expiring_7_days: "Các bản dùng thử hết hạn trong 7 ngày tới"
+        table:
+          user: "Người dùng"
+          trial_ends_at: "Kết thúc dùng thử"
+          family_accounts: "Tài khoản gia đình"
+          family_transactions: "Giao dịch gia đình"
+          last_login: "Đăng nhập lần cuối"
+          session_count: "Số phiên"
+          never: "Chưa bao giờ"
+          role: "Vai trò"
+        role_descriptions_title: "Mô tả vai trò"
+        roles:
+          guest: "Khách"
+          member: "Thành viên"
+          admin: "Quản trị viên"
+          super_admin: "Quản trị viên cấp cao"
+        role_descriptions:
+          guest: "Trải nghiệm ưu tiên trợ lý với quyền hạn bị hạn chế có chủ ý cho quy trình giới thiệu."
+          member: "Quyền truy cập người dùng cơ bản. Có thể quản lý tài khoản, giao dịch và cài đặt của riêng họ."
+          admin: "Quản trị viên gia đình. Có thể truy cập các cài đặt nâng cao như khóa API, nhập dữ liệu và lệnh AI."
+          super_admin: "Quản trị viên phiên bản. Có thể quản lý nhà cung cấp SSO, vai trò người dùng và mạo danh người dùng để hỗ trợ."
+        invitations:
+          pending_label: "Đã mời (đang chờ)"
+          expires: "Hết hạn %{date}"
+          delete: "Xóa"
+          delete_all: "Xóa tất cả"
+      update:
+        success: "Vai trò người dùng đã được cập nhật thành công."
+        failure: "Không thể cập nhật vai trò người dùng."
