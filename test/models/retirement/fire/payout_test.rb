@@ -32,4 +32,18 @@ class Retirement::Fire::PayoutTest < ActiveSupport::TestCase
     assert_equal 620 * 12, p.contribute_at(70)[:income]
     assert_equal 0, p.contribute_at(70)[:portfolio_delta]
   end
+
+  test "net_rate honors effective_rate_override, else falls back to the static rate" do
+    overridden = Payout.new(kind: "workplace", shape: "monthly_for_life", tax_treatment: "de_bav", start_age: 65, monthly_amount: 100, effective_rate_override: 1.0)
+    assert_equal 1.0.to_d, overridden.net_rate(2050)
+
+    default = Payout.new(kind: "workplace", shape: "monthly_for_life", tax_treatment: "de_bav", start_age: 65, monthly_amount: 100)
+    assert_in_delta 0.74, default.net_rate(2050).to_f, 0.0001
+  end
+
+  test "net_income_at applies the rate to gross income" do
+    p = Payout.new(kind: "state", shape: "monthly_for_life", tax_treatment: "de_bav", start_age: 65, monthly_amount: 100, effective_rate_override: 0.5)
+    assert_equal (1200 * 0.5).to_d, p.net_income_at(65, 2050)
+    assert_equal 0.to_d, p.net_income_at(64, 2050)
+  end
 end

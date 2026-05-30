@@ -57,11 +57,10 @@ module Retirement
               gross = { state: 0.to_d, workplace: 0.to_d, other: 0.to_d }
               lump = 0.to_d
               i.payouts.each do |payout|
-                contribution = payout.contribute_at(age)
-                net = Retirement::Tax::StaticRate.net_at(contribution[:income], payout.tax_treatment, retire_year: i.retire_year)
+                net = payout.net_income_at(age, i.retire_year)
                 bucket = gross.key?(payout.kind.to_sym) ? payout.kind.to_sym : :other
                 gross[bucket] += net
-                lump += contribution[:portfolio_delta]
+                lump += payout.contribute_at(age)[:portfolio_delta]
               end
 
               total_income = gross.values.sum
@@ -115,7 +114,12 @@ module Retirement
         def required_at_retirement
           @required_at_retirement ||= begin
             lo = 0.to_d
-            hi = [ i.annual_target_spend.to_d * 50, 1.to_d ].max
+            # Bound on the PEAK annual target across the drawdown (≈ a 2% SWR
+            # floor on it), not just the base spend — otherwise a positive
+            # spending adjustment (e.g. higher healthcare) could push the true
+            # requirement above `hi` and the bisection would under-shoot.
+            peak_target = (i.retire_age..i.terminal_age).map { |age| annual_target_at(age) }.max
+            hi = [ peak_target * 50, 1.to_d ].max
             40.times do
               mid = (lo + hi) / 2
               survives_drawdown?(mid) ? hi = mid : lo = mid
@@ -130,9 +134,8 @@ module Retirement
             gross = 0.to_d
             lump = 0.to_d
             i.payouts.each do |payout|
-              contribution = payout.contribute_at(age)
-              gross += Retirement::Tax::StaticRate.net_at(contribution[:income], payout.tax_treatment, retire_year: i.retire_year)
-              lump += contribution[:portfolio_delta]
+              gross += payout.net_income_at(age, i.retire_year)
+              lump += payout.contribute_at(age)[:portfolio_delta]
             end
             drawdown = [ annual_target_at(age) - gross, 0.to_d ].max
             portfolio = (portfolio * rate) + lump - drawdown

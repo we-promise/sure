@@ -71,6 +71,17 @@ class Retirement::Fire::ForecastTest < ActiveSupport::TestCase
     assert_equal 6_240, row[:drawdown]        # 24,000 - 17,760
   end
 
+  test "a pension net-rate override is honored (no static discount)" do
+    result = Forecast.new(inputs(
+      retire_age: 65, starting_portfolio: 5_000_000, annual_target_spend: 24_000,
+      payouts: [ payout(kind: "workplace", tax_treatment: "de_bav", start_age: 65, monthly_amount: 2000, effective_rate_override: 1.0) ]
+    )).call
+
+    row = result.income_by_year.first
+    assert_equal 24_000, row[:workplace]      # full gross kept, not 0.74×
+    assert_equal 0, row[:drawdown]
+  end
+
   test "a negative adjustment lowers the target spend from its age" do
     result = Forecast.new(inputs(
       retire_age: 65, starting_portfolio: 5_000_000, annual_target_spend: 24_000,

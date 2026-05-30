@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Live "what-if": debounce input changes and POST the current plan inputs
+// Live "what-if": debounce input changes and PATCH the current plan inputs
 // to the forecast endpoint, which streams back the recomputed KPI cards
 // without persisting. Saving is a separate form submit (#update).
 export default class extends Controller {

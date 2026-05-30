@@ -92,8 +92,10 @@ class Goal::Retirement < Goal
   end
 
   def forecast_inputs
-    retire = effective_retire_age
     current = current_age
+    # Clamp retire age to at least the current age: a lower value would
+    # produce a past retire_year and a nonsensical "freedom date".
+    retire = [ effective_retire_age, current ].max
     ::Retirement::Fire::Inputs.new(
       current_age: current,
       retire_age: retire,

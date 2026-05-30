@@ -15,8 +15,11 @@ module Retirement
         money_lasts_to_age >= terminal_age
       end
 
+      # Defensive: glide is always non-empty on the normal path (it starts
+      # with [current_age, portfolio]), but guard so a degenerate result
+      # can't raise on nil.
       def terminal_age
-        glide.last.first
+        glide.last&.first || 0
       end
 
       def portfolio_at_retirement(retire_age)
