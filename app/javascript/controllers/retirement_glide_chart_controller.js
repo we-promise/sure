@@ -222,9 +222,17 @@ export default class extends Controller {
     }
 
     const showAt = (mx) => {
-      const age = Math.round(x.invert(mx))
-      const pt = data.series.find((d) => d.age === age)
+      // Snap to the nearest series point so the tooltip never no-ops at the
+      // edges or if an integer age is ever skipped.
+      const rawAge = x.invert(mx)
+      let pt = null
+      let best = Number.POSITIVE_INFINITY
+      for (const d of data.series) {
+        const dist = Math.abs(d.age - rawAge)
+        if (dist < best) { best = dist; pt = d }
+      }
       if (!pt) return
+      const age = pt.age
       crosshair.attr("x1", x(age)).attr("x2", x(age)).style("display", null)
       dot.attr("cx", x(age)).attr("cy", y(pt.value)).style("display", null)
 

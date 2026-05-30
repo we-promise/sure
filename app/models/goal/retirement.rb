@@ -165,13 +165,13 @@ class Goal::Retirement < Goal
     {
       currency_symbol: Money.new(0, currency).currency.symbol,
       current_age: current_age,
-      retire_age: effective_retire_age,
+      retire_age: clamped_retire_age,
       terminal_age: effective_terminal_age,
       coast_age: base.coast_age,
       money_lasts_to_age: base.money_lasts_to_age,
       lasts_past_terminal: base.lasts_past_terminal?,
       target_monthly: target_spend_monthly.to_i,
-      retire_value: base.portfolio_at_retirement(effective_retire_age),
+      retire_value: base.portfolio_at_retirement(clamped_retire_age),
       series: base.glide.map { |age, value| { age: age, value: value } },
       shadow_series: shadow.glide.map { |age, value| { age: age, value: value } },
       band_low: band_low.glide.map { |age, value| { age: age, value: value } },
@@ -180,7 +180,7 @@ class Goal::Retirement < Goal
         {
           age: row[:age], state: row[:state], workplace: row[:workplace],
           other: row[:other], drawdown: row[:drawdown], shortfall: row[:shortfall],
-          covered: row[:shortfall].zero?
+          covered: row[:shortfall] <= 0
         }
       end,
       lumps: lump_markers

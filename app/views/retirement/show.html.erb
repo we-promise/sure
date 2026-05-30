@@ -177,7 +177,7 @@
           <% negative = adjustment.amount_today.to_d.negative? %>
           <li class="flex items-center justify-between gap-2 rounded-xl border border-secondary bg-surface-inset p-3">
             <div class="flex items-center gap-2 min-w-0">
-              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg <%= negative ? "bg-green-500/10" : "bg-amber-500/10" %>">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg <%= negative ? "bg-success/10" : "bg-warning/10" %>">
                 <%= icon(negative ? "trending-down" : "trending-up", size: "sm", color: negative ? "success" : "warning") %>
               </span>
               <div class="min-w-0">

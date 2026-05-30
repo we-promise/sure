@@ -127,12 +127,15 @@ class IncomeStatement
 
   # Trailing-N-month mean monthly expense with the top/bottom `trim_pct`%
   # of months dropped — a robust spend anchor for retirement planning that
-  # ignores one-off spikes (a big quarter, a zero month). Returns a numeric
-  # in the family currency.
+  # ignores one-off spikes. Uses the `months` COMPLETE months before the
+  # current one (offset 1..months), so the partial current month doesn't
+  # drag the anchor down. Empty months (no data yet) are skipped so a short
+  # history isn't diluted toward zero. Returns a numeric in the family
+  # currency.
   def trimmed_mean_expense(months: 12, trim_pct: 10)
-    today = Date.current
+    first_complete = Date.current.beginning_of_month - 1.month
     monthly = (0...months).map do |offset|
-      start = today.beginning_of_month - offset.months
+      start = first_complete - offset.months
       totals(date_range: start..start.end_of_month).expense_money.amount
     end.reject(&:zero?)
 
