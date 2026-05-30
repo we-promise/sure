@@ -14,7 +14,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
       next if name.blank?
 
       days_overdue = (Date.current - rt.next_expected_date).to_i
-      amount = rt.amount.to_f.abs
+      amount = rt.amount.abs
 
       metadata = {
         "recurring_transaction_id" => rt.id,

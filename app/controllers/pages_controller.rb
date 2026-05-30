@@ -24,6 +24,8 @@ class PagesController < ApplicationController
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
 
+    @dashboard_insights = Current.family.insights.status_active.by_priority.limit(3)
+
     @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.dashboard"), nil ] ]
@@ -89,8 +91,8 @@ class PagesController < ApplicationController
           key: "insights_feed",
           title: "pages.dashboard.insights_feed.title",
           partial: "pages/dashboard/insights_feed",
-          locals: {},
-          visible: Current.family.insights.visible.any?,
+          locals: { insights: @dashboard_insights },
+          visible: @dashboard_insights.any?,
           collapsible: true
         },
         {

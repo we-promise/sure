@@ -9,9 +9,9 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
     return [] if current <= 0
 
     crossed = highest_crossed_milestone(balance_sheet, current)
-    all_time_high = all_time_high?(balance_sheet, current)
+    thirty_day_high = thirty_day_high?(balance_sheet, current)
 
-    return [] unless crossed || all_time_high
+    return [] unless crossed || thirty_day_high
 
     if crossed
       metadata = { "net_worth" => current.round(2), "milestone" => crossed, "kind" => "milestone" }
@@ -20,11 +20,11 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
       facts = { signal: "net_worth_milestone", net_worth: format_money(current), milestone: format_money(crossed) }
       dedup = "net_worth_milestone:milestone:#{crossed}"
     else
-      metadata = { "net_worth" => current.round(2), "kind" => "all_time_high" }
-      title = "New all-time high net worth"
-      fallback = "Your net worth just reached a new all-time high of #{format_money(current)}."
-      facts = { signal: "net_worth_all_time_high", net_worth: format_money(current) }
-      dedup = "net_worth_milestone:all_time_high:#{Date.current.strftime('%Y-%m')}"
+      metadata = { "net_worth" => current.round(2), "kind" => "thirty_day_high" }
+      title = "New 30-day high in net worth"
+      fallback = "Your net worth just hit a new 30-day high of #{format_money(current)}."
+      facts = { signal: "net_worth_thirty_day_high", net_worth: format_money(current) }
+      dedup = "net_worth_milestone:thirty_day_high:#{Date.current.strftime('%Y-%m')}"
     end
 
     [
@@ -50,7 +50,7 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
       MILESTONES.select { |m| previous < m && current >= m }.max
     end
 
-    def all_time_high?(balance_sheet, current)
+    def thirty_day_high?(balance_sheet, current)
       series = net_worth_values(balance_sheet, Period.last_30_days)
       return false if series.size < 2
 

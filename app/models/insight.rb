@@ -32,8 +32,4 @@ class Insight < ApplicationRecord
   def dismiss!
     update!(status: "dismissed", dismissed_at: Time.current)
   end
-
-  def high_priority?
-    priority_high?
-  end
 end

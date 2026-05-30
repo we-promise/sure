@@ -10,7 +10,7 @@
   <div class="flex-1 min-w-0 space-y-1">
     <div class="flex items-center gap-2">
       <h3 class="text-sm font-medium text-primary truncate"><%= insight.title %></h3>
-      <% if insight.high_priority? %>
+      <% if insight.priority_high? %>
         <%= render DS::Pill.new(label: t("insights.priority.high"), tone: :amber, size: :sm, show_dot: false) %>
       <% end %>
     </div>

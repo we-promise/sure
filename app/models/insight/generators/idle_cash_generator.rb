@@ -49,13 +49,4 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
       )
     end
   end
-
-  private
-    def convert_to_family_currency(amount, from_currency)
-      return amount.to_f if from_currency == family.currency
-
-      Money.new(amount, from_currency).exchange_to(family.currency).amount.to_f
-    rescue Money::ConversionError
-      amount.to_f
-    end
 end

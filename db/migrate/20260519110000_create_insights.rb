@@ -14,7 +14,7 @@ class CreateInsights < ActiveRecord::Migration[7.2]
       t.datetime :generated_at, null: false, default: -> { "CURRENT_TIMESTAMP" }
       t.datetime :read_at
       t.datetime :dismissed_at
-      t.string  :dedup_key,    null: false
+      t.string :dedup_key, null: false
 
       t.timestamps
     end

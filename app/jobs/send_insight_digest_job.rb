@@ -8,7 +8,7 @@ class SendInsightDigestJob < ApplicationJob
       insights = family.insights.status_active.by_priority.limit(5).to_a
       next if insights.empty?
 
-      family.users.each do |user|
+      family.users.find_each do |user|
         next if user.insight_digest_disabled?
         next if user.email.blank?
 

@@ -1,6 +1,4 @@
 <div class="px-4 space-y-3">
-  <% insights = Current.family.insights.status_active.by_priority.limit(3) %>
-
   <% if insights.any? %>
     <%= render partial: "insights/insight_card", collection: insights, as: :insight %>
 

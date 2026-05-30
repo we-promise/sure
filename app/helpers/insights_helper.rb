@@ -11,8 +11,8 @@ module InsightsHelper
   }.freeze
 
   PRIORITY_STYLES = {
-    "high" => "text-red-600 bg-red-50",
-    "medium" => "text-yellow-700 bg-yellow-50",
+    "high" => "text-destructive bg-destructive/10",
+    "medium" => "text-warning bg-warning/10",
     "low" => "text-secondary bg-surface-inset"
   }.freeze
 

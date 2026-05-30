@@ -3,11 +3,19 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
   WARNING_THRESHOLD = 500
 
   def generate
+    @cash_account_ids = cash_account_ids
     starting_balance = cash_balance
     return [] if starting_balance.nil?
 
-    daily_baseline = (family.income_statement.median_expense(interval: "month").to_f / 30.0)
     scheduled = scheduled_movements
+    # The median-expense baseline already includes recurring bills, so we
+    # subtract the projected recurring outflow to get a non-recurring/
+    # discretionary daily floor — otherwise scheduled[date] subtracts the
+    # same dollars a second time.
+    monthly_baseline = family.income_statement.median_expense(interval: "month").to_f
+    scheduled_outflow_total = scheduled.values.sum { |amount| [ amount, 0 ].max.to_f }
+    recurring_daily = scheduled_outflow_total / PROJECTION_DAYS
+    daily_baseline = [ (monthly_baseline / 30.0) - recurring_daily, 0 ].max
 
     balance = starting_balance
     low_point = starting_balance
@@ -69,6 +77,10 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
   end
 
   private
+    def cash_account_ids
+      family.accounts.visible.where(accountable_type: "Depository").pluck(:id).to_set
+    end
+
     def cash_balance
       accounts = family.accounts.visible.where(accountable_type: "Depository")
       return nil if accounts.none?
@@ -78,12 +90,14 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
       end
     end
 
-    def convert_to_family_currency(amount, from_currency)
-      return amount.to_f if from_currency == family.currency
+    # A transfer where both endpoints are cash accounts already counted in
+    # the starting balance nets to zero on the family's overall cash position;
+    # subtracting it would falsely project a dip.
+    def internal_cash_transfer?(recurring_transaction)
+      return false unless recurring_transaction.transfer?
 
-      Money.new(amount, from_currency).exchange_to(family.currency).amount.to_f
-    rescue Money::ConversionError
-      amount.to_f
+      @cash_account_ids.include?(recurring_transaction.account_id) &&
+        @cash_account_ids.include?(recurring_transaction.destination_account_id)
     end
 
     # Returns { Date => net outflow } from recurring transactions due soon.
@@ -95,6 +109,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         entry = rt.projected_entry
         next unless entry
         next unless entry.date.between?(Date.current, Date.current + PROJECTION_DAYS.days)
+        next if internal_cash_transfer?(rt)
 
         amount = convert_to_family_currency(entry.amount, entry.currency)
         movements[entry.date.to_date] += amount

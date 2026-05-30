@@ -26,6 +26,9 @@ class GenerateInsightsJob < ApplicationJob
 
         if existing
           numbers_changed = existing.metadata != gi.metadata.deep_stringify_keys
+          # Only reactivate non-dismissed insights so a dismiss isn't undone
+          # by an upsert when the underlying numbers shift the next day.
+          reactivate = numbers_changed && !existing.status_dismissed?
           existing.update!(
             title: gi.title,
             body: gi.body,
@@ -35,7 +38,7 @@ class GenerateInsightsJob < ApplicationJob
             period_start: gi.period_start,
             period_end: gi.period_end,
             generated_at: Time.current,
-            status: numbers_changed ? "active" : existing.status
+            status: reactivate ? "active" : existing.status
           )
         else
           family.insights.create!(

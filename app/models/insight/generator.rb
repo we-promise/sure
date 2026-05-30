@@ -37,6 +37,14 @@ class Insight::Generator
       Money.new(amount, currency).format
     end
 
+    def convert_to_family_currency(amount, from_currency)
+      return amount.to_f if from_currency == family.currency
+
+      Money.new(amount, from_currency).exchange_to(family.currency).amount.to_f
+    rescue Money::ConversionError
+      amount.to_f
+    end
+
     # Generates the human-readable body via the LLM. Falls back to the provided
     # template string when no LLM provider is configured (e.g. self-hosted
     # without an API key) or the call fails.
