@@ -24,8 +24,10 @@ GITHUB_WORKSPACE_PREFIX = %r{
   )
   (?:/|\z)
 }ix
-EXPECTED_PREVIEW_PERMISSIONS = { "actions" => "read", "contents" => "read", "pull-requests" => "write", "deployments" => "write" }.freeze
-EXPECTED_PR_IMAGE_PERMISSIONS = { "contents" => "read" }.freeze
+EXPECTED_TOP_LEVEL_PERMISSIONS = { "contents" => "read" }.freeze
+EXPECTED_GATE_PERMISSIONS = { "actions" => "read", "contents" => "read", "pull-requests" => "read" }.freeze
+EXPECTED_IMAGE_PERMISSIONS = { "contents" => "read" }.freeze
+EXPECTED_DEPLOY_PERMISSIONS = { "contents" => "read", "pull-requests" => "write", "deployments" => "write" }.freeze
 EXPECTED_DEPLOY_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_WORKERS_SUBDOMAIN].freeze
 EXPECTED_PUSH_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN].freeze
 REQUIRED_PREPARE_LINES = [
@@ -36,7 +38,7 @@ REQUIRED_PREPARE_LINES = [
   'cp -R trusted/workers/preview/src "$preview_dir/src"',
   "npm ci --ignore-scripts --no-audit --no-fund"
 ].freeze
-REQUIRED_PR_IMAGE_LINES = [
+REQUIRED_IMAGE_BUILD_LINES = [
   "docker build",
   "--platform linux/amd64",
   '--build-arg "BUILD_COMMIT_SHA=${HEAD_SHA}"',
@@ -114,91 +116,126 @@ lockfile = JSON.parse(File.read(LOCKFILE_PATH))
 
 preview_on = workflow_on(preview_workflow)
 pr_on = workflow_on(pr_workflow)
-preview_job = preview_workflow.fetch("jobs").fetch("deploy-preview")
-preview_steps = preview_job.fetch("steps")
-preview_step_names = preview_steps.map { |step| step["name"] }
-pr_image_job = pr_workflow.fetch("jobs").fetch("preview_image")
-pr_image_steps = pr_image_job.fetch("steps")
+preview_jobs = preview_workflow.fetch("jobs")
+pr_jobs = pr_workflow.fetch("jobs")
+gate_job = preview_jobs.fetch("preview-gate")
+image_job = preview_jobs.fetch("preview-image")
+deploy_job = preview_jobs.fetch("deploy-preview")
+gate_steps = gate_job.fetch("steps")
+image_steps = image_job.fetch("steps")
+deploy_steps = deploy_job.fetch("steps")
+deploy_step_names = deploy_steps.map { |step| step["name"] }
 wrangler = lockfile.fetch("packages").fetch("node_modules/wrangler")
 
-wait_for_pr_ci = step!(preview_steps, "Wait for PR CI and preview image")
-trusted_checkout = step!(preview_steps, "Checkout trusted preview tooling")
-download_artifact = step!(preview_steps, "Download preview image artifact")
-prepare = step!(preview_steps, "Prepare trusted preview deploy workspace")
-load_image = step!(preview_steps, "Load preview image artifact")
-push_image = step!(preview_steps, "Push preview image to Cloudflare registry")
-configure_image = step!(preview_steps, "Configure trusted preview image reference")
-deploy = step!(preview_steps, "Deploy to Cloudflare Containers")
+verify_workflows = step!(gate_steps, "Verify trusted CI workflow definitions")
+wait_for_pr_ci = step!(gate_steps, "Wait for PR CI")
 
-pr_checkout = step!(pr_image_steps, "Checkout PR code")
-build_image = step!(pr_image_steps, "Build preview image without secrets")
-upload_image = step!(pr_image_steps, "Upload preview image artifact")
+pr_checkout = step!(image_steps, "Checkout PR code")
+build_image = step!(image_steps, "Build preview image without secrets")
+upload_image = step!(image_steps, "Upload preview image artifact")
+
+trusted_checkout = step!(deploy_steps, "Checkout trusted preview tooling")
+download_artifact = step!(deploy_steps, "Download preview image artifact")
+prepare = step!(deploy_steps, "Prepare trusted preview deploy workspace")
+load_image = step!(deploy_steps, "Load preview image artifact")
+push_image = step!(deploy_steps, "Push preview image to Cloudflare registry")
+configure_image = step!(deploy_steps, "Configure trusted preview image reference")
+deploy = step!(deploy_steps, "Deploy to Cloudflare Containers")
 
 [
   [ "preview trigger", preview_on.keys, [ "pull_request_target" ] ],
   [ "preview trigger types", preview_on.dig("pull_request_target", "types"), %w[opened synchronize reopened labeled] ],
-  [ "PR trigger types", pr_on.dig("pull_request", "types"), %w[opened synchronize reopened labeled] ],
-  [ "PR workflow permissions", pr_workflow.fetch("permissions"), EXPECTED_PR_IMAGE_PERMISSIONS ],
-  [ "preview job permissions", preview_job.fetch("permissions"), EXPECTED_PREVIEW_PERMISSIONS ],
-  [ "preview job environment", environment_name(preview_job), "preview" ],
-  [ "preview job timeout", preview_job.fetch("timeout-minutes"), 45 ],
-  [ "preview concurrency group", preview_job.dig("concurrency", "group"), "preview-deploy-${{ github.event.pull_request.number }}" ],
-  [ "preview concurrency cancellation", preview_job.dig("concurrency", "cancel-in-progress"), true ],
-  [ "preview PR_NUMBER env", preview_job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
-  [ "preview HEAD_SHA env", preview_job.dig("env", "HEAD_SHA"), "${{ github.event.pull_request.head.sha }}" ],
+  [ "preview top-level permissions", preview_workflow.fetch("permissions"), EXPECTED_TOP_LEVEL_PERMISSIONS ],
+  [ "PR workflow permissions", pr_workflow.fetch("permissions"), EXPECTED_TOP_LEVEL_PERMISSIONS ],
+  [ "PR workflow jobs", pr_jobs.keys, [ "ci" ] ],
+  [ "preview gate permissions", gate_job.fetch("permissions"), EXPECTED_GATE_PERMISSIONS ],
+  [ "preview gate timeout", gate_job.fetch("timeout-minutes"), 35 ],
+  [ "preview image needs", image_job.fetch("needs"), "preview-gate" ],
+  [ "preview image permissions", image_job.fetch("permissions"), EXPECTED_IMAGE_PERMISSIONS ],
+  [ "preview image timeout", image_job.fetch("timeout-minutes"), 30 ],
+  [ "deploy job needs", deploy_job.fetch("needs"), %w[preview-gate preview-image] ],
+  [ "deploy job permissions", deploy_job.fetch("permissions"), EXPECTED_DEPLOY_PERMISSIONS ],
+  [ "deploy job environment", environment_name(deploy_job), "preview" ],
+  [ "deploy job timeout", deploy_job.fetch("timeout-minutes"), 45 ],
+  [ "deploy concurrency group", deploy_job.dig("concurrency", "group"), "preview-deploy-${{ github.event.pull_request.number }}" ],
+  [ "deploy concurrency cancellation", deploy_job.dig("concurrency", "cancel-in-progress"), true ],
+  [ "gate PR_NUMBER env", gate_job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
+  [ "gate HEAD_SHA env", gate_job.dig("env", "HEAD_SHA"), "${{ github.event.pull_request.head.sha }}" ],
+  [ "image PR_NUMBER env", image_job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
+  [ "image HEAD_SHA env", image_job.dig("env", "HEAD_SHA"), "${{ github.event.pull_request.head.sha }}" ],
+  [ "image tag env", image_job.dig("env", "IMAGE_TAG"), "sure-preview-pr-${{ github.event.pull_request.number }}:${{ github.event.pull_request.head.sha }}" ],
+  [ "deploy PR_NUMBER env", deploy_job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
+  [ "deploy HEAD_SHA env", deploy_job.dig("env", "HEAD_SHA"), "${{ github.event.pull_request.head.sha }}" ],
+  [ "PR checkout repository", pr_checkout.dig("with", "repository"), "${{ github.event.pull_request.head.repo.full_name }}" ],
+  [ "PR checkout ref", pr_checkout.dig("with", "ref"), "${{ github.event.pull_request.head.sha }}" ],
+  [ "PR checkout credentials", pr_checkout.dig("with", "persist-credentials"), false ],
+  [ "upload artifact name", upload_image.dig("with", "name"), "preview-image-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}" ],
+  [ "upload artifact retention", upload_image.dig("with", "retention-days"), 3 ],
   [ "trusted checkout ref", trusted_checkout.dig("with", "ref"), "${{ github.event.pull_request.base.sha }}" ],
   [ "trusted checkout path", trusted_checkout.dig("with", "path"), "trusted" ],
   [ "trusted checkout credentials", trusted_checkout.dig("with", "persist-credentials"), false ],
-  [ "download artifact name", download_artifact.dig("with", "name"), "${{ steps.pr_ci.outputs.artifact_name }}" ],
-  [ "download artifact run id", download_artifact.dig("with", "run-id"), "${{ steps.pr_ci.outputs.run_id }}" ],
+  [ "download artifact name", download_artifact.dig("with", "name"), "preview-image-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}" ],
   [ "download artifact path", download_artifact.dig("with", "path"), "${{ runner.temp }}/preview-image" ],
-  [ "PR image permissions", pr_image_job.fetch("permissions"), EXPECTED_PR_IMAGE_PERMISSIONS ],
-  [ "PR image timeout", pr_image_job.fetch("timeout-minutes"), 30 ],
-  [ "PR checkout credentials", pr_checkout.dig("with", "persist-credentials"), false ],
-  [ "PR image PR_NUMBER env", pr_image_job.dig("env", "PR_NUMBER"), "${{ github.event.pull_request.number }}" ],
-  [ "PR image HEAD_SHA env", pr_image_job.dig("env", "HEAD_SHA"), "${{ github.event.pull_request.head.sha }}" ],
-  [ "PR image tag env", pr_image_job.dig("env", "IMAGE_TAG"), "sure-preview-pr-${{ github.event.pull_request.number }}:${{ github.event.pull_request.head.sha }}" ],
-  [ "upload artifact name", upload_image.dig("with", "name"), "preview-image-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}" ],
-  [ "upload artifact retention", upload_image.dig("with", "retention-days"), 1 ],
   [ "Wrangler binary", wrangler.dig("bin", "wrangler"), "bin/wrangler.js" ]
 ].each { |label, actual, expected| assert(actual == expected, "#{label}: expected #{actual.inspect} to equal #{expected.inspect}") }
 
-assert(preview_job.fetch("if").include?("preview-cf"), "privileged preview deploy must stay gated by preview-cf")
-assert(pr_image_job.fetch("if").include?("preview-cf"), "PR image build must stay gated by preview-cf")
+assert(pr_on.key?("pull_request"), "PR workflow must still run on pull_request")
+assert(pr_on.dig("pull_request", "paths-ignore") == [ "charts/**" ], "PR workflow paths-ignore must stay scoped")
+assert(!pr_jobs.key?("preview_image"), "PR workflow must not build preview image artifacts")
+assert(!download_artifact.fetch("with").key?("run-id"), "deploy workflow must not download artifacts from another workflow run")
+assert(!download_artifact.fetch("with").key?("github-token"), "deploy workflow must not use the GitHub token for cross-run artifact download")
+assert(gate_job.fetch("if").include?("preview-cf"), "preview gate must stay gated by preview-cf")
+assert(image_job.fetch("if").include?("preview-cf"), "preview image build must stay gated by preview-cf")
+assert(deploy_job.fetch("if").include?("preview-cf"), "privileged preview deploy must stay gated by preview-cf")
+assert(gate_job["environment"].nil?, "preview gate must not use a protected secret-bearing environment")
+assert(image_job["environment"].nil?, "preview image build must not use a protected secret-bearing environment")
 assert(lockfile.dig("packages", "", "devDependencies", "wrangler"), "Wrangler must stay a root dev dependency")
 assert(lockfile.fetch("lockfileVersion") >= 3, "preview tooling lockfile must preserve npm ci integrity metadata")
 assert(wrangler.fetch("resolved").start_with?("https://registry.npmjs.org/wrangler/-/wrangler-"), "Wrangler must resolve from npm registry")
 assert(wrangler.fetch("integrity").start_with?("sha512-"), "Wrangler lockfile entry must keep npm integrity metadata")
 assert(trusted_checkout.dig("with", "sparse-checkout").to_s.include?("workers/preview"), "trusted checkout must include preview tooling")
-assert(preview_step_names.compact.uniq == preview_step_names.compact, "workflow step names must stay unique for security checks")
-assert([ wait_for_pr_ci, trusted_checkout, download_artifact, prepare, load_image, push_image, configure_image, deploy ].map { |step| preview_steps.index(step) }.each_cons(2).all? { |left, right| left < right }, "preview workflow steps must preserve safe build-artifact deploy order")
-assert(preview_steps.none? { |step| step["name"] == "Checkout PR code" }, "privileged preview workflow must not checkout PR code")
-assert(preview_job.fetch("env").keys.none? { |name| name.start_with?("CLOUDFLARE_") }, "Cloudflare secrets must not be job-wide")
+assert(deploy_step_names.compact.uniq == deploy_step_names.compact, "workflow step names must stay unique for security checks")
+assert([ trusted_checkout, download_artifact, prepare, load_image, push_image, configure_image, deploy ].map { |step| deploy_steps.index(step) }.each_cons(2).all? { |left, right| left < right }, "deploy workflow steps must preserve safe same-run artifact deploy order")
+assert(deploy_steps.none? { |step| step["name"] == "Checkout PR code" }, "privileged deploy job must not checkout PR code")
+assert(deploy_job.fetch("env").keys.none? { |name| name.start_with?("CLOUDFLARE_") }, "Cloudflare secrets must not be job-wide")
+assert(gate_job.fetch("env").keys.none? { |name| name.start_with?("CLOUDFLARE_") }, "preview gate must not receive Cloudflare secrets")
+assert(image_job.fetch("env").keys.none? { |name| name.start_with?("CLOUDFLARE_") }, "preview image build must not receive Cloudflare secrets")
 
-assert_pinned_actions!(preview_steps)
-assert_pinned_actions!(pr_image_steps)
-assert_no_inline_expressions!(preview_steps)
-assert_no_inline_expressions!(pr_image_steps)
+assert_pinned_actions!(gate_steps)
+assert_pinned_actions!(image_steps)
+assert_pinned_actions!(deploy_steps)
+assert_no_inline_expressions!(gate_steps)
+assert_no_inline_expressions!(image_steps)
+assert_no_inline_expressions!(deploy_steps)
 
-assert(preview_steps.none? { |step| normalized_working_directory(step["working-directory"]).match?(PR_CONTROLLED_WORKDIR) }, "privileged steps must not run from PR-controlled dirs")
-assert(preview_steps.none? { |step| run(step).include?("npx wrangler") }, "privileged workflow must not use npx wrangler")
-assert(preview_steps.none? { |step| run(step).match?(/Dockerfile\.preview|docker build|docker save/) }, "privileged workflow must not build PR Dockerfiles")
-assert(preview_steps.none? { |step| run(step).include?("${GITHUB_WORKSPACE}/pr") || run(step).include?(" pr/") }, "privileged workflow must not reference PR checkout paths")
+all_steps = gate_steps + image_steps + deploy_steps
+assert(all_steps.none? { |step| step.fetch("env", {}).values.join("\n").match?(INLINE_SECRET_EXPRESSION) && ![ push_image, deploy ].include?(step) }, "only Cloudflare steps may reference GitHub secrets")
+assert(deploy_steps.none? { |step| normalized_working_directory(step["working-directory"]).match?(PR_CONTROLLED_WORKDIR) }, "privileged deploy steps must not run from PR-controlled dirs")
+assert(deploy_steps.none? { |step| run(step).include?("npx wrangler") }, "privileged deploy workflow must not use npx wrangler")
+assert(deploy_steps.none? { |step| run(step).match?(/Dockerfile\.preview|docker build|docker save/) }, "privileged deploy job must not build PR Dockerfiles")
+assert(deploy_steps.none? { |step| run(step).include?("${GITHUB_WORKSPACE}/pr") || run(step).include?(" pr/") }, "privileged deploy job must not reference PR checkout paths")
+
+assert_run_includes(verify_workflows, "github.rest.pulls.listFiles", "filename.startsWith('.github/workflows/')", "base-trusted workflow definitions", "core.setFailed")
+assert_run_includes(wait_for_pr_ci, "Number(process.env.PR_NUMBER)", "listWorkflowRunsForRepo", "run.name === 'Pull Request' && run.head_sha === headSha", "run.pull_requests?.some((pr) => pr.number === prNumber)", "const timeoutMs = 30 * 60 * 1000")
 
 prepare_run = assert_run_includes(prepare, *REQUIRED_PREPARE_LINES)
 assert(!prepare_run.include?("npm install"), "prepare step must not use npm install")
 assert(!prepare_run.include?("CLOUDFLARE_API_TOKEN"), "prepare step must not receive Cloudflare secrets")
 assert(prepare_run.include?('preview_dir="$RUNNER_TEMP/sure-preview-worker"'), "trusted workspace must be created under RUNNER_TEMP")
-assert(preview_steps.select { |step| run(step).match?(/npm (ci|install)/) }.map { |step| step["name"] } == [ prepare["name"] ], "only prepare may install deploy tooling")
+assert(deploy_steps.select { |step| run(step).match?(/npm (ci|install)/) }.map { |step| step["name"] } == [ prepare["name"] ], "only prepare may install deploy tooling")
 
-assert_run_includes(wait_for_pr_ci, "preview-image-pr-${prNumber}-${headSha}", "listWorkflowRunArtifacts", "core.setOutput('run_id'", "core.setOutput('artifact_name'")
-assert_run_includes(wait_for_pr_ci, "const timeoutMs = 30 * 60 * 1000")
+image_build_run = assert_run_includes(build_image, *REQUIRED_IMAGE_BUILD_LINES)
+assert(image_build_run.include?("set -euo pipefail"), "preview image build must fail closed")
+assert(!image_build_run.include?("CLOUDFLARE_"), "preview image build must not receive Cloudflare secrets")
+assert(image_steps.none? { |step| step.fetch("env", {}).keys.any? { |key| key.start_with?("CLOUDFLARE_") } }, "preview image workflow must not expose Cloudflare secret env")
+assert(image_steps.none? { |step| [ run(step), step.fetch("env", {}).values.join("\n") ].join("\n").match?(INLINE_SECRET_EXPRESSION) }, "preview image workflow must not reference GitHub secrets")
+
 assert_run_includes(load_image, 'gzip -dc "$image_archive" | docker load', 'docker image inspect "$expected_image"')
 assert_run_includes(push_image, "./node_modules/.bin/wrangler containers push", "registry\\.cloudflare\\.com/", "image_ref=")
-assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'replace(/image = "[^"]+"/', "JSON.stringify(imageRef)")
+assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'const original = fs.readFileSync', 'const updated = original.replace(/image = "[^"]+"/', "updated === original", "Expected wrangler.toml to contain an image entry to rewrite", "JSON.stringify(imageRef)")
 assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"')
 
-secret_steps = preview_steps.select { |step| step.fetch("env", {}).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }
+secret_steps = deploy_steps.select { |step| step.fetch("env", {}).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }
 assert(secret_steps.map { |step| step["name"] } == [ push_image["name"], deploy["name"] ], "only image push and deploy may receive Cloudflare secrets")
 assert_secret_env_sources!(push_image, EXPECTED_PUSH_SECRET_ENV)
 assert_secret_env_sources!(deploy, EXPECTED_DEPLOY_SECRET_ENV)
@@ -206,11 +243,5 @@ secret_steps.each do |step|
   assert(step["working-directory"].nil?, "#{step["name"]} must not run from a PR-controlled working directory")
   assert(!run(step).match?(/npx wrangler|npm (ci|install)|docker build|docker save|docker run/), "#{step["name"]} must not execute PR-controlled build or package tooling with secrets")
 end
-
-pr_image_run = assert_run_includes(build_image, *REQUIRED_PR_IMAGE_LINES)
-assert(pr_image_run.include?("set -euo pipefail"), "PR image build must fail closed")
-assert(!pr_image_run.include?("CLOUDFLARE_"), "PR image build must not receive Cloudflare secrets")
-assert(pr_image_steps.none? { |step| step.fetch("env", {}).keys.any? { |key| key.start_with?("CLOUDFLARE_") } }, "PR image workflow must not expose Cloudflare secret env")
-assert(pr_image_steps.none? { |step| [ run(step), step.fetch("env", {}).values.join("\n") ].join("\n").match?(INLINE_SECRET_EXPRESSION) }, "PR image workflow must not reference GitHub secrets")
 
 puts "preview-deploy security check passed"

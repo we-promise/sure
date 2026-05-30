@@ -8,37 +8,51 @@ on:
       - 'docs/**'
       - '*.md'
 
+permissions:
+  contents: read
+
 jobs:
-  deploy-preview:
+  preview-gate:
     if: |
       contains(github.event.pull_request.labels.*.name, 'preview-cf') &&
       (github.event.action != 'labeled' || github.event.label.name == 'preview-cf')
-    name: Deploy to Cloudflare Containers
+    name: Validate preview deployment gates
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    concurrency:
-      group: preview-deploy-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
-    environment:
-      name: preview
+    timeout-minutes: 35
     permissions:
       actions: read
       contents: read
-      pull-requests: write
-      deployments: write
+      pull-requests: read
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
     steps:
-      - name: Wait for PR CI and preview image
-        id: pr_ci
+      - name: Verify trusted CI workflow definitions
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
-            const prNumber = process.env.PR_NUMBER;
+            const prNumber = Number(process.env.PR_NUMBER);
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+            const workflowChanges = files
+              .map((file) => file.filename)
+              .filter((filename) => filename.startsWith('.github/workflows/'));
+
+            if (workflowChanges.length > 0) {
+              core.setFailed(`Preview deployment requires base-trusted workflow definitions; changed workflow files: ${workflowChanges.join(', ')}`);
+            }
+
+      - name: Wait for PR CI
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
             const headSha = process.env.HEAD_SHA;
-            const artifactName = `preview-image-pr-${prNumber}-${headSha}`;
             const timeoutMs = 30 * 60 * 1000;
             const pollMs = 15 * 1000;
             const startedAt = Date.now();
@@ -57,6 +71,7 @@ jobs:
 
               const runs = data.workflow_runs
                 .filter((run) => run.name === 'Pull Request' && run.head_sha === headSha)
+                .filter((run) => run.pull_requests?.some((pr) => pr.number === prNumber))
                 .sort((left, right) => right.run_number - left.run_number);
               const prRun = runs[0];
 
@@ -65,35 +80,85 @@ jobs:
                 core.info(`Pull Request workflow ${lastState}`);
 
                 if (prRun.status === 'completed') {
-                  if (prRun.conclusion !== 'success') {
-                    core.setFailed(`Pull Request workflow concluded with ${prRun.conclusion}`);
+                  if (prRun.conclusion === 'success') {
                     return;
                   }
 
-                  const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    run_id: prRun.id,
-                    per_page: 100,
-                  });
-                  const artifact = artifacts.find((item) => item.name === artifactName && !item.expired);
-
-                  if (artifact) {
-                    core.setOutput('run_id', String(prRun.id));
-                    core.setOutput('artifact_name', artifactName);
-                    return;
-                  }
-
-                  lastState = `${prRun.id}: success but missing ${artifactName}`;
-                  core.info(lastState);
+                  core.setFailed(`Pull Request workflow concluded with ${prRun.conclusion}`);
+                  return;
                 }
               }
 
               await sleep(pollMs);
             }
 
-            core.setFailed(`Timed out waiting for Pull Request workflow artifact for ${headSha}. Last state: ${lastState}`);
+            core.setFailed(`Timed out waiting for Pull Request workflow for ${headSha}. Last state: ${lastState}`);
 
+  preview-image:
+    needs: preview-gate
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'preview-cf') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview-cf')
+    name: Build Cloudflare preview image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      IMAGE_TAG: sure-preview-pr-${{ github.event.pull_request.number }}:${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Build preview image without secrets
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --platform linux/amd64 \
+            --build-arg "BUILD_COMMIT_SHA=${HEAD_SHA}" \
+            -f Dockerfile.preview \
+            -t "${IMAGE_TAG}" \
+            .
+
+          docker image inspect "${IMAGE_TAG}" >/dev/null
+          docker save "${IMAGE_TAG}" | gzip -1 > "$RUNNER_TEMP/sure-preview-image.tar.gz"
+
+      - name: Upload preview image artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: preview-image-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}
+          path: ${{ runner.temp }}/sure-preview-image.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy-preview:
+    needs: [preview-gate, preview-image]
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'preview-cf') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview-cf')
+    name: Deploy to Cloudflare Containers
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: preview-deploy-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    environment: preview
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
       - name: Checkout trusted preview tooling
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
@@ -106,9 +171,7 @@ jobs:
       - name: Download preview image artifact
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          name: ${{ steps.pr_ci.outputs.artifact_name }}
-          run-id: ${{ steps.pr_ci.outputs.run_id }}
-          github-token: ${{ github.token }}
+          name: preview-image-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}
           path: ${{ runner.temp }}/preview-image
 
       - name: Setup Node.js
@@ -178,6 +241,7 @@ jobs:
           set -euo pipefail
 
           config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"
+          # Keep the image reference JSON-quoted so the rewrite preserves TOML string syntax.
           node - "$config_path" <<'NODE'
           const fs = require('node:fs');
 
@@ -188,9 +252,12 @@ jobs:
             throw new Error('Expected a Cloudflare registry image reference');
           }
 
-          const config = fs.readFileSync(configPath, 'utf8')
-            .replace(/image = "[^"]+"/, `image = ${JSON.stringify(imageRef)}`);
-          fs.writeFileSync(configPath, config);
+          const original = fs.readFileSync(configPath, 'utf8');
+          const updated = original.replace(/image = "[^"]+"/, `image = ${JSON.stringify(imageRef)}`);
+          if (updated === original) {
+            throw new Error('Expected wrangler.toml to contain an image entry to rewrite');
+          }
+          fs.writeFileSync(configPath, updated);
           NODE
 
           cat "$config_path"
