@@ -122,39 +122,6 @@ jobs:
           cd "$preview_dir"
           npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Delete existing preview container app before redeploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        working-directory: workers/preview
-        run: |
-          set -euo pipefail
-          CONTAINER_NAME="sure-preview-${PR_NUMBER}-railscontainer"
-          echo "Looking for stale preview container app: $CONTAINER_NAME"
-
-          CONTAINER_ID=$(npx wrangler containers list --json | jq -r --arg NAME "$CONTAINER_NAME" '
-            map(select((.name // .application_name // .app_name // "") == $NAME))
-            | first
-            | (.id // .container_id // .application_id // empty)
-          ')
-
-          if [ -n "$CONTAINER_ID" ]; then
-            echo "Deleting stale preview container app $CONTAINER_NAME ($CONTAINER_ID)"
-            npx wrangler containers delete "$CONTAINER_ID"
-          else
-            echo "No stale preview container app found; continuing"
-          fi
-
-      - name: Delete existing preview Worker before redeploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        working-directory: workers/preview
-        run: |
-          WORKER_NAME="sure-preview-${PR_NUMBER}"
-          echo "Ensuring fresh preview deployment for $WORKER_NAME"
-          npx wrangler delete --name "$WORKER_NAME" --force || echo "Existing preview not found; continuing"
-
       - name: Create GitHub Deployment
         id: deployment
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
