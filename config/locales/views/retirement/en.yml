@@ -42,6 +42,28 @@ en:
         monthly_fixed_term: Monthly · fixed term
         lump_sum: Lump sum
         lump_plus_annuity: Lump + annuity
+      countries:
+        DE: Germany
+        US: United States
+        UK: United Kingdom
+      pension_systems:
+        de_grv: Gesetzliche Rentenversicherung (GRV)
+        de_bav: Betriebliche Altersvorsorge (bAV)
+        de_riester: Riester-Rente
+        us_ss: US Social Security
+        uk_state: UK State Pension
+        uk_workplace: UK Workplace Pension
+        custom: Custom
+      tax_treatments:
+        de_renten: Rente · Besteuerungsanteil
+        de_bav: bAV · deferred
+        de_riester: Riester
+        de_private: Private · post-tax
+        uk_state: UK State Pension
+        uk_dc_drawdown: UK DC · drawdown
+        uk_dc_25pct: UK DC · 25% tax-free
+        uk_isa: ISA · tax-free
+        custom_post_tax: Custom · post-tax
       form:
         name: Name
         kind: Type
