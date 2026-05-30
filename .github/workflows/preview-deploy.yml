@@ -45,9 +45,49 @@ jobs:
             const { resolvePreviewRequest } = require('./trusted-preview-resolver/workers/preview/deploy/resolve_preview_request.cjs');
             await resolvePreviewRequest({ github, context, core });
 
-  deploy-preview:
+  deployment_record:
     needs: preview-gate
     if: needs.preview-gate.outputs.should_deploy == 'true'
+    name: Create GitHub Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      deployment_id: ${{ steps.deployment.outputs.result }}
+    env:
+      HEAD_SHA: ${{ needs.preview-gate.outputs.head_sha }}
+      IS_FORK: ${{ needs.preview-gate.outputs.is_fork }}
+      PR_NUMBER: ${{ needs.preview-gate.outputs.pr_number }}
+
+    steps:
+      - name: Create GitHub Deployment
+        if: env.IS_FORK == 'false'
+        id: deployment
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const prNumber = process.env.PR_NUMBER;
+            const headSha = process.env.HEAD_SHA;
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: headSha,
+              environment: `preview-pr-${prNumber}`,
+              auto_merge: false,
+              required_contexts: [],
+              description: 'PR Preview Deployment'
+            });
+            return deployment.data.id;
+          result-encoding: string
+
+  deploy-preview:
+    needs: [preview-gate, deployment_record]
+    if: |
+      always() &&
+      needs.preview-gate.outputs.should_deploy == 'true' &&
+      (needs.deployment_record.result == 'success' || needs.deployment_record.result == 'skipped')
     name: Deploy to Cloudflare Containers
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -58,8 +98,8 @@ jobs:
     permissions:
       actions: read
       contents: read
-      deployments: write
-      issues: write
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
     env:
       ARTIFACT_NAME: ${{ needs.preview-gate.outputs.artifact_name }}
       HEAD_SHA: ${{ needs.preview-gate.outputs.head_sha }}
@@ -84,15 +124,35 @@ jobs:
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/preview-image
 
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24"
+
       - name: Verify preview image artifact checksum
         run: |
           set -euo pipefail
 
           image_archive="$RUNNER_TEMP/preview-image/sure-preview-image.tar.gz"
           checksum_file="$RUNNER_TEMP/preview-image/sure-preview-image.sha256"
+          manifest_file="$RUNNER_TEMP/preview-image/sure-preview-image.manifest.json"
+          expected_files="$(mktemp)"
+          actual_files="$(mktemp)"
 
           test -f "$image_archive"
           test -f "$checksum_file"
+          test -f "$manifest_file"
+
+          printf '%s\n' \
+            sure-preview-image.manifest.json \
+            sure-preview-image.sha256 \
+            sure-preview-image.tar.gz | sort > "$expected_files"
+          find "$RUNNER_TEMP/preview-image" -maxdepth 1 -type f -printf '%f\n' | sort > "$actual_files"
+
+          if ! diff -u "$expected_files" "$actual_files"; then
+            echo "Preview image artifact contained unexpected files" >&2
+            exit 1
+          fi
 
           expected_checksum="$(tr -d '[:space:]' < "$checksum_file")"
           actual_checksum="$(sha256sum "$image_archive" | awk '{print $1}')"
@@ -102,10 +162,32 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version: "24"
+          node - "$manifest_file" "$expected_checksum" <<'NODE'
+          const fs = require('node:fs');
+
+          const manifestPath = process.argv[2];
+          const expectedChecksum = process.argv[3];
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          const expectedImageTag = `sure-preview-pr-${process.env.PR_NUMBER}:${process.env.HEAD_SHA}`;
+          const expected = {
+            artifactVersion: 1,
+            archivePath: 'sure-preview-image.tar.gz',
+            archiveSha256: expectedChecksum,
+            headSha: process.env.HEAD_SHA,
+            imageTag: expectedImageTag,
+            prNumber: process.env.PR_NUMBER,
+          };
+
+          for (const [key, value] of Object.entries(expected)) {
+            if (manifest[key] !== value) {
+              throw new Error(`Preview image manifest ${key} mismatch`);
+            }
+          }
+
+          if (!/^sha256:[a-f0-9]{64}$/.test(manifest.imageId || '')) {
+            throw new Error('Preview image manifest imageId is invalid');
+          }
+          NODE
 
       - name: Prepare trusted preview deploy workspace
         run: |
@@ -132,10 +214,18 @@ jobs:
           set -euo pipefail
 
           image_archive="$RUNNER_TEMP/preview-image/sure-preview-image.tar.gz"
+          manifest_file="$RUNNER_TEMP/preview-image/sure-preview-image.manifest.json"
           expected_image="sure-preview-pr-${PR_NUMBER}:${HEAD_SHA}"
 
           gzip -dc "$image_archive" | docker load
           docker image inspect "$expected_image" >/dev/null
+          expected_image_id="$(node -e 'const fs = require("node:fs"); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).imageId);' "$manifest_file")"
+          actual_image_id="$(docker image inspect --format '{{.Id}}' "$expected_image")"
+
+          if [ "$expected_image_id" != "$actual_image_id" ]; then
+            echo "Loaded preview image ID did not match artifact manifest" >&2
+            exit 1
+          fi
 
       - name: Push preview image to Cloudflare registry
         id: image
@@ -188,26 +278,6 @@ jobs:
           NODE
 
           cat "$config_path"
-
-      - name: Create GitHub Deployment
-        if: env.IS_FORK == 'false'
-        id: deployment
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        with:
-          script: |
-            const prNumber = process.env.PR_NUMBER;
-            const headSha = process.env.HEAD_SHA;
-            const deployment = await github.rest.repos.createDeployment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: headSha,
-              environment: `preview-pr-${prNumber}`,
-              auto_merge: false,
-              required_contexts: [],
-              description: 'PR Preview Deployment'
-            });
-            return deployment.data.id;
-          result-encoding: string
 
       - name: Deploy to Cloudflare Containers
         id: deploy
@@ -288,15 +358,38 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+      - name: Store cleanup metadata
+        if: success()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: preview-cleanup-pr-${{ env.PR_NUMBER }}
+          path: ${{ runner.temp }}/sure-preview-worker/wrangler.toml
+          retention-days: 2
+
+  deployment_status:
+    needs: [preview-gate, deployment_record, deploy-preview]
+    if: |
+      always() &&
+      needs.preview-gate.outputs.should_deploy == 'true' &&
+      needs.preview-gate.outputs.is_fork == 'false' &&
+      needs.deployment_record.result == 'success'
+    name: Update GitHub Deployment Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      deployments: write
+    env:
+      DEPLOYMENT_ID: ${{ needs.deployment_record.outputs.deployment_id }}
+      DEPLOY_RESULT: ${{ needs.deploy-preview.result }}
+      PREVIEW_URL: ${{ needs.deploy-preview.outputs.preview_url }}
+
+    steps:
       - name: Update Deployment Status
-        if: always() && steps.deployment.outputs.result
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        env:
-          DEPLOYMENT_ID: ${{ steps.deployment.outputs.result }}
-          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         with:
           script: |
-            const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+            const state = process.env.DEPLOY_RESULT === 'success' ? 'success' : 'failure';
             const previewUrl = process.env.PREVIEW_URL || undefined;
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
@@ -307,11 +400,23 @@ jobs:
               description: state === 'success' ? 'Preview deployed successfully' : 'Preview deployment failed'
             });
 
+  preview_comment:
+    needs: [preview-gate, deploy-preview]
+    if: needs.deploy-preview.result == 'success'
+    name: Comment on PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      HEAD_SHA: ${{ needs.preview-gate.outputs.head_sha }}
+      PR_NUMBER: ${{ needs.preview-gate.outputs.pr_number }}
+      PREVIEW_URL: ${{ needs.deploy-preview.outputs.preview_url }}
+
+    steps:
       - name: Comment on PR
-        if: success()
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        env:
-          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         with:
           script: |
             const previewUrl = process.env.PREVIEW_URL;
@@ -356,11 +461,3 @@ jobs:
                 body: commentBody
               });
             }
-
-      - name: Store cleanup metadata
-        if: success()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: preview-cleanup-pr-${{ env.PR_NUMBER }}
-          path: ${{ runner.temp }}/sure-preview-worker/wrangler.toml
-          retention-days: 2

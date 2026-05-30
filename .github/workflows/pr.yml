@@ -38,6 +38,7 @@ jobs:
           set -euo pipefail
 
           image_archive="$RUNNER_TEMP/sure-preview-image.tar.gz"
+          manifest_file="$RUNNER_TEMP/sure-preview-image.manifest.json"
 
           docker build \
             --platform linux/amd64 \
@@ -48,7 +49,21 @@ jobs:
 
           docker image inspect "${IMAGE_TAG}" >/dev/null
           docker save "${IMAGE_TAG}" | gzip -1 > "$image_archive"
-          sha256sum "$image_archive" | awk '{print $1}' > "$RUNNER_TEMP/sure-preview-image.sha256"
+          archive_sha256="$(sha256sum "$image_archive" | awk '{print $1}')"
+          image_id="$(docker image inspect --format '{{.Id}}' "${IMAGE_TAG}")"
+
+          printf '%s\n' "$archive_sha256" > "$RUNNER_TEMP/sure-preview-image.sha256"
+          cat > "$manifest_file" <<JSON
+          {
+            "artifactVersion": 1,
+            "archivePath": "sure-preview-image.tar.gz",
+            "archiveSha256": "${archive_sha256}",
+            "headSha": "${HEAD_SHA}",
+            "imageId": "${image_id}",
+            "imageTag": "${IMAGE_TAG}",
+            "prNumber": "${PR_NUMBER}"
+          }
+          JSON
 
       - name: Upload preview image artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -57,5 +72,6 @@ jobs:
           path: |
             ${{ runner.temp }}/sure-preview-image.tar.gz
             ${{ runner.temp }}/sure-preview-image.sha256
+            ${{ runner.temp }}/sure-preview-image.manifest.json
           if-no-files-found: error
           retention-days: 3
