@@ -13,12 +13,12 @@
 
   <div class="grid grid-cols-2 gap-3">
     <%= f.select :kind, PensionSource::KINDS.map { |k| [ t("retirement.pension_sources.kinds.#{k}"), k ] }, { label: t("retirement.pension_sources.form.kind") } %>
-    <%= f.select :country, PensionSource::COUNTRIES, { label: t("retirement.pension_sources.form.country") } %>
+    <%= f.select :country, PensionSource::COUNTRIES.map { |c| [ t("retirement.pension_sources.countries.#{c}"), c ] }, { label: t("retirement.pension_sources.form.country") } %>
   </div>
 
   <div class="grid grid-cols-2 gap-3">
-    <%= f.select :pension_system, PensionSource::PENSION_SYSTEMS, { label: t("retirement.pension_sources.form.pension_system") } %>
-    <%= f.select :tax_treatment, PensionSource::TAX_TREATMENTS, { label: t("retirement.pension_sources.form.tax_treatment") } %>
+    <%= f.select :pension_system, PensionSource::PENSION_SYSTEMS.map { |s| [ t("retirement.pension_sources.pension_systems.#{s}"), s ] }, { label: t("retirement.pension_sources.form.pension_system") } %>
+    <%= f.select :tax_treatment, PensionSource::TAX_TREATMENTS.map { |tt| [ t("retirement.pension_sources.tax_treatments.#{tt}"), tt ] }, { label: t("retirement.pension_sources.form.tax_treatment") } %>
   </div>
 
   <%= f.select :payout_shape, PensionSource::PAYOUT_SHAPES.map { |s| [ t("retirement.pension_sources.payout_shapes.#{s}"), s ] }, { label: t("retirement.pension_sources.form.payout_shape") } %>
