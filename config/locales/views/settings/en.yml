@@ -133,6 +133,7 @@ en:
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
         personal_budgets: Personal budgets
         personal_budgets_hint: Enable individual budgets for each family member.
+        translations_notice: Please note, we are still working on translations for various languages.
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
