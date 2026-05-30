@@ -8,7 +8,7 @@ class CreateInsights < ActiveRecord::Migration[7.2]
       t.string  :title,        null: false
       t.text    :body,         null: false
       t.jsonb   :metadata,     null: false, default: {}
-      t.string  :currency,     null: false, default: "USD"
+      t.string  :currency,     null: false, default: "USD", limit: 3
       t.date    :period_start
       t.date    :period_end
       t.datetime :generated_at, null: false, default: -> { "CURRENT_TIMESTAMP" }
@@ -25,5 +25,8 @@ class CreateInsights < ActiveRecord::Migration[7.2]
 
     add_check_constraint :insights, "priority IN ('high', 'medium', 'low')", name: "chk_insights_priority"
     add_check_constraint :insights, "status IN ('active', 'read', 'dismissed')", name: "chk_insights_status"
+    add_check_constraint :insights,
+      "period_start IS NULL OR period_end IS NULL OR period_start <= period_end",
+      name: "chk_insights_period_order"
   end
 end

@@ -987,7 +987,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
     t.string "title", null: false
     t.text "body", null: false
     t.jsonb "metadata", default: {}, null: false
-    t.string "currency", default: "USD", null: false
+    t.string "currency", limit: 3, default: "USD", null: false
     t.date "period_start"
     t.date "period_end"
     t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
@@ -1000,6 +1000,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
     t.index ["family_id", "insight_type", "dedup_key"], name: "index_insights_on_family_type_dedup_key", unique: true
     t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
     t.index ["family_id"], name: "index_insights_on_family_id"
+    t.check_constraint "period_start IS NULL OR period_end IS NULL OR period_start <= period_end", name: "chk_insights_period_order"
     t.check_constraint "priority::text = ANY (ARRAY['high'::character varying::text, 'medium'::character varying::text, 'low'::character varying::text])", name: "chk_insights_priority"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'read'::character varying::text, 'dismissed'::character varying::text])", name: "chk_insights_status"
   end
