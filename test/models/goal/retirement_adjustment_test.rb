@@ -28,4 +28,16 @@ class Goal::RetirementAdjustmentTest < ActiveSupport::TestCase
   test "amount_today_money uses the adjustment currency" do
     assert_equal Money.new(-680, "USD"), @adj.amount_today_money
   end
+
+  test "child create is blocked past the plan adjustments limit" do
+    plan = goals(:retirement_bob)
+    (Goal::Retirement::ADJUSTMENTS_LIMIT - plan.adjustments.count).times do |i|
+      plan.adjustments.create!(label: "fill #{i}", amount_today: -1, currency: "USD", from_age: 60, ordinal: 100 + i)
+    end
+
+    over_limit = plan.adjustments.new(label: "over", amount_today: -1, currency: "USD", from_age: 61, ordinal: 999)
+
+    assert_not over_limit.valid?
+    assert over_limit.errors[:base].present?
+  end
 end

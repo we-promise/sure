@@ -34,4 +34,23 @@ class Goal::RetirementStatementTest < ActiveSupport::TestCase
   test "money uses projected_currency" do
     assert_equal Money.new(1510, "EUR"), @statement.projected_monthly_amount_money
   end
+
+  test "rejects a pension source from another plan (IDOR guard)" do
+    other_plan = Goal::Retirement.create!(
+      family: families(:dylan_family), owner: users(:family_member),
+      name: "Other plan", currency: "USD"
+    )
+    other_source = other_plan.pension_sources.create!(
+      name: "Foreign", kind: "state", country: "DE", pension_system: "de_grv",
+      tax_treatment: "de_renten", payout_shape: "monthly_for_life", start_age: 67, amount: 1, currency: "EUR"
+    )
+
+    statement = goals(:retirement_bob).statements.new(
+      pension_source: other_source, received_on: Date.current,
+      projected_monthly_amount: 100, projected_currency: "EUR"
+    )
+
+    assert_not statement.valid?
+    assert_includes statement.errors.attribute_names, :pension_source
+  end
 end

@@ -6,7 +6,7 @@ class RetirementController < ApplicationController
     @adjustments = @plan.adjustments.ordered
     @statements = @plan.statements.chronological.reverse
     @bucket_account_ids = @plan.retirement_bucket_entries.pluck(:account_id).to_set
-    @bucket_candidates = Current.family.accounts.visible.alphabetically
+    @bucket_candidates = Current.family.accounts.visible.accessible_by(Current.user).alphabetically
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.retirement"), nil ]

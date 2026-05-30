@@ -9,6 +9,9 @@ class Goal::RetirementStatement < ApplicationRecord
   validates :received_on, presence: true
   validates :projected_monthly_amount, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :projected_currency, presence: true
+  # Prevent IDOR: a statement may only reference a pension source from its
+  # own plan, even if a crafted request supplies another plan's source id.
+  validate :pension_source_belongs_to_plan
 
   # Append-only audit: soft-deleted rows stay in the table for history but
   # drop out of every normal read. Edits go through soft_replace!.
@@ -37,6 +40,8 @@ class Goal::RetirementStatement < ApplicationRecord
   def soft_replace!(attrs)
     new_statement = nil
     self.class.transaction do
+      # update_column is deliberate: flip the soft-delete flag without
+      # re-running validations/callbacks on the archived row.
       update_column(:deleted, true)
       new_statement = pension_source.statements.create!(
         attributes
@@ -48,6 +53,13 @@ class Goal::RetirementStatement < ApplicationRecord
   end
 
   private
+    def pension_source_belongs_to_plan
+      return if pension_source.nil? || goal_retirement_id.nil?
+      return if pension_source.goal_retirement_id == goal_retirement_id
+
+      errors.add(:pension_source, :must_belong_to_plan)
+    end
+
     def monetizable_currency
       projected_currency
     end
