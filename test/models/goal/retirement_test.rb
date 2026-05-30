@@ -140,4 +140,14 @@ class Goal::RetirementTest < ActiveSupport::TestCase
     assert_instance_of Retirement::Fire::ForecastResult, plan.forecast
     assert_equal Date.new(Date.current.year - 45 + 60, 1, 1), plan.freedom_date
   end
+
+  test "freedom_date is clamped to today when retire_age precedes current age" do
+    plan = goals(:retirement_bob)
+    plan.update!(retirement_params: { "birth_year" => Date.current.year - 50, "retire_age" => 40 })
+    plan = Goal.find(plan.id)
+
+    assert_equal 50, plan.current_age
+    assert_equal 50, plan.clamped_retire_age          # not 40
+    assert_equal Date.current.year, plan.freedom_date.year   # not a past year
+  end
 end

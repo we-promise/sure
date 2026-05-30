@@ -54,6 +54,13 @@ class Goal::Retirement < Goal
     (retire_age.presence || DEFAULT_RETIRE_AGE).to_i
   end
 
+  # Retire age never earlier than today, so the forecast and the
+  # freedom-date KPI agree and neither emits a past year.
+  def clamped_retire_age
+    return effective_retire_age if current_age.nil?
+    [ effective_retire_age, current_age ].max
+  end
+
   def effective_terminal_age
     (terminal_age.presence || DEFAULT_TERMINAL_AGE).to_i
   end
@@ -93,9 +100,7 @@ class Goal::Retirement < Goal
 
   def forecast_inputs
     current = current_age
-    # Clamp retire age to at least the current age: a lower value would
-    # produce a past retire_year and a nonsensical "freedom date".
-    retire = [ effective_retire_age, current ].max
+    retire = clamped_retire_age
     ::Retirement::Fire::Inputs.new(
       current_age: current,
       retire_age: retire,
@@ -116,10 +121,10 @@ class Goal::Retirement < Goal
     @forecast ||= ::Retirement::Fire::Forecast.new(forecast_inputs).call
   end
 
-  # Date the user can stop working, derived from retire_age.
+  # Date the user can stop working, derived from the (clamped) retire age.
   def freedom_date
     return nil if current_age.nil?
-    Date.new(birth_year.to_i + effective_retire_age, 1, 1)
+    Date.new(birth_year.to_i + clamped_retire_age, 1, 1)
   end
 
   def coast_fire_date
