@@ -6,7 +6,9 @@ class GenerateInsightsJob < ApplicationJob
       family = Family.find_by(id: family_id)
       generate_for(family) if family
     else
-      Family.find_each { |family| generate_for(family) }
+      # Fan out so one slow LLM call can't block other families and so retries
+      # are scoped to a single family.
+      Family.find_each { |family| self.class.perform_later(family_id: family.id) }
     end
   end
 
