@@ -13,16 +13,15 @@
 
   <% opt = Struct.new(:value, :label) %>
   <% loc = ->(prefix, values) { values.map { |v| opt.new(v, t("retirement.pension_sources.#{prefix}.#{v}")) } } %>
-  <% codes = ->(values) { values.map { |v| opt.new(v, v) } } %>
 
   <div class="grid grid-cols-2 gap-3">
     <%= f.collection_select :kind, loc.call("kinds", PensionSource::KINDS), :value, :label, { label: t("retirement.pension_sources.form.kind") } %>
-    <%= f.collection_select :country, codes.call(PensionSource::COUNTRIES), :value, :label, { label: t("retirement.pension_sources.form.country") } %>
+    <%= f.collection_select :country, loc.call("countries", PensionSource::COUNTRIES), :value, :label, { label: t("retirement.pension_sources.form.country") } %>
   </div>
 
   <div class="grid grid-cols-2 gap-3">
-    <%= f.collection_select :pension_system, codes.call(PensionSource::PENSION_SYSTEMS), :value, :label, { label: t("retirement.pension_sources.form.pension_system") } %>
-    <%= f.collection_select :tax_treatment, codes.call(PensionSource::TAX_TREATMENTS), :value, :label, { label: t("retirement.pension_sources.form.tax_treatment") } %>
+    <%= f.collection_select :pension_system, loc.call("pension_systems", PensionSource::PENSION_SYSTEMS), :value, :label, { label: t("retirement.pension_sources.form.pension_system") } %>
+    <%= f.collection_select :tax_treatment, loc.call("tax_treatments", PensionSource::TAX_TREATMENTS), :value, :label, { label: t("retirement.pension_sources.form.tax_treatment") } %>
   </div>
 
   <%= f.collection_select :payout_shape, loc.call("payout_shapes", PensionSource::PAYOUT_SHAPES), :value, :label, { label: t("retirement.pension_sources.form.payout_shape") } %>
