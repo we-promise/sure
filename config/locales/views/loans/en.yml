@@ -3,35 +3,76 @@ en:
   loans:
     edit:
       edit: Edit %{account}
+    
     form:
+      subtypes:
+        mortgage:
+          short: Mortgage
+          long: Mortgage
+        student:
+          short: Student Loan
+          long: Student Loan
+        auto:
+          short: Auto Loan
+          long: Auto Loan
+        other:
+          short: Other Loan
+          long: Other Loan
+      down_payment: Down payment
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
+      insurance_rate: Insurance rate
+      insurance_rate_placeholder: '0.5'
       initial_balance: Original loan balance
       rate_type: Rate type
+      rate_type_options:
+        fixed: Fixed
+        variable: Variable
+        adjustable: Adjustable
+      insurance_rate_type: Insurance rate type
+      insurance_rate_type_options:
+        level_term: Level Term
+        decreasing_life: Decreasing Life
       term_months: Term (months)
       term_months_placeholder: '360'
-      none: None
+      subtype: Subtype
       subtype_prompt: Select loan type
-      subtype_none: None
+      none: None
+      start_date: Start date
     new:
-      title: Enter loan details
-    overview:
-      interest_rate: Interest Rate
-      monthly_payment: Monthly Payment
-      not_applicable: N/A
-      original_principal: Original Principal
-      remaining_principal: Remaining Principal
-      term: Term
-      type: Type
-      unknown: Unknown
+      title: Enter loan details      
     tabs:
       overview:
-        interest_rate: Interest Rate
-        monthly_payment: Monthly Payment
+        interest_rate: Interest rate
+        monthly_payment: Monthly payment
         not_applicable: N/A
-        original_principal: Original Principal
-        remaining_principal: Remaining Principal
+        original_principal: Original principal
+        remaining_principal: Remaining principal
+        repayment_progress: Repayment progress
         term: Term
         type: Type
+        rate_types:
+          fixed: Fixed
+          variable: Variable
+          adjustable: Adjustable
         unknown: Unknown
+        already_paid_html: "You have already repaid %{percentage} of your loan"
+        initial_leverage: Initial leverage
+        leverage_bands:
+          conservative: Defensive
+          moderate: Moderate
+          high: Aggressive
+        debt_over_down_payment: Debt / down payment
+        total_cost: Total cost
+        principal: Principal
+        interest: Interest
+        insurance: Insurance
+        months_elapsed: Months elapsed
+        remaining_months: Remaining months
+        years:
+          one: "%{count} year"
+          other: "%{count} years"
+        months:
+          one: "%{count} month"
+          other: "%{count} months"
         edit_loan_details: "Edit loan details"
