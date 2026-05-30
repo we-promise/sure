@@ -15,3 +15,11 @@ de:
           attributes:
             adjustments:
               too_many: "darf %{count} pro Plan nicht überschreiten."
+        "goal/retirement_statement":
+          attributes:
+            pension_source:
+              must_belong_to_plan: muss zu diesem Ruhestandsplan gehören.
+        "goal/retirement_adjustment":
+          attributes:
+            base:
+              limit_reached: "Du kannst nicht mehr als %{count} Anpassungen hinzufügen."
