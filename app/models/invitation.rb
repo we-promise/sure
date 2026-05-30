@@ -32,6 +32,7 @@ class Invitation < ApplicationRecord
     return false if user.blank?
     return false unless pending?
     return false unless emails_match?(user)
+    return false if would_orphan_owned_accounts?(user)
 
     transaction do
       user.update!(family_id: family_id, role: role.to_s)
@@ -39,6 +40,14 @@ class Invitation < ApplicationRecord
       auto_share_existing_accounts(user) if family.share_all_by_default?
     end
     true
+  end
+
+  def would_orphan_owned_accounts?(user)
+    return false if user.blank?
+    return false if user.family_id.blank?
+    return false if user.family_id == family_id
+
+    user.owned_accounts.where.not(family_id: family_id).exists?
   end
 
   private
