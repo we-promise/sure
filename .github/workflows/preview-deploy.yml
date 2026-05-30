@@ -190,8 +190,8 @@ jobs:
       - name: Push preview image to Cloudflare registry
         id: image
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -200,14 +200,7 @@ jobs:
           push_log="$RUNNER_TEMP/wrangler-containers-push.log"
           clean_log="$RUNNER_TEMP/wrangler-containers-push.clean.log"
 
-          cf_prefix="CLOUD"
-          cf_prefix="${cf_prefix}FLARE"
-          wrangler_token_env="${cf_prefix}_API_TOKEN"
-          wrangler_account_env="${cf_prefix}_ACCOUNT_ID"
-          env \
-            "$wrangler_token_env=$CF_API_TOKEN" \
-            "$wrangler_account_env=$CF_ACCOUNT_ID" \
-            ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log"
+          ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log"
           perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$push_log" > "$clean_log"
           image_ref=$(grep -Eo 'registry\.cloudflare\.com/[^[:space:]]+' "$clean_log" | tail -n 1 | tr -d '\r')
 
@@ -225,7 +218,7 @@ jobs:
           set -euo pipefail
 
           config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"
-          # Keep the image reference JSON-quoted so the rewrite preserves TOML string syntax.
+          # Use Node instead of sed so the replacement preserves TOML string syntax.
           node - "$config_path" <<'NODE'
           const fs = require('node:fs');
 
@@ -268,21 +261,14 @@ jobs:
       - name: Deploy to Cloudflare Containers
         id: deploy
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}
         run: |
           set -euo pipefail
 
           cd "$RUNNER_TEMP/sure-preview-worker"
-          cf_prefix="CLOUD"
-          cf_prefix="${cf_prefix}FLARE"
-          wrangler_token_env="${cf_prefix}_API_TOKEN"
-          wrangler_account_env="${cf_prefix}_ACCOUNT_ID"
-          env \
-            "$wrangler_token_env=$CF_API_TOKEN" \
-            "$wrangler_account_env=$CF_ACCOUNT_ID" \
-            ./node_modules/.bin/wrangler deploy --config wrangler.toml --var "PR_NUMBER:${PR_NUMBER}"
+          ./node_modules/.bin/wrangler deploy --config wrangler.toml --var "PR_NUMBER:${PR_NUMBER}"
 
           # Get the deployment URL
           PREVIEW_URL="https://sure-preview-${PR_NUMBER}.${CLOUDFLARE_WORKERS_SUBDOMAIN}.workers.dev"

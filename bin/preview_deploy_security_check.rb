@@ -40,8 +40,8 @@ EXPECTED_DEPLOY_PERMISSIONS = {
   "deployments" => "write",
   "pull-requests" => "write"
 }.freeze
-EXPECTED_DEPLOY_SECRET_ENV = %w[CF_ACCOUNT_ID CF_API_TOKEN CLOUDFLARE_WORKERS_SUBDOMAIN].freeze
-EXPECTED_PUSH_SECRET_ENV = %w[CF_ACCOUNT_ID CF_API_TOKEN].freeze
+EXPECTED_DEPLOY_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_WORKERS_SUBDOMAIN].freeze
+EXPECTED_PUSH_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN].freeze
 REQUIRED_PREPARE_LINES = [
   'cp trusted/workers/preview/package.json "$preview_dir/package.json"',
   'cp trusted/workers/preview/package-lock.json "$preview_dir/package-lock.json"',
@@ -281,7 +281,7 @@ assert_run_includes(push_image, "./node_modules/.bin/wrangler containers push", 
 assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'const original = fs.readFileSync', 'const updated = original.replace(/image = "[^"]+"/', "updated === original", "Expected wrangler.toml to contain an image entry to rewrite", "JSON.stringify(imageRef)")
 assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"')
 
-secret_steps = deploy_steps.select { |step| env_hash(step).then { |env| env.key?("CF_API_TOKEN") || env.key?("CF_ACCOUNT_ID") } }
+secret_steps = deploy_steps.select { |step| env_hash(step).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }
 assert(secret_steps.map { |step| step["name"] } == [ push_image["name"], deploy["name"] ], "only image push and deploy may receive Cloudflare secrets")
 assert_secret_env_sources!(push_image, EXPECTED_PUSH_SECRET_ENV)
 assert_secret_env_sources!(deploy, EXPECTED_DEPLOY_SECRET_ENV)
