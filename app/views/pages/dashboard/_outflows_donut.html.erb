@@ -1,5 +1,5 @@
 <%# locals: (outflows_data:, period:) %>
-<div id="outflows-donut-section">
+<div id="outflows-donut-section" class="@container">
   <div class="flex justify-end items-center gap-4 px-4 mb-4">
     <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
       <%= form.select :period,
@@ -11,9 +11,9 @@
   </div>
 
   <div class="px-4">
-    <div class="flex flex-col lg:flex-row gap-8 items-center">
+    <div class="flex flex-col @2xl:flex-row gap-8 items-center">
       <!-- Donut Chart -->
-      <div class="w-full lg:w-1/3 max-w-[300px] px-4">
+      <div class="w-full @2xl:w-1/3 max-w-[300px] px-4">
         <div class="h-[300px] relative"
           data-controller="donut-chart"
           data-donut-chart-segments-value="<%= outflows_data[:categories].to_json %>"
@@ -54,13 +54,13 @@
       </div>
 
       <!-- Category List -->
-      <div class="w-full lg:w-2/3 bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
+      <div class="w-full @2xl:w-2/3 bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
         <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
-          <div class="w-16 lg:w-40">
+          <div class="@2xl:w-40">
             <p><%= t("pages.dashboard.outflows_donut.categories") %><span class="text-subdued mx-1">&middot;</span><%= outflows_data[:categories].count %></p>
           </div>
           <div class="ml-auto text-right flex items-center gap-6">
-            <div class="w-16 lg:w-40">
+            <div class="w-16 @2xl:w-40">
               <p><%= t("pages.dashboard.outflows_donut.value") %></p>
             </div>
             <div class="w-16">
@@ -95,7 +95,7 @@
               </div>
               <div class="flex items-center gap-4 flex-shrink-0 text-right">
                 <span class="text-sm font-medium text-primary whitespace-nowrap privacy-sensitive"><%= format_money Money.new(category[:amount], category[:currency]) %></span>
-                <span class="text-sm text-secondary whitespace-nowrap w-10 lg:w-15 privacy-sensitive"><%= category[:percentage] %>%</span>
+                <span class="text-sm text-secondary whitespace-nowrap w-10 @2xl:w-15 privacy-sensitive"><%= category[:percentage] %>%</span>
               </div>
             <% end %>
 
@@ -118,7 +118,7 @@
               </div>
             <% end %>
             <% if idx < outflows_data[:categories].size - 1 %>
-              <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+              <%= render "shared/ruler", classes: "mx-3 @2xl:mx-4" %>
             <% end %>
           <% end %>
         </div>
