@@ -199,6 +199,26 @@ describe("resolvePreviewRequest", () => {
     assert.equal(state.outputs.is_fork, "true");
   });
 
+  it("resolves PRs from artifact names when workflow and commit association metadata are unavailable", async () => {
+    const pullRequest = openPullRequest(2017, headSha, "Rene0422/sure");
+    const state = fakeCore();
+    const github = fakeGithub({
+      artifacts: [previewArtifact(2017, headSha)],
+      associatedPullRequests: [],
+      pullRequest,
+    });
+
+    await resolvePreviewRequest({ github, context: contextFor(workflowRun), core: state.core });
+
+    assert.equal(state.failure, null);
+    assert.equal(state.outputs.should_deploy, "true");
+    assert.equal(state.outputs.pr_number, "2017");
+    assert.equal(state.outputs.head_sha, headSha);
+    assert.equal(state.outputs.artifact_name, `preview-image-pr-2017-${headSha}`);
+    assert.equal(state.outputs.is_fork, "true");
+    assert.match(state.messages.join("\n"), /Resolved PR 2017 from artifact_name; fork=true/);
+  });
+
   it("treats stale workflow runs as successful no-ops", async () => {
     const currentHeadSha = "c79a325513160e651680170f817d802395c38d86";
     const pullRequest = openPullRequest(2060, currentHeadSha);

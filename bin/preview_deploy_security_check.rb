@@ -304,8 +304,8 @@ assert_run_includes(push_image, "./node_modules/.bin/wrangler containers push", 
 assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'const original = fs.readFileSync', 'const updated = original.replace(/image = "[^"]+"/', "updated === original", "Expected wrangler.toml to contain an image entry to rewrite", "JSON.stringify(imageRef)")
 assert_run_includes(create_deployment, "github.rest.repos.createDeployment", "ref: headSha", "preview-pr-${prNumber}")
 assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", './node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "retrying once")
-assert_run_includes(warm_preview, "$PREVIEW_URL/_container_status")
-assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'")
+assert_run_includes(warm_preview, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15")
+assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'")
 
 secret_steps = deploy_steps.select { |step| env_hash(step).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }
 assert(secret_steps.map { |step| step["name"] } == [ push_image["name"], deploy["name"] ], "only image push and deploy may receive Cloudflare secrets")

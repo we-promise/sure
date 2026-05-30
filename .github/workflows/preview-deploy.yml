@@ -247,7 +247,7 @@ jobs:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         run: |
           echo "Triggering preview wake-up..."
-          curl -fsS "$PREVIEW_URL/_container_status" >/dev/null || true
+          curl -fsS --connect-timeout 5 --max-time 15 "$PREVIEW_URL/_container_status" >/dev/null || true
 
       - name: Collect preview diagnostics
         if: success()
@@ -260,7 +260,7 @@ jobs:
           last_error=""
 
           for attempt in $(seq 1 20); do
-            if curl -fsS "$PREVIEW_URL/_container_status" -o "$diagnostics_file"; then
+            if curl -fsS --connect-timeout 5 --max-time 15 "$PREVIEW_URL/_container_status" -o "$diagnostics_file"; then
               if jq -e '.previewReady == true or .previewFailed == true' "$diagnostics_file" >/dev/null; then
                 break
               fi
