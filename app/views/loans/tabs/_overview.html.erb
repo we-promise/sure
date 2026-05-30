@@ -17,29 +17,17 @@
                   percentage: tag.span(number_to_percentage(percentage, precision: 1),class: "font-medium text-warning")) %>
           </div>
 
-          <div class="relative w-16 h-16">
-            <svg viewBox="0 0 64 64" class="w-full h-full -rotate-90" aria-hidden="true">
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                stroke-width="6"
-                fill="none"
-                stroke="currentColor"
-                class="text-gray-200 dark:text-gray-700"
-              />
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                stroke-width="6"
-                stroke-linecap="round"
-                fill="none"
-                class="stroke-warning transition-all duration-500"
-                stroke-dasharray="<%= 2 * Math::PI * 28 %>"
-                stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.balance_paid_ratio) %>"
-              />
-            </svg>
+          <div
+            data-controller="donut-chart"
+            data-donut-chart-segments-value="<%= loan.to_donut_segments.to_json %>"
+            data-donut-chart-segment-height-value="6"
+            data-donut-chart-overage-segment-id-value="paid"
+            class="relative w-16 h-16"
+            aria-hidden="true">
+            <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
+            <div data-donut-chart-target="contentContainer" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div data-donut-chart-target="defaultContent"></div>
+            </div>
           </div>
         </div>
 

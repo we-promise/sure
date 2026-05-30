@@ -186,6 +186,23 @@ class Loan < ApplicationRecord
     (1 - current.fdiv(initial)).clamp(0.0, 1.0)
   end
 
+  # Donut-chart segments for the repayment-progress ring, consumed by the
+  # shared `donut-chart` Stimulus controller (the same one Budgets and Goals
+  # use). A warning-colored "paid" arc plus a `--budget-unused-fill` track
+  # segment — both CSS-var driven so the ring themes correctly in light/dark.
+  # The view marks "paid" as the controller's overage segment so its var()
+  # color is passed straight to the SVG fill instead of being parsed by
+  # d3.color() (which returns null for var(...)). Returns nil when paydown
+  # can't be computed, in which case the view hides the ring.
+  def to_donut_segments
+    ratio = balance_paid_ratio
+    return unless ratio
+
+    [
+      { color: "var(--color-warning)", amount: ratio, id: "paid" },
+      { color: "var(--budget-unused-fill)", amount: 1 - ratio, id: "unused" }
+    ]
+  end
 
   def initial_leverage_ratio
     dp = down_payment
