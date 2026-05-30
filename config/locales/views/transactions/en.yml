@@ -278,9 +278,17 @@ en:
         unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
+        account_filter:
+          filter_accounts: Filter accounts
+        category_filter:
+          filter_category: Filter category
         date_filter:
           start_date: "Start date"
           end_date: "End date"
+        merchant_filter:
+          filter_merchants: Filter merchants
+        tag_filter:
+          filter_tags: Filter tags
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than

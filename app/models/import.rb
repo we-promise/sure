@@ -40,6 +40,7 @@ class Import < ApplicationRecord
 
   belongs_to :family
   belongs_to :account, optional: true
+  belongs_to :account_statement, optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
