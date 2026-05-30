@@ -4,8 +4,6 @@ class PagesController < ApplicationController
   skip_authentication only: %i[redis_configuration_error privacy terms]
   before_action :ensure_intro_guest!, only: :intro
 
-  # Dashboard shows a high-level overview of the family's finances, including cash flow, net worth, and investments.
-  # [GET] /
   def dashboard
     if Current.user&.ui_layout_intro?
       redirect_to chats_path and return
@@ -31,14 +29,10 @@ class PagesController < ApplicationController
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.dashboard"), nil ] ]
   end
 
-  # Intro page with app overview and onboarding steps, shown to guest users before they create an account.
-  # [GET] /intro(.:format)
   def intro
     @breadcrumbs = [ [ t("breadcrumbs.home"), chats_path ], [ t("breadcrumbs.intro"), nil ] ]
   end
 
-  # AJAX endpoint to save user preferences for dashboard layout (collapsed sections, section order, etc.)
-  # [PATCH] /dashboard/preferences(.:format)
   def update_preferences
     if Current.user.update_dashboard_preferences(preferences_params)
       head :ok
@@ -47,8 +41,6 @@ class PagesController < ApplicationController
     end
   end
 
-  # Changelog page that fetches and displays the latest release notes from GitHub.
-  # [GET] /changelog(.:format)
   def changelog
     @release_notes = github_provider.fetch_latest_release_notes
 
@@ -66,26 +58,18 @@ class PagesController < ApplicationController
     render layout: "settings"
   end
 
-  # Feedback page with a form to submit user feedback, questions, etc.
-  # [GET] /feedback(.:format)
   def feedback
     render layout: "settings"
   end
 
-  # Redis configuration error page shown when the app detects an issue connecting to Redis
-  # [GET] /redis-configuration-error(.:format)
   def redis_configuration_error
     render layout: "blank"
   end
 
-  # Privacy policy page
-  # [GET] /privacy(.:format)
   def privacy
     render layout: "blank"
   end
 
-  # Terms and Conditions page
-  # [GET] /terms(.:format)
   def terms
     render layout: "blank"
   end
