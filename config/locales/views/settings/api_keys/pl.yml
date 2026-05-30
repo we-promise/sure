@@ -37,7 +37,7 @@ pl:
           never_expires: Nigdy nie wygasa
           permissions: Uprawnienia
           usage_instructions_title: Jak używać klucza API
-          usage_instructions: 'Dołącz klucz API w nagłówku X-Api-Key podczas wysyłania żądań do API Maybe:'
+          usage_instructions: 'Dołącz klucz API w nagłówku X-Api-Key podczas wysyłania żądań do API %{product_name}:'
           regenerate_key: Utwórz nowy klucz
           revoke_key: Unieważnij klucz
           revoke_confirmation: Czy na pewno chcesz unieważnić ten klucz API? Tej akcji nie można cofnąć, a wszystkie aplikacje używające tego klucza zostaną natychmiast wyłączone.

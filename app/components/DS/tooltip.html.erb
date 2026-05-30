@@ -1,8 +1,39 @@
 <span data-controller="DS--tooltip" data-DS--tooltip-placement-value="<%= placement %>" data-DS--tooltip-offset-value="<%= offset %>" data-DS--tooltip-cross-axis-value="<%= cross_axis %>" class="inline-flex">
-  <%= helpers.icon icon_name, size: size, color: color %>
+  <% if as == :button %>
+    <%# Wrap the trigger icon in a focusable `<button>` so AT users (and
+        keyboard-only users) can land on the tooltip anchor. The Lucide
+        icon itself carries `aria-hidden`, so the button's accessible
+        name comes from `aria-label`, and the tooltip text is exposed
+        via `aria-describedby`. %>
+    <button type="button"
+            class="inline-flex items-center cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 theme-dark:focus-visible:ring-alpha-white-300 rounded"
+            aria-describedby="<%= tooltip_id %>"
+            aria-label="<%= t("ds.tooltip.trigger_label", default: "More info") %>">
+      <%= helpers.icon icon_name, size: size, color: color %>
+    </button>
+  <% else %>
+    <%# `as: :span` — used when the tooltip is rendered inside an
+        already-focusable interactive ancestor (e.g. `<summary>`),
+        where the HTML spec forbids nested interactive content.
+        Keyboard reveal is wired in the controller, which (in addition
+        to listening on the outer span for the standalone case) also
+        binds `focusin/focusout/keydown` on the closest `<summary>`
+        ancestor — because `focusin` only bubbles UP, a listener on
+        this descendant span would never fire when the ancestor
+        disclosure receives focus. %>
+    <span class="inline-flex items-center"
+          aria-describedby="<%= tooltip_id %>">
+      <%= helpers.icon icon_name, size: size, color: color %>
+    </span>
+  <% end %>
 
-  <div role="tooltip" data-DS--tooltip-target="tooltip" class="hidden absolute z-50 bg-inverse text-sm px-1.5 py-1 rounded-md">
-    <div class="text-inverse font-normal max-w-[200px]">
+  <div role="tooltip"
+       id="<%= tooltip_id %>"
+       data-DS--tooltip-target="tooltip"
+       class="hidden absolute z-50 bg-inverse text-sm px-1.5 py-1 rounded-md">
+    <%# `max-w-[20rem]` scales with the root font-size so AT users with
+        a larger base font don't see the tooltip clipped. %>
+    <div class="text-inverse font-normal max-w-[20rem]">
       <%= tooltip_content %>
     </div>
   </div>

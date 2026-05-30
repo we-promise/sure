@@ -38,8 +38,16 @@ class Transfer < ApplicationRecord
   # Once transfer is destroyed, we need to mark the denormalized kind fields on the transactions
   def destroy!
     Transfer.transaction do
-      inflow_transaction.update!(kind: "standard")
-      outflow_transaction.update!(kind: "standard")
+      [ inflow_transaction, outflow_transaction ].each do |transaction|
+        next if transaction.nil?
+        next unless Transaction.exists?(transaction.id)
+        begin
+          transaction.update!(kind: "standard")
+        rescue ActiveRecord::RecordNotFound
+        rescue NoMethodError
+          next
+        end
+      end
       super
     end
   end
@@ -107,12 +115,12 @@ class Transfer < ApplicationRecord
   private
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
-      errors.add(:base, "Must be from different accounts") if to_account == from_account
+      errors.add(:base, :different_accounts) if to_account == from_account
     end
 
     def transfer_has_same_family
       return unless inflow_transaction&.entry && outflow_transaction&.entry
-      errors.add(:base, "Must be from same family") unless to_account&.family == from_account&.family
+      errors.add(:base, :same_family) unless to_account&.family == from_account&.family
     end
 
     def transfer_has_opposite_amounts
@@ -126,10 +134,10 @@ class Transfer < ApplicationRecord
 
       if inflow_entry.currency == outflow_entry.currency
         # For same currency, amounts must be exactly opposite
-        errors.add(:base, "Must have opposite amounts") if inflow_amount + outflow_amount != 0
+        errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != 0
       else
         # For different currencies, just check the signs are opposite
-        errors.add(:base, "Must have opposite amounts") unless inflow_amount.negative? && outflow_amount.positive?
+        errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
       end
     end
 
@@ -138,6 +146,6 @@ class Transfer < ApplicationRecord
 
       date_diff = (inflow_transaction.entry.date - outflow_transaction.entry.date).abs
       max_days = status == "confirmed" ? 30 : 4
-      errors.add(:base, "Must be within #{max_days} days") if date_diff > max_days
+      errors.add(:base, :within_days, count: max_days) if date_diff > max_days
     end
 end
