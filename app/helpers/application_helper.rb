@@ -214,7 +214,12 @@ module ApplicationHelper
       lucide_icon(key, **opts)
     rescue StandardError => e
       Rails.logger.warn("[ApplicationHelper] Falling back to key for unknown icon #{key.inspect}: #{e.message}")
-      lucide_icon("key", **opts)
+      begin
+        lucide_icon("key", **opts)
+      rescue StandardError => fallback_error
+        Rails.logger.warn("[ApplicationHelper] Unable to render fallback icon: #{fallback_error.message}")
+        tag.span("", class: opts[:class], aria: { hidden: true })
+      end
     end
 
     def normalize_icon_key(key)

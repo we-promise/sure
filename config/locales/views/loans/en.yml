@@ -7,7 +7,16 @@ en:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
       initial_balance: Original loan balance
+      annuity_enabled: Annuity schedule
+      monthly: Monthly
+      payment_cadence: Payment cadence
       rate_type: Rate type
+      rate_periods: Rate periods
+      rate_period_annual_rate: Annual rate
+      rate_period_payment_amount: Payment override
+      rate_period_starts_on: Starts on
+      remove_rate_period: Remove
+      started_on: Loan start date
       term_months: Term (months)
       term_months_placeholder: '360'
       none: None
@@ -15,6 +24,8 @@ en:
       subtype_none: None
     new:
       title: Enter loan details
+    reconcile:
+      success: Loan reconciled to scheduled balance
     overview:
       interest_rate: Interest Rate
       monthly_payment: Monthly Payment
@@ -30,8 +41,17 @@ en:
         monthly_payment: Monthly Payment
         not_applicable: N/A
         original_principal: Original Principal
+        balance_variance: Balance Variance
+        interest: Interest
+        payment_breakdown: Payment Breakdown
+        payoff_date: Payoff Date
+        principal: Principal
+        reconcile_to_schedule: Reconcile to schedule
         remaining_principal: Remaining Principal
+        remaining_term: Remaining Term
+        scheduled_balance: Scheduled Balance
         term: Term
+        total_interest: Total Interest
         type: Type
         unknown: Unknown
         edit_loan_details: "Edit loan details"

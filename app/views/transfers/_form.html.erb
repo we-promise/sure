@@ -9,8 +9,12 @@
 
   <%# Hide expense/income tabs when creating a transfer involving an investment or crypto account. %>
   <% show_type_tabs = true %>
+  <% selected_from_account_id = @from_account_id.presence || params.dig(:transfer, :from_account_id).presence || params[:from_account_id].presence %>
+  <% selected_to_account_id = params.dig(:transfer, :to_account_id).presence || params[:to_account_id].presence %>
+  <% preview_currency = @accounts.find { |account| account.id == selected_from_account_id }&.currency || Current.family.currency %>
   <% account_ids = [] %>
-  <% account_ids << @from_account_id if defined?(@from_account_id) && @from_account_id.present? %>
+  <% account_ids << selected_from_account_id if selected_from_account_id.present? %>
+  <% account_ids << selected_to_account_id if selected_to_account_id.present? %>
   <% account_ids << params[:from_account_id] if params[:from_account_id].present? %>
   <% account_ids << params[:to_account_id] if params[:to_account_id].present? %>
   <% account_ids << transfer.from_account_id if transfer.respond_to?(:from_account_id) && transfer.from_account_id.present? %>
@@ -28,16 +32,17 @@
   <% end %>
 
   <section class="space-y-2">
-    <%= f.collection_select :from_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id, variant: :logo }, { required: true, data: { transfer_form_target: "fromAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
-    <%= f.collection_select :to_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".to"), variant: :logo }, { required: true, data: { transfer_form_target: "toAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
-    
-    <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
-    
-    <%= f.number_field :amount, label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
-    
+    <%= f.collection_select :from_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: selected_from_account_id, variant: :logo }, { required: true, data: { transfer_form_target: "fromAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+    <%= f.collection_select :to_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".to"), selected: selected_to_account_id, variant: :logo }, { required: true, data: { transfer_form_target: "toAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+
+    <%= f.date_field :date, value: params.dig(:transfer, :date).presence || transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
+
+    <%= f.number_field :amount, value: params.dig(:transfer, :amount), label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
+
     <% convert_input = capture do %>
       <%= f.number_field :exchange_rate,
         label: t("shared.exchange_rate_tabs.exchange_rate"),
+        value: params.dig(:transfer, :exchange_rate),
         min: "0.00000000000001",
         step: "0.00000000000001",
         placeholder: "1.0",
@@ -71,6 +76,61 @@
       exchange_rate_label: t("shared.exchange_rate_tabs.exchange_rate"),
       convert_input: convert_input,
       destination_input: destination_input %>
+
+    <% if defined?(@loan_payment_split_preview) && @loan_payment_split_preview.present? %>
+      <div class="space-y-3 rounded-lg border border-primary bg-container-inset p-3" data-testid="loan-payment-split-preview">
+        <div class="flex items-start gap-2">
+          <%= icon "split", size: "sm", color: "default", class: "mt-0.5" %>
+          <div class="space-y-1">
+            <h3 class="text-sm font-medium text-primary"><%= t(".loan_payment_split_title") %></h3>
+            <p class="text-sm text-secondary"><%= t(".loan_payment_split_description") %></p>
+          </div>
+        </div>
+
+        <dl class="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <dt class="text-secondary"><%= t(".loan_payment_interest") %></dt>
+            <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.interest, preview_currency) %></dd>
+          </div>
+          <div>
+            <dt class="text-secondary"><%= t(".loan_payment_principal") %></dt>
+            <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.principal, preview_currency) %></dd>
+          </div>
+          <div>
+            <dt class="text-secondary"><%= t(".loan_payment_extra_principal") %></dt>
+            <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.extra_principal, preview_currency) %></dd>
+          </div>
+          <div>
+            <dt class="text-secondary"><%= t(".loan_payment_variance") %></dt>
+            <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.variance, preview_currency) %></dd>
+          </div>
+        </dl>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <%= render DS::Button.new(
+            text: t(".accept_loan_payment_split"),
+            type: "submit",
+            name: "transfer[loan_payment_split_action]",
+            value: "accept",
+            full_width: true
+          ) %>
+          <%= render DS::Button.new(
+            text: t(".update_loan_payment_split"),
+            variant: "secondary",
+            type: "submit",
+            full_width: true
+          ) %>
+          <%= render DS::Button.new(
+            text: t(".leave_loan_payment_unmatched"),
+            variant: "outline",
+            type: "submit",
+            name: "transfer[loan_payment_split_action]",
+            value: "unmatched",
+            full_width: true
+          ) %>
+        </div>
+      </div>
+    <% end %>
   </section>
 
   <section>

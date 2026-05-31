@@ -29,6 +29,51 @@
                                  placeholder: t("loans.form.term_months_placeholder") %>
       </div>
 
+      <div class="space-y-3 rounded-lg border border-primary p-3">
+        <div class="flex items-center gap-2">
+          <%= loan_form.toggle :annuity_enabled %>
+          <span class="text-sm font-medium text-primary"><%= t("loans.form.annuity_enabled") %></span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <%= loan_form.date_field :started_on,
+                                   label: t("loans.form.started_on") %>
+
+          <%= loan_form.select :payment_cadence,
+                               [[t("loans.form.monthly"), "monthly"]],
+                               { label: t("loans.form.payment_cadence") } %>
+        </div>
+
+        <% rate_periods = loan_form.object.loan_rate_periods.to_a %>
+        <% rate_periods << loan_form.object.loan_rate_periods.build if rate_periods.empty? || rate_periods.all?(&:persisted?) %>
+
+        <div class="space-y-2">
+          <div class="text-sm font-medium text-primary"><%= t("loans.form.rate_periods") %></div>
+
+          <%= loan_form.fields_for :loan_rate_periods, rate_periods do |rate_period_form| %>
+            <div class="grid grid-cols-1 gap-2 rounded-md bg-container-inset p-2 sm:grid-cols-4">
+              <%= rate_period_form.hidden_field :id if rate_period_form.object.persisted? %>
+              <%= rate_period_form.date_field :starts_on,
+                                              label: t("loans.form.rate_period_starts_on") %>
+              <%= rate_period_form.number_field :annual_rate,
+                                                label: t("loans.form.rate_period_annual_rate"),
+                                                min: 0,
+                                                step: 0.005 %>
+              <%= rate_period_form.number_field :payment_amount,
+                                                label: t("loans.form.rate_period_payment_amount"),
+                                                min: 0,
+                                                step: 0.01 %>
+              <% if rate_period_form.object.persisted? %>
+                <div class="flex items-end gap-2 pb-2">
+                  <%= rate_period_form.check_box :_destroy, class: "checkbox checkbox--light" %>
+                  <%= rate_period_form.label :_destroy, t("loans.form.remove_rate_period"), class: "text-sm text-secondary" %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
       <div>
         <%= loan_form.select :subtype,
                   Loan::SUBTYPES.map { |k, v| [v[:long], k] },

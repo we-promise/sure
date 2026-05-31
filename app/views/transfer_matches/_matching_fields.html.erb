@@ -1,4 +1,7 @@
-<%# locals: (form:, entry:, candidates:, accounts:) %>
+<%# locals: (form:, entry:, candidates:, accounts:, selected_method: nil, selected_target_account_id: nil, selected_matched_entry_id: nil) %>
+<% selected_method = local_assigns[:selected_method].presence || (candidates.any? ? "existing" : "new") %>
+<% selected_target_account_id = local_assigns[:selected_target_account_id].presence %>
+<% selected_matched_entry_id = local_assigns[:selected_matched_entry_id].presence %>
 
 <% if candidates.any? %>
   <div data-controller="transfer-match" class="space-y-2">
@@ -11,21 +14,21 @@
                 [t(".match_existing_recommended"), "existing"],
                 [t(".create_new_transaction"), "new"]
               ],
-              { selected: "existing", label: t(".matching_method") },
+              { selected: selected_method, label: t(".matching_method") },
               data: { action: "change->transfer-match#update" } %>
 
-    <div data-transfer-match-target="existingSelect">
+    <div data-transfer-match-target="existingSelect" class="<%= "hidden" if selected_method == "new" %>">
       <%= form.select :matched_entry_id,
                 candidates.map { |entry|
                   [entry_name_detailed(entry), entry.id]
                 },
-                { label: t(".matching_transaction") } %>
+                { label: t(".matching_transaction"), selected: selected_matched_entry_id } %>
     </div>
 
-    <div data-transfer-match-target="newSelect" class="hidden">
+    <div data-transfer-match-target="newSelect" class="<%= "hidden" unless selected_method == "new" %>">
       <%= form.select :target_account_id,
                 accounts.map { |account| [account.name, account.id] },
-                { label: t(".target_account") } %>
+                { label: t(".target_account"), selected: selected_target_account_id } %>
     </div>
   </div>
 <% else %>
@@ -38,6 +41,6 @@
   <div>
     <%= form.select :target_account_id,
                 accounts.map { |account| [account.name, account.id] },
-                { label: t(".target_account") } %>
+                { label: t(".target_account"), selected: selected_target_account_id } %>
   </div>
 <% end %>

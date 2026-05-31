@@ -4,8 +4,16 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["newSelect", "existingSelect"];
 
+  connect() {
+    this.updateView(this.element.querySelector("select").value);
+  }
+
   update(event) {
-    if (event.target.value === "new") {
+    this.updateView(event.target.value);
+  }
+
+  updateView(value) {
+    if (value === "new") {
       this.newSelectTarget.classList.remove("hidden");
       this.existingSelectTarget.classList.add("hidden");
     } else {

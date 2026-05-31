@@ -32,13 +32,22 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
+    if loan_payment_split_confirmation_required?(destination_account)
+      @transfer = Transfer.new
+      @from_account_id = source_account.id
+      @loan_payment_split_preview = loan_payment_split_preview(destination_account)
+      render :new, status: :unprocessable_entity
+      return
+    end
+
     @transfer = Transfer::Creator.new(
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
-      date: transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current,
+      date: transfer_date,
       amount: transfer_params[:amount].to_d,
-      exchange_rate: transfer_params[:exchange_rate].presence&.to_d
+      exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
+      split_loan_payment: transfer_params[:loan_payment_split_action] != "unmatched"
     ).create
 
     if @transfer.persisted?
@@ -160,7 +169,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate)
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :loan_payment_split_action)
     end
 
     def set_accounts
@@ -187,5 +196,25 @@ class TransfersController < ApplicationController
     def update_transfer_details
       @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
       @transfer.update!(notes: transfer_update_params[:notes])
+    end
+
+    def loan_payment_split_confirmation_required?(destination_account)
+      return false if transfer_params[:loan_payment_split_action].present?
+
+      split = loan_payment_split_preview(destination_account)
+      split&.matched? && split.interest.positive?
+    end
+
+    def loan_payment_split_preview(destination_account)
+      return nil unless destination_account.loan? && destination_account.loan.annuity_enabled?
+
+      Loan::PaymentSplitter.new(destination_account.loan).split(
+        payment_date: transfer_date,
+        amount: transfer_params[:amount].to_d
+      )
+    end
+
+    def transfer_date
+      transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current
     end
 end

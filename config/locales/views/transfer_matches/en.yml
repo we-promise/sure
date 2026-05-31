@@ -13,7 +13,16 @@ en:
       to_account_named: "To account: %{name}"
       outflow_transaction: Outflow transaction
       inflow_transaction: Inflow transaction
+      accept_loan_payment_split: Accept split
       create_transfer_match: Create transfer match
+      leave_loan_payment_unmatched: Leave unmatched
+      loan_payment_extra_principal: Extra principal
+      loan_payment_interest: Interest
+      loan_payment_principal: Principal
+      loan_payment_split_description: Only principal will reduce the loan balance; interest will remain spending from the source account.
+      loan_payment_split_title: Proposed loan payment split
+      loan_payment_variance: Variance
+      update_loan_payment_split: Update preview
     matching_fields:
       select_method: Select a method for matching your transactions.
       match_existing_recommended: Match existing transaction (recommended)

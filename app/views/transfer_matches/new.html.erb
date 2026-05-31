@@ -25,7 +25,13 @@
                 ) %>
           <% else %>
             <%= render "transfer_matches/matching_fields",
-                        form: f, entry: @entry, candidates: @transfer_match_candidates.map { |pm| pm.outflow_transaction.entry }, accounts: @accounts %>
+                        form: f,
+                        entry: @entry,
+                        candidates: @transfer_match_candidates.map { |pm| pm.outflow_transaction.entry },
+                        accounts: @accounts,
+                        selected_method: params.dig(:transfer_match, :method),
+                        selected_target_account_id: params.dig(:transfer_match, :target_account_id),
+                        selected_matched_entry_id: params.dig(:transfer_match, :matched_entry_id) %>
           <% end %>
         </div>
       </section>
@@ -52,12 +58,73 @@
                 ) %>
           <% else %>
             <%= render "transfer_matches/matching_fields",
-                        form: f, entry: @entry, candidates: @transfer_match_candidates.map { |pm| pm.inflow_transaction.entry }, accounts: @accounts %>
+                        form: f,
+                        entry: @entry,
+                        candidates: @transfer_match_candidates.map { |pm| pm.inflow_transaction.entry },
+                        accounts: @accounts,
+                        selected_method: params.dig(:transfer_match, :method),
+                        selected_target_account_id: params.dig(:transfer_match, :target_account_id),
+                        selected_matched_entry_id: params.dig(:transfer_match, :matched_entry_id) %>
           <% end %>
         </div>
       </section>
 
-      <%= f.submit t(".create_transfer_match") %>
+      <% if defined?(@loan_payment_split_preview) && @loan_payment_split_preview.present? %>
+        <section class="space-y-3 rounded-lg border border-primary bg-container-inset p-3" data-testid="loan-payment-split-preview">
+          <div class="flex items-start gap-2">
+            <%= icon "split", size: "sm", color: "default", class: "mt-0.5" %>
+            <div class="space-y-1">
+              <h3 class="text-sm font-medium text-primary"><%= t(".loan_payment_split_title") %></h3>
+              <p class="text-sm text-secondary"><%= t(".loan_payment_split_description") %></p>
+            </div>
+          </div>
+
+          <dl class="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <dt class="text-secondary"><%= t(".loan_payment_interest") %></dt>
+              <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.interest, @entry.currency) %></dd>
+            </div>
+            <div>
+              <dt class="text-secondary"><%= t(".loan_payment_principal") %></dt>
+              <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.principal, @entry.currency) %></dd>
+            </div>
+            <div>
+              <dt class="text-secondary"><%= t(".loan_payment_extra_principal") %></dt>
+              <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.extra_principal, @entry.currency) %></dd>
+            </div>
+            <div>
+              <dt class="text-secondary"><%= t(".loan_payment_variance") %></dt>
+              <dd class="font-medium text-primary"><%= format_money Money.new(@loan_payment_split_preview.variance, @entry.currency) %></dd>
+            </div>
+          </dl>
+
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <%= render DS::Button.new(
+              text: t(".accept_loan_payment_split"),
+              type: "submit",
+              name: "transfer_match[loan_payment_split_action]",
+              value: "accept",
+              full_width: true
+            ) %>
+            <%= render DS::Button.new(
+              text: t(".update_loan_payment_split"),
+              variant: "secondary",
+              type: "submit",
+              full_width: true
+            ) %>
+            <%= render DS::Button.new(
+              text: t(".leave_loan_payment_unmatched"),
+              variant: "outline",
+              type: "submit",
+              name: "transfer_match[loan_payment_split_action]",
+              value: "unmatched",
+              full_width: true
+            ) %>
+          </div>
+        </section>
+      <% else %>
+        <%= f.submit t(".create_transfer_match") %>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

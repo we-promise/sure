@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
   end
 
@@ -23,6 +24,75 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       }
       assert_enqueued_with job: SyncJob
     end
+  end
+
+  test "annuity loan transfer shows proposed split before creating records" do
+    loan_account = create_annuity_loan_account
+
+    assert_no_difference [ "Transfer.count", "Entry.count", "Transaction.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: loan_account.id,
+          date: "2024-02-01",
+          amount: 1798.65
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[data-testid='loan-payment-split-preview']"
+    assert_select "button[name='transfer[loan_payment_split_action]'][value='accept']"
+    assert_select "button", text: /Accept split/
+    assert_select "button", text: /Leave unmatched/
+  end
+
+  test "accepting annuity loan split creates principal transfer and interest expense" do
+    loan_account = create_annuity_loan_account
+
+    assert_difference -> { Transfer.count } => 1,
+      -> { Entry.count } => 3,
+      -> { Transaction.count } => 3 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: loan_account.id,
+          date: "2024-02-01",
+          amount: 1798.65,
+          loan_payment_split_action: "accept"
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+
+    assert_in_delta 298.65, transfer.outflow_transaction.entry.amount, 0.01
+    assert_in_delta(-298.65, transfer.inflow_transaction.entry.amount, 0.01)
+    assert_in_delta 1500, accounts(:depository).entries.where(name: "Interest for Annuity Mortgage").sole.amount, 0.01
+  end
+
+  test "leaving annuity loan split unmatched creates existing full-principal transfer" do
+    loan_account = create_annuity_loan_account
+
+    assert_difference -> { Transfer.count } => 1,
+      -> { Entry.count } => 2,
+      -> { Transaction.count } => 2 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: loan_account.id,
+          date: "2024-02-01",
+          amount: 1798.65,
+          loan_payment_split_action: "unmatched"
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+
+    assert_in_delta 1798.65, transfer.outflow_transaction.entry.amount, 0.01
+    assert_in_delta(-1798.65, transfer.inflow_transaction.entry.amount, 0.01)
+    assert_empty accounts(:depository).entries.where(name: "Interest for Annuity Mortgage")
   end
 
   test "can create transfer with custom exchange rate" do
@@ -242,4 +312,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
   end
+
+  private
+    def create_annuity_loan_account
+      loan = Loan.new(
+        annuity_enabled: true,
+        started_on: Date.new(2024, 1, 1),
+        payment_cadence: "monthly",
+        initial_balance: 300000,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+      loan.loan_rate_periods.build(starts_on: Date.new(2024, 1, 1), annual_rate: 6.0)
+
+      users(:family_admin).family.accounts.create!(
+        name: "Annuity Mortgage",
+        balance: 300000,
+        currency: "USD",
+        accountable: loan
+      )
+    end
 end

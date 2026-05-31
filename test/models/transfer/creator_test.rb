@@ -153,6 +153,132 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "Payment from #{@source_account.name}", inflow.entry.name
   end
 
+  test "splits annuity loan payment into principal transfer and interest expense" do
+    loan = Loan.new(
+      annuity_enabled: true,
+      started_on: Date.new(2024, 1, 1),
+      payment_cadence: "monthly",
+      initial_balance: 300000,
+      term_months: 360,
+      rate_type: "fixed"
+    )
+    loan.loan_rate_periods.build(starts_on: Date.new(2024, 1, 1), annual_rate: 6.0)
+    loan_account = @family.accounts.create!(
+      name: "Annuity Mortgage",
+      balance: 300000,
+      currency: "USD",
+      accountable: loan
+    )
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: loan_account.id,
+      date: Date.new(2024, 2, 1),
+      amount: 1798.65
+    )
+
+    assert_difference -> { Entry.count } => 3,
+      -> { Transaction.count } => 3,
+      -> { Transfer.count } => 1 do
+      @transfer = creator.create
+    end
+
+    assert @transfer.persisted?
+    assert_in_delta 298.65, @transfer.outflow_transaction.entry.amount, 0.01
+    assert_in_delta(-298.65, @transfer.inflow_transaction.entry.amount, 0.01)
+
+    split = @transfer.outflow_transaction.extra.fetch("loan_payment_split")
+    assert_in_delta 1500, split.fetch("interest").to_d, 0.01
+    assert_in_delta 298.65, split.fetch("principal").to_d, 0.01
+
+    interest_entry = @source_account.entries.where(name: "Interest for Annuity Mortgage").sole
+    assert_in_delta 1500, interest_entry.amount, 0.01
+    assert_equal "standard", interest_entry.transaction.kind
+  end
+
+  test "annuity loan underpayment records interest without reducing principal" do
+    loan = Loan.new(
+      annuity_enabled: true,
+      started_on: Date.new(2024, 1, 1),
+      payment_cadence: "monthly",
+      initial_balance: 300000,
+      term_months: 360,
+      rate_type: "fixed"
+    )
+    loan.loan_rate_periods.build(starts_on: Date.new(2024, 1, 1), annual_rate: 6.0)
+    loan_account = @family.accounts.create!(
+      name: "Underpaid Mortgage",
+      balance: 300000,
+      currency: "USD",
+      accountable: loan
+    )
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: loan_account.id,
+      date: Date.new(2024, 2, 1),
+      amount: 1000
+    )
+
+    transfer = creator.create
+
+    assert transfer.persisted?
+    assert_in_delta 0, transfer.outflow_transaction.entry.amount, 0.01
+    assert_in_delta 0, transfer.inflow_transaction.entry.amount, 0.01
+
+    split = transfer.outflow_transaction.extra.fetch("loan_payment_split")
+    assert_in_delta 1000, split.fetch("interest").to_d, 0.01
+    assert_in_delta 0, split.fetch("principal").to_d, 0.01
+    assert_in_delta 798.65, split.fetch("variance").to_d, 0.01
+
+    interest_entry = @source_account.entries.where(name: "Interest for Underpaid Mortgage").sole
+    assert_in_delta 1000, interest_entry.amount, 0.01
+  end
+
+  test "annuity split changes balances through principal only on the loan side" do
+    source_account = @family.accounts.create!(
+      name: "Annuity Checking",
+      balance: 5000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    source_account.set_opening_anchor_balance(balance: 5000, date: Date.new(2024, 1, 31))
+
+    loan = Loan.new(
+      annuity_enabled: true,
+      started_on: Date.new(2024, 1, 1),
+      payment_cadence: "monthly",
+      initial_balance: 300000,
+      term_months: 360,
+      rate_type: "fixed"
+    )
+    loan.loan_rate_periods.build(starts_on: Date.new(2024, 1, 1), annual_rate: 6.0)
+    loan_account = @family.accounts.create!(
+      name: "Net Worth Mortgage",
+      balance: 300000,
+      currency: "USD",
+      accountable: loan
+    )
+    loan_account.set_opening_anchor_balance(balance: 300000, date: Date.new(2024, 1, 31))
+
+    Transfer::Creator.new(
+      family: @family,
+      source_account_id: source_account.id,
+      destination_account_id: loan_account.id,
+      date: Date.new(2024, 2, 1),
+      amount: 1798.65
+    ).create
+
+    source_balance = Balance::ForwardCalculator.new(source_account).calculate.last.balance
+    loan_balance = Balance::ForwardCalculator.new(loan_account).calculate.last.balance
+
+    assert_in_delta 3201.35, source_balance, 0.01
+    assert_in_delta 299701.35, loan_balance, 0.01
+    assert_in_delta(-296500, source_balance - loan_balance, 0.01)
+  end
+
   test "creates credit card payment" do
     credit_card_account = accounts(:credit_card)
 

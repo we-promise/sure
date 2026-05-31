@@ -49,6 +49,11 @@ module AccountableResource
     end
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+  rescue ActiveRecord::RecordInvalid => e
+    @account = e.record if e.record.is_a?(Account)
+    @error_message = e.record.errors.full_messages.join(", ")
+    set_link_options
+    render :new, status: :unprocessable_entity
   end
 
   def update

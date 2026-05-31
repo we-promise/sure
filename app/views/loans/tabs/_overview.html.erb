@@ -1,5 +1,7 @@
 <%# locals: (account:) %>
 
+<% annuity_summary = account.loan.annuity_summary if account.loan.annuity_enabled? %>
+
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".original_principal") do %>
     <%= format_money account.loan.original_balance %>
@@ -10,7 +12,9 @@
   <% end %>
 
   <%= summary_card title: t(".interest_rate") do %>
-    <% if account.loan.interest_rate.present? %>
+    <% if annuity_summary&.dig(:current_rate_period) %>
+      <%= number_to_percentage(annuity_summary[:current_rate_period].annual_rate, precision: 3) %>
+    <% elsif account.loan.interest_rate.present? %>
       <%= number_to_percentage(account.loan.interest_rate, precision: 3) %>
     <% else %>
       <%= t(".unknown") %>
@@ -42,7 +46,61 @@
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
   <% end %>
+
+  <% if annuity_summary %>
+    <%= summary_card title: t(".remaining_term") do %>
+      <%= pluralize(annuity_summary[:remaining_periods], "month") %>
+    <% end %>
+
+    <%= summary_card title: t(".scheduled_balance") do %>
+      <%= format_money Money.new(annuity_summary[:scheduled_balance], account.currency) %>
+    <% end %>
+
+    <%= summary_card title: t(".balance_variance") do %>
+      <%= format_money Money.new(annuity_summary[:balance_variance], account.currency) %>
+    <% end %>
+
+    <%= summary_card title: t(".payoff_date") do %>
+      <%= annuity_summary[:payoff_date]&.to_fs(:long) || t(".unknown") %>
+    <% end %>
+
+    <%= summary_card title: t(".total_interest") do %>
+      <%= format_money Money.new(annuity_summary[:total_interest], account.currency) %>
+    <% end %>
+  <% end %>
 </div>
+
+<% if annuity_summary %>
+  <div class="mt-4 space-y-3">
+    <h3 class="text-sm font-medium text-primary"><%= t(".payment_breakdown") %></h3>
+
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+      <% (annuity_summary[:recent_rows] + annuity_summary[:upcoming_rows]).each do |row| %>
+        <div class="rounded-lg border border-primary p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-sm font-medium text-primary"><%= row.due_date.to_fs(:long) %></div>
+            <div class="text-sm text-secondary"><%= format_money Money.new(row.scheduled_payment, account.currency) %></div>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-sm text-secondary">
+            <div><%= t(".interest") %>: <%= format_money Money.new(row.interest, account.currency) %></div>
+            <div><%= t(".principal") %>: <%= format_money Money.new(row.scheduled_principal, account.currency) %></div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <% if annuity_summary[:balance_variance].present? && annuity_summary[:balance_variance].abs >= 0.01 %>
+      <div class="flex justify-center pt-2">
+        <%= render DS::Button.new(
+          text: t(".reconcile_to_schedule"),
+          variant: "outline",
+          href: reconcile_loan_path(account),
+          method: :post
+        ) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
 
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(

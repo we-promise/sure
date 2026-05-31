@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_30_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1079,6 +1079,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.boolean "annuity_enabled", default: false, null: false
+    t.date "started_on"
+    t.string "payment_cadence", default: "monthly", null: false
+  end
+
+  create_table "loan_rate_periods", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "loan_id", null: false
+    t.date "starts_on", null: false
+    t.decimal "annual_rate", precision: 10, scale: 3, null: false
+    t.decimal "payment_amount", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["loan_id", "starts_on"], name: "index_loan_rate_periods_on_loan_id_and_starts_on", unique: true
+    t.index ["loan_id"], name: "index_loan_rate_periods_on_loan_id"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1940,6 +1954,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100000) do
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
+  add_foreign_key "loan_rate_periods", "loans"
   add_foreign_key "llm_usages", "families"
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"

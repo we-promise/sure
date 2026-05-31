@@ -17,12 +17,21 @@ en:
       exchange_rate_help: Choose how to enter the transfer amount.
       expense: Expense
       from: From
+      accept_loan_payment_split: Accept split
       income: Income
+      leave_loan_payment_unmatched: Leave unmatched
+      loan_payment_extra_principal: Extra principal
+      loan_payment_interest: Interest
+      loan_payment_principal: Principal
+      loan_payment_split_description: Only principal will reduce the loan balance; interest will be recorded as spending from the source account.
+      loan_payment_split_title: Proposed loan payment split
+      loan_payment_variance: Variance
       select_account: Select account
       source_amount: Source amount
       submit: Create transfer
       to: To
       transfer: Transfer
+      update_loan_payment_split: Update preview
     new:
       title: New transfer
     show:
