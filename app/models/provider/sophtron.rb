@@ -387,8 +387,12 @@ class Provider::Sophtron < Provider
 
       parsed = URI.parse(url)
       parsed.path.to_s.end_with?("/api") ? url : "#{url}/api"
-    rescue URI::InvalidURIError
-      DEFAULT_BASE_URL
+    rescue URI::InvalidURIError => e
+      raise Error.new(
+        "Invalid Sophtron base URL: #{value}",
+        :invalid_base_url,
+        details: e.message
+      )
     end
 
     def normalize_account(account, user_institution_id:)

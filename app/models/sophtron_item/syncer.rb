@@ -121,7 +121,7 @@ class SophtronItem::Syncer
 
       if import_result[:transactions_failed].to_i.positive?
         errors << {
-          message: "#{import_result[:transactions_failed]} #{'account'.pluralize(import_result[:transactions_failed])} failed to import transactions",
+          message: "#{import_result[:transactions_failed]} #{'transaction'.pluralize(import_result[:transactions_failed])} failed to import transactions",
           category: "transaction_import"
         }
       end

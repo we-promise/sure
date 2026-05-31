@@ -340,7 +340,7 @@ class SophtronItem::Importer
         { success: true, transactions_count: transactions_count }
       rescue Provider::Sophtron::Error => e
         requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-        sophtron_item.update!(status: :requires_update) if requires_update
+        mark_requires_update if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
       rescue JSON::ParserError => e
@@ -387,9 +387,19 @@ class SophtronItem::Importer
       nil
     rescue Provider::Sophtron::Error => e
       requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-      sophtron_item.update!(status: :requires_update) if requires_update
+      mark_requires_update if requires_update
       Rails.logger.error "SophtronItem::Importer - Sophtron API error refreshing account #{sophtron_account.id}: #{e.message}"
       { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
+    end
+
+    # Marks the item as requiring update without raising. Safe to call from
+    # within rescue blocks: a validation failure here must not crash the sync
+    # job, so we use the non-bang +update+ and log any failure instead of
+    # letting ActiveRecord::RecordInvalid propagate.
+    def mark_requires_update
+      return if sophtron_item.update(status: :requires_update)
+
+      Rails.logger.error "SophtronItem::Importer - Failed to mark item #{sophtron_item.id} as requires_update: #{sophtron_item.errors.full_messages.join(', ')}"
     end
 
     # Determines the appropriate start date for fetching transactions.
