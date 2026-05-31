@@ -7,7 +7,7 @@
             <%= image_tag "logomark.svg", class: "w-16 mb-6" %>
           </div>
           <div class="space-y-2">
-            <% if (controller_name == "sessions" && action_name == "new") || (controller_name == "registrations" && action_name == "new") %>
+            <% if AuthConfig.local_login_enabled? && ((controller_name == "sessions" && action_name == "new") || (controller_name == "registrations" && action_name == "new")) %>
               <div class="space-y-3 md:hidden w-full my-4">
                 <div class="bg-surface-inset rounded-lg p-1 flex">
                   <%= link_to new_session_path,
@@ -21,7 +21,7 @@
                 </div>
               </div>
             <% end %>
-            <% if controller_name == "sessions" %>
+            <% if controller_name == "sessions" && AuthConfig.local_login_enabled? %>
               <p class="text-sm text-center hidden md:block">
                 <%= tag.span t("layouts.auth.no_account", product_name: product_name), class: "text-secondary" %> <%= link_to t("layouts.auth.sign_up"), new_registration_path, class: "font-medium text-primary hover:underline transition" %>
               </p>

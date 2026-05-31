@@ -77,6 +77,26 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal @device_info[:device_type], device.device_type
   end
 
+  # Regression for #1430: pure SSO-only mode must block local account creation.
+  test "should not signup when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/signup", params: {
+        user: {
+          email: "sso-only@example.com",
+          password: "SecurePass123!",
+          first_name: "New",
+          last_name: "User"
+        },
+        device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+    assert_equal "Local account creation is disabled", JSON.parse(response.body)["error"]
+  end
+
   test "should not signup without device info" do
     assert_no_difference("User.count") do
       post "/api/v1/auth/signup", params: {
