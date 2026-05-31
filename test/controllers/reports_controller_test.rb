@@ -41,6 +41,42 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   test "index with last 6 months period" do
     get reports_path(period_type: :last_6_months)
     assert_response :ok
+
+    expected_end   = Date.current.end_of_month
+    expected_start = (expected_end + 1.day - 6.months).beginning_of_month
+
+    # Should show exactly 6 months, not 7
+    assert_equal 6, (expected_end.year * 12 + expected_end.month) - (expected_start.year * 12 + expected_start.month) + 1
+
+    # Page should include both boundary months
+    assert_includes @response.body, expected_start.strftime("%b %Y")
+    assert_includes @response.body, expected_end.strftime("%b %Y")
+
+    # Page should NOT include the months immediately outside the window
+    prev_month = expected_start - 1.month
+    next_month = expected_end + 1.month
+    assert_not_includes @response.body, prev_month.strftime("%b %Y")
+    assert_not_includes @response.body, next_month.strftime("%b %Y")
+  end
+
+  test "last 6 months default start date is consistent with navigation" do
+    # First load (no params) should produce the same start/end as the navigation arrows would
+    get reports_path(period_type: :last_6_months)
+    assert_response :ok
+
+    expected_end   = Date.current.end_of_month
+    expected_start = (expected_end + 1.day - 6.months).beginning_of_month
+
+    # Navigate forward from one window back — should land on the same default window
+    prev_start = expected_start - 6.months
+    prev_end   = prev_start + 6.months - 1.day
+
+    get reports_path(period_type: :last_6_months, start_date: prev_start, end_date: prev_end)
+    assert_response :ok
+
+    # The next-window link should point to the same dates as the default
+    assert_select "a[href=?]",
+      reports_path(period_type: :last_6_months, start_date: expected_start, end_date: expected_end)
   end
 
   test "index shows empty state when no transactions" do

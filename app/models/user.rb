@@ -157,8 +157,16 @@ class User < ApplicationRecord
     when "external"
       Assistant::External.available_for?(self)
     else
-      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+      openai_configured? || anthropic_configured?
     end
+  end
+
+  def openai_configured?
+    Provider::Openai.configured?
+  end
+
+  def anthropic_configured?
+    Provider::Anthropic.configured?
   end
 
   def ai_enabled?
