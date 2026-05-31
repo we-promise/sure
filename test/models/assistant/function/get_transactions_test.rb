@@ -65,7 +65,9 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
       tool_calls = caller.fulfill_requests([ request ])
     end
 
-    result = tool_calls.first.function_result
+    # function_result is persisted through a jsonb column, so keys come back as
+    # strings — read it via indifferent access to stay agnostic to that.
+    result = tool_calls.first.function_result.with_indifferent_access
     assert_kind_of Array, result[:transactions]
   end
 
