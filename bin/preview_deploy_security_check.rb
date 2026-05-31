@@ -66,8 +66,9 @@ REQUIRED_IMAGE_BUILD_LINES = [
   'docker save "${IMAGE_TAG}" | gzip -1 > "$image_archive"',
   'sha256sum "$image_archive"',
   "sure-preview-image.manifest.json",
-  '"archiveSha256": "${archive_sha256}"',
-  '"imageId": "${image_id}"'
+  'ARCHIVE_SHA256="$archive_sha256" IMAGE_ID="$image_id" node - "$manifest_file"',
+  "JSON.stringify(manifest, null, 2)",
+  'jq -e . "$manifest_file"'
 ].freeze
 
 def fail_check(message)
@@ -355,13 +356,14 @@ assert(deploy_steps.select { |step| run(step).match?(/npm (ci|install)/) }.map {
 image_build_run = assert_run_includes(build_image, *REQUIRED_IMAGE_BUILD_LINES)
 assert(image_build_run.include?("set -euo pipefail"), "preview image build must fail closed")
 assert(!image_build_run.include?("CLOUDFLARE_"), "preview image build must not receive Cloudflare secrets")
+assert(!image_build_run.include?('cat > "$manifest_file" <<JSON'), "preview image manifest must be generated with JSON escaping")
 
 assert_run_includes(verify_checksum, 'expected_checksum="$(tr -d', 'actual_checksum="$(sha256sum "$image_archive"', "Preview image artifact checksum mismatch", "Preview image artifact contained unexpected files", "sure-preview-image.manifest.json", "Preview image manifest", "imageId is invalid")
 assert_run_includes(load_image, 'gzip -dc "$image_archive" | docker load', 'docker image inspect "$expected_image"', "Loaded preview image ID did not match artifact manifest")
 assert_run_includes(push_image, "./node_modules/.bin/wrangler containers push", "registry\\.cloudflare\\.com/", "image_ref=")
 assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'const original = fs.readFileSync', 'const updated = original.replace(/image = "[^"]+"/', "updated === original", "Expected wrangler.toml to contain an image entry to rewrite", "JSON.stringify(imageRef)")
 assert_run_includes(create_deployment, "github.rest.repos.createDeployment", "ref: headSha", "preview-pr-${prNumber}")
-assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", './node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "retrying once")
+assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", 'if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "Preview Worker delete failed", "retrying once")
 assert_run_includes(warm_preview, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15")
 assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'")
 assert_run_includes(update_deployment_status, "github.rest.repos.createDeploymentStatus", "process.env.DEPLOY_RESULT === 'success'", "deployment_id: Number(process.env.DEPLOYMENT_ID)")

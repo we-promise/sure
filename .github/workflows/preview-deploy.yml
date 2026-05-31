@@ -301,7 +301,9 @@ jobs:
 
             if grep -F "associated with a different durable object namespace" "$clean_deploy_log" >/dev/null; then
               echo "Detected stale Cloudflare container app state for PR ${PR_NUMBER}; deleting preview Worker and retrying once."
-              ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force || true
+              if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force; then
+                echo "Preview Worker delete failed; continuing to the single retry so wrangler deploy reports the final error if the stale state remains." >&2
+              fi
               deploy_once
             else
               exit 1

@@ -53,17 +53,23 @@ jobs:
           image_id="$(docker image inspect --format '{{.Id}}' "${IMAGE_TAG}")"
 
           printf '%s\n' "$archive_sha256" > "$RUNNER_TEMP/sure-preview-image.sha256"
-          cat > "$manifest_file" <<JSON
-          {
-            "artifactVersion": 1,
-            "archivePath": "sure-preview-image.tar.gz",
-            "archiveSha256": "${archive_sha256}",
-            "headSha": "${HEAD_SHA}",
-            "imageId": "${image_id}",
-            "imageTag": "${IMAGE_TAG}",
-            "prNumber": "${PR_NUMBER}"
-          }
-          JSON
+          ARCHIVE_SHA256="$archive_sha256" IMAGE_ID="$image_id" node - "$manifest_file" <<'NODE'
+          const fs = require('node:fs');
+
+          const manifestPath = process.argv[2];
+          const manifest = {
+            artifactVersion: 1,
+            archivePath: 'sure-preview-image.tar.gz',
+            archiveSha256: process.env.ARCHIVE_SHA256,
+            headSha: process.env.HEAD_SHA,
+            imageId: process.env.IMAGE_ID,
+            imageTag: process.env.IMAGE_TAG,
+            prNumber: process.env.PR_NUMBER,
+          };
+
+          fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+          jq -e . "$manifest_file" >/dev/null
 
       - name: Upload preview image artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
