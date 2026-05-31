@@ -2,9 +2,60 @@ name: Pull Request
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - 'charts/**'
+
+permissions:
+  contents: read
 
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
+
+  preview_image:
+    needs: ci
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'preview-cf') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview-cf')
+    name: Build Cloudflare preview image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      IMAGE_TAG: sure-preview-pr-${{ github.event.pull_request.number }}:${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Build preview image without secrets
+        run: |
+          set -euo pipefail
+
+          image_archive="$RUNNER_TEMP/sure-preview-image.tar.gz"
+
+          docker build \
+            --platform linux/amd64 \
+            --build-arg "BUILD_COMMIT_SHA=${HEAD_SHA}" \
+            -f Dockerfile.preview \
+            -t "${IMAGE_TAG}" \
+            .
+
+          docker image inspect "${IMAGE_TAG}" >/dev/null
+          docker save "${IMAGE_TAG}" | gzip -1 > "$image_archive"
+          sha256sum "$image_archive" | awk '{print $1}' > "$RUNNER_TEMP/sure-preview-image.sha256"
+
+      - name: Upload preview image artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: preview-image-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}
+          path: |
+            ${{ runner.temp }}/sure-preview-image.tar.gz
+            ${{ runner.temp }}/sure-preview-image.sha256
+          if-no-files-found: error
+          retention-days: 3
