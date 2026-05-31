@@ -26,6 +26,10 @@ module Family::AutoTransferMatchable
   def auto_match_transfers!
     # Exclude already matched transfers
     candidates_scope = transfer_match_candidates(include_rejected: false)
+    transaction_ids = candidates_scope.flat_map do |match|
+      [ match.inflow_transaction_id, match.outflow_transaction_id ]
+    end.uniq
+    transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
@@ -44,16 +48,17 @@ module Family::AutoTransferMatchable
           # Another concurrent job created the transfer; safe to ignore
         end
 
-        inflow_transaction = Transaction.find(match.inflow_transaction_id)
-        outflow_transaction = Transaction.find(match.outflow_transaction_id)
+        inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
+        outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
+        destination_account = inflow_transaction.entry.account
+        transfer_kind = Transfer.kind_for_account(destination_account)
 
         # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
         inflow_transaction.update!(kind: "funds_movement")
-        outflow_transaction.update!(kind: Transfer.kind_for_account(inflow_transaction.entry.account))
+        outflow_transaction.update!(kind: transfer_kind)
 
         # Assign Investment Contributions category for transfers to investment accounts
-        destination_account = inflow_transaction.entry.account
-        if Transfer.kind_for_account(destination_account) == "investment_contribution"
+        if transfer_kind == "investment_contribution"
           outflow_txn = outflow_transaction
           if outflow_txn.category_id.blank?
             category = destination_account.family.investment_contributions_category
