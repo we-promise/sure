@@ -57,9 +57,9 @@ REQUIRED_PREPARE_LINES = [
   'cp trusted/workers/preview/tsconfig.json "$preview_dir/tsconfig.json"',
   'cp trusted/workers/preview/wrangler.toml "$preview_dir/wrangler.toml"',
   'cp -R trusted/workers/preview/src "$preview_dir/src"',
-  'diagnostics_token="$(openssl rand -hex 32)"',
-  'sed -i "s/\${PREVIEW_DIAGNOSTICS_TOKEN}/${diagnostics_token}/g" "$preview_dir/src/index.ts"',
-  "Preview diagnostics token placeholder was not replaced",
+  'diagnostics_nonce="$(openssl rand -hex 32)"',
+  'sed -i "s/\${PREVIEW_DIAGNOSTICS_NONCE}/${diagnostics_nonce}/g" "$preview_dir/src/index.ts"',
+  "Preview diagnostics nonce placeholder was not replaced",
   "npm ci --ignore-scripts --no-audit --no-fund"
 ].freeze
 REQUIRED_IMAGE_BUILD_LINES = [
@@ -394,9 +394,9 @@ assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.re
 
 [
   "interface PreviewTimings",
-  'const PREVIEW_DIAGNOSTICS_TOKEN = "${PREVIEW_DIAGNOSTICS_TOKEN}"',
-  "PREVIEW_DIAGNOSTICS_TOKEN",
-  'request.headers.get("x-preview-diagnostics-token")',
+  'const PREVIEW_DIAGNOSTICS_NONCE = "${PREVIEW_DIAGNOSTICS_NONCE}"',
+  "PREVIEW_DIAGNOSTICS_NONCE",
+  'request.headers.get("x-preview-diagnostics-nonce")',
   "return new Response(\"not found\", { status: 404 })",
   "timings: PreviewTimings",
   "buildPreviewTimings",
@@ -409,8 +409,8 @@ assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.re
 ].each { |needle| assert(preview_worker_script.include?(needle), "preview worker must include #{needle.inspect}") }
 
 [
-  '[ -n "$PREVIEW_ORIGIN" ] && [ -n "$PREVIEW_DIAGNOSTICS_TOKEN" ]',
-  '-H "x-preview-diagnostics-token: $PREVIEW_DIAGNOSTICS_TOKEN"'
+  '[ -n "$PREVIEW_ORIGIN" ] && [ -n "$PREVIEW_DIAGNOSTICS_NONCE" ]',
+  '-H "x-preview-diagnostics-nonce: $PREVIEW_DIAGNOSTICS_NONCE"'
 ].each { |needle| assert(preview_dockerfile.include?(needle), "preview Dockerfile entrypoint must include #{needle.inspect}") }
 
 secret_steps = deploy_steps.select { |step| env_hash(step).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }

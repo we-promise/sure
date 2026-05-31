@@ -53,7 +53,7 @@ interface PreviewStatusPayload {
 
 const DIAGNOSTICS_KEY = "preview-diagnostics";
 const DIAGNOSTICS_HISTORY_KEY = "preview-diagnostics-history";
-const PREVIEW_DIAGNOSTICS_TOKEN = "${PREVIEW_DIAGNOSTICS_TOKEN}";
+const PREVIEW_DIAGNOSTICS_NONCE = "${PREVIEW_DIAGNOSTICS_NONCE}";
 const READY_STAGES = new Set(["demo-data-ready", "demo-data-skip"]);
 const FAILED_STAGES = new Set(["demo-data-failed", "failed"]);
 const WAITING_MESSAGES: Record<string, string> = {
@@ -96,7 +96,7 @@ export class RailsContainer extends Container {
     BINDING: "::",
     DEMO_DATA_SEED: "${PR_NUMBER}",
     PREVIEW_ORIGIN: "https://sure-preview-${PR_NUMBER}.sure-finances.workers.dev",
-    PREVIEW_DIAGNOSTICS_TOKEN,
+    PREVIEW_DIAGNOSTICS_NONCE,
   };
   sleepAfter = "30m";
   enableInternet = true;
@@ -369,7 +369,7 @@ export class RailsContainer extends Container {
     }
 
     if (url.pathname === "/_container_event" && request.method === "POST") {
-      if (request.headers.get("x-preview-diagnostics-token") !== PREVIEW_DIAGNOSTICS_TOKEN) {
+      if (request.headers.get("x-preview-diagnostics-nonce") !== PREVIEW_DIAGNOSTICS_NONCE) {
         return new Response("not found", { status: 404 });
       }
 

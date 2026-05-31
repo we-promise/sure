@@ -203,13 +203,13 @@ jobs:
           cp trusted/workers/preview/wrangler.toml "$preview_dir/wrangler.toml"
           cp -R trusted/workers/preview/src "$preview_dir/src"
 
-          diagnostics_token="$(openssl rand -hex 32)"
+          diagnostics_nonce="$(openssl rand -hex 32)"
           sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" "$preview_dir/wrangler.toml"
           sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" "$preview_dir/src/index.ts"
-          sed -i "s/\${PREVIEW_DIAGNOSTICS_TOKEN}/${diagnostics_token}/g" "$preview_dir/src/index.ts"
+          sed -i "s/\${PREVIEW_DIAGNOSTICS_NONCE}/${diagnostics_nonce}/g" "$preview_dir/src/index.ts"
 
-          if grep -F "\${PREVIEW_DIAGNOSTICS_TOKEN}" "$preview_dir/src/index.ts" >/dev/null; then
-            echo "Preview diagnostics token placeholder was not replaced" >&2
+          if grep -F "\${PREVIEW_DIAGNOSTICS_NONCE}" "$preview_dir/src/index.ts" >/dev/null; then
+            echo "Preview diagnostics nonce placeholder was not replaced" >&2
             exit 1
           fi
 
