@@ -200,6 +200,12 @@ class Settings::HostingsController < ApplicationController
 
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
+    # Preserve user-submitted OpenAI config so the form re-renders with their
+    # input intact (issue #1824). The form auto-submits on blur, so a partial
+    # entry (e.g. URI base before model) hits validation and would otherwise
+    # be wiped because the view reads from the unchanged Setting.* values.
+    @openai_uri_base_input = hosting_params[:openai_uri_base] if hosting_params.key?(:openai_uri_base)
+    @openai_model_input = hosting_params[:openai_model] if hosting_params.key?(:openai_model)
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end

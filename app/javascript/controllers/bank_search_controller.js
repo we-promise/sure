@@ -7,9 +7,9 @@ export default class extends Controller {
     const query = this.inputTarget.value.toLocaleLowerCase().trim();
     let visibleCount = 0;
 
-    this.itemTargets.forEach(item => {
-      const name = item.dataset.bankName?.toLocaleLowerCase() ?? "";
-      const match = name.includes(query);
+    this.itemTargets.forEach((item) => {
+      const haystack = (item.dataset.bankSearch ?? "").toLocaleLowerCase();
+      const match = haystack.includes(query);
       item.style.display = match ? "" : "none";
       if (match) visibleCount++;
     });

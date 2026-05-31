@@ -1,15 +1,13 @@
 module ReportsHelper
-  # Returns CSS classes for tax treatment badge styling
-  def tax_treatment_badge_classes(treatment)
+  # Returns the DS::Pill tone for a given tax treatment. Mirrors the
+  # mapping used by `accounts/_tax_treatment_badge.html.erb` so the
+  # report and the per-account badge stay visually aligned.
+  def tax_treatment_pill_tone(treatment)
     case treatment.to_sym
-    when :tax_exempt
-      "bg-green-500/10 text-green-600 theme-dark:text-green-400"
-    when :tax_deferred
-      "bg-blue-500/10 text-blue-600 theme-dark:text-blue-400"
-    when :tax_advantaged
-      "bg-purple-500/10 text-purple-600 theme-dark:text-purple-400"
-    else
-      "bg-gray-500/10 text-secondary"
+    when :tax_exempt     then :green
+    when :tax_deferred   then :indigo  # was raw blue-500/10 → closest DS tone
+    when :tax_advantaged then :violet  # was raw purple-500/10 → closest DS tone
+    else                      :neutral
     end
   end
 

@@ -1,0 +1,92 @@
+---
+vi:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Kết nối báo cáo Flex Web Service của Interactive Brokers
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Đang xóa
+      flex_web_service: Flex Web Service
+      syncing: Đang đồng bộ
+      requires_update: Thông tin xác thực cần chú ý
+      error: Lỗi
+      synced: Đã đồng bộ %{time} trước. %{summary}.
+      never_synced: Chưa bao giờ đồng bộ.
+      setup_accounts: Thiết lập tài khoản
+      delete: Xóa
+      accounts_need_setup: Tài khoản cần thiết lập
+      accounts_need_setup_description: Một số tài khoản từ IBKR cần được liên kết với tài khoản Sure.
+      no_accounts_discovered: Chưa phát hiện tài khoản IBKR nào.
+      no_accounts_discovered_description: Chạy đồng bộ sau khi cấu hình truy vấn Flex để phát hiện tài khoản.
+    setup_accounts:
+      page_title: Thiết lập tài khoản Interactive Brokers
+      dialog_title: Thiết lập tài khoản Interactive Brokers của bạn
+      subtitle: Chọn tài khoản brokerage IBKR để liên kết.
+      info_box:
+        title: Nhập Flex Query IBKR
+        items:
+          item_1: Tài sản nắm giữ với giá hiện tại và số lượng
+          item_2: Cơ sở chi phí theo vị thế
+          item_3: Giao dịch, cổ tức, hoa hồng và tiền gửi hoặc rút tiền
+        warning: Hoạt động lịch sử bị giới hạn trong khoảng thời gian báo cáo của Flex Query
+      status:
+        fetching_accounts: Đang lấy tài khoản từ Interactive Brokers...
+        no_accounts_found_title: Không tìm thấy tài khoản.
+        no_accounts_found_description: Sure không thể tìm thấy tài khoản IBKR nào trong báo cáo Flex mới nhất.
+      available_accounts:
+        title: Tài khoản có sẵn
+        account_type_investment: Đầu tư
+        account_summary: "%{account_type} • Số dư: %{balance}"
+        account_id: "Mã tài khoản: %{account_id}"
+      link_existing:
+        description: Hoặc liên kết tài khoản IBKR đã phát hiện với tài khoản đầu tư thủ công hiện có.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Chọn một tài khoản...
+      linked_accounts:
+        title: Đã liên kết
+        linked_to_html: "Liên kết với: %{account}"
+      buttons:
+        refresh: Làm mới
+        cancel: Hủy
+        back_to_settings: Quay lại Cài đặt
+        create_selected_accounts: Tạo tài khoản đã chọn
+        link: Liên kết
+        done: Xong
+    sync_status:
+      no_accounts: Chưa phát hiện tài khoản IBKR nào
+      all_linked:
+        one: 1 tài khoản đã liên kết
+        other: "%{count} tài khoản đã liên kết"
+      partial: "%{linked} đã liên kết, %{unlinked} cần thiết lập"
+    select_existing_account:
+      title: Liên kết tài khoản Interactive Brokers
+      no_accounts_available: Chưa có tài khoản Interactive Brokers chưa được liên kết.
+      run_sync_hint: "Chạy đồng bộ từ Cài đặt > Nhà cung cấp sau khi cập nhật truy vấn Flex."
+      wait_for_sync: Chờ quá trình đồng bộ phát hiện tài khoản hoàn tất.
+      balance: Số dư
+      link: Liên kết
+      cancel: Hủy
+    create:
+      success: Đã cấu hình Interactive Brokers thành công.
+    update:
+      success: Đã cập nhật cấu hình Interactive Brokers thành công.
+    destroy:
+      success: Đã lên lịch xóa kết nối Interactive Brokers.
+    select_accounts:
+      not_configured: Interactive Brokers chưa được cấu hình.
+    link_existing_account:
+      not_found: Không tìm thấy tài khoản hoặc cấu hình Interactive Brokers.
+      only_manual_investment: Chỉ tài khoản đầu tư thủ công mới có thể liên kết với Interactive Brokers.
+      already_linked: Tài khoản Interactive Brokers này đã được liên kết.
+      success: Đã liên kết thành công với tài khoản Interactive Brokers.
+      failed: Liên kết tài khoản Interactive Brokers thất bại.
+    complete_account_setup:
+      success:
+        one: Đã tạo thành công %{count} tài khoản Interactive Brokers.
+        other: Đã tạo thành công %{count} tài khoản Interactive Brokers.
+      none_selected: Không có tài khoản nào được chọn.
+      none_created: Không có tài khoản nào được tạo.
