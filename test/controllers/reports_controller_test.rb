@@ -51,6 +51,12 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # Page should include both boundary months
     assert_includes @response.body, expected_start.strftime("%b %Y")
     assert_includes @response.body, expected_end.strftime("%b %Y")
+
+    # Page should NOT include the months immediately outside the window
+    prev_month = expected_start - 1.month
+    next_month = expected_end + 1.month
+    assert_not_includes @response.body, prev_month.strftime("%b %Y")
+    assert_not_includes @response.body, next_month.strftime("%b %Y")
   end
 
   test "last 6 months default start date is consistent with navigation" do
