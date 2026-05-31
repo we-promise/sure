@@ -2,6 +2,10 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
+import {
+  buildCategoryTransactionsUrl,
+  isNavigableCategoryNode,
+} from "utils/transactions_filter_url";
 
 // Connects to data-controller="sankey-chart"
 export default class extends Controller {
@@ -12,6 +16,8 @@ export default class extends Controller {
     nodeWidth: { type: Number, default: 15 },
     nodePadding: { type: Number, default: 20 },
     currencySymbol: { type: String, default: "$" },
+    startDate: String,
+    endDate: String,
   };
 
   // Visual constants
@@ -160,6 +166,20 @@ export default class extends Controller {
     this.zoomRootId = node.id;
     this.#syncZoomControls();
     this.#draw({ animate: true });
+  }
+
+  #navigateToTransactions(d) {
+    if (!isNavigableCategoryNode(d.id)) {
+      // Structural node (Cash Flow / Surplus): keep current zoom behavior.
+      this.#zoomIn(d);
+      return;
+    }
+
+    window.location.href = buildCategoryTransactionsUrl({
+      name: d.name,
+      startDate: this.startDateValue,
+      endDate: this.endDateValue,
+    });
   }
 
   // Dynamic padding prevents padding from dominating when there are many nodes
@@ -480,6 +500,7 @@ export default class extends Controller {
     nodeGroups
       .selectAll("text")
       .style("cursor", (d) =>
+        isNavigableCategoryNode(d.id) ||
         sankeyNodeHasChildren(this.#visibleData(), d.id)
           ? "pointer"
           : "default",
@@ -494,7 +515,7 @@ export default class extends Controller {
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
       .on("click", (event, d) => {
         event.stopPropagation();
-        this.#zoomIn(d);
+        this.#navigateToTransactions(d);
       })
       .on("mouseleave", () => {
         resetHover();
