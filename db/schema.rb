@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -595,6 +595,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
+    t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "((entryable_type)::text = 'Transaction'::text)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
   end
 

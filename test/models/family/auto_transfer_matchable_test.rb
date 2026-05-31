@@ -131,6 +131,52 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "same-currency matching ignores amount-mismatched busy-window entries" do
+    noise_transaction_ids = []
+
+    25.times do |index|
+      noise_outflow = create_transaction(date: Date.current, account: @depository, amount: 13_001 + index)
+      noise_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -(27_001 + index))
+
+      noise_transaction_ids << noise_outflow.entryable_id
+      noise_transaction_ids << noise_inflow.entryable_id
+    end
+
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    candidate_pairs = @family.transfer_match_candidates.map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+
+    noise_pairs = candidate_pairs.select do |inflow_transaction_id, outflow_transaction_id|
+      noise_transaction_ids.include?(inflow_transaction_id) || noise_transaction_ids.include?(outflow_transaction_id)
+    end
+
+    assert_empty noise_pairs
+  end
+
+  test "single transaction transfer candidates filter optimized relation aliases" do
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    outflow_candidates = outflow.transaction.transfer_match_candidates
+    inflow_candidates = inflow.transaction.transfer_match_candidates
+
+    assert_equal [ inflow.entryable_id ], outflow_candidates.map(&:inflow_transaction_id)
+    assert_equal [ outflow.entryable_id ], inflow_candidates.map(&:outflow_transaction_id)
+  end
+
+  test "transfer candidate query separates exact and exchange-rate matching paths" do
+    sql = @family.send(:transfer_match_candidates_sql)
+
+    assert_includes sql, "UNION ALL"
+    assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
+    assert_includes sql, "JOIN exchange_rates"
+  end
+
   # Regression tests for loan transfer kind assignment bug
   # The kind should be determined by the DESTINATION account (inflow), not the source (outflow)
   test "loan payment (cash to loan) assigns loan_payment kind to outflow" do
