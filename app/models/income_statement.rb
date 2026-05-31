@@ -31,6 +31,7 @@ class IncomeStatement
 
   def expense_totals(period: Period.current_month, for_budget: false)
     # Memoized per instance so callers that also invoke `net_category_totals`
+    key = period_cache_key(period)
     @expense_totals_by_period ||= {}
     cache_key = [ period_cache_key(period), for_budget ]
     @expense_totals_by_period[cache_key] ||=
@@ -71,9 +72,9 @@ class IncomeStatement
     raw_expense_categories = []
     raw_income_categories = []
 
-    all_keys.each do |key|
-      exp_ct = expense_by_cat[key]
-      inc_ct = income_by_cat[key]
+    all_keys.each do |cat|
+      exp_ct = expense_by_cat[cat]
+      inc_ct = income_by_cat[cat]
       exp_total = exp_ct&.total || 0
       inc_total = inc_ct&.total || 0
       net = exp_total - inc_total
@@ -156,8 +157,6 @@ class IncomeStatement
       other_investments_category = family.categories.other_investments
 
       category_totals = [ *categories, uncategorized_category, other_investments_category ].map do |category|
-        subcategory = categories.find { |c| c.id == category.parent_id }
-
         parent_category_total = if category.uncategorized?
           # Regular uncategorized: NULL category_id and NOT uncategorized investment
           totals.select { |t| t.category_id.nil? && !t.is_uncategorized_investment }&.sum(&:total) || 0
