@@ -18,7 +18,7 @@ class ApiKey < ApplicationRecord
   validates :scopes, presence: true
   validates :source, presence: true, inclusion: { in: SOURCES }
   validate :scopes_not_empty
-  validate :one_active_key_per_user_per_source, on: :create
+  validate :name_unique_among_active_keys, on: :create
 
   # Callbacks
   before_validation :set_display_key
@@ -103,10 +103,11 @@ class ApiKey < ApplicationRecord
       end
     end
 
-    def one_active_key_per_user_per_source
-      if user&.api_keys&.active&.where(source: source)&.where&.not(id: id)&.exists?
-        errors.add(:user, "can only have one active API key per source (#{source})")
-      end
+    def name_unique_among_active_keys
+      return if name.blank? || user.blank?
+      scope = user.api_keys.active.visible.where(name: name)
+      scope = scope.where.not(id: id) if persisted?
+      errors.add(:name, :taken) if scope.exists?
     end
 
     def prevent_demo_monitoring_key_destroy!

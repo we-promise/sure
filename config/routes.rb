@@ -249,7 +249,7 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
     resources :sso_identities, only: :destroy
-    resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
