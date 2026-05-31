@@ -6,8 +6,8 @@ module Family::AutoTransferMatchable
     outflow_transaction_id: nil,
     include_rejected: true
   )
-    date_window = date_window.to_i
-    exchange_rate_tolerance = exchange_rate_tolerance.to_f
+    date_window = coerce_transfer_match_date_window!(date_window)
+    exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
 
     Entry.find_by_sql([
       transfer_match_candidates_sql,
@@ -33,6 +33,8 @@ module Family::AutoTransferMatchable
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
+    investment_category = nil
+    investment_category_loaded = false
 
     Transfer.transaction do
       candidates_scope.each do |match|
@@ -61,8 +63,11 @@ module Family::AutoTransferMatchable
         if transfer_kind == "investment_contribution"
           outflow_txn = outflow_transaction
           if outflow_txn.category_id.blank?
-            category = destination_account.family.investment_contributions_category
-            outflow_txn.update!(category: category) if category.present?
+            unless investment_category_loaded
+              investment_category = investment_contributions_category
+              investment_category_loaded = true
+            end
+            outflow_txn.update!(category: investment_category) if investment_category.present?
           end
         end
 
@@ -73,6 +78,21 @@ module Family::AutoTransferMatchable
   end
 
   private
+    def coerce_transfer_match_date_window!(value)
+      Integer(value)
+    rescue ArgumentError, TypeError
+      raise ArgumentError, "date_window must be an integer"
+    end
+
+    def coerce_transfer_match_exchange_rate_tolerance!(value)
+      tolerance = Float(value)
+      return tolerance if tolerance.finite?
+
+      raise ArgumentError
+    rescue ArgumentError, TypeError
+      raise ArgumentError, "exchange_rate_tolerance must be numeric"
+    end
+
     def transfer_match_candidates_sql
       <<~SQL.squish
         SELECT transfer_match_candidates.*

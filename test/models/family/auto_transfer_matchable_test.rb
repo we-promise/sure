@@ -109,6 +109,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "transfer candidate options require valid numeric input" do
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: "wide") }
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: Float::INFINITY) }
+
+    assert_nothing_raised do
+      @family.transfer_match_candidates(date_window: "4", exchange_rate_tolerance: "0.1")
+    end
+  end
+
   test "auto-matched cash to investment assigns investment contribution category" do
     investment = accounts(:investment)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
@@ -120,6 +131,22 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     category = @family.investment_contributions_category
     assert_equal category, outflow_entry.entryable.category
+  end
+
+  test "auto-matched investment transfers reuse contribution category lookup" do
+    investment = accounts(:investment)
+    category = @family.investment_contributions_category
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: investment, amount: -500)
+    create_transaction(date: Date.current, account: @depository, amount: 700)
+    create_transaction(date: Date.current, account: investment, amount: -700)
+
+    @family.expects(:investment_contributions_category).once.returns(category)
+
+    assert_difference -> { Transfer.count }, 2 do
+      @family.auto_match_transfers!
+    end
   end
 
   test "does not match multi-currency transfer with missing exchange rate" do
