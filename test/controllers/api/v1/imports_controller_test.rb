@@ -1216,16 +1216,20 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     inaccessible_account = accounts(:other_asset)
     csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
 
-    assert_no_difference("Import.count") do
-      post api_v1_imports_url,
-           params: {
-             raw_file_content: csv_content,
-             date_col_label: "date",
-             amount_col_label: "amount",
-             name_col_label: "name",
-             account_id: inaccessible_account.id
-           },
-           headers: api_headers(member_api_key)
+    assert_no_enqueued_jobs only: ImportJob do
+      assert_no_difference([ "Import.count", "Import::Row.count", "Entry.count" ]) do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: inaccessible_account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(member_api_key)
+      end
     end
 
     assert_response :not_found
