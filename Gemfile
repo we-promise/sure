@@ -37,7 +37,7 @@ gem "sidekiq-cron"
 gem "sidekiq-unique-jobs"
 
 # Monitoring
-gem "vernier" unless Gem.win_platform?
+gem "vernier", platforms: :ruby
 gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
@@ -123,7 +123,7 @@ group :development do
   gem "web-console"
   gem "faker"
   gem "benchmark-ips"
-  gem "stackprof" unless Gem.win_platform?
+  gem "stackprof", platforms: :ruby
   gem "derailed_benchmarks"
   gem "foreman"
 end

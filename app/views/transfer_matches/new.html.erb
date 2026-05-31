@@ -29,8 +29,10 @@
                         entry: @entry,
                         candidates: @transfer_match_candidates.map { |pm| pm.outflow_transaction.entry },
                         accounts: @accounts,
+                        scheduled_loan_payment_candidates: [],
                         selected_method: params.dig(:transfer_match, :method),
                         selected_target_account_id: params.dig(:transfer_match, :target_account_id),
+                        selected_scheduled_loan_account_id: params.dig(:transfer_match, :scheduled_loan_account_id),
                         selected_matched_entry_id: params.dig(:transfer_match, :matched_entry_id) %>
           <% end %>
         </div>
@@ -62,8 +64,10 @@
                         entry: @entry,
                         candidates: @transfer_match_candidates.map { |pm| pm.inflow_transaction.entry },
                         accounts: @accounts,
+                        scheduled_loan_payment_candidates: @annuity_loan_payment_candidates,
                         selected_method: params.dig(:transfer_match, :method),
                         selected_target_account_id: params.dig(:transfer_match, :target_account_id),
+                        selected_scheduled_loan_account_id: params.dig(:transfer_match, :scheduled_loan_account_id),
                         selected_matched_entry_id: params.dig(:transfer_match, :matched_entry_id) %>
           <% end %>
         </div>

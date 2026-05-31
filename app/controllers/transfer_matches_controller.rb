@@ -4,6 +4,7 @@ class TransferMatchesController < ApplicationController
   def new
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
     @transfer_match_candidates = @entry.transaction.transfer_match_candidates
+    @annuity_loan_payment_candidates = annuity_loan_payment_candidates
   end
 
   def create
@@ -50,14 +51,17 @@ class TransferMatchesController < ApplicationController
     def set_form_state
       @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
       @transfer_match_candidates = @entry.transaction.transfer_match_candidates
+      @annuity_loan_payment_candidates = annuity_loan_payment_candidates
     end
 
     def transfer_match_params
-      params.require(:transfer_match).permit(:method, :matched_entry_id, :target_account_id, :loan_payment_split_action)
+      params.require(:transfer_match).permit(:method, :matched_entry_id, :target_account_id, :scheduled_loan_account_id, :loan_payment_split_action)
     end
 
     def resolve_target_account
-      if transfer_match_params[:method] == "new"
+      if transfer_match_params[:method] == "scheduled_loan_payment"
+        accessible_accounts.find(transfer_match_params[:scheduled_loan_account_id])
+      elsif transfer_match_params[:method] == "new"
         accessible_accounts.find(transfer_match_params[:target_account_id])
       else
         Current.accessible_entries.find(transfer_match_params[:matched_entry_id]).account
@@ -99,7 +103,7 @@ class TransferMatchesController < ApplicationController
     end
 
     def accepted_new_annuity_loan_payment?(target_account)
-      transfer_match_params[:method] == "new" &&
+      %w[new scheduled_loan_payment].include?(transfer_match_params[:method]) &&
         transfer_match_params[:loan_payment_split_action] == "accept" &&
         @entry.amount.positive? &&
         target_account.loan? &&
@@ -120,6 +124,22 @@ class TransferMatchesController < ApplicationController
         payment_date: @entry.date,
         amount: @entry.amount
       )
+    end
+
+    def annuity_loan_payment_candidates
+      return [] unless @entry.amount.positive?
+
+      @accounts
+        .select { |account| account.loan? && account.loan.annuity_enabled? }
+        .filter_map do |account|
+          split = loan_payment_split_preview(account)
+          next unless split&.matched?
+
+          {
+            account: account,
+            split: split
+          }
+        end
     end
 
     def build_split_annuity_loan_transfer(loan_account)

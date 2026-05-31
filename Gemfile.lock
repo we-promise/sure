@@ -222,6 +222,7 @@ GEM
       net-http (~> 0.5)
     faraday-retry (2.3.2)
       faraday (~> 2.0)
+    ffi (1.17.2)
     ffi (1.17.2-aarch64-linux-gnu)
     ffi (1.17.2-aarch64-linux-musl)
     ffi (1.17.2-arm-linux-gnu)
@@ -403,6 +404,7 @@ GEM
       benchmark
       logger
     mini_mime (1.1.5)
+    mini_portile2 (2.8.9)
     minitest (5.27.0)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
@@ -424,6 +426,9 @@ GEM
     net-smtp (0.5.1)
       net-protocol
     nio4r (2.7.4)
+    nokogiri (1.19.2)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
     nokogiri (1.19.2-aarch64-linux-gnu)
       racc (~> 1.4)
     nokogiri (1.19.2-aarch64-linux-musl)
@@ -761,6 +766,7 @@ GEM
     snaptrade (2.0.156)
       faraday (>= 1.0.1, < 3.0)
       faraday-multipart (~> 1.0, >= 1.0.4)
+    stackprof (0.2.28)
     stimulus-rails (1.3.4)
       railties (>= 6.0.0)
     stringio (3.1.7)
@@ -813,6 +819,7 @@ GEM
       public_suffix
     vcr (6.3.1)
       base64
+    vernier (1.10.1)
     version_gem (1.1.9)
     view_component (3.23.2)
       activesupport (>= 5.2.0, < 8.1)
@@ -855,6 +862,7 @@ PLATFORMS
   arm-linux-gnu
   arm-linux-musl
   arm64-darwin
+  ruby
   x64-mingw-ucrt
   x86_64-darwin
   x86_64-linux-gnu
@@ -946,12 +954,14 @@ DEPENDENCIES
   simplecov
   skylight
   snaptrade (~> 2.0)
+  stackprof
   stimulus-rails
   stripe
   tailwindcss-rails
   turbo-rails
   tzinfo-data
   vcr
+  vernier
   view_component
   web-console
   webauthn (~> 3.4)

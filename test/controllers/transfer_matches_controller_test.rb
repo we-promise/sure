@@ -96,6 +96,64 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "button[name='transfer_match[loan_payment_split_action]'][value='unmatched']"
   end
 
+  test "shows scheduled annuity loan payments as match choices" do
+    create_annuity_loan_account
+    payment_entry = create_transaction(amount: 1798.65, account: accounts(:depository), date: Date.new(2024, 2, 1))
+
+    get new_transaction_transfer_match_path(payment_entry)
+
+    assert_response :success
+    assert_select "option[value='scheduled_loan_payment']", text: /Match scheduled loan payment/
+    assert_select "option", text: /Annuity Mortgage due/
+    assert_select "option", text: /principal/
+    assert_select "option", text: /interest/
+  end
+
+  test "scheduled annuity loan payment selection shows split preview" do
+    loan_account = create_annuity_loan_account
+    payment_entry = create_transaction(amount: 1798.65, account: accounts(:depository), date: Date.new(2024, 2, 1))
+
+    assert_no_difference [ "Transfer.count", "Entry.count", "Transaction.count" ] do
+      post transaction_transfer_match_path(payment_entry), params: {
+        transfer_match: {
+          method: "scheduled_loan_payment",
+          scheduled_loan_account_id: loan_account.id
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[data-testid='loan-payment-split-preview']"
+    assert_select "button[name='transfer_match[loan_payment_split_action]'][value='accept']"
+  end
+
+  test "accepts scheduled annuity loan payment match" do
+    loan_account = create_annuity_loan_account
+    payment_entry = create_transaction(amount: 1798.65, account: accounts(:depository), date: Date.new(2024, 2, 1))
+
+    assert_difference -> { Transfer.count } => 1,
+      -> { Entry.count } => 3,
+      -> { Transaction.count } => 3 do
+      post transaction_transfer_match_path(payment_entry), params: {
+        transfer_match: {
+          method: "scheduled_loan_payment",
+          scheduled_loan_account_id: loan_account.id,
+          loan_payment_split_action: "accept"
+        }
+      }
+    end
+
+    payment_entry.reload
+    transfer = Transfer.order(created_at: :desc).first
+
+    assert payment_entry.split_parent?
+    assert_in_delta 298.65, transfer.outflow_transaction.entry.amount, 0.01
+    assert_in_delta(-298.65, transfer.inflow_transaction.entry.amount, 0.01)
+
+    interest_entry = payment_entry.child_entries.where(name: "Interest for #{loan_account.name}").sole
+    assert_in_delta 1500, interest_entry.amount, 0.01
+  end
+
   test "accepts annuity split when matching existing cash payment to new loan transaction" do
     loan_account = create_annuity_loan_account
     payment_entry = create_transaction(amount: 1798.65, account: accounts(:depository), date: Date.new(2024, 2, 1))
