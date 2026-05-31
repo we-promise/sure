@@ -351,6 +351,12 @@ jobs:
 
           jq -c . "$diagnostics_file"
 
+          if jq -e '.previewFailed == true' "$diagnostics_file" >/dev/null; then
+            echo "Preview diagnostics from _container_status reported previewFailed=true:" >&2
+            jq -c . "$diagnostics_file" >&2
+            exit 1
+          fi
+
       - name: Upload preview diagnostics
         if: success()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

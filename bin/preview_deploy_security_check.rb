@@ -365,7 +365,7 @@ assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.c
 assert_run_includes(create_deployment, "github.rest.repos.createDeployment", "ref: headSha", "preview-pr-${prNumber}")
 assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", 'if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "Preview Worker delete failed", "retrying once")
 assert_run_includes(warm_preview, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15")
-assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'")
+assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'", "jq -e '.previewFailed == true'", "Preview diagnostics from _container_status reported previewFailed=true", "exit 1")
 assert_run_includes(update_deployment_status, "github.rest.repos.createDeploymentStatus", "process.env.DEPLOY_RESULT === 'success'", "deployment_id: Number(process.env.DEPLOYMENT_ID)")
 assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.rest.issues.updateComment", "github.rest.issues.createComment", "Preview Deployment Ready")
 
