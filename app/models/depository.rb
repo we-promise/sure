@@ -19,12 +19,18 @@ class Depository < ApplicationRecord
   # was previously invisible to the tax-advantaged filter PR #724 introduced.
   TAX_ADVANTAGED_SUBTYPES = %w[hsa].freeze
 
-  # Mirrors `Investment#tax_treatment` / the `cryptos.tax_treatment` enum.
   # `TaxTreatable` (the `Account` concern) reads this via `respond_to?` so
   # adding it here transparently flips `Account#tax_advantaged?` for HSA
   # depositories without touching the concern itself.
+  #
+  # Returns `nil` (not `:taxable`) for ordinary depository subtypes. `nil`
+  # already reads as taxable everywhere it matters: `TaxTreatable#taxable?`
+  # treats `nil` as taxable and `#tax_advantaged?` excludes it. Returning
+  # `nil` also keeps `tax_treatment.present?` false so the header tax badge
+  # (`app/views/accounts/show/_header.html.erb`) stays hidden on checking,
+  # savings, CD, and money-market accounts that never displayed it before.
   def tax_treatment
-    TAX_ADVANTAGED_SUBTYPES.include?(subtype) ? :tax_advantaged : :taxable
+    :tax_advantaged if TAX_ADVANTAGED_SUBTYPES.include?(subtype)
   end
 
   class << self

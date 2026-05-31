@@ -155,13 +155,16 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal I18n.t("accounts.tax_treatments.taxable"), account.tax_treatment_label
   end
 
-  test "tax_treatment returns :taxable for non-HSA depository accounts" do
-    # Depository now exposes a `tax_treatment` method symmetric to Investment
-    # and Crypto. For non-HSA subtypes (checking, savings, cd, money_market)
-    # it returns :taxable, so `Account#tax_treatment` delegates through and
-    # `taxable?` returns true.
-    assert_equal :taxable, @account.tax_treatment
-    assert_equal I18n.t("accounts.tax_treatments.taxable"), @account.tax_treatment_label
+  test "tax_treatment returns nil for non-HSA depository accounts" do
+    # Depository exposes a `tax_treatment` method so HSA cash flips
+    # tax-advantaged, but non-HSA subtypes (checking, savings, cd,
+    # money_market) return nil. nil still reads as taxable via `taxable?`,
+    # and keeps `tax_treatment.present?` false so the header tax badge does
+    # not appear on ordinary bank accounts that never displayed it before.
+    assert_nil @account.tax_treatment
+    assert_nil @account.tax_treatment_label
+    assert_not @account.tax_treatment.present?
+    assert @account.taxable?
   end
 
   test "tax_treatment returns nil for accountables that do not implement it" do
@@ -224,7 +227,7 @@ class AccountTest < ActiveSupport::TestCase
 
   test "taxable? returns true for non-HSA depository accounts" do
     # `@account` is the checking depository fixture; `tax_treatment` is
-    # `:taxable` (no subtype override), so `taxable?` reads true.
+    # `nil` (no subtype override), which `taxable?` reads as true.
     assert @account.taxable?
     assert_not @account.tax_advantaged?
   end
