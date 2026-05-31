@@ -236,9 +236,30 @@ jobs:
           set -euo pipefail
 
           cd "$RUNNER_TEMP/sure-preview-worker"
+          config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"
           image_tag="sure-preview-pr-${PR_NUMBER}:${HEAD_SHA}"
           push_log="$RUNNER_TEMP/wrangler-containers-push.log"
           clean_log="$RUNNER_TEMP/wrangler-containers-push.clean.log"
+
+          # wrangler containers push validates wrangler.toml, so point the trusted
+          # config at the loaded CI image before replacing it with the registry ref.
+          LOCAL_IMAGE_TAG="$image_tag" node - "$config_path" <<'NODE'
+          const fs = require('node:fs');
+
+          const configPath = process.argv[2];
+          const imageTag = process.env.LOCAL_IMAGE_TAG;
+
+          if (!/^sure-preview-pr-[1-9][0-9]*:[a-f0-9]{40}$/.test(imageTag || '')) {
+            throw new Error('Expected local preview image tag for wrangler containers push');
+          }
+
+          const original = fs.readFileSync(configPath, 'utf8');
+          const updated = original.replace(/image = "[^"]+"/, `image = ${JSON.stringify(imageTag)}`);
+          if (updated === original) {
+            throw new Error('Expected wrangler.toml to contain an image entry to rewrite before push');
+          }
+          fs.writeFileSync(configPath, updated);
+          NODE
 
           ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log"
           perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$push_log" > "$clean_log"

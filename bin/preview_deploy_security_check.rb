@@ -360,7 +360,22 @@ assert(!image_build_run.include?('cat > "$manifest_file" <<JSON'), "preview imag
 
 assert_run_includes(verify_checksum, 'expected_checksum="$(tr -d', 'actual_checksum="$(sha256sum "$image_archive"', "Preview image artifact checksum mismatch", "Preview image artifact contained unexpected files", "sure-preview-image.manifest.json", "Preview image manifest", "imageId is invalid")
 assert_run_includes(load_image, 'gzip -dc "$image_archive" | docker load', 'docker image inspect "$expected_image"', "Loaded preview image ID did not match artifact manifest")
-assert_run_includes(push_image, "./node_modules/.bin/wrangler containers push", "registry\\.cloudflare\\.com/", "image_ref=")
+push_image_run = assert_run_includes(
+  push_image,
+  "./node_modules/.bin/wrangler containers push",
+  "registry\\.cloudflare\\.com/",
+  "image_ref=",
+  'config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"',
+  'LOCAL_IMAGE_TAG="$image_tag" node - "$config_path"',
+  "Expected local preview image tag for wrangler containers push",
+  "Expected wrangler.toml to contain an image entry to rewrite before push"
+)
+push_rewrite_index = push_image_run.index('LOCAL_IMAGE_TAG="$image_tag" node - "$config_path"')
+push_command_index = push_image_run.index("./node_modules/.bin/wrangler containers push")
+assert(
+  push_rewrite_index < push_command_index,
+  "push step must rewrite wrangler.toml to the loaded local image tag before wrangler validates it"
+)
 assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'const original = fs.readFileSync', 'const updated = original.replace(/image = "[^"]+"/', "updated === original", "Expected wrangler.toml to contain an image entry to rewrite", "JSON.stringify(imageRef)")
 assert_run_includes(create_deployment, "github.rest.repos.createDeployment", "ref: headSha", "preview-pr-${prNumber}")
 assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", 'if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "Preview Worker delete failed", "retrying once")
