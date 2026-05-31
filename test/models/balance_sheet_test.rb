@@ -48,13 +48,15 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 1000, BalanceSheet.new(@family).liabilities.total
   end
 
-  test "net worth series includes disabled accounts to avoid false archive jumps" do
+  test "net worth series preserves disabled history without carrying it into current totals" do
     period = Period.custom(start_date: Date.current - 1.day, end_date: Date.current)
     active_account = create_account(balance: 20_000, accountable: Depository.new)
     disabled_account = create_account(balance: 0, accountable: Depository.new)
     pending_deletion_account = create_account(balance: 0, accountable: Depository.new)
     disabled_account.disable!
     pending_deletion_account.mark_for_deletion!
+
+    assert_not_nil disabled_account.reload.disabled_at
 
     create_balance(account: active_account, date: period.start_date, balance: 10_000)
     create_balance(account: active_account, date: period.end_date, balance: 20_000)
@@ -67,7 +69,8 @@ class BalanceSheetTest < ActiveSupport::TestCase
     values_by_date = series.values.index_by(&:date)
 
     assert_equal 30_000, values_by_date.fetch(period.start_date).value.amount
-    assert_equal 30_000, values_by_date.fetch(period.end_date).value.amount
+    assert_equal 20_000, BalanceSheet.new(@family).net_worth
+    assert_equal BalanceSheet.new(@family).net_worth, values_by_date.fetch(period.end_date).value.amount
   end
 
   test "historical account scope respects shared-account finance settings" do
