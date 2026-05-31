@@ -11,7 +11,7 @@ class SureImport < Import
     private
       def build_message
         return I18n.t(
-          "views.imports.errors.readback_verification_failed",
+          "imports.errors.readback_verification_failed",
           status: verification_status,
           default: "Sure import readback verification failed with status: #{verification_status}"
         ) if mismatches.empty?
@@ -21,7 +21,7 @@ class SureImport < Import
         end.join("; ")
 
         I18n.t(
-          "views.imports.errors.readback_verification_mismatch",
+          "imports.errors.readback_verification_mismatch",
           details: details,
           default: "Sure import readback verification mismatch (#{details})"
         )
