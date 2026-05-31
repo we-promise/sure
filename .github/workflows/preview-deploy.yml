@@ -23,7 +23,7 @@ jobs:
     outputs:
       artifact_name: ${{ steps.preview.outputs.artifact_name }}
       head_sha: ${{ steps.preview.outputs.head_sha }}
-      pr_number: ${{ github.event.pull_request.number }}
+      pr_number: ${{ steps.preview.outputs.pr_number }}
       should_deploy: ${{ steps.preview.outputs.should_deploy }}
 
     steps:
