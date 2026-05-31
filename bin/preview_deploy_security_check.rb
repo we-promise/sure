@@ -394,6 +394,11 @@ assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.re
 
 [
   "interface PreviewTimings",
+  "DIAGNOSTICS_HISTORY_LIMIT = 50",
+  "const TIMING_ANCHOR_STAGES",
+  "trimDiagnosticsHistory",
+  "isTimingAnchor",
+  "history.filter((record) => kept.has(record))",
   'const PREVIEW_DIAGNOSTICS_NONCE = "${PREVIEW_DIAGNOSTICS_NONCE}"',
   "PREVIEW_DIAGNOSTICS_NONCE",
   'request.headers.get("x-preview-diagnostics-nonce")',

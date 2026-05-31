@@ -53,9 +53,22 @@ interface PreviewStatusPayload {
 
 const DIAGNOSTICS_KEY = "preview-diagnostics";
 const DIAGNOSTICS_HISTORY_KEY = "preview-diagnostics-history";
+const DIAGNOSTICS_HISTORY_LIMIT = 50;
 const PREVIEW_DIAGNOSTICS_NONCE = "${PREVIEW_DIAGNOSTICS_NONCE}";
 const READY_STAGES = new Set(["demo-data-ready", "demo-data-skip"]);
 const FAILED_STAGES = new Set(["demo-data-failed", "failed"]);
+const TIMING_ANCHOR_STAGES = new Set([
+  "boot",
+  "rails-start",
+  "rails-up-ready",
+  "demo-data-check",
+  "demo-data-deferred",
+  "demo-data-load",
+  "demo-data-ready",
+  "demo-data-skip",
+  "demo-data-failed",
+  "failed",
+]);
 const WAITING_MESSAGES: Record<string, string> = {
   boot: "Waking preview…",
   "redis-start": "Starting Redis…",
@@ -109,20 +122,37 @@ export class RailsContainer extends Container {
     const diagnostic = {
       ...payload,
       state: await this.getState(),
-    };
+    } as DiagnosticRecord;
 
     await this.ctx.storage.put(DIAGNOSTICS_KEY, diagnostic);
 
     const history =
-      ((await this.ctx.storage.get(DIAGNOSTICS_HISTORY_KEY)) as Record<string, unknown>[] | undefined) ?? [];
+      ((await this.ctx.storage.get(DIAGNOSTICS_HISTORY_KEY)) as DiagnosticRecord[] | undefined) ?? [];
 
     history.push(diagnostic);
+    await this.ctx.storage.put(DIAGNOSTICS_HISTORY_KEY, this.trimDiagnosticsHistory(history));
+  }
 
-    if (history.length > 20) {
-      history.splice(0, history.length - 20);
-    }
+  private isTimingAnchor(record: DiagnosticRecord): boolean {
+    return (
+      record.event === "start" ||
+      (record.event === "entrypoint" &&
+        typeof record.payload?.stage === "string" &&
+        TIMING_ANCHOR_STAGES.has(record.payload.stage))
+    );
+  }
 
-    await this.ctx.storage.put(DIAGNOSTICS_HISTORY_KEY, history);
+  private trimDiagnosticsHistory(history: DiagnosticRecord[]): DiagnosticRecord[] {
+    if (history.length <= DIAGNOSTICS_HISTORY_LIMIT) return history;
+
+    const anchors = history.filter((record) => this.isTimingAnchor(record)).slice(-DIAGNOSTICS_HISTORY_LIMIT);
+    const anchored = new Set(anchors);
+    const remainingSlots = Math.max(DIAGNOSTICS_HISTORY_LIMIT - anchors.length, 0);
+    const recentNonAnchors =
+      remainingSlots > 0 ? history.filter((record) => !anchored.has(record)).slice(-remainingSlots) : [];
+    const kept = new Set([...anchors, ...recentNonAnchors]);
+
+    return history.filter((record) => kept.has(record));
   }
 
   private async getDiagnostics(): Promise<{
