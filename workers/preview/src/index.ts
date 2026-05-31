@@ -24,6 +24,22 @@ interface PreviewProgress {
   detail: string;
 }
 
+interface PreviewTimings {
+  containerStartedAt: string | null;
+  bootStartedAt: string | null;
+  railsStartedAt: string | null;
+  railsReadyAt: string | null;
+  demoDataStartedAt: string | null;
+  demoDataReadyAt: string | null;
+  demoDataReadyStage: string | null;
+  demoDataFailedAt: string | null;
+  previewReadyAt: string | null;
+  secondsToRailsReady: number | null;
+  secondsToDemoDataReady: number | null;
+  secondsFromRailsReadyToDemoDataReady: number | null;
+  secondsToPreviewReady: number | null;
+}
+
 interface PreviewStatusPayload {
   state: unknown;
   containerRunning: boolean;
@@ -31,11 +47,13 @@ interface PreviewStatusPayload {
   diagnosticsHistory: DiagnosticRecord[];
   previewReady: boolean;
   previewFailed: boolean;
+  timings: PreviewTimings;
   progress: PreviewProgress;
 }
 
 const DIAGNOSTICS_KEY = "preview-diagnostics";
 const DIAGNOSTICS_HISTORY_KEY = "preview-diagnostics-history";
+const PREVIEW_DIAGNOSTICS_TOKEN = "${PREVIEW_DIAGNOSTICS_TOKEN}";
 const READY_STAGES = new Set(["demo-data-ready", "demo-data-skip"]);
 const FAILED_STAGES = new Set(["demo-data-failed", "failed"]);
 const WAITING_MESSAGES: Record<string, string> = {
@@ -78,6 +96,7 @@ export class RailsContainer extends Container {
     BINDING: "::",
     DEMO_DATA_SEED: "${PR_NUMBER}",
     PREVIEW_ORIGIN: "https://sure-preview-${PR_NUMBER}.sure-finances.workers.dev",
+    PREVIEW_DIAGNOSTICS_TOKEN,
   };
   sleepAfter = "30m";
   enableInternet = true;
@@ -130,6 +149,60 @@ export class RailsContainer extends Container {
     }
   }
 
+  private validTimestamp(value: string | undefined): string | null {
+    if (!value) return null;
+
+    const timestamp = Date.parse(value);
+    return Number.isNaN(timestamp) ? null : value;
+  }
+
+  private secondsBetween(startAt: string | null, endAt: string | null): number | null {
+    if (!startAt || !endAt) return null;
+
+    const start = Date.parse(startAt);
+    const end = Date.parse(endAt);
+    if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
+
+    return Math.round(((end - start) / 1000) * 100) / 100;
+  }
+
+  private buildPreviewTimings(allDiagnostics: DiagnosticRecord[], previewReady: boolean): PreviewTimings {
+    const entrypointDiagnostics = allDiagnostics.filter(
+      (item) => item.event === "entrypoint" && typeof item.payload?.stage === "string"
+    );
+    const firstEventAt = (event: string) => this.validTimestamp(allDiagnostics.find((item) => item.event === event)?.at);
+    const firstStageAt = (...stages: string[]) =>
+      this.validTimestamp(entrypointDiagnostics.find((item) => stages.includes(item.payload?.stage ?? ""))?.at);
+
+    const containerStartedAt = firstEventAt("start");
+    const bootStartedAt = firstStageAt("boot") ?? containerStartedAt;
+    const railsStartedAt = firstStageAt("rails-start");
+    const railsReadyAt = firstStageAt("rails-up-ready");
+    const demoDataStartedAt =
+      firstStageAt("demo-data-load") ?? firstStageAt("demo-data-deferred") ?? firstStageAt("demo-data-check");
+    const demoDataReady = entrypointDiagnostics.find((item) => READY_STAGES.has(item.payload?.stage ?? ""));
+    const demoDataReadyAt = this.validTimestamp(demoDataReady?.at);
+    const demoDataReadyStage = demoDataReady?.payload?.stage ?? null;
+    const demoDataFailedAt = firstStageAt("demo-data-failed");
+    const previewReadyAt = previewReady ? (demoDataReadyAt ?? railsReadyAt) : null;
+
+    return {
+      containerStartedAt,
+      bootStartedAt,
+      railsStartedAt,
+      railsReadyAt,
+      demoDataStartedAt,
+      demoDataReadyAt,
+      demoDataReadyStage,
+      demoDataFailedAt,
+      previewReadyAt,
+      secondsToRailsReady: this.secondsBetween(bootStartedAt, railsReadyAt),
+      secondsToDemoDataReady: this.secondsBetween(demoDataStartedAt, demoDataReadyAt),
+      secondsFromRailsReadyToDemoDataReady: this.secondsBetween(railsReadyAt, demoDataReadyAt),
+      secondsToPreviewReady: this.secondsBetween(bootStartedAt, previewReadyAt),
+    };
+  }
+
   private async buildPreviewStatus(base: {
     state: unknown;
     containerRunning: boolean;
@@ -151,10 +224,11 @@ export class RailsContainer extends Container {
         ? (base.state as { status?: string }).status === "healthy"
         : false) ||
       entrypointDiagnostics.some((item) => item.payload?.stage === "rails-up-ready");
-    const previewReady = liveProbeReady || (sampleDataReady && railsResponding);
+    const previewReady = sampleDataReady && railsResponding;
     const previewFailed =
       entrypointDiagnostics.some((item) => FAILED_STAGES.has(item.payload?.stage ?? "")) ||
       base.diagnostics?.event === "error";
+    const timings = this.buildPreviewTimings(allDiagnostics, previewReady);
 
     let phase: PreviewProgress["phase"] = "cold";
     if (previewFailed) {
@@ -188,6 +262,7 @@ export class RailsContainer extends Container {
       ...base,
       previewReady,
       previewFailed,
+      timings,
       progress: {
         phase,
         stage: latestStage,
@@ -294,6 +369,10 @@ export class RailsContainer extends Container {
     }
 
     if (url.pathname === "/_container_event" && request.method === "POST") {
+      if (request.headers.get("x-preview-diagnostics-token") !== PREVIEW_DIAGNOSTICS_TOKEN) {
+        return new Response("not found", { status: 404 });
+      }
+
       const payload = await request.json();
       await this.recordDiagnostic({
         event: "entrypoint",

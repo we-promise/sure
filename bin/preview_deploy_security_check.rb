@@ -8,6 +8,8 @@ PREVIEW_WORKFLOW_PATH = File.join(ROOT, ".github/workflows/preview-deploy.yml")
 PR_WORKFLOW_PATH = File.join(ROOT, ".github/workflows/pr.yml")
 LOCKFILE_PATH = File.join(ROOT, "workers/preview/package-lock.json")
 RESOLVER_PATH = File.join(ROOT, "workers/preview/deploy/resolve_preview_request.cjs")
+PREVIEW_WORKER_PATH = File.join(ROOT, "workers/preview/src/index.ts")
+PREVIEW_DOCKERFILE_PATH = File.join(ROOT, "Dockerfile.preview")
 PINNED_ACTION = /\A[^@\s]+@[a-f0-9]{40}\z/
 EXPECTED_ACTION_PINS = {
   "actions/checkout" => "93cb6efe18208431cddfb8368fd83d5badbf9bfd", # v5
@@ -55,6 +57,9 @@ REQUIRED_PREPARE_LINES = [
   'cp trusted/workers/preview/tsconfig.json "$preview_dir/tsconfig.json"',
   'cp trusted/workers/preview/wrangler.toml "$preview_dir/wrangler.toml"',
   'cp -R trusted/workers/preview/src "$preview_dir/src"',
+  'diagnostics_token="$(openssl rand -hex 32)"',
+  'sed -i "s/\${PREVIEW_DIAGNOSTICS_TOKEN}/${diagnostics_token}/g" "$preview_dir/src/index.ts"',
+  "Preview diagnostics token placeholder was not replaced",
   "npm ci --ignore-scripts --no-audit --no-fund"
 ].freeze
 REQUIRED_IMAGE_BUILD_LINES = [
@@ -149,6 +154,8 @@ preview_workflow = YAML.safe_load_file(PREVIEW_WORKFLOW_PATH, aliases: true)
 pr_workflow = YAML.safe_load_file(PR_WORKFLOW_PATH, aliases: true)
 lockfile = JSON.parse(File.read(LOCKFILE_PATH))
 resolver_script = File.read(RESOLVER_PATH)
+preview_worker_script = File.read(PREVIEW_WORKER_PATH)
+preview_dockerfile = File.read(PREVIEW_DOCKERFILE_PATH)
 
 preview_on = workflow_on(preview_workflow)
 pr_on = workflow_on(pr_workflow)
@@ -260,6 +267,7 @@ comment_on_pr = step!(preview_comment_steps, "Comment on PR")
   [ "download artifact token", download_artifact.dig("with", "github-token"), "${{ github.token }}" ],
   [ "download artifact path", download_artifact.dig("with", "path"), "${{ runner.temp }}/preview-image" ],
   [ "fork deployment record guard", create_deployment.fetch("if"), "env.IS_FORK == 'false'" ],
+  [ "diagnostics upload if", upload_diagnostics.fetch("if"), "always() && steps.deploy.outputs.preview_url != ''" ],
   [ "diagnostics upload name", upload_diagnostics.dig("with", "name"), "preview-diagnostics-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}" ],
   [ "diagnostics upload path", upload_diagnostics.dig("with", "path"), "${{ runner.temp }}/preview-diagnostics.json" ],
   [ "diagnostics upload retention", upload_diagnostics.dig("with", "retention-days"), 3 ],
@@ -380,9 +388,30 @@ assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.c
 assert_run_includes(create_deployment, "github.rest.repos.createDeployment", "ref: headSha", "preview-pr-${prNumber}")
 assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", 'if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "Preview Worker delete failed", "retrying once")
 assert_run_includes(warm_preview, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15")
-assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'", "jq -e '.previewFailed == true'", "Preview diagnostics from _container_status reported previewFailed=true", "exit 1")
+assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "seq 1 40", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'", "jq -e '.previewFailed == true'", "Preview diagnostics from _container_status reported previewFailed=true", "jq -e '.previewReady == true'", "Preview diagnostics from _container_status did not reach previewReady=true", ".timings.previewReadyAt != null and .timings.secondsToPreviewReady != null", "Preview diagnostics are missing readiness timing fields", "exit 1")
 assert_run_includes(update_deployment_status, "github.rest.repos.createDeploymentStatus", "process.env.DEPLOY_RESULT === 'success'", "deployment_id: Number(process.env.DEPLOYMENT_ID)")
 assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.rest.issues.updateComment", "github.rest.issues.createComment", "Preview Deployment Ready")
+
+[
+  "interface PreviewTimings",
+  'const PREVIEW_DIAGNOSTICS_TOKEN = "${PREVIEW_DIAGNOSTICS_TOKEN}"',
+  "PREVIEW_DIAGNOSTICS_TOKEN",
+  'request.headers.get("x-preview-diagnostics-token")',
+  "return new Response(\"not found\", { status: 404 })",
+  "timings: PreviewTimings",
+  "buildPreviewTimings",
+  "const previewReady = sampleDataReady && railsResponding",
+  "previewReadyAt",
+  "secondsToRailsReady",
+  "secondsToDemoDataReady",
+  "secondsFromRailsReadyToDemoDataReady",
+  "secondsToPreviewReady"
+].each { |needle| assert(preview_worker_script.include?(needle), "preview worker must include #{needle.inspect}") }
+
+[
+  '[ -n "$PREVIEW_ORIGIN" ] && [ -n "$PREVIEW_DIAGNOSTICS_TOKEN" ]',
+  '-H "x-preview-diagnostics-token: $PREVIEW_DIAGNOSTICS_TOKEN"'
+].each { |needle| assert(preview_dockerfile.include?(needle), "preview Dockerfile entrypoint must include #{needle.inspect}") }
 
 secret_steps = deploy_steps.select { |step| env_hash(step).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }
 assert(secret_steps.map { |step| step["name"] } == [ push_image["name"], deploy["name"] ], "only image push and deploy may receive Cloudflare secrets")
