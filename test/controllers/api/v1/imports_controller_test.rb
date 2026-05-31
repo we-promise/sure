@@ -987,7 +987,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :not_found
-    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    assert_equal "not_found", JSON.parse(response.body)["error"]
   end
 
   test "should require authentication for preflight" do
@@ -1023,7 +1023,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :not_found
-    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    assert_equal "not_found", JSON.parse(response.body)["error"]
   end
 
   test "should return not found for malformed preflight account id" do
@@ -1040,7 +1040,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :not_found
-    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    assert_equal "not_found", JSON.parse(response.body)["error"]
   end
 
   test "should apply Mint defaults before preflight header validation" do
@@ -1208,7 +1208,28 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :not_found
-    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    assert_equal "not_found", JSON.parse(response.body)["error"]
+  end
+
+  test "should not create import for inaccessible same family account" do
+    member_api_key = api_key_for(users(:family_member))
+    inaccessible_account = accounts(:other_asset)
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: inaccessible_account.id
+           },
+           headers: api_headers(member_api_key)
+    end
+
+    assert_response :not_found
+    assert_equal "not_found", JSON.parse(response.body)["error"]
   end
 
   test "should not create import for account in another family" do
@@ -1229,7 +1250,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
     json_response = JSON.parse(response.body)
-    assert_equal "record_not_found", json_response["error"]
+    assert_equal "not_found", json_response["error"]
   end
 
   test "should reject file upload exceeding max size" do

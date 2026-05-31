@@ -187,7 +187,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     def render_account_not_found
       render json: {
-        error: "record_not_found",
+        error: "not_found",
         message: "The requested resource was not found"
       }, status: :not_found
     end
