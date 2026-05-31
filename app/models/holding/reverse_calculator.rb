@@ -81,28 +81,29 @@ class Holding::ReverseCalculator
 
     def precompute_cost_basis
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
-      tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+      trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
-        next unless trade.qty > 0
+        tracker = trackers[trade.security_id]
 
-        security_id = trade.security_id
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
+        # Buys raise the basis; sells relieve quantity at the running average so
+        # the figure stays correct after a position is fully sold and repurchased.
+        tracker.apply(converted_trade_price(trade), trade.qty)
 
-        tracker[security_id][:total_cost] += converted_price * trade.qty
-        tracker[security_id][:total_qty] += trade.qty
+        average_cost = tracker.average_cost
+        next if average_cost.nil?
 
-        @cost_basis_snapshots[security_id] << [
-          trade_entry.date,
-          tracker[security_id][:total_cost] / tracker[security_id][:total_qty]
-        ]
+        @cost_basis_snapshots[trade.security_id] << [ trade_entry.date, average_cost ]
       end
+    end
+
+    # Converts a trade's price into the account's currency (falling back to the
+    # raw price when no exchange rate is available).
+    def converted_trade_price(trade)
+      Money.new(trade.price, trade.currency).exchange_to(account.currency).amount
+    rescue Money::ConversionError
+      trade.price
     end
 
     def cost_basis_for(security_id, date)
