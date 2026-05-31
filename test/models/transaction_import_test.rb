@@ -70,6 +70,30 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "complete", @import.status
   end
 
+  test "dry_run includes count of accounts to be created when no account is preselected" do
+    csv = <<~CSV
+      date,name,amount,account
+      01/01/2024,Txn1,100,NewAccount
+    CSV
+
+    @import.update!(
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      date_format: "%m/%d/%Y"
+    )
+
+    @import.generate_rows_from_csv
+    @import.mappings.create! key: "NewAccount", create_when_empty: true, type: "Import::AccountMapping"
+    @import.reload
+
+    assert_nil @import.account
+
+    dry_run = @import.dry_run
+    assert_equal 1, dry_run[:transactions]
+    assert_equal 1, dry_run[:accounts]
+  end
+
   test "imports transactions with separate type column for signage convention" do
     import = <<~CSV
       date,amount,amount_type
