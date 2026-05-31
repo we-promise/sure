@@ -422,6 +422,14 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sync started/i, response.body)
   end
 
+  test "non-admin users can view the bank sync page" do
+    sign_in users(:family_member)
+
+    get settings_providers_url
+
+    assert_response :success
+  end
+
   test "non-admin users cannot update providers" do
     with_self_hosting do
       sign_in users(:family_member)
@@ -436,6 +444,28 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       # Value should not have changed
       assert_nil Setting["plaid_client_id"]
     end
+  end
+
+  test "non-admin users cannot sync all providers" do
+    sign_in users(:family_member)
+
+    assert_no_enqueued_jobs only: SyncAllProvidersJob do
+      post sync_all_settings_providers_path
+    end
+
+    assert_redirected_to root_path
+    assert_equal "Not authorized", flash[:alert]
+  end
+
+  test "non-admin users cannot sync a provider" do
+    sign_in users(:family_member)
+
+    assert_no_enqueued_jobs only: SyncJob do
+      post sync_provider_settings_providers_path(provider_key: "simplefin")
+    end
+
+    assert_redirected_to root_path
+    assert_equal "Not authorized", flash[:alert]
   end
 
   test "uses singleton_class method_defined to detect declared fields" do
