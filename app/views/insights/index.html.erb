@@ -10,12 +10,14 @@
         </p>
       </div>
 
-      <%= button_to refresh_insights_path,
+      <%= render DS::Button.new(
+            text: t("insights.index.refresh"),
+            icon: "refresh-cw",
+            variant: "outline",
+            size: "sm",
+            href: refresh_insights_path,
             method: :post,
-            class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
-        <%= icon("refresh-cw", size: "sm") %>
-        <span class="hidden sm:inline"><%= t("insights.index.refresh") %></span>
-      <% end %>
+          ) %>
     </header>
 
     <% if flash[:notice].present? %>
