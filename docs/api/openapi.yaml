@@ -4687,6 +4687,12 @@ paths:
                 oneOf:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
+        '404':
+          description: account not found or not writable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '500':
           description: import uploaded but publish enqueue failed
           content:
@@ -4719,7 +4725,7 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID to import into
+                  description: Writable account ID to import into
                 publish:
                   type: string
                   description: Set to "true" to automatically queue for processing
@@ -4826,7 +4832,7 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID to import into
+                  description: Writable account ID to import into
                 publish:
                   type: string
                   description: Set to "true" to automatically queue for processing
@@ -5064,7 +5070,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID used for account-scoped CSV import validation
+                  description: Accessible account ID used for account-scoped CSV import
+                    validation
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -5175,7 +5182,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID used for account-scoped CSV import validation
+                  description: Accessible account ID used for account-scoped CSV import
+                    validation
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
