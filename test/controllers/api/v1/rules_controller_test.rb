@@ -215,6 +215,16 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "should require authentication to create rule" do
+    assert_no_difference "Rule.count" do
+      post api_v1_rules_url,
+        params: { rule: { name: "Unauth", resource_type: "transaction" } },
+        as: :json
+    end
+
+    assert_response :unauthorized
+  end
+
   test "should update a rule name" do
     patch api_v1_rule_url(@rule),
       params: { rule: { name: "Updated name" } },
@@ -271,11 +281,37 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     assert_not Rule.exists?(rule_id)
   end
 
+  test "should require read_write scope to update rule" do
+    patch api_v1_rule_url(@rule),
+      params: { rule: { name: "Blocked" } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :forbidden
+    assert_not_equal "Blocked", @rule.reload.name
+  end
+
+  test "should require authentication to update rule" do
+    patch api_v1_rule_url(@rule),
+      params: { rule: { name: "Unauth" } },
+      as: :json
+
+    assert_response :unauthorized
+    assert_not_equal "Unauth", @rule.reload.name
+  end
+
   test "should require read_write scope to delete rule" do
     delete api_v1_rule_url(@rule),
       headers: api_headers(@api_key)
 
     assert_response :forbidden
+    assert Rule.exists?(@rule.id)
+  end
+
+  test "should require authentication to delete rule" do
+    delete api_v1_rule_url(@rule)
+
+    assert_response :unauthorized
     assert Rule.exists?(@rule.id)
   end
 

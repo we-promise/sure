@@ -85,6 +85,12 @@ module Api
             errors: @merchant.errors.full_messages
           }, status: :unprocessable_entity
         end
+      rescue ActionController::ParameterMissing => e
+        render json: {
+          error: "validation_failed",
+          message: e.message,
+          errors: [ e.message ]
+        }, status: :unprocessable_entity
       rescue => e
         Rails.logger.error("API Merchants Create Error: #{e.message}")
         render json: { error: "internal_server_error", message: "An unexpected error occurred" }, status: :internal_server_error

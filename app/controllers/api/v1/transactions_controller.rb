@@ -6,7 +6,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
-  before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :set_transaction, only: [ :show ]
+  before_action :set_writable_transaction, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
@@ -207,6 +208,22 @@ end
       @transaction = family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(current_resource_owner))
+        .find(params[:id])
+      @entry = @transaction.entry
+    rescue ActiveRecord::RecordNotFound
+      render json: {
+        error: "not_found",
+        message: "Transaction not found"
+      }, status: :not_found
+    end
+
+    def set_writable_transaction
+      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
+      family = current_resource_owner.family
+      @transaction = family.transactions
+        .joins(entry: :account)
+        .merge(Account.writable_by(current_resource_owner))
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound

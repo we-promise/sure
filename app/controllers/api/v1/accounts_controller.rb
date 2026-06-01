@@ -130,6 +130,11 @@ class Api::V1::AccountsController < Api::V1::BaseController
   private
 
     def set_writable_account
+      unless valid_uuid?(params[:id])
+        render json: { error: "not_found", message: "Account not found" }, status: :not_found
+        return
+      end
+
       @account = current_resource_owner.family.accounts
                                        .writable_by(current_resource_owner)
                                        .find(params[:id])
@@ -177,8 +182,8 @@ class Api::V1::AccountsController < Api::V1::BaseController
       date_str = params.dig(:account, :opening_balance_date)
       return nil if date_str.blank?
 
-      Date.parse(date_str)
-    rescue Date::Error
+      Date.iso8601(date_str)
+    rescue ArgumentError
       raise ArgumentError, "opening_balance_date is not a valid date"
     end
 

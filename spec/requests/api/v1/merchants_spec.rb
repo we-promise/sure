@@ -33,6 +33,17 @@ RSpec.describe 'API V1 Merchants', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
+  let(:read_only_api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Read Key',
+      key: key,
+      scopes: %w[read],
+      source: 'web'
+    )
+  end
+
   let!(:family_merchant) { family.merchants.create!(name: 'Coffee Shop') }
 
   path '/api/v1/merchants' do
@@ -76,6 +87,14 @@ RSpec.describe 'API V1 Merchants', type: :request do
 
       response '401', 'unauthorized' do
         let(:'X-Api-Key') { 'invalid' }
+        let(:body) { { merchant: { name: 'x' } } }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
         let(:body) { { merchant: { name: 'x' } } }
         run_test!
       end

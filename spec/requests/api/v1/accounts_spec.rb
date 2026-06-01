@@ -110,7 +110,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
       consumes 'application/json'
       produces 'application/json'
 
-      parameter name: :body, in: :body, schema: {
+      parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         required: [ 'account' ],
         properties: {
@@ -139,6 +139,14 @@ RSpec.describe 'API V1 Accounts', type: :request do
 
       response '401', 'unauthorized' do
         let(:'X-Api-Key') { 'invalid' }
+        let(:body) { { account: { name: 'x', accountable_type: 'Depository', balance: 0, currency: 'USD' } } }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
         let(:body) { { account: { name: 'x', accountable_type: 'Depository', balance: 0, currency: 'USD' } } }
         run_test!
       end
@@ -222,6 +230,15 @@ RSpec.describe 'API V1 Accounts', type: :request do
         run_test!
       end
 
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { checking_account.id }
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+        let(:body) { { account: { name: 'x' } } }
+        run_test!
+      end
+
       response '404', 'not found' do
         let(:id) { SecureRandom.uuid }
         let(:body) { { account: { name: 'x' } } }
@@ -236,6 +253,14 @@ RSpec.describe 'API V1 Accounts', type: :request do
 
       response '200', 'account deleted' do
         let(:id) { checking_account.id }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { checking_account.id }
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
         run_test!
       end
 

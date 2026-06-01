@@ -379,6 +379,27 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal "Hacked", account.reload.name
   end
 
+  test "should return 404 when other family write key tries to update account" do
+    account = accounts(:depository)
+    other_write_key = ApiKey.create!(
+      user: @other_family_user,
+      name: "Other Write Key",
+      scopes: [ "read_write" ],
+      source: "mobile",
+      display_key: "other_write_#{SecureRandom.hex(8)}"
+    )
+
+    patch "/api/v1/accounts/#{account.id}",
+      params: { account: { name: "Hacked" } },
+      headers: api_headers(other_write_key),
+      as: :json
+
+    assert_response :not_found
+    assert_not_equal "Hacked", account.reload.name
+  ensure
+    other_write_key&.destroy
+  end
+
   test "should require read_write scope to update account" do
     account = accounts(:depository)
 
@@ -423,6 +444,15 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       headers: api_headers(@api_key)
 
     assert_response :forbidden
+  end
+
+  test "should return 404 when deleting missing or inaccessible account" do
+    delete "/api/v1/accounts/#{SecureRandom.uuid}",
+      headers: api_headers(@write_api_key)
+
+    assert_response :not_found
+    response_body = JSON.parse(response.body)
+    assert_equal "not_found", response_body["error"]
   end
 
   test "should return 422 for malformed opening_balance_date" do
