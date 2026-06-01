@@ -114,6 +114,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: "wide") }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: Float::INFINITY) }
+    error = assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: -0.1) }
+    assert_equal "exchange_rate_tolerance must be non-negative", error.message
 
     assert_nothing_raised do
       @family.transfer_match_candidates(date_window: "4", exchange_rate_tolerance: "0.1")

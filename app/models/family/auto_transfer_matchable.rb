@@ -85,12 +85,16 @@ module Family::AutoTransferMatchable
     end
 
     def coerce_transfer_match_exchange_rate_tolerance!(value)
-      tolerance = Float(value)
-      return tolerance if tolerance.finite?
+      tolerance = begin
+        Float(value)
+      rescue ArgumentError, TypeError
+        raise ArgumentError, "exchange_rate_tolerance must be numeric"
+      end
 
-      raise ArgumentError
-    rescue ArgumentError, TypeError
-      raise ArgumentError, "exchange_rate_tolerance must be numeric"
+      raise ArgumentError, "exchange_rate_tolerance must be numeric" unless tolerance.finite?
+      raise ArgumentError, "exchange_rate_tolerance must be non-negative" if tolerance.negative?
+
+      tolerance
     end
 
     def transfer_match_candidates_sql
