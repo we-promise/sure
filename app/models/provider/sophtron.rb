@@ -388,10 +388,13 @@ class Provider::Sophtron < Provider
       parsed = URI.parse(url)
       parsed.path.to_s.end_with?("/api") ? url : "#{url}/api"
     rescue URI::InvalidURIError => e
+      # Keep the raw URL out of the human-readable message so it doesn't leak
+      # into error-tracking payloads (e.g. Sentry). The configured value is
+      # preserved in details for admin-facing diagnostics.
       raise Error.new(
-        "Invalid Sophtron base URL: #{value}",
+        "Invalid Sophtron base URL",
         :invalid_base_url,
-        details: e.message
+        details: "value=#{value.inspect}; #{e.message}"
       )
     end
 
