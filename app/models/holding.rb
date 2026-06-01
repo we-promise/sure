@@ -12,6 +12,7 @@ class Holding < ApplicationRecord
   }.freeze
 
   COST_BASIS_SOURCES = %w[manual calculated provider].freeze
+  SOURCES = %w[manual provider calculated].freeze
 
   belongs_to :account
   belongs_to :security
@@ -22,6 +23,7 @@ class Holding < ApplicationRecord
   validates :qty, :price, :amount, numericality: { greater_than_or_equal_to: 0 }
   validates :external_id, uniqueness: { scope: :account_id }, allow_blank: true
   validates :cost_basis_source, inclusion: { in: COST_BASIS_SOURCES }, allow_nil: true
+  validates :source, inclusion: { in: SOURCES }
 
   scope :chronological, -> { order(:date) }
   scope :for, ->(security) { where(security_id: security).order(:date) }
@@ -129,6 +131,10 @@ class Holding < ApplicationRecord
   # Unlock cost_basis to allow provider/calculated updates
   def unlock_cost_basis!
     update!(cost_basis_locked: false)
+  end
+
+  def manual?
+    source == "manual"
   end
 
   # Check if this holding's security can be changed by provider sync

@@ -168,4 +168,31 @@ class Holding::CostBasisReconcilerTest < ActiveSupport::TestCase
     assert_equal BigDecimal("175"), result[:cost_basis]
     assert_equal "provider", result[:cost_basis_source]
   end
+
+  test "manual holding (source=manual) cost_basis is never overwritten regardless of incoming source" do
+    holding = @account.holdings.create!(
+      security: @security,
+      date: Date.current,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      cost_basis: BigDecimal("125"),
+      cost_basis_source: "manual",
+      cost_basis_locked: false,
+      source: "manual"
+    )
+
+    [ "provider", "calculated" ].each do |incoming_source|
+      result = Holding::CostBasisReconciler.reconcile(
+        existing_holding: holding,
+        incoming_cost_basis: BigDecimal("999"),
+        incoming_source: incoming_source
+      )
+
+      assert_not result[:should_update], "#{incoming_source} should not update a manual holding"
+      assert_equal BigDecimal("125"), result[:cost_basis]
+      assert_equal "manual", result[:cost_basis_source]
+    end
+  end
 end

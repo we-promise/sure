@@ -421,6 +421,40 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.provider_security_id
   end
 
+  # =========================================================================
+  # source / manual? predicate
+  # =========================================================================
+
+  test "manual? returns true only when source is manual" do
+    manual = @account.holdings.create!(
+      security: @amzn.security, date: Date.current - 10.days,
+      qty: 5, price: 100, amount: 500, currency: "USD", source: "manual"
+    )
+
+    assert manual.manual?
+    assert_not @amzn.manual?
+  end
+
+  test "source defaults to calculated for new holdings" do
+    holding = @account.holdings.create!(
+      security: @amzn.security, date: Date.current - 11.days,
+      qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+
+    assert_equal "calculated", holding.source
+    assert_not holding.manual?
+  end
+
+  test "source validation rejects unknown values" do
+    holding = @account.holdings.new(
+      security: @amzn.security, date: Date.current - 12.days,
+      qty: 5, price: 100, amount: 500, currency: "USD", source: "bogus"
+    )
+
+    assert_not holding.valid?
+    assert_includes holding.errors[:source], "is not included in the list"
+  end
+
   private
 
     def load_holdings
