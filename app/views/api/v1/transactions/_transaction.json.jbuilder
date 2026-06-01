@@ -20,6 +20,7 @@ json.notes transaction.entry.notes
 json.external_id transaction.entry.external_id
 json.source transaction.entry.source
 json.classification transaction.entry.classification
+json.pending transaction.pending?
 
 # Account information
 json.account do

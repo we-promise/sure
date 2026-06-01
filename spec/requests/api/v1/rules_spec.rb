@@ -45,6 +45,17 @@ RSpec.describe 'API V1 Rules', type: :request do
     ).tap { |api_key| api_key.save!(validate: false) }
   end
 
+  let(:write_api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Write Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'monitoring'
+    )
+  end
+
   let(:'X-Api-Key') { api_key.plain_key }
 
   let!(:rule) do
@@ -114,6 +125,88 @@ RSpec.describe 'API V1 Rules', type: :request do
         run_test!
       end
     end
+
+    post 'Create a rule' do
+      tags 'Rules'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        required: [ 'rule' ],
+        properties: {
+          rule: {
+            type: :object,
+            required: [ 'resource_type' ],
+            properties: {
+              name: { type: :string, example: 'Auto coffee' },
+              resource_type: { type: :string, enum: %w[transaction], example: 'transaction' },
+              active: { type: :boolean, example: true },
+              effective_date: { type: :string, format: :date, example: '2024-01-01' },
+              conditions_attributes: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    condition_type: { type: :string, example: 'transaction_name' },
+                    operator: { type: :string, example: 'like' },
+                    value: { type: :string, example: 'coffee' }
+                  }
+                }
+              },
+              actions_attributes: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    action_type: { type: :string, example: 'set_transaction_name' },
+                    value: { type: :string, example: 'Coffee' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      response '201', 'rule created' do
+        let(:'X-Api-Key') { write_api_key.plain_key }
+        let(:body) do
+          { rule: {
+              resource_type: 'transaction', active: true,
+              conditions_attributes: [ { condition_type: 'transaction_name', operator: 'like', value: 'coffee' } ],
+              actions_attributes: [ { action_type: 'set_transaction_name', value: 'Coffee' } ]
+          } }
+        end
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        let(:'X-Api-Key') { nil }
+        let(:body) { { rule: { resource_type: 'transaction' } } }
+        run_test!
+      end
+
+      response '403', 'forbidden - requires read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { rule: { resource_type: 'transaction' } } }
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        let(:'X-Api-Key') { write_api_key.plain_key }
+        let(:body) do
+          { rule: {
+              resource_type: 'transaction',
+              conditions_attributes: [ { condition_type: 'transaction_name', operator: 'like', value: 'test' } ],
+              actions_attributes: []
+          } }
+        end
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/rules/{id}' do
@@ -153,6 +246,124 @@ RSpec.describe 'API V1 Rules', type: :request do
 
         let(:id) { SecureRandom.uuid }
 
+        run_test!
+      end
+    end
+
+    patch 'Update a rule' do
+      tags 'Rules'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          rule: {
+            type: :object,
+            properties: {
+              name: { type: :string, example: 'Updated name' },
+              active: { type: :boolean, example: false },
+              effective_date: { type: :string, format: :date },
+              conditions_attributes: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    id: { type: :string },
+                    condition_type: { type: :string },
+                    operator: { type: :string },
+                    value: { type: :string },
+                    _destroy: { type: :boolean }
+                  }
+                }
+              },
+              actions_attributes: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    id: { type: :string },
+                    action_type: { type: :string },
+                    value: { type: :string },
+                    _destroy: { type: :boolean }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      response '200', 'rule updated' do
+        schema '$ref' => '#/components/schemas/RuleResponse'
+
+        let(:'X-Api-Key') { write_api_key.plain_key }
+        let(:id) { rule.id }
+        let(:body) { { rule: { name: 'Updated name' } } }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+        let(:id) { rule.id }
+        let(:body) { { rule: { name: 'x' } } }
+        run_test!
+      end
+
+      response '403', 'forbidden - requires read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { rule.id }
+        let(:body) { { rule: { name: 'x' } } }
+        run_test!
+      end
+
+      response '404', 'rule not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { write_api_key.plain_key }
+        let(:id) { SecureRandom.uuid }
+        let(:body) { { rule: { name: 'x' } } }
+        run_test!
+      end
+    end
+
+    delete 'Delete a rule' do
+      tags 'Rules'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+
+      response '200', 'rule deleted' do
+        schema '$ref' => '#/components/schemas/DeleteResponse'
+
+        let(:'X-Api-Key') { write_api_key.plain_key }
+        let(:id) { rule.id }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+        let(:id) { rule.id }
+        run_test!
+      end
+
+      response '403', 'forbidden - requires read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { rule.id }
+        run_test!
+      end
+
+      response '404', 'rule not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { write_api_key.plain_key }
+        let(:id) { SecureRandom.uuid }
         run_test!
       end
     end

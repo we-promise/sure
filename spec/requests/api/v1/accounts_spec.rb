@@ -103,6 +103,51 @@ RSpec.describe 'API V1 Accounts', type: :request do
         run_test!
       end
     end
+
+    post 'Create an account' do
+      tags 'Accounts'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        required: [ 'account' ],
+        properties: {
+          account: {
+            type: :object,
+            required: %w[name accountable_type balance currency],
+            properties: {
+              name: { type: :string, example: 'My Checking Account' },
+              accountable_type: { type: :string, example: 'Depository' },
+              subtype: { type: :string, nullable: true, example: 'checking' },
+              balance: { type: :number, format: :float, example: 1500.0 },
+              currency: { type: :string, example: 'USD' },
+              opening_balance_date: { type: :string, format: :date, nullable: true, example: '2025-01-01' }
+            }
+          }
+        }
+      }
+
+      response '201', 'account created' do
+        let(:body) do
+          { account: { name: 'New Account', accountable_type: 'Depository',
+                       subtype: 'checking', balance: 500.0, currency: 'USD' } }
+        end
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        let(:'X-Api-Key') { 'invalid' }
+        let(:body) { { account: { name: 'x', accountable_type: 'Depository', balance: 0, currency: 'USD' } } }
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        let(:body) { { account: { name: '', accountable_type: 'InvalidType', balance: 0, currency: 'USD' } } }
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/accounts/{id}' do
@@ -147,6 +192,55 @@ RSpec.describe 'API V1 Accounts', type: :request do
 
         let(:id) { SecureRandom.uuid }
 
+        run_test!
+      end
+    end
+
+    patch 'Update an account' do
+      tags 'Accounts'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          account: {
+            type: :object,
+            properties: {
+              name: { type: :string },
+              currency: { type: :string },
+              subtype: { type: :string, nullable: true }
+            }
+          }
+        }
+      }
+
+      response '200', 'account updated' do
+        let(:id) { checking_account.id }
+        let(:body) { { account: { name: 'Renamed Account' } } }
+        run_test!
+      end
+
+      response '404', 'not found' do
+        let(:id) { SecureRandom.uuid }
+        let(:body) { { account: { name: 'x' } } }
+        run_test!
+      end
+    end
+
+    delete 'Delete an account' do
+      tags 'Accounts'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+
+      response '200', 'account deleted' do
+        let(:id) { checking_account.id }
+        run_test!
+      end
+
+      response '404', 'not found' do
+        let(:id) { SecureRandom.uuid }
         run_test!
       end
     end

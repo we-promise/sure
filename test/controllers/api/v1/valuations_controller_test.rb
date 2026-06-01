@@ -267,6 +267,31 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should not allow valuation create on account not writable by user" do
+    other_user = users(:family_member)
+    unwritable_account = Account.create!(
+      name: "Other User Account",
+      balance: 1000,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: Depository.create!,
+      family: @family,
+      owner: other_user
+    )
+
+    post api_v1_valuations_url,
+         params: {
+           valuation: {
+             account_id: unwritable_account.id,
+             amount: 5000.00,
+             date: Date.current
+           }
+         },
+         headers: api_headers(@api_key)
+
+    assert_response :not_found
+  end
+
   # UPDATE action tests
   test "should update valuation with valid parameters" do
     entry = @valuation.entry

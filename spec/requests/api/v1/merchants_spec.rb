@@ -47,6 +47,44 @@ RSpec.describe 'API V1 Merchants', type: :request do
         run_test!
       end
     end
+
+    post 'Create a merchant' do
+      tags 'Merchants'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        required: [ 'merchant' ],
+        properties: {
+          merchant: {
+            type: :object,
+            required: [ 'name' ],
+            properties: {
+              name: { type: :string, example: 'Corner Coffee' },
+              website_url: { type: :string, nullable: true, example: 'https://cornercoffee.com' }
+            }
+          }
+        }
+      }
+
+      response '201', 'merchant created' do
+        let(:body) { { merchant: { name: 'Brand New Merchant' } } }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        let(:'X-Api-Key') { 'invalid' }
+        let(:body) { { merchant: { name: 'x' } } }
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        let(:body) { { merchant: { name: '' } } }
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/merchants/{id}' do

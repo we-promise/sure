@@ -12,7 +12,8 @@ module Api
     #   GET /api/v1/merchants/:id
     #
     class MerchantsController < BaseController
-      before_action -> { authorize_scope!(:read) }
+      before_action :ensure_read_scope, only: [ :index, :show ]
+      before_action :ensure_write_scope, only: [ :create ]
 
       # List all merchants available to the family
       #
@@ -71,6 +72,24 @@ module Api
         render json: { error: "Failed to fetch merchant" }, status: :internal_server_error
       end
 
+      def create
+        @merchant = FamilyMerchant.new(merchant_params)
+        @merchant.family = current_resource_owner.family
+
+        if @merchant.save
+          render json: merchant_json(@merchant), status: :created
+        else
+          render json: {
+            error: "validation_failed",
+            message: "Merchant could not be created",
+            errors: @merchant.errors.full_messages
+          }, status: :unprocessable_entity
+        end
+      rescue => e
+        Rails.logger.error("API Merchants Create Error: #{e.message}")
+        render json: { error: "internal_server_error", message: "An unexpected error occurred" }, status: :internal_server_error
+      end
+
       private
 
         # Serialize a merchant to JSON format
@@ -85,6 +104,10 @@ module Api
             created_at: merchant.created_at,
             updated_at: merchant.updated_at
           }
+        end
+
+        def merchant_params
+          params.require(:merchant).permit(:name, :website_url)
         end
     end
   end

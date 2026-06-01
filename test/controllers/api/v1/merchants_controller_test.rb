@@ -26,6 +26,27 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     @merchant = @user.family.merchants.first || @user.family.merchants.create!(
       name: "Test Merchant"
     )
+
+    @user.api_keys.active.destroy_all
+
+    @write_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "write_#{SecureRandom.hex(8)}"
+    )
+
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read Key",
+      scopes: [ "read" ],
+      source: "mobile",
+      display_key: "read_#{SecureRandom.hex(8)}"
+    )
+
+    Redis.new.del("api_rate_limit:#{@write_api_key.id}")
+    Redis.new.del("api_rate_limit:#{@api_key.id}")
   end
 
   # Index action tests
@@ -94,6 +115,39 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_merchant_url(other_merchant), headers: auth_headers
 
     assert_response :not_found
+  end
+
+  test "should create a merchant" do
+    post "/api/v1/merchants",
+      params: { merchant: { name: "New Coffee Shop" } },
+      headers: { "X-Api-Key" => @write_api_key.plain_key },
+      as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "New Coffee Shop", body["name"]
+    assert_equal "FamilyMerchant", body["type"]
+  end
+
+  test "should reject duplicate merchant name within family" do
+    FamilyMerchant.create!(name: "Existing Shop", family: @user.family)
+
+    post "/api/v1/merchants",
+      params: { merchant: { name: "Existing Shop" } },
+      headers: { "X-Api-Key" => @write_api_key.plain_key },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should require read_write scope to create merchant" do
+    post "/api/v1/merchants",
+      params: { merchant: { name: "Test" } },
+      headers: { "X-Api-Key" => @api_key.plain_key },
+      as: :json
+
+    assert_response :forbidden
   end
 
   private

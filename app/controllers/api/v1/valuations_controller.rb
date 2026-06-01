@@ -6,9 +6,10 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   InvalidFilterError = Class.new(StandardError)
   BOOLEAN_PARAM = ActiveModel::Type::Boolean.new
 
-  before_action :ensure_read_scope, only: [ :index, :show ]
+  before_action :ensure_read_scope
   before_action :ensure_write_scope, only: [ :create, :update ]
-  before_action :set_valuation, only: [ :show, :update ]
+  before_action :set_valuation, only: [ :show ]
+  before_action :set_writable_valuation, only: [ :update ]
 
   def index
     family = current_resource_owner.family
@@ -83,7 +84,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    account = current_resource_owner.family.accounts.find(valuation_account_id)
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).find(valuation_account_id)
     requested_upsert = upsert_requested?
     existing_write = false
 
@@ -244,12 +245,19 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       }, status: :not_found
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
-    def ensure_write_scope
-      authorize_scope!(:write)
+    def set_writable_valuation
+      @entry = current_resource_owner.family
+                 .entries
+                 .where(entryable_type: "Valuation")
+                 .joins(:account)
+                 .merge(current_resource_owner.family.accounts.writable_by(current_resource_owner))
+                 .find(params[:id])
+      @valuation = @entry.entryable
+    rescue ActiveRecord::RecordNotFound
+      render json: {
+        error: "not_found",
+        message: "Valuation not found"
+      }, status: :not_found
     end
 
     def apply_filters(query)

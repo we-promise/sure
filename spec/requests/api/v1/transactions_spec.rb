@@ -128,6 +128,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
       parameter name: :tag_ids, in: :query, required: false,
                 description: 'Filter by tag IDs',
                 schema: { type: :array, items: { type: :string } }
+      parameter name: :pending, in: :query, schema: { type: :boolean }, required: false, description: 'Filter by pending status (true/false)'
+      parameter name: :source,  in: :query, schema: { type: :string },  required: false, description: 'Filter by transaction source'
 
       response '200', 'transactions listed' do
         schema '$ref' => '#/components/schemas/TransactionCollection'
@@ -176,7 +178,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
+              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' },
+              pending: { type: :boolean, nullable: true, example: true }
             },
             required: %w[account_id date amount name]
           }

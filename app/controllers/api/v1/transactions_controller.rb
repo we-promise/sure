@@ -4,7 +4,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
   # Ensure proper scope authorization for read vs write access
-  before_action :ensure_read_scope, only: [ :index, :show ]
+  before_action :ensure_read_scope
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
 
@@ -216,14 +216,6 @@ end
       }, status: :not_found
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
-    def ensure_write_scope
-      authorize_scope!(:write)
-    end
-
     def apply_filters(query)
       # Account filtering
       if params[:account_id].present?
@@ -291,6 +283,17 @@ end
         end
       end
 
+      # Pending filter
+      if params[:pending].present?
+        pending_val = ActiveModel::Type::Boolean.new.cast(params[:pending])
+        query = pending_val ? query.pending : query.excluding_pending
+      end
+
+      # Source filter
+      if params[:source].present?
+        query = query.where(entries: { source: params[:source] })
+      end
+
       query
     end
 
@@ -308,7 +311,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :pending, tag_ids: []
       )
     end
 
@@ -335,6 +338,11 @@ end
         entry_params[:source] = idempotency_source
       end
 
+      if transaction_params.key?(:pending)
+        pending_val = ActiveModel::Type::Boolean.new.cast(transaction_params[:pending])
+        entry_params[:entryable_attributes][:extra] = { "api" => { "pending" => pending_val } }
+      end
+
       entry_params.compact
     end
 
@@ -355,6 +363,13 @@ end
       # Only update amount if provided
       if transaction_params[:amount].present?
         entry_params[:amount] = calculate_signed_amount
+      end
+
+      if transaction_params.key?(:pending)
+        pending_val = ActiveModel::Type::Boolean.new.cast(transaction_params[:pending])
+        existing_extra = @entry.transaction.extra || {}
+        api_extra = existing_extra.fetch("api", {}).merge("pending" => pending_val)
+        entry_params[:entryable_attributes][:extra] = existing_extra.merge("api" => api_extra)
       end
 
       entry_params.compact
