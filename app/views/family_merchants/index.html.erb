@@ -38,6 +38,10 @@
           </table>
         </div>
       </div>
+
+      <div class="pt-4">
+        <%= render "shared/pagination", pagy: @pagy_family_merchants %>
+      </div>
     <% else %>
       <div class="flex justify-center items-center py-12">
         <div class="text-center flex flex-col items-center max-w-[300px]">
@@ -52,10 +56,6 @@
         </div>
       </div>
     <% end %>
-
-    <div class="pt-4">
-      <%= render "shared/pagination", pagy: @pagy_family_merchants %>
-    </div>
   </section>
 
   <section class="space-y-3">
@@ -105,15 +105,15 @@
           </table>
         </div>
       </div>
+
+      <div class="pt-4">
+        <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
+      </div>
     <% else %>
       <div class="flex justify-center items-center py-8">
         <p class="text-secondary text-sm text-center"><%= t(".provider_empty", moniker: family_moniker_downcase) %></p>
       </div>
     <% end %>
-
-    <div class="pt-4">
-      <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
-    </div>
   </section>
 
   <% if @unlinked_merchants.any? %>
