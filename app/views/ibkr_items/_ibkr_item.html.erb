@@ -33,8 +33,11 @@
               </div>
             <% elsif ibkr_item.sync_error.present? %>
               <div class="text-secondary flex items-center gap-1">
-                <%= render DS::Tooltip.new(text: ibkr_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= icon "alert-circle", size: "sm", color: "destructive" %>
                 <%= tag.span t(".error"), class: "text-destructive" %>
+                <% if Current.user&.super_admin? %>
+                  <%= link_to provider_sync_debug_log_label, provider_sync_debug_log_path(ibkr_item), class: "text-xs underline" %>
+                <% end %>
               </div>
             <% else %>
               <p class="text-secondary">

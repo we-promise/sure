@@ -184,6 +184,22 @@ module ApplicationHelper
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
+  def provider_sync_debug_log_path(provider_item)
+    settings_debug_path(
+      provider_key: provider_sync_provider_key(provider_item),
+      family_id: provider_item.try(:family_id),
+      category: "provider_sync_error"
+    )
+  end
+
+  def provider_sync_debug_log_label
+    "View debug log"
+  end
+
+  def provider_sync_debug_log_hint
+    "Details in debug log"
+  end
+
   # Formats quantity with adaptive precision based on the value size.
   # Shows more decimal places for small quantities (common with crypto).
   #
@@ -234,5 +250,9 @@ module ApplicationHelper
       end
       total = items.sum(&money_method)
       negate ? -total : total
+    end
+
+    def provider_sync_provider_key(provider_item)
+      provider_item.class.name.demodulize.delete_suffix("Item").underscore
     end
 end
