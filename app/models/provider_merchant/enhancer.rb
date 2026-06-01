@@ -70,6 +70,11 @@ class ProviderMerchant::Enhancer
       count
     end
 
+    # TODO(#1984 follow-up): hardcoded to OpenAI. Provider::Anthropic now
+    # implements enhance_provider_merchants (PR #1984), so this should honor
+    # Setting.llm_provider the way chat does, instead of always routing merchant
+    # enhancement to OpenAI. Until then, Anthropic batch ops are only reachable
+    # directly / via the eval runner, not this family flow.
     def llm_provider
       @llm_provider ||= Provider::Registry.get_provider(:openai)
     end

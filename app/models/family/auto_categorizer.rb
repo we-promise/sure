@@ -58,7 +58,11 @@ class Family::AutoCategorizer
   private
     attr_reader :family, :transaction_ids
 
-    # For now, OpenAI only, but this should work with any LLM concept provider
+    # TODO(#1984 follow-up): hardcoded to OpenAI. Provider::Anthropic now
+    # implements auto_categorize (PR #1984), so this should honor
+    # Setting.llm_provider the way chat does, instead of always routing batch
+    # categorization to OpenAI. Until then, Anthropic batch ops are only
+    # reachable directly / via the eval runner, not this family flow.
     def llm_provider
       Provider::Registry.get_provider(:openai)
     end

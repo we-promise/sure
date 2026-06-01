@@ -220,7 +220,12 @@ class Provider::Anthropic < Provider
           usage: usage,
           trace: trace
         )
-        record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
+        # Record once. On a normal stream `on_partial` never fires (it only runs
+        # from stream_chat_response's rescue on a mid-stream error, which
+        # re-raises past here), so today this is the sole recorder. Guard it
+        # anyway so a future change that emits partial usage on success can't
+        # silently double-bill — the symptom we chased in the #1984 review.
+        record_llm_usage(family: family, model: model, operation: "chat", usage: usage) unless partial_usage_recorded
 
         parsed
       rescue => e
