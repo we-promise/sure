@@ -51,6 +51,26 @@ class DS::PillTest < ViewComponent::TestCase
     assert_includes pill.palette[:bg], "color-red-50"
   end
 
+  test "marker mode shows the dot by default" do
+    render_inline(DS::Pill.new(label: "Beta", tone: :violet))
+    assert_selector "span.inline-block.rounded-full"
+  end
+
+  test "badge mode (marker: false) is dot-less by default" do
+    render_inline(DS::Pill.new(label: "Member", tone: :neutral, marker: false))
+    assert_no_selector "span.inline-block.rounded-full"
+  end
+
+  test "badge mode opts back into the dot with show_dot: true" do
+    render_inline(DS::Pill.new(label: "Active", tone: :success, marker: false, show_dot: true))
+    assert_selector "span.inline-block.rounded-full"
+  end
+
+  test "marker mode can drop the dot with show_dot: false" do
+    render_inline(DS::Pill.new(label: "Beta", tone: :violet, show_dot: false))
+    assert_no_selector "span.inline-block.rounded-full"
+  end
+
   test "icon option renders glyph in place of dot" do
     render_inline(DS::Pill.new(label: "Syncing", tone: :info, marker: false, icon: "loader"))
 
