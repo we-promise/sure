@@ -18,7 +18,7 @@
       <% active_items.each do |item| %>
         <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
           <% disclosure.with_summary_content do %>
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-2 w-full">
               <div class="flex items-center gap-3">
                 <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
                   <p class="text-primary text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>

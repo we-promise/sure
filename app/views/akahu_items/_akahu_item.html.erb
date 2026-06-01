@@ -3,7 +3,7 @@
 <%= tag.div id: dom_id(akahu_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center justify-between gap-2 w-full">
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
