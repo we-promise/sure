@@ -15,7 +15,10 @@ module Syncable
   # NOTE: Uses `visible` scope (syncs < 5 min old) instead of `incomplete` to prevent
   # getting stuck on stale syncs after server/Sidekiq restarts. If a sync is older than
   # 5 minutes, we assume its job was lost and create a new sync.
-  def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+  def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil, enqueue: true)
+    sync = nil
+    deferred_sync = nil
+
     Sync.transaction do
       with_lock do
         sync = self.syncs.visible.first
@@ -35,12 +38,18 @@ module Syncable
             window_end_date: window_end_date
           )
 
-          SyncJob.perform_later(sync)
+          if enqueue
+            SyncJob.perform_later(sync)
+          else
+            deferred_sync = sync
+          end
         end
-
-        sync
       end
     end
+
+    yield(deferred_sync) if deferred_sync && block_given?
+
+    sync
   end
 
   def perform_sync(sync)

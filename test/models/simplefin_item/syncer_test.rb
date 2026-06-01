@@ -10,23 +10,10 @@ class SimplefinItem::SyncerTest < ActiveSupport::TestCase
       name: "SimpleFIN Syncer Test",
       access_url: "https://example.com/simplefin/access"
     )
-    @account = Account.create!(
-      family: @family,
-      owner: users(:family_admin),
+    @account, @simplefin_account = create_linked_account(
       name: "SimpleFIN Linked Checking",
-      balance: 100,
-      currency: "USD",
-      accountable: Depository.create!(subtype: "checking")
+      account_id: "sf-syncer-checking"
     )
-    @simplefin_account = @simplefin_item.simplefin_accounts.create!(
-      name: "SimpleFIN Checking",
-      account_id: "sf-syncer-checking",
-      currency: "USD",
-      account_type: "checking",
-      current_balance: 100
-    )
-
-    AccountProvider.create!(account: @account, provider: @simplefin_account)
   end
 
   teardown do
@@ -46,14 +33,18 @@ class SimplefinItem::SyncerTest < ActiveSupport::TestCase
 
     assert_equal "syncing", sync.reload.status
     assert_equal "pending", child_sync.status
+    assert_nil @simplefin_item.reload.last_synced_at
 
-    stub_sync_callbacks
+    stub_account_sync_callbacks
+    stub_simplefin_provider_refresh
+    SimplefinItem.any_instance.stubs(:broadcast_sync_complete)
     Account.any_instance.expects(:perform_sync).with(child_sync).once
 
     child_sync.perform
 
     assert_equal "completed", child_sync.reload.status
     assert_equal "completed", sync.reload.status
+    assert_not_nil @simplefin_item.reload.last_synced_at
   end
 
   test "failed account child sync fails simplefin and family parents" do
@@ -87,15 +78,81 @@ class SimplefinItem::SyncerTest < ActiveSupport::TestCase
     assert_nil @simplefin_item.reload.last_synced_at
   end
 
+  test "full sync registers all child syncs before enqueueing account jobs" do
+    create_linked_account(
+      name: "SimpleFIN Linked Savings",
+      account_id: "sf-syncer-savings"
+    )
+
+    sync = Sync.create!(syncable: @simplefin_item)
+    stub_full_simplefin_sync(sync)
+    stub_sync_callbacks
+    Account.any_instance.stubs(:perform_sync)
+
+    performed_child = false
+
+    SyncJob.expects(:perform_later).twice.with do |child_sync|
+      assert_equal 2, sync.children.reload.count
+
+      unless performed_child
+        performed_child = true
+        child_sync.perform
+        assert_equal "syncing", sync.reload.status
+      end
+
+      true
+    end
+
+    sync.perform
+
+    child_statuses = sync.children.reload.map(&:status)
+
+    assert_equal 1, child_statuses.count("completed")
+    assert_equal 1, child_statuses.count("pending")
+    assert_equal "syncing", sync.reload.status
+  end
+
   private
+    def create_linked_account(name:, account_id:)
+      account = Account.create!(
+        family: @family,
+        owner: users(:family_admin),
+        name: name,
+        balance: 100,
+        currency: "USD",
+        accountable: Depository.create!(subtype: "checking")
+      )
+      simplefin_account = @simplefin_item.simplefin_accounts.create!(
+        name: name,
+        account_id: account_id,
+        currency: "USD",
+        account_type: "checking",
+        current_balance: 100
+      )
+
+      AccountProvider.create!(account: account, provider: simplefin_account)
+
+      [ account, simplefin_account ]
+    end
+
     def stub_full_simplefin_sync(sync)
       @simplefin_item.stubs(:import_latest_simplefin_data).with(sync: sync)
       @simplefin_item.stubs(:process_accounts).returns([])
     end
 
-    def stub_sync_callbacks
+    def stub_account_sync_callbacks
       Account.any_instance.stubs(:perform_post_sync)
       Account.any_instance.stubs(:broadcast_sync_complete)
+    end
+
+    def stub_simplefin_provider_refresh
+      ApplicationController.stubs(:render).returns("<div></div>")
+      Turbo::StreamsChannel.expects(:broadcast_replace_to).once
+      Family.any_instance.expects(:broadcast_refresh).once
+    end
+
+    def stub_sync_callbacks
+      stub_account_sync_callbacks
       SimplefinItem.any_instance.stubs(:perform_post_sync)
       SimplefinItem.any_instance.stubs(:broadcast_sync_complete)
       Family.any_instance.stubs(:perform_post_sync)
