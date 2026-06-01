@@ -1,0 +1,112 @@
+---
+fr:
+  retirement:
+    show:
+      page_title: Planification de la Retraite
+      subtitle: Suivez votre chemin vers l'indépendance financière et la préparation à la retraite
+      current_age: Âge Actuel
+      years_to_retirement:
+        one: "%{count} an avant la retraite"
+        other: "%{count} ans avant la retraite"
+      estimated_pension: Pension Mensuelle Estimée
+      after_tax: Après impôts
+      pension_gap: Écart Mensuel de Pension
+      target: "Objectif"
+      required_savings: Épargne Mensuelle Nécessaire
+      per_month: par mois pour combler l'écart de pension
+      fire_progress: Progression FIRE
+      current_portfolio: Portefeuille Actuel
+      fire_number: Nombre FIRE
+      progress: Progression
+      estimated_fire_date: Date FIRE Estimée
+      assumptions: Hypothèses
+      edit: Modifier
+      birth_year: Année de Naissance
+      retirement_age: Âge de Retraite
+      expected_return: Rendement Attendu
+      inflation: Taux d'Inflation
+      tax_rate: Taux d'Imposition
+      monthly_savings: Épargne Mensuelle
+      pension_history: Historique de Pension
+      add_entry: Ajouter une entrée de pension
+      date: Date
+      pension_points: Points de Pension
+      points_gained: Points Gagnés
+      current_pension: Pension Actuelle
+      projected_pension: Pension Projetée
+      notes: Notes
+      notes_placeholder: "ex. Relevé de situation individuelle 2024"
+      save_entry: Enregistrer
+      confirm_delete: "Êtes-vous sûr de vouloir supprimer cette entrée ?"
+      no_entries: Aucune entrée de pension
+      no_entries_hint: Ajoutez des entrées de vos relevés de pension pour suivre votre progression
+      setup_required: Veuillez d'abord configurer la planification de retraite
+      uk_progress_title: Progression de la Pension d'État
+      uk_qualifying_years: Années de Qualification (NI)
+      uk_years_remaining:
+        zero: "Toutes les années atteintes — Pension d'État complète !"
+        one: "%{count} an de plus pour la Pension d'État complète"
+        other: "%{count} ans de plus pour la Pension d'État complète"
+    form_fields: &retirement_form_fields_fr
+      personal_section: Informations Personnelles
+      birth_year: Année de Naissance
+      retirement_age: Âge de Retraite Souhaité
+      financial_section: Objectifs Financiers
+      target_monthly_income: Revenu Mensuel Cible (Retraite)
+      current_monthly_savings: Épargne Mensuelle Actuelle
+      currency: Devise
+      pension_section: Système de Retraite
+      pension_system: Système de Retraite
+      country: Pays
+      de_expected_annual_points: Points Annuels Attendus
+      de_expected_annual_points_hint: Salaire moyen = ~1,0 point/an
+      de_rentenwert: Valeur Actuelle de la Pension (Rentenwert)
+      de_rentenwert_hint: Valeur actuelle en EUR (2025 ~ 39,32)
+      de_contribution_start_year: Année de Début des Cotisations
+      us_estimated_monthly_benefit: Prestation Mensuelle Estimée
+      us_estimated_monthly_benefit_hint: De votre relevé SSA (ssa.gov)
+      uk_qualifying_years: Années de Qualification (NI)
+      uk_qualifying_years_hint: "35 ans pour la State Pension complète"
+      uk_full_weekly_rate: Taux Hebdomadaire Complet (£)
+      uk_full_weekly_rate_hint: "2024/25 : £221,20/semaine"
+      fr_estimated_monthly_pension: Pension Mensuelle Estimée
+      fr_estimated_monthly_pension_hint: De votre relevé de situation individuelle
+      fr_trimestres: Trimestres Validés
+      es_estimated_monthly_pension: Pension Mensuelle Estimée
+      es_estimated_monthly_pension_hint: De votre informe de vida laboral
+      es_contribution_years: Années de Cotisation
+      custom_hint: Ajoutez des entrées de pension manuellement pour suivre votre pension estimée.
+      assumptions_section: Hypothèses
+      expected_return: Rendement Annuel Attendu (%)
+      inflation: Inflation Attendue (%)
+      tax_rate: Taux d'Imposition à la Retraite (%)
+    setup:
+      page_title: Configurer la Planification de Retraite
+      subtitle: Configurez vos paramètres de planification de retraite et FIRE
+      cancel: Annuler
+      save: Enregistrer et Continuer
+    edit:
+      page_title: Modifier les Paramètres de Retraite
+      subtitle: Mettez à jour vos paramètres de planification de retraite
+      cancel: Annuler
+      save: Enregistrer les Modifications
+    create:
+      created: La planification de la retraite a été configurée avec succès
+    update:
+      updated: Paramètres de retraite mis à jour avec succès
+    add_pension_entry:
+      pension_entry_added: Entrée de pension ajoutée avec succès
+    destroy_pension_entry:
+      pension_entry_removed: Entrée de pension supprimée
+    pension_system_groups:
+      europe: Europe
+      united_kingdom: Royaume-Uni
+      north_america: Amérique du Nord
+      other: Autre
+    pension_systems:
+      de_grv: Pension Légale Allemande (GRV)
+      us_ss: Sécurité Sociale Américaine
+      uk_sp: Pension d'État Britannique
+      fr_regime: Régime Général Français
+      es_ss: Sécurité Sociale Espagnole
+      custom: Personnalisé / Autre
