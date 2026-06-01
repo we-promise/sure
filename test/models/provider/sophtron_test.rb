@@ -216,6 +216,24 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert_equal :unauthorized, response.error.error_type
   end
 
+  test "raises a configuration error for an invalid base url instead of silently defaulting" do
+    error = assert_raises(Provider::Sophtron::Error) do
+      Provider::Sophtron.new("developer-user", @access_key, base_url: "http://[invalid")
+    end
+
+    assert_equal :invalid_base_url, error.error_type
+    # The raw URL must not leak into the human-readable message (it could end up
+    # in error-tracking payloads); it belongs in details for diagnostics.
+    assert_not_includes error.message, "http://[invalid"
+    assert_includes error.details.to_s, "http://[invalid"
+  end
+
+  test "falls back to the default base url when base url is blank" do
+    provider = Provider::Sophtron.new("developer-user", @access_key, base_url: "")
+
+    assert_equal Provider::Sophtron::DEFAULT_BASE_URL, provider.base_url
+  end
+
   private
 
     def provider_data(response)

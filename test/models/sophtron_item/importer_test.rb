@@ -329,4 +329,15 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       assert_equal 0, result[:transactions_failed]
     end
   end
+
+  test "marking an item as requires_update does not raise when the update fails" do
+    importer = SophtronItem::Importer.new(@item, sophtron_provider: mock)
+
+    @item.stubs(:update).with(status: :requires_update).returns(false)
+    @item.stubs(:errors).returns(OpenStruct.new(full_messages: [ "Status is invalid" ]))
+
+    assert_nothing_raised do
+      importer.send(:mark_requires_update)
+    end
+  end
 end
