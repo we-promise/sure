@@ -1,5 +1,12 @@
 ---
 zh-CN:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+    common:
+      close: 关闭
+  global:
+    expand: 展开
   activerecord:
     errors:
       messages:
@@ -62,19 +69,43 @@ zh-CN:
     - :day
   datetime:
     distance_in_words:
-      about_x_hours: 大约%{count}小时
-      about_x_months: 大约%{count}个月
-      about_x_years: 大约%{count}年
-      almost_x_years: 接近%{count}年
+      about_x_hours:
+        one: 大约%{count}小时
+        other: 大约%{count}小时
+      about_x_months:
+        one: 大约%{count}个月
+        other: 大约%{count}个月
+      about_x_years:
+        one: 大约%{count}年
+        other: 大约%{count}年
+      almost_x_years:
+        one: 接近%{count}年
+        other: 接近%{count}年
       half_a_minute: 半分钟
-      less_than_x_minutes: 不到%{count}分钟
-      less_than_x_seconds: 不到%{count}秒
-      over_x_years: "%{count}年多"
-      x_days: "%{count}天"
-      x_minutes: "%{count}分钟"
-      x_months: "%{count}个月"
-      x_seconds: "%{count}秒"
-      x_years: "%{count}年"
+      less_than_x_minutes:
+        one: 不到%{count}分钟
+        other: 不到%{count}分钟
+      less_than_x_seconds:
+        one: 不到%{count}秒
+        other: 不到%{count}秒
+      over_x_years:
+        one: "%{count}年多"
+        other: "%{count}年多"
+      x_days:
+        one: "%{count}天"
+        other: "%{count}天"
+      x_minutes:
+        one: "%{count}分钟"
+        other: "%{count}分钟"
+      x_months:
+        one: "%{count}个月"
+        other: "%{count}个月"
+      x_seconds:
+        one: "%{count}秒"
+        other: "%{count}秒"
+      x_years:
+        one: "%{count}年"
+        other: "%{count}年"
     prompts:
       day: 日
       hour: 时
@@ -107,15 +138,25 @@ zh-CN:
       present: 必须是空白
       required: 必须存在
       taken: 已经被使用
-      too_long: 过长（最长为%{count}个字符）
-      too_short: 过短（最短为%{count}个字符）
-      wrong_length: 长度非法（必须为%{count}个字符）
+      too_long:
+        one: 过长（最长为%{count}个字符）
+        other: 过长（最长为%{count}个字符）
+      too_short:
+        one: 过短（最短为%{count}个字符）
+        other: 过短（最短为%{count}个字符）
+      wrong_length:
+        one: 长度非法（必须为%{count}个字符）
+        other: 长度非法（必须为%{count}个字符）
     template:
       body: 如下字段出现错误：
-      header: 有%{count}个错误发生导致"%{model}"无法被保存。
+      header:
+        one: '%{count}个错误导致"%{model}"无法被保存。'
+        other: '%{count}个错误导致"%{model}"无法被保存。'
   helpers:
     select:
       prompt: 请选择
+      search_placeholder: 搜索
+      default_label: 选择...
     submit:
       create: 新增%{model}
       submit: 储存%{model}
@@ -137,10 +178,14 @@ zh-CN:
         format: "%n %u"
         units:
           billion: 十亿
-          million: 百万
+          million:
+            one: 百万
+            other: 百万
           quadrillion: 千兆
           thousand: 千
-          trillion: 兆
+          trillion:
+            one: 兆
+            other: 兆
           unit: ''
       format:
         delimiter: ''
@@ -150,7 +195,9 @@ zh-CN:
       storage_units:
         format: "%n %u"
         units:
-          byte: 字节
+          byte:
+            one: 字节
+            other: 字节
           eb: EB
           gb: GB
           kb: KB
@@ -166,7 +213,7 @@ zh-CN:
         delimiter: ''
   support:
     array:
-      last_word_connector: "、"
+      last_word_connector: 和
       two_words_connector: 和
       words_connector: "、"
   time:
