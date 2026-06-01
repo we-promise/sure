@@ -117,19 +117,13 @@ class RegistrationsController < ApplicationController
     # which also handles pending invitations. Otherwise a local account could be
     # created that can never log in again after logout (see issue #1430).
     #
-    # Carry any invitation token through to the login page so the SSO callback
-    # can still claim the invitation (via store_pending_invitation_if_valid),
-    # even when the SSO email differs from the invited email.
+    # Stash any pending invitation in the session before redirecting so the SSO
+    # callback can still claim it (via accept_pending_invitation_for), even when
+    # the SSO email differs from the invited email.
     def ensure_local_login_enabled
       return if AuthConfig.local_login_enabled?
 
-      redirect_to new_session_path(invitation: pending_invitation_token),
-                  alert: t("registrations.local_login_disabled")
-    end
-
-    def pending_invitation_token
-      token = params[:invitation]
-      token ||= params[:user][:invitation] if params[:user].present?
-      token.presence
+      store_pending_invitation_if_valid
+      redirect_to new_session_path, alert: t("registrations.local_login_disabled")
     end
 end

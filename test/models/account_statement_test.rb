@@ -712,6 +712,11 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   test "coverage marks covered duplicate ambiguous and mismatched months" do
+    # Pin the clock: the relative months below otherwise collide with the rolling
+    # balances.yml fixtures on the 1st of a month, when 1.month.ago.end_of_month
+    # equals 1.day.ago (same account/date/currency -> unique violation).
+    travel_to Date.new(2026, 5, 6)
+
     covered_month = 5.months.ago.to_date.beginning_of_month
     missing_month = 4.months.ago.to_date.beginning_of_month
     duplicate_month = 3.months.ago.to_date.beginning_of_month

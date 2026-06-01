@@ -126,22 +126,22 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     invitation.update!(email: "invited-sso@example.com")
 
     assert_no_difference "User.count" do
-      post registration_url, params: { user: {
+      post registration_url, params: { invitation: invitation.token, user: {
         email: invitation.email,
-        password: "Password1!",
-        invitation: invitation.token } }
+        password: "Password1!" } }
     end
 
-    assert_redirected_to new_session_url(invitation: invitation.token)
+    assert_redirected_to new_session_url
   end
 
-  test "carries the invitation token to the login page so SSO can claim it" do
+  test "stashes a pending invitation in the session so SSO can claim it" do
     AuthConfig.stubs(:local_login_enabled?).returns(false)
     invitation = invitations(:one)
 
     get new_registration_url(invitation: invitation.token)
 
-    assert_redirected_to new_session_url(invitation: invitation.token)
+    assert_redirected_to new_session_url
+    assert_equal invitation.token, session[:pending_invitation_token]
   end
 
   test "login page hides the create account link when local login is disabled" do
