@@ -1,11 +1,11 @@
-class AddSourceToHoldings < ActiveRecord::Migration[8.0]
+class AddSourceToHoldings < ActiveRecord::Migration[7.2]
   def up
     add_column :holdings, :source, :string
 
-    # Backfill: provider holdings (account_provider_id set) → "provider", rest → "calculated"
+    # Backfill: provider holdings (account_provider_id set) → "provider", manually-entered holdings → "manual"
     execute <<~SQL
       UPDATE holdings SET source = 'provider' WHERE account_provider_id IS NOT NULL;
-      UPDATE holdings SET source = 'calculated' WHERE account_provider_id IS NULL;
+      UPDATE holdings SET source = 'manual' WHERE account_provider_id IS NULL;
     SQL
 
     change_column_null :holdings, :source, false, "calculated"
