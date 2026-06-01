@@ -1,0 +1,85 @@
+---
+vi:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Liên kết với tài khoản sàn giao dịch Kraken
+      name: "Kraken - %{name}"
+      description: "Liên kết với %{name}"
+    create:
+      default_name: Kraken
+      success: Đã kết nối thành công với Kraken. Tài khoản sàn giao dịch của bạn đang được đồng bộ.
+    update:
+      success: Đã cập nhật kết nối Kraken thành công.
+    destroy:
+      success: Đã lên lịch xóa kết nối Kraken.
+    select_accounts:
+      select_connection: Chọn kết nối Kraken trong Cài đặt nhà cung cấp.
+      no_credentials_configured: Thêm thông tin API Kraken trước khi thiết lập tài khoản.
+    link_accounts:
+      select_connection: Chọn kết nối Kraken trước khi liên kết tài khoản.
+    select_existing_account:
+      title: Liên kết tài khoản Kraken
+      no_accounts_found: Không tìm thấy tài khoản Kraken nào.
+      wait_for_sync: Chờ Kraken hoàn tất đồng bộ.
+      check_provider_health: Kiểm tra xem thông tin API Kraken của bạn có hợp lệ không.
+      link: Liên kết
+      cancel: Hủy
+    link_existing_account:
+      success: Đã liên kết thành công với tài khoản Kraken
+      select_connection: Chọn kết nối Kraken trước khi liên kết tài khoản.
+      errors:
+        only_manual: Chỉ tài khoản tiền điện tử thủ công chưa có liên kết nhà cung cấp mới có thể liên kết với Kraken
+        invalid_kraken_account: Tài khoản Kraken không hợp lệ
+        kraken_account_already_linked: Tài khoản Kraken này đã được liên kết
+    setup_accounts:
+      title: Nhập tài khoản Kraken
+      subtitle: Chọn tài khoản sàn giao dịch để theo dõi
+      instructions: Kraken nhập một tài khoản sàn giao dịch tiền điện tử kết hợp cho kết nối này, chỉ với các tài sản nắm giữ và lệnh giao ngay.
+      no_accounts: Tất cả tài khoản Kraken đã được nhập.
+      accounts_count:
+        one: "%{count} tài khoản có sẵn"
+        other: "%{count} tài khoản có sẵn"
+      select_all: Chọn tất cả
+      import_selected: Nhập đã chọn
+      cancel: Hủy
+      creating: Đang nhập...
+    complete_account_setup:
+      success:
+        one: "Đã nhập %{count} tài khoản"
+        other: "Đã nhập %{count} tài khoản"
+      none_selected: Chưa chọn tài khoản nào
+      no_accounts: Không có tài khoản nào để nhập
+    kraken_item:
+      provider_name: Kraken
+      syncing: Đang đồng bộ...
+      reconnect: Thông tin xác thực cần cập nhật
+      deletion_in_progress: Đang xóa...
+      sync_status:
+        no_accounts: Không tìm thấy tài khoản
+        all_synced:
+          one: "%{count} tài khoản đã đồng bộ"
+          other: "%{count} tài khoản đã đồng bộ"
+        partial_sync: "%{linked_count} đã đồng bộ, %{unlinked_count} cần thiết lập"
+      status: "Đồng bộ lần cuối %{timestamp} trước"
+      status_with_summary: "Đồng bộ lần cuối %{timestamp} trước - %{summary}"
+      status_never: Chưa bao giờ đồng bộ
+      delete: Xóa
+      no_accounts_title: Không tìm thấy tài khoản
+      no_accounts_message: Tài khoản sàn giao dịch Kraken của bạn sẽ xuất hiện ở đây sau khi đồng bộ.
+      setup_needed: Tài khoản sẵn sàng để nhập
+      setup_description: Nhập kết nối Kraken này dưới dạng tài khoản sàn giao dịch tiền điện tử.
+      setup_action: Nhập tài khoản
+      import_accounts_menu: Nhập tài khoản
+      stale_rate_warning: "Số dư là xấp xỉ vì tỷ giá hối đoái chính xác cho ngày %{date} không có sẵn. Sẽ cập nhật lần đồng bộ tiếp theo."
+  kraken_item:
+    syncer:
+      checking_credentials: Đang kiểm tra thông tin xác thực...
+      credentials_invalid: Thông tin API Kraken không hợp lệ. Vui lòng kiểm tra khóa API và bí mật của bạn.
+      importing_accounts: Đang nhập tài khoản từ Kraken...
+      checking_configuration: Đang kiểm tra cấu hình tài khoản...
+      accounts_need_setup:
+        one: "%{count} tài khoản cần thiết lập"
+        other: "%{count} tài khoản cần thiết lập"
+      processing_accounts: Đang xử lý dữ liệu tài khoản...
+      calculating_balances: Đang tính toán số dư...

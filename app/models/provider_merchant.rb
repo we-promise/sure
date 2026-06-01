@@ -15,8 +15,14 @@ class ProviderMerchant < Merchant
         website_url: attributes[:website_url].presence || website_url
       )
 
+      scope = family.transactions.where(merchant_id: id)
+
+      # Protect the manual reassignment from being reverted on the next
+      # provider sync (issue #1977). Must run before the merchant_id update.
+      Entry.mark_user_modified_for_transactions!(scope)
+
       # Update only this family's transactions to point to new merchant
-      family.transactions.where(merchant_id: id).update_all(merchant_id: family_merchant.id)
+      scope.update_all(merchant_id: family_merchant.id)
 
       family_merchant
     end
@@ -37,7 +43,13 @@ class ProviderMerchant < Merchant
   # Does NOT delete the ProviderMerchant since it may be used by other families.
   # Tracks the unlink in FamilyMerchantAssociation so it shows as "recently unlinked".
   def unlink_from_family(family)
-    family.transactions.where(merchant_id: id).update_all(merchant_id: nil)
+    scope = family.transactions.where(merchant_id: id)
+
+    # Protect the manual unlink from being reverted on the next provider sync
+    # (issue #1977). Must run before the merchant_id is nulled.
+    Entry.mark_user_modified_for_transactions!(scope)
+
+    scope.update_all(merchant_id: nil)
 
     # Track that this merchant was unlinked from this family
     association = FamilyMerchantAssociation.find_or_initialize_by(family: family, merchant: self)

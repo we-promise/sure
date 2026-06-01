@@ -1,0 +1,13 @@
+---
+vi:
+  category:
+    deletions:
+      create:
+        success: Danh mục giao dịch đã được xóa thành công
+      new:
+        category: Danh mục
+        delete_and_leave_uncategorized: Xóa "%{category_name}" và để chưa phân loại
+        delete_and_recategorize: Xóa "%{category_name}" và gán danh mục mới
+        delete_category: Xóa danh mục?
+        explanation: Bằng cách xóa danh mục này, mọi giao dịch có danh mục "%{category_name}" sẽ trở thành chưa phân loại. Thay vì để chúng không được phân loại, bạn cũng có thể gán một danh mục mới bên dưới.
+        replacement_category_prompt: Chọn danh mục
