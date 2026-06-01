@@ -1,0 +1,25 @@
+<%# locals: (insight:, compact: false) %>
+
+<%= turbo_frame_tag dom_id(insight) do %>
+  <div class="rounded-xl border border-primary p-4 space-y-2">
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <%= icon(insight_icon(insight.insight_type), size: "sm", class: insight_icon_color_class(insight.priority)) %>
+        <p class="text-sm font-semibold text-primary truncate"><%= insight.title %></p>
+      </div>
+
+      <%= button_to t("insights.dismiss"),
+            dismiss_insight_path(insight),
+            method: :patch,
+            class: "text-secondary hover:text-primary text-xs shrink-0" %>
+    </div>
+
+    <p class="text-sm text-secondary leading-relaxed"><%= insight.body %></p>
+
+    <% unless compact %>
+      <p class="text-xs text-tertiary">
+        <%= t("insights.generated_at", time: time_ago_in_words(insight.generated_at)) %>
+      </p>
+    <% end %>
+  </div>
+<% end %>
