@@ -130,7 +130,7 @@ class Provider::Anthropic::BankStatementExtractor
     end
 
     def instructions
-      <<~INSTRUCTIONS.strip_heredoc
+      <<~INSTRUCTIONS
         Extract bank statement data from the attached PDF and return the result via the report_bank_statement tool.
 
         Rules:
@@ -156,6 +156,12 @@ class Provider::Anthropic::BankStatementExtractor
     end
 
     def build_result(parsed)
+      # Intentionally NOT deduplicated, unlike Provider::Openai's extractor. That
+      # one chunks the PDF text with overlap and must drop transactions repeated
+      # across adjacent chunks. We send the whole PDF as a single native document
+      # block — no chunk artifacts — so deduping here would wrongly merge
+      # legitimate same-day, same-amount rows (e.g. two identical purchases).
+      # Preserve every transaction the model returns.
       transactions = Array(parsed["transactions"] || parsed[:transactions]).map { |t| normalize_transaction(t) }.compact
 
       {

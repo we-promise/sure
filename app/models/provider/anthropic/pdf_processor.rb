@@ -115,7 +115,7 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def instructions
-      <<~INSTRUCTIONS.strip_heredoc
+      <<~INSTRUCTIONS
         You analyze financial documents. For the attached PDF, classify the document type,
         summarize it, and extract key metadata. Return the result via the report_document_analysis tool.
 
