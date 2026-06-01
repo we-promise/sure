@@ -2889,15 +2889,108 @@ components:
         counts:
           type: object
           required:
+          - account_statements
+          - family_exports
+          - imports
+          - import_rows
+          - import_mappings
           - accounts
+          - account_shares
+          - account_providers
+          - entries
+          - transactions
+          - transfers
+          - rejected_transfers
+          - valuations
+          - trades
+          - holdings
+          - balances
+          - recurring_transactions
+          - rules
+          - rule_actions
+          - rule_conditions
+          - rule_runs
+          - budgets
+          - budget_categories
           - categories
           - tags
+          - taggings
           - merchants
+          - family_merchant_associations
+          - provider_items
+          - active_storage_attachments
           - plaid_items
-          - imports
-          - budgets
+          additionalProperties:
+            type: integer
+            minimum: 0
           properties:
+            account_statements:
+              type: integer
+              minimum: 0
+            family_exports:
+              type: integer
+              minimum: 0
+            imports:
+              type: integer
+              minimum: 0
+            import_rows:
+              type: integer
+              minimum: 0
+            import_mappings:
+              type: integer
+              minimum: 0
             accounts:
+              type: integer
+              minimum: 0
+            account_shares:
+              type: integer
+              minimum: 0
+            account_providers:
+              type: integer
+              minimum: 0
+            entries:
+              type: integer
+              minimum: 0
+            transactions:
+              type: integer
+              minimum: 0
+            transfers:
+              type: integer
+              minimum: 0
+            rejected_transfers:
+              type: integer
+              minimum: 0
+            valuations:
+              type: integer
+              minimum: 0
+            trades:
+              type: integer
+              minimum: 0
+            holdings:
+              type: integer
+              minimum: 0
+            balances:
+              type: integer
+              minimum: 0
+            recurring_transactions:
+              type: integer
+              minimum: 0
+            rules:
+              type: integer
+              minimum: 0
+            rule_actions:
+              type: integer
+              minimum: 0
+            rule_conditions:
+              type: integer
+              minimum: 0
+            rule_runs:
+              type: integer
+              minimum: 0
+            budgets:
+              type: integer
+              minimum: 0
+            budget_categories:
               type: integer
               minimum: 0
             categories:
@@ -2906,16 +2999,22 @@ components:
             tags:
               type: integer
               minimum: 0
+            taggings:
+              type: integer
+              minimum: 0
             merchants:
               type: integer
               minimum: 0
+            family_merchant_associations:
+              type: integer
+              minimum: 0
+            provider_items:
+              type: integer
+              minimum: 0
+            active_storage_attachments:
+              type: integer
+              minimum: 0
             plaid_items:
-              type: integer
-              minimum: 0
-            imports:
-              type: integer
-              minimum: 0
-            budgets:
               type: integer
               minimum: 0
 paths:
