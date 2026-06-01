@@ -712,10 +712,14 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   test "coverage marks covered duplicate ambiguous and mismatched months" do
-    # Pin the clock: the relative months below otherwise collide with the rolling
-    # balances.yml fixtures on the 1st of a month, when 1.month.ago.end_of_month
-    # equals 1.day.ago (same account/date/currency -> unique violation).
-    travel_to Date.new(2026, 5, 6)
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Coverage Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
 
     covered_month = 5.months.ago.to_date.beginning_of_month
     missing_month = 4.months.ago.to_date.beginning_of_month
@@ -723,13 +727,13 @@ class AccountStatementTest < ActiveSupport::TestCase
     ambiguous_month = 2.months.ago.to_date.beginning_of_month
     mismatched_month = 1.month.ago.to_date.beginning_of_month
 
-    create_statement(account: @account, month: covered_month, content: "covered")
-    create_statement(account: @account, month: duplicate_month, content: "duplicate-a")
-    create_statement(account: @account, month: duplicate_month, content: "duplicate-b")
-    create_statement(account: nil, suggested_account: @account, month: ambiguous_month, content: "ambiguous")
-    create_statement(account: @account, month: mismatched_month, content: "mismatched", closing_balance: 120)
+    create_statement(account: account, month: covered_month, content: "covered")
+    create_statement(account: account, month: duplicate_month, content: "duplicate-a")
+    create_statement(account: account, month: duplicate_month, content: "duplicate-b")
+    create_statement(account: nil, suggested_account: account, month: ambiguous_month, content: "ambiguous")
+    create_statement(account: account, month: mismatched_month, content: "mismatched", closing_balance: 120)
 
-    @account.balances.create!(
+    account.balances.create!(
       date: mismatched_month.end_of_month,
       balance: 100,
       currency: "USD",
@@ -739,7 +743,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     )
 
     coverage = AccountStatement::Coverage.new(
-      @account,
+      account,
       start_month: covered_month,
       end_month: mismatched_month
     )
