@@ -138,6 +138,36 @@ describe("selectPullRequestNumber", () => {
     });
   });
 
+  it("records workflow_run as a corroborating source when it matches the preview artifact", () => {
+    const selected = selectPullRequestNumber({
+      runPullRequest: { number: 2017 },
+      artifacts: [previewArtifact(2017, headSha)],
+      associatedPullRequests: [],
+      context,
+      headSha,
+    });
+
+    assert.deepEqual(selected, {
+      prNumber: 2017,
+      source: "artifact_name+workflow_run",
+    });
+  });
+
+  it("records workflow_run and commit association when both match the preview artifact", () => {
+    const selected = selectPullRequestNumber({
+      runPullRequest: { number: 2017 },
+      artifacts: [previewArtifact(2017, headSha)],
+      associatedPullRequests: [openPullRequest(2017, headSha, "Rene0422/sure")],
+      context,
+      headSha,
+    });
+
+    assert.deepEqual(selected, {
+      prNumber: 2017,
+      source: "artifact_name+workflow_run+commit_association",
+    });
+  });
+
   it("uses a matching artifact when the same head SHA is associated with more than one PR", () => {
     const selected = selectPullRequestNumber({
       runPullRequest: undefined,

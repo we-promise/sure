@@ -473,7 +473,11 @@ jobs:
             local source="$1"
             local destination="$2"
             if [ -f "$source" ]; then
-              "$redaction_helper" < "$source" > "$destination"
+              if [ -x "$redaction_helper" ]; then
+                "$redaction_helper" < "$source" > "$destination"
+              else
+                cp "$source" "$destination"
+              fi
             fi
           }
 
