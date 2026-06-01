@@ -259,7 +259,7 @@ class Family < ApplicationRecord
         .where(cryptos: { tax_treatment: %w[tax_deferred tax_exempt] })
         .pluck(:id)
 
-      investment_ids + crypto_ids
+      investment_ids + crypto_ids + tax_advantaged_depository_account_ids
     end
   end
 
@@ -345,6 +345,18 @@ class Family < ApplicationRecord
   end
 
   private
+    # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
+    # `tax_advantaged_account_ids`. Joins `depositories` and filters by
+    # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted
+    # rather than inlined because the existing two blocks are already long
+    # enough; the extraction keeps `tax_advantaged_account_ids` readable.
+    def tax_advantaged_depository_account_ids
+      accounts
+        .joins("INNER JOIN depositories ON depositories.id = accounts.accountable_id AND accounts.accountable_type = 'Depository'")
+        .where(depositories: { subtype: Depository::TAX_ADVANTAGED_SUBTYPES })
+        .pluck(:id)
+    end
+
     def normalize_enabled_currencies!
       if enabled_currencies.blank?
         self.enabled_currencies = nil
