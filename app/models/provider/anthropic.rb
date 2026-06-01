@@ -403,7 +403,9 @@ class Provider::Anthropic < Provider
       estimated_cost = LlmUsage.calculate_cost(
         model: model,
         prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens
+        completion_tokens: completion_tokens,
+        cache_creation_tokens: usage["cache_creation_input_tokens"],
+        cache_read_tokens: usage["cache_read_input_tokens"]
       )
 
       family.llm_usages.create!(
