@@ -146,7 +146,11 @@ class Sync < ApplicationRecord
       rescue => e
         fail!
         update(error: e.message)
-        log_provider_sync_error(e)
+        begin
+          log_provider_sync_error(e)
+        rescue => log_error
+          Rails.logger.error("Failed to log provider sync error for Sync #{id}: #{log_error.class}: #{log_error.message}")
+        end
         report_error(e)
       ensure
         finalize_if_all_children_finalized
@@ -233,13 +237,15 @@ class Sync < ApplicationRecord
       provider_sync, provider_item = provider_sync_context
       return unless provider_sync && provider_item
 
+      family = provider_item.family
+
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "error",
         message: "Provider sync failed",
         source: provider_item.class.name,
         provider_key: provider_sync_provider_key(provider_item),
-        family: provider_item.family,
+        family: family,
         metadata: {
           provider_item_type: provider_item.class.name,
           provider_item_id: provider_item.id,

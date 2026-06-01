@@ -190,6 +190,21 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "test account sync error", entry.metadata["error_message"]
   end
 
+  test "provider sync logging failures do not suppress error reporting" do
+    syncable = plaid_items(:one)
+    sync = Sync.create!(syncable: syncable)
+    error = StandardError.new("test provider sync error")
+
+    syncable.expects(:perform_sync).with(sync).raises(error)
+    sync.expects(:log_provider_sync_error).with(error).raises(StandardError.new("debug log failed"))
+    sync.expects(:report_error).with(error).once
+
+    sync.perform
+
+    assert_equal "failed", sync.reload.status
+    assert_equal "test provider sync error", sync.error
+  end
+
   test "parent failure should not change status if child succeeds" do
     family = families(:dylan_family)
     plaid_item = plaid_items(:one)

@@ -193,11 +193,11 @@ module ApplicationHelper
   end
 
   def provider_sync_debug_log_label
-    "View debug log"
+    t("provider_sync_summary.health.view_debug_log")
   end
 
   def provider_sync_debug_log_hint
-    "Details in debug log"
+    t("provider_sync_summary.health.details_in_debug_log")
   end
 
   # Formats quantity with adaptive precision based on the value size.
