@@ -224,6 +224,27 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match /Invalid or expired API key/, @response.body
   end
 
+  test "filter_account_id cannot bypass finance account scoping" do
+    member = users(:family_member)
+    private_account = accounts(:investment)
+
+    assert_not_includes member.finance_accounts.pluck(:id), private_account.id
+
+    category = @family.categories.create!(name: "LEAKED_REPORTS_CATEGORY", color: "#737373", lucide_icon: "circle")
+    private_account.entries.create!(
+      name: "Admin-only spend",
+      date: Date.current,
+      amount: -25,
+      currency: "USD",
+      entryable: Transaction.new(category: category, kind: "standard")
+    )
+
+    sign_in member
+
+    get reports_path(period_type: :monthly, filter_account_id: private_account.id)
+    refute_includes @response.body, "LEAKED_REPORTS_CATEGORY"
+  end
+
   test "export transactions without API key uses session auth" do
     # Should use normal session-based authentication
     # The setup already signs in @user = users(:family_admin)
