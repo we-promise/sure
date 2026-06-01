@@ -67,7 +67,7 @@
       "cwe_id": [
         915
       ],
-      "note": "account_id validated in create action (line 42: family.accounts.visible.find ensures family membership; lines 44-48: supports_trades? check); security_id validated via Security.find (line 287); transfer_account_id validated in Transfer::Creator where family.accounts.find scopes both source and destination accounts to the family (app/models/transfer/creator.rb lines 4-5); type validated in build_create_form_params against allowed values: buy, sell, dividend, deposit, withdrawal, interest (line 217)"
+      "note": "account_id validated in create action (line 42: family.accounts.visible.find ensures family membership; lines 44-48: supports_trades? check); security_id validated via Security.find (line 290); transfer_account_id validated in Transfer::Creator where family.accounts.find scopes both source and destination accounts to the family (app/models/transfer/creator.rb lines 4-5); type validated in build_create_form_params against allowed values: buy, sell, dividend, deposit, withdrawal, interest (line 217)"
     },
     {
       "warning_type": "Mass Assignment",
