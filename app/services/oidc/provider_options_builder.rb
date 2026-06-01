@@ -53,7 +53,7 @@ module Oidc
         custom_scopes = cfg.dig(:settings, :scopes).presence
         return DEFAULT_SCOPES unless custom_scopes.present?
 
-        custom_scopes.to_s.split(/\s+/).map(&:to_sym)
+        custom_scopes.to_s.split.map(&:to_sym)
       end
 
       def oidc_extra_authorize_params(cfg, scopes = oidc_scopes(cfg))
@@ -61,8 +61,8 @@ module Oidc
 
         {
           claims: JSON.generate(
-            id_token: { groups: { essential: true } },
-            userinfo: { groups: { essential: true } }
+            id_token: { groups: nil },
+            userinfo: { groups: nil }
           )
         }
       end
@@ -73,7 +73,7 @@ module Oidc
 
       private
         def role_mapping(cfg)
-          cfg.dig(:settings, :role_mapping).presence || cfg.dig(:settings, "role_mapping").presence
+          cfg.dig(:settings, :role_mapping).presence
         end
 
         def ssl_options(ssl_config)

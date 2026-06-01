@@ -13,8 +13,10 @@ module Oidc
       options = ProviderOptionsBuilder.call(base_config(settings: { scopes: "openid email profile groups" }))
 
       claims = JSON.parse(options.dig(:extra_authorize_params, :claims))
-      assert_equal({ "essential" => true }, claims.dig("id_token", "groups"))
-      assert_equal({ "essential" => true }, claims.dig("userinfo", "groups"))
+      assert_nil claims.dig("id_token", "groups")
+      assert_nil claims.dig("userinfo", "groups")
+      assert_equal ["groups"], claims["id_token"].keys
+      assert_equal ["groups"], claims["userinfo"].keys
     end
 
     test "requests groups claim when role mapping is configured" do
@@ -23,8 +25,26 @@ module Oidc
       }))
 
       claims = JSON.parse(options.dig(:extra_authorize_params, :claims))
-      assert_equal({ "essential" => true }, claims.dig("id_token", "groups"))
-      assert_equal({ "essential" => true }, claims.dig("userinfo", "groups"))
+      assert_nil claims.dig("id_token", "groups")
+      assert_nil claims.dig("userinfo", "groups")
+      assert_equal ["groups"], claims["id_token"].keys
+      assert_equal ["groups"], claims["userinfo"].keys
+    end
+
+    test "discards blank scope tokens from surrounding whitespace" do
+      options = ProviderOptionsBuilder.call(base_config(settings: { scopes: "  openid   email profile groups  " }))
+
+      assert_equal %i[openid email profile groups], options[:scope]
+    end
+
+    test "returns nil when required configuration is missing" do
+      config = base_config.except(:client_secret)
+
+      assert_nil ProviderOptionsBuilder.call(
+        config,
+        env: {},
+        rails_env: ActiveSupport::StringInquirer.new("production")
+      )
     end
 
     test "includes configured prompt" do
