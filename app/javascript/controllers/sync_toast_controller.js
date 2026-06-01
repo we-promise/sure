@@ -24,6 +24,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this._timer);
+    this.#removeDeferredDialogListener();
   }
 
   // Turbo 8 morph refresh (the app sets `turbo_refreshes_with method: :morph,
@@ -47,12 +48,19 @@ export default class extends Controller {
       this.#reveal();
       return;
     }
-    dialog.addEventListener("close", () => this.#onDialogClose(), {
-      once: true,
-    });
+    // Keep refs so disconnect() can detach this listener. Otherwise a toast
+    // replaced by a newer broadcast while the dialog is still open stays
+    // subscribed, and its now-detached controller fires #reveal()/#arm() on
+    // close — a spurious auto-refresh from a stale toast.
+    this._deferredDialog = dialog;
+    this._dialogCloseHandler = () => this.#onDialogClose();
+    dialog.addEventListener("close", this._dialogCloseHandler, { once: true });
   }
 
   #onDialogClose() {
+    // The `once` listener has already fired and detached itself.
+    this._deferredDialog = null;
+    this._dialogCloseHandler = null;
     // Another dialog may still be open (stacked modals) — keep deferring until
     // every dialog has closed.
     if (this.#dialogOpen()) {
@@ -60,6 +68,17 @@ export default class extends Controller {
       return;
     }
     this.#reveal();
+  }
+
+  #removeDeferredDialogListener() {
+    if (this._deferredDialog && this._dialogCloseHandler) {
+      this._deferredDialog.removeEventListener(
+        "close",
+        this._dialogCloseHandler,
+      );
+    }
+    this._deferredDialog = null;
+    this._dialogCloseHandler = null;
   }
 
   #reveal() {
