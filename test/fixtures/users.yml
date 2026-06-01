@@ -100,3 +100,29 @@ sso_only:
   role: admin
   onboarded_at: <%= 1.day.ago %>
   ai_enabled: true
+
+# Additional test users expected by PersonalBudgetTest
+josh:
+  family: empty
+  first_name: Josh
+  last_name: Tester
+  email: josh@example.com
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  onboarded_at: <%= 2.days.ago %>
+  role: member
+  ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+
+ann:
+  family: empty
+  first_name: Ann
+  last_name: Tester
+  email: ann@example.com
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  onboarded_at: <%= 2.days.ago %>
+  role: member
+  ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+
