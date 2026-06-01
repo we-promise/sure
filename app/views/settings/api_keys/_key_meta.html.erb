@@ -1,0 +1,9 @@
+<%# locals: (api_key:) %>
+<p class="text-secondary">
+  <%= t("settings.api_keys.shared.created_ago", time: time_ago_in_words(api_key.created_at)) %>
+  <% if api_key.last_used_at %>
+    • <%= t("settings.api_keys.shared.last_used_ago", time: time_ago_in_words(api_key.last_used_at)) %>
+  <% else %>
+    • <%= t("settings.api_keys.shared.never_used") %>
+  <% end %>
+</p>

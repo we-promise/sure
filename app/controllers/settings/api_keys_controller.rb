@@ -40,18 +40,18 @@ class Settings::ApiKeysController < ApplicationController
   end
 
   def destroy
-    if @api_key.demo_monitoring_key?
-      flash[:alert] = t(".cannot_revoke")
-    elsif @api_key.revoke!
-      flash[:notice] = t(".revoked_successfully")
-    else
-      flash[:alert] = t(".revoke_failed")
-    end
+    @api_key.revoke!
+    flash[:notice] = t(".revoked_successfully")
     redirect_to settings_api_keys_path
   end
 
   private
 
+    # Demo monitoring keys are intentionally excluded by `.visible`: a demo key
+    # id therefore 404s here rather than reaching #destroy, which is what
+    # prevents it from being revoked. Do NOT broaden this scope to include
+    # monitoring keys — `.visible` is the revocation guard. (ApiKey#revoke! also
+    # raises as a defense-in-depth backstop.)
     def set_api_key
       @api_key = Current.user.api_keys.active.visible.find(params[:id])
     end
