@@ -3065,6 +3065,12 @@ paths:
           description: account created
         '401':
           description: unauthorized
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation failed
       requestBody:
@@ -3105,6 +3111,7 @@ paths:
                       format: date
                       nullable: true
                       example: '2025-01-01'
+        required: true
   "/api/v1/accounts/{id}":
     parameters:
     - name: id
@@ -3162,6 +3169,12 @@ paths:
       responses:
         '200':
           description: account updated
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: not found
       requestBody:
@@ -3189,6 +3202,12 @@ paths:
       responses:
         '200':
           description: account deleted
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: not found
   "/api/v1/auth/signup":
@@ -5379,6 +5398,12 @@ paths:
           description: merchant created
         '401':
           description: unauthorized
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation failed
       requestBody:
@@ -7306,6 +7331,10 @@ paths:
                         format: uuid
                       description: Array of tag IDs to assign. Omit to preserve existing
                         tags; use [] to clear all tags.
+                    pending:
+                      type: boolean
+                      nullable: true
+                      example: false
         required: true
     delete:
       summary: Delete a transaction
