@@ -268,6 +268,10 @@ class Entry < ApplicationRecord
   end
 
   def classification
+    # Refunds are semantically 'expense' (they offset a spend), not income,
+    # even though their amount is negative (money coming back).
+    # Must be kept in sync with IncomeStatement::Totals#classification_sql.
+    return "expense" if entryable.is_a?(Transaction) && entryable.refund?
     amount.negative? ? "income" : "expense"
   end
 

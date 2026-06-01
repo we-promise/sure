@@ -42,6 +42,8 @@ en:
       note_label: Notes
       note_placeholder: Enter a note
       create_tag: Create
+      refund_title: Mark as refund
+      refund_description: A refund offsets the original expense in your budget — it won't be counted as income.
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
@@ -77,6 +79,10 @@ en:
       activity_type: Activity Type
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
+      refund_title: Refund
+      refund_description: Mark this as a refund to offset the original expense in your budget and reports. It will not be counted as income.
+      refund_link_label: Link to original transaction (optional)
+      refund_no_link: "— not linked to an original transaction —"
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
