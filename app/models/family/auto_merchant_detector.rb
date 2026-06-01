@@ -61,7 +61,7 @@ class Family::AutoMerchantDetector
   private
     attr_reader :family, :transaction_ids
 
-    # TODO(#1984 follow-up): hardcoded to OpenAI. Provider::Anthropic now
+    # TODO(#2113): hardcoded to OpenAI. Provider::Anthropic now
     # implements auto_detect_merchants (PR #1984), so this should honor
     # Setting.llm_provider the way chat does, instead of always routing batch
     # merchant detection to OpenAI. Until then, Anthropic batch ops are only
