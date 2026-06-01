@@ -188,4 +188,35 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert draft_account.active?
     assert_redirected_to account_path(draft_account)
   end
+
+  test "address update on draft account honors stored return_to over the account page" do
+    draft_account = Account.create!(
+      family: @user.family,
+      name: "Draft Property RT",
+      accountable: Property.new,
+      status: "draft",
+      balance: 500000,
+      currency: "USD"
+    )
+
+    # The property wizard (create → balances → address) doesn't thread return_to
+    # as a form param, so StoreLocation's session value is the only carrier.
+    get new_account_path(return_to: transactions_path)
+
+    patch update_address_property_path(draft_account), params: {
+      property: {
+        address_attributes: {
+          line1: "789 Activate St",
+          locality: "New York",
+          region: "NY",
+          country: "US",
+          postal_code: "10001"
+        }
+      }
+    }
+
+    draft_account.reload
+    assert draft_account.active?
+    assert_redirected_to transactions_path
+  end
 end

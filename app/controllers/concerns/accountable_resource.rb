@@ -48,7 +48,12 @@ module AccountableResource
       @account.lock_saved_attributes!
     end
 
-    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+    # Prefer the form-carried return_to, then the session value StoreLocation
+    # captured from `?return_to=` (survives multi-step flows where the param
+    # isn't threaded), then the account page. Rails blocks external-host
+    # redirects, so a hostile return_to can't open-redirect.
+    redirect_to account_params[:return_to].presence || session[:return_to].presence || @account,
+                notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
   def update
