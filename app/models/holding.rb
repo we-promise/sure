@@ -276,10 +276,19 @@ class Holding < ApplicationRecord
     end
 
     # Calculates weighted average cost from buy trades.
-    # Returns nil if no trades exist (cost basis is unknown).
+    # Returns nil if no trades exist or if any foreign-currency trade is missing an
+    # exchange rate for its trade date (avoids a silent 1:1 substitution that would
+    # produce a wrong value rather than an honest nil).
     def calculate_avg_cost
-      trades = account.trades
+      buy_trades = account.trades
         .with_entry
+        .where(security_id: security.id)
+        .where("trades.qty > 0 AND entries.date <= ?", date)
+
+      # If any foreign-currency buy trade has no exchange rate for its trade date,
+      # cost basis is unknowable — return nil to match ForwardCalculator / ReverseCalculator.
+      missing_rate = buy_trades
+        .where("trades.currency != ?", account.currency)
         .joins(ActiveRecord::Base.sanitize_sql_array([
           "LEFT JOIN exchange_rates ON (
             exchange_rates.date = entries.date AND
@@ -287,16 +296,26 @@ class Holding < ApplicationRecord
             exchange_rates.to_currency = ?
           )", account.currency
         ]))
-        .where(security_id: security.id)
-        .where("trades.qty > 0 AND entries.date <= ?", date)
+        .where("exchange_rates.rate IS NULL")
+        .exists?
 
-      total_cost, total_qty = trades.pick(
-        Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
-        Arel.sql("SUM(trades.qty)")
-      )
+      return nil if missing_rate
 
-      # Return nil when no trades exist - cost basis is genuinely unknown
-      # Previously this fell back to current market price, which was misleading
+      # All foreign rates are confirmed present; COALESCE fallback now only applies
+      # to domestic (same-currency) trades where treating rate = 1 is correct.
+      total_cost, total_qty = buy_trades
+        .joins(ActiveRecord::Base.sanitize_sql_array([
+          "LEFT JOIN exchange_rates ON (
+            exchange_rates.date = entries.date AND
+            exchange_rates.from_currency = trades.currency AND
+            exchange_rates.to_currency = ?
+          )", account.currency
+        ]))
+        .pick(
+          Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
+          Arel.sql("SUM(trades.qty)")
+        )
+
       return nil unless total_qty && total_qty > 0
 
       Money.new(total_cost / total_qty, currency)
