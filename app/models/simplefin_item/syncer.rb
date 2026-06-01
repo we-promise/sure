@@ -144,7 +144,6 @@ class SimplefinItem::Syncer
       normalize_duplicate_only_errors(sync)
     end
 
-    # Computes transaction/holding counters between sync start and completion
     def normalize_duplicate_only_errors(sync)
       stats = (sync.sync_stats || {})
       errors = Array(stats["errors"]).map { |e| (e.is_a?(Hash) ? e["message"] || e[:message] : e.to_s) }
