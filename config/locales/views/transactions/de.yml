@@ -16,7 +16,9 @@ de:
       none: (keine)
       note_label: Notizen
       note_placeholder: Notiz eingeben
+      create_tag: Erstellen
       submit: Transaktion hinzufügen
+      tag_search_placeholder: Tag suchen oder erstellen
       tags_label: Tags
       transfer: Überweisung
     new:
