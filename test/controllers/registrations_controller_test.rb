@@ -132,7 +132,16 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
         invitation: invitation.token } }
     end
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(invitation: invitation.token)
+  end
+
+  test "carries the invitation token to the login page so SSO can claim it" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    invitation = invitations(:one)
+
+    get new_registration_url(invitation: invitation.token)
+
+    assert_redirected_to new_session_url(invitation: invitation.token)
   end
 
   test "login page hides the create account link when local login is disabled" do
