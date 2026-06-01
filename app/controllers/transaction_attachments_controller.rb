@@ -17,6 +17,8 @@ class TransactionAttachmentsController < ApplicationController
     attachments = attachment_params
 
     if attachments.present?
+      blobs_to_index = []
+
       @transaction.with_lock do
         # Check attachment count limit before attaching
         current_count = @transaction.attachments.count
@@ -32,8 +34,10 @@ class TransactionAttachmentsController < ApplicationController
 
         existing_ids = @transaction.attachments.pluck(:id)
         attachment_proxy = @transaction.attachments.attach(attachments)
+        newly_added = Array(attachment_proxy).reject { |a| existing_ids.include?(a.id) }
 
         if @transaction.valid?
+          blobs_to_index = newly_added.map(&:blob)
           count = new_count
           message = count == 1 ? t("transactions.attachments.uploaded_one") : t("transactions.attachments.uploaded_many", count: count)
           respond_to do |format|
@@ -42,7 +46,6 @@ class TransactionAttachmentsController < ApplicationController
           end
         else
           # Remove invalid attachments
-          newly_added = Array(attachment_proxy).reject { |a| existing_ids.include?(a.id) }
           newly_added.each(&:purge)
           error_messages = @transaction.errors.full_messages_for(:attachments).join(", ")
           respond_to do |format|
@@ -51,6 +54,10 @@ class TransactionAttachmentsController < ApplicationController
           end
         end
       end
+
+      # Enqueue vector-store indexing only after the attachments are committed,
+      # so the background job can reliably load the persisted blobs.
+      enqueue_attachment_indexing(blobs_to_index)
     else
       respond_to do |format|
         format.html { redirect_back_or_to transaction_path(@transaction), alert: t("transactions.attachments.no_files_selected") }
@@ -71,7 +78,10 @@ class TransactionAttachmentsController < ApplicationController
       return
     end
 
+    family = @transaction.entry.account.family
+    blob_id = @attachment.blob_id
     @attachment.purge
+    enqueue_attachment_removal(family, blob_id)
     message = t("transactions.attachments.attachment_deleted")
     respond_to do |format|
       format.html { redirect_back_or_to transaction_path(@transaction), notice: message }
@@ -102,6 +112,21 @@ class TransactionAttachmentsController < ApplicationController
       permission = @transaction.entry.account.permission_for(Current.user)
       @can_upload = permission.in?([ :owner, :full_control, :read_write ])
       @can_delete = permission.in?([ :owner, :full_control ])
+    end
+
+    def enqueue_attachment_indexing(blobs)
+      return if blobs.blank?
+      return unless VectorStore.configured?
+
+      blobs.each do |blob|
+        IndexTransactionAttachmentJob.perform_later(@transaction, blob)
+      end
+    end
+
+    def enqueue_attachment_removal(family, blob_id)
+      return unless VectorStore.configured?
+
+      RemoveTransactionAttachmentJob.perform_later(family, blob_id)
     end
 
     def attachment_params
