@@ -748,13 +748,12 @@ class AccountStatementTest < ActiveSupport::TestCase
       end_month: mismatched_month
     )
 
-      statuses = coverage.months.index_by(&:date).transform_values(&:status)
-      assert_equal "covered", statuses[covered_month]
-      assert_equal "missing", statuses[missing_month]
-      assert_equal "duplicate", statuses[duplicate_month]
-      assert_equal "ambiguous", statuses[ambiguous_month]
-      assert_equal "mismatched", statuses[mismatched_month]
-    end
+    statuses = coverage.months.index_by(&:date).transform_values(&:status)
+    assert_equal "covered", statuses[covered_month]
+    assert_equal "missing", statuses[missing_month]
+    assert_equal "duplicate", statuses[duplicate_month]
+    assert_equal "ambiguous", statuses[ambiguous_month]
+    assert_equal "mismatched", statuses[mismatched_month]
   end
 
   private
