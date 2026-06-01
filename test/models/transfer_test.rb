@@ -124,4 +124,67 @@ class TransferTest < ActiveSupport::TestCase
   test "kind_for_account returns funds_movement for depository accounts" do
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
   end
+
+  test "categorizable? returns true for loan account transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:loan), amount: -500)
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? returns true for investment account transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500)
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? returns true for crypto account transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:crypto), amount: -500)
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? returns false for regular fund movement transfers" do
+    other_depository = families(:dylan_family).accounts.create!(
+      name: "Savings", balance: 5000, currency: "USD", accountable: Depository.new
+    )
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: other_depository, amount: -500)
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    refute transfer.categorizable?
+  end
+
+  test "categorizable? returns false for credit card payment transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    refute transfer.categorizable?
+  end
 end
