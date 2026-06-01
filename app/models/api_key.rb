@@ -26,6 +26,10 @@ class ApiKey < ApplicationRecord
 
   # Scopes
   scope :active, -> { where(revoked_at: nil).where("expires_at IS NULL OR expires_at > ?", Time.current) }
+  # SECURITY: excluding the demo monitoring key here is also the revocation guard
+  # in Settings::ApiKeysController#destroy — a demo key id 404s in `set_api_key`
+  # (it is not `.visible`) before it can be revoked. Do NOT broaden this scope to
+  # include monitoring keys without adding another explicit destroy guard.
   scope :visible, -> { where.not(display_key: DEMO_MONITORING_KEY) }
 
   # Class methods

@@ -6,7 +6,7 @@
       <%= case scope
           when "read" then t("settings.api_keys.shared.scope_read_only")
           when "read_write" then t("settings.api_keys.shared.scope_read_write")
-          else scope.humanize
+          else t("settings.api_keys.shared.scopes.#{scope}", default: scope.humanize)
           end %>
     </span>
   <% end %>

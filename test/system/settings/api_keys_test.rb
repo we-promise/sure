@@ -30,7 +30,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     # Newly-created confirmation page shows the plain key
     assert_text "API Key Created Successfully"
     assert_text "First Key"
-    api_key_display = find("#api-key-display")
+    api_key_display = find("[data-clipboard-target='source']")
     assert api_key_display.text.length > 30 # Should be a long hex string
 
     # Back to the list, the first key is shown

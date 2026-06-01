@@ -47,11 +47,9 @@ class Settings::ApiKeysController < ApplicationController
 
   private
 
-    # Demo monitoring keys are intentionally excluded by `.visible`: a demo key
-    # id therefore 404s here rather than reaching #destroy, which is what
-    # prevents it from being revoked. Do NOT broaden this scope to include
-    # monitoring keys — `.visible` is the revocation guard. (ApiKey#revoke! also
-    # raises as a defense-in-depth backstop.)
+    # `.visible` excludes the demo monitoring key, so a demo key id 404s here
+    # before #destroy can revoke it — this is intentional (see the SECURITY note
+    # on ApiKey's `visible` scope).
     def set_api_key
       @api_key = Current.user.api_keys.active.visible.find(params[:id])
     end

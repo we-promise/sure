@@ -224,6 +224,21 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert monitoring_key.valid?
   end
 
+  test "visible scope excludes the demo monitoring key" do
+    # The demo key's exclusion from `.visible` is the revocation guard used by
+    # Settings::ApiKeysController#destroy. Lock the invariant so broadening the
+    # scope can't silently make the demo key revocable.
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    refute_includes ApiKey.visible, demo_key
+    refute_includes @user.api_keys.active.visible, demo_key
+  end
+
   test "should include active api keys in active scope" do
     @api_key.save!
     active_keys = ApiKey.active
