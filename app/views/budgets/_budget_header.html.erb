@@ -29,7 +29,11 @@
 
   <%= render DS::Popover.new(variant: "button") do |popover| %>
     <% popover.with_button class: "flex items-center gap-1 hover:bg-alpha-black-25 cursor-pointer rounded-md p-2"  do %>
-      <span class="text-primary font-medium text-lg lg:text-base"><%= @budget.name %></span>
+      <span class="text-primary font-medium text-lg lg:text-base"><%= @budget.name %>
+        <% if @budget.family.personal_budgets? && @budget.user.present? %>
+          <span class="text-secondary font-normal ml-1">(<%= @budget.user.first_name %>)</span>
+        <% end %>
+      </span>
       <%= icon("chevron-down") %>
     <% end %>
 
