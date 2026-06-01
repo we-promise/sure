@@ -513,6 +513,37 @@ class IncomeStatementTest < ActiveSupport::TestCase
     refute_includes tax_advantaged_ids, @credit_card_account.id
   end
 
+  test "family.tax_advantaged_account_ids includes HSA depository accounts and excludes non-HSA depositories" do
+    # Plaid routes `depository.hsa` to `Depository` (not Investment), so HSA
+    # cash accounts created from a Plaid sync end up as Depository(subtype:
+    # "hsa") rows. They are semantically tax-advantaged but were previously
+    # invisible to this filter because it only joined `investments` and
+    # `cryptos`.
+    hsa_depository = @family.accounts.create!(
+      name: "Fidelity HSA Cash",
+      currency: @family.currency,
+      balance: 3_000,
+      accountable: Depository.new(subtype: "hsa")
+    )
+
+    savings_depository = @family.accounts.create!(
+      name: "Emergency Savings",
+      currency: @family.currency,
+      balance: 8_000,
+      accountable: Depository.new(subtype: "savings")
+    )
+
+    # Clear the memoized value (the setup-block @checking_account is also
+    # a depository, so we exercise both inclusion and exclusion paths).
+    @family.instance_variable_set(:@tax_advantaged_account_ids, nil)
+
+    tax_advantaged_ids = @family.tax_advantaged_account_ids
+
+    assert_includes tax_advantaged_ids, hsa_depository.id
+    refute_includes tax_advantaged_ids, savings_depository.id
+    refute_includes tax_advantaged_ids, @checking_account.id
+  end
+
   # net_category_totals tests
   test "net_category_totals nets expense and refund in the same category" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
