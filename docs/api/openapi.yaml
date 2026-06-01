@@ -4688,7 +4688,8 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '404':
-          description: account not found or not writable
+          description: account does not exist, is outside the authenticated user family,
+            or is not writable by the authenticated user
           content:
             application/json:
               schema:

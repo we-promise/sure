@@ -267,7 +267,8 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'account not found or not writable' do
+      response '404',
+               'account does not exist, is outside the authenticated user family, or is not writable by the authenticated user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
