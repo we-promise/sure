@@ -123,7 +123,7 @@ describe("selectPullRequestNumber", () => {
   const headSha = "4f1159e99c7785bc370f53510284c251fabdb75b";
   const context = contextFor({ id: 123, head_sha: headSha });
 
-  it("falls back to commit association when workflow_run has no PR payload", () => {
+  it("prefers the preview artifact when commit association matches", () => {
     const selected = selectPullRequestNumber({
       runPullRequest: undefined,
       artifacts: [previewArtifact(2017, headSha)],
@@ -134,7 +134,7 @@ describe("selectPullRequestNumber", () => {
 
     assert.deepEqual(selected, {
       prNumber: 2017,
-      source: "commit_association",
+      source: "artifact_name+commit_association",
     });
   });
 
@@ -152,8 +152,36 @@ describe("selectPullRequestNumber", () => {
 
     assert.deepEqual(selected, {
       prNumber: 2060,
-      source: "artifact_and_commit_association",
+      source: "artifact_name+commit_association",
     });
+  });
+
+  it("fails closed when workflow metadata disagrees with the preview artifact", () => {
+    const selected = selectPullRequestNumber({
+      runPullRequest: { number: 1985 },
+      artifacts: [previewArtifact(1798, headSha)],
+      associatedPullRequests: [openPullRequest(1798, headSha)],
+      context,
+      headSha,
+    });
+
+    assert.equal(selected.prNumber, undefined);
+    assert.equal(typeof selected.error, "string");
+    assert.match(selected.error, /conflicts with workflow_run PR 1985/);
+  });
+
+  it("fails closed when commit association disagrees with the preview artifact", () => {
+    const selected = selectPullRequestNumber({
+      runPullRequest: undefined,
+      artifacts: [previewArtifact(1798, headSha)],
+      associatedPullRequests: [openPullRequest(1985, headSha)],
+      context,
+      headSha,
+    });
+
+    assert.equal(selected.prNumber, undefined);
+    assert.equal(typeof selected.error, "string");
+    assert.match(selected.error, /conflicts with commit-associated PRs 1985/);
   });
 
   it("refuses ambiguous associated PRs without a single matching artifact", () => {
@@ -197,6 +225,7 @@ describe("resolvePreviewRequest", () => {
     assert.equal(state.outputs.head_sha, headSha);
     assert.equal(state.outputs.artifact_name, `preview-image-pr-2017-${headSha}`);
     assert.equal(state.outputs.is_fork, "true");
+    assert.equal(state.outputs.resolution_source, "artifact_name+commit_association");
   });
 
   it("resolves PRs from artifact names when workflow and commit association metadata are unavailable", async () => {
@@ -216,6 +245,7 @@ describe("resolvePreviewRequest", () => {
     assert.equal(state.outputs.head_sha, headSha);
     assert.equal(state.outputs.artifact_name, `preview-image-pr-2017-${headSha}`);
     assert.equal(state.outputs.is_fork, "true");
+    assert.equal(state.outputs.resolution_source, "artifact_name");
     assert.match(state.messages.join("\n"), /Resolved PR 2017 from artifact_name; fork=true/);
   });
 
