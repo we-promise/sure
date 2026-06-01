@@ -117,6 +117,20 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Test API Key"
   end
 
+  test "show renders the newly created confirmation" do
+    created_key = ApiKey.create!(
+      user: @user,
+      name: "Fresh Key",
+      display_key: "fresh_key_123",
+      scopes: [ "read" ]
+    )
+
+    get settings_api_key_path(created_key, newly_created: true)
+    assert_response :success
+    assert_includes response.body, created_key.plain_key
+    assert_select "h3", text: I18n.t("settings.api_keys.show.newly_created.heading")
+  end
+
   test "show 404s on another user's key" do
     other_user = users(:family_member)
     other_user.api_keys.destroy_all
