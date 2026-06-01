@@ -76,7 +76,7 @@ class Assistant::Function
         key.to_s if type.to_s == "array"
       end
     rescue StandardError => e
-      Rails.logger.warn("#{self.class.name}#array_param_keys failed: #{e.message}")
+      Rails.logger.warn("#{self.class.name}#array_param_keys failed; skipping argument coercion: #{e.class} - #{e.message}")
       []
     end
 
