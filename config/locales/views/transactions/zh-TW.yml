@@ -15,7 +15,9 @@ zh-TW:
       none: (無)
       note_label: 備註
       note_placeholder: 輸入備註
+      create_tag: 建立
       submit: 新增交易
+      tag_search_placeholder: 搜尋或建立標籤
       tags_label: 標籤
       transfer: 轉帳
     new:

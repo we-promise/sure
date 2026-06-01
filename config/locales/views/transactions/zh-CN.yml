@@ -40,8 +40,10 @@ zh-CN:
       merchant_label: 商户
       none: （无）
       note_label: 备注
-      note_placeholder: 输入备注
+      note_placeholder: 请输入备注
+      create_tag: 创建
       submit: 添加交易
+      tag_search_placeholder: 搜索或创建标签
       tags_label: 标签
       transfer: 转账
     create:
