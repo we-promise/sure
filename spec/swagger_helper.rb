@@ -938,7 +938,7 @@ RSpec.configure do |config|
                 properties: {
                   id: { type: :string, format: :uuid },
                   name: { type: :string },
-                  account_type: { type: :string }
+                  account_type: { type: :string, nullable: true }
                 }
               }
             }

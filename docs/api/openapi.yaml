@@ -1715,6 +1715,7 @@ components:
               type: string
             account_type:
               type: string
+              nullable: true
     ImportConfiguration:
       type: object
       properties:
