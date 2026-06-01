@@ -52,18 +52,25 @@ class Trend
 
   def percent
     return 0.0 if previous.zero? && current.zero?
-    return Float::INFINITY if previous.zero?
 
+    # No baseline to divide by: report a signed infinity that matches the
+    # direction of the move, rather than always-positive infinity.
+    return signed_infinity if previous.zero?
+
+    # Measure the change against the *magnitude* of the prior value so the sign
+    # reflects the actual direction of change. Dividing by a signed baseline
+    # would flip the sign whenever `previous` is negative (e.g. a net worth
+    # moving from -100 to -50 is +50%, not -50%).
     change = (current - previous).to_f
 
-    (change / previous.to_f * 100).round(1)
+    (change / previous.to_f.abs * 100).round(1)
   end
 
   def percent_formatted
     if percent.finite?
       "#{percent.round(1)}%"
     else
-      percent > 0 ? "＋∞" : "-∞"
+      percent.positive? ? "＋∞" : "-∞"
     end
   end
 
@@ -80,6 +87,18 @@ class Trend
   end
 
   private
+    # An infinite percentage carrying the sign of the move's direction, used
+    # when there is no baseline (previous is zero) to compute against.
+    def signed_infinity
+      if direction.up?
+        Float::INFINITY
+      elsif direction.down?
+        -Float::INFINITY
+      else
+        0.0
+      end
+    end
+
     def red_hex
       "var(--color-destructive)"
     end
