@@ -724,14 +724,17 @@ class AccountStatementTest < ActiveSupport::TestCase
     create_statement(account: nil, suggested_account: @account, month: ambiguous_month, content: "ambiguous")
     create_statement(account: @account, month: mismatched_month, content: "mismatched", closing_balance: 120)
 
-    @account.balances.create!(
-      date: mismatched_month.end_of_month,
-      balance: 100,
-      currency: "USD",
-      start_cash_balance: 100,
-      cash_inflows: 0,
-      cash_outflows: 0
-    )
+    # The depository fixture seeds balances at 1.day.ago / 2.days.ago, which
+    # land on mismatched_month.end_of_month when the suite runs on the first of
+    # the month. Upsert so the date-relative collision can't make this flaky.
+    @account.balances
+            .find_or_initialize_by(date: mismatched_month.end_of_month, currency: "USD")
+            .update!(
+              balance: 100,
+              start_cash_balance: 100,
+              cash_inflows: 0,
+              cash_outflows: 0
+            )
 
     coverage = AccountStatement::Coverage.new(
       @account,
