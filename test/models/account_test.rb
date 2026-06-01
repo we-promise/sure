@@ -155,10 +155,32 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal I18n.t("accounts.tax_treatments.taxable"), account.tax_treatment_label
   end
 
-  test "tax_treatment returns nil for non-investment accounts" do
-    # Depository accounts don't have tax_treatment
+  test "tax_treatment returns nil for non-HSA depository accounts" do
+    # Depository exposes a `tax_treatment` method so HSA cash flips
+    # tax-advantaged, but non-HSA subtypes (checking, savings, cd,
+    # money_market) return nil. nil still reads as taxable via `taxable?`,
+    # and keeps `tax_treatment.present?` false so the header tax badge does
+    # not appear on ordinary bank accounts that never displayed it before.
     assert_nil @account.tax_treatment
     assert_nil @account.tax_treatment_label
+    assert_not @account.tax_treatment.present?
+    assert @account.taxable?
+  end
+
+  test "tax_treatment returns nil for accountables that do not implement it" do
+    # CreditCard / Loan / Property / OtherAsset / OtherLiability do not
+    # implement `tax_treatment`, so the `TaxTreatable#respond_to?` short-
+    # circuit still returns nil for them.
+    credit_card_account = @family.accounts.create!(
+      owner: @admin,
+      name: "Test Credit Card",
+      balance: 100,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+
+    assert_nil credit_card_account.tax_treatment
+    assert_nil credit_card_account.tax_treatment_label
   end
 
   test "tax_advantaged? returns true for tax-advantaged accounts" do
@@ -175,6 +197,20 @@ class AccountTest < ActiveSupport::TestCase
     assert_not account.taxable?
   end
 
+  test "tax_advantaged? returns true for HSA depository accounts" do
+    hsa_depository = @family.accounts.create!(
+      owner: @admin,
+      name: "Fidelity HSA Cash",
+      balance: 3_000,
+      currency: "USD",
+      accountable: Depository.new(subtype: "hsa")
+    )
+
+    assert_equal :tax_advantaged, hsa_depository.tax_treatment
+    assert hsa_depository.tax_advantaged?
+    assert_not hsa_depository.taxable?
+  end
+
   test "tax_advantaged? returns false for taxable accounts" do
     investment = Investment.new(subtype: "brokerage")
     account = @family.accounts.create!(
@@ -189,8 +225,9 @@ class AccountTest < ActiveSupport::TestCase
     assert account.taxable?
   end
 
-  test "taxable? returns true for accounts without tax_treatment" do
-    # Depository accounts
+  test "taxable? returns true for non-HSA depository accounts" do
+    # `@account` is the checking depository fixture; `tax_treatment` is
+    # `nil` (no subtype override), which `taxable?` reads as true.
     assert @account.taxable?
     assert_not @account.tax_advantaged?
   end

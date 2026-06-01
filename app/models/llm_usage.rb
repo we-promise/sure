@@ -52,7 +52,7 @@ class LlmUsage < ApplicationRecord
   # Calculate cost for a model and token usage
   # Provider is automatically inferred from the model using the pricing map
   # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers)
-  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:)
+  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:, cache_creation_tokens: 0, cache_read_tokens: 0)
     provider = infer_provider(model)
     pricing = find_pricing(provider, model)
 
@@ -65,8 +65,16 @@ class LlmUsage < ApplicationRecord
     prompt_cost = (prompt_tokens * pricing[:prompt]) / 1_000_000.0
     completion_cost = (completion_tokens * pricing[:completion]) / 1_000_000.0
 
-    cost = (prompt_cost + completion_cost).round(6)
-    Rails.logger.info("Calculated cost for #{provider}/#{model}: $#{cost} (#{prompt_tokens} prompt tokens, #{completion_tokens} completion tokens)")
+    # Anthropic prompt-cache tokens bill relative to the input rate: cache
+    # writes at 1.25x, cache reads at 0.1x. Only Anthropic rows populate these
+    # columns (OpenAI leaves them null → 0), so this is a no-op elsewhere.
+    # Without this, estimated_cost under-reports every cached call vs Anthropic's
+    # actual bill (see #1984 review).
+    cache_creation_cost = (cache_creation_tokens.to_i * pricing[:prompt] * 1.25) / 1_000_000.0
+    cache_read_cost = (cache_read_tokens.to_i * pricing[:prompt] * 0.10) / 1_000_000.0
+
+    cost = (prompt_cost + completion_cost + cache_creation_cost + cache_read_cost).round(6)
+    Rails.logger.info("Calculated cost for #{provider}/#{model}: $#{cost} (#{prompt_tokens} prompt + #{cache_creation_tokens.to_i} cache-write + #{cache_read_tokens.to_i} cache-read input, #{completion_tokens} completion)")
     cost
   end
 

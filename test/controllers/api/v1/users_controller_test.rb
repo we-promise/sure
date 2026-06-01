@@ -123,13 +123,22 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal @user.family.id, body["family_id"]
     assert_includes %w[complete data_remaining], body["status"]
     assert_equal body["counts"].values.sum.zero?, body["reset_complete"]
-    assert body["counts"].key?("accounts")
-    assert body["counts"].key?("categories")
-    assert body["counts"].key?("tags")
-    assert body["counts"].key?("merchants")
-    assert body["counts"].key?("plaid_items")
-    assert body["counts"].key?("imports")
-    assert body["counts"].key?("budgets")
+    assert_equal expected_reset_count_keys.sort, body["counts"].keys.sort
+  end
+
+  test "reset status ignores the follow-up family sync after reset" do
+    family = @user.family
+    Provider::Registry.stubs(:plaid_provider_for_region).returns(nil)
+    Family::FinancialDataReset.new(family: family, dry_run: false, confirmed: true).call
+    family.syncs.create!
+
+    get "/api/v1/users/reset/status", headers: api_headers(@read_only_api_key)
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal "complete", body["status"]
+    assert_equal true, body["reset_complete"]
+    assert_not body["counts"].key?("syncs")
   end
 
   # -- Delete account --------------------------------------------------------
@@ -185,5 +194,9 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
+    end
+
+    def expected_reset_count_keys
+      Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
     end
 end

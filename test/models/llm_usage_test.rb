@@ -48,4 +48,32 @@ class LlmUsageTest < ActiveSupport::TestCase
     # $1 in + $5 out = $6.00
     assert_in_delta 6.0, cost, 0.0001
   end
+
+  test "calculate_cost prices Anthropic cache tokens relative to the input rate" do
+    # Sonnet input is $3/MTok → cache write 1.25x = $3.75/MTok, read 0.1x = $0.30/MTok.
+    write = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 0, completion_tokens: 0, cache_creation_tokens: 1_000_000)
+    assert_in_delta 3.75, write, 0.0001
+
+    read = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 0, completion_tokens: 0, cache_read_tokens: 1_000_000)
+    assert_in_delta 0.30, read, 0.0001
+  end
+
+  test "calculate_cost matches Anthropic's bill for a cached chat turn (issue #1984)" do
+    # Real tokens from the review: ignoring cache tokens under-reports ($0.0328 vs $0.0355).
+    cost = LlmUsage.calculate_cost(
+      model: "claude-sonnet-4-6",
+      prompt_tokens: 8082, completion_tokens: 572,
+      cache_creation_tokens: 435, cache_read_tokens: 3502
+    )
+    assert_in_delta 0.035508, cost, 0.0001
+
+    without_cache = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 8082, completion_tokens: 572)
+    assert cost > without_cache, "cache tokens must add cost"
+  end
+
+  test "calculate_cost treats nil cache tokens as zero (OpenAI rows)" do
+    # gpt-4.1 input is $2/MTok; nil cache columns must not blow up or add cost.
+    cost = LlmUsage.calculate_cost(model: "gpt-4.1", prompt_tokens: 1_000_000, completion_tokens: 0, cache_creation_tokens: nil, cache_read_tokens: nil)
+    assert_in_delta 2.0, cost, 0.0001
+  end
 end

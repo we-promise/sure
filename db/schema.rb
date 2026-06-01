@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_25_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -923,6 +923,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_120000) do
     t.jsonb "extracted_data"
     t.jsonb "expected_record_counts", default: {}, null: false
     t.jsonb "readback_verification", default: {}, null: false
+    t.uuid "account_statement_id"
+    t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
@@ -1564,6 +1566,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_120000) do
     t.datetime "updated_at", null: false
     t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
+    t.jsonb "raw_balances_payload", default: []
     t.index ["snaptrade_item_id", "snaptrade_account_id"], name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", unique: true, where: "(snaptrade_account_id IS NOT NULL)"
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
   end
@@ -1932,6 +1935,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_120000) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
+  add_foreign_key "imports", "account_statements", on_delete: :nullify
   add_foreign_key "imports", "families"
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
