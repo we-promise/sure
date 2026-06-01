@@ -89,27 +89,46 @@ class SimplefinItem::SyncerTest < ActiveSupport::TestCase
     stub_sync_callbacks
     Account.any_instance.stubs(:perform_sync)
 
-    performed_child = false
+    enqueued_child_syncs = []
 
     SyncJob.expects(:perform_later).twice.with do |child_sync|
       assert_equal 2, sync.children.reload.count
-
-      unless performed_child
-        performed_child = true
-        child_sync.perform
-        assert_equal "syncing", sync.reload.status
-      end
-
+      enqueued_child_syncs << child_sync
       true
     end
 
     sync.perform
+
+    assert_equal 2, enqueued_child_syncs.size
+
+    enqueued_child_syncs.first.perform
 
     child_statuses = sync.children.reload.map(&:status)
 
     assert_equal 1, child_statuses.count("completed")
     assert_equal 1, child_statuses.count("pending")
     assert_equal "syncing", sync.reload.status
+  end
+
+  test "schedule account syncs removes deferred children when enqueue fails" do
+    create_linked_account(
+      name: "SimpleFIN Linked Savings",
+      account_id: "sf-syncer-savings"
+    )
+
+    sync = Sync.create!(syncable: @simplefin_item)
+
+    SyncJob.expects(:perform_later).once.with do |_child_sync|
+      assert_equal 2, sync.children.reload.count
+      true
+    end.raises(StandardError.new("queue unavailable"))
+
+    error = assert_raises(StandardError) do
+      @simplefin_item.schedule_account_syncs(parent_sync: sync)
+    end
+
+    assert_equal "queue unavailable", error.message
+    assert_equal 0, sync.children.reload.count
   end
 
   private

@@ -233,16 +233,21 @@ class SimplefinItem < ApplicationRecord
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     syncs_to_enqueue = []
 
-    accounts.each do |account|
-      account.sync_later(
-        parent_sync: parent_sync,
-        window_start_date: window_start_date,
-        window_end_date: window_end_date,
-        enqueue: false
-      ) { |sync| syncs_to_enqueue << sync }
-    end
+    begin
+      accounts.each do |account|
+        account.sync_later(
+          parent_sync: parent_sync,
+          window_start_date: window_start_date,
+          window_end_date: window_end_date,
+          enqueue: false
+        ) { |sync| syncs_to_enqueue << sync }
+      end
 
-    syncs_to_enqueue.each { |sync| SyncJob.perform_later(sync) }
+      syncs_to_enqueue.each { |sync| SyncJob.perform_later(sync) }
+    rescue
+      cleanup_deferred_account_syncs(syncs_to_enqueue)
+      raise
+    end
   end
 
   def upsert_simplefin_snapshot!(accounts_snapshot)
@@ -469,6 +474,19 @@ class SimplefinItem < ApplicationRecord
   end
 
   private
+    def cleanup_deferred_account_syncs(syncs)
+      syncs.each do |sync|
+        sync.reload
+        sync.destroy! if sync.pending?
+      rescue ActiveRecord::RecordNotFound
+        next
+      rescue => e
+        Rails.logger.warn(
+          "SimplefinItem#schedule_account_syncs cleanup failed for sync #{sync.id}: #{e.class} - #{e.message}"
+        )
+      end
+    end
+
     # Parse sync_stats, handling cases where it might be a raw JSON string
     # (e.g., from console testing or bypassed serialization)
     def parse_sync_stats(sync_stats)
