@@ -646,4 +646,28 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(0, @family.currency), totals.transfer_inflow_money
     assert_equal Money.new(0, @family.currency), totals.transfer_outflow_money
   end
+
+  test "status filter matches pending transactions for every supported provider" do
+    confirmed = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    # One pending transaction per provider in PENDING_PROVIDERS. Regression for the
+    # status filter only checking simplefin/plaid/lunchflow and silently dropping
+    # enable_banking pending transactions.
+    pending_by_provider = Transaction::PENDING_PROVIDERS.index_with do |provider|
+      entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+      entry.entryable.update!(extra: { provider => { "pending" => true } })
+      entry.entryable.id
+    end
+
+    pending_ids = Transaction::Search.new(@family, filters: { status: [ "pending" ] }).transactions_scope.pluck(:id)
+    confirmed_ids = Transaction::Search.new(@family, filters: { status: [ "confirmed" ] }).transactions_scope.pluck(:id)
+
+    pending_by_provider.each do |provider, txn_id|
+      assert_includes pending_ids, txn_id, "#{provider} pending txn should match the pending filter"
+      assert_not_includes confirmed_ids, txn_id, "#{provider} pending txn should be excluded from the confirmed filter"
+    end
+
+    assert_includes confirmed_ids, confirmed.entryable.id
+    assert_not_includes pending_ids, confirmed.entryable.id
+  end
 end
