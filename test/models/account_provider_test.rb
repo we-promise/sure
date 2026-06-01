@@ -146,6 +146,25 @@ class AccountProviderTest < ActiveSupport::TestCase
     assert PlaidAccount.exists?(plaid_account_id)
   end
 
+  test "prevents linking a manual-only accountable type to a sync provider" do
+    other_liability_account = accounts(:other_liability)
+    assert OtherLiability.manual_only?, "OtherLiability should be manual-only"
+
+    link = AccountProvider.new(
+      account: other_liability_account,
+      provider: @plaid_account
+    )
+
+    assert_not link.valid?
+    assert_includes link.errors[:account].to_sentence, "manual-only"
+  end
+
+  test "allows linking a non-manual-only accountable type to a sync provider" do
+    link = AccountProvider.new(account: @account, provider: @plaid_account)
+
+    assert link.valid?
+  end
+
   test "destroying account_provider destroys coinstats provider account" do
     coinstats_item = CoinstatsItem.create!(
       family: @family,

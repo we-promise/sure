@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 class IndexaCapitalItemsController < ApplicationController
-  ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
+  # OtherLiability (and any other manual-only type) is intentionally excluded:
+  # it must never be linked to a sync provider. See Accountable::MANUAL_ONLY_TYPES
+  # and issue #1216.
+  ALLOWED_ACCOUNTABLE_TYPES = (%w[Depository CreditCard Investment Loan OtherAsset Crypto Property Vehicle] - Accountable::MANUAL_ONLY_TYPES).freeze
 
   before_action :set_indexa_capital_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]

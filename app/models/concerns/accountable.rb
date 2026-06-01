@@ -3,12 +3,23 @@ module Accountable
 
   TYPES = %w[Depository Investment Crypto Property Vehicle OtherAsset CreditCard Loan OtherLiability]
 
+  # Account types that may only be created manually and must never be linked to
+  # or created by a sync provider. Providers only infer liability balance
+  # inversion for CreditCard and Loan, so linking a provider to one of these
+  # would skip that handling and produce an incorrect (non-inverted) balance.
+  # See issue #1216.
+  MANUAL_ONLY_TYPES = %w[OtherLiability].freeze
+
   # Define empty hash to ensure all accountables have this defined
   SUBTYPES = {}.freeze
 
   def self.from_type(type)
     return nil unless TYPES.include?(type)
     type.constantize
+  end
+
+  def self.manual_only?(type)
+    MANUAL_ONLY_TYPES.include?(type.to_s)
   end
 
   included do
@@ -18,6 +29,12 @@ module Accountable
   end
 
   class_methods do
+    # Whether this accountable type can only be created manually (i.e. it must
+    # never be linked to or created by a sync provider). See MANUAL_ONLY_TYPES.
+    def manual_only?
+      Accountable.manual_only?(name)
+    end
+
     def classification
       raise NotImplementedError, "Accountable must implement #classification"
     end
