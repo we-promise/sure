@@ -22,4 +22,3 @@ class ChangeBudgetsUserFkToCascade < ActiveRecord::Migration[7.2]
     add_foreign_key :budgets, :users, on_delete: :nullify
   end
 end
-
