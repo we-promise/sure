@@ -50,9 +50,11 @@ module AccountableResource
 
     # Prefer the form-carried return_to, then the session value StoreLocation
     # captured from `?return_to=` (survives multi-step flows where the param
-    # isn't threaded), then the account page. Rails blocks external-host
-    # redirects, so a hostile return_to can't open-redirect.
-    redirect_to account_params[:return_to].presence || session[:return_to].presence || @account,
+    # isn't threaded), then the account page. The form param is sanitized here
+    # (the session value is already filtered at store time); the session is
+    # consumed with delete so a stale value can't leak into a later flow.
+    return_path = safe_return_to(account_params[:return_to]) || session.delete(:return_to).presence || @account
+    redirect_to return_path,
                 notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 

@@ -29,4 +29,13 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to budgets_path
   end
+
+  test "create ignores an external return_to (open-redirect guard)" do
+    post depositories_path, params: {
+      account: { name: "Evil RT Checking", currency: "USD", balance: 100, accountable_type: "Depository", return_to: "https://evil.example/phish" }
+    }
+
+    created = Account.order(:created_at).last
+    assert_redirected_to account_path(created) # not the external URL
+  end
 end

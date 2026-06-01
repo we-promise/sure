@@ -219,4 +219,31 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert draft_account.active?
     assert_redirected_to transactions_path
   end
+
+  test "address update ignores an external stored return_to (open-redirect guard)" do
+    draft_account = Account.create!(
+      family: @user.family,
+      name: "Draft Property Evil",
+      accountable: Property.new,
+      status: "draft",
+      balance: 500000,
+      currency: "USD"
+    )
+
+    # A hostile ?return_to is rejected at store time, so the wizard falls back
+    # to the account page rather than stream-redirecting off-site.
+    get new_account_path(return_to: "https://evil.example/phish")
+
+    patch update_address_property_path(draft_account), params: {
+      property: {
+        address_attributes: {
+          line1: "1 Safe St", locality: "NYC", region: "NY", country: "US", postal_code: "10001"
+        }
+      }
+    }
+
+    draft_account.reload
+    assert draft_account.active?
+    assert_redirected_to account_path(draft_account)
+  end
 end
