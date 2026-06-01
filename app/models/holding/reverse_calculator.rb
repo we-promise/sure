@@ -1,4 +1,6 @@
 class Holding::ReverseCalculator
+  include Holding::TradeCalculatorHelpers
+
   attr_reader :account, :portfolio_snapshot
 
   def initialize(account, portfolio_snapshot:, security_ids: nil)
@@ -96,14 +98,6 @@ class Holding::ReverseCalculator
 
         @cost_basis_snapshots[trade.security_id] << [ trade_entry.date, average_cost ]
       end
-    end
-
-    # Converts a trade's price into the account's currency (falling back to the
-    # raw price when no exchange rate is available).
-    def converted_trade_price(trade)
-      Money.new(trade.price, trade.currency).exchange_to(account.currency).amount
-    rescue Money::ConversionError
-      trade.price
     end
 
     def cost_basis_for(security_id, date)

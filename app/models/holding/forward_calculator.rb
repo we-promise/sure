@@ -1,4 +1,6 @@
 class Holding::ForwardCalculator
+  include Holding::TradeCalculatorHelpers
+
   attr_reader :account
 
   def initialize(account, security_ids: nil)
@@ -86,14 +88,6 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         @cost_basis_trackers[trade.security_id].apply(converted_trade_price(trade), trade.qty)
       end
-    end
-
-    # Converts a trade's price into the account's currency (falling back to the
-    # raw price when no exchange rate is available).
-    def converted_trade_price(trade)
-      Money.new(trade.price, trade.currency).exchange_to(account.currency).amount
-    rescue Money::ConversionError
-      trade.price
     end
 
     # Returns the current cost basis for a security, or nil if nothing is held.

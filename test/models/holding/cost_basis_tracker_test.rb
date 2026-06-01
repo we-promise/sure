@@ -50,4 +50,17 @@ class Holding::CostBasisTrackerTest < ActiveSupport::TestCase
 
     assert_nil @tracker.average_cost
   end
+
+  test "coerces float quantities so a full liquidation still resets" do
+    # Float inputs must not accumulate rounding error that leaves a tiny
+    # residual quantity and bypasses the reset-on-full-liquidation.
+    @tracker.apply(100.0, 10.0)
+    @tracker.apply(300.0, -10.0)
+
+    assert_nil @tracker.average_cost
+
+    @tracker.apply(300.0, 10.0)
+
+    assert_equal BigDecimal("300"), @tracker.average_cost
+  end
 end

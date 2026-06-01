@@ -18,16 +18,17 @@ class Holding::CostBasisTracker
 
   # Applies a trade by its signed quantity: positive is a buy, negative a sell.
   def apply(price, qty)
-    return if qty.nil? || qty.zero?
+    return if qty.nil?
 
-    if qty.positive?
-      buy(price, qty)
-    else
-      sell(qty)
-    end
+    qty = qty.to_d
+    return if qty.zero?
+
+    qty.positive? ? buy(price, qty) : sell(qty)
   end
 
   def buy(price, qty)
+    price = price&.to_d
+    qty = qty&.to_d
     return if price.nil? || qty.nil? || !qty.positive?
 
     @total_cost += price * qty
@@ -35,6 +36,7 @@ class Holding::CostBasisTracker
   end
 
   def sell(qty)
+    qty = qty&.to_d
     return if qty.nil? || qty.zero? || @total_qty.zero?
 
     # Relieve at the current average cost so the per-share average is unchanged.
@@ -43,6 +45,8 @@ class Holding::CostBasisTracker
     @total_cost -= average_cost * relieved_qty
     @total_qty -= relieved_qty
 
+    # Coercing to BigDecimal keeps arithmetic exact, so a full liquidation lands
+    # on exactly zero and the reset fires (Float math could leave a tiny remainder).
     reset if @total_qty <= 0
   end
 
