@@ -1,14 +1,18 @@
 <%= content_for :page_title, t(".title") %>
 <%= content_for :page_actions do %>
-  <%= render DS::Link.new(
-    text: t(".merge"),
-    variant: "outline",
-    href: merge_family_merchants_path,
-    frame: :modal
-  ) %>
+  <%= render DS::Menu.new do |menu| %>
+    <% menu.with_item(
+        variant: "link",
+        text: t(".merge"),
+        href: merge_family_merchants_path,
+        frame: :modal,
+        icon: "combine") %>
+      %>
+  <% end %>
   <%= render DS::Link.new(
     text: t(".new"),
     variant: "primary",
+    icon: "plus",
     href: new_family_merchant_path,
     frame: :modal
   ) %>

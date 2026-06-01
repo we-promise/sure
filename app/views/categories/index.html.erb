@@ -2,6 +2,12 @@
 <%= content_for :page_actions do %>
   <%= render DS::Menu.new do |menu| %>
     <% menu.with_item(
+        variant: "link",
+        text: t(".merge"),
+        href: merge_categories_path,
+        frame: :modal,
+        icon: "combine") %>
+    <% menu.with_item(
         variant: "button",
         text: t(".delete_all"),
         href: destroy_all_categories_path,
@@ -9,14 +15,6 @@
         icon: "trash-2",
         confirm: CustomConfirm.for_resource_deletion("all categories", high_severity: true)) %>
   <% end %>
-
-  <%= render DS::Link.new(
-    text: t(".merge"),
-    variant: "outline",
-    icon: "combine",
-    href: merge_categories_path,
-    frame: :modal
-  ) %>
 
   <%= render DS::Link.new(
     text: t(".new"),
