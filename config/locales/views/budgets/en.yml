@@ -76,7 +76,7 @@ en:
       confirm: "Confirm"
     no_categories:
       oops: "Oops!"
-      no_categories_message: "You have not created or assigned any expense categories to your transactions yet."
+      no_categories_message: "You have not created or assigned any spending categories to your transactions yet."
       use_defaults: "Use defaults (recommended)"
       new_category: "New category"
     index:

@@ -6,8 +6,8 @@ http_interactions:
     body:
       encoding: UTF-8
       string: '{"model":"gpt-4.1-mini","input":[{"role":"developer","content":"Here
-        are the user''s available categories in JSON format:\n\n```json\n[{\"id\":\"shopping_id\",\"name\":\"Shopping\",\"is_subcategory\":false,\"parent_id\":null,\"classification\":\"expense\"},{\"id\":\"subscriptions_id\",\"name\":\"Subscriptions\",\"is_subcategory\":true,\"parent_id\":null,\"classification\":\"expense\"},{\"id\":\"restaurants_id\",\"name\":\"Restaurants\",\"is_subcategory\":false,\"parent_id\":null,\"classification\":\"expense\"},{\"id\":\"fast_food_id\",\"name\":\"Fast
-        Food\",\"is_subcategory\":true,\"parent_id\":\"restaurants_id\",\"classification\":\"expense\"},{\"id\":\"income_id\",\"name\":\"Income\",\"is_subcategory\":false,\"parent_id\":null,\"classification\":\"income\"}]\n```\n\nUse
+        are the user''s available categories in JSON format:\n\n```json\n[{\"id\":\"shopping_id\",\"name\":\"Shopping\",\"is_subcategory\":false,\"parent_id\":null},{\"id\":\"subscriptions_id\",\"name\":\"Subscriptions\",\"is_subcategory\":true,\"parent_id\":null},{\"id\":\"restaurants_id\",\"name\":\"Restaurants\",\"is_subcategory\":false,\"parent_id\":null},{\"id\":\"fast_food_id\",\"name\":\"Fast
+        Food\",\"is_subcategory\":true,\"parent_id\":\"restaurants_id\"},{\"id\":\"income_id\",\"name\":\"Income\",\"is_subcategory\":false,\"parent_id\":null}]\n```\n\nUse
         the available categories to auto-categorize the following transactions:\n\n```json\n[{\"id\":\"1\",\"name\":\"McDonalds\",\"amount\":20,\"classification\":\"expense\",\"merchant\":\"McDonalds\",\"hint\":\"Fast
         Food\"},{\"id\":\"2\",\"name\":\"Amazon purchase\",\"amount\":100,\"classification\":\"expense\",\"merchant\":\"Amazon\"},{\"id\":\"3\",\"name\":\"Netflix
         subscription\",\"amount\":10,\"classification\":\"expense\",\"merchant\":\"Netflix\",\"hint\":\"Subscriptions\"},{\"id\":\"4\",\"name\":\"paycheck\",\"amount\":3000,\"classification\":\"income\"},{\"id\":\"5\",\"name\":\"Italian
@@ -22,9 +22,9 @@ http_interactions:
         job is to auto-categorize\neach transaction.\n\nClosely follow ALL the rules
         below while auto-categorizing:\n\n- Return 1 result per transaction\n- Correlate
         each transaction by ID (transaction_id)\n- Attempt to match the most specific
-        category possible (i.e. subcategory over parent category)\n- Category and
-        transaction classifications should match (i.e. if transaction is an \"expense\",
-        the category must have classification of \"expense\")\n- If you don''t know
+        category possible (i.e. subcategory over parent category)\n- Any category
+        can be used for any transaction regardless of whether the transaction is income
+        or expense\n- If you don''t know
         the category, return \"null\"\n  - You should always favor \"null\" over false
         positives\n  - Be slightly pessimistic.  Only match a category if you''re
         60%+ confident it is the correct one.\n- Each transaction has varying metadata
@@ -91,7 +91,7 @@ http_interactions:
           "status": "completed",
           "error": null,
           "incomplete_details": null,
-          "instructions": "You are an assistant to a consumer personal finance app.  You will be provided a list\nof the user's transactions and a list of the user's categories.  Your job is to auto-categorize\neach transaction.\n\nClosely follow ALL the rules below while auto-categorizing:\n\n- Return 1 result per transaction\n- Correlate each transaction by ID (transaction_id)\n- Attempt to match the most specific category possible (i.e. subcategory over parent category)\n- Category and transaction classifications should match (i.e. if transaction is an \"expense\", the category must have classification of \"expense\")\n- If you don't know the category, return \"null\"\n  - You should always favor \"null\" over false positives\n  - Be slightly pessimistic.  Only match a category if you're 60%+ confident it is the correct one.\n- Each transaction has varying metadata that can be used to determine the category\n  - Note: \"hint\" comes from 3rd party aggregators and typically represents a category name that\n    may or may not match any of the user-supplied categories\n",
+          "instructions": "You are an assistant to a consumer personal finance app.  You will be provided a list\nof the user's transactions and a list of the user's categories.  Your job is to auto-categorize\neach transaction.\n\nClosely follow ALL the rules below while auto-categorizing:\n\n- Return 1 result per transaction\n- Correlate each transaction by ID (transaction_id)\n- Attempt to match the most specific category possible (i.e. subcategory over parent category)\n- Any category can be used for any transaction regardless of whether the transaction is income or expense\n- If you don't know the category, return \"null\"\n  - You should always favor \"null\" over false positives\n  - Be slightly pessimistic.  Only match a category if you're 60%+ confident it is the correct one.\n- Each transaction has varying metadata that can be used to determine the category\n  - Note: \"hint\" comes from 3rd party aggregators and typically represents a category name that\n    may or may not match any of the user-supplied categories\n",
           "max_output_tokens": null,
           "model": "gpt-4.1-mini-2025-04-14",
           "output": [
