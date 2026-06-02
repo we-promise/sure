@@ -57,6 +57,31 @@ void main() {
       expect(restored.syncStatus, SyncStatus.synced);
     });
 
+    test('preserves omitted tag state for stored rows without tag columns', () {
+      final restored = OfflineTransaction.fromDatabaseMap({
+        'server_id': 'tx_1',
+        'local_id': 'local_1',
+        'account_id': 'acct_1',
+        'name': 'Coffee',
+        'date': '2026-06-01',
+        'amount': r'$4.50',
+        'currency': 'USD',
+        'nature': 'expense',
+        'notes': null,
+        'category_id': null,
+        'category_name': null,
+        'merchant_id': null,
+        'merchant_name': null,
+        'sync_status': 'synced',
+        'created_at': '2026-06-01T00:00:00.000',
+        'updated_at': '2026-06-01T00:00:00.000',
+      });
+
+      expect(restored.tagsProvided, false);
+      expect(restored.tagIds, isEmpty);
+      expect(restored.tagNames, isEmpty);
+    });
+
     test('parses flat merchant and tag fields', () {
       final transaction = Transaction.fromJson({
         'id': 'tx_1',

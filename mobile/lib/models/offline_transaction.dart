@@ -69,6 +69,11 @@ class OfflineTransaction extends Transaction {
   }
 
   factory OfflineTransaction.fromDatabaseMap(Map<String, dynamic> map) {
+    final tagIds = _decodeStringList(map['tag_ids'] as String?);
+    final tagNames = _decodeStringList(map['tag_names'] as String?);
+    final tagsProvided =
+        map.containsKey('tag_ids') || map.containsKey('tag_names');
+
     return OfflineTransaction(
       id: map['server_id'] as String?,
       localId: map['local_id'] as String,
@@ -83,9 +88,9 @@ class OfflineTransaction extends Transaction {
       categoryName: map['category_name'] as String?,
       merchantId: map['merchant_id'] as String?,
       merchantName: map['merchant_name'] as String?,
-      tagIds: _decodeStringList(map['tag_ids'] as String?),
-      tagNames: _decodeStringList(map['tag_names'] as String?),
-      tagsProvided: true,
+      tagIds: tagIds,
+      tagNames: tagNames,
+      tagsProvided: tagsProvided,
       syncStatus: _parseSyncStatus(map['sync_status'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
