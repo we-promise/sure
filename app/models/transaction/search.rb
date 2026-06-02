@@ -12,6 +12,7 @@ class Transaction::Search
   attribute :start_date, :string
   attribute :end_date, :string
   attribute :categories, array: true
+  attribute :category_ids, array: true
   attribute :merchants, array: true
   attribute :tags, array: true
   attribute :active_accounts_only, :boolean, default: true
@@ -34,6 +35,7 @@ class Transaction::Search
 
       query = apply_active_accounts_filter(query, active_accounts_only)
       query = apply_category_filter(query, categories)
+      query = apply_category_ids_filter(query, category_ids)
       query = apply_type_filter(query, types)
       query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
@@ -119,6 +121,23 @@ class Transaction::Search
       end
     end
 
+
+    # ID-based variant of apply_category_filter. Deep-links from the donut /
+    # cashflow charts thread the category id through the URL so renamed or
+    # name-collided categories still filter to the clicked slice. Parent ids
+    # match the parent itself and any of its child subcategories, mirroring
+    # the name-based filter's parent-inheritance semantics.
+    def apply_category_ids_filter(query, category_ids)
+      return query unless category_ids.present?
+
+      scoped_ids = family.categories.where(id: category_ids).pluck(:id)
+      return query.none if scoped_ids.empty?
+
+      query.left_joins(:category).where(
+        "categories.id IN (?) OR categories.parent_id IN (?)",
+        scoped_ids, scoped_ids
+      )
+    end
 
     def apply_category_filter(query, categories)
       return query unless categories.present?
