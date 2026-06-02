@@ -8,7 +8,7 @@
           </div>
           <div class="space-y-2">
             <% if (controller_name == "sessions" && action_name == "new") || (controller_name == "registrations" && action_name == "new") %>
-              <div class="space-y-3 md:hidden w-full my-4">
+              <div class="space-y-3 w-full my-4">
                 <div class="bg-surface-inset rounded-lg p-1 flex">
                   <%= link_to new_session_path,
       class: "w-1/2 px-2 py-1 rounded-md text-sm text-center font-medium #{current_page?(new_session_path) ? 'bg-surface shadow-sm text-primary' : 'text-secondary'}" do %>
@@ -20,15 +20,6 @@
                   <% end %>
                 </div>
               </div>
-            <% end %>
-            <% if controller_name == "sessions" %>
-              <p class="text-sm text-center hidden md:block">
-                <%= tag.span t("layouts.auth.no_account", product_name: product_name), class: "text-secondary" %> <%= link_to t("layouts.auth.sign_up"), new_registration_path, class: "font-medium text-primary hover:underline transition" %>
-              </p>
-            <% elsif controller_name == "registrations" %>
-              <p class="text-sm text-center text-secondary hidden md:block">
-                <%= t("layouts.auth.existing_account") %> <%= link_to t("layouts.auth.sign_in"), new_session_path, class: "font-medium text-primary hover:underline transition" %>
-              </p>
             <% end %>
           </div>
         </div>
