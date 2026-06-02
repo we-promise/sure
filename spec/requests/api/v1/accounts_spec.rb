@@ -230,6 +230,15 @@ RSpec.describe 'API V1 Accounts', type: :request do
         run_test!
       end
 
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { checking_account.id }
+        let(:'X-Api-Key') { 'invalid' }
+        let(:body) { { account: { name: 'x' } } }
+        run_test!
+      end
+
       response '403', 'insufficient scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -253,6 +262,14 @@ RSpec.describe 'API V1 Accounts', type: :request do
 
       response '200', 'account deleted' do
         let(:id) { checking_account.id }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { checking_account.id }
+        let(:'X-Api-Key') { 'invalid' }
         run_test!
       end
 
