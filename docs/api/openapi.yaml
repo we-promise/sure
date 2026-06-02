@@ -3169,6 +3169,12 @@ paths:
       responses:
         '200':
           description: account updated
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: insufficient scope
           content:
@@ -3202,6 +3208,12 @@ paths:
       responses:
         '200':
           description: account deleted
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: insufficient scope
           content:
