@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {'name': 'Ghana',        'code': 'GH'},
   ];
 
-  static const _availableCountryCodes = {'KE'};
+  static const _availableCountryCodes = {'KE', 'RW', 'ZA'};
 
   String get _selectedCountryName => _supportedCountries.firstWhere(
         (c) => c['code'] == _selectedCountryCode,
