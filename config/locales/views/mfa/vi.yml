@@ -1,0 +1,41 @@
+---
+vi:
+  mfa:
+    backup_codes:
+      backup_codes_description: Mỗi mã chỉ có thể được sử dụng một lần. Hãy giữ các mã này an toàn và bảo mật.
+      backup_codes_title: Mã dự phòng của bạn
+      continue: Tiếp tục đến Cài đặt bảo mật
+      description: Lưu trữ các mã dự phòng này ở nơi an toàn - bạn sẽ cần chúng nếu mất quyền truy cập vào ứng dụng xác thực
+      page_title: Mã dự phòng
+      title: Lưu mã dự phòng của bạn
+    create:
+      invalid_code: Mã xác minh không hợp lệ. Vui lòng thử lại.
+    disable:
+      success: Xác thực hai yếu tố đã bị tắt
+    new:
+      code_label: Mã xác minh
+      code_placeholder: Nhập mã 6 chữ số
+      description: Tăng cường bảo mật tài khoản của bạn bằng cách thiết lập xác thực hai yếu tố
+      page_title: Thiết lập xác thực hai yếu tố
+      scan_description: Sử dụng ứng dụng xác thực như Google Authenticator hoặc 1Password để quét mã QR này
+      scan_title: 1. Quét mã QR
+      secret_description: Nếu bạn không thể quét mã QR, hãy nhập mã bí mật này theo cách thủ công vào ứng dụng xác thực của bạn
+      secret_title: Mã nhập thủ công
+      title: Thiết lập xác thực hai yếu tố
+      verify_button: Xác minh và bật 2FA
+      verify_description: Nhập mã 6 chữ số từ ứng dụng xác thực của bạn
+      verify_title: 2. Nhập mã xác minh
+    verify:
+      description: Nhập mã từ ứng dụng xác thực của bạn để tiếp tục
+      or: hoặc
+      page_title: Xác minh xác thực hai yếu tố
+      title: Xác thực hai yếu tố
+      verify_button: Xác minh
+      webauthn_button: Sử dụng khóa passkey hoặc khóa bảo mật
+      webauthn_unsupported: Trình duyệt này không hỗ trợ passkey hoặc khóa bảo mật.
+    verify_code:
+      invalid_code: Mã xác thực không hợp lệ. Vui lòng thử lại.
+    verify_webauthn:
+      invalid_credential: Không thể xác minh passkey hoặc khóa bảo mật đó. Vui lòng thử lại.
+    webauthn_options:
+      unavailable: Không có passkey hoặc khóa bảo mật nào cho tài khoản này.

@@ -2,6 +2,12 @@
 <%= content_for :page_actions do %>
   <%= render DS::Menu.new do |menu| %>
     <% menu.with_item(
+        variant: "link",
+        text: t(".merge"),
+        href: merge_categories_path,
+        frame: :modal,
+        icon: "combine") %>
+    <% menu.with_item(
         variant: "button",
         text: t(".delete_all"),
         href: destroy_all_categories_path,
@@ -22,7 +28,11 @@
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <% if @categories.any? %>
     <div class="space-y-4">
-      <%= render "categories/category_list_group", title: t(".categories"), categories: @categories %>
+      <%= render "categories/category_list_group",
+                 title: t(".categories"),
+                 categories: @categories,
+                 category_groups: @category_groups,
+                 category_ids_with_transactions: @category_ids_with_transactions %>
     </div>
   <% else %>
     <div class="flex justify-center items-center py-20">
