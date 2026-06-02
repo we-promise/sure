@@ -73,7 +73,7 @@ class DS::Disclosure < DesignSystemComponent
       # alpha-black-300 token used by the card variants for consistency.
       "list-none cursor-pointer focus-ring rounded-sm"
     else
-      "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-ring"
+      "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-ring min-h-11"
     end
   end
 end
