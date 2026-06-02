@@ -59,14 +59,18 @@ class DS::Pill < DesignSystemComponent
   end
 
   def palette
+    # Light-mode `text` is mixed 30% with black on top of the 700 stop so
+    # the 10–11px uppercase label still reads against the very pale 50
+    # background. Without the mix the perceptual contrast feels low even
+    # though the raw ratio passes WCAG.
     {
-      violet:  { bg: "var(--color-violet-50)",  bg_dark: "var(--color-violet-tint-10)",  text: "var(--color-violet-700)",  text_dark: "var(--color-violet-200)",  border: "var(--color-violet-200)",  dot: "var(--color-violet-500)",  fill: "var(--color-violet-500)" },
-      indigo:  { bg: "var(--color-indigo-50)",  bg_dark: "var(--color-indigo-tint-10)",  text: "var(--color-indigo-700)",  text_dark: "var(--color-indigo-200)",  border: "var(--color-indigo-200)",  dot: "var(--color-indigo-500)",  fill: "var(--color-indigo-500)" },
-      fuchsia: { bg: "var(--color-fuchsia-50)", bg_dark: "var(--color-fuchsia-tint-10)", text: "var(--color-fuchsia-700)", text_dark: "var(--color-fuchsia-200)", border: "var(--color-fuchsia-200)", dot: "var(--color-fuchsia-500)", fill: "var(--color-fuchsia-500)" },
-      amber:   { bg: "var(--color-yellow-50)",  bg_dark: "var(--color-yellow-tint-10)",  text: "var(--color-yellow-700)",  text_dark: "var(--color-yellow-200)",  border: "var(--color-yellow-200)",  dot: "var(--color-yellow-500)",  fill: "var(--color-yellow-500)" },
-      green:   { bg: "var(--color-green-50)",   bg_dark: "var(--color-green-tint-10)",   text: "var(--color-green-700)",   text_dark: "var(--color-green-200)",   border: "var(--color-green-200)",   dot: "var(--color-green-500)",   fill: "var(--color-green-500)" },
-      gray:    { bg: "var(--color-gray-100)",   bg_dark: "var(--color-gray-tint-10)",    text: "var(--color-gray-700)",    text_dark: "var(--color-gray-200)",    border: "var(--color-gray-200)",    dot: "var(--color-gray-500)",    fill: "var(--color-gray-500)" },
-      red:     { bg: "var(--color-red-50)",     bg_dark: "var(--color-red-tint-10)",     text: "var(--color-red-700)",     text_dark: "var(--color-red-200)",     border: "var(--color-red-200)",     dot: "var(--color-red-500)",     fill: "var(--color-red-500)" }
+      violet:  { bg: "var(--color-violet-50)",  bg_dark: "var(--color-violet-tint-10)",  text: "color-mix(in oklab, var(--color-violet-700), black 30%)",  text_dark: "var(--color-violet-200)",  border: "var(--color-violet-200)",  dot: "var(--color-violet-500)",  fill: "var(--color-violet-500)" },
+      indigo:  { bg: "var(--color-indigo-50)",  bg_dark: "var(--color-indigo-tint-10)",  text: "color-mix(in oklab, var(--color-indigo-700), black 30%)",  text_dark: "var(--color-indigo-200)",  border: "var(--color-indigo-200)",  dot: "var(--color-indigo-500)",  fill: "var(--color-indigo-500)" },
+      fuchsia: { bg: "var(--color-fuchsia-50)", bg_dark: "var(--color-fuchsia-tint-10)", text: "color-mix(in oklab, var(--color-fuchsia-700), black 30%)", text_dark: "var(--color-fuchsia-200)", border: "var(--color-fuchsia-200)", dot: "var(--color-fuchsia-500)", fill: "var(--color-fuchsia-500)" },
+      amber:   { bg: "var(--color-yellow-50)",  bg_dark: "var(--color-yellow-tint-10)",  text: "color-mix(in oklab, var(--color-yellow-700), black 30%)",  text_dark: "var(--color-yellow-200)",  border: "var(--color-yellow-200)",  dot: "var(--color-yellow-500)",  fill: "var(--color-yellow-500)" },
+      green:   { bg: "var(--color-green-50)",   bg_dark: "var(--color-green-tint-10)",   text: "color-mix(in oklab, var(--color-green-700), black 30%)",   text_dark: "var(--color-green-200)",   border: "var(--color-green-200)",   dot: "var(--color-green-500)",   fill: "var(--color-green-500)" },
+      gray:    { bg: "var(--color-gray-100)",   bg_dark: "var(--color-gray-tint-10)",    text: "color-mix(in oklab, var(--color-gray-700), black 30%)",    text_dark: "var(--color-gray-200)",    border: "var(--color-gray-200)",    dot: "var(--color-gray-500)",    fill: "var(--color-gray-500)" },
+      red:     { bg: "var(--color-red-50)",     bg_dark: "var(--color-red-tint-10)",     text: "color-mix(in oklab, var(--color-red-700), black 30%)",     text_dark: "var(--color-red-200)",     border: "var(--color-red-200)",     dot: "var(--color-red-500)",     fill: "var(--color-red-500)" }
     }[tone]
   end
 
