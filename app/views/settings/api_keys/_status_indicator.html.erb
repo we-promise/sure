@@ -1,5 +1,1 @@
-<%# Active-status dot indicator (the app's standard dot style). %>
-<span class="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-  <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
-  <%= t("settings.api_keys.shared.active") %>
-</span>
+<%= render DS::Pill.new(label: t("settings.api_keys.shared.active"), tone: :success, show_dot: true, marker: false) %>
