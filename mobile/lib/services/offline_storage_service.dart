@@ -28,10 +28,11 @@ class OfflineStorageService {
     String? serverId,
     SyncStatus syncStatus = SyncStatus.pending,
   }) async {
-    _log.info('OfflineStorage',
-        'saveTransaction called: name=$name, amount=$amount, accountId=$accountId, syncStatus=$syncStatus');
-
     final localId = _uuid.v4();
+
+    _log.info('OfflineStorage',
+        'saveTransaction called: localId=$localId, accountId=$accountId, syncStatus=$syncStatus');
+
     final transaction = OfflineTransaction(
       id: serverId,
       localId: localId,
