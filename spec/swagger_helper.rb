@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
+  reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
 
   config.openapi_specs = {
     'openapi.yaml' => {
@@ -1607,16 +1608,9 @@ RSpec.configure do |config|
               },
               counts: {
                 type: :object,
-                required: %w[accounts categories tags merchants plaid_items imports budgets],
-                properties: {
-                  accounts: { type: :integer, minimum: 0 },
-                  categories: { type: :integer, minimum: 0 },
-                  tags: { type: :integer, minimum: 0 },
-                  merchants: { type: :integer, minimum: 0 },
-                  plaid_items: { type: :integer, minimum: 0 },
-                  imports: { type: :integer, minimum: 0 },
-                  budgets: { type: :integer, minimum: 0 }
-                }
+                required: reset_count_keys,
+                additionalProperties: { type: :integer, minimum: 0 },
+                properties: reset_count_keys.index_with { { type: :integer, minimum: 0 } }
               }
             }
           }
