@@ -318,19 +318,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken == null) return;
-    final deletedCurrent = _selectedChatIds.contains(_chatId);
     await chatProvider.deleteMultipleChats(
       accessToken: accessToken,
       chatIds: _selectedChatIds.toList(),
     );
     if (!mounted) return;
+    // Sync _chatId from the provider's actual post-delete state rather than
+    // the pre-delete selection; deleteMultipleChats may partially fail so the
+    // current chat may still exist even if it was in the selection set.
     setState(() {
       _drawerSelectionMode = false;
       _selectedChatIds.clear();
-      if (deletedCurrent) _chatId = null;
+      _chatId = chatProvider.currentChat?.id;
     });
-    if (deletedCurrent) {
-      Provider.of<ChatProvider>(context, listen: false).clearCurrentChat();
+    // Only stop polling if the provider actually cleared currentChat.
+    if (chatProvider.currentChat == null) {
+      chatProvider.clearCurrentChat();
     }
   }
 
@@ -428,25 +431,28 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (chatProvider.chats.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'No chats yet.\nStart a new conversation!',
-                          textAlign: TextAlign.center,
-                          style:
-                              TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ),
-                    );
-                  }
                   return RefreshIndicator(
                     onRefresh: _loadChats,
                     child: ListView.builder(
                       padding: const EdgeInsets.only(top: 4),
-                      itemCount: chatProvider.chats.length,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: chatProvider.chats.isEmpty
+                          ? 1
+                          : chatProvider.chats.length,
                       itemBuilder: (context, index) {
+                        if (chatProvider.chats.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                'No chats yet.\nStart a new conversation!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant),
+                              ),
+                            ),
+                          );
+                        }
                         final chat = chatProvider.chats[index];
                         final isActive =
                             !_drawerSelectionMode && chat.id == _chatId;
