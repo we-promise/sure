@@ -55,10 +55,16 @@ jobs:
             CHART_VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
           fi
 
+          # Normalize APP_VERSION the same way CHART_VERSION is — appVersion
+          # must match the OCI image tag in GHCR, which is published without a
+          # leading `v`. Without this, a release on tag `v0.7.1-rc.1` writes
+          # `appVersion: "v0.7.1-rc.1"` into Chart.yaml / index.yaml, and Helm
+          # then fails to pull `ghcr.io/we-promise/sure:v0.7.1-rc.1` (the real
+          # tag is `0.7.1-rc.1`). See #2050.
           if [ -n "${{ inputs.app_version }}" ]; then
-            APP_VERSION="${{ inputs.app_version }}"
+            APP_VERSION="$(normalize_version "${{ inputs.app_version }}")"
           elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
-            APP_VERSION="${GITHUB_REF_NAME}"
+            APP_VERSION="$(normalize_version "${GITHUB_REF_NAME}")"
           else
             APP_VERSION="${CHART_VERSION}"
           fi
