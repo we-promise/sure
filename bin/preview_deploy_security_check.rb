@@ -416,9 +416,9 @@ assert(File.executable?(REDACTION_HELPER_PATH), "preview log redaction helper mu
   "registry\\.cloudflare\\.com/[^/]+/",
   "Authorization|Proxy-Authorization",
   "X-Auth-Key|X-Auth-Email|X-Api-Key|Api-Key",
-  "api_key|access_token|refresh_token|auth_token",
+  "api_key|access_token|refresh_token|auth_token|key|private_key",
   "CLOUDFLARE_ACCOUNT_ID=",
-  "CLOUDFLARE_API_TOKEN|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|AUTH_TOKEN",
+  "CLOUDFLARE_API_TOKEN|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|AUTH_TOKEN|PRIVATE_KEY",
   "<redacted-token>",
   "<redacted-account>"
 ].each { |needle| assert(redaction_helper_script.include?(needle), "preview log redaction helper must include #{needle.inspect}") }
