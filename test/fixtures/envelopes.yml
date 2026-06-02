@@ -1,0 +1,18 @@
+holidays:
+  family: dylan_family
+  category: food_and_drink
+  name: Holidays
+  monthly_contribution: 350
+  currency: USD
+  starts_on: <%= 2.months.ago.to_date.beginning_of_month %>
+  color: "#4da568"
+
+boiler_fund:
+  family: dylan_family
+  name: Boiler fund
+  monthly_contribution: 100
+  currency: USD
+  target_amount: 1200
+  target_date: <%= 10.months.from_now.to_date %>
+  starts_on: <%= 1.month.ago.to_date.beginning_of_month %>
+  color: "#6471eb"
