@@ -303,6 +303,22 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
+  resources :goals do
+    member do
+      patch :pause
+      patch :resume
+      patch :complete
+      patch :archive
+      patch :unarchive
+    end
+
+    resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
+      member do
+        patch :renew
+      end
+    end
+  end
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge
@@ -382,6 +398,7 @@ Rails.application.routes.draw do
       post :merge_duplicate
       post :dismiss_duplicate
       post :unlock
+      patch :tags, action: :update_tags
     end
   end
 

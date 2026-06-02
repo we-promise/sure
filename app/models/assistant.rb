@@ -29,7 +29,8 @@ module Assistant
         Function::GetIncomeStatement,
         Function::GetBudget,
         Function::ImportBankStatement,
-        Function::SearchFamilyFiles
+        Function::SearchFamilyFiles,
+        Function::CreateGoal
       ]
     end
 
