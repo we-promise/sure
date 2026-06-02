@@ -464,10 +464,6 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
       .with(bulk_response, "0xworking", "ethereum")
       .returns([ { coinId: "ethereum", name: "Ethereum", amount: 1.0, price: 2000 } ])
 
-    @mock_provider.expects(:extract_wallet_balance)
-      .with(bulk_response, "0xfailing", "ethereum")
-      .returns([]) # Empty array for missing wallet
-
     bulk_transactions_response = [
       {
         blockchain: "ethereum",
@@ -556,10 +552,6 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     @mock_provider.expects(:get_wallet_balances)
       .with("ethereum:0xworking,dogecoin:Ddoge123")
       .returns(success_response(bulk_response))
-
-    @mock_provider.expects(:extract_wallet_balance)
-      .with(bulk_response, "0xworking", "ethereum")
-      .returns([])
 
     @mock_provider.expects(:extract_wallet_balance)
       .with(bulk_response, "Ddoge123", "dogecoin")

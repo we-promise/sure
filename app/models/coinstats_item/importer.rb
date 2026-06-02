@@ -225,20 +225,32 @@ class CoinstatsItem::Importer
         return { success: false, error: "Missing address or blockchain" }
       end
 
-      # Extract balance data for this specific wallet from the bulk response
-      balance_data = if bulk_balance_data.present?
-        coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
+      if bulk_balance_data.nil?
+        Rails.logger.warn "CoinstatsItem::Importer - Missing bulk balance data for account #{coinstats_account.id}; preserving previous snapshot"
+      elsif wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
+        Rails.logger.warn "CoinstatsItem::Importer - Wallet #{blockchain}:#{address} missing from bulk balance response for account #{coinstats_account.id}; preserving previous snapshot"
       else
-        []
-      end
+        balance_data = coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
 
-      # Update the coinstats account with new balance data
-      coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
+        # Update the coinstats account with new balance data
+        coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
+      end
 
       # Extract and merge transactions from bulk response
       transactions_count = fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
 
       { success: true, transactions_count: transactions_count }
+    end
+
+    def wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
+      return true unless bulk_balance_data.is_a?(Array)
+
+      bulk_balance_data.none? do |entry|
+        entry = entry.with_indifferent_access
+        entry[:address]&.downcase == address&.downcase &&
+          (entry[:connectionId]&.downcase == blockchain&.downcase ||
+           entry[:blockchain]&.downcase == blockchain&.downcase)
+      end
     end
 
     def update_exchange_account(coinstats_account, portfolio_coins_data:, portfolio_transactions_data:)
