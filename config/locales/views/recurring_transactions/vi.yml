@@ -1,0 +1,56 @@
+---
+vi:
+  recurring_transactions:
+    title: Giao dịch định kỳ
+    upcoming: Giao dịch định kỳ sắp tới
+    projected: Dự kiến
+    recurring: Định kỳ
+    expected_today: "Dự kiến hôm nay"
+    expected_in:
+      one: "Dự kiến sau %{count} ngày"
+      other: "Dự kiến sau %{count} ngày"
+    day_of_month: Ngày %{day} hàng tháng
+    identify_patterns: Xác định mẫu
+    cleanup_stale: Dọn dẹp mẫu cũ
+    settings:
+      enable_label: Bật giao dịch định kỳ
+      enable_description: Tự động phát hiện mẫu giao dịch định kỳ và hiển thị các giao dịch dự kiến sắp tới.
+    settings_updated: Đã cập nhật cài đặt giao dịch định kỳ
+    info:
+      title: Tự động phát hiện mẫu
+      manual_description: Bạn có thể tự tay xác định mẫu hoặc dọn dẹp giao dịch định kỳ cũ bằng các nút ở trên.
+      automatic_description: "Nhận dạng tự động cũng chạy sau:"
+      triggers:
+        - Nhập CSV hoàn tất (giao dịch, giao dịch chứng khoán, tài khoản, v.v.)
+        - Bất kỳ lần đồng bộ nhà cung cấp nào hoàn tất (Plaid, SimpleFIN, v.v.)
+    identified: Đã xác định %{count} mẫu giao dịch định kỳ
+    cleaned_up: Đã dọn dẹp %{count} giao dịch định kỳ cũ
+    marked_inactive: Giao dịch định kỳ đã được đánh dấu không hoạt động
+    marked_active: Giao dịch định kỳ đã được đánh dấu hoạt động
+    deleted: Đã xóa giao dịch định kỳ
+    confirm_delete: Bạn có chắc muốn xóa giao dịch định kỳ này?
+    marked_as_recurring: Giao dịch đã được đánh dấu là định kỳ
+    already_exists: Đã tồn tại giao dịch định kỳ thủ công cho mẫu này
+    creation_failed: Không thể tạo giao dịch định kỳ. Vui lòng kiểm tra thông tin giao dịch và thử lại.
+    unexpected_error: Đã xảy ra lỗi không mong muốn khi tạo giao dịch định kỳ
+    amount_range: "Khoảng: %{min} đến %{max}"
+    empty:
+      title: Không tìm thấy giao dịch định kỳ
+      description: Nhấn "Xác định mẫu" để tự động phát hiện giao dịch định kỳ từ lịch sử giao dịch.
+    table:
+      merchant: Tên
+      amount: Số tiền
+      expected_day: Ngày dự kiến
+      next_date: Ngày tiếp theo
+      last_occurrence: Lần xuất hiện gần nhất
+      status: Trạng thái
+      actions: Hành động
+    status:
+      active: Hoạt động
+      inactive: Không hoạt động
+    badges:
+      manual: Thủ công
+    transfer_marked_as_recurring: Chuyển khoản đã được đánh dấu là định kỳ
+    transfer_already_exists: Đã tồn tại chuyển khoản định kỳ cho cặp tài khoản này
+    transfer_creation_failed: Không thể tạo chuyển khoản định kỳ. Vui lòng kiểm tra thông tin và thử lại.
+    transfer_feature_disabled: Chuyển khoản định kỳ đã bị tắt cho hộ gia đình này
