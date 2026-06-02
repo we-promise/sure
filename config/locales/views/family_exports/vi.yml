@@ -1,0 +1,43 @@
+---
+vi:
+  family_exports:
+    access_denied: Truy cập bị từ chối
+    create:
+      success: Xuất dữ liệu đã bắt đầu. Bạn sẽ có thể tải xuống trong thời gian ngắn.
+    delete_confirmation: Bạn có chắc chắn muốn xóa bản xuất này không? Hành động này không thể hoàn tác.
+    delete_failed_confirmation: Bạn có chắc chắn muốn xóa bản xuất thất bại này không?
+    destroy:
+      success: Bản xuất đã được xóa thành công
+    export_not_ready: Bản xuất chưa sẵn sàng để tải xuống
+    exporting: Đang xuất dữ liệu...
+    new:
+      dialog_title: Xuất dữ liệu của bạn
+      dialog_subtitle: Tải xuống tất cả dữ liệu tài chính của bạn
+      whats_included: "Bao gồm:"
+      accounts_and_balances: Tất cả tài khoản và số dư
+      transaction_history: Lịch sử giao dịch
+      investment_trades: Giao dịch đầu tư
+      categories_tags_rules: Danh mục, nhãn và quy tắc
+      note_label: Lưu ý
+      note_description: Bản xuất này bao gồm tất cả dữ liệu của bạn, nhưng chỉ một phần dữ liệu có thể được nhập lại thông qua tính năng nhập CSV. Chúng tôi hỗ trợ nhập tài khoản, giao dịch (với danh mục và nhãn) và giao dịch mua bán. Dữ liệu tài khoản khác không thể nhập và chỉ dùng để lưu trữ hồ sơ của bạn.
+      cancel: Hủy
+      export_data: Xuất dữ liệu
+    index:
+      title: Xuất dữ liệu
+      new: Xuất mới
+    table:
+      title: Xuất dữ liệu
+      header:
+        date: Ngày
+        filename: Tên tệp
+        status: Trạng thái
+        actions: Hành động
+      row:
+        status:
+          in_progress: Đang xử lý
+          complete: Hoàn tất
+          failed: Thất bại
+        actions:
+          delete: Xóa
+          download: Tải xuống
+      empty: Chưa có bản xuất nào.

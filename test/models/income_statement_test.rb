@@ -39,6 +39,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "memoizes expense and income period totals across repeated calculations" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    expense_period_total = IncomeStatement::PeriodTotal.new("expense", 900, @family.currency, [])
+    income_period_total = IncomeStatement::PeriodTotal.new("income", 1000, @family.currency, [])
+
+    income_statement.expects(:build_period_total).with(classification: "expense", period: period).once.returns(expense_period_total)
+    income_statement.expects(:build_period_total).with(classification: "income", period: period).once.returns(income_period_total)
+
+    income_statement.net_category_totals(period: period)
+    income_statement.expense_totals(period: period)
+    income_statement.income_totals(period: period)
+    income_statement.net_category_totals(period: period)
+  end
+
   test "calculates income for a period" do
     income_statement = IncomeStatement.new(@family)
     income_totals = income_statement.income_totals(period: Period.last_30_days)
@@ -495,6 +511,37 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Should NOT include non-investment accounts
     refute_includes tax_advantaged_ids, @checking_account.id
     refute_includes tax_advantaged_ids, @credit_card_account.id
+  end
+
+  test "family.tax_advantaged_account_ids includes HSA depository accounts and excludes non-HSA depositories" do
+    # Plaid routes `depository.hsa` to `Depository` (not Investment), so HSA
+    # cash accounts created from a Plaid sync end up as Depository(subtype:
+    # "hsa") rows. They are semantically tax-advantaged but were previously
+    # invisible to this filter because it only joined `investments` and
+    # `cryptos`.
+    hsa_depository = @family.accounts.create!(
+      name: "Fidelity HSA Cash",
+      currency: @family.currency,
+      balance: 3_000,
+      accountable: Depository.new(subtype: "hsa")
+    )
+
+    savings_depository = @family.accounts.create!(
+      name: "Emergency Savings",
+      currency: @family.currency,
+      balance: 8_000,
+      accountable: Depository.new(subtype: "savings")
+    )
+
+    # Clear the memoized value (the setup-block @checking_account is also
+    # a depository, so we exercise both inclusion and exclusion paths).
+    @family.instance_variable_set(:@tax_advantaged_account_ids, nil)
+
+    tax_advantaged_ids = @family.tax_advantaged_account_ids
+
+    assert_includes tax_advantaged_ids, hsa_depository.id
+    refute_includes tax_advantaged_ids, savings_depository.id
+    refute_includes tax_advantaged_ids, @checking_account.id
   end
 
   # net_category_totals tests

@@ -20,7 +20,9 @@ pl:
       none: "(brak)"
       note_label: Notatki
       note_placeholder: Wprowadź notatkę
+      create_tag: Utwórz
       submit: Dodaj transakcję
+      tag_search_placeholder: Wyszukaj lub utwórz tag
       tags_label: Tagi
       transfer: Przelew
     new:
