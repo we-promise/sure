@@ -443,6 +443,7 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :toggle_category_matcher
       patch :set_default
       patch :remove_default
       get :select_provider
