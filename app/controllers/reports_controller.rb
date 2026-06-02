@@ -122,7 +122,7 @@ class ReportsController < ApplicationController
       @summary_metrics = build_summary_metrics
 
       # Build trend data (last 6 months)
-      @trends_data = build_trends_data
+      @trends_data = build_trends_data(income_statement: @income_statement)
 
       # Net worth metrics
       @net_worth_metrics = build_net_worth_metrics
@@ -321,7 +321,7 @@ class ReportsController < ApplicationController
       nil
     end
 
-    def build_trends_data
+    def build_trends_data(income_statement:)
       # Generate month-by-month data based on the current period filter
       trends = []
 
@@ -338,8 +338,8 @@ class ReportsController < ApplicationController
 
         period = Period.custom(start_date: month_start, end_date: month_end)
 
-        income = @income_statement.income_totals(period: period).total
-        expenses = @income_statement.expense_totals(period: period).total
+        income = income_statement.income_totals(period: period).total
+        expenses = income_statement.expense_totals(period: period).total
 
         trends << {
           month: month_start.strftime("%b %Y"),
@@ -384,7 +384,7 @@ class ReportsController < ApplicationController
       sort_direction = %w[asc desc].include?(params[:sort_direction]) ? params[:sort_direction] : "desc"
       sort_logic = ->(item) do
         value = (sort_by == "count") ? item[:count] : item[:total]
-        sort_direction == "asc" ? value : -value
+        sort_direction == "asc" ? (value || 0) : -(value || 0)
       end
 
       # Group by category (tracking parent relationship) and type
