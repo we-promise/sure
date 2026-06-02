@@ -85,6 +85,22 @@ emit_status() {
   fi
 }
 
+summarize_log_tail() {
+  local file="$1"
+  local label="$2"
+
+  if [ ! -f "$file" ]; then
+    printf '%s log unavailable' "$label"
+    return 0
+  fi
+
+  tail -n 80 "$file" 2>&1 |
+    sed 's/"/'"'"'/g' |
+    tr '\n' ' ' |
+    sed 's/  */ /g' |
+    cut -c 1-1600
+}
+
 trap 'emit_status failed "preview-entrypoint failed on line ${LINENO}"' ERR
 emit_status boot "preview-entrypoint started"
 
@@ -218,7 +234,7 @@ for i in {1..180}; do
           '
         ) > /tmp/demo-data.log 2>&1 && \
           emit_status demo-data-ready "default demo dataset loaded in background" || \
-          emit_status demo-data-failed "background demo dataset load failed"
+          emit_status demo-data-failed "background demo dataset load failed: $(summarize_log_tail /tmp/demo-data.log demo-data)"
       ) &
     fi
 

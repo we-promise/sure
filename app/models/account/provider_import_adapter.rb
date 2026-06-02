@@ -56,11 +56,10 @@ class Account::ProviderImportAdapter
       incoming_pending = false
       if extra.is_a?(Hash)
         pending_extra = extra.with_indifferent_access
-        incoming_pending =
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
+        boolean_type = ActiveModel::Type::Boolean.new
+        incoming_pending = Transaction::PENDING_PROVIDERS.any? do |provider|
+          boolean_type.cast(pending_extra.dig(provider, "pending"))
+        end
       end
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
@@ -286,6 +285,19 @@ class Account::ProviderImportAdapter
 
       entry.save!
       entry.transaction.save! if entry.transaction.changed?
+
+      # Auto-resolve any open Goal pledges on this account whose tolerance
+      # window matches the posted transaction. Idempotent via the partial-unique
+      # index on transactions.extra->'goal'->>'pledge_id'.
+      #
+      # Short-circuit when the account isn't linked to any goal: a 2k-row
+      # historical Plaid import on an unlinked account otherwise pays one
+      # SELECT per row. goal_accounts membership is stable across a sync
+      # batch, so memoize once per adapter instance (one query per account
+      # synced, not per transaction).
+      if !incoming_pending && account_linked_to_any_goal?
+        GoalPledge::Reconciler.new(entry).run
+      end
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
@@ -821,6 +833,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -869,6 +882,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -940,6 +954,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
@@ -1052,6 +1067,14 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # Memoized per adapter instance (which is per-account). Membership in
+    # goal_accounts is stable across a sync batch.
+    def account_linked_to_any_goal?
+      return @account_linked_to_any_goal if defined?(@account_linked_to_any_goal)
+
+      @account_linked_to_any_goal = account.goal_accounts.exists?
+    end
 
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
