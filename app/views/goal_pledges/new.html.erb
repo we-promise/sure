@@ -1,0 +1,65 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(@goal.pledge_action_label_key)) %>
+  <% dialog.with_body do %>
+    <% if @pledge.errors.any? %>
+      <%= render "shared/form_errors", model: @pledge %>
+    <% end %>
+
+    <%
+      account_options = @goal.linked_accounts.map do |a|
+        [ a.name, a.id, { data: { manual: a.manual?.to_s } } ]
+      end
+    %>
+
+    <%= styled_form_with model: @pledge,
+                         url: goal_pledges_path(@goal),
+                         class: "space-y-3",
+                         data: {
+                           controller: "goal-pledge-preview",
+                           goal_pledge_preview_current_balance_value: @goal.current_balance.to_f,
+                           goal_pledge_preview_target_amount_value: @goal.target_amount.to_f,
+                           goal_pledge_preview_currency_value: @goal.currency,
+                           goal_pledge_preview_template_zero_value: t(".preview_zero"),
+                           goal_pledge_preview_template_nonzero_value: t(".preview_nonzero"),
+                           goal_pledge_preview_template_reached_value: t(".preview_reached")
+                         } do |f| %>
+      <p class="text-sm text-secondary"
+         data-goal-pledge-preview-target="helperConnected"
+         hidden>
+        <%= t(".helper_transfer") %>
+      </p>
+      <p class="text-sm text-secondary"
+         data-goal-pledge-preview-target="helperManual"
+         hidden>
+        <%= t(".helper_manual") %>
+      </p>
+
+      <%= f.money_field :amount,
+                        label: t(".amount_label"),
+                        hide_currency: true,
+                        autofocus: true,
+                        required: true,
+                        amount_data: {
+                          goal_pledge_preview_target: "amountInput",
+                          action: "input->goal-pledge-preview#update"
+                        } %>
+
+      <p class="text-xs text-secondary tabular-nums -mt-1 privacy-sensitive"
+         data-goal-pledge-preview-target="preview"></p>
+
+      <%= f.select :account_id,
+                   options_for_select(account_options, @pledge.account_id),
+                   { label: t(".account_label") },
+                   {
+                     data: {
+                       goal_pledge_preview_target: "accountSelect",
+                       action: "change->goal-pledge-preview#accountChanged"
+                     }
+                   } %>
+
+      <div class="flex justify-end pt-2">
+        <%= f.submit t(".submit") %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

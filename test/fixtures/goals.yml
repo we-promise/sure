@@ -1,0 +1,25 @@
+vacation_italy:
+  family: dylan_family
+  name: Vacation in Italy
+  target_amount: 5000
+  currency: USD
+  target_date: <%= 4.months.from_now.to_date %>
+  color: "#4da568"
+  state: active
+
+emergency_fund:
+  family: dylan_family
+  name: Emergency fund
+  target_amount: 10000
+  currency: USD
+  color: "#6471eb"
+  state: active
+
+car_paydown:
+  family: dylan_family
+  name: Paid-off car
+  target_amount: 8000
+  currency: USD
+  target_date: <%= 12.months.from_now.to_date %>
+  color: "#e99537"
+  state: paused

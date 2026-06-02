@@ -21,6 +21,28 @@ class CategoryTest < ActiveSupport::TestCase
     assert_nil transactions.map { |t| t.reload.category }.uniq.first
   end
 
+  test "destroying parent category preserves subcategory transaction assignments" do
+    parent = @family.categories.create!(
+      name: "Parent With Child Transactions",
+      color: "#000000",
+      lucide_icon: "folder"
+    )
+    subcategory = @family.categories.create!(
+      name: "Child With Transactions",
+      color: "#111111",
+      lucide_icon: "folder",
+      parent: parent
+    )
+    transaction = Transaction.create!(category: subcategory)
+
+    assert_difference "Category.count", -1 do
+      parent.destroy!
+    end
+
+    assert_nil subcategory.reload.parent_id
+    assert_equal subcategory, transaction.reload.category
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 
