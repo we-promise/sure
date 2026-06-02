@@ -2,6 +2,7 @@
 
 class Api::V1::ImportsController < Api::V1::BaseController
   include Pagy::Backend
+  INTERNAL_ERROR_MESSAGE = "An unexpected error occurred".freeze
 
   # Ensure proper scope authorization
   before_action :ensure_read_scope, only: [ :index, :show, :rows, :preflight ]
@@ -35,14 +36,14 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
   rescue StandardError => e
     Rails.logger.error "ImportsController#index error: #{e.message}"
-    render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: INTERNAL_ERROR_MESSAGE }, status: :internal_server_error
   end
 
   def show
     render :show
   rescue StandardError => e
     Rails.logger.error "ImportsController#show error: #{e.message}"
-    render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: INTERNAL_ERROR_MESSAGE }, status: :internal_server_error
   end
 
   def rows
@@ -58,7 +59,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     render :rows
   rescue StandardError => e
     Rails.logger.error "ImportsController#rows error: #{e.message}"
-    render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: INTERNAL_ERROR_MESSAGE }, status: :internal_server_error
   end
 
   def create
@@ -133,7 +134,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
   rescue StandardError => e
     Rails.logger.error "ImportsController#create error: #{e.message}"
-    render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: INTERNAL_ERROR_MESSAGE }, status: :internal_server_error
   end
 
   def preflight
@@ -156,7 +157,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: INTERNAL_ERROR_MESSAGE
     }, status: :internal_server_error
   end
 

@@ -740,7 +740,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_csv", json_response["error"]
   end
 
-  test "should include preflight exception message in internal server error response" do
+  test "should sanitize preflight exception message in internal server error response" do
     Import::Preflight.any_instance.stubs(:call).raises(StandardError, "boom")
 
     post preflight_api_v1_imports_url,
@@ -755,7 +755,8 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     json_response = JSON.parse(response.body)
     assert_equal "internal_server_error", json_response["error"]
-    assert_equal "Error: boom", json_response["message"]
+    assert_equal "An unexpected error occurred", json_response["message"]
+    refute_includes json_response["message"], "boom"
   end
 
   test "should reject unknown preflight import type" do
