@@ -9,7 +9,7 @@ class DS::Buttonish < DesignSystemComponent
       icon_classes: "text-primary"
     },
     destructive: {
-      container_classes: "text-inverse bg-red-500 theme-dark:bg-red-400 hover:bg-red-600 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
+      container_classes: "text-inverse bg-red-600 theme-dark:bg-red-400 hover:bg-red-700 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
       icon_classes: "text-inverse"
     },
     outline: {
