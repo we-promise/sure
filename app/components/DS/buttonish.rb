@@ -76,7 +76,7 @@ class DS::Buttonish < DesignSystemComponent
 
   def container_classes(override_classes = nil)
     class_names(
-      "font-medium whitespace-nowrap",
+      "font-medium whitespace-nowrap focus-ring",
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,

@@ -65,15 +65,15 @@ class DS::Disclosure < DesignSystemComponent
       # surface. Keep cursor + focus-visible ring + flex baseline.
       # Ring token matches `settings/provider_card.html.erb` (the
       # established focus pattern on container cards).
-      "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 rounded-xl"
+      "list-none cursor-pointer focus-ring rounded-xl"
     when :inline
       # Inline variant: no surface, no padding — the summary reads as
       # plain text-link copy. Caller markup (text + optional chevron)
       # provides the visual. Keep cursor + focus-visible ring + matching
       # alpha-black-300 token used by the card variants for consistency.
-      "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 rounded-sm"
+      "list-none cursor-pointer focus-ring rounded-sm"
     else
-      "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300"
+      "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-ring"
     end
   end
 end
