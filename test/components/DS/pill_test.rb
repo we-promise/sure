@@ -51,6 +51,14 @@ class DS::PillTest < ViewComponent::TestCase
     assert_includes pill.palette[:bg], "color-red-50"
   end
 
+  test "custom color renders dynamic badge styles" do
+    render_inline(DS::Pill.new(label: "Groceries", marker: false, custom_color: "#f97316"))
+
+    pill = page.find("span", text: "Groceries")
+    assert_includes pill[:style], "color-mix(in oklab, #f97316 10%, transparent)"
+    assert_includes pill[:style], "color: #f97316"
+  end
+
   test "icon option renders glyph in place of dot" do
     render_inline(DS::Pill.new(label: "Syncing", tone: :info, marker: false, icon: "loader"))
 
