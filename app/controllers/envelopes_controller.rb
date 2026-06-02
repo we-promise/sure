@@ -87,7 +87,14 @@ class EnvelopesController < ApplicationController
       )
     end
 
+    # Categories the form may offer: everything in the family minus the ones
+    # already backing another envelope (the model enforces one envelope per
+    # category). The envelope being edited keeps its own category in the list.
     def assignable_categories
-      Current.family.categories.alphabetically.to_a
+      taken_ids = Current.family.envelopes
+                         .where.not(category_id: nil)
+                         .where.not(id: @envelope&.id)
+                         .select(:category_id)
+      Current.family.categories.alphabetically.where.not(id: taken_ids).to_a
     end
 end
