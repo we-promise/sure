@@ -2,10 +2,13 @@ class AddSourceToHoldings < ActiveRecord::Migration[7.2]
   def up
     add_column :holdings, :source, :string
 
-    # Backfill: provider holdings (account_provider_id set) → "provider", manually-entered holdings → "manual"
+    # Backfill: provider holdings (account_provider_id set) → "provider",
+    # all others (historically materializer-calculated) → "calculated".
+    # There is no way to distinguish truly manual holdings in historical data,
+    # so we default to "calculated" — safe because manual holdings are a new concept.
     execute <<~SQL
       UPDATE holdings SET source = 'provider' WHERE account_provider_id IS NOT NULL;
-      UPDATE holdings SET source = 'manual' WHERE account_provider_id IS NULL;
+      UPDATE holdings SET source = 'calculated' WHERE account_provider_id IS NULL;
     SQL
 
     change_column_null :holdings, :source, false, "calculated"
