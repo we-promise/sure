@@ -333,7 +333,7 @@
     "border-divider":     { "$type": "utility", "$value": "border-tertiary" },
     "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.200}" } },
     "border-solid":       { "$type": "utility", "$value": "{color.black}",           "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.white}" } },
-    "border-destructive": { "$type": "utility", "$value": "{color.red.500}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
+    "border-destructive": { "$type": "utility", "$value": "{color.red.600}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
     "border-inverse":     { "$type": "utility", "$value": "{color.alpha-white.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-black.300}" } },
 
     "button-bg-primary":           { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
@@ -343,8 +343,8 @@
     "button-bg-secondary-strong":       { "$type": "utility", "$value": "{color.gray.200}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
     "button-bg-secondary-strong-hover": { "$type": "utility", "$value": "{color.gray.300}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.600}" } },
     "button-bg-disabled":          { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
-    "button-bg-destructive":       { "$type": "utility", "$value": "{color.red.500}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.400}" } },
-    "button-bg-destructive-hover": { "$type": "utility", "$value": "{color.red.600}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.500}" } },
+    "button-bg-destructive":       { "$type": "utility", "$value": "{color.red.600}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.400}" } },
+    "button-bg-destructive-hover": { "$type": "utility", "$value": "{color.red.700}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.500}" } },
     "button-bg-ghost-hover":       { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "bg-gray-800 text-inverse" } },
     "button-bg-outline-hover":     { "$type": "utility", "$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
 
