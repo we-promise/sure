@@ -10,6 +10,7 @@ import '../screens/transaction_form_screen.dart';
 import '../widgets/category_filter.dart';
 import '../widgets/sync_status_badge.dart';
 import '../services/log_service.dart';
+import '../utils/amount_parser.dart';
 
 class TransactionsListScreen extends StatefulWidget {
   final Account account;
@@ -41,25 +42,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   // and a sign either before or after the symbol)
   Map<String, dynamic> _getAmountDisplayInfo(String amount, bool isAsset) {
     try {
-      // Trim whitespace
-      String trimmedAmount = amount.trim();
-
-      // Normalize common minus characters (U+002D HYPHEN-MINUS, U+2212 MINUS SIGN)
-      trimmedAmount = trimmedAmount.replaceAll('\u2212', '-');
-
-      // Detect if the amount has a negative sign (leading or trailing)
-      bool hasNegativeSign = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
-
-      // Remove all non-numeric characters except decimal point and minus sign
-      String numericString = trimmedAmount.replaceAll(RegExp(r'[^\d.\-]'), '');
-
-      // Parse the numeric value
-      double numericValue = double.tryParse(numericString.replaceAll('-', '')) ?? 0.0;
-
-      // Apply the sign from the string
-      if (hasNegativeSign) {
-        numericValue = -numericValue;
-      }
+      final parsed = AmountParser.parse(amount);
+      var numericValue = parsed.value;
 
       // For asset accounts, flip the sign to match accounting conventions
       if (isAsset) {
@@ -69,22 +53,15 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       // Determine if the final value is positive
       bool isPositive = numericValue >= 0;
 
-      // Get the display amount by removing the sign and currency symbols
-      String displayAmount = trimmedAmount
-          .replaceAll('-', '')
-          .replaceAll('\u2212', '')
-          .trim();
-
       return {
         'isPositive': isPositive,
-        'displayAmount': displayAmount,
+        'displayAmount': parsed.displayText,
         'color': isPositive ? Colors.green : Colors.red,
         'icon': isPositive ? Icons.arrow_upward : Icons.arrow_downward,
         'prefix': isPositive ? '' : '-',
       };
-    } catch (e) {
-      // Fallback if parsing fails - log and return neutral state
-      LogService.instance.error('TransactionsListScreen', 'Failed to parse amount "$amount": $e');
+    } on FormatException {
+      LogService.instance.error('TransactionsListScreen', 'Failed to parse transaction amount');
       return {
         'isPositive': true,
         'displayAmount': amount,

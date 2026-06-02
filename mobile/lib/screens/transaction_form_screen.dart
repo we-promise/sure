@@ -8,6 +8,7 @@ import '../providers/categories_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
 import '../services/connectivity_service.dart';
+import '../utils/amount_parser.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
@@ -66,8 +67,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       return 'Please enter an amount';
     }
 
-    final amount = double.tryParse(value.trim());
-    if (amount == null) {
+    final double amount;
+    try {
+      amount = AmountParser.parse(value, locale: Intl.getCurrentLocale()).value;
+    } on FormatException {
       return 'Please enter a valid number';
     }
 
@@ -126,6 +129,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       // Convert date format from yyyy/MM/dd to yyyy-MM-dd
       final parsedDate = DateFormat('yyyy/MM/dd').parse(_dateController.text);
       final apiDate = DateFormat('yyyy-MM-dd').format(parsedDate);
+      final canonicalAmount = AmountParser.canonicalize(
+        _amountController.text,
+        locale: Intl.getCurrentLocale(),
+      );
 
       _log.info('TransactionForm', 'Calling TransactionsProvider.createTransaction (offline-first)');
 
@@ -135,7 +142,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         accountId: widget.account.id,
         name: _nameController.text.trim(),
         date: apiDate,
-        amount: _amountController.text.trim(),
+        amount: canonicalAmount,
         currency: widget.account.currency,
         nature: _nature,
         notes: 'This transaction via mobile app.',
