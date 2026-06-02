@@ -133,13 +133,26 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     openai_provider = mock("openai_provider")
     anthropic_provider = mock("anthropic_provider")
 
+    openai_provider.stubs(:supports_pdf_processing?).returns(true)
+    anthropic_provider.stubs(:supports_pdf_processing?).returns(false)
+    Setting.stubs(:llm_provider).returns("anthropic")
+    Provider::Registry.stubs(:openai).returns(openai_provider)
+    Provider::Registry.stubs(:anthropic).returns(anthropic_provider)
+
+    assert_equal openai_provider, Provider::Registry.llm_provider(require_pdf_processing: true)
+  end
+
+  test "llm_provider returns nil when no provider supports PDF processing" do
+    openai_provider = mock("openai_provider")
+    anthropic_provider = mock("anthropic_provider")
+
     openai_provider.stubs(:supports_pdf_processing?).returns(false)
-    anthropic_provider.stubs(:supports_pdf_processing?).returns(true)
+    anthropic_provider.stubs(:supports_pdf_processing?).returns(false)
     Setting.stubs(:llm_provider).returns("openai")
     Provider::Registry.stubs(:openai).returns(openai_provider)
     Provider::Registry.stubs(:anthropic).returns(anthropic_provider)
 
-    assert_equal anthropic_provider, Provider::Registry.llm_provider(require_pdf_processing: true)
+    assert_nil Provider::Registry.llm_provider(require_pdf_processing: true)
   end
 
   test "llm_model returns effective model for selected Anthropic provider" do

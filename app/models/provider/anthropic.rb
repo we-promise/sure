@@ -8,9 +8,6 @@ class Provider::Anthropic < Provider
   DEFAULT_ANTHROPIC_MODEL_PREFIXES = %w[claude].freeze
   DEFAULT_MODEL = "claude-sonnet-4-6"
 
-  # All Claude 3.5+ and 4.x models accept native document content blocks.
-  VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
-
   def self.effective_model
     # Use ENV[].presence rather than ENV.fetch(KEY, default) so the Setting
     # lookup is only performed when the ENV var is actually absent — otherwise
@@ -149,9 +146,7 @@ class Provider::Anthropic < Provider
   end
 
   def supports_pdf_processing?(model: @default_model)
-    return true if custom_endpoint?
-
-    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
+    false
   end
 
   def process_pdf(pdf_content:, model: "", family: nil)

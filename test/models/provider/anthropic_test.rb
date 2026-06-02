@@ -50,8 +50,8 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_equal "models starting with: claude", @subject.supported_models_description
   end
 
-  test "supports_pdf_processing? true for claude models" do
-    assert @subject.supports_pdf_processing?(model: "claude-sonnet-4-6")
+  test "supports_pdf_processing? false until PDF methods are implemented" do
+    assert_not @subject.supports_pdf_processing?(model: "claude-sonnet-4-6")
     assert_not @subject.supports_pdf_processing?(model: "gpt-4o")
   end
 
