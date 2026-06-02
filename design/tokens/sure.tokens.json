@@ -35,7 +35,7 @@
     "container-inset":       { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
     "container-inset-hover": { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },
     "nav-indicator":         { "$value": "{color.black}",            "$type": "color", "$extensions": { "sure.dark": "{color.white}" } },
-    "toggle-track":          { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },
+    "toggle-track":          { "$value": "{color.gray.300}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },
     "destructive-subtle":    { "$value": "{color.red.200}",          "$type": "color", "$extensions": { "sure.dark": "{color.red.800}" } },
 
     "gray": {
@@ -285,7 +285,7 @@
     "text-primary":   { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.white}" } },
     "text-inverse":   { "$type": "utility", "$value": "{color.white}",    "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.900}" } },
     "text-secondary": { "$type": "utility", "$value": "{color.gray.500}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.300}" } },
-    "text-subdued":   { "$type": "utility", "$value": "{color.gray.400}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.500}" } },
+    "text-subdued":   { "$type": "utility", "$value": "{color.gray.400}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.400}" } },
 
     "shadow-border-xs": {
       "$type": "utility",
@@ -328,10 +328,10 @@
       }
     },
 
-    "border-primary":     { "$type": "utility", "$value": "{color.alpha-black.300}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.400}" } },
-    "border-secondary":   { "$type": "utility", "$value": "{color.alpha-black.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.300}" } },
+    "border-primary":     { "$type": "utility", "$value": "{color.alpha-black.300}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.500}" } },
+    "border-secondary":   { "$type": "utility", "$value": "{color.alpha-black.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.400}" } },
     "border-divider":     { "$type": "utility", "$value": "border-tertiary" },
-    "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.100}" } },
+    "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.200}" } },
     "border-solid":       { "$type": "utility", "$value": "{color.black}",           "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.white}" } },
     "border-destructive": { "$type": "utility", "$value": "{color.red.500}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
     "border-inverse":     { "$type": "utility", "$value": "{color.alpha-white.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-black.300}" } },
