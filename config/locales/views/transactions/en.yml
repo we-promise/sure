@@ -44,6 +44,7 @@ en:
       create_tag: Create
       refund_title: Mark as refund
       refund_description: A refund offsets the original expense in your budget — it won't be counted as income.
+      refund_tooltip: "Refund — offsets an expense"
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
