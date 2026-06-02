@@ -139,7 +139,18 @@ export default class extends Controller {
       .attr("d", this._d3Line)
       .attr("stroke-linejoin", "round")
       .attr("stroke-linecap", "round")
-      .attr("stroke-width", this.strokeWidthValue);
+      // A flat series (no variation across the period — a single valuation or an
+      // unchanged balance) otherwise renders as a full-bleed near-black rule
+      // bisecting the hero card. Draw it as a faint hairline so it reads as
+      // "no change", consistent across light and dark (#2137).
+      .attr("stroke-width", this._isFlatSeries ? 1 : this.strokeWidthValue)
+      .attr("stroke-opacity", this._isFlatSeries ? 0.4 : 1);
+  }
+
+  get _isFlatSeries() {
+    const min = d3.min(this._normalDataPoints, this._getDatumValue);
+    const max = d3.max(this._normalDataPoints, this._getDatumValue);
+    return min === max;
   }
 
   _installTrendlineSplit() {
