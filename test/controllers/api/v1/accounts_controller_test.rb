@@ -25,6 +25,14 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       source: "web",
       display_key: "other_family_read_#{SecureRandom.hex(8)}"
     )
+
+    @write_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Write Key",
+      scopes: [ "read_write" ],
+      source: "mobile",
+      display_key: "test_write_#{SecureRandom.hex(8)}"
+    )
   end
 
   test "should require authentication" do
@@ -301,6 +309,171 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     # Should be sorted alphabetically by name
     account_names = response_body["accounts"].map { |a| a["name"] }
     assert_equal account_names.sort, account_names
+  end
+
+  test "should create a depository account" do
+    post "/api/v1/accounts",
+      params: {
+        account: {
+          name: "My Checking",
+          accountable_type: "Depository",
+          subtype: "checking",
+          balance: 2000.0,
+          currency: "USD",
+          opening_balance_date: "2025-01-01"
+        }
+      },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "My Checking", body["name"]
+    assert_equal "depository", body["account_type"]
+    assert_equal "checking", body["subtype"]
+    assert_equal "USD", body["currency"]
+  end
+
+  test "should reject invalid accountable_type on create" do
+    post "/api/v1/accounts",
+      params: { account: { name: "Bad", accountable_type: "NotAType", balance: 0, currency: "USD" } },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should require read_write scope to create account" do
+    post "/api/v1/accounts",
+      params: { account: { name: "Test", accountable_type: "Depository", balance: 0, currency: "USD" } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :forbidden
+  end
+
+  test "should update account name" do
+    account = accounts(:depository)
+
+    patch "/api/v1/accounts/#{account.id}",
+      params: { account: { name: "Updated Name" } },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :success
+    assert_equal "Updated Name", JSON.parse(response.body)["name"]
+    assert_equal "Updated Name", account.reload.name
+  end
+
+  test "should not update another family's account" do
+    account = accounts(:depository)
+
+    patch "/api/v1/accounts/#{account.id}",
+      params: { account: { name: "Hacked" } },
+      headers: api_headers(@other_family_api_key),
+      as: :json
+
+    # ensure_write_scope fires before set_writable_account, so read-scoped key returns 403
+    assert_response :forbidden
+    assert_not_equal "Hacked", account.reload.name
+  end
+
+  test "should return 404 when other family write key tries to update account" do
+    account = accounts(:depository)
+    other_write_key = ApiKey.create!(
+      user: @other_family_user,
+      name: "Other Write Key",
+      scopes: [ "read_write" ],
+      source: "mobile",
+      display_key: "other_write_#{SecureRandom.hex(8)}"
+    )
+
+    patch "/api/v1/accounts/#{account.id}",
+      params: { account: { name: "Hacked" } },
+      headers: api_headers(other_write_key),
+      as: :json
+
+    assert_response :not_found
+    assert_not_equal "Hacked", account.reload.name
+  ensure
+    other_write_key&.destroy
+  end
+
+  test "should require read_write scope to update account" do
+    account = accounts(:depository)
+
+    patch "/api/v1/accounts/#{account.id}",
+      params: { account: { name: "Nope" } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :forbidden
+  end
+
+  test "should delete an account" do
+    account = Account.create_and_sync(
+      { name: "Temp Account", balance: 0, currency: "USD",
+        accountable_type: "Depository", accountable_attributes: { subtype: "checking" },
+        owner: @user, family: @user.family },
+      opening_balance_date: 1.year.ago.to_date
+    )
+
+    delete "/api/v1/accounts/#{account.id}",
+      headers: api_headers(@write_api_key)
+
+    assert_response :ok
+    assert_equal "Account queued for deletion", JSON.parse(response.body)["message"]
+  end
+
+  test "should reject deletion of a linked account" do
+    account = accounts(:depository)
+    Account.any_instance.stubs(:linked?).returns(true)
+
+    delete "/api/v1/accounts/#{account.id}",
+      headers: api_headers(@write_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should require read_write scope to delete account" do
+    account = accounts(:depository)
+
+    delete "/api/v1/accounts/#{account.id}",
+      headers: api_headers(@api_key)
+
+    assert_response :forbidden
+  end
+
+  test "should return 404 when deleting missing or inaccessible account" do
+    delete "/api/v1/accounts/#{SecureRandom.uuid}",
+      headers: api_headers(@write_api_key)
+
+    assert_response :not_found
+    response_body = JSON.parse(response.body)
+    assert_equal "not_found", response_body["error"]
+  end
+
+  test "should return 422 for malformed opening_balance_date" do
+    post "/api/v1/accounts",
+      params: {
+        account: {
+          name: "Bad Date Account",
+          accountable_type: "Depository",
+          subtype: "checking",
+          balance: 0,
+          currency: "USD",
+          opening_balance_date: "not-a-date"
+        }
+      },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "validation_failed", body["error"]
+    assert_match(/not a valid date/i, body["errors"].first)
   end
 
   private

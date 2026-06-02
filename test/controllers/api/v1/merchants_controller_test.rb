@@ -11,21 +11,30 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal @user.family_id, @other_family_user.family_id,
       "Test setup error: @other_family_user must belong to a different family"
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read"
-    )
-
-    @access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
     @merchant = @user.family.merchants.first || @user.family.merchants.create!(
       name: "Test Merchant"
     )
+
+    @user.api_keys.active.destroy_all
+
+    @write_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "write_#{SecureRandom.hex(8)}"
+    )
+
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read Key",
+      scopes: [ "read" ],
+      source: "mobile",
+      display_key: "read_#{SecureRandom.hex(8)}"
+    )
+
+    Redis.new.del("api_rate_limit:#{@write_api_key.id}")
+    Redis.new.del("api_rate_limit:#{@api_key.id}")
   end
 
   # Index action tests
@@ -36,7 +45,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns user's family merchants successfully" do
-    get api_v1_merchants_url, headers: auth_headers
+    get api_v1_merchants_url, headers: api_headers(@api_key)
 
     assert_response :success
 
@@ -55,7 +64,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     # Create a merchant in another family
     other_merchant = @other_family_user.family.merchants.create!(name: "Other Merchant")
 
-    get api_v1_merchants_url, headers: auth_headers
+    get api_v1_merchants_url, headers: api_headers(@api_key)
 
     assert_response :success
     merchants = JSON.parse(response.body)
@@ -73,7 +82,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns merchant successfully" do
-    get api_v1_merchant_url(@merchant), headers: auth_headers
+    get api_v1_merchant_url(@merchant), headers: api_headers(@api_key)
 
     assert_response :success
 
@@ -83,7 +92,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns 404 for non-existent merchant" do
-    get api_v1_merchant_url(id: SecureRandom.uuid), headers: auth_headers
+    get api_v1_merchant_url(id: SecureRandom.uuid), headers: api_headers(@api_key)
 
     assert_response :not_found
   end
@@ -91,14 +100,57 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   test "show returns 404 for merchant from another family" do
     other_merchant = @other_family_user.family.merchants.create!(name: "Other Merchant")
 
-    get api_v1_merchant_url(other_merchant), headers: auth_headers
+    get api_v1_merchant_url(other_merchant), headers: api_headers(@api_key)
 
     assert_response :not_found
   end
 
+  test "should create a merchant" do
+    post "/api/v1/merchants",
+      params: { merchant: { name: "New Coffee Shop" } },
+      headers: { "X-Api-Key" => @write_api_key.plain_key },
+      as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "New Coffee Shop", body["name"]
+    assert_equal "FamilyMerchant", body["type"]
+  end
+
+  test "should reject duplicate merchant name within family" do
+    FamilyMerchant.create!(name: "Existing Shop", family: @user.family)
+
+    post "/api/v1/merchants",
+      params: { merchant: { name: "Existing Shop" } },
+      headers: { "X-Api-Key" => @write_api_key.plain_key },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should require read_write scope to create merchant" do
+    post "/api/v1/merchants",
+      params: { merchant: { name: "Test" } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :forbidden
+  end
+
+  test "should require authentication to create merchant" do
+    assert_no_difference "FamilyMerchant.count" do
+      post "/api/v1/merchants",
+        params: { merchant: { name: "Unauth Shop" } },
+        as: :json
+    end
+
+    assert_response :unauthorized
+  end
+
   private
 
-    def auth_headers
-      { "Authorization" => "Bearer #{@access_token.token}" }
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.plain_key }
     end
 end

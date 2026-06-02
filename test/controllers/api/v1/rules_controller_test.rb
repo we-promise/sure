@@ -16,7 +16,16 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
       display_key: "test_read_#{SecureRandom.hex(8)}"
     )
 
+    @write_api_key = ApiKey.create!(
+      user: @user,
+      name: "Write Key",
+      scopes: [ "read_write" ],
+      source: "mobile",
+      display_key: "test_write_#{SecureRandom.hex(8)}"
+    )
+
     Redis.new.del("api_rate_limit:#{@api_key.id}")
+    Redis.new.del("api_rate_limit:#{@write_api_key.id}")
 
     @rule = @family.rules.build(
       name: "Coffee cleanup",
@@ -152,6 +161,158 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     json_response = JSON.parse(response.body)
     assert_equal "record_not_found", json_response["error"]
+  end
+
+  test "should create a rule" do
+    post api_v1_rules_url,
+      params: {
+        rule: {
+          name: "Auto coffee",
+          resource_type: "transaction",
+          active: true,
+          effective_date: "2024-01-01",
+          conditions_attributes: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions_attributes: [
+            { action_type: "set_transaction_name", value: "Coffee" }
+          ]
+        }
+      },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Auto coffee", body["data"]["name"]
+    assert_equal 1, body["data"]["conditions"].length
+    assert_equal 1, body["data"]["actions"].length
+  end
+
+  test "should reject rule with no actions" do
+    post api_v1_rules_url,
+      params: {
+        rule: {
+          resource_type: "transaction",
+          conditions_attributes: [
+            { condition_type: "transaction_name", operator: "like", value: "test" }
+          ],
+          actions_attributes: []
+        }
+      },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "should require read_write scope to create rule" do
+    post api_v1_rules_url,
+      params: { rule: { resource_type: "transaction" } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :forbidden
+  end
+
+  test "should require authentication to create rule" do
+    assert_no_difference "Rule.count" do
+      post api_v1_rules_url,
+        params: { rule: { name: "Unauth", resource_type: "transaction" } },
+        as: :json
+    end
+
+    assert_response :unauthorized
+  end
+
+  test "should update a rule name" do
+    patch api_v1_rule_url(@rule),
+      params: { rule: { name: "Updated name" } },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :success
+    assert_equal "Updated name", JSON.parse(response.body)["data"]["name"]
+    assert_equal "Updated name", @rule.reload.name
+  end
+
+  test "should add a condition to a rule" do
+    original_count = @rule.conditions.count
+
+    patch api_v1_rule_url(@rule),
+      params: {
+        rule: {
+          conditions_attributes: [
+            { condition_type: "transaction_amount", operator: ">", value: "10" }
+          ]
+        }
+      },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :success
+    assert_equal original_count + 1, @rule.reload.conditions.count
+  end
+
+  test "should not update another family's rule" do
+    other_family = Family.create!(name: "OtherRuleFamily", currency: "USD", locale: "en")
+    other_rule = other_family.rules.build(name: "Other", resource_type: "transaction", active: true)
+    other_rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "x")
+    other_rule.actions.build(action_type: "set_transaction_name", value: "X")
+    other_rule.save!
+
+    patch api_v1_rule_url(other_rule),
+      params: { rule: { name: "Hacked" } },
+      headers: api_headers(@write_api_key),
+      as: :json
+
+    assert_response :not_found
+    assert_not_equal "Hacked", other_rule.reload.name
+  end
+
+  test "should delete a rule" do
+    rule_id = @rule.id
+
+    delete api_v1_rule_url(@rule),
+      headers: api_headers(@write_api_key)
+
+    assert_response :ok
+    assert_equal "Rule deleted successfully", JSON.parse(response.body)["message"]
+    assert_not Rule.exists?(rule_id)
+  end
+
+  test "should require read_write scope to update rule" do
+    patch api_v1_rule_url(@rule),
+      params: { rule: { name: "Blocked" } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :forbidden
+    assert_not_equal "Blocked", @rule.reload.name
+  end
+
+  test "should require authentication to update rule" do
+    patch api_v1_rule_url(@rule),
+      params: { rule: { name: "Unauth" } },
+      as: :json
+
+    assert_response :unauthorized
+    assert_not_equal "Unauth", @rule.reload.name
+  end
+
+  test "should require read_write scope to delete rule" do
+    delete api_v1_rule_url(@rule),
+      headers: api_headers(@api_key)
+
+    assert_response :forbidden
+    assert Rule.exists?(@rule.id)
+  end
+
+  test "should require authentication to delete rule" do
+    delete api_v1_rule_url(@rule)
+
+    assert_response :unauthorized
+    assert Rule.exists?(@rule.id)
   end
 
   private

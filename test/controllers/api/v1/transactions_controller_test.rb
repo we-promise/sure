@@ -757,6 +757,77 @@ end
     assert transaction_data["transfer"].key?("other_account")
   end
 
+  test "should create pending transaction" do
+    account = accounts(:depository)
+
+    post "/api/v1/transactions",
+      params: { transaction: { account_id: account.id, name: "Pending charge", amount: 50.00, date: Date.today.to_s, pending: true } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal true, body["pending"]
+  end
+
+  test "should transition pending transaction to posted" do
+    account = accounts(:depository)
+
+    post "/api/v1/transactions",
+      params: { transaction: { account_id: account.id, name: "Pending charge", amount: 50.00, date: Date.today.to_s, pending: true } },
+      headers: api_headers(@api_key),
+      as: :json
+    assert_response :created
+    txn_id = JSON.parse(response.body)["id"]
+
+    patch "/api/v1/transactions/#{txn_id}",
+      params: { transaction: { pending: false } },
+      headers: api_headers(@api_key),
+      as: :json
+
+    assert_response :success
+    assert_equal false, JSON.parse(response.body)["pending"]
+  end
+
+  test "should filter pending transactions" do
+    account = accounts(:depository)
+
+    post "/api/v1/transactions",
+      params: { transaction: { account_id: account.id, name: "Pending txn", amount: 10.0, date: Date.today.to_s, pending: true } },
+      headers: api_headers(@api_key),
+      as: :json
+    assert_response :created
+
+    get "/api/v1/transactions", params: { pending: "true" }, headers: api_headers(@api_key)
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert body["transactions"].all? { |t| t["pending"] == true }
+    assert body["transactions"].any? { |t| t["name"] == "Pending txn" }
+  end
+
+  test "should filter non-pending transactions" do
+    get "/api/v1/transactions", params: { pending: "false" }, headers: api_headers(@api_key)
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert body["transactions"].all? { |t| t["pending"] == false }
+  end
+
+  test "should filter transactions by source" do
+    account = accounts(:depository)
+
+    post "/api/v1/transactions",
+      params: { transaction: { account_id: account.id, name: "Imported txn", amount: 25.0, date: Date.today.to_s, source: "my_importer", external_id: "ext_#{SecureRandom.hex(4)}" } },
+      headers: api_headers(@api_key),
+      as: :json
+    assert_response :created
+
+    get "/api/v1/transactions", params: { source: "my_importer" }, headers: api_headers(@api_key)
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert body["transactions"].all? { |t| t["source"] == "my_importer" }
+    assert body["transactions"].any? { |t| t["name"] == "Imported txn" }
+  end
+
   private
 
     def api_headers(api_key)

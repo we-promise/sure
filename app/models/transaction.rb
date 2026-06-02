@@ -94,7 +94,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking api].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
@@ -114,6 +114,14 @@ class Transaction < ApplicationRecord
     conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
     where(conditions.join(" AND "))
   }
+
+  # SQL fragment for subqueries that match pending transactions under a given table alias.
+  def self.pending_sql_fragment(table_alias = "transactions")
+    PENDING_PROVIDERS
+      .map { |provider| "(#{table_alias}.extra -> '#{provider}' ->> 'pending')::boolean = true" }
+      .join(" OR ")
+      .freeze
+  end
 
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
