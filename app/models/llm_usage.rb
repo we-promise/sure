@@ -37,13 +37,22 @@ class LlmUsage < ApplicationRecord
     "google" => {
       "gemini-2.5-pro" => { prompt: 1.25, completion: 10.00 },
       "gemini-2.5-flash" => { prompt: 0.3, completion: 2.50 }
+    },
+    # Anthropic pricing per 1M tokens (Claude 4.x family, as of May 2026)
+    # Source: https://www.anthropic.com/pricing
+    "anthropic" => {
+      "claude-opus-4-7" => { prompt: 15.00, completion: 75.00 },
+      "claude-opus-4-6" => { prompt: 15.00, completion: 75.00 },
+      "claude-sonnet-4-6" => { prompt: 3.00, completion: 15.00 },
+      "claude-sonnet-4-5" => { prompt: 3.00, completion: 15.00 },
+      "claude-haiku-4-5" => { prompt: 1.00, completion: 5.00 }
     }
   }.freeze
 
   # Calculate cost for a model and token usage
   # Provider is automatically inferred from the model using the pricing map
   # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers)
-  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:)
+  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:, cache_creation_tokens: 0, cache_read_tokens: 0)
     provider = infer_provider(model)
     pricing = find_pricing(provider, model)
 
@@ -56,8 +65,21 @@ class LlmUsage < ApplicationRecord
     prompt_cost = (prompt_tokens * pricing[:prompt]) / 1_000_000.0
     completion_cost = (completion_tokens * pricing[:completion]) / 1_000_000.0
 
-    cost = (prompt_cost + completion_cost).round(6)
-    Rails.logger.info("Calculated cost for #{provider}/#{model}: $#{cost} (#{prompt_tokens} prompt tokens, #{completion_tokens} completion tokens)")
+    # Anthropic prompt-cache tokens bill relative to the input rate: cache
+    # writes at 1.25x, cache reads at 0.1x. These multipliers are Anthropic's;
+    # gate on the provider so a non-Anthropic caller that happens to pass cache
+    # counts can't be priced with the wrong (e.g. OpenAI cached-input is 0.5x,
+    # no write premium) rates. Without cache pricing at all, estimated_cost
+    # under-reports every cached Anthropic call vs the real bill (see #1984 review).
+    cache_creation_cost = 0.0
+    cache_read_cost = 0.0
+    if provider == "anthropic"
+      cache_creation_cost = (cache_creation_tokens.to_i * pricing[:prompt] * 1.25) / 1_000_000.0
+      cache_read_cost = (cache_read_tokens.to_i * pricing[:prompt] * 0.10) / 1_000_000.0
+    end
+
+    cost = (prompt_cost + completion_cost + cache_creation_cost + cache_read_cost).round(6)
+    Rails.logger.info("Calculated cost for #{provider}/#{model}: $#{cost} (#{prompt_tokens} prompt + #{cache_creation_tokens.to_i} cache-write + #{cache_read_tokens.to_i} cache-read input, #{completion_tokens} completion)")
     cost
   end
 
@@ -82,6 +104,13 @@ class LlmUsage < ApplicationRecord
   # Returns the provider name if found, or "openai" as default (for backward compatibility)
   def self.infer_provider(model)
     return "openai" if model.blank?
+
+    # Bedrock + Vertex prefix model IDs with "anthropic." regardless of
+    # whether the Claude family is in the local PRICING map. Attribute them
+    # to the Anthropic provider so cost-ledger filtering by provider is
+    # correct even when we can't compute a per-token rate (custom endpoints
+    # bill via their own provider, not Anthropic directly).
+    return "anthropic" if model.start_with?("anthropic.", "anthropic/")
 
     # Check each provider to see if they have pricing for this model
     PRICING.each do |provider_name, provider_pricing|
