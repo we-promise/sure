@@ -283,8 +283,10 @@ ru:
       success: Синхронизация начата
     sync_status:
       all_synced:
-        one: Синхронизирован %{count} счёт
-        other: Синхронизировано %{count} счетов
+        one: "Синхронизирован %{count} счёт"
+        few: "Синхронизированы %{count} счёта"
+        many: "Синхронизировано %{count} счетов"
+        other: "Синхронизированы %{count} счёта"
       no_accounts: Счета не найдены
       partial_setup: "%{synced} синхронизировано, %{pending} требует настройки"
     syncer:

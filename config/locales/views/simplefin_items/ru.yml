@@ -180,11 +180,11 @@ ru:
       syncing: Синхронизация...
       update: Обновить
     stale_pending_status:
-    message:
-      one: "%{count} ожидающая операция старше %{days} дней"
-      few: "%{count} ожидающие операции старше %{days} дней"
-      many: "%{count} ожидающих операций старше %{days} дней"
-      other: "%{count} ожидающие операции старше %{days} дней"
+      message:
+        one: "%{count} ожидающая операция старше %{days} дней"
+        few: "%{count} ожидающие операции старше %{days} дней"
+        many: "%{count} ожидающих операций старше %{days} дней"
+        other: "%{count} ожидающие операции старше %{days} дней"
     update:
       errors:
         blank_token: Пожалуйста, введите токен настройки SimpleFIN.
