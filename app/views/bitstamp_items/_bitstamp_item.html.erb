@@ -83,7 +83,7 @@
           <%= render "accounts/index/account_groups", accounts: bitstamp_item.accounts %>
         <% end %>
 
-        <% stats = bitstamp_item.syncs.ordered.first&.sync_stats || {} %>
+        <% stats = bitstamp_item.latest_sync_stats %>
         <%= render ProviderSyncSummary.new(stats: stats, provider_item: bitstamp_item) %>
 
         <% if unlinked_count.to_i > 0 && bitstamp_item.accounts.empty? %>
