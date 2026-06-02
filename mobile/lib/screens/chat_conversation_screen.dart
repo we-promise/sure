@@ -283,6 +283,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   Future<void> _switchToChat(String chatId) async {
     _scaffoldKey.currentState?.closeDrawer();
     if (chatId == _chatId) return;
+    // Clear currentChat immediately so the screen shows loading state and
+    // _sendMessage cannot target the previous thread while the fetch is in
+    // flight. fetchChat never clears currentChat on its own, so without this
+    // the old messages stay visible (and writable) until the response arrives.
+    Provider.of<ChatProvider>(context, listen: false).clearCurrentChat();
     setState(() => _chatId = chatId);
     await _loadChat();
   }
