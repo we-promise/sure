@@ -231,6 +231,66 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  # Regression for #2007: a reconciliation waypoint on a day that ALSO has a transaction.
+  # The waypoint is an END-of-day balance, so the day's own flow must derive the START
+  # (waypoint - flow), and the flow must NOT be added on top of the waypoint (double-count).
+  # Critically, the derived start (not the waypoint) is what carries back, so the prior
+  # gap day must not show a phantom jump.
+  test "reconciliation waypoint with a same-day transaction is not double-counted" do
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "reconciliation", date: 2.days.ago, balance: 17000 }, # Waypoint (end-of-day)
+        { type: "transaction", date: 2.days.ago, amount: -2000 },      # 2000 deposit ON the waypoint day
+        { type: "opening_anchor", date: 4.days.ago, balance: 15000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago, # End forced to waypoint 17000; start derived from the +2000 deposit = 15000
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
+          flows: { cash_inflows: 2000, cash_outflows: 0 },
+          adjustments: 0
+        },
+        {
+          date: 3.days.ago, # No phantom jump: stays at 15000 (the deposit is not re-applied here)
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 4.days.ago,
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        } # Opening anchor
+      ]
+    )
+  end
+
 
   # Investment account balances are made of two components: cash and holdings.
   test "anchors on investment accounts calculate cash balance dynamically based on holdings value" do

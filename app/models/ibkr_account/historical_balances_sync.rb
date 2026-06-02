@@ -11,8 +11,11 @@ class IbkrAccount::HistoricalBalancesSync
     return unless account.present?
     return if normalized_rows.empty?
 
+    rows = balance_rows
+    return if rows.empty?
+
     account.balances.upsert_all(
-      balance_rows,
+      rows,
       unique_by: %i[account_id date currency]
     )
   end
@@ -109,11 +112,34 @@ class IbkrAccount::HistoricalBalancesSync
 
     def balance_rows
       current_time = Time.current
+      trade_flows_by_date  # ensure @failed_fx_dates is populated before iterating
 
-      normalized_rows.each_with_index.map do |row, index|
+      normalized_rows.each_with_index.filter_map do |row, index|
+        next if @failed_fx_dates.include?(row[:date])
         previous_row = index.zero? ? nil : normalized_rows[index - 1]
         start_cash_balance     = previous_row ? previous_row[:cash]     : row[:cash]
         start_non_cash_balance = previous_row ? previous_row[:non_cash] : row[:non_cash]
+
+        # Derive market return directly from IBKR's equity data so Period Return
+        # matches IBKR without requiring third-party security price providers.
+        #
+        # nmf = Δnon_cash - net_buy_sell
+        #   Δnon_cash  : change in holdings value per IBKR equity summary (exact)
+        #   net_buy_sell: sum of trade entry amounts converted to base currency
+        #                 (positive = buy, negative = sell; IBKR fx_rate_to_base applied)
+        #
+        # non_cash_adjustments absorbs net_buy_sell so the virtual column
+        # end_non_cash_balance = start + nmf + adjustments stays equal to row[:non_cash].
+        if previous_row
+          net_buy_sell = trade_flows_by_date[row[:date]] || 0
+          nmf          = row[:non_cash] - start_non_cash_balance - net_buy_sell
+          non_cash_adj = net_buy_sell
+        else
+          # First-day row has no prior period to diff against, so both values are
+          # intentionally zero — not a bug, just an unavoidable bootstrap constraint.
+          nmf          = 0
+          non_cash_adj = 0
+        end
 
         {
           account_id: account.id,
@@ -127,13 +153,44 @@ class IbkrAccount::HistoricalBalancesSync
           cash_outflows: 0,
           non_cash_inflows: 0,
           non_cash_outflows: 0,
-          net_market_flows: 0,
+          net_market_flows: nmf,
           cash_adjustments: row[:cash] - start_cash_balance,
-          non_cash_adjustments: row[:non_cash] - start_non_cash_balance,
+          non_cash_adjustments: non_cash_adj,
           flows_factor: 1,
           created_at: current_time,
           updated_at: current_time
         }
+      end
+    end
+
+    # Net value of all trades on each date, in account base currency.
+    # Uses the IBKR-provided fx_rate_to_base stored on each Trade entry so the
+    # conversion is exact and consistent with IBKR's own calculations.
+    # Positive = net buy (cash out), negative = net sell (cash in).
+    def trade_flows_by_date
+      @trade_flows_by_date ||= begin
+        @failed_fx_dates = []
+        if account
+          account.entries
+            .joins("INNER JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
+            .where.not(trades: { qty: 0 })
+            .includes(:entryable)
+            .each_with_object(Hash.new(0)) do |entry, flows|
+              custom_rate = entry.entryable.exchange_rate
+              base_amount = Money.new(entry.amount, entry.currency)
+                .exchange_to(account_currency, custom_rate: custom_rate, date: entry.date)
+                .amount
+              flows[entry.date] += base_amount
+            rescue Money::ConversionError
+              Rails.logger.warn(
+                "IbkrAccount::HistoricalBalancesSync - No FX rate for #{entry.currency}→#{account_currency} " \
+                "on #{entry.date}; balance row for this date will not be persisted"
+              )
+              @failed_fx_dates << entry.date
+            end
+        else
+          {}
+        end
       end
     end
 end

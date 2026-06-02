@@ -77,6 +77,16 @@ module ApplicationHelper
     current_page?(path) || (request.path.start_with?(path) && path != "/")
   end
 
+  # Wraps a nav-item hash so a single call performs both halves of a
+  # preview-gated entry: returns `nil` for users without the flag (so the
+  # entry never reaches the rendered nav), and stamps `preview: true` on
+  # the hash for users with the flag (so the partial paints the violet
+  # dot on the icon). Use inside an `Array#compact` nav-items list.
+  def preview_gated_nav_item(item)
+    return nil unless preview_features_enabled?
+    item.merge(preview: true)
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
