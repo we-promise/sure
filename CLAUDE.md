@@ -134,7 +134,7 @@ Sidekiq handles asynchronous tasks:
 
 ### Debug Logging for Provider Syncs
 - Prefer `DebugLogEntry.capture(...)` over `Rails.logger.*` for provider sync/import failures, partial responses, and other support-relevant diagnostics.
-- Follow the pattern introduced in PR `#2101` so incidents appear in the super-admin `/settings/debug` UI.
+- Record support-relevant incidents in the super-admin `/settings/debug` UI rather than leaving them only in raw application logs.
 - Include `category`, `level`, `message`, `source`, `provider_key`, and structured `metadata`.
 - Attach `family` and `account_provider` whenever possible so support can filter to the affected provider connection.
 

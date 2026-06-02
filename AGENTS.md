@@ -67,8 +67,8 @@ If you need to add a new securities price provider (Tiingo, EODHD, Binance-style
 
 When a provider sync/import path hits a recoverable error or suspicious partial response that support may need to inspect later, prefer `DebugLogEntry.capture(...)` over `Rails.logger.*`.
 
-- Use the same debug-log pattern as PR `#2101` so issues surface in the super-admin-friendly `/settings/debug` UI.
-- Include `category`, `level`, `message`, `source`, `provider_key`, and useful `metadata`.
+- Record support-relevant diagnostics in the debug log so they surface in the super-admin-friendly `/settings/debug` UI.
+- Include `category`, `level`, `message`, `source`, `provider_key`, and useful structured `metadata`.
 - Attach `family` and `account_provider` when available so support can filter and trace the affected connection.
 - Reserve raw Rails logging for low-value local noise; anything operators may need should go to the debug log.
 
