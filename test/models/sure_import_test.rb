@@ -90,6 +90,26 @@ class SureImportTest < ActiveSupport::TestCase
     assert_not @import.uploaded?
   end
 
+  test "valid_ndjson_content? returns false when later line is invalid" do
+    ndjson = [
+      { type: "Account", data: { id: "uuid-1" } }.to_json,
+      "{\"type\":\"Transaction\",\"data\":"
+    ].join("\n")
+
+    assert_not SureImport.valid_ndjson_content?(ndjson)
+    assert_not_empty SureImport.ndjson_validation_errors(ndjson)
+  end
+
+  test "valid_ndjson_content? returns false when later line misses required keys" do
+    ndjson = [
+      { type: "Account", data: { id: "uuid-1" } }.to_json,
+      { type: "Transaction" }.to_json
+    ].join("\n")
+
+    assert_not SureImport.valid_ndjson_content?(ndjson)
+    assert_includes SureImport.ndjson_validation_errors(ndjson), "Line 2 must include type and data."
+  end
+
   test "configured? and cleaned? follow uploaded?" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }

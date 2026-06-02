@@ -363,4 +363,28 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to imports_path
   end
+
+  test "rejects Sure import when later NDJSON line is invalid" do
+    ndjson_content = [
+      { type: "Account", data: { id: "account_1", name: "Checking" } }.to_json,
+      "{\"type\":\"Transaction\",\"data\":"
+    ].join("\n")
+    invalid_file = Rack::Test::UploadedFile.new(
+      StringIO.new(ndjson_content),
+      "application/x-ndjson",
+      original_filename: "broken.ndjson"
+    )
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: {
+        import: {
+          type: "SureImport",
+          import_file: invalid_file
+        }
+      }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.invalid_ndjson_file_type"), flash[:alert]
+  end
 end

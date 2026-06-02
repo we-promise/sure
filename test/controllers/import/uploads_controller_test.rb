@@ -46,4 +46,27 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "Must be valid CSV with headers and at least one row of data", flash[:alert]
   end
+
+  test "rejects Sure import upload when later NDJSON line is invalid" do
+    sure_import = @user.family.imports.create!(type: "SureImport")
+    ndjson_content = [
+      { type: "Account", data: { id: "account_1", name: "Checking" } }.to_json,
+      "{\"type\":\"Transaction\",\"data\":"
+    ].join("\n")
+    invalid_file = Rack::Test::UploadedFile.new(
+      StringIO.new(ndjson_content),
+      "application/x-ndjson",
+      original_filename: "broken.ndjson"
+    )
+
+    patch import_upload_url(sure_import), params: {
+      import: {
+        ndjson_file: invalid_file
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "Must be valid NDJSON with at least one record", flash[:alert]
+    assert_not sure_import.reload.ndjson_file.attached?
+  end
 end

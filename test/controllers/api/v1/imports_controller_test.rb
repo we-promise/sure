@@ -587,6 +587,27 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_ndjson", json_response["error"]
   end
 
+  test "should reject Sure import when later NDJSON line is invalid" do
+    ndjson_content = [
+      { type: "Account", data: { id: "account_1", name: "Checking" } }.to_json,
+      "{\"type\":\"Transaction\",\"data\":"
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             type: "SureImport",
+             raw_file_content: ndjson_content
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "invalid_ndjson", json_response["error"]
+    assert_includes json_response["errors"].first, "Line 2 is not valid JSON"
+  end
+
   test "should preflight CSV import without persisting records" do
     csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
 

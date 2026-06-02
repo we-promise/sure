@@ -237,7 +237,7 @@ class ImportsController < ApplicationController
 
       content = file.read
       file.rewind
-      unless SureImport.valid_ndjson_first_line?(content)
+      unless SureImport.valid_ndjson_content?(content)
         redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
         return
       end
