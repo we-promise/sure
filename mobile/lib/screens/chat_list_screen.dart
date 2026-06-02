@@ -263,6 +263,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           child: const Text('Enable AI Chats'),
                         ),
                       ),
+                      if (chatProvider.errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          chatProvider.errorMessage!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: colorScheme.error,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Text(
                         'Disable anytime. All data sent to our AI providers is anonymized.',

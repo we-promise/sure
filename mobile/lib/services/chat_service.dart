@@ -45,6 +45,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ?? 'AI features not enabled',
+          'ai_available': responseData['ai_available'] ?? false,
         };
       } else {
         final responseData = jsonDecode(response.body);
@@ -375,7 +376,12 @@ class ChatService {
         final responseData = jsonDecode(response.body);
         return {'success': true, 'user': responseData['user']};
       } else if (response.statusCode == 403) {
-        return {'success': false, 'error': 'ai_unavailable'};
+        final responseData = jsonDecode(response.body);
+        final error = responseData['error'] ?? '';
+        return {
+          'success': false,
+          'error': error == 'ai_unavailable' ? 'ai_unavailable' : 'insufficient_scope',
+        };
       } else if (response.statusCode == 401) {
         return {'success': false, 'error': 'unauthorized'};
       } else {

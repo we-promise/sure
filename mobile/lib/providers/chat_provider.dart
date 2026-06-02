@@ -65,7 +65,9 @@ class ChatProvider with ChangeNotifier {
         _chats = result['chats'] as List<Chat>;
         _errorMessage = null;
       } else if (result['error'] == 'feature_disabled') {
-        _featureDisabled = true;
+        final aiAvailable = result['ai_available'] as bool? ?? true;
+        _featureDisabled = aiAvailable;
+        _aiUnavailable = !aiAvailable;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
       }
@@ -97,13 +99,22 @@ class ChatProvider with ChangeNotifier {
         _isLoading = false;
         notifyListeners();
         return false;
+      } else if (result['error'] == 'unauthorized') {
+        // Clear featureDisabled so the generic error state renders the message
+        _featureDisabled = false;
+        _errorMessage = 'Session expired. Please sign in again.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
       } else {
+        _errorMessage = 'Could not enable AI features. Please try again.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
       debugPrint('enableAi error: $e');
+      _errorMessage = 'Something went wrong. Please try again.';
       _isLoading = false;
       notifyListeners();
       return false;
