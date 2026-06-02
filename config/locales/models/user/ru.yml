@@ -15,6 +15,8 @@ ru:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Администратор не может удалить аккаунт, пока есть другие пользователи. Пожалуйста, сначала удалите всех участников.
+              cannot_deactivate_admin_with_other_users: Администратор не может удалить
+                аккаунт, пока есть другие пользователи. Пожалуйста, сначала удалите
+                всех участников.
             profile_image:
               invalid_file_size: размер файла должен быть меньше %{max_megabytes}МБ

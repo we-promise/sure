@@ -9,6 +9,8 @@ ru:
       title: Присоединиться к %{family}
     create:
       existing_user_added: Пользователь добавлен в ваше домохозяйство.
+      existing_user_has_family_data: That user already owns a household with accounts.
+        They need to remove or transfer those accounts before joining yours.
       failure: Не удалось отправить приглашение
       success: Приглашение успешно отправлено
     destroy:
@@ -23,5 +25,6 @@ ru:
       role_label: Роль
       role_member: Участник
       submit: Отправить приглашение
-      subtitle: Отправьте приглашение присоединиться к вашей учетной записи %{moniker} в %{product_name}
+      subtitle: Отправьте приглашение присоединиться к вашей учетной записи %{moniker}
+        в %{product_name}
       title: Пригласить кого-то

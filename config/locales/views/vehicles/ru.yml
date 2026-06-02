@@ -26,10 +26,10 @@ ru:
     tabs:
       overview:
         current_price: Текущая цена
+        edit_account_details: Редактировать данные счёта
         make_model: Марка и модель
         mileage: Пробег
         purchase_price: Цена покупки
         trend: Тенденция
         unknown: Неизвестно
         year: Год
-        edit_account_details: "Редактировать данные счёта"

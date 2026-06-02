@@ -10,19 +10,19 @@ ru:
       success: Категория успешно создана
     destroy:
       success: Категория успешно удалена
+    destroy_all:
+      success: Все категории удалены
     edit:
       edit: Редактировать категорию
     form:
-      placeholder: Название категории
-      name_label: Название
-      unassigned: "(не назначено)"
-      parent_category_label: "Родительская категория (необязательно)"
+      auto_adjust: авто-настройка.
       color: Цвет
       icon: Иконка
-      auto_adjust: авто-настройка.
-      poor_contrast: "Плохой контраст, выберите более тёмный цвет или"
-    destroy_all:
-      success: Все категории удалены
+      name_label: Название
+      parent_category_label: Родительская категория (необязательно)
+      placeholder: Название категории
+      poor_contrast: Плохой контраст, выберите более тёмный цвет или
+      unassigned: "(не назначено)"
     index:
       bootstrap: Использовать стандартные (рекомендуется)
       categories: Категории
@@ -30,23 +30,42 @@ ru:
       categories_incomes: Категории доходов
       delete_all: Удалить все
       empty: Категории не найдены
+      merge: Объединить категории
       new: Новая категория
     menu:
       loading: Загрузка...
+    merge:
+      description: Выберите целевую категорию и категории, которые нужно в неё объединить. Соответствующие операции и строки бюджета будут перемещены.
+      select_target: Выберите целевую категорию...
+      sources_hint: Выбранные категории будут удалены после перемещения операций и бюджетных строк в целевую. Не выбирайте целевую категорию как источник.
+      sources_label: Категории для объединения
+      submit: Объединить выбранные
+      target_label: Объединить в (целевая)
+      title: Объединение категорий
     new:
       new_category: Новая категория
+    perform_merge:
+      invalid_categories: Выбраны некорректные категории
+      no_categories_selected: Не выбрано ни одной категории для объединения
+      success:
+        one: "Успешно объединена %{count} категория"
+        few: "Успешно объединены %{count} категории"
+        many: "Успешно объединено %{count} категорий"
+        other: "Успешно объединены %{count} категории"
+      target_not_found: Целевая категория не найдена
+      target_selected_as_source: Выберите разные категории для цели и источников.
     update:
       success: Категория успешно обновлена
     virtual:
-      transfer: Перевод
       payment: Платёж
       trade: Сделка
+      transfer: Перевод
   category:
     dropdowns:
       show:
         bootstrap: Создать стандартные категории
         empty: Категории не найдены
-        match_transfer: "Соответствие переводу/платежу"
-        one_time: "Одноразовый %{type}"
-        income: "доход"
-        expense: "расход"
+        expense: расход
+        income: доход
+        match_transfer: Соответствие переводу/платежу
+        one_time: Одноразовый %{type}

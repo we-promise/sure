@@ -1,54 +1,54 @@
 ---
 ru:
   period:
-    last_day:
-      label_short: "1Д"
-      label: "Последний день"
-      comparison_label: "по сравнению со вчера"
-    current_week:
-      label_short: "ТН"
-      label: "Текущая неделя"
-      comparison_label: "по сравнению с началом недели"
-    last_7_days:
-      label_short: "7Д"
-      label: "Последние 7 дней"
-      comparison_label: "по сравнению с прошлой неделей"
-    current_month:
-      label_short: "ТМ"
-      label: "Текущий месяц"
-      comparison_label: "по сравнению с началом месяца"
-    last_month:
-      label_short: "ПМ"
-      label: "Прошлый месяц"
-      comparison_label: "по сравнению с прошлым месяцем"
-    last_30_days:
-      label_short: "30Д"
-      label: "Последние 30 дней"
-      comparison_label: "по сравнению с последними 30 днями"
-    last_90_days:
-      label_short: "90Д"
-      label: "Последние 90 дней"
-      comparison_label: "по сравнению с прошлым кварталом"
-    current_year:
-      label_short: "ТГ"
-      label: "Текущий год"
-      comparison_label: "по сравнению с началом года"
-    last_365_days:
-      label_short: "365Д"
-      label: "Последние 365 дней"
-      comparison_label: "по сравнению с год назад"
-    last_5_years:
-      label_short: "5Л"
-      label: "Последние 5 лет"
-      comparison_label: "по сравнению с 5 лет назад"
-    last_10_years:
-      label_short: "10Л"
-      label: "Последние 10 лет"
-      comparison_label: "по сравнению с 10 лет назад"
     all_time:
-      label_short: "Все"
-      label: "Всё время"
-      comparison_label: "по сравнению с началом"
+      comparison_label: по сравнению с началом
+      label: Всё время
+      label_short: Все
+    current_month:
+      comparison_label: по сравнению с началом месяца
+      label: Текущий месяц
+      label_short: ТМ
+    current_week:
+      comparison_label: по сравнению с началом недели
+      label: Текущая неделя
+      label_short: ТН
+    current_year:
+      comparison_label: по сравнению с началом года
+      label: Текущий год
+      label_short: ТГ
     custom:
-      label_short: "Свой"
-      label: "Свой период"
+      label: Свой период
+      label_short: Свой
+    last_10_years:
+      comparison_label: по сравнению с 10 лет назад
+      label: Последние 10 лет
+      label_short: 10Л
+    last_30_days:
+      comparison_label: по сравнению с последними 30 днями
+      label: Последние 30 дней
+      label_short: 30Д
+    last_365_days:
+      comparison_label: по сравнению с год назад
+      label: Последние 365 дней
+      label_short: 365Д
+    last_5_years:
+      comparison_label: по сравнению с 5 лет назад
+      label: Последние 5 лет
+      label_short: 5Л
+    last_7_days:
+      comparison_label: по сравнению с прошлой неделей
+      label: Последние 7 дней
+      label_short: 7Д
+    last_90_days:
+      comparison_label: по сравнению с прошлым кварталом
+      label: Последние 90 дней
+      label_short: 90Д
+    last_day:
+      comparison_label: по сравнению со вчера
+      label: Последний день
+      label_short: 1Д
+    last_month:
+      comparison_label: по сравнению с прошлым месяцем
+      label: Прошлый месяц
+      label_short: ПМ

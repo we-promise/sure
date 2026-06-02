@@ -13,10 +13,10 @@ ru:
     form:
       placeholder: Название тега
     index:
+      delete_all: Удалить все
       empty: Тегов пока нет
       new: Новый тег
       tags: Теги
-      delete_all: Удалить все
     new:
       new: Новый тег
     tag:

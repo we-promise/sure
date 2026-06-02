@@ -2,30 +2,28 @@
 ru:
   valuations:
     confirmation_contents:
-      this_will: "Это %{action_verb} стоимость счёта на"
-      to_colon: "до:"
-      total_account_value: Общая стоимость счёта
-      holdings_value: Стоимость активов
-      brokerage_cash: Брокерский счёт
       account_balance: баланс счёта
-      credit_card_balance: баланс кредитной карты
-      loan_balance: баланс по кредиту
-      property_value: стоимость недвижимости
-      vehicle_value: стоимость транспортного средства
-      crypto_balance: баланс криптовалюты
       asset_value: стоимость актива
-      liability_balance: баланс обязательств
       balance: баланс
-      "on": "на"
-      to: "до"
-      recalculate_notice: "Все будущие операции и балансы будут пересчитаны на основе этого %{change_or_update}."
+      brokerage_cash: Брокерский счёт
       change: изменение
+      credit_card_balance: баланс кредитной карты
+      crypto_balance: баланс криптовалюты
+      holdings_value: Стоимость активов
+      liability_balance: баланс обязательств
+      loan_balance: баланс по кредиту
+      'on': на
+      property_value: стоимость недвижимости
+      recalculate_notice: Все будущие операции и балансы будут пересчитаны на основе
+        этого %{change_or_update}.
+      this_will: Это %{action_verb} стоимость счёта на
+      to: до
+      to_colon: 'до:'
+      total_account_value: Общая стоимость счёта
       update: обновление
+      vehicle_value: стоимость транспортного средства
     create:
       account_updated: Счёт обновлён
-    update:
-      account_updated: Счёт обновлён
-      entry_updated: Запись обновлена
     errors:
       amount_required: Требуется указать сумму
     form:
@@ -41,6 +39,8 @@ ru:
       valuations: Стоимость
       value: стоимость
     new:
+      amount: Сумма
+      submit: Сохранить
       title: Новый баланс
     show:
       amount: Сумма
@@ -54,7 +54,10 @@ ru:
       name_placeholder: Введите название для этой записи
       note_label: Заметки
       note_placeholder: Добавьте любые дополнительные детали об этой записи
+      opening_balance: Начальный баланс
       overview: Обзор
       settings: Настройки
-      opening_balance: "Начальный баланс"
       update_value: Обновить стоимость
+    update:
+      account_updated: Счёт обновлён
+      entry_updated: Запись обновлена

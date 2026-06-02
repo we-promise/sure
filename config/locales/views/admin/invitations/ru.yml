@@ -3,6 +3,6 @@ ru:
   admin:
     invitations:
       destroy:
-        success: "Приглашение удалено."
+        success: Приглашение удалено.
       destroy_all:
-        success: "Все приглашения для этой семьи удалены."
+        success: Все приглашения для этой семьи удалены.

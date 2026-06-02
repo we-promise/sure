@@ -5,6 +5,7 @@ ru:
       account: Счёт для перевода (необязательно)
       account_prompt: Поиск счёта
       amount: Сумма
+      dividend_requires_security: Для дивидендов требуется актив
       fee: Комиссия за операцию
       holding: Символ тикера
       holding_optional: Символ тикера (необязательно)
@@ -14,21 +15,20 @@ ru:
       ticker_placeholder: AAPL
       type: Тип
       type_buy: Покупка
-      type_sell: Продажа
       type_deposit: Депозит
-      type_withdrawal: Снятие
       type_dividend: Дивиденды
       type_interest: Проценты
-      dividend_requires_security: Для дивидендов требуется актив
+      type_sell: Продажа
+      type_withdrawal: Снятие
     header:
       buy: Покупка
-      sell: Продажа
+      current_market_price_label: Текущая рыночная цена
       dividend: Дивиденды
       interest: Проценты
-      current_market_price_label: Текущая рыночная цена
       overview: Обзор
       purchase_price_label: Цена покупки
       purchase_qty_label: Количество покупки
+      sell: Продажа
       symbol_label: Символ
       total_return_label: Нереализованная прибыль/убыток
     new:
@@ -41,16 +41,17 @@ ru:
       cost_per_share_label: Стоимость за акцию
       date_label: Дата
       delete: Удалить
-      fee_label: Комиссия за операцию
       delete_subtitle: Это действие нельзя отменить
       delete_title: Удалить операцию
       details: Детали
-      provider_disabled_warning: "Обновления цен приостановлены — провайдер %{provider} отключен. Включите его в Настройках или переназначьте актив другому провайдеру."
       exclude_subtitle: Эта операция не будет включена в отчёты и расчёты
       exclude_title: Исключить из аналитики
+      fee_label: Комиссия за операцию
       no_category: Без категории
       note_label: Заметка
       note_placeholder: Добавьте любые дополнительные заметки здесь...
+      provider_disabled_warning: Обновления цен приостановлены — провайдер %{provider}
+        отключен. Включите его в Настройках или переназначьте актив другому провайдеру.
       quantity_label: Количество
       sell: Продажа
       settings: Настройки
