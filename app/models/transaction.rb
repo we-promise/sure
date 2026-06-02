@@ -50,6 +50,7 @@ class Transaction < ApplicationRecord
   end
 
   validate :exchange_rate_must_be_valid
+  validate :refund_of_transaction_must_belong_to_same_family, if: :refund_of_transaction_id?
 
   private
 
@@ -61,6 +62,14 @@ class Transaction < ApplicationRecord
         if numeric_rate.nil? || !numeric_rate.finite? || numeric_rate <= 0
           errors.add(:exchange_rate, "must be greater than 0")
         end
+      end
+    end
+
+    def refund_of_transaction_must_belong_to_same_family
+      return unless entry && refund_of_transaction&.entry
+
+      if entry.account.family_id != refund_of_transaction.entry.account.family_id
+        errors.add(:refund_of_transaction_id, :same_family)
       end
     end
 

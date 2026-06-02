@@ -1991,6 +1991,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "transactions", column: "refund_of_transaction_id", on_delete: :nullify
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
