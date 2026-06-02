@@ -87,6 +87,28 @@ class EnvelopesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new form omits categories already backing another envelope" do
+    family = @user.family
+    cat_taken = Category.create!(name: "Taken WT", family: family, color: "#4da568", lucide_icon: "plane")
+    cat_free = Category.create!(name: "Free WT", family: family, color: "#6471eb", lucide_icon: "house")
+    family.envelopes.create!(name: "Owner WT", category: cat_taken, monthly_contribution: 10, currency: "USD", starts_on: Date.current.beginning_of_month)
+
+    get new_envelope_url
+    assert_response :success
+    assert_no_match %r{data-value="#{cat_taken.id}"}, response.body
+    assert_match %r{data-value="#{cat_free.id}"}, response.body
+  end
+
+  test "edit form keeps the envelope's own category assignable" do
+    family = @user.family
+    cat = Category.create!(name: "Owned WT", family: family, color: "#4da568", lucide_icon: "plane")
+    env = family.envelopes.create!(name: "Owner2 WT", category: cat, monthly_contribution: 10, currency: "USD", starts_on: Date.current.beginning_of_month)
+
+    get edit_envelope_url(env)
+    assert_response :success
+    assert_match %r{data-value="#{cat.id}"}, response.body
+  end
+
   test "update changes the envelope" do
     patch envelope_url(@envelope), params: {
       envelope: { name: "Renamed", monthly_contribution: "400" }

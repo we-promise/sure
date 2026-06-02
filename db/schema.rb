@@ -667,6 +667,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.check_constraint "char_length(name::text) <= 255", name: "chk_envelopes_name_length"
     t.check_constraint "monthly_contribution >= 0::numeric", name: "chk_envelopes_monthly_contribution_non_negative"
     t.check_constraint "target_amount IS NULL OR target_amount > 0::numeric", name: "chk_envelopes_target_amount_positive"
+    t.check_constraint "target_date IS NULL OR target_amount IS NOT NULL", name: "chk_envelopes_target_date_requires_target_amount"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

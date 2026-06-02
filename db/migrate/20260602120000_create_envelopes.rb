@@ -26,5 +26,8 @@ class CreateEnvelopes < ActiveRecord::Migration[7.2]
     add_check_constraint :envelopes,
                          "target_amount IS NULL OR target_amount > 0",
                          name: "chk_envelopes_target_amount_positive"
+    add_check_constraint :envelopes,
+                         "target_date IS NULL OR target_amount IS NOT NULL",
+                         name: "chk_envelopes_target_date_requires_target_amount"
   end
 end

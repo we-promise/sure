@@ -81,7 +81,7 @@ en:
         notes_placeholder: A reminder for future you…
     envelope_card:
       no_category: No category
-      aria_balance: "%{balance} available"
+      aria_label: "%{name}, %{status}, %{balance} available"
       contribution: "%{amount}/mo"
       overspent: Overspent
       reached: Target reached
