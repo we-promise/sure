@@ -56,6 +56,25 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_includes dup.errors[:category], "That category already backs another envelope."
   end
 
+  test "rejects a category whose parent already backs another envelope" do
+    parent = Category.create!(name: "Bills test", family: @family, color: "#6471eb", lucide_icon: "house")
+    child = Category.create!(name: "Electric test", parent: parent, family: @family)
+    @family.envelopes.create!(name: "Bills env", category: parent, monthly_contribution: 10, currency: "USD", starts_on: Date.current.beginning_of_month)
+
+    overlap = @family.envelopes.new(name: "Electric env", category: child, monthly_contribution: 5, currency: "USD", starts_on: Date.current.beginning_of_month)
+    assert_not overlap.valid?
+    assert_includes overlap.errors[:category], "A parent or sub-category of this category already backs another envelope."
+  end
+
+  test "rejects a category whose subcategory already backs another envelope" do
+    parent = Category.create!(name: "Bills2 test", family: @family, color: "#6471eb", lucide_icon: "house")
+    child = Category.create!(name: "Water test", parent: parent, family: @family)
+    @family.envelopes.create!(name: "Water env", category: child, monthly_contribution: 5, currency: "USD", starts_on: Date.current.beginning_of_month)
+
+    overlap = @family.envelopes.new(name: "Bills env", category: parent, monthly_contribution: 10, currency: "USD", starts_on: Date.current.beginning_of_month)
+    assert_not overlap.valid?
+  end
+
   test "category must belong to the same family" do
     other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
     foreign_category = Category.create!(name: "Foreign", family: other_family, color: "#4da568", lucide_icon: "plane")
@@ -155,6 +174,17 @@ class EnvelopeTest < ActiveSupport::TestCase
     excluded.update!(excluded: true)
 
     assert_equal 0.to_d, envelope.total_spent
+  end
+
+  test "recent_entries excludes pending transactions" do
+    envelope = build_envelope(months_ago: 0)
+    posted = create_transaction(account: @account, amount: 50, date: Date.current, category: @category)
+    pending = create_transaction(account: @account, amount: 75, date: Date.current, category: @category)
+    pending.transaction.update!(extra: { "plaid" => { "pending" => true } })
+
+    ids = envelope.recent_entries.map(&:id)
+    assert_includes ids, posted.id
+    assert_not_includes ids, pending.id
   end
 
   test "an envelope with no category has zero spend" do

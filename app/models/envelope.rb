@@ -34,6 +34,7 @@ class Envelope < ApplicationRecord
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validate :category_must_belong_to_family
   validate :category_must_be_unused
+  validate :category_must_not_overlap_other_envelope
   validate :target_date_requires_target_amount
 
   monetize :monthly_contribution, :target_amount, :total_contributed, :total_spent,
@@ -151,6 +152,7 @@ class Envelope < ApplicationRecord
           .where(transactions: { category_id: spend_category_ids })
           .where(excluded: false)
           .where("entries.date >= ?", starts_on)
+          .merge(Transaction.excluding_pending)
           .order(date: :desc, created_at: :desc)
           .limit(limit)
   end
@@ -179,6 +181,21 @@ class Envelope < ApplicationRecord
 
       clashing = Envelope.where(category_id: category_id).where.not(id: id)
       errors.add(:category, :already_taken) if clashing.exists?
+    end
+
+    # Prevent ancestor/descendant overlap. Because spend rolls up from
+    # subcategories into the parent envelope (see spend_category_ids), letting
+    # a parent-category envelope coexist with one of its child-category
+    # envelopes would double-count the child's spend. Categories are at most
+    # two levels deep, so "related" is the parent plus any direct children.
+    def category_must_not_overlap_other_envelope
+      return if category.nil? || family.nil?
+
+      related_ids = ([ category.parent_id ] + category.subcategories.pluck(:id)).compact
+      return if related_ids.empty?
+
+      clashing = family.envelopes.where(category_id: related_ids).where.not(id: id)
+      errors.add(:category, :overlaps_envelope) if clashing.exists?
     end
 
     def target_date_requires_target_amount
