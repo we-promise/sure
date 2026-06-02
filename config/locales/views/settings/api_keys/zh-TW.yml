@@ -37,7 +37,7 @@ zh-TW:
           never_expires: "永不過期"
           permissions: "權限範圍"
           usage_instructions_title: "如何使用您的 API 金鑰"
-          usage_instructions: "在向 Maybe API 發送請求時，請在 X-Api-Key 標頭 (Header) 中包含您的 API 金鑰："
+          usage_instructions: "在向 %{product_name} API 發送請求時，請在 X-Api-Key 標頭 (Header) 中包含您的 API 金鑰："
           regenerate_key: "建立新金鑰"
           revoke_key: "撤銷金鑰"
           revoke_confirmation: "您確定要撤銷此 API 金鑰嗎？此操作無法還原，且會立即停用所有使用此金鑰的應用程式。"
