@@ -27,8 +27,10 @@ class OfflineTransaction extends Transaction {
     super.notes,
     super.categoryId,
     super.categoryName,
+    super.categoryProvided = true,
     super.merchantId,
     super.merchantName,
+    super.merchantProvided = true,
     super.tagIds,
     super.tagNames,
     super.tagsProvided = true,
@@ -55,8 +57,10 @@ class OfflineTransaction extends Transaction {
       notes: transaction.notes,
       categoryId: transaction.categoryId,
       categoryName: transaction.categoryName,
+      categoryProvided: transaction.categoryProvided,
       merchantId: transaction.merchantId,
       merchantName: transaction.merchantName,
+      merchantProvided: transaction.merchantProvided,
       tagIds: transaction.tagIds,
       tagNames: transaction.tagNames,
       tagsProvided: transaction.tagsProvided,
@@ -123,11 +127,45 @@ class OfflineTransaction extends Transaction {
       notes: notes,
       categoryId: categoryId,
       categoryName: categoryName,
+      categoryProvided: categoryProvided,
       merchantId: merchantId,
       merchantName: merchantName,
+      merchantProvided: merchantProvided,
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,
+    );
+  }
+
+  OfflineTransaction mergeServerTransaction(
+    Transaction transaction, {
+    required String accountId,
+  }) {
+    return OfflineTransaction(
+      id: transaction.id,
+      localId: localId,
+      accountId: accountId,
+      name: transaction.name,
+      date: transaction.date,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      nature: transaction.nature,
+      notes: transaction.notes,
+      categoryId:
+          transaction.categoryProvided ? transaction.categoryId : categoryId,
+      categoryName: transaction.categoryProvided
+          ? transaction.categoryName
+          : categoryName,
+      merchantId:
+          transaction.merchantProvided ? transaction.merchantId : merchantId,
+      merchantName: transaction.merchantProvided
+          ? transaction.merchantName
+          : merchantName,
+      tagIds: transaction.tagsProvided ? transaction.tagIds : tagIds,
+      tagNames: transaction.tagsProvided ? transaction.tagNames : tagNames,
+      syncStatus: SyncStatus.synced,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
     );
   }
 
@@ -143,8 +181,10 @@ class OfflineTransaction extends Transaction {
     String? notes,
     String? categoryId,
     String? categoryName,
+    bool? categoryProvided,
     String? merchantId,
     String? merchantName,
+    bool? merchantProvided,
     List<String>? tagIds,
     List<String>? tagNames,
     bool? tagsProvided,
@@ -164,8 +204,10 @@ class OfflineTransaction extends Transaction {
       notes: notes ?? this.notes,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
+      categoryProvided: categoryProvided ?? this.categoryProvided,
       merchantId: merchantId ?? this.merchantId,
       merchantName: merchantName ?? this.merchantName,
+      merchantProvided: merchantProvided ?? this.merchantProvided,
       tagIds: tagIds ?? this.tagIds,
       tagNames: tagNames ?? this.tagNames,
       tagsProvided: tagsProvided ?? this.tagsProvided,

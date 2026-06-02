@@ -267,24 +267,9 @@ class OfflineStorageService {
             'CRITICAL: Updating transaction ${transaction.id} with EMPTY accountId!');
       }
 
-      final updated = OfflineTransaction(
-        id: transaction.id,
-        localId: existing.localId,
+      final updated = existing.mergeServerTransaction(
+        transaction,
         accountId: finalAccountId,
-        name: transaction.name,
-        date: transaction.date,
-        amount: transaction.amount,
-        currency: transaction.currency,
-        nature: transaction.nature,
-        notes: transaction.notes,
-        categoryId: transaction.categoryId ?? existing.categoryId,
-        categoryName: transaction.categoryName ?? existing.categoryName,
-        merchantId: transaction.merchantId ?? existing.merchantId,
-        merchantName: transaction.merchantName ?? existing.merchantName,
-        tagIds: transaction.tagsProvided ? transaction.tagIds : existing.tagIds,
-        tagNames:
-            transaction.tagsProvided ? transaction.tagNames : existing.tagNames,
-        syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(
           existing.localId, updated.toDatabaseMap());

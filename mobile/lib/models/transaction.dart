@@ -9,8 +9,10 @@ class Transaction {
   final String? notes;
   final String? categoryId;
   final String? categoryName;
+  final bool categoryProvided;
   final String? merchantId;
   final String? merchantName;
+  final bool merchantProvided;
   final List<String> tagIds;
   final List<String> tagNames;
   final bool tagsProvided;
@@ -26,13 +28,19 @@ class Transaction {
     this.notes,
     this.categoryId,
     this.categoryName,
+    bool? categoryProvided,
     this.merchantId,
     this.merchantName,
+    bool? merchantProvided,
     List<String> tagIds = const [],
     List<String> tagNames = const [],
     bool? tagsProvided,
   })  : tagIds = List.unmodifiable(tagIds),
         tagNames = List.unmodifiable(tagNames),
+        categoryProvided =
+            categoryProvided ?? (categoryId != null || categoryName != null),
+        merchantProvided =
+            merchantProvided ?? (merchantId != null || merchantName != null),
         tagsProvided =
             tagsProvided ?? (tagIds.isNotEmpty || tagNames.isNotEmpty);
 
@@ -60,6 +68,9 @@ class Transaction {
     // Parse category from API response
     String? categoryId;
     String? categoryName;
+    final categoryProvided = json.containsKey('category') ||
+        json.containsKey('category_id') ||
+        json.containsKey('category_name');
     if (json['category'] != null && json['category'] is Map) {
       categoryId = json['category']['id']?.toString();
       categoryName = json['category']['name']?.toString();
@@ -70,6 +81,9 @@ class Transaction {
 
     String? merchantId;
     String? merchantName;
+    final merchantProvided = json.containsKey('merchant') ||
+        json.containsKey('merchant_id') ||
+        json.containsKey('merchant_name');
     if (json['merchant'] != null && json['merchant'] is Map) {
       merchantId = json['merchant']['id']?.toString();
       merchantName = json['merchant']['name']?.toString();
@@ -121,8 +135,10 @@ class Transaction {
       notes: json['notes']?.toString(),
       categoryId: categoryId,
       categoryName: categoryName,
+      categoryProvided: categoryProvided,
       merchantId: merchantId,
       merchantName: merchantName,
+      merchantProvided: merchantProvided,
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,

@@ -146,5 +146,98 @@ void main() {
       expect(withoutTags.tagsProvided, false);
       expect(clearedTags.tagsProvided, true);
     });
+
+    test('distinguishes omitted metadata from explicitly cleared metadata', () {
+      final withoutMetadata = Transaction.fromJson({
+        'account_id': 'acct_1',
+        'name': 'Coffee',
+        'date': '2026-06-01',
+        'amount': r'$4.50',
+        'currency': 'USD',
+        'nature': 'expense',
+      });
+
+      final clearedMetadata = Transaction.fromJson({
+        'account_id': 'acct_1',
+        'name': 'Coffee',
+        'date': '2026-06-01',
+        'amount': r'$4.50',
+        'currency': 'USD',
+        'nature': 'expense',
+        'category': null,
+        'merchant': null,
+      });
+
+      expect(withoutMetadata.categoryProvided, false);
+      expect(withoutMetadata.merchantProvided, false);
+      expect(clearedMetadata.categoryProvided, true);
+      expect(clearedMetadata.categoryId, isNull);
+      expect(clearedMetadata.categoryName, isNull);
+      expect(clearedMetadata.merchantProvided, true);
+      expect(clearedMetadata.merchantId, isNull);
+      expect(clearedMetadata.merchantName, isNull);
+    });
+
+    test('server sync merge preserves omitted metadata and applies clears', () {
+      final existing = OfflineTransaction(
+        id: 'tx_1',
+        localId: 'local_1',
+        accountId: 'acct_1',
+        name: 'Coffee',
+        date: '2026-06-01',
+        amount: r'$4.50',
+        currency: 'USD',
+        nature: 'expense',
+        categoryId: 'cat_1',
+        categoryName: 'Dining',
+        merchantId: 'merchant_1',
+        merchantName: 'Cafe',
+        tagIds: const ['tag_1'],
+        tagNames: const ['Work'],
+      );
+
+      final omittedMetadata = existing.mergeServerTransaction(
+        Transaction.fromJson({
+          'id': 'tx_1',
+          'account_id': 'acct_1',
+          'name': 'Coffee',
+          'date': '2026-06-01',
+          'amount': r'$4.50',
+          'currency': 'USD',
+          'nature': 'expense',
+        }),
+        accountId: 'acct_1',
+      );
+
+      expect(omittedMetadata.categoryId, 'cat_1');
+      expect(omittedMetadata.categoryName, 'Dining');
+      expect(omittedMetadata.merchantId, 'merchant_1');
+      expect(omittedMetadata.merchantName, 'Cafe');
+      expect(omittedMetadata.tagIds, ['tag_1']);
+      expect(omittedMetadata.tagNames, ['Work']);
+
+      final clearedMetadata = existing.mergeServerTransaction(
+        Transaction.fromJson({
+          'id': 'tx_1',
+          'account_id': 'acct_1',
+          'name': 'Coffee',
+          'date': '2026-06-01',
+          'amount': r'$4.50',
+          'currency': 'USD',
+          'nature': 'expense',
+          'category': null,
+          'merchant': null,
+          'tags': [],
+        }),
+        accountId: 'acct_1',
+      );
+
+      expect(clearedMetadata.categoryId, isNull);
+      expect(clearedMetadata.categoryName, isNull);
+      expect(clearedMetadata.merchantId, isNull);
+      expect(clearedMetadata.merchantName, isNull);
+      expect(clearedMetadata.tagIds, isEmpty);
+      expect(clearedMetadata.tagNames, isEmpty);
+    });
   });
 }
