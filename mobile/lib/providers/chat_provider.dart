@@ -15,6 +15,8 @@ class ChatProvider with ChangeNotifier {
   bool _isSendingMessage = false;
   bool _isWaitingForResponse = false;
   String? _errorMessage;
+  bool _featureDisabled = false;
+  bool _aiUnavailable = false;
   Timer? _pollingTimer;
   DateTime? _pollingStartTime;
   bool _isPollingRequestInFlight = false;
@@ -37,6 +39,8 @@ class ChatProvider with ChangeNotifier {
   bool get isWaitingForResponse => _isWaitingForResponse;
   bool get isPolling => _pollingTimer != null;
   String? get errorMessage => _errorMessage;
+  bool get featureDisabled => _featureDisabled;
+  bool get aiUnavailable => _aiUnavailable;
 
   /// Fetch list of chats
   Future<void> fetchChats({
@@ -46,6 +50,8 @@ class ChatProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     _errorMessage = null;
+    _featureDisabled = false;
+    _aiUnavailable = false;
     notifyListeners();
 
     try {
@@ -58,6 +64,8 @@ class ChatProvider with ChangeNotifier {
       if (result['success'] == true) {
         _chats = result['chats'] as List<Chat>;
         _errorMessage = null;
+      } else if (result['error'] == 'feature_disabled') {
+        _featureDisabled = true;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
       }
@@ -67,6 +75,38 @@ class ChatProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Enable AI for the current user, then refresh the chat list.
+  Future<bool> enableAi({required String accessToken}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _chatService.enableAi(accessToken: accessToken);
+
+      if (result['success'] == true) {
+        _featureDisabled = false;
+        _aiUnavailable = false;
+        await fetchChats(accessToken: accessToken);
+        return true;
+      } else if (result['error'] == 'ai_unavailable') {
+        _featureDisabled = false;
+        _aiUnavailable = true;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('enableAi error: $e');
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 

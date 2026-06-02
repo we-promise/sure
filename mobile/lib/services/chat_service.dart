@@ -359,6 +359,33 @@ class ChatService {
     };
   }
 
+  /// Enable AI features for the current user
+  Future<Map<String, dynamic>> enableAi({
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/enable_ai');
+
+      final response = await http.patch(
+        url,
+        headers: ApiConfig.getAuthHeaders(accessToken),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {'success': true, 'user': responseData['user']};
+      } else if (response.statusCode == 403) {
+        return {'success': false, 'error': 'ai_unavailable'};
+      } else if (response.statusCode == 401) {
+        return {'success': false, 'error': 'unauthorized'};
+      } else {
+        return {'success': false, 'error': 'Failed to enable AI'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
   /// Retry the last assistant response in a chat
   Future<Map<String, dynamic>> retryMessage({
     required String accessToken,
