@@ -578,15 +578,27 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
       .with(bulk_transactions_response, "Ddoge123", "dogecoin")
       .returns([])
 
-    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+    assert_difference "DebugLogEntry.count", 1 do
+      result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
 
-    assert result[:success]
+      assert result[:success]
+    end
 
     coinstats_account1.reload
     coinstats_account2.reload
 
     assert_equal 2000.0, coinstats_account1.current_balance.to_f, "missing wallet data should not zero an existing wallet"
     assert_equal 100.0, coinstats_account2.current_balance.to_f
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync_error", entry.category
+    assert_equal "warn", entry.level
+    assert_equal "CoinStats wallet balance sync preserved existing snapshot because wallet was missing from bulk response", entry.message
+    assert_equal "coinstats", entry.provider_key
+    assert_equal @family.id, entry.family_id
+    assert_equal coinstats_account1.account_provider.id, entry.account_provider_id
+    assert_equal "wallet_missing_from_bulk_response", entry.metadata["reason"]
+    assert_equal "0xworking", entry.metadata["wallet_address"]
   end
 
   test "bulk balance fetch failure preserves all existing wallet balances during import" do
@@ -645,15 +657,28 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
       .with("ethereum:0xeth123,dogecoin:Ddoge456")
       .returns(success_response(bulk_transactions_response))
 
-    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+    assert_difference "DebugLogEntry.count", 3 do
+      result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
 
-    assert result[:success]
+      assert result[:success]
+    end
 
     coinstats_account1.reload
     coinstats_account2.reload
 
     assert_equal 2000.0, coinstats_account1.current_balance.to_f
     assert_equal 100.0, coinstats_account2.current_balance.to_f
+
+    entries = DebugLogEntry.order(:created_at).last(3)
+    fetch_failure_entry = entries.find { |entry| entry.message == "CoinStats bulk balance fetch failed" }
+    assert_not_nil fetch_failure_entry
+    assert_equal "provider_sync_error", fetch_failure_entry.category
+    assert_equal "coinstats", fetch_failure_entry.provider_key
+    assert_equal "CoinStats timeout", fetch_failure_entry.metadata["error_message"]
+
+    preserved_entries = entries.select { |entry| entry.message == "CoinStats wallet balance sync preserved existing snapshot after bulk fetch failure" }
+    assert_equal 2, preserved_entries.size
+    assert_equal [ "0xeth123", "Ddoge456" ], preserved_entries.map { |entry| entry.metadata["wallet_address"] }.sort
   end
 
   test "uses bulk endpoint for multiple unique wallets and falls back on error" do

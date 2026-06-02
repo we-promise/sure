@@ -130,7 +130,16 @@ class CoinstatsItem::Importer
       response = coinstats_provider.get_wallet_balances(wallets_param)
       response.success? ? response.data : nil
     rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - Bulk balance fetch failed: #{e.message}"
+      log_debug_event(
+        level: "warn",
+        message: "CoinStats bulk balance fetch failed",
+        metadata: {
+          coinstats_item_id: coinstats_item.id,
+          wallets: wallets.map { |wallet| "#{wallet[:blockchain]}:#{wallet[:address]}" },
+          error_class: e.class.name,
+          error_message: e.message
+        }
+      )
       nil
     end
 
@@ -226,9 +235,31 @@ class CoinstatsItem::Importer
       end
 
       if bulk_balance_data.nil?
-        Rails.logger.warn "CoinstatsItem::Importer - Missing bulk balance data for account #{coinstats_account.id}; preserving previous snapshot"
+        log_debug_event(
+          level: "warn",
+          message: "CoinStats wallet balance sync preserved existing snapshot after bulk fetch failure",
+          account_provider: coinstats_account.account_provider,
+          metadata: {
+            coinstats_item_id: coinstats_item.id,
+            coinstats_account_id: coinstats_account.id,
+            wallet_address: address,
+            blockchain: blockchain,
+            reason: "bulk_balance_data_missing"
+          }
+        )
       elsif wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
-        Rails.logger.warn "CoinstatsItem::Importer - Wallet #{blockchain}:#{address} missing from bulk balance response for account #{coinstats_account.id}; preserving previous snapshot"
+        log_debug_event(
+          level: "warn",
+          message: "CoinStats wallet balance sync preserved existing snapshot because wallet was missing from bulk response",
+          account_provider: coinstats_account.account_provider,
+          metadata: {
+            coinstats_item_id: coinstats_item.id,
+            coinstats_account_id: coinstats_account.id,
+            wallet_address: address,
+            blockchain: blockchain,
+            reason: "wallet_missing_from_bulk_response"
+          }
+        )
       else
         balance_data = coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
 
@@ -251,6 +282,19 @@ class CoinstatsItem::Importer
           (entry[:connectionId]&.downcase == blockchain&.downcase ||
            entry[:blockchain]&.downcase == blockchain&.downcase)
       end
+    end
+
+    def log_debug_event(level:, message:, metadata:, account_provider: nil)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: "coinstats",
+        family: coinstats_item.family,
+        account_provider: account_provider,
+        metadata: metadata
+      )
     end
 
     def update_exchange_account(coinstats_account, portfolio_coins_data:, portfolio_transactions_data:)
