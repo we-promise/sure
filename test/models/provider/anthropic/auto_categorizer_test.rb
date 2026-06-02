@@ -31,6 +31,10 @@ class Provider::Anthropic::AutoCategorizerTest < ActiveSupport::TestCase
       assert_equal [ { type: "tool", name: "report_categorizations", disable_parallel_tool_use: true } ].first, params[:tool_choice]
       assert_equal 1, params[:tools].size
       assert_equal "report_categorizations", params[:tools].first[:name]
+      # category_name enum must include nil so Claude can abstain on uncertain
+      # transactions (the prompt + type allow null) — see #1984 review.
+      category_enum = params.dig(:tools, 0, :input_schema, :properties, :categorizations, :items, :properties, :category_name, :enum)
+      assert_includes category_enum, nil
     })
 
     result = Provider::Anthropic::AutoCategorizer.new(

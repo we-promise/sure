@@ -76,4 +76,14 @@ class LlmUsageTest < ActiveSupport::TestCase
     cost = LlmUsage.calculate_cost(model: "gpt-4.1", prompt_tokens: 1_000_000, completion_tokens: 0, cache_creation_tokens: nil, cache_read_tokens: nil)
     assert_in_delta 2.0, cost, 0.0001
   end
+
+  test "calculate_cost does not apply Anthropic cache pricing to non-Anthropic models" do
+    # The 1.25x/0.1x cache multipliers are Anthropic's. If a non-Anthropic caller
+    # ever passes cache counts, they must not be billed with the wrong rates.
+    cost = LlmUsage.calculate_cost(
+      model: "gpt-4.1", prompt_tokens: 0, completion_tokens: 0,
+      cache_creation_tokens: 1_000_000, cache_read_tokens: 1_000_000
+    )
+    assert_in_delta 0.0, cost, 0.0001
+  end
 end
