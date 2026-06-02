@@ -1,0 +1,65 @@
+<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-container-hover transition-colors p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
+     <% if filterable %> data-goals-filter-target="card"<% end %>
+     data-goal-name="<%= goal.name %>"
+     data-goal-status="<%= goal.display_status %>">
+  <div class="flex items-start gap-3">
+    <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2 mb-0.5">
+        <p class="text-base font-medium text-primary truncate">
+          <a href="<%= goal_path(goal) %>"
+             aria-label="<%= aria_label %>"
+             class="before:absolute before:inset-0 before:rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100">
+            <%= goal.name %>
+          </a>
+        </p>
+        <%= render Goals::StatusPillComponent.new(goal: goal) %>
+      </div>
+      <p class="text-xs text-subdued truncate"><%= secondary_line %></p>
+    </div>
+
+    <div class="shrink-0 relative" style="width: <%= Goals::CardComponent::RING_SIZE %>px; height: <%= Goals::CardComponent::RING_SIZE %>px;">
+      <svg width="<%= Goals::CardComponent::RING_SIZE %>" height="<%= Goals::CardComponent::RING_SIZE %>" viewBox="0 0 <%= Goals::CardComponent::RING_SIZE %> <%= Goals::CardComponent::RING_SIZE %>" aria-hidden="true">
+        <circle cx="<%= Goals::CardComponent::RING_SIZE / 2.0 %>"
+                cy="<%= Goals::CardComponent::RING_SIZE / 2.0 %>"
+                r="<%= ring_radius %>"
+                fill="none"
+                stroke="var(--budget-unused-fill)"
+                stroke-width="<%= Goals::CardComponent::RING_STROKE %>" />
+        <circle cx="<%= Goals::CardComponent::RING_SIZE / 2.0 %>"
+                cy="<%= Goals::CardComponent::RING_SIZE / 2.0 %>"
+                r="<%= ring_radius %>"
+                fill="none"
+                stroke="<%= ring_color %>"
+                stroke-width="<%= Goals::CardComponent::RING_STROKE %>"
+                stroke-linecap="round"
+                stroke-dasharray="<%= ring_circumference %>"
+                stroke-dashoffset="<%= ring_offset %>"
+                transform="rotate(-90 <%= Goals::CardComponent::RING_SIZE / 2.0 %> <%= Goals::CardComponent::RING_SIZE / 2.0 %>)" />
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-primary tabular-nums" aria-hidden="true">
+        <%= progress_percent %>%
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-5">
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-xl font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format(precision: 0) %></span>
+      <span class="text-xs text-subdued tabular-nums privacy-sensitive">/ <%= goal.target_amount_money.format(precision: 0) %></span>
+    </div>
+    <% if pace_line %>
+      <p class="text-xs text-subdued tabular-nums mt-1 privacy-sensitive"><%= pace_line %></p>
+    <% end %>
+  </div>
+
+  <div class="mt-4 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <%= render Goals::AccountStackComponent.new(accounts: linked_accounts, color_map: goal.account_color_map) %>
+      <span class="text-xs text-subdued"><%= linked_accounts_count_label %></span>
+    </div>
+    <span class="text-xs text-subdued tabular-nums <%= "privacy-sensitive" if footer_has_money? %>">
+      <%= footer_line %><% if has_pending_pledge? %> · <%= t("goals.goal_card.pending_count", count: pending_pledges_count) %><% end %>
+    </span>
+  </div>
+</div>
