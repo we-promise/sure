@@ -57,6 +57,9 @@ module SettingsHelper
     when "plaid", "plaid_eu"
       configured = @provider_configurations&.find { |c| c.provider_key.to_s.casecmp(key).zero? }&.configured?
       configured ? { status: :ok } : { status: :off }
+    when "akahu"
+      return { status: :off } unless @akahu_items&.any?
+      sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
       sync_based_summary(key)
