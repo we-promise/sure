@@ -712,45 +712,48 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   test "coverage marks covered duplicate ambiguous and mismatched months" do
-    # Pin the clock so the computed months are deterministic and never collide
-    # with the relative-dated balance fixtures (which land on "yesterday").
-    # Without this the test fails on the 1st of every month, when
-    # 1.month.ago.end_of_month equals 1.day.ago. See balances.yml.
-    travel_to Date.new(2026, 5, 6) do
-      covered_month = 5.months.ago.to_date.beginning_of_month
-      missing_month = 4.months.ago.to_date.beginning_of_month
-      duplicate_month = 3.months.ago.to_date.beginning_of_month
-      ambiguous_month = 2.months.ago.to_date.beginning_of_month
-      mismatched_month = 1.month.ago.to_date.beginning_of_month
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Coverage Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
 
-      create_statement(account: @account, month: covered_month, content: "covered")
-      create_statement(account: @account, month: duplicate_month, content: "duplicate-a")
-      create_statement(account: @account, month: duplicate_month, content: "duplicate-b")
-      create_statement(account: nil, suggested_account: @account, month: ambiguous_month, content: "ambiguous")
-      create_statement(account: @account, month: mismatched_month, content: "mismatched", closing_balance: 120)
+    covered_month = 5.months.ago.to_date.beginning_of_month
+    missing_month = 4.months.ago.to_date.beginning_of_month
+    duplicate_month = 3.months.ago.to_date.beginning_of_month
+    ambiguous_month = 2.months.ago.to_date.beginning_of_month
+    mismatched_month = 1.month.ago.to_date.beginning_of_month
 
-      @account.balances.create!(
-        date: mismatched_month.end_of_month,
-        balance: 100,
-        currency: "USD",
-        start_cash_balance: 100,
-        cash_inflows: 0,
-        cash_outflows: 0
-      )
+    create_statement(account: account, month: covered_month, content: "covered")
+    create_statement(account: account, month: duplicate_month, content: "duplicate-a")
+    create_statement(account: account, month: duplicate_month, content: "duplicate-b")
+    create_statement(account: nil, suggested_account: account, month: ambiguous_month, content: "ambiguous")
+    create_statement(account: account, month: mismatched_month, content: "mismatched", closing_balance: 120)
 
-      coverage = AccountStatement::Coverage.new(
-        @account,
-        start_month: covered_month,
-        end_month: mismatched_month
-      )
+    account.balances.create!(
+      date: mismatched_month.end_of_month,
+      balance: 100,
+      currency: "USD",
+      start_cash_balance: 100,
+      cash_inflows: 0,
+      cash_outflows: 0
+    )
 
-      statuses = coverage.months.index_by(&:date).transform_values(&:status)
-      assert_equal "covered", statuses[covered_month]
-      assert_equal "missing", statuses[missing_month]
-      assert_equal "duplicate", statuses[duplicate_month]
-      assert_equal "ambiguous", statuses[ambiguous_month]
-      assert_equal "mismatched", statuses[mismatched_month]
-    end
+    coverage = AccountStatement::Coverage.new(
+      account,
+      start_month: covered_month,
+      end_month: mismatched_month
+    )
+
+    statuses = coverage.months.index_by(&:date).transform_values(&:status)
+    assert_equal "covered", statuses[covered_month]
+    assert_equal "missing", statuses[missing_month]
+    assert_equal "duplicate", statuses[duplicate_month]
+    assert_equal "ambiguous", statuses[ambiguous_month]
+    assert_equal "mismatched", statuses[mismatched_month]
   end
 
   private
