@@ -100,8 +100,8 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
 
     totals = Transaction::Search.new(@family).totals
 
-    # A standalone refund contributes negatively to expense_total (no expense to offset).
-    assert_equal Money.new(-80, @family.currency), totals.expense_money
+    # Wrapped in ABS(SUM(...)) so a standalone refund still produces a positive expense_total.
+    assert_equal Money.new(80, @family.currency), totals.expense_money
     assert_equal Money.new(0,  @family.currency), totals.income_money
   end
 end
