@@ -123,6 +123,56 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], child.reload.entryable.tag_ids
   end
 
+  test "can update tags through tag-only endpoint" do
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, tags(:two).id ]
+    }
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert_equal @entry.entryable.tag_ids.sort, JSON.parse(response.body)["tag_ids"].sort
+  end
+
+  test "tag-only endpoint ignores tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, other_tag.id ]
+    }
+
+    assert_response :success
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint locks tags when clearing all tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: []
+    }, as: :json
+
+    assert_response :success
+    assert_empty @entry.reload.entryable.tag_ids
+    assert @entry.entryable.locked?(:tag_ids)
+  end
+
+  test "tag-only endpoint returns forbidden json for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: {
+      tag_ids: [ tags(:one).id ]
+    }, headers: {
+      "Accept" => "application/json"
+    }
+
+    assert_response :forbidden
+    assert_equal "application/json", response.media_type
+    assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
