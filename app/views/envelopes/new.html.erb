@@ -1,0 +1,30 @@
+<% if turbo_frame_request? %>
+  <%= render DS::Dialog.new(width: "lg") do |dialog| %>
+    <% dialog.with_header(custom_header: true) do %>
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <%= render DS::FilledIcon.new(variant: :container, icon: "mail", size: "md", rounded: true) %>
+          <div>
+            <h2 class="text-base font-medium text-primary"><%= t(".heading") %></h2>
+            <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
+          </div>
+        </div>
+        <%= render DS::Button.new(variant: "icon", icon: "x", title: t("common.close"), aria_label: t("common.close"), data: { action: "DS--dialog#close" }) %>
+      </div>
+    <% end %>
+    <% dialog.with_body do %>
+      <%= render "form", envelope: @envelope, categories: @categories %>
+    <% end %>
+  <% end %>
+<% else %>
+  <div class="max-w-2xl mx-auto py-8 px-4">
+    <header class="mb-6 flex items-start gap-3">
+      <%= render DS::FilledIcon.new(variant: :container, icon: "mail", size: "md", rounded: true) %>
+      <div>
+        <h1 class="text-xl font-medium text-primary"><%= t(".heading") %></h1>
+        <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
+      </div>
+    </header>
+    <%= render "form", envelope: @envelope, categories: @categories %>
+  </div>
+<% end %>
