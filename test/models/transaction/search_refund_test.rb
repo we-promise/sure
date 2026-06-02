@@ -27,7 +27,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
     expense_entry  = create_transaction(account: @checking, amount: 100,  kind: "standard")
     income_entry   = create_transaction(account: @checking, amount: -80,  kind: "standard")
 
-    result_ids = Transaction::Search.new(@family, filters: { types: ["expense"] })
+    result_ids = Transaction::Search.new(@family, filters: { types: [ "expense" ] })
                                     .transactions_scope.pluck(:id)
 
     assert_includes     result_ids, refund_entry.entryable.id,  "refund must appear under expense filter"
@@ -39,7 +39,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
     refund_entry  = create_transaction(account: @checking, amount: -50, kind: "refund")
     income_entry  = create_transaction(account: @checking, amount: -80, kind: "standard")
 
-    result_ids = Transaction::Search.new(@family, filters: { types: ["income"] })
+    result_ids = Transaction::Search.new(@family, filters: { types: [ "income" ] })
                                     .transactions_scope.pluck(:id)
 
     assert_not_includes result_ids, refund_entry.entryable.id, "refund must NOT appear under income filter"
@@ -50,7 +50,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
     refund_entry   = create_transaction(account: @checking, amount: -50,  kind: "refund")
     transfer_entry = create_transaction(account: @checking, amount: 200,  kind: "funds_movement")
 
-    result_ids = Transaction::Search.new(@family, filters: { types: ["expense", "transfer"] })
+    result_ids = Transaction::Search.new(@family, filters: { types: [ "expense", "transfer" ] })
                                     .transactions_scope.pluck(:id)
 
     assert_includes result_ids, refund_entry.entryable.id
@@ -62,7 +62,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
     income_entry   = create_transaction(account: @checking, amount: -80, kind: "standard")
     transfer_entry = create_transaction(account: @checking, amount: 200, kind: "funds_movement")
 
-    result_ids = Transaction::Search.new(@family, filters: { types: ["income", "transfer"] })
+    result_ids = Transaction::Search.new(@family, filters: { types: [ "income", "transfer" ] })
                                     .transactions_scope.pluck(:id)
 
     assert_not_includes result_ids, refund_entry.entryable.id
