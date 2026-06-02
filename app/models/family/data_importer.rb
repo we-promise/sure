@@ -311,6 +311,11 @@ class Family::DataImporter
 
         account = @family.accounts.find(new_account_id)
 
+        if (existing_entry = existing_provenance_entry(account, data))
+          @id_mappings[:transactions][old_id] = existing_entry.entryable_id if existing_entry.transaction?
+          next
+        end
+
         # Map category ID (optional)
         new_category_id = nil
         if data["category_id"].present?
@@ -343,6 +348,7 @@ class Family::DataImporter
           currency: data["currency"] || account.currency,
           notes: data["notes"],
           excluded: data["excluded"] || false,
+          **entry_provenance_attributes(data),
           entryable: transaction
         )
 
@@ -406,6 +412,7 @@ class Family::DataImporter
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
+        next if existing_provenance_entry(account, data)
 
         # Resolve or create security
         ticker = data["ticker"]
@@ -432,6 +439,7 @@ class Family::DataImporter
           amount: data["amount"].to_d,
           name: "#{data["qty"].to_d >= 0 ? 'Buy' : 'Sell'} #{ticker}",
           currency: data["currency"] || account.currency,
+          **entry_provenance_attributes(data),
           entryable: trade
         )
 
@@ -494,6 +502,7 @@ class Family::DataImporter
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
+        next if existing_provenance_entry(account, data)
 
         valuation = Valuation.new(kind: valuation_kind_for(data["kind"]))
 
@@ -503,6 +512,7 @@ class Family::DataImporter
           amount: data["amount"].to_d,
           name: data["name"] || "Valuation",
           currency: data["currency"] || account.currency,
+          **entry_provenance_attributes(data),
           entryable: valuation
         )
 
@@ -558,6 +568,21 @@ class Family::DataImporter
     def valuation_kind_for(value)
       kind = value.to_s
       Valuation.kinds.key?(kind) ? kind : "reconciliation"
+    end
+
+    def existing_provenance_entry(account, data)
+      attributes = entry_provenance_attributes(data)
+      # Both fields are required to avoid false-positive matches across providers.
+      return unless attributes[:external_id] && attributes[:source]
+
+      account.entries.find_by(attributes)
+    end
+
+    def entry_provenance_attributes(data)
+      {
+        external_id: data["external_id"].presence,
+        source: data["source"].presence
+      }.compact
     end
 
     def parse_import_date(value)
