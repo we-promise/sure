@@ -212,45 +212,43 @@ class Provider::TwelveData < Provider
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
       base, quote = symbol.split("/")
-      if base && COMMODITY_CURRENCIES.include?(base)
-        fetch_cross_prices(base: base, quote: quote, start_date: start_date, end_date: end_date)
-      else
-        throttle_request
-        response = client.get("#{base_url}/time_series") do |req|
-          req.params["symbol"] = symbol
-          req.params["mic_code"] = exchange_operating_mic
-          req.params["start_date"] = start_date.to_s
-          req.params["end_date"] = end_date.to_s
-          req.params["interval"] = "1day"
-        end
+      return fetch_cross_prices(base: base, quote: quote, start_date: start_date, end_date: end_date) if base && quote && COMMODITY_CURRENCIES.include?(base)
 
-        parsed = JSON.parse(response.body)
-        check_api_error!(parsed)
-        values = parsed.dig("values")
-
-        if values.nil?
-          error_message = parsed.dig("message") || "No data returned"
-          error_code = parsed.dig("code") || "unknown"
-          raise InvalidSecurityPriceError, "API error (code: #{error_code}): #{error_message}"
-        end
-
-        values.map do |resp|
-          price = resp.dig("close")
-          date = resp.dig("datetime")
-          if price.nil? || price.to_f <= 0
-            Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} on: #{date}.  Price data: #{price.inspect}")
-            next
-          end
-
-          Price.new(
-            symbol: symbol,
-            date: date.to_date,
-            price: price,
-            currency: parsed.dig("meta", "currency") || parsed.dig("currency"),
-            exchange_operating_mic: exchange_operating_mic
-          )
-        end.compact
+      throttle_request
+      response = client.get("#{base_url}/time_series") do |req|
+        req.params["symbol"] = symbol
+        req.params["mic_code"] = exchange_operating_mic
+        req.params["start_date"] = start_date.to_s
+        req.params["end_date"] = end_date.to_s
+        req.params["interval"] = "1day"
       end
+
+      parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
+      values = parsed.dig("values")
+
+      if values.nil?
+        error_message = parsed.dig("message") || "No data returned"
+        error_code = parsed.dig("code") || "unknown"
+        raise InvalidSecurityPriceError, "API error (code: #{error_code}): #{error_message}"
+      end
+
+      values.map do |resp|
+        price = resp.dig("close")
+        date = resp.dig("datetime")
+        if price.nil? || price.to_f <= 0
+          Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} on: #{date}.  Price data: #{price.inspect}")
+          next
+        end
+
+        Price.new(
+          symbol: symbol,
+          date: date.to_date,
+          price: price,
+          currency: parsed.dig("meta", "currency") || parsed.dig("currency"),
+          exchange_operating_mic: exchange_operating_mic
+        )
+      end.compact
     end
   end
 
