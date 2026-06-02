@@ -61,6 +61,17 @@ void main() {
       expect(AmountParser.canonicalize('1,234.50', locale: 'en_US'), '1234.5');
     });
 
+    test('rejects repeated separators that are not grouped', () {
+      expect(
+        () => AmountParser.parse('1.2.3', locale: 'en_US'),
+        throwsFormatException,
+      );
+      expect(
+        () => AmountParser.parse('1,2,3', locale: 'id_ID'),
+        throwsFormatException,
+      );
+    });
+
     test('rejects inputs without digits', () {
       expect(
         () => AmountParser.parse('USD', locale: 'en_US'),

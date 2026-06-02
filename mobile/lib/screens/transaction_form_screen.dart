@@ -69,7 +69,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
     final double amount;
     try {
-      amount = AmountParser.parse(value, locale: Intl.getCurrentLocale()).value;
+      amount = AmountParser.parse(value, locale: _currentLocaleName()).value;
     } on FormatException {
       return 'Please enter a valid number';
     }
@@ -79,6 +79,11 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     }
 
     return null;
+  }
+
+  String _currentLocaleName() {
+    return Localizations.maybeLocaleOf(context)?.toString() ??
+        Intl.getCurrentLocale();
   }
 
   Future<void> _selectDate() async {
@@ -131,7 +136,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       final apiDate = DateFormat('yyyy-MM-dd').format(parsedDate);
       final canonicalAmount = AmountParser.canonicalize(
         _amountController.text,
-        locale: Intl.getCurrentLocale(),
+        locale: _currentLocaleName(),
       );
 
       _log.info('TransactionForm', 'Calling TransactionsProvider.createTransaction (offline-first)');

@@ -40,13 +40,17 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   // Amount is a currency-formatted string returned by the API (e.g. may include
   // currency symbol, grouping separators, locale-dependent decimal separator,
   // and a sign either before or after the symbol)
-  Map<String, dynamic> _getAmountDisplayInfo(String amount, bool isAsset) {
+  Map<String, dynamic> _getAmountDisplayInfo(
+    String amount,
+    bool isAsset,
+    bool isLiability,
+  ) {
     try {
       final parsed = AmountParser.parse(amount);
       var numericValue = parsed.value;
 
-      // For asset accounts, flip the sign to match accounting conventions
-      if (isAsset) {
+      // For asset and liability accounts, flip the sign to match accounting conventions
+      if (isAsset || isLiability) {
         numericValue = -numericValue;
       }
 
@@ -473,6 +477,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 final displayInfo = _getAmountDisplayInfo(
                   transaction.amount,
                   widget.account.isAsset,
+                  widget.account.isLiability,
                 );
 
                 return Dismissible(

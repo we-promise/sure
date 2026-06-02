@@ -121,8 +121,12 @@ class AmountParser {
     final separator = lastDot == -1 ? ',' : '.';
     final parts = numericText.split(separator);
 
-    if (parts.length > 2 && _looksGrouped(parts)) {
-      return null;
+    if (parts.length > 2) {
+      if (_looksGrouped(parts)) {
+        return null;
+      }
+
+      throw const FormatException('Invalid amount format');
     }
 
     if (separator == separators.decimalSeparator) {
