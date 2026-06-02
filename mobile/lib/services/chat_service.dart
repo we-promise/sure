@@ -377,10 +377,12 @@ class ChatService {
         return {'success': true, 'user': responseData['user']};
       } else if (response.statusCode == 403) {
         final responseData = jsonDecode(response.body);
-        final error = responseData['error'] ?? '';
+        final error = (responseData['error'] ?? '').toString();
+        final isAiUnavailable = error == 'ai_unavailable' ||
+            error.toLowerCase().contains('ai is not available');
         return {
           'success': false,
-          'error': error == 'ai_unavailable' ? 'ai_unavailable' : 'insufficient_scope',
+          'error': isAiUnavailable ? 'ai_unavailable' : 'insufficient_scope',
         };
       } else if (response.statusCode == 401) {
         return {'success': false, 'error': 'unauthorized'};
