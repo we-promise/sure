@@ -100,9 +100,8 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
 
     totals = Transaction::Search.new(@family).totals
 
-    # The refund is -80 in the expense bucket; outer ABS returns 80.
-    # (A standalone refund with no offsetting expense is an unusual but valid state.)
-    assert_equal Money.new(80, @family.currency), totals.expense_money
+    # A standalone refund contributes negatively to expense_total (no expense to offset).
+    assert_equal Money.new(-80, @family.currency), totals.expense_money
     assert_equal Money.new(0,  @family.currency), totals.income_money
   end
 end
