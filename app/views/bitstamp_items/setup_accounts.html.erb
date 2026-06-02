@@ -82,7 +82,7 @@
           class: "flex-1",
           data: { loading_button_target: "button" }
         ) %>
-        <%= render DS::Link.new(text: t(".cancel"), variant: "secondary", href: accounts_path) %>
+        <%= render DS::Link.new(text: t(".cancel"), variant: "secondary", href: accounts_path, data: { turbo_frame: "_top" }) %>
       </div>
     <% end %>
   <% end %>

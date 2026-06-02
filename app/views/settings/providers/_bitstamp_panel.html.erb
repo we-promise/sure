@@ -39,9 +39,14 @@
                       <p class="text-xs text-secondary"><%= t("settings.providers.bitstamp_panel.syncing") %></p>
                     <% elsif item.requires_update? %>
                       <span class="w-2 h-2 bg-destructive rounded-full flex-shrink-0"></span>
-                      <p class="text-xs text-destructive" title="<%= item.sync_error %>">
-                        <%= item.sync_error.present? ? item.sync_error.truncate(60) : t("bitstamp_items.bitstamp_item.reconnect") %>
-                      </p>
+                      <div class="flex items-center gap-1">
+                        <p class="text-xs text-destructive">
+                          <%= item.sync_error.present? ? item.sync_error.truncate(60) : t("bitstamp_items.bitstamp_item.reconnect") %>
+                        </p>
+                        <% if item.sync_error.present? %>
+                          <%= render DS::Tooltip.new(text: item.sync_error, icon: "info", size: "sm", color: "destructive", as: :span) %>
+                        <% end %>
+                      </div>
                     <% else %>
                       <span class="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
                       <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>

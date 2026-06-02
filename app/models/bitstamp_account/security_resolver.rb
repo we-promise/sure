@@ -4,7 +4,7 @@ class BitstampAccount::SecurityResolver
   EXCHANGE_MIC = "XBTS"
 
   def self.resolve(ticker, symbol)
-    Security::Resolver.new(ticker).resolve
+    Security::Resolver.new(ticker, exchange_operating_mic: EXCHANGE_MIC).resolve
   rescue StandardError => e
     Rails.logger.warn "BitstampAccount::SecurityResolver - resolver failed for #{ticker}: #{e.message}"
     Security.find_or_initialize_by(ticker: ticker, exchange_operating_mic: EXCHANGE_MIC).tap do |security|

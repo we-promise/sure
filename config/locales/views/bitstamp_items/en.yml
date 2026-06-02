@@ -13,6 +13,7 @@ en:
       success: Successfully updated Bitstamp connection.
     destroy:
       success: Scheduled Bitstamp connection for deletion.
+      unlink_failed: Failed to unlink some accounts. Please try again.
     select_accounts:
       select_connection: Choose a Bitstamp connection in Provider Settings.
       no_credentials_configured: Add Bitstamp API credentials before setting up accounts.
