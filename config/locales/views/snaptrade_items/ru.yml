@@ -40,6 +40,8 @@ ru:
       needs_linking: требует связывания
       needs_setup:
         one: "%{count} требует настройки"
+        few: "%{count} требуют настройки"
+        many: "%{count} требуют настройки"
         other: "%{count} требуют настройки"
       no_connections: Подключения брокеров не найдены.
       orphaned_connection: Осиротевшее подключение (не синхронизировано локально)
@@ -198,6 +200,8 @@ ru:
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} счёт требует настройки"
+        few: "%{count} счёта требуют настройки"
+        many: "%{count} счетов требуют настройки"
         other: "%{count} счёта требуют настройки"
       add_another_brokerage: Подключить другого брокера
       connect_brokerage: Подключить брокера
@@ -206,8 +210,10 @@ ru:
       error: Ошибка синхронизации
       manage_connections: Управление подключениями
       more_accounts_available:
-        one: Доступен ещё %{count} счёт для настройки
-        other: Доступно ещё %{count} счёта для настройки
+        one: "Доступен ещё %{count} счёт для настройки"
+        few: "Доступно ещё %{count} счёта для настройки"
+        many: "Доступно ещё %{count} счетов для настройки"
+        other: "Доступно ещё %{count} счёта для настройки"
       no_accounts_description: Подключите брокера для импорта ваших инвестиционных
         счетов.
       no_accounts_title: Счета не обнаружены

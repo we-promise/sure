@@ -4,7 +4,9 @@ ru:
     syncer:
       accounts_need_setup:
         one: "%{count} счёт требует настройки"
-        other: "%{count} счетов требуют настройки"
+        few: "%{count} счёта требуют настройки"
+        many: "%{count} счетов требуют настройки"
+        other: "%{count} счёта требуют настройки"
       calculating_balances: Расчёт балансов...
       checking_configuration: Проверка конфигурации счёта...
       checking_credentials: Проверка учётных данных...
@@ -17,8 +19,10 @@ ru:
       no_accounts: Нет счетов для импорта
       none_selected: Счета не выбраны
       success:
-        one: Импортирован %{count} счёт
-        other: Импортировано %{count} счетов
+        one: "Импортирован %{count} счёт"
+        few: "Импортированы %{count} счёта"
+        many: "Импортировано %{count} счетов"
+        other: "Импортированы %{count} счёта"
     create:
       default_name: Kraken
       success: Успешно подключено к Kraken. Ваша учётная запись на бирже синхронизируется.
@@ -43,8 +47,10 @@ ru:
       status_with_summary: Последняя синхронизация %{timestamp} назад - %{summary}
       sync_status:
         all_synced:
-          one: Синхронизирован %{count} счёт
-          other: Синхронизировано %{count} счетов
+          one: "Синхронизирован %{count} счёт"
+          few: "Синхронизированы %{count} счёта"
+          many: "Синхронизировано %{count} счетов"
+          other: "Синхронизированы %{count} счёта"
         no_accounts: Счета не найдены
         partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют
           настройки"

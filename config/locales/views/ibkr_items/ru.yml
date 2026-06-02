@@ -5,8 +5,10 @@ ru:
       none_created: Счета не были созданы.
       none_selected: Счета не были выбраны.
       success:
-        one: Успешно создан %{count} счёт Interactive Brokers.
-        other: Успешно создано %{count} счетов Interactive Brokers.
+        one: "Успешно создан %{count} счёт Interactive Brokers."
+        few: "Успешно созданы %{count} счёта Interactive Brokers."
+        many: "Успешно создано %{count} счетов Interactive Brokers."
+        other: "Успешно созданы %{count} счёта Interactive Brokers."
     create:
       success: Успешно настроен Interactive Brokers.
     defaults:
@@ -85,8 +87,10 @@ ru:
       subtitle: Выберите, какие брокерские счета IBKR связать.
     sync_status:
       all_linked:
-        one: 1 счёт связан
-        other: "%{count} счетов связаны"
+        one: "%{count} счёт связан"
+        few: "%{count} счёта связаны"
+        many: "%{count} счетов связано"
+        other: "%{count} счёта связаны"
       no_accounts: Счета IBKR ещё не обнаружены
       partial: "%{linked} связаны, %{unlinked} требуют настройки"
     update:

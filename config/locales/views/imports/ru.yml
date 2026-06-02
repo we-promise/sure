@@ -177,14 +177,18 @@ ru:
         submit: Продолжить к обзору
         tag_name_col: Название тега
         tags_found:
-          one: Найден 1 тег
-          other: Найдено %{count} тегов
+          one: "Найден 1 тег"
+          few: "Найдено %{count} тега"
+          many: "Найдено %{count} тегов"
+          other: "Найдено %{count} тега"
         tags_heading: Теги
         title: Настройка и выбор
         transactions_col: Операции
         txn_count:
-          one: 1 операция
-          other: "%{count} операций"
+          one: "1 операция"
+          few: "%{count} операции"
+          many: "%{count} операций"
+          other: "%{count} операции"
       update:
         success: Категории и теги сохранены.
     uploads:
@@ -381,8 +385,10 @@ ru:
       processing_failed_with_message: "%{message}"
       processing_title: Обработка вашего PDF
       publish_transactions:
-        one: Опубликовать %{count} операцию
-        other: Опубликовать %{count} операций
+        one: "Опубликовать %{count} операцию"
+        few: "Опубликовать %{count} операции"
+        many: "Опубликовать %{count} операций"
+        other: "Опубликовать %{count} операции"
       ready_for_review_description: Мы извлекли %{count} операций из вашей выписки.
         Проверьте и опубликуйте их, чтобы добавить на ваш счёт.
       ready_for_review_title: Готово к обзору
@@ -397,7 +403,9 @@ ru:
       transactions_extracted: Извлечённые операции
       transactions_extracted_count:
         one: "%{count} операция"
-        other: "%{count} операций"
+        few: "%{count} операции"
+        many: "%{count} операций"
+        other: "%{count} операции"
       try_again: Попробовать снова
       unknown_document_type: Неизвестный
       unknown_state_description: Этот импорт находится в неожиданном состоянии. Пожалуйста,

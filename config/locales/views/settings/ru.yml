@@ -120,8 +120,10 @@ ru:
         subscription_subtitle: Обновите данные вашей кредитной карты
         subscription_title: Управление взносами
         trial_days_left:
-          one: Данные будут удалены через %{count} день
-          other: Данные будут удалены через %{count} дней
+          one: "Данные будут удалены через %{count} день"
+          few: "Данные будут удалены через %{count} дня"
+          many: "Данные будут удалены через %{count} дней"
+          other: "Данные будут удалены через %{count} дня"
         trialing: В настоящее время используется открытая демо-версия %{product_name}
     preferences:
       show:
@@ -162,6 +164,8 @@ ru:
         select_base_only: Только базовая валюта
         selected_currencies_count:
           one: Выбрано %{count}
+          few: Выбрано %{count}
+          many: Выбрано %{count}
           other: Выбрано %{count}
         sharing_default_label: Совместное использование по умолчанию для новых счетов
         sharing_private: Оставить приватным по умолчанию
@@ -449,8 +453,10 @@ ru:
         last_synced: Синхронизировано %{time} назад
         no_recent_sync: Синхронизация просрочена
         reconsent_needed:
-          one: Повторное согласие требуется через 1 день
-          other: Повторное согласие требуется через %{count} дней
+          one: "Повторное согласие требуется через %{count} день"
+          few: "Повторное согласие требуется через %{count} дня"
+          many: "Повторное согласие требуется через %{count} дней"
+          other: "Повторное согласие требуется через %{count} дня"
         reconsent_required: Требуется повторное согласие
         registration_needed: Требуется регистрация
         sync_error: Ошибка синхронизации

@@ -3,10 +3,12 @@ ru:
   binance_item:
     syncer:
       accounts_need_setup:
-        one: "%{count} счёт требует настройки"
-        other: "%{count} счёта требуют настройки"
+        one: "%{count} подключение требует настройки"
+        few: "%{count} подключения требуют настройки"
+        many: "%{count} подключений требуют настройки"
+        other: "%{count} подключения требуют настройки"
       calculating_balances: Расчёт балансов...
-      checking_configuration: Проверка конфигурации счёта...
+      checking_configuration: Проверка конфигурации подключения...
       checking_credentials: Проверка данных...
       credentials_invalid: Недействительные API-данные. Пожалуйста, проверьте ваш
         API-ключ и секрет.
@@ -31,8 +33,10 @@ ru:
       status_with_summary: Последняя синхронизация %{timestamp} назад - %{summary}
       sync_status:
         all_synced:
-          one: Синхронизирован %{count} счёт
-          other: Синхронизировано %{count} счёта
+          one: "Синхронизирован %{count} счёт"
+          few: "Синхронизированы %{count} счёта"
+          many: "Синхронизировано %{count} счетов"
+          other: "Синхронизированы %{count} счёта"
         no_accounts: Счета не найдены
         partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют
           настройки"
@@ -42,8 +46,10 @@ ru:
       no_accounts: Нет счетов для импорта
       none_selected: Счета не выбраны
       success:
-        one: Импортирован %{count} счёт
-        other: Импортировано %{count} счёта
+        one: "Импортирован %{count} счёт"
+        few: "Импортированы %{count} счёта"
+        many: "Импортировано %{count} счетов"
+        other: "Импортированы %{count} счёта"
     create:
       default_name: Binance
       success: Успешно подключено к Binance! Ваш счёт синхронизируется.
@@ -64,8 +70,10 @@ ru:
       wait_for_sync: Подождите, пока Binance завершит синхронизацию
     setup_accounts:
       accounts_count:
-        one: Доступен %{count} счёт
-        other: Доступно %{count} счёта
+        one: "Доступен %{count} счёт"
+        few: "Доступно %{count} счёта"
+        many: "Доступно %{count} счетов"
+        other: "Доступно %{count} счёта"
       cancel: Отмена
       creating: Импортирование...
       historical_import: Исторический импорт
