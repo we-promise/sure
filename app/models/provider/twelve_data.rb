@@ -11,6 +11,8 @@ class Provider::TwelveData < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
 
+  COMMODITY_CURRENCIES = %w[XAU XAG XPT XPD].freeze
+
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
 
@@ -209,10 +211,67 @@ class Provider::TwelveData < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
-      throttle_request
-      response = client.get("#{base_url}/time_series") do |req|
-        req.params["symbol"] = symbol
-        req.params["mic_code"] = exchange_operating_mic
+      base, quote = symbol.split("/")
+      if base && COMMODITY_CURRENCIES.include?(base)
+        fetch_cross_prices(base: base, quote: quote, start_date: start_date, end_date: end_date)
+      else
+        throttle_request
+        response = client.get("#{base_url}/time_series") do |req|
+          req.params["symbol"] = symbol
+          req.params["mic_code"] = exchange_operating_mic
+          req.params["start_date"] = start_date.to_s
+          req.params["end_date"] = end_date.to_s
+          req.params["interval"] = "1day"
+        end
+
+        parsed = JSON.parse(response.body)
+        check_api_error!(parsed)
+        values = parsed.dig("values")
+
+        if values.nil?
+          error_message = parsed.dig("message") || "No data returned"
+          error_code = parsed.dig("code") || "unknown"
+          raise InvalidSecurityPriceError, "API error (code: #{error_code}): #{error_message}"
+        end
+
+        values.map do |resp|
+          price = resp.dig("close")
+          date = resp.dig("datetime")
+          if price.nil? || price.to_f <= 0
+            Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} on: #{date}.  Price data: #{price.inspect}")
+            next
+          end
+
+          Price.new(
+            symbol: symbol,
+            date: date.to_date,
+            price: price,
+            currency: parsed.dig("meta", "currency") || parsed.dig("currency"),
+            exchange_operating_mic: exchange_operating_mic
+          )
+        end.compact
+      end
+    end
+  end
+
+  private
+    attr_reader :api_key
+
+    # TwelveData tags crypto symbols with `instrument_type: "Digital Currency"` and
+    # `mic_code: "DIGITAL_CURRENCY"`, and returns an empty `currency` field for them.
+    # We exclude them so crypto is handled exclusively by Provider::BinancePublic —
+    # TD's empty currency would otherwise cascade into Security::Price rows defaulting
+    # to USD, silently mispricing EUR/GBP crypto holdings.
+    def crypto_row?(row)
+      row["instrument_type"].to_s.casecmp?("Digital Currency") ||
+        row["mic_code"].to_s.casecmp?("DIGITAL_CURRENCY")
+    end
+
+    def fetch_cross_prices(base:, quote:, start_date:, end_date:)
+      throttle_request(credits: 5)
+      response = client.get("#{base_url}/time_series/cross") do |req|
+        req.params["base"] = base
+        req.params["quote"] = quote
         req.params["start_date"] = start_date.to_s
         req.params["end_date"] = end_date.to_s
         req.params["interval"] = "1day"
@@ -232,32 +291,18 @@ class Provider::TwelveData < Provider
         price = resp.dig("close")
         date = resp.dig("datetime")
         if price.nil? || price.to_f <= 0
-          Rails.logger.warn("#{self.class.name} returned invalid price data for security #{symbol} on: #{date}.  Price data: #{price.inspect}")
+          Rails.logger.warn("#{self.class.name} returned invalid price for #{base}/#{quote} on: #{date}")
           next
         end
 
         Price.new(
-          symbol: symbol,
+          symbol: "#{base}/#{quote}",
           date: date.to_date,
           price: price,
-          currency: parsed.dig("meta", "currency") || parsed.dig("currency"),
-          exchange_operating_mic: exchange_operating_mic
+          currency: quote,
+          exchange_operating_mic: nil
         )
       end.compact
-    end
-  end
-
-  private
-    attr_reader :api_key
-
-    # TwelveData tags crypto symbols with `instrument_type: "Digital Currency"` and
-    # `mic_code: "DIGITAL_CURRENCY"`, and returns an empty `currency` field for them.
-    # We exclude them so crypto is handled exclusively by Provider::BinancePublic —
-    # TD's empty currency would otherwise cascade into Security::Price rows defaulting
-    # to USD, silently mispricing EUR/GBP crypto holdings.
-    def crypto_row?(row)
-      row["instrument_type"].to_s.casecmp?("Digital Currency") ||
-        row["mic_code"].to_s.casecmp?("DIGITAL_CURRENCY")
     end
 
     def base_url
