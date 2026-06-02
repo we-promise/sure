@@ -497,6 +497,173 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, result[:accounts_failed]
   end
 
+  test "multi-wallet import preserves an existing wallet when bulk response omits it" do
+    crypto1 = Crypto.create!
+    account1 = @family.accounts.create!(
+      accountable: crypto1,
+      name: "Working Wallet",
+      balance: 2000,
+      currency: "USD"
+    )
+    coinstats_account1 = @coinstats_item.coinstats_accounts.create!(
+      name: "Working Wallet",
+      currency: "USD",
+      current_balance: 2000,
+      account_id: "ethereum",
+      raw_payload: {
+        address: "0xworking",
+        blockchain: "ethereum",
+        coinId: "ethereum",
+        amount: 1.0,
+        price: 2000,
+        balance: 2000
+      }
+    )
+    AccountProvider.create!(account: account1, provider: coinstats_account1)
+
+    crypto2 = Crypto.create!
+    account2 = @family.accounts.create!(
+      accountable: crypto2,
+      name: "DOGE Wallet",
+      balance: 100,
+      currency: "USD"
+    )
+    coinstats_account2 = @coinstats_item.coinstats_accounts.create!(
+      name: "DOGE Wallet",
+      currency: "USD",
+      current_balance: 100,
+      account_id: "dogecoin",
+      raw_payload: {
+        address: "Ddoge123",
+        blockchain: "dogecoin",
+        coinId: "dogecoin",
+        amount: 1000,
+        price: 0.1,
+        balance: 100
+      }
+    )
+    AccountProvider.create!(account: account2, provider: coinstats_account2)
+
+    bulk_response = [
+      {
+        blockchain: "dogecoin",
+        address: "Ddoge123",
+        connectionId: "dogecoin",
+        balances: [ { coinId: "dogecoin", name: "Dogecoin", amount: 1000, price: 0.1 } ]
+      }
+    ]
+
+    @mock_provider.expects(:get_wallet_balances)
+      .with("ethereum:0xworking,dogecoin:Ddoge123")
+      .returns(success_response(bulk_response))
+
+    @mock_provider.expects(:extract_wallet_balance)
+      .with(bulk_response, "0xworking", "ethereum")
+      .returns([])
+
+    @mock_provider.expects(:extract_wallet_balance)
+      .with(bulk_response, "Ddoge123", "dogecoin")
+      .returns([ { coinId: "dogecoin", name: "Dogecoin", amount: 1000, price: 0.1 } ])
+
+    bulk_transactions_response = [
+      {
+        blockchain: "dogecoin",
+        address: "Ddoge123",
+        connectionId: "dogecoin",
+        transactions: []
+      }
+    ]
+
+    @mock_provider.expects(:get_wallet_transactions)
+      .with("ethereum:0xworking,dogecoin:Ddoge123")
+      .returns(success_response(bulk_transactions_response))
+
+    @mock_provider.expects(:extract_wallet_transactions)
+      .with(bulk_transactions_response, "0xworking", "ethereum")
+      .returns([])
+
+    @mock_provider.expects(:extract_wallet_transactions)
+      .with(bulk_transactions_response, "Ddoge123", "dogecoin")
+      .returns([])
+
+    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    assert result[:success]
+
+    coinstats_account1.reload
+    coinstats_account2.reload
+
+    assert_equal 2000.0, coinstats_account1.current_balance.to_f, "missing wallet data should not zero an existing wallet"
+    assert_equal 100.0, coinstats_account2.current_balance.to_f
+  end
+
+  test "bulk balance fetch failure preserves all existing wallet balances during import" do
+    crypto1 = Crypto.create!
+    account1 = @family.accounts.create!(
+      accountable: crypto1,
+      name: "Ethereum Wallet",
+      balance: 2000,
+      currency: "USD"
+    )
+    coinstats_account1 = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum Wallet",
+      currency: "USD",
+      current_balance: 2000,
+      account_id: "ethereum",
+      raw_payload: {
+        address: "0xeth123",
+        blockchain: "ethereum",
+        coinId: "ethereum",
+        amount: 1.0,
+        price: 2000,
+        balance: 2000
+      }
+    )
+    AccountProvider.create!(account: account1, provider: coinstats_account1)
+
+    crypto2 = Crypto.create!
+    account2 = @family.accounts.create!(
+      accountable: crypto2,
+      name: "DOGE Wallet",
+      balance: 100,
+      currency: "USD"
+    )
+    coinstats_account2 = @coinstats_item.coinstats_accounts.create!(
+      name: "DOGE Wallet",
+      currency: "USD",
+      current_balance: 100,
+      account_id: "dogecoin",
+      raw_payload: {
+        address: "Ddoge456",
+        blockchain: "dogecoin",
+        coinId: "dogecoin",
+        amount: 1000,
+        price: 0.1,
+        balance: 100
+      }
+    )
+    AccountProvider.create!(account: account2, provider: coinstats_account2)
+
+    @mock_provider.expects(:get_wallet_balances)
+      .with("ethereum:0xeth123,dogecoin:Ddoge456")
+      .raises(Provider::Coinstats::Error.new("CoinStats timeout"))
+
+    bulk_transactions_response = []
+    @mock_provider.expects(:get_wallet_transactions)
+      .with("ethereum:0xeth123,dogecoin:Ddoge456")
+      .returns(success_response(bulk_transactions_response))
+
+    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    assert result[:success]
+
+    coinstats_account1.reload
+    coinstats_account2.reload
+
+    assert_equal 2000.0, coinstats_account1.current_balance.to_f
+    assert_equal 100.0, coinstats_account2.current_balance.to_f
+  end
+
   test "uses bulk endpoint for multiple unique wallets and falls back on error" do
     # Create accounts with two different wallet addresses
     crypto1 = Crypto.create!
