@@ -23,6 +23,7 @@ module AccountAuthorizable
       respond_to do |format|
         format.html { redirect_back_or_to path, alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(path, alert: t("accounts.not_authorized")) }
+        format.json { render json: { error: t("accounts.not_authorized") }, status: :forbidden }
       end
       false
     end
