@@ -1,7 +1,7 @@
 <%# locals: (envelope:, categories:) %>
 
 <div>
-  <% if envelope.errors[:base].any? %>
+  <% if envelope.errors.any? %>
     <%= render "shared/form_errors", model: envelope %>
   <% end %>
 

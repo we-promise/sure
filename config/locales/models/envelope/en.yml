@@ -20,5 +20,6 @@ en:
             category:
               must_belong_to_family: The category must belong to the same family as the envelope.
               already_taken: That category already backs another envelope.
+              overlaps_envelope: A parent or sub-category of this category already backs another envelope.
             target_date:
               requires_target_amount: Add a target amount before setting a target date.

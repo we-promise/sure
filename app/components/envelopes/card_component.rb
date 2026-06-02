@@ -23,12 +23,14 @@ class Envelopes::CardComponent < ApplicationComponent
     envelope.category&.name || I18n.t("envelopes.envelope_card.no_category")
   end
 
-  # Single screen-reader sentence for the whole-card link.
+  # Single screen-reader sentence for the whole-card link. Built from one
+  # translation key so locales control ordering and punctuation rather than a
+  # hard-coded join.
   def aria_label
-    status_text = I18n.t("envelopes.status.#{envelope.status}")
-    balance_text = I18n.t("envelopes.envelope_card.aria_balance",
-                          balance: envelope.current_balance_money.format(precision: 0))
-    [ envelope.name, status_text, balance_text ].join(", ")
+    I18n.t("envelopes.envelope_card.aria_label",
+           name: envelope.name,
+           status: I18n.t("envelopes.status.#{envelope.status}"),
+           balance: envelope.current_balance_money.format(precision: 0))
   end
 
   def contribution_line
