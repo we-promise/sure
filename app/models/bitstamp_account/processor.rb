@@ -231,7 +231,7 @@ class BitstampAccount::Processor
     def extract_earn_fields(transaction)
       excluded = %w[id datetime type fee order_id usd_usd btc_usd]
       keys = transaction.keys.reject { |k| excluded.include?(k) || k.include?("_") }
-      key = keys.find { |k| transaction[k].to_d.positive? }
+      key = keys.find { |k| transaction[k].to_d.nonzero? }
       return [ nil, nil ] unless key
 
       [ key.upcase, transaction[key].to_d ]
@@ -273,7 +273,10 @@ class BitstampAccount::Processor
     def normalize_currency(symbol)
       return "USD" if symbol.blank?
       return "USD" if %w[USDC USDT BUSD DAI TUSD USDP GUSD].include?(symbol)
-      Money::Currency.all[symbol.downcase] ? symbol : "USD"
+      Money::Currency.new(symbol)
+      symbol
+    rescue Money::Currency::UnknownCurrencyError
+      "USD"
     end
 
     def convert_trade_to_target(cost, price, fee, quote_currency, date)
