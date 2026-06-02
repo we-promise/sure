@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["messages", "form", "input"];
+  static targets = ["messages", "form", "input", "submit"];
 
   connect() {
     this.#configureAutoScroll();
+    this.#updateSubmitState();
   }
 
   disconnect() {
@@ -22,10 +23,13 @@ export default class extends Controller {
     input.style.height = `${Math.min(input.scrollHeight, lineHeight * maxLines)}px`;
     input.style.overflowY =
       input.scrollHeight > lineHeight * maxLines ? "auto" : "hidden";
+
+    this.#updateSubmitState();
   }
 
   submitSampleQuestion(e) {
     this.inputTarget.value = e.target.dataset.chatQuestionParam;
+    this.#updateSubmitState();
 
     setTimeout(() => {
       this.formTarget.requestSubmit();
@@ -36,8 +40,19 @@ export default class extends Controller {
   handleInputKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      this.formTarget.requestSubmit();
+      if (this.#hasContent()) {
+        this.formTarget.requestSubmit();
+      }
     }
+  }
+
+  #hasContent() {
+    return this.inputTarget.value.trim().length > 0;
+  }
+
+  #updateSubmitState() {
+    if (!this.hasSubmitTarget) return;
+    this.submitTarget.disabled = !this.#hasContent();
   }
 
   #configureAutoScroll() {

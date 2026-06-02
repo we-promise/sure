@@ -1,0 +1,54 @@
+---
+vi:
+  period:
+    last_day:
+      label_short: "1N"
+      label: "Hôm qua"
+      comparison_label: "so với hôm qua"
+    current_week:
+      label_short: "TNN"
+      label: "Tuần này"
+      comparison_label: "so với đầu tuần"
+    last_7_days:
+      label_short: "7N"
+      label: "7 Ngày Qua"
+      comparison_label: "so với tuần trước"
+    current_month:
+      label_short: "TTN"
+      label: "Tháng này"
+      comparison_label: "so với đầu tháng"
+    last_month:
+      label_short: "TT"
+      label: "Tháng Trước"
+      comparison_label: "so với tháng trước"
+    last_30_days:
+      label_short: "30N"
+      label: "30 Ngày Qua"
+      comparison_label: "so với 30 ngày trước"
+    last_90_days:
+      label_short: "90N"
+      label: "90 Ngày Qua"
+      comparison_label: "so với quý trước"
+    current_year:
+      label_short: "NĐN"
+      label: "Năm này"
+      comparison_label: "so với đầu năm"
+    last_365_days:
+      label_short: "365N"
+      label: "365 Ngày Qua"
+      comparison_label: "so với 1 năm trước"
+    last_5_years:
+      label_short: "5Năm"
+      label: "5 Năm Qua"
+      comparison_label: "so với 5 năm trước"
+    last_10_years:
+      label_short: "10Năm"
+      label: "10 Năm Qua"
+      comparison_label: "so với 10 năm trước"
+    all_time:
+      label_short: "Tất cả"
+      label: "Toàn thời gian"
+      comparison_label: "so với ban đầu"
+    custom:
+      label_short: "Tùy chỉnh"
+      label: "Khoảng thời gian tùy chỉnh"

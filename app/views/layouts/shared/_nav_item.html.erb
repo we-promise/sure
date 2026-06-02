@@ -1,14 +1,19 @@
-<%# locals:(name:, path:, icon:, icon_custom:, active:, mobile_only: false) %>
+<%# locals: (name:, path:, icon:, icon_custom:, active:, mobile_only: false, preview: false) %>
 
 <%= link_to path, class: "space-y-1 group block relative pb-1", aria: { current: ("page" if active) } do %>
   <div class="grow flex flex-col lg:flex-row gap-1 items-center">
     <%= tag.div class: class_names("w-4 h-1 lg:w-1 lg:h-4 rounded-bl-sm rounded-br-sm lg:rounded-tr-sm lg:rounded-br-sm lg:rounded-bl-none", "bg-nav-indicator" => active) %>
 
     <%= tag.div class: class_names(
-      "w-8 h-8 flex items-center justify-center mx-auto rounded-lg",
+      "w-8 h-8 flex items-center justify-center mx-auto rounded-lg relative",
       active ? "bg-container shadow-xs text-primary" : "group-hover:bg-surface-hover text-secondary"
     ) do %>
       <%= icon(icon, color: active ? "current" : "default", custom: icon_custom) %>
+      <% if preview %>
+        <span class="absolute -top-0.5 -right-0.5">
+          <%= render DS::Pill.new(tone: :violet, dot_only: true, title: t("shared.preview")) %>
+        </span>
+      <% end %>
     <% end %>
   </div>
 

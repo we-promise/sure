@@ -14,16 +14,25 @@
       </div>
 
       <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
+        <% if import.account_statement.present? %>
+          <div class="space-y-2">
+            <h2 class="font-medium text-primary"><%= t("imports.pdf_import.source_statement") %></h2>
+            <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
+              <%= link_to import.account_statement.filename, account_statement_path(import.account_statement), class: "text-primary hover:text-primary-hover" %>
+            </p>
+          </div>
+        <% end %>
+
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
-          <p class="text-sm text-secondary px-3 py-2 bg-gray-tint-5 rounded-lg">
+          <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
             <%= t("imports.document_types.#{import.document_type}", default: import.document_type&.humanize || t("imports.pdf_import.unknown_document_type", default: "Unknown")) %>
           </p>
         </div>
 
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.transactions_extracted", default: "Transactions Extracted") %></h2>
-          <p class="text-sm text-secondary px-3 py-2 bg-gray-tint-5 rounded-lg">
+          <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
             <%= t("imports.pdf_import.transactions_extracted_count", count: import.rows_count, default: "%{count} transactions") %>
           </p>
         </div>
@@ -38,7 +47,7 @@
                 <p class="text-xs text-secondary"><%= t("imports.pdf_import.select_account_hint", default: "Choose which account to import these transactions into.") %></p>
               <% end %>
             <% else %>
-              <p class="text-sm text-secondary px-3 py-2 bg-yellow-500/10 rounded-lg">
+              <p class="text-sm text-secondary px-3 py-2 bg-warning/10 rounded-lg">
                 <%= t("imports.pdf_import.no_accounts", default: "No accounts available. Please create an account first.") %>
               </p>
               <%= render DS::Link.new(text: t("imports.pdf_import.create_account", default: "Create Account"), href: new_account_path(return_to: import_path(import)), variant: "primary", full_width: true, frame: :modal) %>
@@ -106,16 +115,25 @@
       </div>
 
       <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
+        <% if import.account_statement.present? %>
+          <div class="space-y-2">
+            <h2 class="font-medium text-primary"><%= t("imports.pdf_import.source_statement") %></h2>
+            <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
+              <%= link_to import.account_statement.filename, account_statement_path(import.account_statement), class: "text-primary hover:text-primary-hover" %>
+            </p>
+          </div>
+        <% end %>
+
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
-          <p class="text-sm text-secondary px-3 py-2 bg-gray-tint-5 rounded-lg">
+          <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
             <%= t("imports.document_types.#{import.document_type}", default: import.document_type&.humanize || t("imports.pdf_import.unknown_document_type", default: "Unknown")) %>
           </p>
         </div>
 
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.summary_label") %></h2>
-          <p class="text-sm text-secondary px-3 py-2 bg-gray-tint-5 rounded-lg whitespace-pre-wrap">
+          <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg whitespace-pre-wrap">
             <%= import.ai_summary %>
           </p>
         </div>
