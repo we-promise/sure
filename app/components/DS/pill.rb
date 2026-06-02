@@ -16,7 +16,7 @@ class DS::Pill < DesignSystemComponent
     neutral:     :gray
   }.freeze
 
-  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon, :marker
+  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon, :marker, :custom_color
 
   # Generic inline pill primitive. Two modes:
   #
@@ -44,7 +44,7 @@ class DS::Pill < DesignSystemComponent
   # - Sure has full violet / indigo / fuchsia / amber / green / gray /
   #   red ramps in the design system; this component picks named tokens
   #   at render time. No raw hex.
-  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil, icon: nil, marker: true)
+  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil, icon: nil, marker: true, custom_color: nil)
     resolved_tone = SEMANTIC_TONE_ALIASES.fetch(tone.to_sym, tone.to_sym)
     @label = label || I18n.t("ds.pill.default_label", default: "Beta")
     @tone = TONES.include?(resolved_tone) ? resolved_tone : :violet
@@ -55,6 +55,7 @@ class DS::Pill < DesignSystemComponent
     @title = title
     @icon = icon
     @marker = marker
+    @custom_color = custom_color
   end
 
   def palette
@@ -74,6 +75,8 @@ class DS::Pill < DesignSystemComponent
   end
 
   def container_styles
+    return custom_color_styles if custom_color.present?
+
     p = palette
     case style
     when :filled
@@ -98,7 +101,32 @@ class DS::Pill < DesignSystemComponent
   end
 
   def dot_color
+    return custom_color if custom_color.present?
+
     style == :filled ? "rgba(255,255,255,0.85)" : palette[:dot]
+  end
+
+  def custom_color_styles
+    case style
+    when :filled
+      <<~CSS.strip.gsub(/\s+/, " ")
+        background-color: #{custom_color};
+        color: var(--color-white);
+        border-color: transparent;
+      CSS
+    when :outline
+      <<~CSS.strip.gsub(/\s+/, " ")
+        background-color: transparent;
+        color: #{custom_color};
+        border-color: color-mix(in oklab, #{custom_color} 40%, transparent);
+      CSS
+    else
+      <<~CSS.strip.gsub(/\s+/, " ")
+        background-color: color-mix(in oklab, #{custom_color} 10%, transparent);
+        color: #{custom_color};
+        border-color: color-mix(in oklab, #{custom_color} 20%, transparent);
+      CSS
+    end
   end
 
   def container_classes

@@ -169,7 +169,8 @@ module LanguagesHelper
     "zh-CN", # Chinese (Simplified)
     "zh-TW",  # Chinese (Traditional)
     "nl",   # Dutch
-    "hu"   # Hungarian
+    "hu",   # Hungarian
+    "vi"    # Vietnamese
   ].freeze
 
   COUNTRY_MAPPING = {

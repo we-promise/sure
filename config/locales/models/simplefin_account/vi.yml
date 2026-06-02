@@ -1,0 +1,7 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: "Tài khoản SimpleFin phải có số dư hiện tại hoặc số dư khả dụng"
