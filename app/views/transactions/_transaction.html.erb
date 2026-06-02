@@ -98,33 +98,45 @@
 
                     <%# Pending indicator %>
                     <% if transaction.pending? %>
-                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
-                        <%= icon "clock", size: "sm", color: "current" %>
-                        <%= t("transactions.transaction.pending") %>
-                      </span>
+                      <%= render DS::Pill.new(
+                        label: t("transactions.transaction.pending"),
+                        tone: :neutral,
+                        marker: false,
+                        icon: "clock",
+                        title: t("transactions.transaction.pending_tooltip")
+                      ) %>
                     <% end %>
 
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>
-                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t("transactions.transaction.review_recommended_tooltip") %>">
-                          <%= icon "help-circle", size: "sm", color: "current" %>
-                          <%= t("transactions.transaction.review_recommended") %>
-                        </span>
+                        <%= render DS::Pill.new(
+                          label: t("transactions.transaction.review_recommended"),
+                          tone: :neutral,
+                          marker: false,
+                          icon: "help-circle",
+                          title: t("transactions.transaction.review_recommended_tooltip")
+                        ) %>
                       <% else %>
-                        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-warning bg-warning/10 text-warning" title="<%= t("transactions.transaction.potential_duplicate_tooltip") %>">
-                          <%= icon "alert-triangle", size: "sm", color: "current" %>
-                          <%= t("transactions.transaction.possible_duplicate") %>
-                        </span>
+                        <%= render DS::Pill.new(
+                          label: t("transactions.transaction.possible_duplicate"),
+                          tone: :warning,
+                          marker: false,
+                          icon: "alert-triangle",
+                          title: t("transactions.transaction.potential_duplicate_tooltip")
+                        ) %>
                       <% end %>
                     <% end %>
 
                     <%# Split indicator %>
                     <% if @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent? %>
-                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t("transactions.transaction.split_tooltip") %>">
-                        <%= icon "split", size: "sm", color: "current" %>
-                        <%= t("transactions.transaction.split") %>
-                      </span>
+                      <%= render DS::Pill.new(
+                        label: t("transactions.transaction.split"),
+                        tone: :neutral,
+                        marker: false,
+                        icon: "split",
+                        title: t("transactions.transaction.split_tooltip")
+                      ) %>
                     <% end %>
                     <% if entry.split_child? && !in_split_group %>
                       <span class="text-secondary" title="<%= t("transactions.transaction.split_child_tooltip") %>">
@@ -168,8 +180,8 @@
       </div>
 
       <div class="hidden md:flex min-w-0 items-center gap-1 col-span-2">
-        <% if entry.account.investment? && !transaction.transfer? %>
-          <%# For investment accounts, show activity label instead of category %>
+        <% if entry.account.supports_trades? && !transaction.transfer? %>
+          <%# For investment/crypto accounts, show activity label instead of category %>
           <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction %>
         <% else %>
           <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop", in_split_group: in_split_group %>

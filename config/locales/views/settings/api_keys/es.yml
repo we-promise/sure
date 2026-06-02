@@ -37,7 +37,7 @@ es:
           never_expires: "Nunca expira"
           permissions: "Permisos"
           usage_instructions_title: "Cómo usar tu clave API"
-          usage_instructions: "Incluye tu clave API en el encabezado X-Api-Key al realizar solicitudes a la API de Maybe:"
+          usage_instructions: "Incluye tu clave API en el encabezado X-Api-Key al realizar solicitudes a la API de %{product_name}:"
           regenerate_key: "Crear Nueva Clave"
           revoke_key: "Revocar Clave"
           revoke_confirmation: "¿Estás seguro de que deseas revocar esta clave API? Esta acción no se puede deshacer y deshabilitará inmediatamente todas las aplicaciones que usen esta clave."

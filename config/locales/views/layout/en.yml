@@ -10,6 +10,7 @@ en:
         home: Home
         intro: Intro
         reports: Reports
+        goals: Goals
         transactions: Transactions
     auth:
       existing_account: Already have an account?

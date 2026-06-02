@@ -7,8 +7,9 @@ module NavigationHelper
       { name: t("layouts.application.nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
       { name: t("layouts.application.nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
       { name: t("layouts.application.nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
+      preview_gated_nav_item({ name: t("layouts.application.nav.goals"), path: goals_path, icon: "piggy-bank", icon_custom: false, active: page_active?(goals_path) }),
       { name: t("layouts.application.nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
-    ]
+    ].compact
 
     items.reject { |item| item[:module] && !module_enabled?(item[:module]) }
   end

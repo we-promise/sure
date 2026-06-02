@@ -35,6 +35,8 @@
     "container-inset":       { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
     "container-inset-hover": { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },
     "nav-indicator":         { "$value": "{color.black}",            "$type": "color", "$extensions": { "sure.dark": "{color.white}" } },
+    "toggle-track":          { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },
+    "destructive-subtle":    { "$value": "{color.red.200}",          "$type": "color", "$extensions": { "sure.dark": "{color.red.800}" } },
 
     "gray": {
       "25":  { "$value": "#FAFAFA", "$type": "color" },

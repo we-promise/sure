@@ -1,0 +1,10 @@
+---
+vi:
+  passwords:
+    edit:
+      password: Mật khẩu mới
+      password_challenge: Mật khẩu hiện tại
+      submit: Đặt lại mật khẩu
+      title: Cập nhật mật khẩu
+    update:
+      success: Mật khẩu của bạn đã được đặt lại.
