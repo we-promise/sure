@@ -1,7 +1,7 @@
 require "test_helper"
 
 class PdfImportTest < ActiveSupport::TestCase
-  include ActiveJob::TestHelper
+  include ActiveJob::TestHelper, ProviderTestHelper
 
   setup do
     @import = imports(:pdf)
@@ -121,6 +121,32 @@ class PdfImportTest < ActiveSupport::TestCase
 
     assert_not import.process_with_ai_later
     assert_equal "pending", import.reload.status
+  end
+
+  test "process_with_ai uses configured PDF-capable LLM provider" do
+    provider = mock("llm_provider")
+    result = Struct.new(:summary, :document_type).new("Statement summary", "bank_statement")
+
+    Provider::Registry.expects(:llm_provider).with(require_pdf_processing: true).returns(provider)
+    @import.stubs(:pdf_file_content).returns("%PDF-test")
+    provider.expects(:process_pdf).with(pdf_content: "%PDF-test", family: @import.family).returns(provider_success_response(result))
+
+    assert_equal result, @import.process_with_ai
+    assert_equal "Statement summary", @import.reload.ai_summary
+    assert_equal "bank_statement", @import.document_type
+  end
+
+  test "extract_transactions uses configured PDF-capable LLM provider" do
+    provider = mock("llm_provider")
+    extracted_data = { transactions: [ { date: "2024-01-01", amount: "-10.00", name: "Coffee" } ] }
+
+    @import.update!(document_type: "bank_statement")
+    Provider::Registry.expects(:llm_provider).with(require_pdf_processing: true).returns(provider)
+    @import.stubs(:pdf_file_content).returns("%PDF-test")
+    provider.expects(:extract_bank_statement).with(pdf_content: "%PDF-test", family: @import.family).returns(provider_success_response(extracted_data))
+
+    assert_equal extracted_data, @import.extract_transactions
+    assert_equal extracted_data, @import.reload.extracted_data.deep_symbolize_keys
   end
 
   test "generate_rows_from_extracted_data creates import rows" do

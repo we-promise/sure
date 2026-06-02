@@ -89,9 +89,8 @@ class PdfImport < Import
   end
 
   def process_with_ai
-    provider = Provider::Registry.get_provider(:openai)
+    provider = Provider::Registry.llm_provider(require_pdf_processing: true)
     raise "AI provider not configured" unless provider
-    raise "AI provider does not support PDF processing" unless provider.supports_pdf_processing?
 
     response = provider.process_pdf(
       pdf_content: pdf_file_content,
@@ -115,7 +114,7 @@ class PdfImport < Import
   def extract_transactions
     return unless statement_with_transactions?
 
-    provider = Provider::Registry.get_provider(:openai)
+    provider = Provider::Registry.llm_provider(require_pdf_processing: true)
     raise "AI provider not configured" unless provider
 
     response = provider.extract_bank_statement(

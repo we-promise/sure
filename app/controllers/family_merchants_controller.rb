@@ -18,7 +18,7 @@ class FamilyMerchantsController < ApplicationController
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
-    @llm_available = Provider::Registry.get_provider(:openai).present?
+    @llm_available = Provider::Registry.llm_provider.present?
 
     @pagy_family_merchants, @family_merchants = pagy(@all_family_merchants, page_param: :family_page, limit: safe_per_page)
     @pagy_provider_merchants, @provider_merchants = pagy(@all_provider_merchants, page_param: :provider_page, limit: safe_per_page)

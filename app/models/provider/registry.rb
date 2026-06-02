@@ -18,11 +18,45 @@ class Provider::Registry
       raise Error.new("Provider '#{name}' not found in registry")
     end
 
+    def llm_provider(require_pdf_processing: false)
+      provider_names = llm_provider_names
+
+      provider_names.each do |provider_name|
+        provider = get_provider(provider_name)
+        next unless provider
+        next if require_pdf_processing && !provider.supports_pdf_processing?
+
+        return provider
+      end
+
+      nil
+    end
+
+    def llm_model
+      case llm_provider
+      when Provider::Anthropic
+        Provider::Anthropic.effective_model
+      when Provider::Openai
+        Provider::Openai.effective_model
+      else
+        nil
+      end
+    end
+
     def plaid_provider_for_region(region)
       region.to_sym == :us ? plaid_us : plaid_eu
     end
 
     private
+      def llm_provider_names
+        preferred_provider = Setting.llm_provider.to_s.presence&.to_sym
+        providers = %i[openai anthropic]
+
+        return providers unless providers.include?(preferred_provider)
+
+        [ preferred_provider, *(providers - [ preferred_provider ]) ]
+      end
+
       def stripe
         secret_key = ENV["STRIPE_SECRET_KEY"]
         webhook_secret = ENV["STRIPE_WEBHOOK_SECRET"]

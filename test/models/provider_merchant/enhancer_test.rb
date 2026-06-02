@@ -7,7 +7,7 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Enhancer test", balance: 100, currency: "USD", accountable: Depository.new)
     @llm_provider = mock
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
+    Provider::Registry.stubs(:llm_provider).returns(@llm_provider)
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(40)
   end
@@ -71,7 +71,7 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
   end
 
   test "returns zero counts when no LLM provider" do
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
+    Provider::Registry.stubs(:llm_provider).returns(nil)
 
     result = ProviderMerchant::Enhancer.new(@family).enhance
 

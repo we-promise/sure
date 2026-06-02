@@ -107,4 +107,47 @@ class Provider::RegistryTest < ActiveSupport::TestCase
       assert_instance_of Provider::Openai, provider
     end
   end
+
+  test "llm_provider honors configured Anthropic preference" do
+    openai_provider = mock("openai_provider")
+    anthropic_provider = mock("anthropic_provider")
+
+    Setting.stubs(:llm_provider).returns("anthropic")
+    Provider::Registry.stubs(:openai).returns(openai_provider)
+    Provider::Registry.stubs(:anthropic).returns(anthropic_provider)
+
+    assert_equal anthropic_provider, Provider::Registry.llm_provider
+  end
+
+  test "llm_provider falls back when preferred provider is unconfigured" do
+    anthropic_provider = mock("anthropic_provider")
+
+    Setting.stubs(:llm_provider).returns("openai")
+    Provider::Registry.stubs(:openai).returns(nil)
+    Provider::Registry.stubs(:anthropic).returns(anthropic_provider)
+
+    assert_equal anthropic_provider, Provider::Registry.llm_provider
+  end
+
+  test "llm_provider can require PDF processing support" do
+    openai_provider = mock("openai_provider")
+    anthropic_provider = mock("anthropic_provider")
+
+    openai_provider.stubs(:supports_pdf_processing?).returns(false)
+    anthropic_provider.stubs(:supports_pdf_processing?).returns(true)
+    Setting.stubs(:llm_provider).returns("openai")
+    Provider::Registry.stubs(:openai).returns(openai_provider)
+    Provider::Registry.stubs(:anthropic).returns(anthropic_provider)
+
+    assert_equal anthropic_provider, Provider::Registry.llm_provider(require_pdf_processing: true)
+  end
+
+  test "llm_model returns effective model for selected Anthropic provider" do
+    anthropic_provider = Provider::Anthropic.allocate
+
+    Provider::Registry.stubs(:llm_provider).returns(anthropic_provider)
+    Provider::Anthropic.stubs(:effective_model).returns("claude-test")
+
+    assert_equal "claude-test", Provider::Registry.llm_model
+  end
 end
