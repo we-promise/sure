@@ -1,6 +1,6 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
   <%# Total Income Card %>
-  <div class="bg-container rounded-xl shadow-border-xs p-6">
+  <%= render DS::Card.new(level: :outer, padding: :lg) do %>
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
         <%= icon("trending-up", size: "sm") %>
@@ -34,10 +34,10 @@
         </div>
       <% end %>
     </div>
-  </div>
+  <% end %>
 
   <%# Total Expenses Card %>
-  <div class="bg-container rounded-xl shadow-border-xs p-6">
+  <%= render DS::Card.new(level: :outer, padding: :lg) do %>
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
         <%= icon("trending-down", class: "w-5 h-5") %>
@@ -71,10 +71,10 @@
         </div>
       <% end %>
     </div>
-  </div>
+  <% end %>
 
   <%# Net Savings Card %>
-  <div class="bg-container rounded-xl shadow-border-xs p-6">
+  <%= render DS::Card.new(level: :outer, padding: :lg) do %>
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
         <%= icon("piggy-bank", class: "w-5 h-5") %>
@@ -93,10 +93,10 @@
         <%= t("reports.summary.income_minus_expenses") %>
       </p>
     </div>
-  </div>
+  <% end %>
 
   <%# Budget Performance Card %>
-  <div class="bg-container rounded-xl shadow-border-xs p-6">
+  <%= render DS::Card.new(level: :outer, padding: :lg) do %>
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
         <%= icon("gauge", class: "w-5 h-5") %>
@@ -128,5 +128,5 @@
         </p>
       <% end %>
     </div>
-  </div>
+  <% end %>
 </div>
