@@ -1,17 +1,19 @@
 @layer components {
   /*
     Canonical keyboard-focus indicator (#2136). One recipe for every focusable
-    primitive: a 2px outline + 2px offset in the theme-aware `focus-ring` token
-    (blue, >=4:1 against both light and dark surfaces). Outline — not a ring /
-    box-shadow — so the offset gap is transparent on any surface and there is no
-    layout shift. `:focus-visible` only, so it never shows for mouse/touch.
-    `.focus-ring-within` (and `.form-field`) mirror it onto a wrapper whose focus
-    lands on a child input.
+    primitive: a soft 2px box-shadow ring that hugs the control, in the
+    theme-aware neutral `focus-ring` token. A hugging box-shadow (not a hard,
+    offset outline) follows the border-radius and reads as part of the control
+    rather than a detached frame; the transparent `outline` is a forced-colors
+    fallback so the indicator survives Windows high-contrast mode.
+    `:focus-visible` only, so it never shows for mouse/touch. `.focus-ring-within`
+    (and `.form-field`) mirror it onto a wrapper whose focus lands on a child.
   */
   .focus-ring:focus-visible,
   .focus-ring-within:focus-within,
   .form-field:focus-within {
-    outline: 2px solid var(--color-focus-ring);
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
+    outline: 2px solid transparent;
     outline-offset: 2px;
   }
 
