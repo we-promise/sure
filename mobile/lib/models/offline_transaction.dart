@@ -1,10 +1,12 @@
+import 'dart:convert';
+
 import 'transaction.dart';
 
 enum SyncStatus {
-  synced,         // Transaction is synced with server
-  pending,        // Transaction is waiting to be synced (create)
-  failed,         // Last sync attempt failed
-  pendingDelete,  // Transaction is waiting to be deleted on server
+  synced, // Transaction is synced with server
+  pending, // Transaction is waiting to be synced (create)
+  failed, // Last sync attempt failed
+  pendingDelete, // Transaction is waiting to be deleted on server
 }
 
 class OfflineTransaction extends Transaction {
@@ -25,6 +27,11 @@ class OfflineTransaction extends Transaction {
     super.notes,
     super.categoryId,
     super.categoryName,
+    super.merchantId,
+    super.merchantName,
+    super.tagIds,
+    super.tagNames,
+    super.tagsProvided = true,
     this.syncStatus = SyncStatus.pending,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -48,6 +55,11 @@ class OfflineTransaction extends Transaction {
       notes: transaction.notes,
       categoryId: transaction.categoryId,
       categoryName: transaction.categoryName,
+      merchantId: transaction.merchantId,
+      merchantName: transaction.merchantName,
+      tagIds: transaction.tagIds,
+      tagNames: transaction.tagNames,
+      tagsProvided: transaction.tagsProvided,
       syncStatus: syncStatus,
     );
   }
@@ -65,6 +77,11 @@ class OfflineTransaction extends Transaction {
       notes: map['notes'] as String?,
       categoryId: map['category_id'] as String?,
       categoryName: map['category_name'] as String?,
+      merchantId: map['merchant_id'] as String?,
+      merchantName: map['merchant_name'] as String?,
+      tagIds: _decodeStringList(map['tag_ids'] as String?),
+      tagNames: _decodeStringList(map['tag_names'] as String?),
+      tagsProvided: true,
       syncStatus: _parseSyncStatus(map['sync_status'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -84,6 +101,10 @@ class OfflineTransaction extends Transaction {
       'notes': notes,
       'category_id': categoryId,
       'category_name': categoryName,
+      'merchant_id': merchantId,
+      'merchant_name': merchantName,
+      'tag_ids': jsonEncode(tagIds),
+      'tag_names': jsonEncode(tagNames),
       'sync_status': _syncStatusToString(syncStatus),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -102,6 +123,11 @@ class OfflineTransaction extends Transaction {
       notes: notes,
       categoryId: categoryId,
       categoryName: categoryName,
+      merchantId: merchantId,
+      merchantName: merchantName,
+      tagIds: tagIds,
+      tagNames: tagNames,
+      tagsProvided: tagsProvided,
     );
   }
 
@@ -117,6 +143,11 @@ class OfflineTransaction extends Transaction {
     String? notes,
     String? categoryId,
     String? categoryName,
+    String? merchantId,
+    String? merchantName,
+    List<String>? tagIds,
+    List<String>? tagNames,
+    bool? tagsProvided,
     SyncStatus? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -133,6 +164,11 @@ class OfflineTransaction extends Transaction {
       notes: notes ?? this.notes,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
+      merchantId: merchantId ?? this.merchantId,
+      merchantName: merchantName ?? this.merchantName,
+      tagIds: tagIds ?? this.tagIds,
+      tagNames: tagNames ?? this.tagNames,
+      tagsProvided: tagsProvided ?? this.tagsProvided,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -156,6 +192,26 @@ class OfflineTransaction extends Transaction {
       default:
         return SyncStatus.pending;
     }
+  }
+
+  static List<String> _decodeStringList(String? jsonText) {
+    if (jsonText == null || jsonText.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonText);
+      if (decoded is List) {
+        return decoded
+            .where((item) => item != null)
+            .map((item) => item.toString())
+            .toList();
+      }
+    } catch (_) {
+      return const [];
+    }
+
+    return const [];
   }
 
   static String _syncStatusToString(SyncStatus status) {

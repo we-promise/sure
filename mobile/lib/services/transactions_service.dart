@@ -14,6 +14,8 @@ class TransactionsService {
     required String nature,
     String? notes,
     String? categoryId,
+    String? merchantId,
+    List<String>? tagIds,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions');
 
@@ -27,18 +29,22 @@ class TransactionsService {
         'nature': nature,
         if (notes != null) 'notes': notes,
         if (categoryId != null) 'category_id': categoryId,
+        if (merchantId != null) 'merchant_id': merchantId,
+        if (tagIds != null) 'tag_ids': tagIds,
       }
     };
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          ...ApiConfig.getAuthHeaders(accessToken),
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: {
+              ...ApiConfig.getAuthHeaders(accessToken),
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
@@ -114,7 +120,8 @@ class TransactionsService {
 
         if (responseData is List) {
           transactionsJson = responseData;
-        } else if (responseData is Map && responseData.containsKey('transactions')) {
+        } else if (responseData is Map &&
+            responseData.containsKey('transactions')) {
           transactionsJson = responseData['transactions'];
           // Extract pagination metadata if present
           if (responseData.containsKey('pagination')) {
@@ -124,9 +131,8 @@ class TransactionsService {
           transactionsJson = [];
         }
 
-        final transactions = transactionsJson
-            .map((json) => Transaction.fromJson(json))
-            .toList();
+        final transactions =
+            transactionsJson.map((json) => Transaction.fromJson(json)).toList();
 
         return {
           'success': true,
@@ -152,11 +158,101 @@ class TransactionsService {
     }
   }
 
+  Future<Map<String, dynamic>> updateTransaction({
+    required String accessToken,
+    required String transactionId,
+    String? name,
+    String? date,
+    String? amount,
+    String? currency,
+    String? nature,
+    String? notes,
+    String? categoryId,
+    String? merchantId,
+    List<String>? tagIds,
+  }) async {
+    final url =
+        Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions/$transactionId');
+
+    final transaction = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (date != null) 'date': date,
+      if (amount != null) 'amount': amount,
+      if (currency != null) 'currency': currency,
+      if (nature != null) 'nature': nature,
+      if (notes != null) 'notes': notes,
+      if (categoryId != null) 'category_id': categoryId,
+      if (merchantId != null) 'merchant_id': merchantId,
+      if (tagIds != null) 'tag_ids': tagIds,
+    };
+
+    if (transaction.isEmpty) {
+      return {
+        'success': false,
+        'error': 'No fields to update',
+      };
+    }
+
+    try {
+      final response = await http
+          .patch(
+            url,
+            headers: {
+              ...ApiConfig.getAuthHeaders(accessToken),
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'transaction': transaction}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (response.body.trim().isEmpty) {
+          return {
+            'success': true,
+            'transaction': null,
+          };
+        }
+
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'transaction': Transaction.fromJson(responseData),
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'unauthorized',
+        };
+      } else {
+        try {
+          final responseData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'error': responseData['message'] ??
+                responseData['error'] ??
+                'Failed to update transaction',
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'error': 'Failed to update transaction',
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> deleteTransaction({
     required String accessToken,
     required String transactionId,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions/$transactionId');
+    final url =
+        Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions/$transactionId');
 
     try {
       final response = await http.delete(
@@ -205,9 +301,9 @@ class TransactionsService {
     try {
       final results = await Future.wait(
         transactionIds.map((id) => deleteTransaction(
-          accessToken: accessToken,
-          transactionId: id,
-        )),
+              accessToken: accessToken,
+              transactionId: id,
+            )),
       );
 
       final allSuccess = results.every((result) => result['success'] == true);
