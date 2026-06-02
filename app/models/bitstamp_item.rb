@@ -30,8 +30,10 @@ class BitstampItem < ApplicationRecord
   before_validation :strip_credentials
 
   def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+    transaction do
+      update!(scheduled_for_deletion: true)
+      DestroyJob.perform_later(self)
+    end
   end
 
   def import_latest_bitstamp_data
@@ -83,6 +85,10 @@ class BitstampItem < ApplicationRecord
 
   def has_completed_initial_setup?
     accounts.any?
+  end
+
+  def latest_sync_stats
+    syncs.ordered.first&.sync_stats || {}
   end
 
   def sync_status_summary

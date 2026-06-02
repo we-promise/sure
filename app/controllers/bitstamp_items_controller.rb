@@ -26,7 +26,11 @@ class BitstampItemsController < ApplicationController
   end
 
   def destroy
-    @bitstamp_item.unlink_all!(dry_run: false)
+    results = @bitstamp_item.unlink_all!(dry_run: false)
+    if results.any? { |r| r[:error].present? }
+      redirect_to settings_providers_path, alert: t(".unlink_failed")
+      return
+    end
     @bitstamp_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success")
   end
@@ -102,13 +106,18 @@ class BitstampItemsController < ApplicationController
     unless bitstamp_account
       return redirect_or_flash_error(t(".errors.invalid_bitstamp_account"), account_path(@account))
     end
-    if bitstamp_account.account_provider.present?
+
+    already_linked = false
+    bitstamp_account.with_lock do
+      already_linked = bitstamp_account.account_provider.present?
+      AccountProvider.create!(account: @account, provider: bitstamp_account) unless already_linked
+    end
+
+    if already_linked
       return redirect_or_flash_error(t(".errors.bitstamp_account_already_linked"), account_path(@account))
     end
 
-    AccountProvider.create!(account: @account, provider: bitstamp_account)
     bitstamp_item.sync_later
-
     redirect_to accounts_path, notice: t(".success")
   end
 
