@@ -292,10 +292,10 @@ class Holding < ApplicationRecord
           SELECT er.rate FROM exchange_rates er
           WHERE er.from_currency = trades.currency
             AND er.to_currency = ?
-            AND er.date BETWEEN entries.date - #{ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS} AND entries.date
+            AND er.date BETWEEN entries.date - ? AND entries.date
           ORDER BY er.date DESC
           LIMIT 1
-        ) nearest_fx ON true", account.currency
+        ) nearest_fx ON true", account.currency, ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS
       ])
 
       # If any foreign-currency buy trade has no rate within the lookback window,
