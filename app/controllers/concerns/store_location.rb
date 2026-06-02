@@ -24,8 +24,12 @@ private
   end
 
   def store_return_to
-    if params[:return_to].present?
-      session[:return_to] = params[:return_to]
+    return if params[:return_to].blank?
+
+    path = params[:return_to].to_s
+    # Only allow relative paths to prevent open redirect attacks
+    if path.start_with?("/") && !path.start_with?("//")
+      session[:return_to] = path
     end
   end
 
