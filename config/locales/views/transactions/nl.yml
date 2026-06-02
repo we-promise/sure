@@ -16,7 +16,9 @@ nl:
       none: (geen)
       note_label: Notities
       note_placeholder: Voer een notitie in
+      create_tag: Maken
       submit: Transactie toevoegen
+      tag_search_placeholder: Tag zoeken of aanmaken
       tags_label: Tags
       transfer: Overboeking
     new:

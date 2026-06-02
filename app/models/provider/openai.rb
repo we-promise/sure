@@ -14,6 +14,10 @@ class Provider::Openai < Provider
     ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
   end
 
+  def self.configured?
+    ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+  end
+
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
@@ -260,6 +264,7 @@ class Provider::Openai < Provider
     functions: [],
     function_results: [],
     messages: nil,
+    conversation_history: [],
     streamer: nil,
     previous_response_id: nil,
     session_id: nil,

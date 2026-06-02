@@ -60,3 +60,9 @@ send_insight_digest:
   class: "SendInsightDigestJob"
   queue: "scheduled"
   description: "Sends weekly insight digest emails"
+  
+sweep_expired_goal_pledges:
+  cron: "*/15 * * * *" # every 15 minutes
+  class: "SweepExpiredGoalPledgesJob"
+  queue: "scheduled"
+  description: "Marks goal pledges that passed their 7-day window as expired"
