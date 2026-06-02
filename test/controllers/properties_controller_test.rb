@@ -188,4 +188,41 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert draft_account.active?
     assert_redirected_to account_path(draft_account)
   end
+
+  test "address update redirects activated draft account to stored return_to" do
+    Family.any_instance.stubs(:get_link_token).returns("test-link-token")
+
+    get new_property_path(return_to: accounts_path)
+
+    post properties_path, params: {
+      account: {
+        name: "Return Property",
+        subtype: "house",
+        currency: "USD",
+        accountable_type: "Property",
+        accountable_attributes: {
+          year_built: 1995,
+          area_value: 1800,
+          area_unit: "sqft"
+        }
+      }
+    }
+
+    draft_account = Account.find_by!(name: "Return Property")
+    assert_redirected_to balances_property_path(draft_account)
+
+    patch update_address_property_path(draft_account), params: {
+      property: {
+        address_attributes: {
+          line1: "12 Return St",
+          locality: "Seattle",
+          region: "WA",
+          country: "US",
+          postal_code: "98101"
+        }
+      }
+    }
+
+    assert_redirected_to accounts_path
+  end
 end

@@ -76,8 +76,8 @@ class PropertiesController < ApplicationController
         @account.activate!
 
         respond_to do |format|
-          format.html { redirect_to account_path(@account) }
-          format.turbo_stream { stream_redirect_to account_path(@account) }
+          format.html { redirect_to stored_return_to_or(account_path(@account)) }
+          format.turbo_stream { stream_redirect_to stored_return_to_or(account_path(@account)) }
         end
       else
         @success_message = "Address updated successfully."
