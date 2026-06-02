@@ -1,6 +1,8 @@
 class AddForeignKeyRefundOfTransaction < ActiveRecord::Migration[7.2]
   def change
-    nullify_orphaned_refund_links
+    reversible do |dir|
+      dir.up { nullify_orphaned_refund_links }
+    end
     add_foreign_key :transactions, :transactions,
                     column: :refund_of_transaction_id,
                     on_delete: :nullify,
