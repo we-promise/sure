@@ -14,7 +14,7 @@
         <% else %>
           <%= t(".header.no_category") %>
         <% end %>
-        ·
+        <%= t(".header.separator") %>
         <%= @envelope.sinking_fund? ? t(".header.sinking_fund") : t(".header.virtual_goal") %>
       </p>
     </div>

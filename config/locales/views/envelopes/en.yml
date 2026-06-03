@@ -43,6 +43,7 @@ en:
       header:
         category: "Spends from %{category}"
         no_category: No category linked
+        separator: "·"
         sinking_fund: Sinking fund
         virtual_goal: Virtual goal
       negative_banner:
