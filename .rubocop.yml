@@ -13,3 +13,7 @@ Layout/IndentationConsistency:
 
 Layout/SpaceInsidePercentLiteralDelimiters:
   Enabled: true
+
+Layout/SpaceInsideArrayLiteralBrackets:
+  Exclude:
+    - "db/schema.rb"
