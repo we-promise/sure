@@ -98,14 +98,14 @@ class EnvelopesController < ApplicationController
                          .where.not(id: @envelope&.id)
                          .pluck(:category_id)
 
-      relative_ids = Current.family.categories
-                            .where(id: taken_ids)
-                            .flat_map { |c| [ c.parent_id ] + c.subcategories.pluck(:id) }
-                            .compact
+      # Parents (ancestors) and children (descendants) of taken categories —
+      # two flat queries rather than a query-per-category loop.
+      parent_ids = Current.family.categories.where(id: taken_ids).pluck(:parent_id).compact
+      child_ids  = Current.family.categories.where(parent_id: taken_ids).pluck(:id)
 
       Current.family.categories
              .alphabetically
-             .where.not(id: (taken_ids + relative_ids).uniq)
+             .where.not(id: (taken_ids + parent_ids + child_ids).uniq)
              .to_a
     end
 end
