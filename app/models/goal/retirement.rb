@@ -78,6 +78,12 @@ class Goal::Retirement < Goal
     target_spend.presence&.to_d || family.retirement_spending_baseline(user: owner).amount
   end
 
+  # The 25× rule of thumb: the portfolio that sustains the target spend at a
+  # 4% withdrawal rate. A tertiary stat next to the spending anchor.
+  def fi_number
+    (target_spend_monthly.to_d * 12 * 25).to_i
+  end
+
   # Sum of selected accounts. v1 assumes the plan currency; cross-currency
   # FX of the bucket is a v1.1 follow-up.
   def bucket_value
@@ -131,6 +137,54 @@ class Goal::Retirement < Goal
     age = forecast&.coast_age
     return nil if age.nil?
     Date.new(birth_year.to_i + age, 1, 1)
+  end
+
+  # One-time lump payouts as chart markers (age + amount).
+  def lump_markers
+    payouts.filter_map do |payout|
+      next unless %w[lump_sum lump_plus_annuity].include?(payout.shape)
+      amount = payout.shape == "lump_sum" ? payout.monthly_amount : payout.lump_amount
+      next if amount.to_d.zero?
+      { age: payout.start_age, amount: amount.to_i }
+    end
+  end
+
+  # Everything the glide chart needs, pre-derived from the forecast: the
+  # active plan, a zero-savings shadow (Walletburst), a ±1pp real-return
+  # band, the per-age income breakdown for the hover tooltip, lump
+  # markers, and the retire/coast crossover points. nil until projectable.
+  def glide_payload
+    base = forecast
+    return nil if base.nil?
+
+    inputs = forecast_inputs
+    shadow = ::Retirement::Fire::Forecast.new(inputs.with(annual_savings: 0)).call
+    band_low = ::Retirement::Fire::Forecast.new(inputs.with(real_return: inputs.real_return - 0.01)).call
+    band_high = ::Retirement::Fire::Forecast.new(inputs.with(real_return: inputs.real_return + 0.01)).call
+
+    {
+      currency_symbol: Money.new(0, currency).currency.symbol,
+      current_age: current_age,
+      retire_age: clamped_retire_age,
+      terminal_age: effective_terminal_age,
+      coast_age: base.coast_age,
+      money_lasts_to_age: base.money_lasts_to_age,
+      lasts_past_terminal: base.lasts_past_terminal?,
+      target_monthly: target_spend_monthly.to_i,
+      retire_value: base.portfolio_at_retirement(clamped_retire_age),
+      series: base.glide.map { |age, value| { age: age, value: value } },
+      shadow_series: shadow.glide.map { |age, value| { age: age, value: value } },
+      band_low: band_low.glide.map { |age, value| { age: age, value: value } },
+      band_high: band_high.glide.map { |age, value| { age: age, value: value } },
+      income: base.income_by_year.map do |row|
+        {
+          age: row[:age], state: row[:state], workplace: row[:workplace],
+          other: row[:other], drawdown: row[:drawdown], shortfall: row[:shortfall],
+          covered: row[:shortfall] <= 0
+        }
+      end,
+      lumps: lump_markers
+    }
   end
 
   private

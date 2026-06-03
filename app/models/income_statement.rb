@@ -125,6 +125,28 @@ class IncomeStatement
     family_stats(interval: interval).find { |stat| stat.classification == "income" }&.median || 0
   end
 
+  # Trailing-N-month mean monthly expense with the top/bottom `trim_pct`%
+  # of months dropped — a robust spend anchor for retirement planning that
+  # ignores one-off spikes. Uses the `months` COMPLETE months before the
+  # current one (offset 1..months), so the partial current month doesn't
+  # drag the anchor down. Empty months (no data yet) are skipped so a short
+  # history isn't diluted toward zero. Returns a numeric in the family
+  # currency.
+  def trimmed_mean_expense(months: 12, trim_pct: 10)
+    first_complete = Date.current.beginning_of_month - 1.month
+    monthly = (0...months).map do |offset|
+      start = first_complete - offset.months
+      totals(date_range: start..start.end_of_month).expense_money.amount
+    end.reject(&:zero?)
+
+    return 0 if monthly.empty?
+
+    sorted = monthly.sort
+    drop = (sorted.size * trim_pct / 100.0).floor
+    kept = drop.positive? && sorted.size > 2 * drop ? sorted[drop...(sorted.size - drop)] : sorted
+    kept.sum / kept.size
+  end
+
   private
     ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)

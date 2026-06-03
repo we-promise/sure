@@ -3,13 +3,40 @@
 <% end %>
 
 <div class="space-y-6">
-  <header class="space-y-2">
-    <h1 class="text-primary text-2xl font-semibold"><%= t("retirement.show.title") %></h1>
-    <p class="text-secondary text-sm"><%= t("retirement.show.subtitle") %></p>
-    <p class="text-subdued text-xs"><%= t("retirement.show.preview_note") %></p>
+  <header class="flex items-start justify-between gap-4">
+    <div class="space-y-2">
+      <h1 class="text-primary text-2xl font-semibold"><%= t("retirement.show.title") %></h1>
+      <p class="text-secondary text-sm"><%= t("retirement.show.subtitle") %></p>
+      <p class="text-subdued text-xs"><%= t("retirement.show.preview_note") %></p>
+    </div>
+    <% if @glide.present? %>
+      <%= render DS::Pill.new(label: t("retirement.show.active_plan"), tone: :success, marker: false, show_dot: true, size: :sm) %>
+    <% end %>
   </header>
 
   <%= render "retirement/kpis", plan: @plan %>
+
+  <%# Glide path chart %>
+  <% if @glide.present? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-3">
+      <div>
+        <h2 class="text-primary font-medium"><%= t("retirement.glide.title") %></h2>
+        <p class="text-secondary text-xs"><%= t("retirement.glide.subtitle") %></p>
+      </div>
+      <div class="h-72 w-full privacy-sensitive"
+           data-controller="retirement-glide-chart"
+           data-retirement-glide-chart-data-value="<%= @glide.to_json %>"
+           data-retirement-glide-chart-aria-label-value="<%= t("retirement.glide.title") %>"
+           data-retirement-glide-chart-covered-label-value="<%= t("retirement.glide.covered") %>"
+           data-retirement-glide-chart-portfolio-label-value="<%= t("retirement.glide.portfolio") %>"
+           data-retirement-glide-chart-state-label-value="<%= t("retirement.glide.state") %>"
+           data-retirement-glide-chart-workplace-label-value="<%= t("retirement.glide.workplace") %>"
+           data-retirement-glide-chart-drawdown-label-value="<%= t("retirement.glide.drawdown") %>"
+           data-retirement-glide-chart-total-label-value="<%= t("retirement.glide.total") %>"
+           data-retirement-glide-chart-retire-label-value="<%= t("retirement.glide.retire") %>"
+           data-retirement-glide-chart-coast-label-value="<%= t("retirement.glide.coast") %>"></div>
+    </section>
+  <% end %>
 
   <%# What-if — live recompute on input, persist on save %>
   <section data-controller="retirement-what-if"
@@ -21,26 +48,76 @@
     </div>
 
     <%= form_with url: retirement_path, method: :patch, data: { retirement_what_if_target: "form" }, class: "space-y-3" do |form| %>
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <% [
-          [ "birth_year", @plan.birth_year ],
-          [ "retire_age", @plan.retire_age ],
-          [ "target_spend", @plan.target_spend ],
-          [ "monthly_savings", @plan.monthly_savings ],
-          [ "real_return_pct", @plan.real_return_pct ]
-        ].each do |field, value| %>
-          <label class="text-xs text-secondary space-y-1">
-            <span class="block"><%= t("retirement.what_if.fields.#{field}") %></span>
-            <%= number_field_tag "retirement[#{field}]", value, step: "any",
-                  autocomplete: "off",
-                  class: "form-field__input w-full",
-                  data: { action: "input->retirement-what-if#preview" } %>
-          </label>
+      <% levers = {
+        "retire_age" => { min: 40, max: 75, step: 1 },
+        "target_spend" => { min: 0, max: 20_000, step: 50 },
+        "monthly_savings" => { min: 0, max: 20_000, step: 50 },
+        "real_return_pct" => { min: 0, max: 10, step: 0.1 }
+      } %>
+      <% slider_class = "w-full h-4 appearance-none bg-transparent cursor-pointer " \
+        "[&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-surface-inset " \
+        "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-container [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-sm " \
+        "[&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-surface-inset " \
+        "[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-container" %>
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        <label class="text-xs text-secondary space-y-1">
+          <span class="block"><%= t("retirement.what_if.fields.birth_year") %></span>
+          <%= number_field_tag "retirement[birth_year]", @plan.birth_year, step: 1,
+                autocomplete: "off", class: "form-field__input w-full",
+                data: { action: "input->retirement-what-if#preview" } %>
+        </label>
+
+        <% levers.each do |field, cfg| %>
+          <% value = @plan.public_send(field) %>
+          <div class="space-y-1.5">
+            <label class="text-xs text-secondary block" for="rwi_<%= field %>"><%= t("retirement.what_if.fields.#{field}") %></label>
+            <%= number_field_tag "retirement[#{field}]", value, step: cfg[:step], id: "rwi_#{field}",
+                  autocomplete: "off", class: "form-field__input w-full",
+                  data: { lever: field, action: "input->retirement-what-if#sync" } %>
+            <%= range_field_tag "rwi_#{field}_slider", value, min: cfg[:min], max: cfg[:max], step: cfg[:step],
+                  class: slider_class,
+                  data: { lever: field, action: "input->retirement-what-if#sync" } %>
+          </div>
         <% end %>
       </div>
       <%= form.submit t("retirement.what_if.save"), class: "text-sm font-medium text-primary underline cursor-pointer" %>
     <% end %>
   </section>
+
+  <%# Why this target? — spending anchor + FI number %>
+  <% if @glide.present? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h2 class="text-primary font-medium"><%= t("retirement.why.title") %></h2>
+          <p class="text-secondary text-xs"><%= t("retirement.why.subtitle") %></p>
+        </div>
+        <%= button_to t("retirement.why.use_average"), retirement_path, method: :patch,
+              params: { retirement: { target_spend: @baseline.amount.to_i } },
+              class: "text-sm text-primary underline shrink-0" %>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.why.last_12") %></p>
+          <p class="text-primary text-xl font-semibold tabular-nums privacy-sensitive">
+            <%= @baseline.format(precision: 0) %><span class="text-secondary text-sm"><%= t("retirement.show.per_month") %></span>
+          </p>
+        </div>
+        <div>
+          <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.why.target") %></p>
+          <p class="text-primary text-xl font-semibold tabular-nums privacy-sensitive">
+            <%= Money.new(@plan.target_spend_monthly, @plan.currency).format(precision: 0) %><span class="text-secondary text-sm"><%= t("retirement.show.per_month") %></span>
+          </p>
+        </div>
+        <div>
+          <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.why.fi_number") %></p>
+          <p class="text-primary text-xl font-semibold tabular-nums privacy-sensitive">
+            <%= Money.new(@plan.fi_number, @plan.currency).format(precision: 0) %>
+          </p>
+        </div>
+      </div>
+    </section>
+  <% end %>
 
   <%# Pension sources %>
   <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
@@ -53,18 +130,19 @@
     <% if @pension_sources.empty? %>
       <p class="text-secondary text-sm"><%= t("retirement.show.no_sources") %></p>
     <% else %>
-      <ul class="divide-y divide-tertiary">
+      <% pill_tone = { "state" => :indigo, "workplace" => :violet, "other" => :gray } %>
+      <% accent = { "state" => "var(--color-blue-500)", "workplace" => "var(--color-violet-500)", "other" => "var(--color-gray-400)" } %>
+      <ul class="space-y-2">
         <% @pension_sources.each do |source| %>
-          <li class="py-3 flex items-center justify-between gap-3">
-            <div>
-              <p class="text-primary text-sm font-medium">
-                <%= source.name %>
-                <span class="text-secondary text-xs">· <%= t("retirement.pension_sources.kinds.#{source.kind}") %></span>
-              </p>
-              <p class="text-secondary text-xs">
-                <%= t("retirement.show.starts_at_age", age: source.start_age) %> ·
-                <%= source.country %> ·
-                <%= t("retirement.pension_sources.payout_shapes.#{source.payout_shape}") %>
+          <li class="flex items-center justify-between gap-3 border-l-2 pl-3 py-1" style="border-left-color: <%= accent.fetch(source.kind, "var(--color-gray-400)") %>">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-primary text-sm font-medium truncate"><%= source.name %></span>
+                <%= render DS::Pill.new(label: t("retirement.pension_sources.kinds.#{source.kind}"), tone: pill_tone.fetch(source.kind, :gray), marker: false, show_dot: false, size: :sm) %>
+                <%= render DS::Pill.new(label: t("retirement.pension_sources.payout_shapes.#{source.payout_shape}"), tone: :gray, marker: false, show_dot: false, size: :sm) %>
+              </div>
+              <p class="text-secondary text-xs mt-0.5">
+                <%= t("retirement.show.starts_at_age", age: source.start_age) %> · <%= source.country %>
               </p>
             </div>
             <div class="flex items-center gap-3 shrink-0">
@@ -94,20 +172,24 @@
     <% if @adjustments.empty? %>
       <p class="text-secondary text-sm"><%= t("retirement.show.no_adjustments") %></p>
     <% else %>
-      <ul class="divide-y divide-tertiary">
+      <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <% @adjustments.each do |adjustment| %>
-          <li class="py-3 flex items-center justify-between gap-3">
-            <div>
-              <p class="text-primary text-sm font-medium"><%= adjustment.label %></p>
-              <p class="text-secondary text-xs"><%= t("retirement.show.from_age", age: adjustment.from_age) %></p>
+          <% negative = adjustment.amount_today.to_d.negative? %>
+          <li class="flex items-center justify-between gap-2 rounded-xl border border-secondary bg-surface-inset p-3">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg <%= negative ? "bg-success/10" : "bg-warning/10" %>">
+                <%= icon(negative ? "trending-down" : "trending-up", size: "sm", color: negative ? "success" : "warning") %>
+              </span>
+              <div class="min-w-0">
+                <p class="text-primary text-sm font-medium truncate"><%= adjustment.label %></p>
+                <p class="text-secondary text-xs"><%= t("retirement.show.from_age", age: adjustment.from_age) %></p>
+              </div>
             </div>
-            <div class="flex items-center gap-3 shrink-0">
-              <span class="text-primary text-sm tabular-nums privacy-sensitive"><%= adjustment.amount_today_money&.format %></span>
-              <%= link_to t("retirement.show.edit"), edit_retirement_adjustment_path(adjustment),
-                    class: "text-xs text-secondary underline" %>
-              <%= button_to t("retirement.show.delete"), retirement_adjustment_path(adjustment),
-                    method: :delete, class: "text-xs text-destructive underline",
-                    form: { data: { turbo_confirm: t("retirement.show.delete_confirm") } } %>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-sm tabular-nums privacy-sensitive <%= negative ? "text-success" : "text-warning" %>"><%= adjustment.amount_today_money&.format %></span>
+              <%= link_to edit_retirement_adjustment_path(adjustment), class: "text-secondary hover:text-primary" do %><%= icon("pencil", size: "xs") %><% end %>
+              <%= button_to retirement_adjustment_path(adjustment), method: :delete, class: "text-secondary hover:text-destructive",
+                    form: { data: { turbo_confirm: t("retirement.show.delete_confirm") } } do %><%= icon("trash-2", size: "xs") %><% end %>
             </div>
           </li>
         <% end %>
@@ -116,21 +198,30 @@
   </section>
 
   <%# Retirement bucket %>
+  <% counted = @bucket_candidates.select { |a| @bucket_account_ids.include?(a.id) }.sum { |a| a.balance.to_d } %>
   <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
-    <div>
-      <h2 class="text-primary font-medium"><%= t("retirement.show.bucket_title") %></h2>
-      <p class="text-secondary text-xs"><%= t("retirement.show.bucket_hint") %></p>
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-primary font-medium"><%= t("retirement.show.bucket_title") %></h2>
+        <p class="text-secondary text-xs"><%= t("retirement.show.bucket_hint") %></p>
+      </div>
+      <div class="text-right shrink-0">
+        <%= render DS::Pill.new(label: t("retirement.show.bucket_count", selected: @bucket_account_ids.size, total: @bucket_candidates.size), tone: :gray, marker: false, show_dot: false, size: :sm) %>
+        <p class="text-secondary text-xs mt-1 privacy-sensitive"><%= t("retirement.show.bucket_counted", amount: Money.new(counted, @plan.currency).format(precision: 0)) %></p>
+      </div>
     </div>
 
     <%= form_with url: retirement_bucket_path, method: :patch, class: "space-y-3" do |form| %>
       <div class="space-y-2">
         <% @bucket_candidates.each do |account| %>
-          <label class="flex items-center gap-2 text-sm text-primary">
-            <%= check_box_tag "bucket[account_ids][]", account.id,
-                  @bucket_account_ids.include?(account.id) %>
-            <span><%= account.name %></span>
-            <span class="text-secondary text-xs privacy-sensitive"><%= account.balance_money&.format %></span>
-          </label>
+          <%= render DS::SelectableCard.new(
+                name: "bucket[account_ids][]",
+                value: account.id,
+                title: account.name,
+                subtitle: account.accountable_type&.underscore&.humanize,
+                amount: account.balance_money&.format,
+                checked: @bucket_account_ids.include?(account.id)
+              ) %>
         <% end %>
       </div>
       <%= form.submit t("retirement.show.save_bucket"), class: "text-sm font-medium text-primary underline cursor-pointer" %>
@@ -157,6 +248,7 @@
             <th class="py-2"><%= t("retirement.statements.table.date") %></th>
             <th class="py-2"><%= t("retirement.statements.table.source") %></th>
             <th class="py-2"><%= t("retirement.statements.table.points") %></th>
+            <th class="py-2"><%= t("retirement.statements.table.delta") %></th>
             <th class="py-2"><%= t("retirement.statements.table.amount") %></th>
             <th class="py-2"><%= t("retirement.statements.table.age") %></th>
             <th class="py-2"><%= t("retirement.statements.table.notes") %></th>
@@ -169,6 +261,14 @@
               <td class="py-2 text-primary tabular-nums"><%= I18n.l(statement.received_on) %></td>
               <td class="py-2 text-secondary"><%= statement.pension_source.name %></td>
               <td class="py-2 text-secondary tabular-nums"><%= statement.current_points %></td>
+              <td class="py-2 tabular-nums">
+                <% delta = statement.points_delta %>
+                <% if delta.nil? %>
+                  <span class="text-secondary">&mdash;</span>
+                <% else %>
+                  <span class="<%= delta.negative? ? "text-destructive" : "text-success" %>"><%= format("%+.2f", delta) %></span>
+                <% end %>
+              </td>
               <td class="py-2 text-primary tabular-nums privacy-sensitive"><%= statement.projected_monthly_amount_money&.format %></td>
               <td class="py-2 text-secondary tabular-nums"><%= statement.projected_at_age %></td>
               <td class="py-2 text-secondary"><%= statement.raw_source_doc %></td>

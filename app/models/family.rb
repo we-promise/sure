@@ -416,12 +416,11 @@ class Family < ApplicationRecord
   end
 
   # Default monthly spending anchor for a retirement plan, in the family's
-  # primary currency / today's money. v1 uses the median monthly expense (a
-  # robust central estimate that already applies Sure's expense exclusions);
-  # the precise trailing-12m 10%-trimmed-mean + its methodology label ship
-  # with the PR4 "Why this target?" card.
-  def retirement_spending_baseline(user: nil)
-    monthly = income_statement(user: user || Current.user).median_expense(interval: "month").to_d
+  # primary currency / today's money: a trailing-12-month 10%-trimmed mean
+  # of monthly expense, so one-off spikes don't skew the target.
+  def retirement_spending_baseline(user: nil, months: 12, trim_pct: 10)
+    monthly = income_statement(user: user || Current.user)
+                .trimmed_mean_expense(months: months, trim_pct: trim_pct).to_d
     Money.new(monthly, primary_currency_code)
   end
 

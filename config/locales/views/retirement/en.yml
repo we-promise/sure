@@ -5,6 +5,7 @@ en:
       title: Retirement
       subtitle: Plan when you can stop working — and what you'll need to get there.
       preview_note: Preview — projections are a single deterministic path in today's money. The polished dashboard arrives in a later update.
+      active_plan: Active plan
       sources_title: Pension sources
       add_source: Add source
       no_sources: No pension sources yet.
@@ -16,6 +17,8 @@ en:
       from_age: From age %{age}
       bucket_title: Retirement bucket
       bucket_hint: Select the accounts that fund your retirement.
+      bucket_count: "%{selected} of %{total} accounts"
+      bucket_counted: "Counted: %{amount}"
       save_bucket: Save bucket
       statements_title: Statement journal
       statements_subtitle: Every annual pension statement you've received — for the audit trail.
@@ -38,6 +41,24 @@ en:
       age: "age %{age}"
       past_age: "past %{age}"
       terminal: "~%{amount} left at the end"
+    why:
+      title: Why this target?
+      subtitle: Trailing 12 months · 10% trimmed mean
+      use_average: Use my average
+      last_12: Last 12 months
+      target: Target
+      fi_number: FI number · 25×
+    glide:
+      title: Glide path
+      subtitle: Projected portfolio value · today's money · hover for monthly income at that age
+      covered: Covered
+      portfolio: Portfolio
+      state: State pension
+      workplace: Workplace
+      drawdown: Portfolio drawdown
+      total: Total / mo
+      retire: Retire · age
+      coast: Coast · age
     what_if:
       title: What-if
       hint: Change a lever — the projection updates live.
@@ -112,6 +133,7 @@ en:
         date: Date
         source: Source
         points: Points
+        delta: Δ
         amount: Projected
         age: At age
         notes: Notes

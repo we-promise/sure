@@ -2,6 +2,10 @@ class RetirementController < ApplicationController
   include RetirementScoped
 
   def show
+    @glide = @plan.glide_payload
+    # Only consumed inside the @glide.present? blocks; skip the trailing-month
+    # aggregation when there's nothing to render.
+    @baseline = Current.family.retirement_spending_baseline(user: Current.user) if @glide.present?
     @pension_sources = @plan.pension_sources.order(:start_age)
     @adjustments = @plan.adjustments.ordered
     @statements = @plan.statements.chronological.reverse

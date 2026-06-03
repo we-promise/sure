@@ -1,0 +1,17 @@
+<label class="flex items-center gap-3 cursor-pointer rounded-xl border-2 border-secondary bg-surface-inset p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface has-[:checked]:[&_.sc-box]:border-primary has-[:checked]:[&_.sc-box]:bg-primary has-[:checked]:[&_.sc-check]:opacity-100">
+  <%= check_box_tag name, value, checked, class: "sr-only", **opts %>
+  <span class="sc-box flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 border-secondary transition-colors">
+    <%= helpers.icon("check", size: "xs", color: "white", class: "sc-check opacity-0") %>
+  </span>
+  <div class="flex items-center justify-between gap-3 flex-1 min-w-0">
+    <div class="min-w-0">
+      <p class="text-primary text-sm font-medium truncate"><%= title %></p>
+      <% if subtitle %>
+        <p class="text-secondary text-xs truncate"><%= subtitle %></p>
+      <% end %>
+    </div>
+    <% if amount %>
+      <span class="text-primary text-sm tabular-nums shrink-0 privacy-sensitive"><%= amount %></span>
+    <% end %>
+  </div>
+</label>

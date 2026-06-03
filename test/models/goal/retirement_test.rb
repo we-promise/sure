@@ -150,4 +150,37 @@ class Goal::RetirementTest < ActiveSupport::TestCase
     assert_equal 50, plan.clamped_retire_age          # not 40
     assert_equal Date.current.year, plan.freedom_date.year   # not a past year
   end
+
+  test "glide_payload is nil without a birth year, structured once set" do
+    plan = goals(:retirement_bob)
+    assert_nil plan.glide_payload
+
+    plan.update!(retirement_params: {
+      "birth_year" => Date.current.year - 40, "retire_age" => 60,
+      "monthly_savings" => 1000, "target_spend" => 2000, "real_return_pct" => 5
+    })
+    payload = Goal.find(plan.id).glide_payload
+
+    assert_equal 40, payload[:current_age]
+    assert_equal 60, payload[:retire_age]
+    assert_operator payload[:series].length, :>, 1
+    assert_equal payload[:series].length, payload[:shadow_series].length
+    assert_equal payload[:series].length, payload[:band_low].length
+    assert_kind_of Array, payload[:income]
+    assert_kind_of Array, payload[:lumps]
+  end
+
+  test "lump_markers picks up lump payouts from params" do
+    plan = goals(:retirement_bob)
+    source = plan.pension_sources.find_by(payout_shape: "lump_plus_annuity")
+    source.update!(params: { "lump_amount" => 30_000 })
+
+    assert_equal [ { age: source.start_age, amount: 30_000 } ], plan.reload.lump_markers
+  end
+
+  test "fi_number is 25x the annual target spend" do
+    plan = goals(:retirement_bob)
+    plan.update!(retirement_params: { "birth_year" => Date.current.year - 40, "target_spend" => 3000 })
+    assert_equal 3000 * 12 * 25, Goal.find(plan.id).fi_number
+  end
 end

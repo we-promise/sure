@@ -7,20 +7,29 @@
       <p class="text-secondary text-sm"><%= t("retirement.kpis.set_birth_year_body") %></p>
     </div>
   <% else %>
-    <div class="bg-container shadow-border-xs rounded-xl p-5">
-      <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.freedom_date") %></p>
-      <p class="text-primary text-2xl font-semibold"><%= plan.freedom_date&.year || "—" %></p>
+    <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-1">
+      <div class="flex items-center gap-1.5">
+        <%= icon("flag", size: "sm", color: "success") %>
+        <span class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.freedom_date") %></span>
+      </div>
+      <p class="text-success text-2xl font-semibold"><%= plan.freedom_date&.year || "—" %></p>
       <p class="text-secondary text-xs"><%= t("retirement.kpis.retire_at_age", age: plan.effective_retire_age) %></p>
     </div>
 
-    <div class="bg-container shadow-border-xs rounded-xl p-5">
-      <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.coast_fire") %></p>
-      <p class="text-primary text-2xl font-semibold"><%= plan.coast_fire_date&.year || t("retirement.kpis.not_yet") %></p>
+    <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-1">
+      <div class="flex items-center gap-1.5">
+        <%= icon("zap", size: "sm", color: "info") %>
+        <span class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.coast_fire") %></span>
+      </div>
+      <p class="text-info text-2xl font-semibold"><%= plan.coast_fire_date&.year || t("retirement.kpis.not_yet") %></p>
       <p class="text-secondary text-xs"><%= t("retirement.kpis.coast_hint") %></p>
     </div>
 
-    <div class="bg-container shadow-border-xs rounded-xl p-5">
-      <p class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.money_lasts_to") %></p>
+    <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-1">
+      <div class="flex items-center gap-1.5">
+        <%= icon("hourglass", size: "sm") %>
+        <span class="text-secondary text-xs uppercase tracking-wide"><%= t("retirement.kpis.money_lasts_to") %></span>
+      </div>
       <p class="text-primary text-2xl font-semibold">
         <%= forecast.lasts_past_terminal? ? t("retirement.kpis.past_age", age: forecast.terminal_age) : t("retirement.kpis.age", age: forecast.money_lasts_to_age) %>
       </p>
