@@ -11,7 +11,8 @@
   <%= styled_form_with model: goal,
                        url: goal.persisted? ? goal_path(goal) : goals_path,
                        method: goal.persisted? ? :patch : :post,
-                       class: "space-y-5" do |f| %>
+                       class: "space-y-5",
+                       data: { action: "submit->goal-form#validateOnSubmit" } do |f| %>
     <div class="flex justify-center">
       <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
     </div>
@@ -83,7 +84,8 @@
                     placeholder: t("goals.form.fields.notes_placeholder") %>
 
     <div class="flex justify-end pt-2">
-      <%= f.submit goal.persisted? ? t("goals.form.save") : t("goals.form.create") %>
+      <%= f.submit goal.persisted? ? t("goals.form.save") : t("goals.form.create"),
+                   data: { goal_form_target: "submitButton" } %>
     </div>
   <% end %>
 </div>
