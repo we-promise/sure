@@ -88,13 +88,24 @@ class EnvelopesController < ApplicationController
     end
 
     # Categories the form may offer: everything in the family minus the ones
-    # already backing another envelope (the model enforces one envelope per
-    # category). The envelope being edited keeps its own category in the list.
+    # already backing another envelope and minus their parent/child relatives
+    # (subcategory spend rolls up, so the model rejects ancestor/descendant
+    # overlaps too — see Envelope#category_must_not_overlap_other_envelope).
+    # The envelope being edited keeps its own category in the list.
     def assignable_categories
       taken_ids = Current.family.envelopes
                          .where.not(category_id: nil)
                          .where.not(id: @envelope&.id)
-                         .select(:category_id)
-      Current.family.categories.alphabetically.where.not(id: taken_ids).to_a
+                         .pluck(:category_id)
+
+      relative_ids = Current.family.categories
+                            .where(id: taken_ids)
+                            .flat_map { |c| [ c.parent_id ] + c.subcategories.pluck(:id) }
+                            .compact
+
+      Current.family.categories
+             .alphabetically
+             .where.not(id: (taken_ids + relative_ids).uniq)
+             .to_a
     end
 end

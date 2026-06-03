@@ -206,6 +206,15 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_not_includes ids, pending.id
   end
 
+  test "recent_entries exposes the amount converted to the envelope currency" do
+    envelope = build_envelope(months_ago: 0) # USD
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+    create_transaction(account: @account, amount: 100, currency: "EUR", date: Date.current, category: @category)
+
+    entry = envelope.recent_entries.first
+    assert_equal 110.to_d, entry.converted_amount.to_d # 100 EUR * 1.1
+  end
+
   test "an envelope with no category has zero spend" do
     envelope = @family.envelopes.create!(name: "No cat", monthly_contribution: 100, currency: "USD", starts_on: Date.current.beginning_of_month)
     create_transaction(account: @account, amount: 500, date: Date.current, category: @category)
