@@ -32,6 +32,10 @@ function uniqueNumbers(candidates) {
   return [...new Set(candidates.map((candidate) => candidate.parsed.prNumber))];
 }
 
+function uniquePullRequestNumbers(pullRequests) {
+  return [...new Set(pullRequests.map((pullRequest) => pullRequest.number))];
+}
+
 function associatedPullRequestsForHead(associatedPullRequests, context, headSha) {
   const baseRepo = repoFullName(context);
 
@@ -43,15 +47,65 @@ function associatedPullRequestsForHead(associatedPullRequests, context, headSha)
 }
 
 function selectPullRequestNumber({ runPullRequest, artifacts, associatedPullRequests, context, headSha }) {
-  if (runPullRequest?.number) {
+  const associatedHeadPullRequests = associatedPullRequestsForHead(associatedPullRequests, context, headSha);
+  const associatedPullRequestNumbers = uniquePullRequestNumbers(associatedHeadPullRequests);
+  const artifactPullRequestNumbers = uniqueNumbers(artifactCandidates(artifacts, headSha));
+  const workflowRunPullRequestNumber = runPullRequest?.number ?? null;
+
+  if (artifactPullRequestNumbers.length > 1) {
     return {
-      prNumber: runPullRequest.number,
-      source: "workflow_run",
+      error: `Workflow run ${headSha} published preview artifacts for multiple pull requests`,
     };
   }
 
-  const associatedHeadPullRequests = associatedPullRequestsForHead(associatedPullRequests, context, headSha);
-  const artifactPullRequestNumbers = uniqueNumbers(artifactCandidates(artifacts, headSha));
+  if (artifactPullRequestNumbers.length === 1) {
+    const artifactPullRequestNumber = artifactPullRequestNumbers[0];
+
+    if (workflowRunPullRequestNumber && workflowRunPullRequestNumber !== artifactPullRequestNumber) {
+      return {
+        error: `Preview artifact PR ${artifactPullRequestNumber} conflicts with workflow_run PR ${workflowRunPullRequestNumber}`,
+      };
+    }
+
+    if (
+      associatedPullRequestNumbers.length > 0 &&
+      !associatedPullRequestNumbers.includes(artifactPullRequestNumber)
+    ) {
+      return {
+        error: `Preview artifact PR ${artifactPullRequestNumber} conflicts with commit-associated PRs ${associatedPullRequestNumbers.join(", ")}`,
+      };
+    }
+
+    const corroboratingSources = [];
+    if (workflowRunPullRequestNumber === artifactPullRequestNumber) corroboratingSources.push("workflow_run");
+    if (associatedPullRequestNumbers.includes(artifactPullRequestNumber)) {
+      corroboratingSources.push("commit_association");
+    }
+
+    return {
+      prNumber: artifactPullRequestNumber,
+      source:
+        corroboratingSources.length > 0
+          ? `artifact_name+${corroboratingSources.join("+")}`
+          : "artifact_name",
+    };
+  }
+
+  if (workflowRunPullRequestNumber) {
+    if (
+      associatedPullRequestNumbers.length > 0 &&
+      !associatedPullRequestNumbers.includes(workflowRunPullRequestNumber)
+    ) {
+      return {
+        error: `workflow_run PR ${workflowRunPullRequestNumber} conflicts with commit-associated PRs ${associatedPullRequestNumbers.join(", ")}`,
+      };
+    }
+
+    return {
+      prNumber: workflowRunPullRequestNumber,
+      source: "workflow_run",
+    };
+  }
 
   if (associatedHeadPullRequests.length === 1) {
     return {
@@ -61,31 +115,8 @@ function selectPullRequestNumber({ runPullRequest, artifacts, associatedPullRequ
   }
 
   if (associatedHeadPullRequests.length > 1) {
-    const associatedNumbers = new Set(associatedHeadPullRequests.map((pullRequest) => pullRequest.number));
-    const artifactMatches = artifactPullRequestNumbers.filter((number) => associatedNumbers.has(number));
-
-    if (artifactMatches.length === 1) {
-      return {
-        prNumber: artifactMatches[0],
-        source: "artifact_and_commit_association",
-      };
-    }
-
     return {
       error: `Workflow run head SHA ${headSha} is associated with multiple open pull requests and no single preview artifact matched`,
-    };
-  }
-
-  if (artifactPullRequestNumbers.length === 1) {
-    return {
-      prNumber: artifactPullRequestNumbers[0],
-      source: "artifact_name",
-    };
-  }
-
-  if (artifactPullRequestNumbers.length > 1) {
-    return {
-      error: `Workflow run ${headSha} published preview artifacts for multiple pull requests`,
     };
   }
 
@@ -186,6 +217,7 @@ async function resolvePreviewRequest({ github, context, core }) {
   core.setOutput("head_sha", headSha);
   core.setOutput("is_fork", String(isFork));
   core.setOutput("pr_number", String(prNumber));
+  core.setOutput("resolution_source", selected.source);
   core.setOutput("should_deploy", "true");
 }
 
