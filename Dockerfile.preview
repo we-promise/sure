@@ -73,15 +73,32 @@ set -e
 cd /rails
 
 emit_status() {
-  if [ -n "$PREVIEW_ORIGIN" ]; then
+  if [ -n "$PREVIEW_ORIGIN" ] && [ -n "$PREVIEW_DIAGNOSTICS_NONCE" ]; then
     local stage="$1"
     local detail="$2"
     local payload
     payload=$(STAGE="$stage" DETAIL="$detail" ruby -rjson -e 'print JSON.generate({stage: ENV.fetch("STAGE"), detail: ENV.fetch("DETAIL", "")})' 2>/dev/null) || return 0
     curl -fsS -X POST "$PREVIEW_ORIGIN/_container_event" \
       -H 'content-type: application/json' \
+      -H "x-preview-diagnostics-nonce: $PREVIEW_DIAGNOSTICS_NONCE" \
       --data "$payload" >/dev/null || true
   fi
+}
+
+summarize_log_tail() {
+  local file="$1"
+  local label="$2"
+
+  if [ ! -f "$file" ]; then
+    printf '%s log unavailable' "$label"
+    return 0
+  fi
+
+  tail -n 80 "$file" 2>&1 |
+    sed 's/"/'"'"'/g' |
+    tr '\n' ' ' |
+    sed 's/  */ /g' |
+    cut -c 1-1600
 }
 
 trap 'emit_status failed "preview-entrypoint failed on line ${LINENO}"' ERR
@@ -217,7 +234,7 @@ for i in {1..180}; do
           '
         ) > /tmp/demo-data.log 2>&1 && \
           emit_status demo-data-ready "default demo dataset loaded in background" || \
-          emit_status demo-data-failed "background demo dataset load failed"
+          emit_status demo-data-failed "background demo dataset load failed: $(summarize_log_tail /tmp/demo-data.log demo-data)"
       ) &
     fi
 

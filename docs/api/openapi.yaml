@@ -4680,7 +4680,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '422':
-          description: validation error - file too large
+          description: validation error or publish rejection
           content:
             application/json:
               schema:

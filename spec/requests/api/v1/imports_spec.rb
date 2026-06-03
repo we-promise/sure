@@ -251,7 +251,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - file too large' do
+      response '422', 'validation error or publish rejection' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
@@ -288,9 +288,22 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '500', 'import uploaded but publish enqueue failed' do
         schema '$ref' => '#/components/schemas/ErrorResponseWithImportId'
 
+        before do
+          allow(ImportJob).to receive(:perform_later).and_raise(StandardError, 'queue offline')
+        end
+
         let(:body) do
           {
-            raw_file_content: { type: 'Account', data: { id: 'account_1', name: 'Checking' } }.to_json,
+            raw_file_content: {
+              type: 'Account',
+              data: {
+                id: 'account_1',
+                name: 'Checking',
+                balance: '100',
+                currency: 'USD',
+                accountable_type: 'Depository'
+              }
+            }.to_json,
             type: 'SureImport',
             publish: 'true'
           }
