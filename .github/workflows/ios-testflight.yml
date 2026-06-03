@@ -180,8 +180,9 @@ jobs:
 
           def patch_block(match):
               block = match.group(0)
-              if f"PRODUCT_BUNDLE_IDENTIFIER = {app_bundle_id};" not in block:
+              if "PRODUCT_BUNDLE_IDENTIFIER =" not in block:
                   return block
+              block = re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = .*?;', f'PRODUCT_BUNDLE_IDENTIFIER = {app_bundle_id};', block)
               if "CODE_SIGN_STYLE = Manual;" not in block:
                   block = block.replace("CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";", "CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;")
               if '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";' not in block:
@@ -247,7 +248,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             MARKETING_VERSION="$IOS_VERSION" \
             CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
-            APP_BUNDLE_IDENTIFIER="$APP_BUNDLE_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$APP_BUNDLE_ID" \
             archive
 
           mkdir -p "$EXPORT_PATH"
