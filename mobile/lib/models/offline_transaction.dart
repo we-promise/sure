@@ -142,6 +142,43 @@ class OfflineTransaction extends Transaction {
     );
   }
 
+  Transaction toTransactionWithSubmittedUpdate({
+    String? name,
+    String? notes,
+    String? categoryId,
+    String? merchantId,
+    List<String>? tagIds,
+  }) {
+    final nextTagIds = tagIds ?? this.tagIds;
+    final tagNamesById = <String, String>{};
+    for (var i = 0; i < this.tagIds.length; i++) {
+      tagNamesById[this.tagIds[i]] = i < tagNames.length ? tagNames[i] : '';
+    }
+
+    final nextCategoryId = categoryId ?? this.categoryId;
+    final nextMerchantId = merchantId ?? this.merchantId;
+
+    return Transaction(
+      id: id,
+      accountId: accountId,
+      name: name ?? this.name,
+      date: date,
+      amount: amount,
+      currency: currency,
+      nature: nature,
+      notes: notes ?? this.notes,
+      categoryId: nextCategoryId,
+      categoryName: nextCategoryId == this.categoryId ? categoryName : null,
+      categoryProvided: true,
+      merchantId: nextMerchantId,
+      merchantName: nextMerchantId == this.merchantId ? merchantName : null,
+      merchantProvided: true,
+      tagIds: nextTagIds,
+      tagNames: nextTagIds.map((tagId) => tagNamesById[tagId] ?? '').toList(),
+      tagsProvided: true,
+    );
+  }
+
   OfflineTransaction mergeServerTransaction(
     Transaction transaction, {
     required String accountId,

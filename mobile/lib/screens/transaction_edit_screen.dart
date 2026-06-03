@@ -20,6 +20,9 @@ class TransactionEditScreen extends StatefulWidget {
 }
 
 class _TransactionEditScreenState extends State<TransactionEditScreen> {
+  static const _maxNameLength = 255;
+  static const _maxNotesLength = 2000;
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _notesController;
@@ -65,11 +68,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
     try {
       await Future.wait([
         categoriesProvider.fetchCategories(accessToken: accessToken),
-        merchantsProvider.fetchMerchants(
-          accessToken: accessToken,
-          forceRefresh: true,
-        ),
-        tagsProvider.fetchTags(accessToken: accessToken, forceRefresh: true),
+        merchantsProvider.fetchMerchants(accessToken: accessToken),
+        tagsProvider.fetchTags(accessToken: accessToken),
       ]);
     } catch (_) {
       // Providers expose their own error state; avoid an uncaught async error.
@@ -112,7 +112,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
 
     final success = await transactionsProvider.updateTransaction(
       accessToken: accessToken,
-      transactionId: widget.transaction.id!,
+      transaction: widget.transaction,
       name: _nameController.text.trim(),
       notes: notesText,
       categoryId: _selectedCategoryId,
@@ -129,7 +129,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          success ? 'Transaction updated' : 'Failed to update transaction',
+          success
+              ? 'Transaction updated'
+              : transactionsProvider.error ?? 'Failed to update transaction',
         ),
         backgroundColor: success ? Colors.green : Colors.red,
       ),
@@ -145,7 +147,47 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
       return 'Name is required';
     }
 
+    if (value.trim().length > _maxNameLength) {
+      return 'Name must be $_maxNameLength characters or fewer';
+    }
+
+    if (_containsControlCharacter(value)) {
+      return 'Name contains unsupported characters';
+    }
+
     return null;
+  }
+
+  String? _validateNotes(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    if (value.trim().length > _maxNotesLength) {
+      return 'Notes must be $_maxNotesLength characters or fewer';
+    }
+
+    if (_containsControlCharacter(value, allowWhitespace: true)) {
+      return 'Notes contain unsupported characters';
+    }
+
+    return null;
+  }
+
+  bool _containsControlCharacter(
+    String value, {
+    bool allowWhitespace = false,
+  }) {
+    for (final codeUnit in value.codeUnits) {
+      if (codeUnit == 127) return true;
+      if (codeUnit < 32) {
+        final allowedWhitespace = allowWhitespace &&
+            (codeUnit == 9 || codeUnit == 10 || codeUnit == 13);
+        if (!allowedWhitespace) return true;
+      }
+    }
+
+    return false;
   }
 
   List<DropdownMenuItem<String?>> _categoryItems(
@@ -295,6 +337,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               controller: _nameController,
               enabled: canEdit && !_isSaving,
               validator: _validateName,
+              maxLength: _maxNameLength,
               decoration: const InputDecoration(
                 labelText: 'Name',
                 prefixIcon: Icon(Icons.label),
@@ -304,6 +347,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             TextFormField(
               controller: _notesController,
               enabled: canEdit && !_isSaving,
+              validator: _validateNotes,
+              maxLength: _maxNotesLength,
               minLines: 2,
               maxLines: 4,
               decoration: const InputDecoration(
@@ -315,7 +360,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             Consumer<CategoriesProvider>(
               builder: (context, categoriesProvider, _) {
                 return DropdownButtonFormField<String?>(
-                  value: _selectedCategoryId,
+                  initialValue: _selectedCategoryId,
                   decoration: const InputDecoration(
                     labelText: 'Category',
                     prefixIcon: Icon(Icons.category),
@@ -333,7 +378,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             Consumer<MerchantsProvider>(
               builder: (context, merchantsProvider, _) {
                 return DropdownButtonFormField<String?>(
-                  value: _selectedMerchantId,
+                  initialValue: _selectedMerchantId,
                   decoration: const InputDecoration(
                     labelText: 'Merchant',
                     prefixIcon: Icon(Icons.storefront),

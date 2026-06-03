@@ -260,7 +260,7 @@ class TransactionsProvider with ChangeNotifier {
   /// current offline queue supports create/delete but not pending updates.
   Future<bool> updateTransaction({
     required String accessToken,
-    required String transactionId,
+    required OfflineTransaction transaction,
     String? name,
     String? notes,
     String? categoryId,
@@ -268,11 +268,18 @@ class TransactionsProvider with ChangeNotifier {
     List<String>? tagIds,
   }) async {
     _lastAccessToken = accessToken;
+    _currentAccountId = transaction.accountId;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      final transactionId = transaction.id;
+      if (transactionId == null || transactionId.isEmpty) {
+        _error = 'Only synced transactions can be edited from mobile.';
+        return false;
+      }
+
       final isOnline = _connectivityService?.isOnline ?? false;
       if (!isOnline) {
         _error = 'Connect to the internet before editing synced transactions.';
@@ -290,15 +297,31 @@ class TransactionsProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        final updatedTransaction = result['transaction'];
-        if (updatedTransaction is Transaction) {
-          await _offlineStorage.upsertTransactionFromServer(
-            updatedTransaction,
-            accountId: _currentAccountId,
+        var updatedTransaction = result['transaction'];
+        if (updatedTransaction is! Transaction) {
+          final refreshed = await _transactionsService.getTransaction(
+            accessToken: accessToken,
+            transactionId: transactionId,
           );
+          updatedTransaction = refreshed['transaction'];
         }
+
+        final transactionToCache = updatedTransaction is Transaction
+            ? updatedTransaction
+            : transaction.toTransactionWithSubmittedUpdate(
+                name: name,
+                notes: notes,
+                categoryId: categoryId,
+                merchantId: merchantId,
+                tagIds: tagIds,
+              );
+
+        await _offlineStorage.upsertTransactionFromServer(
+          transactionToCache,
+          accountId: transaction.accountId,
+        );
         final updatedTransactions = await _offlineStorage.getTransactions(
-          accountId: _currentAccountId,
+          accountId: transaction.accountId,
         );
         _transactions = updatedTransactions;
         _error = null;

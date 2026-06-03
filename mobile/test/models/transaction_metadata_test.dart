@@ -264,5 +264,45 @@ void main() {
       expect(clearedMetadata.tagIds, isEmpty);
       expect(clearedMetadata.tagNames, isEmpty);
     });
+
+    test('submitted update fallback preserves account and unchanged labels',
+        () {
+      final existing = OfflineTransaction(
+        id: 'tx_1',
+        localId: 'local_1',
+        accountId: 'acct_1',
+        name: 'Coffee',
+        date: '2026-06-01',
+        amount: r'$4.50',
+        currency: 'USD',
+        nature: 'expense',
+        notes: 'latte',
+        categoryId: 'cat_1',
+        categoryName: 'Dining',
+        merchantId: 'merchant_1',
+        merchantName: 'Cafe',
+        tagIds: const ['tag_1', 'tag_2'],
+        tagNames: const ['Work', 'Travel'],
+      );
+
+      final updated = existing.toTransactionWithSubmittedUpdate(
+        name: 'Morning coffee',
+        notes: '',
+        categoryId: 'cat_2',
+        merchantId: 'merchant_1',
+        tagIds: const ['tag_2'],
+      );
+
+      expect(updated.id, 'tx_1');
+      expect(updated.accountId, 'acct_1');
+      expect(updated.name, 'Morning coffee');
+      expect(updated.notes, '');
+      expect(updated.categoryId, 'cat_2');
+      expect(updated.categoryName, isNull);
+      expect(updated.merchantId, 'merchant_1');
+      expect(updated.merchantName, 'Cafe');
+      expect(updated.tagIds, ['tag_2']);
+      expect(updated.tagNames, ['Travel']);
+    });
   });
 }

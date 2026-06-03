@@ -4,6 +4,11 @@ import '../models/transaction.dart';
 import 'api_config.dart';
 
 class TransactionsService {
+  final http.Client _client;
+
+  TransactionsService({http.Client? client})
+      : _client = client ?? http.Client();
+
   Future<Map<String, dynamic>> createTransaction({
     required String accessToken,
     required String accountId,
@@ -35,7 +40,7 @@ class TransactionsService {
     };
 
     try {
-      final response = await http
+      final response = await _client
           .post(
             url,
             headers: {
@@ -58,18 +63,13 @@ class TransactionsService {
           'error': 'unauthorized',
         };
       } else {
-        try {
-          final responseData = jsonDecode(response.body);
-          return {
-            'success': false,
-            'error': responseData['error'] ?? 'Failed to create transaction',
-          };
-        } catch (e) {
-          return {
-            'success': false,
-            'error': 'Failed to create transaction: ${response.body}',
-          };
-        }
+        return {
+          'success': false,
+          'error': errorMessageFromResponseBody(
+            response.body,
+            fallback: 'Failed to create transaction',
+          ),
+        };
       }
     } catch (e) {
       return {
@@ -103,7 +103,7 @@ class TransactionsService {
         : baseUri;
 
     try {
-      final response = await http.get(
+      final response = await _client.get(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -158,6 +158,50 @@ class TransactionsService {
     }
   }
 
+  Future<Map<String, dynamic>> getTransaction({
+    required String accessToken,
+    required String transactionId,
+  }) async {
+    final url =
+        Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions/$transactionId');
+
+    try {
+      final response = await _client.get(
+        url,
+        headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'transaction': Transaction.fromJson(responseData),
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'unauthorized',
+        };
+      } else {
+        return {
+          'success': false,
+          'error': errorMessageFromResponseBody(
+            response.body,
+            fallback: 'Failed to fetch transaction',
+          ),
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> updateTransaction({
     required String accessToken,
     required String transactionId,
@@ -194,7 +238,7 @@ class TransactionsService {
     }
 
     try {
-      final response = await http
+      final response = await _client
           .patch(
             url,
             headers: {
@@ -224,20 +268,13 @@ class TransactionsService {
           'error': 'unauthorized',
         };
       } else {
-        try {
-          final responseData = jsonDecode(response.body);
-          return {
-            'success': false,
-            'error': responseData['message'] ??
-                responseData['error'] ??
-                'Failed to update transaction',
-          };
-        } catch (e) {
-          return {
-            'success': false,
-            'error': 'Failed to update transaction',
-          };
-        }
+        return {
+          'success': false,
+          'error': errorMessageFromResponseBody(
+            response.body,
+            fallback: 'Failed to update transaction',
+          ),
+        };
       }
     } catch (e) {
       return {
@@ -255,7 +292,7 @@ class TransactionsService {
         Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions/$transactionId');
 
     try {
-      final response = await http.delete(
+      final response = await _client.delete(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -326,5 +363,73 @@ class TransactionsService {
         'error': 'Network error: ${e.toString()}',
       };
     }
+  }
+
+  static String errorMessageFromResponseBody(
+    String body, {
+    required String fallback,
+  }) {
+    try {
+      final responseData = jsonDecode(body);
+      if (responseData is! Map<String, dynamic>) return fallback;
+
+      final message = responseData['message'] ?? responseData['error'];
+      final errors = responseData['errors'];
+      final formattedErrors = _formatErrors(errors);
+
+      if (message != null && formattedErrors != null) {
+        return '${message.toString()}: $formattedErrors';
+      }
+
+      if (formattedErrors != null) return formattedErrors;
+      if (message != null) return message.toString();
+    } catch (_) {
+      return fallback;
+    }
+
+    return fallback;
+  }
+
+  static String? _formatErrors(dynamic errors) {
+    if (errors is List) {
+      final parts = errors
+          .map((error) => error?.toString().trim() ?? '')
+          .where((error) => error.isNotEmpty)
+          .toList();
+      return parts.isEmpty ? null : parts.join('; ');
+    }
+
+    if (errors is Map) {
+      final parts = <String>[];
+      for (final entry in errors.entries) {
+        final field = _humanizeField(entry.key.toString());
+        final value = entry.value;
+        if (value is List) {
+          for (final message in value) {
+            final text = message?.toString().trim() ?? '';
+            if (text.isNotEmpty) parts.add('$field $text');
+          }
+        } else {
+          final text = value?.toString().trim() ?? '';
+          if (text.isNotEmpty) parts.add('$field $text');
+        }
+      }
+      return parts.isEmpty ? null : parts.join('; ');
+    }
+
+    return null;
+  }
+
+  static String _humanizeField(String field) {
+    final words = field
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return field;
+
+    final first = words.first;
+    words[0] = first[0].toUpperCase() + first.substring(1);
+    return words.join(' ');
   }
 }
