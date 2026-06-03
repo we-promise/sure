@@ -182,6 +182,7 @@ class Settings::ProvidersController < ApplicationController
     # status display, and sync actions. The configuration registry excludes
     # them (see prepare_show_context).
     FAMILY_PANELS = [
+      { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
@@ -201,6 +202,7 @@ class Settings::ProvidersController < ApplicationController
 
     # Maps panel key → ActiveRecord model name for sync health queries
     PANEL_SYNCABLE_TYPES = {
+      "akahu"          => "AkahuItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
       "enable_banking" => "EnableBankingItem",
@@ -218,6 +220,8 @@ class Settings::ProvidersController < ApplicationController
 
     def load_provider_items(provider_key)
       case provider_key
+      when "akahu"
+        @akahu_items = Current.family.akahu_items.active.ordered
       when "simplefin"
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
@@ -255,6 +259,7 @@ class Settings::ProvidersController < ApplicationController
         FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? }
       end
 
+      @akahu_items = Current.family.akahu_items.active.ordered
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
@@ -287,6 +292,7 @@ class Settings::ProvidersController < ApplicationController
     # on instance_variable_get for control flow.
     def family_panel_items
       {
+        "akahu"          => @akahu_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "enable_banking" => @enable_banking_items,

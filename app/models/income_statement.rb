@@ -193,6 +193,15 @@ class IncomeStatement
       )
     end
 
+    def totals_for_period(period)
+      @totals_for_period ||= {}
+      @totals_for_period[period_cache_key(period)] ||=
+        totals_query(
+          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          date_range: period.date_range
+        )
+    end
+
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([

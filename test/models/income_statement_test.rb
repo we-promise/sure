@@ -170,8 +170,8 @@ class IncomeStatementTest < ActiveSupport::TestCase
   # NOTE: These tests now pass because kind filtering is working after the refactoring!
   test "excludes regular transfers from income statement calculations" do
     # Create a regular transfer between accounts
-    _outflow_transaction = create_transaction(account: @checking_account, amount: 500, kind: "funds_movement")
-    _inflow_transaction = create_transaction(account: @credit_card_account, amount: -500, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: 500, kind: "funds_movement")
+    create_transaction(account: @credit_card_account, amount: -500, kind: "funds_movement")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -184,7 +184,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "includes loan payments as expenses in income statement" do
     # Create a loan payment transaction
-    _loan_payment = create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
+    create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -220,7 +220,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "excludes payment transactions from income statement calculations" do
     # Create a payment transaction (credit card payment)
-    _payment_transaction = create_transaction(account: @checking_account, amount: 300, category: nil, kind: "cc_payment")
+    create_transaction(account: @checking_account, amount: 300, category: nil, kind: "cc_payment")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -314,7 +314,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "includes investment_contribution transactions as expenses in income statement" do
     # Create a transfer to investment account (marked as investment_contribution)
-    _investment_contribution = create_transaction(
+    create_transaction(
       account: @checking_account,
       amount: 1000,
       category: nil,
@@ -344,7 +344,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     # Provider-imported contribution shows as inflow (negative amount) to the investment account
     # kind is investment_contribution, which should be treated as expense regardless of sign
-    _provider_contribution = create_transaction(
+    create_transaction(
       account: investment_account,
       amount: -500, # Negative = inflow to account
       category: nil,
@@ -662,5 +662,23 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 0, totals.transactions_count
     assert_equal Money.new(0, "USD"), totals.income_money
     assert_equal Money.new(0, "USD"), totals.expense_money
+  end
+
+  test "reuses totals_query for income and expense in the same period" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    totals_query_calls = 0
+    income_statement.singleton_class.prepend(Module.new do
+      define_method(:totals_query) do |**kwargs|
+        totals_query_calls += 1
+        super(**kwargs)
+      end
+    end)
+
+    income_statement.income_totals(period: period)
+    income_statement.expense_totals(period: period)
+
+    assert_equal 1, totals_query_calls
   end
 end

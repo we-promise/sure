@@ -74,10 +74,7 @@
                     <%= t(".table.trial_ends_at") %>: <%= sub.trial_ends_at&.to_fs(:long) || t(".not_available") %>
                   </span>
                 <% elsif sub %>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                    <%= sub.active? ? "bg-success/10 text-success" : "bg-surface text-secondary" %>">
-                    <%= sub.status.humanize %>
-                  </span>
+                  <%= render DS::Pill.new(label: sub.status.humanize, tone: sub.active? ? :success : :neutral) %>
                 <% else %>
                   <span class="text-xs text-secondary"><%= t(".no_subscription") %></span>
                 <% end %>
@@ -191,27 +188,19 @@
   <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: true do %>
     <div class="space-y-3 text-sm">
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.guest") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.guest"), tone: :neutral) %>
         <p class="text-secondary"><%= t(".role_descriptions.guest") %></p>
       </div>
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.member") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.member"), tone: :neutral) %>
         <p class="text-secondary"><%= t(".role_descriptions.member") %></p>
       </div>
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.admin") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.admin"), tone: :neutral) %>
         <p class="text-secondary"><%= t(".role_descriptions.admin") %></p>
       </div>
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success/10 text-success shrink-0">
-          <%= t(".roles.super_admin") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.super_admin"), tone: :success) %>
         <p class="text-secondary"><%= t(".role_descriptions.super_admin") %></p>
       </div>
     </div>

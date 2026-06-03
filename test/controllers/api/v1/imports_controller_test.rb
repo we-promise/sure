@@ -524,7 +524,16 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should preserve Sure import if publish queueing fails" do
-    ndjson_content = { type: "Account", data: { id: "account_1", name: "Checking" } }.to_json
+    ndjson_content = {
+      type: "Account",
+      data: {
+        id: "account_1",
+        name: "Checking",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "Depository"
+      }
+    }.to_json
     ImportJob.stubs(:perform_later).raises(StandardError, "queue offline")
 
     assert_difference("Import.count") do
@@ -546,6 +555,91 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert import.ndjson_file.attached?
     assert_equal 1, import.rows_count
     assert_equal "pending", import.status
+  end
+
+  test "should preserve Sure import and return preflight errors when auto publish fails preflight" do
+    @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+    ndjson_content = [
+      { type: "Category", data: { id: "category_1", name: "Groceries" } }
+    ].map(&:to_json).join("\n")
+
+    assert_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             type: "SureImport",
+             raw_file_content: ndjson_content,
+             publish: "true"
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "preflight_failed", json_response["error"]
+    assert_includes json_response["errors"].join("\n"), "Category name \"Groceries\" already exists"
+
+    import = Import.find(json_response["import_id"])
+    assert_equal "failed", import.status
+    assert import.ndjson_file.attached?
+  end
+
+  test "should preserve Sure import and return not publishable when auto publish has no records" do
+    ndjson_content = { type: "Account", data: { id: "account_1", name: "Checking" } }.to_json
+    SureImport.any_instance.stubs(:publish_later).raises(
+      SureImport::NotPublishableError,
+      "raw publishability failure with internal state"
+    )
+
+    assert_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             type: "SureImport",
+             raw_file_content: ndjson_content,
+             publish: "true"
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "not_publishable", json_response["error"]
+    assert_equal "Import was uploaded but has no publishable records.", json_response["message"]
+    assert_not json_response.key?("errors")
+    refute_includes response.body, "raw publishability failure"
+
+    import = Import.find(json_response["import_id"])
+    assert_instance_of SureImport, import
+    assert import.ndjson_file.attached?
+    assert_equal 1, import.rows_count
+    assert_equal "pending", import.status
+  end
+
+  test "should return unsupported Sure record errors during auto publish preflight" do
+    ndjson_content = [
+      { type: "MysteryType", data: { id: "mystery_1" } }
+    ].map(&:to_json).join("\n")
+
+    assert_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             type: "SureImport",
+             raw_file_content: ndjson_content,
+             publish: "true"
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    json_response = JSON.parse(response.body)
+    assert_equal "preflight_failed", json_response["error"]
+    assert_includes json_response["errors"].join("\n"), "unsupported record type MysteryType"
+
+    import = Import.find(json_response["import_id"])
+    assert_equal "failed", import.status
   end
 
   test "should preserve Sure import if auto publish exceeds row count" do
@@ -740,8 +834,8 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_csv", json_response["error"]
   end
 
-  test "should include preflight exception message in internal server error response" do
-    Import::Preflight.any_instance.stubs(:call).raises(StandardError, "boom")
+  test "should hide preflight exception message in internal server error response" do
+    Import::Preflight.any_instance.stubs(:call).raises(StandardError, "boom with raw internals")
 
     post preflight_api_v1_imports_url,
          params: {
@@ -755,7 +849,8 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :internal_server_error
     json_response = JSON.parse(response.body)
     assert_equal "internal_server_error", json_response["error"]
-    assert_equal "Error: boom", json_response["message"]
+    assert_equal "Import preflight could not be completed.", json_response["message"]
+    refute_includes response.body, "boom with raw internals"
   end
 
   test "should reject unknown preflight import type" do
@@ -816,8 +911,19 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
   test "should preflight Sure import without persisting records" do
     ndjson_content = [
-      { type: "Account", data: { id: "account_1", name: "Checking" } }.to_json,
-      { type: "Transaction", data: { id: "entry_1", account_id: "account_1" } }.to_json
+      { type: "Account", data: {
+        id: "account_1",
+        name: "Checking",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "Depository"
+      } }.to_json,
+      { type: "Transaction", data: {
+        id: "entry_1",
+        account_id: "account_1",
+        date: "2024-01-01",
+        amount: "-5"
+      } }.to_json
     ].join("\n")
 
     assert_no_difference("Import.count") do
@@ -838,6 +944,55 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, data["stats"]["entity_counts"]["accounts"]
     assert_equal 1, data["stats"]["entity_counts"]["transactions"]
     assert_empty data["errors"]
+  end
+
+  test "should preflight Sure import taxonomy collisions in strict mode" do
+    @family.tags.create!(name: "Reviewed", color: "#12B76A")
+    ndjson_content = [
+      { type: "Tag", data: { id: "tag_1", name: "Reviewed" } }
+    ].map(&:to_json).join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "SureImport",
+             raw_file_content: ndjson_content
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+    assert_equal false, data["valid"]
+    assert_equal "existing_taxonomy_collision", data["errors"].first["code"]
+  end
+
+  test "should report invalid Sure import accountable type during preflight" do
+    ndjson_content = [
+      { type: "Account", data: {
+        id: "account_1",
+        name: "Checking",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "Kernel"
+      } }.to_json
+    ].join("\n")
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             type: "SureImport",
+             raw_file_content: ndjson_content
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal false, data["valid"]
+    assert_equal "invalid_accountable_type", data["errors"].first["code"]
+    assert_includes data["errors"].first["message"], "Kernel"
   end
 
   test "should report invalid Sure import NDJSON during preflight" do
