@@ -16,10 +16,7 @@ class EmptyStateComponentPreview < ViewComponent::Preview
       variant: variant,
       size: size
     ) do
-      if with_actions
-        content_tag(:a, "New item", href: "#",
-                    class: "text-link underline underline-offset-2 hover:no-underline")
-      end
+      render(DS::Link.new(text: "New item", href: "#", variant: "primary")) if with_actions
     end
   end
 
@@ -33,11 +30,9 @@ class EmptyStateComponentPreview < ViewComponent::Preview
       variant: :card
     ) do
       safe_join([
-        content_tag(:a, "Add transaction", href: "#",
-                    class: "text-link underline underline-offset-2 hover:no-underline"),
-        content_tag(:a, "Add account", href: "#",
-                    class: "text-link underline underline-offset-2 hover:no-underline")
-      ], " ")
+        render(DS::Link.new(text: "Add transaction", href: "#", variant: "primary")),
+        render(DS::Link.new(text: "Add account", href: "#", variant: "secondary"))
+      ])
     end
   end
 
