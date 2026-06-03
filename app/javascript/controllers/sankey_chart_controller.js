@@ -175,11 +175,13 @@ export default class extends Controller {
       return;
     }
 
-    window.location.href = buildCategoryTransactionsUrl({
-      name: d.name,
-      startDate: this.startDateValue,
-      endDate: this.endDateValue,
-    });
+    Turbo.visit(
+      buildCategoryTransactionsUrl({
+        name: d.name,
+        startDate: this.startDateValue,
+        endDate: this.endDateValue,
+      }),
+    );
   }
 
   // Dynamic padding prevents padding from dominating when there are many nodes
