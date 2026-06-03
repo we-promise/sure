@@ -468,6 +468,39 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Not authorized", flash[:alert]
   end
 
+  test "non-admin users cannot access connect_form" do
+    sign_in users(:family_member)
+
+    get connect_form_settings_providers_path(provider_key: "simplefin")
+
+    assert_redirected_to root_path
+    assert_equal "Not authorized", flash[:alert]
+  end
+
+  test "non-admin bank sync view is read-only and hides admin controls" do
+    sign_in users(:family_member)
+
+    get settings_providers_url
+    assert_response :success
+
+    # No sync controls (their endpoints are admin-only)
+    assert_no_match sync_all_settings_providers_path, response.body
+    assert_no_match sync_provider_settings_providers_path(provider_key: "simplefin"), response.body
+
+    # No "Available" providers section — connecting routes through admin-only connect_form
+    assert_select "[data-controller='providers-filter']", false
+
+    # No provider configuration form — would leak settings such as Plaid client IDs
+    assert_select "form[action='#{settings_providers_path}']", false
+  end
+
+  test "admin bank sync view shows sync controls" do
+    get settings_providers_url
+    assert_response :success
+
+    assert_match sync_all_settings_providers_path, response.body
+  end
+
   test "uses singleton_class method_defined to detect declared fields" do
     with_self_hosting do
       # This test verifies the difference between respond_to? and singleton_class.method_defined?
