@@ -16,18 +16,28 @@ class DS::EmptyState < DesignSystemComponent
   # placeholders.
   ICON_STYLES = %i[plain filled].freeze
 
+  # Allowed heading tags for the title. `:h3` is the default since the
+  # primitive most often appears beneath a page-level `<h1>`/`<h2>`; pass
+  # `heading_tag: :h2` when the empty state IS the page's top-of-flow
+  # heading. Allow-listing prevents arbitrary tag injection through the
+  # public_send call in the template.
+  HEADING_TAGS = %i[h1 h2 h3 h4 h5 h6].freeze
+
   def initialize(title:, description: nil, icon: nil, icon_style: :plain,
-                 variant: :card, size: :md)
+                 variant: :card, size: :md, heading_tag: :h3)
+    raise ArgumentError, "title is required" if title.blank?
+
     @title = title
     @description = description
     @icon = icon
     @icon_style = normalize_enum(icon_style, ICON_STYLES, :plain)
     @variant = normalize_enum(variant, VARIANTS, :card)
     @size = normalize_enum(size, SIZES, :md)
+    @heading_tag = normalize_enum(heading_tag, HEADING_TAGS, :h3)
   end
 
   private
-    attr_reader :title, :description, :icon, :icon_style, :variant, :size
+    attr_reader :title, :description, :icon, :icon_style, :variant, :size, :heading_tag
 
     def normalize_enum(raw, allowed, fallback)
       sym = raw.respond_to?(:to_sym) ? raw.to_sym : nil

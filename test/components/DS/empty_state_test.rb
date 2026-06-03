@@ -39,6 +39,41 @@ class DS::EmptyStateTest < ViewComponent::TestCase
     assert_selector "div.bg-container.rounded-xl.shadow-border-xs"
   end
 
+  test "unknown size falls back to :md" do
+    render_inline(DS::EmptyState.new(title: "Empty", size: :nonexistent))
+
+    # :md → h3.text-lg + py-12 px-6
+    assert_selector "h3.text-lg"
+    assert_selector "div.py-12.px-6"
+  end
+
+  test "unknown icon_style falls back to :plain" do
+    render_inline(DS::EmptyState.new(title: "Empty", icon: "target", icon_style: :nonexistent))
+
+    # :plain renders no disc wrapper
+    assert_no_selector "div.bg-surface-inset"
+    assert_selector "svg"
+  end
+
+  test "unknown heading_tag falls back to :h3" do
+    render_inline(DS::EmptyState.new(title: "Empty", heading_tag: :div))
+
+    assert_selector "h3", text: "Empty"
+  end
+
+  test "heading_tag overrides the title element" do
+    render_inline(DS::EmptyState.new(title: "Empty", heading_tag: :h2))
+
+    assert_selector "h2", text: "Empty"
+    assert_no_selector "h3"
+  end
+
+  test "raises ArgumentError when title is blank" do
+    assert_raises(ArgumentError) { DS::EmptyState.new(title: nil) }
+    assert_raises(ArgumentError) { DS::EmptyState.new(title: "") }
+    assert_raises(ArgumentError) { DS::EmptyState.new(title: "  ") }
+  end
+
   test "filled icon style wraps icon in a surface-inset disc" do
     render_inline(DS::EmptyState.new(title: "Empty", icon: "target", icon_style: :filled))
 

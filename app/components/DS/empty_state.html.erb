@@ -6,9 +6,9 @@
       </div>
     <% end %>
 
-    <h3 class="<%= class_names(title_classes, title_margin_class) %>">
+    <%= tag.public_send(heading_tag, class: class_names(title_classes, title_margin_class)) do %>
       <%= title %>
-    </h3>
+    <% end %>
 
     <% if description.present? %>
       <p class="<%= class_names(description_classes, description_margin_class) %>">
