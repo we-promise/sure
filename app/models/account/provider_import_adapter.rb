@@ -49,11 +49,10 @@ class Account::ProviderImportAdapter
       incoming_pending = false
       if extra.is_a?(Hash)
         pending_extra = extra.with_indifferent_access
-        incoming_pending =
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
+        boolean_type = ActiveModel::Type::Boolean.new
+        incoming_pending = Transaction::PENDING_PROVIDERS.any? do |provider|
+          boolean_type.cast(pending_extra.dig(provider, "pending"))
+        end
       end
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
@@ -770,6 +769,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -817,6 +817,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -887,6 +888,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
