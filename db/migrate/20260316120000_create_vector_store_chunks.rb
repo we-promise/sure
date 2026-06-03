@@ -37,11 +37,15 @@ class CreateVectorStoreChunks < ActiveRecord::Migration[7.2]
     def pgvector_available?
       return false unless ENV["VECTOR_STORE_PROVIDER"].to_s.downcase == "pgvector"
 
-      result = ActiveRecord::Base.connection.execute(
-        "SELECT 1 FROM pg_available_extensions WHERE name = 'vector' LIMIT 1"
-      )
-      result.any?
-    rescue
-      false
+      # Narrow the rescue to the PostgreSQL probe only, so DB-related failures
+      # return false while configuration/unexpected errors still bubble up.
+      begin
+        result = ActiveRecord::Base.connection.execute(
+          "SELECT 1 FROM pg_available_extensions WHERE name = 'vector' LIMIT 1"
+        )
+        result.any?
+      rescue ActiveRecord::StatementInvalid, PG::Error
+        false
+      end
     end
 end
