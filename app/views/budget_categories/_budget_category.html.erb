@@ -38,7 +38,7 @@
       <%# Progress Bar %>
       <div class="mb-3">
         <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
-          <% bar_color = budget_category.over_budget? ? "bg-red-500" : (budget_category.near_limit? ? "bg-yellow-500" : "bg-green-500") %>
+          <% bar_color = budget_category.over_budget? ? "bg-destructive" : (budget_category.near_limit? ? "bg-warning" : "bg-success") %>
           <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
             style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
         </div>
@@ -67,8 +67,7 @@
           <div class="w-full sm:w-auto text-xs text-subdued">
             <%= t("reports.budget_performance.suggested_daily",
               amount: daily_info[:amount].format,
-              days: daily_info[:days_remaining])
-            %>
+              days: daily_info[:days_remaining]) %>
           </div>
         <% end %>
         <% end %>
