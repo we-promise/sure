@@ -61,7 +61,7 @@ class GoalsController < ApplicationController
   def create
     @goal = Current.family.goals.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
-    @goal.currency = accounts.first.currency if accounts.any? && @goal.currency.blank?
+    @goal.currency = (accounts.first&.currency || Current.family.primary_currency_code) if @goal.currency.blank?
 
     Goal.transaction do
       accounts.each { |a| @goal.goal_accounts.build(account: a) }
