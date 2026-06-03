@@ -1,14 +1,14 @@
 class DS::MenuItem < DesignSystemComponent
   VARIANTS = %i[link button divider].freeze
 
-  attr_reader :variant, :text, :icon, :href, :method, :destructive, :confirm, :frame, :roving, :opts
+  attr_reader :variant, :text, :icon, :href, :method, :destructive, :confirm, :frame, :roving, :selected, :opts
 
   # `roving: true` (default) emits `tabindex="-1"` and `role="menuitem"` — correct
   # for `DS::Menu`, which provides arrow-key roving and announces `role="menu"`.
   # `roving: false` omits both so items stay in the normal Tab order — required
   # inside `DS::Popover`, which has no roving handler and is not a `role="menu"`
   # container.
-  def initialize(variant:, text: nil, icon: nil, href: nil, method: :post, destructive: false, confirm: nil, frame: nil, roving: true, **opts)
+  def initialize(variant:, text: nil, icon: nil, href: nil, method: :post, destructive: false, confirm: nil, frame: nil, roving: true, selected: nil, **opts)
     @variant = variant.to_sym
     @text = text
     @icon = icon
@@ -18,6 +18,7 @@ class DS::MenuItem < DesignSystemComponent
     @confirm = confirm
     @frame = frame
     @roving = roving
+    @selected = selected
     @opts = opts
     raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
   end
@@ -47,6 +48,14 @@ class DS::MenuItem < DesignSystemComponent
 
   def destructive?
     method == :delete || destructive
+  end
+
+  # A selectable item participates in a single-select list (e.g. a period or
+  # category picker). When set (true/false) the item reserves a fixed-width
+  # leading check gutter so row text stays aligned whether or not it is the
+  # current selection. Leave nil for plain action items (no gutter).
+  def selectable?
+    !selected.nil?
   end
 
   private
