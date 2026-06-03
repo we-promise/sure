@@ -1,10 +1,10 @@
 require "test_helper"
 
 class UI::PeriodPickerTest < ViewComponent::TestCase
-  test "renders one menuitem link per period, all carrying the period param and target frame" do
+  test "renders one menuitemradio link per period, all carrying the period param and target frame" do
     render_inline(UI::PeriodPicker.new(selected: "last_30_days", url: "/", frame: "dashboard_sections"))
 
-    links = page.all("a[role='menuitem']")
+    links = page.all("a[role='menuitemradio']")
     assert_equal Period.all.size, links.size
 
     links.each do |link|
@@ -13,14 +13,14 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     end
   end
 
-  test "marks the selected period with aria-current and a check glyph" do
+  test "marks the selected period with aria-checked and a check glyph" do
     render_inline(UI::PeriodPicker.new(selected: "last_90_days", url: "/", frame: "dashboard_sections"))
 
-    selected = page.all("a[role='menuitem'][aria-current='true']")
+    selected = page.all("a[role='menuitemradio'][aria-checked='true']")
     assert_equal 1, selected.size
     assert_match(/period=last_90_days/, selected.first[:href])
     # Check icon (svg) renders inside the selected item only.
-    assert_selector "a[aria-current='true'] svg"
+    assert_selector "a[aria-checked='true'] svg"
   end
 
   test "trigger button shows the selected period's short label" do
@@ -36,7 +36,7 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
       extra_params: { chart_view: "balance" }
     ))
 
-    href = page.first("a[role='menuitem']")[:href]
+    href = page.first("a[role='menuitemradio']")[:href]
     assert_match(%r{\A/accounts/abc\?}, href)
     assert_match(/chart_view=balance/, href)
     assert_match(/period=/, href)
@@ -46,6 +46,6 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     render_inline(UI::PeriodPicker.new(selected: Period.last_7_days, url: "/"))
 
     assert_text Period.from_key("last_7_days").label_short
-    assert_equal 1, page.all("a[aria-current='true']").size
+    assert_equal 1, page.all("a[aria-checked='true']").size
   end
 end
