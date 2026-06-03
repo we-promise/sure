@@ -18,7 +18,7 @@ module Retirement
           start_age: source.start_age,
           end_age: source.end_age,
           monthly_amount: source.amount.to_d,
-          lump_amount: source.params.fetch("lump_amount", 0).to_d,
+          lump_amount: (source.params.fetch("lump_amount", 0) || 0).to_d,
           effective_rate_override: source.effective_rate_override
         )
       end
