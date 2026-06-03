@@ -1,5 +1,10 @@
 class SureImport < Import
-  MAX_NDJSON_SIZE = 10.megabytes
+  NotPublishableError = Class.new(StandardError)
+  PreflightError = Class.new(StandardError)
+
+  DEFAULT_MAX_NDJSON_SIZE_MB = 10
+  DEFAULT_MAX_ROW_COUNT = 100_000
+  MAX_NDJSON_SIZE = DEFAULT_MAX_NDJSON_SIZE_MB.megabytes
   IMPORTABLE_NDJSON_TYPES = {
     "Account" => :accounts,
     "Balance" => :balances,
@@ -30,11 +35,11 @@ class SureImport < Import
 
   class << self
     def max_row_count
-      100_000
+      positive_integer_env("SURE_IMPORT_MAX_ROWS", DEFAULT_MAX_ROW_COUNT)
     end
 
     def max_ndjson_size
-      MAX_NDJSON_SIZE
+      positive_integer_env("SURE_IMPORT_MAX_NDJSON_SIZE_MB", DEFAULT_MAX_NDJSON_SIZE_MB).megabytes
     end
 
     # Counts JSON lines by top-level "type" (used for dry-run summaries and row limits).
@@ -90,6 +95,12 @@ class SureImport < Import
         false
       end
     end
+
+    private
+      def positive_integer_env(name, default)
+        value = ENV[name].to_i
+        value.positive? ? value : default
+      end
   end
 
   def requires_csv_workflow?
@@ -133,6 +144,37 @@ class SureImport < Import
     raise
   end
 
+  def publish_later
+    raise MaxRowCountExceededError if row_count_exceeded?
+
+    validate_sure_preflight!
+    raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
+
+    previous_status = status
+    update! status: :importing
+
+    begin
+      ImportJob.perform_later(self)
+    rescue StandardError
+      update! status: previous_status
+      raise
+    end
+  end
+
+  def publish
+    raise MaxRowCountExceededError if row_count_exceeded?
+
+    validate_sure_preflight!
+
+    import!
+
+    family.sync_later
+
+    update! status: :complete
+  rescue StandardError => error
+    update! status: :failed, error: error.message
+  end
+
   def uploaded?
     return false unless ndjson_file.attached?
 
@@ -161,6 +203,13 @@ class SureImport < Import
 
   def max_row_count
     self.class.max_row_count
+  end
+
+  def sure_preflight
+    SureImport::Preflight.new(
+      family: family,
+      content: ndjson_blob_string
+    ).call
   end
 
   # Row total for max-row enforcement (counts every parsed line with a "type", including unsupported types).
@@ -301,5 +350,13 @@ class SureImport < Import
 
       @ndjson_blob_id = blob_id
       @ndjson_blob_string = ndjson_file.download.force_encoding(Encoding::UTF_8)
+    end
+
+    def validate_sure_preflight!
+      result = sure_preflight
+      return if result.valid?
+
+      update! status: :failed, error: result.error_message
+      raise PreflightError, result.error_message
     end
 end

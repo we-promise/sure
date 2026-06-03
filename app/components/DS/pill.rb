@@ -32,6 +32,13 @@ class DS::Pill < DesignSystemComponent
   #
   # Other options:
   #
+  # - `show_dot:` defaults per mode. Stage markers (`marker: true`) keep
+  #   their dot; status / category badges (`marker: false`) are clean by
+  #   default — the pill shape + tone + label already carry the signal, so
+  #   a leading dot is usually redundant and noisy in dense lists. Pass
+  #   `show_dot: true` to opt a badge back in where the dot is genuinely
+  #   additive: live / temporal status ("Syncing", "Active"), or a single
+  #   sparse pill where the dot anchors it as a discrete element.
   # - `dot_only: true` renders only the colored dot (no label, no border).
   #   Use on the collapsed sidebar nav, where there's no room for the label.
   # - `icon:` overrides the dot with a Lucide icon (sized xs, current color).
@@ -44,13 +51,15 @@ class DS::Pill < DesignSystemComponent
   # - Sure has full violet / indigo / fuchsia / amber / green / gray /
   #   red ramps in the design system; this component picks named tokens
   #   at render time. No raw hex.
-  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: true, dot_only: false, title: nil, icon: nil, marker: true, custom_color: nil)
+  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: nil, dot_only: false, title: nil, icon: nil, marker: true, custom_color: nil)
     resolved_tone = SEMANTIC_TONE_ALIASES.fetch(tone.to_sym, tone.to_sym)
     @label = label || I18n.t("ds.pill.default_label", default: "Beta")
     @tone = TONES.include?(resolved_tone) ? resolved_tone : :violet
     @style = STYLES.include?(style.to_sym) ? style.to_sym : :soft
     @size = SIZES.include?(size.to_sym) ? size.to_sym : :sm
-    @show_dot = show_dot
+    # Default per mode: markers keep their dot, badges are dot-less. An
+    # explicit show_dot: true/false always wins.
+    @show_dot = show_dot.nil? ? marker : show_dot
     @dot_only = dot_only
     @title = title
     @icon = icon

@@ -55,13 +55,14 @@ class DS::Buttonish < DesignSystemComponent
     }
   }.freeze
 
-  attr_reader :variant, :size, :href, :icon, :icon_position, :text, :full_width, :extra_classes, :frame, :opts
+  attr_reader :variant, :size, :href, :icon, :icon_custom, :icon_position, :text, :full_width, :extra_classes, :frame, :opts
 
-  def initialize(variant: :primary, size: :md, href: nil, text: nil, icon: nil, icon_position: :left, full_width: false, frame: nil, **opts)
+  def initialize(variant: :primary, size: :md, href: nil, text: nil, icon: nil, icon_custom: false, icon_position: :left, full_width: false, frame: nil, **opts)
     @variant = variant.to_s.underscore.to_sym
     @size = size.to_sym
     @href = href
     @icon = icon
+    @icon_custom = icon_custom
     @icon_position = icon_position.to_sym
     @text = text
     @full_width = full_width
