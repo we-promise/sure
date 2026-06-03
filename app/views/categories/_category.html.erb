@@ -1,6 +1,6 @@
 <%# locals: (category:, subcategories: [], has_transactions: false) %>
 
-<div id="<%= dom_id(category) %>" class="flex items-center gap-3 px-4 pb-4 <%= "pt-4" unless category.parent_id.present? %> <%= "pb-4" if subcategories.empty? %> bg-container">
+<div id="<%= dom_id(category) %>" class="flex items-center gap-3 px-4 pb-4 <%= "pt-4" unless category.parent_id.present? %> bg-container">
   <div class="flex min-w-0 flex-1 items-center gap-2.5" data-testid="category-content">
     <% if category.parent_id.present? %>
       <span style="color: <%= category.color %>">
