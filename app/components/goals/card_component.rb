@@ -1,7 +1,4 @@
 class Goals::CardComponent < ApplicationComponent
-  RING_SIZE = 64
-  RING_STROKE = 6
-
   def initialize(goal:, filterable: true)
     @goal = goal
     @filterable = filterable
@@ -13,11 +10,13 @@ class Goals::CardComponent < ApplicationComponent
     goal.progress_percent
   end
 
-  def ring_color
+  # Maps goal status to a DS::ProgressRing tone (the ring geometry/colors now
+  # live in that primitive — see #1899).
+  def ring_tone
     case goal.status
-    when :reached, :on_track then "var(--color-success)"
-    when :behind then "var(--color-warning)"
-    else "var(--color-gray-400)"
+    when :reached, :on_track then :success
+    when :behind then :warning
+    else :neutral
     end
   end
 
@@ -64,19 +63,6 @@ class Goals::CardComponent < ApplicationComponent
         I18n.t("goals.goal_card.past_due")
       end
     end
-  end
-
-  def ring_circumference
-    @ring_circumference ||= 2 * Math::PI * ring_radius
-  end
-
-  def ring_radius
-    @ring_radius ||= (RING_SIZE - RING_STROKE) / 2.0
-  end
-
-  def ring_offset
-    pct = [ [ progress_percent.to_i, 0 ].max, 100 ].min
-    ring_circumference * (1 - pct / 100.0)
   end
 
   def pace_line
