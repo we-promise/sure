@@ -64,8 +64,9 @@ class Envelope < ApplicationRecord
   # positive amounts and income/refunds as negative, so summing entries.amount
   # nets refunds back into the envelope. Amounts are converted to the
   # envelope's currency via the daily exchange rate, falling back to 1:1 when
-  # no rate row exists (e.g. same-currency transactions). Pending and
-  # user-excluded entries are ignored, matching budget semantics.
+  # no rate row exists (e.g. same-currency transactions). Pending,
+  # user-excluded, and budget-excluded kinds (transfers, CC payments) are
+  # ignored, matching budget semantics.
   def total_spent
     return 0.to_d if category_id.nil? || starts_on.nil?
 
@@ -81,6 +82,7 @@ class Envelope < ApplicationRecord
         .joins(rate_join)
         .where(account_id: family.accounts.visible.select(:id))
         .where(transactions: { category_id: spend_category_ids })
+        .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
         .where(excluded: false)
         .where("entries.date >= ?", starts_on)
         .merge(Transaction.excluding_pending)
@@ -158,6 +160,7 @@ class Envelope < ApplicationRecord
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
           .where(account_id: family.accounts.visible.select(:id))
           .where(transactions: { category_id: spend_category_ids })
+          .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
           .where(excluded: false)
           .where("entries.date >= ?", starts_on)
           .merge(Transaction.excluding_pending)
