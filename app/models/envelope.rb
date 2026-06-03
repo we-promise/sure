@@ -37,8 +37,11 @@ class Envelope < ApplicationRecord
   validate :category_must_not_overlap_other_envelope
   validate :target_date_requires_target_amount
 
+  # NOTE: remaining_amount is intentionally not monetized — it returns nil for
+  # sinking funds (no target), which would make remaining_amount_money nil and
+  # blow up any caller chaining .format on it.
   monetize :monthly_contribution, :target_amount, :total_contributed, :total_spent,
-           :current_balance, :remaining_amount
+           :current_balance
 
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
 
@@ -152,12 +155,23 @@ class Envelope < ApplicationRecord
   end
 
   # Recent spend/refund entries categorised to this envelope, newest first.
-  # Used on the show page to explain the balance.
+  # Used on the show page to explain the balance. Each row exposes a
+  # `converted_amount` in the envelope's currency (same FX conversion as
+  # total_spent) so the activity feed reconciles with the balance card for
+  # multi-currency families instead of showing raw native amounts.
   def recent_entries(limit: 10)
     return Entry.none if category_id.nil?
 
+    rate_join = ActiveRecord::Base.sanitize_sql_array([
+      "LEFT JOIN exchange_rates er ON er.date = entries.date " \
+      "AND er.from_currency = entries.currency AND er.to_currency = ?",
+      currency
+    ])
+
     family.entries
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+          .joins(rate_join)
+          .select("entries.*", "entries.amount * COALESCE(er.rate, 1) AS converted_amount")
           .where(account_id: family.accounts.visible.select(:id))
           .where(transactions: { category_id: spend_category_ids })
           .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
@@ -204,7 +218,7 @@ class Envelope < ApplicationRecord
     def category_must_not_overlap_other_envelope
       return if category.nil? || family.nil?
 
-      related_ids = ([ category.parent_id ] + category.subcategories.pluck(:id)).compact
+      related_ids = ([ category.parent_id ] + category.subcategories.map(&:id)).compact
       return if related_ids.empty?
 
       clashing = family.envelopes.where(category_id: related_ids).where.not(id: id)

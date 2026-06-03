@@ -99,6 +99,32 @@ class EnvelopesControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{data-value="#{cat_free.id}"}, response.body
   end
 
+  test "new form omits the parent of a category already backing an envelope" do
+    family = @user.family
+    parent = Category.create!(name: "Holidays WT", family: family, color: "#4da568", lucide_icon: "plane")
+    child = Category.create!(name: "Flights WT", parent: parent, family: family)
+    family.envelopes.create!(name: "Flights env WT", category: child, monthly_contribution: 10, currency: "USD", starts_on: Date.current.beginning_of_month)
+
+    get new_envelope_url
+    assert_response :success
+    # Picking the parent would roll the child's spend up into it, so the model
+    # rejects the overlap — the form must not offer it (it would 422 on submit).
+    assert_no_match %r{data-value="#{parent.id}"}, response.body
+    assert_no_match %r{data-value="#{child.id}"}, response.body
+  end
+
+  test "new form omits child categories when their parent backs an envelope" do
+    family = @user.family
+    parent = Category.create!(name: "Bills WT", family: family, color: "#6471eb", lucide_icon: "house")
+    child = Category.create!(name: "Electric WT", parent: parent, family: family)
+    family.envelopes.create!(name: "Bills env WT", category: parent, monthly_contribution: 10, currency: "USD", starts_on: Date.current.beginning_of_month)
+
+    get new_envelope_url
+    assert_response :success
+    assert_no_match %r{data-value="#{parent.id}"}, response.body
+    assert_no_match %r{data-value="#{child.id}"}, response.body
+  end
+
   test "edit form keeps the envelope's own category assignable" do
     family = @user.family
     cat = Category.create!(name: "Owned WT", family: family, color: "#4da568", lucide_icon: "plane")
