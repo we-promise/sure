@@ -39,8 +39,12 @@ class PillComponentPreview < ViewComponent::Preview
   # @!endgroup
 
   # @!group Status badges (marker: false, semantic tones)
+  # Badge mode is dot-less by default — tone + label carry the signal. Opt the
+  # dot back in with show_dot: true only where it's genuinely additive (live /
+  # temporal status, or a single sparse pill). status_active below shows the
+  # opt-in; status_pending / status_archived show the clean default.
   def status_active
-    render DS::Pill.new(label: "Active", tone: :success, marker: false)
+    render DS::Pill.new(label: "Active", tone: :success, marker: false, show_dot: true)
   end
 
   def status_pending
