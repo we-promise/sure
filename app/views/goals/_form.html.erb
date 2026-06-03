@@ -2,6 +2,7 @@
 
 <div data-controller="goal-form"
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
+     data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
      data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>">
   <% if goal.errors[:base].any? %>

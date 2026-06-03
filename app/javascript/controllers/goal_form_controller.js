@@ -27,6 +27,11 @@ export default class extends Controller {
     currency: { type: String, default: "USD" },
     suggestedWithDate: { type: String, default: "Save {monthly}/mo across {accounts} to hit it on time." },
     suggestedNoDate: { type: String, default: "Set a target date to project a finish line." },
+    // Only the create form must pick an account. On edit the checkboxes are
+    // populated from visible accounts only, so a goal backed by a now-hidden
+    // account renders none — and the controller preserves existing links when
+    // account_ids is omitted. Requiring a checkbox there would wedge the form.
+    requireAccount: { type: Boolean, default: true },
   };
 
   connect() {
@@ -85,8 +90,8 @@ export default class extends Controller {
   isValid() {
     const name = this.hasNameInputTarget ? this.nameInputTarget.value.trim() : "";
     const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
-    const hasAccount = this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
-    return name.length > 0 && Number.isFinite(amount) && amount > 0 && hasAccount;
+    const accountOk = !this.requireAccountValue || this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
+    return name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk;
   }
 
   refreshSubmitState() {
@@ -107,7 +112,7 @@ export default class extends Controller {
     const nameEmpty = !(this.hasNameInputTarget && this.nameInputTarget.value.trim().length > 0);
     const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
     const amountInvalid = !(Number.isFinite(amount) && amount > 0);
-    const noAccount = !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
+    const noAccount = this.requireAccountValue && !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
 
     if (nameEmpty) {
       this.showFieldError(this.nameInputTarget, this.hasNameErrorTarget ? this.nameErrorTarget : null);
