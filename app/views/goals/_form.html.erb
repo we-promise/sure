@@ -24,7 +24,7 @@
       <p class="<%= "hidden" unless goal.errors[:name].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="nameError"><%= t("goals.form.errors.name_required") %></p>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3 items-start">
       <div>
         <%= f.money_field :target_amount,
                           label: t("goals.form.fields.target_amount"),
