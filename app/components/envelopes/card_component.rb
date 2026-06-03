@@ -15,7 +15,7 @@ class Envelopes::CardComponent < ApplicationComponent
     case envelope.status
     when :negative then "var(--color-destructive)"
     when :reached, :on_track then "var(--color-success)"
-    else "var(--color-gray-400)"
+    else "var(--budget-unused-fill)"
     end
   end
 
