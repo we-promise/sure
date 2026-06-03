@@ -20,7 +20,8 @@
     <details class="group"
              data-color-icon-picker-target="details"
              data-action="mousedown->color-icon-picker#handleOutsideClick">
-      <summary class="list-none cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300">
+      <summary aria-label="<%= t("goals.color_picker.trigger_label") %>"
+               class="list-none cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300">
         <%= icon("pen", size: "xs") %>
       </summary>
 
