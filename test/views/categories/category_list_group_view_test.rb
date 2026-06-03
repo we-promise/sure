@@ -21,4 +21,13 @@ class CategoryListGroupViewTest < ActionView::TestCase
     assert_includes html, new_category_deletion_path(category)
     assert_not_includes html, "data-turbo-method=\"delete\""
   end
+
+  test "renders with empty categories when no transaction lookup is provided" do
+    assert_nothing_raised do
+      render(partial: "categories/category_list_group", locals: {
+        title: "Categories",
+        categories: []
+      })
+    end
+  end
 end
