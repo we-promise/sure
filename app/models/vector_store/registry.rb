@@ -35,6 +35,16 @@ class VectorStore::Registry
       :openai if openai_access_token.present?
     end
 
+    # True when pgvector is the effective vector store — whether set explicitly
+    # via VECTOR_STORE_PROVIDER or selected by the Anthropic default above.
+    # Single source of truth shared with the migration that provisions
+    # `vector_store_chunks`, so the table is created exactly when pgvector is in
+    # use (an Anthropic-default install would otherwise skip it and fail on the
+    # missing table).
+    def pgvector_effective?
+      adapter_name == :pgvector
+    end
+
     private
 
       def build_adapter(name)

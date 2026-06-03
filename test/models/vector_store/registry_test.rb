@@ -80,4 +80,26 @@ class VectorStore::RegistryTest < ActiveSupport::TestCase
     VectorStore::Registry.stubs(:adapter).returns(VectorStore::Openai.new(access_token: "sk-test"))
     assert VectorStore.configured?
   end
+
+  test "pgvector_effective? is true when pgvector is explicit" do
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "pgvector") do
+      assert VectorStore::Registry.pgvector_effective?
+    end
+  end
+
+  test "pgvector_effective? is true for the anthropic default (no explicit provider)" do
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Registry.stubs(:openai_access_token).returns(nil)
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: nil) do
+      assert VectorStore::Registry.pgvector_effective?
+    end
+  end
+
+  test "pgvector_effective? is false for the openai default" do
+    Setting.stubs(:llm_provider).returns("openai")
+    VectorStore::Registry.stubs(:openai_access_token).returns("sk-test")
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: nil) do
+      assert_not VectorStore::Registry.pgvector_effective?
+    end
+  end
 end
