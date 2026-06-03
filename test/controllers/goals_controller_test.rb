@@ -90,6 +90,47 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "new form excludes same-family accounts not shared with the current user" do
+    # Regression for #2168: funding-account picker leaked accounts owned by
+    # other family members that were never shared with the current user.
+    private_account = Account.create!(
+      family: @user.family,
+      owner: users(:family_member),
+      accountable: Depository.new,
+      name: "Member Private Checking",
+      currency: "USD",
+      balance: 100
+    )
+
+    get new_goal_url
+    assert_response :success
+    assert_no_match(/Member Private Checking/, response.body)
+    assert_no_match(/goal_account_ids_#{private_account.id}/, response.body)
+  end
+
+  test "create rejects a same-family account not shared with the current user" do
+    private_account = Account.create!(
+      family: @user.family,
+      owner: users(:family_member),
+      accountable: Depository.new,
+      name: "Member Private Checking",
+      currency: "USD",
+      balance: 100
+    )
+
+    assert_no_difference "Goal.count" do
+      post goals_url, params: {
+        goal: {
+          name: "Sneaky goal",
+          target_amount: "1000",
+          color: "#4da568",
+          account_ids: [ private_account.id ]
+        }
+      }
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "update modifies identity fields" do
     patch goal_url(@goal), params: { goal: { name: "Renamed" } }
     assert_redirected_to goal_path(@goal)
