@@ -352,6 +352,42 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 5000.0, opening_anchors.first.entry.amount.to_f
   end
 
+  test "skips synthesized opening anchor for authoritative balance history imports" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Imported With Full History",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository",
+          authoritative_balance_history: true
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-1",
+          account_id: "acct-1",
+          date: "2020-04-01",
+          amount: "4900",
+          name: "Imported balance",
+          currency: "USD",
+          kind: "reconciliation"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Imported With Full History")
+
+    assert_equal 5000.0, account.balance.to_f
+    assert_empty account.valuations.opening_anchor
+    assert_equal 1, account.valuations.reconciliation.count
+  end
+
   test "imports categories with parent relationships" do
     ndjson = build_ndjson([
       {
@@ -730,6 +766,183 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, transaction.tags.count
     assert_equal "Essential", transaction.tags.first.name
     assert_equal "Weekly groceries", transaction.entry.notes
+  end
+
+  test "imports native split lines and lets transfers reference split children" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "checking",
+          name: "Checking",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "wallet",
+          name: "Wallet",
+          balance: "500",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Category",
+        data: {
+          id: "cat-fee",
+          name: "Bank Fees",
+          color: "#FF0000",
+          classification: "expense"
+        }
+      },
+      {
+        type: "Tag",
+        data: {
+          id: "tag-imported",
+          name: "Imported"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "split-parent",
+          account_id: "checking",
+          date: "2024-01-15",
+          amount: "104.00",
+          name: "ATM withdrawal plus fee",
+          currency: "USD",
+          tag_ids: [ "tag-imported" ],
+          split_lines: [
+            {
+              id: "split-transfer-leg",
+              amount: "100.00",
+              name: "Cash movement",
+              notes: "Transfer portion"
+            },
+            {
+              id: "split-fee-line",
+              amount: "4.00",
+              name: "ATM fee",
+              category_id: "cat-fee",
+              notes: "Fee portion"
+            }
+          ]
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "wallet-inflow",
+          account_id: "wallet",
+          date: "2024-01-15",
+          amount: "-100.00",
+          name: "Cash received",
+          currency: "USD"
+        }
+      },
+      {
+        type: "Transfer",
+        data: {
+          id: "transfer-1",
+          inflow_transaction_id: "wallet-inflow",
+          outflow_transaction_id: "split-transfer-leg",
+          status: "confirmed",
+          notes: "Split-linked transfer"
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    parent_entry = @family.entries.find_by!(name: "ATM withdrawal plus fee")
+    assert parent_entry.split_parent?
+    assert_equal true, parent_entry.excluded
+    assert_equal 4, result[:entries].count
+    assert_includes result[:entries].map(&:id), parent_entry.id
+
+    transfer_child = parent_entry.child_entries.find_by!(name: "Cash movement")
+    fee_child = parent_entry.child_entries.find_by!(name: "ATM fee")
+    assert_equal "Transfer portion", transfer_child.notes
+    assert_equal "Fee portion", fee_child.notes
+    assert_equal "Bank Fees", fee_child.transaction.category.name
+    assert_equal [ "Imported" ], transfer_child.transaction.tags.map(&:name)
+    assert_equal [ "Imported" ], fee_child.transaction.tags.map(&:name)
+
+    transfer = Transfer.find_by!(notes: "Split-linked transfer")
+    assert_equal "confirmed", transfer.status
+    assert_equal "Cash movement", transfer.outflow_transaction.entry.name
+    assert_equal "Cash received", transfer.inflow_transaction.entry.name
+  end
+
+  test "imports split lines without adding omitted parent taxonomy to explicit empty values" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "checking",
+          name: "Checking",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Tag",
+        data: {
+          id: "tag-parent",
+          name: "Parent tag"
+        }
+      },
+      {
+        type: "Merchant",
+        data: {
+          id: "merchant-parent",
+          name: "Parent merchant"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "split-parent",
+          account_id: "checking",
+          date: "2024-01-15",
+          amount: "100.00",
+          name: "Tagged merchant split",
+          currency: "USD",
+          merchant_id: "merchant-parent",
+          tag_ids: [ "tag-parent" ],
+          split_lines: [
+            {
+              id: "split-inherits",
+              amount: "40.00",
+              name: "Inherits omitted taxonomy"
+            },
+            {
+              id: "split-empty",
+              amount: "60.00",
+              name: "Explicit empty taxonomy",
+              merchant_id: nil,
+              tag_ids: []
+            }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    parent_entry = @family.entries.find_by!(name: "Tagged merchant split")
+    inherited_child = parent_entry.child_entries.find_by!(name: "Inherits omitted taxonomy")
+    explicit_empty_child = parent_entry.child_entries.find_by!(name: "Explicit empty taxonomy")
+
+    assert_equal "Parent merchant", inherited_child.transaction.merchant.name
+    assert_equal [ "Parent tag" ], inherited_child.transaction.tags.map(&:name)
+    assert_nil explicit_empty_child.transaction.merchant
+    assert_empty explicit_empty_child.transaction.tags
   end
 
   test "imports trades with securities" do
