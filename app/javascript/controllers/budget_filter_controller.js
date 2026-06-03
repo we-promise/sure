@@ -36,6 +36,9 @@ export default class extends Controller {
       // class; the base `.segmented-control__segment` already carries the
       // inactive (text-secondary) state.
       tab.classList.toggle("segmented-control__segment--active", isActive);
+      // Keep assistive tech in sync with the visual selection (these are
+      // button segments, so aria-pressed).
+      tab.setAttribute("aria-pressed", String(isActive));
     });
   }
 

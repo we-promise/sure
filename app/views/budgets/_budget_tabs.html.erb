@@ -1,3 +1,4 @@
+<% current_filter = %w[all over_budget on_track].include?(params[:filter]) ? params[:filter] : "all" %>
 <div class="w-full flex justify-center">
   <div class="max-w-full w-full lg:w-auto overflow-x-auto no-scrollbar">
     <%= render DS::SegmentedControl.new(
@@ -5,11 +6,13 @@
           aria_label: t("budgets.show.filter.aria_label", default: "Filter budget categories"),
           class: "w-full lg:w-auto") do |sc| %>
       <% sc.with_segment t("budgets.show.filter.all"),
-           active: true,
+           active: current_filter == "all",
            data: { action: "click->budget-filter#setFilter", budget_filter_filter_param: "all", budget_filter_target: "tab" } %>
       <% sc.with_segment t("budgets.show.filter.over_budget"),
+           active: current_filter == "over_budget",
            data: { action: "click->budget-filter#setFilter", budget_filter_filter_param: "over_budget", budget_filter_target: "tab" } %>
       <% sc.with_segment t("budgets.show.filter.on_track"),
+           active: current_filter == "on_track",
            data: { action: "click->budget-filter#setFilter", budget_filter_filter_param: "on_track", budget_filter_target: "tab" } %>
     <% end %>
   </div>
