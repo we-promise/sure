@@ -110,6 +110,17 @@ class Category < ApplicationRecord
   end
 
   class << self
+    def ids_with_transactions(family:, category_ids:)
+      category_ids = Array(category_ids).compact
+      return {} if category_ids.empty?
+
+      family.transactions
+            .where(category_id: category_ids)
+            .distinct
+            .pluck(:category_id)
+            .index_with(true)
+    end
+
     def suggested_icon(name)
       name_down = name.to_s.downcase
 
@@ -239,11 +250,15 @@ class Category < ApplicationRecord
   end
 
   def parent?
-    subcategories.any?
+    if association(:subcategories).loaded?
+      subcategories.any?
+    else
+      subcategories.exists?
+    end
   end
 
   def subcategory?
-    parent.present?
+    parent_id.present?
   end
 
   def name_with_parent

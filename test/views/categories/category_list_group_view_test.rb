@@ -1,7 +1,7 @@
 require "test_helper"
 
 class CategoryListGroupViewTest < ActionView::TestCase
-  test "falls back to transaction existence checks when no lookup is provided" do
+  test "loads transaction lookup in one query when no lookup is provided" do
     category = categories(:food_and_drink)
     transaction = Transaction.create!(category: category)
     Entry.create!(
