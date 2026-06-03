@@ -29,7 +29,7 @@
   </div>
 <% end %>
 
-<%= turbo_frame_tag "dashboard_sections" do %>
+<%= turbo_frame_tag "dashboard_sections", target: "_top" do %>
   <% if accessible_accounts.any? %>
     <div class="flex items-center justify-end mb-4">
       <%= render UI::PeriodPicker.new(selected: @period, url: root_path, frame: "dashboard_sections") %>
