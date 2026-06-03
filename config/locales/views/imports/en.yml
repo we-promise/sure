@@ -155,17 +155,17 @@ en:
       show:
         invalid_data: "You have invalid data, please edit until all errors are resolved"
         account_mapping_description: Assign all of your imported file's accounts to
-          Maybe's existing accounts.  You can also add new accounts or leave them
+          %{product_name}'s existing accounts.  You can also add new accounts or leave them
           uncategorized.
         account_mapping_title: Assign your accounts
         account_type_mapping_description: Assign all of your imported file's account
-          types to Maybe's
+          types to %{product_name}'s
         account_type_mapping_title: Assign your account types
         category_mapping_description: Assign all of your imported file's categories
-          to Maybe's existing categories.  You can also add new categories or leave
+          to %{product_name}'s existing categories.  You can also add new categories or leave
           them uncategorized.
         category_mapping_title: Assign your categories
-        tag_mapping_description: Assign all of your imported file's tags to Maybe's
+        tag_mapping_description: Assign all of your imported file's tags to %{product_name}'s
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
@@ -217,6 +217,22 @@ en:
       account: "Account"
       category: "Category"
       tag: "Tag"
+    dry_run_resources:
+      transactions: "Transactions"
+      balances: "Balances"
+      accounts: "Accounts"
+      categories: "Categories"
+      tags: "Tags"
+      rules: "Rules"
+      merchants: "Merchants"
+      recurring_transactions: "Recurring Transactions"
+      transfers: "Transfers"
+      rejected_transfers: "Rejected Transfers"
+      trades: "Trades"
+      holdings: "Holdings"
+      valuations: "Valuations"
+      budgets: "Budgets"
+      budget_categories: "Budget Categories"
     column_labels:
       date: "Date"
       amount: "Amount"
@@ -255,6 +271,16 @@ en:
       title: Import successful
       description: Your imported data has been successfully added to the app and is now ready for use.
       back_to_dashboard: Back to dashboard
+      verification:
+        title: Readback verification
+        checked: Checked
+        mismatches: Mismatches
+        status:
+          not_verified: Not verified
+          matched: Matched
+          mismatch: Mismatch
+          failed: Failed
+          reverted: Reverted
     importing:
       title: Import in progress
       description: "Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app."
@@ -358,6 +384,7 @@ en:
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
       invalid_pdf: The uploaded file is not a valid PDF.
+      duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
@@ -399,6 +426,7 @@ en:
       complete_title: Document analyzed
       complete_description: We've analyzed your PDF and here's what we found.
       document_type_label: Document Type
+      source_statement: Source statement
       summary_label: Summary
       email_sent_notice: An email has been sent to you with next steps.
       back_to_imports: Back to imports

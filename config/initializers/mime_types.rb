@@ -5,3 +5,9 @@
 Mime::Type.register "text/csv", :csv
 Mime::Type.register "application/pdf", :pdf
 Mime::Type.register "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", :xlsx
+
+# Register .mjs so Propshaft serves ES modules with the correct Content-Type.
+Mime::Type.register "text/javascript", :mjs unless Mime::Type.lookup_by_extension(:mjs)
+
+# Service Worker
+Mime::Type.register "application/javascript", :serviceworker

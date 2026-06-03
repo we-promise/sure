@@ -160,6 +160,7 @@ en:
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
+        member_owns_other_family_data: This member still owns accounts in another household and cannot be removed. Transfer or remove those accounts first.
         member_removal_failed: There was a problem removing the member.
         member_removed: Member was successfully removed.
         not_authorized: You are not authorized to remove members.
@@ -314,6 +315,7 @@ en:
       sync_provider_in_progress: Sync started.
       recently_synced: Synced recently. Try again in a moment.
       taglines:
+        akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
@@ -342,6 +344,8 @@ en:
       encryption_error:
         title: Encryption keys missing
         message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
+      provider_form:
+        save_and_connect: "Save and connect"
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
@@ -372,6 +376,9 @@ en:
         connect_button: Connect Binance
         syncing: Syncing...
         sync: Sync
+        historical_import: "Historical Import Settings"
+        sync_start_date_label: "Import data from"
+        sync_start_date_help: "Select how far back to fetch historical trades."
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
       kraken_panel:
         step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
@@ -436,6 +443,10 @@ en:
         base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
+      akahu_panel:
+        step_1_html: "Go to %{link} and create a personal app."
+        step_2: "Copy your app token and user token."
+        step_3: "Paste the tokens below, save, then link your synced accounts."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."

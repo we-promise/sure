@@ -9,8 +9,8 @@ class DS::Buttonish < DesignSystemComponent
       icon_classes: "text-primary"
     },
     destructive: {
-      container_classes: "text-inverse bg-red-500 theme-dark:bg-red-400 hover:bg-red-600 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
-      icon_classes: "fg-white"
+      container_classes: "text-inverse bg-red-600 theme-dark:bg-red-400 hover:bg-red-700 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
+      icon_classes: "text-inverse"
     },
     outline: {
       container_classes: "text-primary border border-secondary bg-transparent hover:bg-surface-hover",
@@ -43,25 +43,26 @@ class DS::Buttonish < DesignSystemComponent
     },
     md: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-9 h-9",
+      icon_container_classes: "inline-flex items-center justify-center w-11 h-11",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
     },
     lg: {
       container_classes: "px-4 py-3",
-      icon_container_classes: "inline-flex items-center justify-center w-10 h-10",
+      icon_container_classes: "inline-flex items-center justify-center w-12 h-12",
       radius_classes: "rounded-xl",
       text_classes: "text-base"
     }
   }.freeze
 
-  attr_reader :variant, :size, :href, :icon, :icon_position, :text, :full_width, :extra_classes, :frame, :opts
+  attr_reader :variant, :size, :href, :icon, :icon_custom, :icon_position, :text, :full_width, :extra_classes, :frame, :opts
 
-  def initialize(variant: :primary, size: :md, href: nil, text: nil, icon: nil, icon_position: :left, full_width: false, frame: nil, **opts)
+  def initialize(variant: :primary, size: :md, href: nil, text: nil, icon: nil, icon_custom: false, icon_position: :left, full_width: false, frame: nil, **opts)
     @variant = variant.to_s.underscore.to_sym
     @size = size.to_sym
     @href = href
     @icon = icon
+    @icon_custom = icon_custom
     @icon_position = icon_position.to_sym
     @text = text
     @full_width = full_width

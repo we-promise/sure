@@ -301,6 +301,30 @@ class Entry < ApplicationRecord
     excluded? || user_modified? || import_locked?
   end
 
+  # Bulk-marks the entries of the given transactions as user-modified so a
+  # later provider sync won't overwrite them (issue #1977). Used by merchant
+  # merge/convert/unlink flows, which reassign merchant_id directly on
+  # transactions and must protect that manual change from being reverted.
+  #
+  # Accepts a Transaction relation (preferred — the selection runs as a
+  # subquery so large merges/unlinks don't materialize ids or hit SQL
+  # parameter limits) or an explicit array of ids.
+  #
+  # @param transactions [ActiveRecord::Relation, Array<String>] Transactions or their ids
+  # @return [void]
+  def self.mark_user_modified_for_transactions!(transactions)
+    entryable_ids =
+      if transactions.is_a?(ActiveRecord::Relation)
+        transactions.select(:id)
+      else
+        ids = Array(transactions).compact.uniq
+        return if ids.empty?
+        ids
+      end
+
+    where(entryable_type: "Transaction", entryable_id: entryable_ids).update_all(user_modified: true)
+  end
+
   # Marks entry as user-modified after manual edit.
   # Called when user edits any field to prevent provider sync from overwriting.
   #
@@ -455,6 +479,7 @@ class Entry < ApplicationRecord
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
             attrs.delete(:date) if entry.split_child?
+            attrs.delete(:entryable_attributes) unless entry.transaction?
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?

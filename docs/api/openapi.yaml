@@ -1733,6 +1733,72 @@ components:
         unassigned_mappings_count:
           type: integer
           minimum: 0
+    ImportVerificationReadback:
+      type: object
+      description: SureImport only. Expected NDJSON counts compared to family-scoped
+        database readback after publish.
+      properties:
+        status:
+          type: string
+          enum:
+          - not_verified
+          - matched
+          - mismatch
+          - failed
+          - reverted
+        checked_at:
+          type: string
+          format: date-time
+          nullable: true
+        expected_record_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        before_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        after_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        actual_delta_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        checked_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        mismatches:
+          type: object
+          additionalProperties:
+            type: object
+            required:
+            - expected
+            - actual
+            properties:
+              expected:
+                type: integer
+              actual:
+                type: integer
+        error:
+          type: string
+          nullable: true
+    ImportVerification:
+      type: object
+      description: SureImport only. Captured at upload and completed after import
+        publish.
+      required:
+      - expected_record_counts
+      - readback
+      properties:
+        expected_record_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        readback:
+          "$ref": "#/components/schemas/ImportVerificationReadback"
     ImportPreflightContent:
       type: object
       required:
@@ -1975,6 +2041,8 @@ components:
           "$ref": "#/components/schemas/ImportConfiguration"
         stats:
           "$ref": "#/components/schemas/ImportStats"
+        verification:
+          "$ref": "#/components/schemas/ImportVerification"
     ImportCollection:
       type: object
       required:
@@ -2821,15 +2889,108 @@ components:
         counts:
           type: object
           required:
+          - account_statements
+          - family_exports
+          - imports
+          - import_rows
+          - import_mappings
           - accounts
+          - account_shares
+          - account_providers
+          - entries
+          - transactions
+          - transfers
+          - rejected_transfers
+          - valuations
+          - trades
+          - holdings
+          - balances
+          - recurring_transactions
+          - rules
+          - rule_actions
+          - rule_conditions
+          - rule_runs
+          - budgets
+          - budget_categories
           - categories
           - tags
+          - taggings
           - merchants
+          - family_merchant_associations
+          - provider_items
+          - active_storage_attachments
           - plaid_items
-          - imports
-          - budgets
+          additionalProperties:
+            type: integer
+            minimum: 0
           properties:
+            account_statements:
+              type: integer
+              minimum: 0
+            family_exports:
+              type: integer
+              minimum: 0
+            imports:
+              type: integer
+              minimum: 0
+            import_rows:
+              type: integer
+              minimum: 0
+            import_mappings:
+              type: integer
+              minimum: 0
             accounts:
+              type: integer
+              minimum: 0
+            account_shares:
+              type: integer
+              minimum: 0
+            account_providers:
+              type: integer
+              minimum: 0
+            entries:
+              type: integer
+              minimum: 0
+            transactions:
+              type: integer
+              minimum: 0
+            transfers:
+              type: integer
+              minimum: 0
+            rejected_transfers:
+              type: integer
+              minimum: 0
+            valuations:
+              type: integer
+              minimum: 0
+            trades:
+              type: integer
+              minimum: 0
+            holdings:
+              type: integer
+              minimum: 0
+            balances:
+              type: integer
+              minimum: 0
+            recurring_transactions:
+              type: integer
+              minimum: 0
+            rules:
+              type: integer
+              minimum: 0
+            rule_actions:
+              type: integer
+              minimum: 0
+            rule_conditions:
+              type: integer
+              minimum: 0
+            rule_runs:
+              type: integer
+              minimum: 0
+            budgets:
+              type: integer
+              minimum: 0
+            budget_categories:
               type: integer
               minimum: 0
             categories:
@@ -2838,16 +2999,22 @@ components:
             tags:
               type: integer
               minimum: 0
+            taggings:
+              type: integer
+              minimum: 0
             merchants:
               type: integer
               minimum: 0
+            family_merchant_associations:
+              type: integer
+              minimum: 0
+            provider_items:
+              type: integer
+              minimum: 0
+            active_storage_attachments:
+              type: integer
+              minimum: 0
             plaid_items:
-              type: integer
-              minimum: 0
-            imports:
-              type: integer
-              minimum: 0
-            budgets:
               type: integer
               minimum: 0
 paths:
@@ -4513,7 +4680,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '422':
-          description: validation error - file too large
+          description: validation error or publish rejection
           content:
             application/json:
               schema:
@@ -4753,7 +4920,7 @@ paths:
     get:
       summary: Retrieve an import
       description: Retrieve detailed information about a specific import, including
-        configuration and row statistics.
+        configuration, row statistics, and SureImport readback verification when available.
       tags:
       - Imports
       security:

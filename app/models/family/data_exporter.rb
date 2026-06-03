@@ -300,27 +300,38 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export transactions with full data (exclude split parents, export children instead)
-      exportable_transactions.includes(:category, :merchant, :tags, entry: :account).find_each do |transaction|
+      ndjson_exportable_transactions.includes(
+        :category,
+        :merchant,
+        :tags,
+        entry: [
+          :account,
+          { child_entries: { entryable: :tags } }
+        ]
+      ).find_each do |transaction|
+        transaction_data = {
+          id: transaction.id,
+          entry_id: transaction.entry.id,
+          account_id: transaction.entry.account_id,
+          date: transaction.entry.date,
+          amount: transaction.entry.amount,
+          currency: transaction.entry.currency,
+          name: transaction.entry.name,
+          notes: transaction.entry.notes,
+          excluded: transaction.entry.excluded,
+          category_id: transaction.category_id,
+          merchant_id: transaction.merchant_id,
+          tag_ids: transaction.tag_ids,
+          kind: transaction.kind,
+          created_at: transaction.created_at,
+          updated_at: transaction.updated_at
+        }
+        split_lines = serialize_split_lines_for_export(transaction.entry)
+        transaction_data[:split_lines] = split_lines if split_lines.any?
+
         lines << {
           type: "Transaction",
-          data: {
-            id: transaction.id,
-            entry_id: transaction.entry.id,
-            account_id: transaction.entry.account_id,
-            date: transaction.entry.date,
-            amount: transaction.entry.amount,
-            currency: transaction.entry.currency,
-            name: transaction.entry.name,
-            notes: transaction.entry.notes,
-            excluded: transaction.entry.excluded,
-            category_id: transaction.category_id,
-            merchant_id: transaction.merchant_id,
-            tag_ids: transaction.tag_ids,
-            kind: transaction.kind,
-            created_at: transaction.created_at,
-            updated_at: transaction.updated_at
-          }
+          data: transaction_data
         }.to_json
       end
 
@@ -454,6 +465,42 @@ class Family::DataExporter
 
     def exportable_transactions
       @family.transactions.merge(Entry.excluding_split_parents)
+    end
+
+    def ndjson_exportable_transactions
+      @family.transactions.joins(:entry).where(entries: { parent_entry_id: nil })
+    end
+
+    def serialize_split_lines_for_export(parent_entry)
+      child_entries = split_child_entries_for_export(parent_entry)
+      return [] if child_entries.empty?
+
+      child_entries.map do |child_entry|
+        transaction = child_entry.entryable
+        {
+          id: transaction.id,
+          entry_id: child_entry.id,
+          amount: child_entry.amount,
+          currency: child_entry.currency,
+          name: child_entry.name,
+          notes: child_entry.notes,
+          excluded: child_entry.excluded,
+          category_id: transaction.category_id,
+          merchant_id: transaction.merchant_id,
+          tag_ids: transaction.tag_ids,
+          kind: transaction.kind,
+          created_at: transaction.created_at,
+          updated_at: transaction.updated_at
+        }
+      end
+    end
+
+    def split_child_entries_for_export(parent_entry)
+      if parent_entry.association(:child_entries).loaded?
+        parent_entry.child_entries.sort_by { |entry| [ entry.created_at, entry.id ] }
+      else
+        parent_entry.child_entries.order(:created_at, :id).to_a
+      end
     end
 
     def family_transaction_ids

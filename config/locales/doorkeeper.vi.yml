@@ -1,0 +1,149 @@
+vi:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Tên'
+        redirect_uri: 'URI chuyển hướng'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'không được chứa fragment.'
+              invalid_uri: 'phải là URI hợp lệ.'
+              unspecified_scheme: 'phải chỉ định scheme.'
+              relative_uri: 'phải là URI tuyệt đối.'
+              secured_uri: 'phải là URI HTTPS/SSL.'
+              forbidden_uri: 'bị cấm bởi máy chủ.'
+            scopes:
+              not_match_configured: "không khớp với cấu hình trên máy chủ."
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Bạn có chắc không?'
+      buttons:
+        edit: 'Chỉnh sửa'
+        destroy: 'Xóa'
+        submit: 'Gửi'
+        cancel: 'Hủy'
+        authorize: 'Ủy quyền'
+      form:
+        error: 'Ối! Kiểm tra biểu mẫu để phát hiện lỗi'
+      help:
+        confidential: 'Ứng dụng sẽ được sử dụng khi client secret có thể được giữ bí mật. Ứng dụng di động native và SPA được coi là không bảo mật.'
+        redirect_uri: 'Dùng một dòng cho mỗi URI'
+        blank_redirect_uri: "Để trống nếu bạn đã cấu hình nhà cung cấp sử dụng Client Credentials, Resource Owner Password Credentials hoặc loại cấp khác không yêu cầu redirect URI."
+        scopes: 'Phân tách phạm vi bằng khoảng trắng. Để trống để dùng phạm vi mặc định.'
+      edit:
+        title: 'Chỉnh sửa ứng dụng'
+      index:
+        title: 'Ứng dụng của bạn'
+        new: 'Ứng dụng mới'
+        name: 'Tên'
+        callback_url: 'URL callback'
+        confidential: 'Bảo mật?'
+        actions: 'Hành động'
+        confidentiality:
+          'yes': 'Có'
+          'no': 'Không'
+      new:
+        title: 'Ứng dụng mới'
+      show:
+        title: 'Ứng dụng: %{name}'
+        application_id: 'UID'
+        secret: 'Bí mật'
+        secret_hashed: 'Bí mật đã mã hóa'
+        scopes: 'Phạm vi'
+        confidential: 'Bảo mật'
+        callback_urls: 'URL callback'
+        actions: 'Hành động'
+        not_defined: 'Chưa xác định'
+
+    authorizations:
+      buttons:
+        authorize: 'Ủy quyền'
+        deny: 'Từ chối'
+      error:
+        title: 'Đã xảy ra lỗi'
+        go_back: 'Quay lại'
+      new:
+        title: 'Yêu cầu ủy quyền'
+        prompt: 'Ủy quyền cho %{client_name} sử dụng tài khoản của bạn?'
+        able_to: 'Ứng dụng này sẽ có thể'
+      show:
+        title: 'Mã ủy quyền'
+        authorization_code_label: 'Mã ủy quyền:'
+        copy_instructions: 'Sao chép mã này và dán vào ứng dụng.'
+      form_post:
+        title: 'Gửi biểu mẫu này'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Bạn có chắc không?'
+      buttons:
+        revoke: 'Thu hồi'
+      index:
+        title: 'Ứng dụng đã được ủy quyền'
+        application: 'Ứng dụng'
+        created_at: 'Ngày tạo'
+        date_format: '%d-%m-%Y %H:%M:%S'
+
+    pre_authorization:
+      status: 'Tiền ủy quyền'
+
+    errors:
+      messages:
+        invalid_request:
+          unknown: 'Yêu cầu thiếu tham số bắt buộc, bao gồm giá trị tham số không được hỗ trợ, hoặc có định dạng sai.'
+          missing_param: 'Thiếu tham số bắt buộc: %{value}.'
+          request_not_authorized: 'Yêu cầu cần được ủy quyền. Tham số bắt buộc để ủy quyền yêu cầu bị thiếu hoặc không hợp lệ.'
+          invalid_code_challenge: 'Cần có code challenge.'
+        invalid_redirect_uri: "URI chuyển hướng được yêu cầu không hợp lệ hoặc không khớp với URI chuyển hướng của client."
+        unauthorized_client: 'Client không được phép thực hiện yêu cầu này bằng phương thức này.'
+        access_denied: 'Chủ sở hữu tài nguyên hoặc máy chủ ủy quyền đã từ chối yêu cầu.'
+        invalid_scope: 'Phạm vi được yêu cầu không hợp lệ, không xác định, hoặc có định dạng sai.'
+        invalid_code_challenge_method:
+          zero: 'Máy chủ ủy quyền không hỗ trợ PKCE vì không có giá trị code_challenge_method được chấp nhận.'
+          one: 'code_challenge_method phải là %{challenge_methods}.'
+          other: 'code_challenge_method phải là một trong %{challenge_methods}.'
+        server_error: 'Máy chủ ủy quyền gặp điều kiện không mong muốn ngăn không thể thực hiện yêu cầu.'
+        temporarily_unavailable: 'Máy chủ ủy quyền hiện không thể xử lý yêu cầu do quá tải tạm thời hoặc bảo trì.'
+        credential_flow_not_configured: 'Luồng Resource Owner Password Credentials thất bại do Doorkeeper.configure.resource_owner_from_credentials chưa được cấu hình.'
+        resource_owner_authenticator_not_configured: 'Tìm Resource Owner thất bại do Doorkeeper.configure.resource_owner_authenticator chưa được cấu hình.'
+        admin_authenticator_not_configured: 'Truy cập bảng quản trị bị cấm do Doorkeeper.configure.admin_authenticator chưa được cấu hình.'
+        unsupported_response_type: 'Máy chủ ủy quyền không hỗ trợ loại phản hồi này.'
+        unsupported_response_mode: 'Máy chủ ủy quyền không hỗ trợ chế độ phản hồi này.'
+        invalid_client: 'Xác thực client thất bại do client không xác định, không có xác thực client, hoặc phương thức xác thực không được hỗ trợ.'
+        invalid_grant: 'Authorization grant được cung cấp không hợp lệ, đã hết hạn, bị thu hồi, không khớp với URI chuyển hướng được dùng trong yêu cầu ủy quyền, hoặc được cấp cho client khác.'
+        unsupported_grant_type: 'Loại authorization grant không được máy chủ ủy quyền hỗ trợ.'
+        invalid_token:
+          revoked: "Access token đã bị thu hồi"
+          expired: "Access token đã hết hạn"
+          unknown: "Access token không hợp lệ"
+        revoke:
+          unauthorized: "Bạn không được phép thu hồi token này"
+        forbidden_token:
+          missing_scope: 'Truy cập tài nguyên này yêu cầu phạm vi "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Đã tạo ứng dụng.'
+        destroy:
+          notice: 'Đã xóa ứng dụng.'
+        update:
+          notice: 'Đã cập nhật ứng dụng.'
+      authorized_applications:
+        destroy:
+          notice: 'Đã thu hồi ứng dụng.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'Nhà cung cấp OAuth2'
+          applications: 'Ứng dụng'
+          home: 'Trang chủ'
+      application:
+        title: 'Yêu cầu ủy quyền OAuth'

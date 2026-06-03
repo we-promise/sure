@@ -232,68 +232,21 @@ class Import::Preflight
     end
 
     def sure_import_preflight_payload(content, filename, content_type)
-      line_counts = Hash.new(0)
-      errors = []
-      valid_rows_count = 0
-      nonblank_rows_count = 0
-
-      content.each_line.with_index(1) do |line, line_number|
-        next if line.strip.blank?
-
-        nonblank_rows_count += 1
-        record = JSON.parse(line)
-
-        unless record.is_a?(Hash)
-          errors << {
-            code: "invalid_ndjson_record",
-            message: "Line #{line_number} must be a JSON object."
-          }
-          next
-        end
-
-        if record["type"].blank? || !record.key?("data")
-          errors << {
-            code: "invalid_ndjson_record",
-            message: "Line #{line_number} must include type and data."
-          }
-          next
-        end
-
-        valid_rows_count += 1
-        line_counts[record["type"]] += 1
-      rescue JSON::ParserError => e
-        errors << {
-          code: "invalid_json",
-          message: "Line #{line_number} is not valid JSON: #{e.message}"
-        }
-      end
-
-      if nonblank_rows_count.zero?
-        errors << {
-          code: "no_data_rows",
-          message: "No data rows were found."
-        }
-      end
-
-      entity_counts = SureImport.dry_run_totals_from_line_type_counts(line_counts)
-      unsupported_types = line_counts.keys - SureImport.importable_ndjson_types
-      warnings = []
-      warnings << "No importable records were found." if nonblank_rows_count.positive? && entity_counts.values.sum.zero?
-      warnings << "Some records use unsupported types: #{unsupported_types.join(', ')}" if unsupported_types.any?
-      warnings << "Row count exceeds this import type's publish limit." if nonblank_rows_count > SureImport.max_row_count
+      result = SureImport::Preflight.new(
+        family: family,
+        content: content
+      ).call
+      stats = result.stats
+      warnings = result.warnings.dup
+      warnings << "No importable records were found." if stats[:rows_count].positive? && (stats[:entity_counts] || {}).values.sum.zero?
+      warnings << "Row count exceeds this import type's publish limit." if stats[:rows_count] > SureImport.max_row_count
 
       {
         type: "SureImport",
-        valid: errors.empty?,
+        valid: result.valid?,
         content: content_payload(filename, content_type, content),
-        stats: {
-          rows_count: nonblank_rows_count,
-          valid_rows_count: valid_rows_count,
-          invalid_rows_count: nonblank_rows_count - valid_rows_count,
-          entity_counts: entity_counts,
-          record_type_counts: line_counts
-        },
-        errors: errors,
+        stats: stats,
+        errors: result.errors,
         warnings: warnings
       }
     end

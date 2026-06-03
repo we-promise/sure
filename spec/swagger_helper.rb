@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
+  reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
 
   config.openapi_specs = {
     'openapi.yaml' => {
@@ -947,6 +948,58 @@ RSpec.configure do |config|
               unassigned_mappings_count: { type: :integer, minimum: 0 }
             }
           },
+          ImportVerificationReadback: {
+            type: :object,
+            description: 'SureImport only. Expected NDJSON counts compared to family-scoped database readback after publish.',
+            properties: {
+              status: { type: :string, enum: %w[not_verified matched mismatch failed reverted] },
+              checked_at: { type: :string, format: :'date-time', nullable: true },
+              expected_record_counts: {
+                type: :object,
+                additionalProperties: { type: :integer }
+              },
+              before_counts: {
+                type: :object,
+                additionalProperties: { type: :integer }
+              },
+              after_counts: {
+                type: :object,
+                additionalProperties: { type: :integer }
+              },
+              actual_delta_counts: {
+                type: :object,
+                additionalProperties: { type: :integer }
+              },
+              checked_counts: {
+                type: :object,
+                additionalProperties: { type: :integer }
+              },
+              mismatches: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  required: %w[expected actual],
+                  properties: {
+                    expected: { type: :integer },
+                    actual: { type: :integer }
+                  }
+                }
+              },
+              error: { type: :string, nullable: true }
+            }
+          },
+          ImportVerification: {
+            type: :object,
+            description: 'SureImport only. Captured at upload and completed after import publish.',
+            required: %w[expected_record_counts readback],
+            properties: {
+              expected_record_counts: {
+                type: :object,
+                additionalProperties: { type: :integer }
+              },
+              readback: { '$ref' => '#/components/schemas/ImportVerificationReadback' }
+            }
+          },
           ImportPreflightContent: {
             type: :object,
             required: %w[filename content_type byte_size],
@@ -1086,7 +1139,8 @@ RSpec.configure do |config|
               error: { type: :string, nullable: true },
               status_detail: { '$ref' => '#/components/schemas/ImportStatusDetail' },
               configuration: { '$ref' => '#/components/schemas/ImportConfiguration' },
-              stats: { '$ref' => '#/components/schemas/ImportStats' }
+              stats: { '$ref' => '#/components/schemas/ImportStats' },
+              verification: { '$ref' => '#/components/schemas/ImportVerification' }
             }
           },
           ImportCollection: {
@@ -1554,16 +1608,9 @@ RSpec.configure do |config|
               },
               counts: {
                 type: :object,
-                required: %w[accounts categories tags merchants plaid_items imports budgets],
-                properties: {
-                  accounts: { type: :integer, minimum: 0 },
-                  categories: { type: :integer, minimum: 0 },
-                  tags: { type: :integer, minimum: 0 },
-                  merchants: { type: :integer, minimum: 0 },
-                  plaid_items: { type: :integer, minimum: 0 },
-                  imports: { type: :integer, minimum: 0 },
-                  budgets: { type: :integer, minimum: 0 }
-                }
+                required: reset_count_keys,
+                additionalProperties: { type: :integer, minimum: 0 },
+                properties: reset_count_keys.index_with { { type: :integer, minimum: 0 } }
               }
             }
           }

@@ -1,6 +1,21 @@
 @layer base {
+  /* Bind CSS color-scheme to Sure's data-theme attribute so the CSS
+     `light-dark()` function resolves to the side that matches the active
+     theme (used by DS::Pill and any future tokens that opt in). */
+  :root {
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   button {
-    @apply cursor-pointer focus-visible:outline-gray-900;
+    @apply cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-alpha-black-300;
+
+    @variant theme-dark {
+      @apply focus-visible:ring-alpha-white-300;
+    }
   }
 
   hr {
