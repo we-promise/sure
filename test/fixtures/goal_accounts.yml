@@ -1,0 +1,15 @@
+vacation_italy_depository:
+  goal: vacation_italy
+  account: depository
+
+vacation_italy_connected:
+  goal: vacation_italy
+  account: connected
+
+emergency_fund_depository:
+  goal: emergency_fund
+  account: depository
+
+car_paydown_depository:
+  goal: car_paydown
+  account: depository
