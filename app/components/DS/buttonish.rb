@@ -77,7 +77,10 @@ class DS::Buttonish < DesignSystemComponent
 
   def container_classes(override_classes = nil)
     class_names(
-      "font-medium whitespace-nowrap",
+      # Tailwind v4 preflight sets `cursor: pointer` on all <button>s, which
+      # also applies while disabled. Override so disabled buttons read as
+      # non-interactive.
+      "font-medium whitespace-nowrap disabled:cursor-not-allowed",
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,
