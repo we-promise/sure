@@ -144,13 +144,8 @@ class IncomeStatement
     end
 
     def build_period_total(classification:, period:, for_budget: false)
-      excluded_kinds = for_budget ? Transaction::BUDGET_EXCLUDED_KINDS : Transaction::REPORT_EXCLUDED_KINDS
-      # Exclude pending transactions from budget calculations
-      totals = totals_query(
-        transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
-        date_range: period.date_range,
-        excluded_kinds: excluded_kinds
-      ).select { |t| t.classification == classification }
+      # Income and expense for the same period+scope share a single totals fetch
+      totals = totals_for_period(period, for_budget: for_budget).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -193,12 +188,16 @@ class IncomeStatement
       )
     end
 
-    def totals_for_period(period)
+    def totals_for_period(period, for_budget: false)
+      excluded_kinds = for_budget ? Transaction::BUDGET_EXCLUDED_KINDS : Transaction::REPORT_EXCLUDED_KINDS
       @totals_for_period ||= {}
-      @totals_for_period[period_cache_key(period)] ||=
+      cache_key = [ period_cache_key(period), for_budget ]
+      # Exclude pending transactions from budget/report calculations
+      @totals_for_period[cache_key] ||=
         totals_query(
           transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
-          date_range: period.date_range
+          date_range: period.date_range,
+          excluded_kinds: excluded_kinds
         )
     end
 
