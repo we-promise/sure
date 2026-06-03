@@ -26,17 +26,17 @@
         <h3 class="flex-1 min-w-0 font-medium text-primary truncate"><%= budget_category.category.name %></h3>
         <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
           <% if budget_category.over_budget? %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-500/10 text-destructive text-xs font-medium rounded-full whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-destructive/10 text-destructive text-xs font-medium rounded-full whitespace-nowrap">
               <%= icon("alert-circle", size: "sm", color: "destructive") %>
               <%= t("reports.budget_performance.status.over") %>
             </span>
           <% elsif budget_category.near_limit? %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-warning text-xs font-medium rounded-full whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-warning/10 text-warning text-xs font-medium rounded-full whitespace-nowrap">
               <%= icon("alert-triangle", size: "sm", color: "warning") %>
               <%= t("reports.budget_performance.status.warning") %>
             </span>
           <% else %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-success text-xs font-medium rounded-full whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-success/10 text-success text-xs font-medium rounded-full whitespace-nowrap">
               <%= icon("check-circle", size: "sm", color: "success") %>
               <%= t("reports.budget_performance.status.good") %>
             </span>
@@ -47,7 +47,7 @@
       <%# Progress Bar %>
       <div class="mb-3">
         <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
-          <% bar_color = budget_category.over_budget? ? "bg-red-500" : (budget_category.near_limit? ? "bg-yellow-500" : "bg-green-500") %>
+          <% bar_color = budget_category.over_budget? ? "bg-destructive" : (budget_category.near_limit? ? "bg-warning" : "bg-success") %>
           <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
             style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
         </div>
@@ -76,8 +76,7 @@
           <div class="w-full sm:w-auto text-xs text-subdued">
             <%= t("reports.budget_performance.suggested_daily",
               amount: daily_info[:amount].format,
-              days: daily_info[:days_remaining])
-            %>
+              days: daily_info[:days_remaining]) %>
           </div>
         <% end %>
         <% end %>
