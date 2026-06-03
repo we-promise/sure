@@ -49,11 +49,12 @@ class CategoryTest < ActiveSupport::TestCase
       color: "#000000",
       lucide_icon: "folder",
       family: @family,
-      parent_id: 0
+      parent_id: SecureRandom.uuid
     )
 
     assert_nothing_raised { category.valid? }
-    assert_not category.subcategory?
+    assert category.subcategory?
+    assert_nil category.parent
   end
 
   test "subcategory can only be one level deep" do

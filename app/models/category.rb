@@ -237,9 +237,7 @@ class Category < ApplicationRecord
   end
 
   def inherit_color_from_parent
-    if subcategory?
-      self.color = parent.color
-    end
+    self.color = parent.color if subcategory? && parent
   end
 
   def replace_and_destroy!(replacement)
@@ -258,11 +256,14 @@ class Category < ApplicationRecord
   end
 
   def subcategory?
-    parent.present?
+    parent_id.present?
   end
 
   def name_with_parent
-    subcategory? ? "#{parent.name} > #{name}" : name
+    return name unless subcategory?
+
+    parent_name = parent&.name
+    parent_name.present? ? "#{parent_name} > #{name}" : name
   end
 
   # Predicate: is this the synthetic "Uncategorized" category?

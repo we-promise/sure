@@ -22,7 +22,7 @@
 
     <%= icon("check") if is_selected %>
 
-    <% if category.subcategory? %>
+    <% if category.parent_id.present? %>
       <%= icon("corner-down-right", size: "sm") %>
     <% end %>
 
