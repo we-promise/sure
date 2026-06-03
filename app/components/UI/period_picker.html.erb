@@ -14,7 +14,7 @@
          text: period.label_short,
          href: href_for(period.key),
          frame: frame,
-         icon: (selected?(period.key) ? "check" : nil),
+         selected: selected?(period.key),
          aria: { current: selected?(period.key) ? "true" : nil }
        ) %>
   <% end %>
