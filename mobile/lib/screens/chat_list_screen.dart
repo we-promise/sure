@@ -202,7 +202,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             );
           }
 
-          if (chatProvider.aiConsentRequired || chatProvider.aiUnavailable) {
+          if (chatProvider.featureDisabled || chatProvider.aiUnavailable) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
