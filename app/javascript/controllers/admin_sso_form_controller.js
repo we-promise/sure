@@ -184,11 +184,11 @@ export default class extends Controller {
   showCopyFeedback(button) {
     const originalText = button.innerHTML
     button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
-    button.classList.add('text-green-600')
+    button.classList.add('text-success')
 
     setTimeout(() => {
       button.innerHTML = originalText
-      button.classList.remove('text-green-600')
+      button.classList.remove('text-success')
     }, 2000)
   }
 
