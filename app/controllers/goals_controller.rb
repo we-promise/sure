@@ -26,7 +26,7 @@ class GoalsController < ApplicationController
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
-    @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
+    @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: "Depository").visible.count
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
     @show_search = @grid_goals.size > 6
@@ -169,11 +169,11 @@ class GoalsController < ApplicationController
       return [] if ids.blank?
 
       ids = Array(ids).reject(&:blank?)
-      Current.family.accounts.where(accountable_type: "Depository").visible.where(id: ids).to_a
+      Current.user.accessible_accounts.where(accountable_type: "Depository").visible.where(id: ids).to_a
     end
 
     def linkable_accounts_for_new
-      Current.family.accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
+      Current.user.accessible_accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
     end
 
     def sync_linked_accounts!(goal, accounts)
