@@ -1,4 +1,33 @@
 class SureImport < Import
+  class ReadbackVerificationMismatchError < StandardError
+    attr_reader :verification_status, :mismatches
+
+    def initialize(verification_status, mismatches = {})
+      @verification_status = verification_status
+      @mismatches = mismatches.to_h
+      super(build_message)
+    end
+
+    private
+      def build_message
+        return I18n.t(
+          "imports.errors.readback_verification_failed",
+          status: verification_status,
+          default: "Sure import readback verification failed with status: #{verification_status}"
+        ) if mismatches.empty?
+
+        details = mismatches.map do |key, counts|
+          "#{key}: expected #{counts['expected']}, actual #{counts['actual']}"
+        end.join("; ")
+
+        I18n.t(
+          "imports.errors.readback_verification_mismatch",
+          details: details,
+          default: "Sure import readback verification mismatch (#{details})"
+        )
+      end
+  end
+
   NotPublishableError = Class.new(StandardError)
   PreflightError = Class.new(StandardError)
 
@@ -139,6 +168,9 @@ class SureImport < Import
     result[:entries].each { |entry| entries << entry }
 
     record_readback_verification!(before_counts:)
+    assert_readback_verification_matched!
+  rescue ReadbackVerificationMismatchError
+    raise
   rescue => error
     record_failed_readback_verification!(before_counts:, error:)
     raise
@@ -256,6 +288,17 @@ class SureImport < Import
         expected_record_counts: self.class.expected_record_counts_from_line_type_counts(line_counts),
         readback_verification: {},
         updated_at: Time.current
+      )
+    end
+
+    def assert_readback_verification_matched!
+      reload
+
+      return if verification_status == "matched"
+
+      raise ReadbackVerificationMismatchError.new(
+        verification_status,
+        normalized_readback_verification["mismatches"]
       )
     end
 
