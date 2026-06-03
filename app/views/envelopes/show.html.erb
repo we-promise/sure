@@ -89,13 +89,14 @@
       <% if @recent_entries.any? %>
         <ul class="divide-y divide-subdued">
           <% @recent_entries.each do |entry| %>
+            <% amount = entry.converted_amount.to_d %>
             <li class="flex items-center justify-between gap-3 py-2.5">
               <div class="min-w-0">
                 <p class="text-sm text-primary truncate"><%= entry.name %></p>
                 <p class="text-xs text-subdued tabular-nums"><%= I18n.l(entry.date, format: :long) %></p>
               </div>
-              <span class="text-sm tabular-nums privacy-sensitive <%= entry.amount.negative? ? "text-success" : "text-primary" %>">
-                <%= entry.amount.negative? ? "+" : "−" %><%= Money.new(entry.amount.abs, entry.currency).format(precision: 0) %>
+              <span class="text-sm tabular-nums privacy-sensitive <%= amount.negative? ? "text-success" : "text-primary" %>">
+                <%= amount.negative? ? "+" : "−" %><%= Money.new(amount.abs, @envelope.currency).format(precision: 0) %>
               </span>
             </li>
           <% end %>
