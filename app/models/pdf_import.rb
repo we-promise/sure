@@ -89,6 +89,8 @@ class PdfImport < Import
   end
 
   def process_with_ai
+    # TODO(#2113): hardcoded to OpenAI. Provider::Anthropic implements
+    # process_pdf (PR #1985); this should honor Setting.llm_provider.
     provider = Provider::Registry.get_provider(:openai)
     raise "AI provider not configured" unless provider
     raise "AI provider does not support PDF processing" unless provider.supports_pdf_processing?
@@ -115,6 +117,8 @@ class PdfImport < Import
   def extract_transactions
     return unless statement_with_transactions?
 
+    # TODO(#2113): hardcoded to OpenAI. Provider::Anthropic implements
+    # extract_bank_statement (PR #1985); this should honor Setting.llm_provider.
     provider = Provider::Registry.get_provider(:openai)
     raise "AI provider not configured" unless provider
 
