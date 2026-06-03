@@ -130,7 +130,14 @@ class Transaction::Search
     def apply_category_ids_filter(query, category_ids)
       return query unless category_ids.present?
 
-      scoped_ids = family.categories.where(id: category_ids).pluck(:id)
+      # Filter to syntactically valid UUIDs first — categories.id is uuid, so
+      # passing `not-a-uuid` (stale link, hand-edited query string) straight
+      # into the WHERE would raise a Postgres invalid-input error and 500 the
+      # transactions page. Reject malformed ids quietly.
+      valid_ids = Array(category_ids).select { |id| UuidFormat.valid?(id) }
+      return query.none if valid_ids.empty?
+
+      scoped_ids = family.categories.where(id: valid_ids).pluck(:id)
       return query.none if scoped_ids.empty?
 
       query.left_joins(:category).where(
