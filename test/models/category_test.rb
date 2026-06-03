@@ -43,6 +43,19 @@ class CategoryTest < ActiveSupport::TestCase
     assert_equal subcategory, transaction.reload.category
   end
 
+  test "invalid parent_id does not raise during validation" do
+    category = Category.new(
+      name: "Orphan Subcategory",
+      color: "#000000",
+      lucide_icon: "folder",
+      family: @family,
+      parent_id: 0
+    )
+
+    assert_nothing_raised { category.valid? }
+    assert_not category.subcategory?
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 
