@@ -155,17 +155,17 @@ en:
       show:
         invalid_data: "You have invalid data, please edit until all errors are resolved"
         account_mapping_description: Assign all of your imported file's accounts to
-          Maybe's existing accounts.  You can also add new accounts or leave them
+          %{product_name}'s existing accounts.  You can also add new accounts or leave them
           uncategorized.
         account_mapping_title: Assign your accounts
         account_type_mapping_description: Assign all of your imported file's account
-          types to Maybe's
+          types to %{product_name}'s
         account_type_mapping_title: Assign your account types
         category_mapping_description: Assign all of your imported file's categories
-          to Maybe's existing categories.  You can also add new categories or leave
+          to %{product_name}'s existing categories.  You can also add new categories or leave
           them uncategorized.
         category_mapping_title: Assign your categories
-        tag_mapping_description: Assign all of your imported file's tags to Maybe's
+        tag_mapping_description: Assign all of your imported file's tags to %{product_name}'s
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
@@ -384,6 +384,7 @@ en:
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
       invalid_pdf: The uploaded file is not a valid PDF.
+      duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
@@ -425,6 +426,7 @@ en:
       complete_title: Document analyzed
       complete_description: We've analyzed your PDF and here's what we found.
       document_type_label: Document Type
+      source_statement: Source statement
       summary_label: Summary
       email_sent_notice: An email has been sent to you with next steps.
       back_to_imports: Back to imports

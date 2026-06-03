@@ -1,0 +1,74 @@
+<div class="relative"
+     data-controller="tag-select"
+     data-tag-select-create-url-value="<%= helpers.tags_path(format: :json) %>"
+     data-tag-select-field-name-value="<%= field_name %>"
+     data-tag-select-default-color-value="<%= Tag::COLORS.first %>"
+     data-tag-select-disabled-value="<%= disabled %>"
+     data-tag-select-auto-submit-value="<%= auto_submit %>"
+     data-tag-select-update-url-value="<%= update_url %>"
+     data-tag-select-menu-placement-value="<%= menu_placement %>"
+     data-tag-select-offset-value="<%= offset %>"
+     data-action="click@window->tag-select#handleOutsideClick keydown->tag-select#handleKeydown">
+  <div class="form-field">
+    <div class="form-field__body">
+      <%= form.label :tag_ids, helpers.t("transactions.form.tags_label"), class: "form-field__label" %>
+
+      <button type="button"
+              class="form-field__input form-field__input--multiselect-trigger min-h-7 flex items-center gap-2 pr-8 <%= "cursor-not-allowed text-subdued" if disabled %>"
+              data-tag-select-target="button"
+              data-action="click->tag-select#toggle"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="<%= menu_id %>"
+              <%= "disabled" if disabled %>>
+        <span class="flex flex-wrap gap-1"
+              data-tag-select-target="selectionContainer"
+              data-placeholder="<%= helpers.t("transactions.form.none") %>">
+          <span class="text-secondary"><%= helpers.t("transactions.form.none") %></span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div data-tag-select-hidden-inputs>
+    <input type="hidden" name="<%= field_name %>" value="" <%= "disabled" if disabled %>>
+  </div>
+
+  <% unless disabled %>
+    <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden"
+         data-tag-select-target="menu">
+      <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
+        <input type="search"
+               placeholder="<%= helpers.t("transactions.form.tag_search_placeholder") %>"
+               autocomplete="off"
+               class="bg-container text-primary text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
+               data-tag-select-target="search"
+               data-action="input->tag-select#filter keydown->tag-select#handleSearchKeydown">
+        <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+      </div>
+
+      <div class="flex flex-col gap-1 max-h-64 overflow-auto"
+           id="<%= menu_id %>"
+           role="listbox"
+           aria-multiselectable="true"
+           tabindex="-1">
+        <% tags.each do |tag| %>
+          <% selected = selected_ids.include?(tag.id.to_s) %>
+          <%= render partial: "DS/tag_select/option", locals: { tag: tag, selected: selected, view_helpers: helpers } %>
+        <% end %>
+
+        <button type="button"
+                class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
+                data-tag-select-target="createForm"
+                data-action="click->tag-select#createTag">
+          <%= helpers.icon("plus") %>
+          <span><%= helpers.t("transactions.form.create_tag") %> "<span data-tag-select-create-name></span>"</span>
+        </button>
+        <p class="hidden px-3 py-1 text-xs text-destructive"
+           data-tag-select-target="createError"
+           aria-live="assertive"
+           aria-atomic="true"></p>
+      </div>
+    </div>
+  <% end %>
+</div>

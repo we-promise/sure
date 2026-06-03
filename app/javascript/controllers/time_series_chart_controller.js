@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
 const parseLocalDate = d3.timeParse("%Y-%m-%d");
 
@@ -287,10 +288,8 @@ export default class extends Controller {
     this._d3Tooltip = d3
       .select(`#${this.element.id}`)
       .append("div")
-      .attr(
-        "class",
-        "bg-container text-sm font-sans absolute p-2 border border-secondary rounded-lg pointer-events-none opacity-0 top-0 privacy-sensitive",
-      );
+      // Shared visual contract + this chart's initial-hidden / positioning classes.
+      .attr("class", `${CHART_TOOLTIP_CLASSES} opacity-0 top-0`);
   }
 
   _trackMouseForShowingTooltip() {
