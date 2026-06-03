@@ -44,7 +44,11 @@ gem "sentry-rails"
 gem "sentry-sidekiq"
 gem "posthog-ruby"
 gem "logtail-rails"
-gem "skylight", groups: [ :production ]
+if ENV["SKYLIGHT_ENABLED"] == "true"
+  gem "skylight", group: :development, require: false
+else
+  gem "skylight", group: :production
+end
 
 # Active Storage
 gem "aws-sdk-s3", "~> 1.208.0", require: false

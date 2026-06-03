@@ -17,7 +17,9 @@ module Provider::Anthropic::Concerns::UsageRecorder
       estimated_cost = LlmUsage.calculate_cost(
         model: model_name,
         prompt_tokens: input_tokens,
-        completion_tokens: output_tokens
+        completion_tokens: output_tokens,
+        cache_creation_tokens: cache_creation,
+        cache_read_tokens: cache_read
       )
 
       family.llm_usages.create!(

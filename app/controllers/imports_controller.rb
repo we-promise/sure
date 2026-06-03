@@ -2,6 +2,7 @@ class ImportsController < ApplicationController
   include SettingsHelper
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template]
+  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template]
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -13,7 +14,9 @@ class ImportsController < ApplicationController
         redirect_back_or_to import_path(@import), alert: t("imports.update.invalid_account", default: "Account not found.")
         return
       end
-      @import.update!(account: account)
+      return if @import.account_statement.present? && !require_account_permission!(account)
+
+      @import.is_a?(PdfImport) ? @import.assign_account!(account) : @import.update!(account: account)
     end
 
     redirect_to import_path(@import), notice: t("imports.update.account_saved", default: "Account saved.")
@@ -134,24 +137,32 @@ class ImportsController < ApplicationController
 
   private
     def set_import
-      @import = Current.family.imports.includes(:account).find(params[:id])
+      @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
+      raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)
     end
 
     def import_params
       params.require(:import).permit(:import_file)
     end
 
+    def require_statement_import_permission!
+      return if @import.account_statement.blank? || @import.account_statement.manageable_by?(Current.user)
+
+      redirect_target = @import.account || @import.account_statement
+      redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
+    end
+
     def create_pdf_import(file)
-      if file.size > Import::MAX_PDF_SIZE
-        redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
-        return
-      end
+      return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
+      return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
-      pdf_import = Current.family.imports.create!(type: "PdfImport")
-      pdf_import.pdf_file.attach(file)
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
       pdf_import.process_with_ai_later
-
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
+    rescue AccountStatement::DuplicateUploadError
+      redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
+    rescue AccountStatement::InvalidUploadError
+      redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
     end
 
     def create_document_import(file)
