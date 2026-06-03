@@ -39,6 +39,12 @@ jobs:
       - name: Resolve chart and app versions
         id: version
         shell: bash
+        # Bind workflow inputs to env so the values arrive as shell variables
+        # instead of being interpolated verbatim by the `${{ }}` runner pass.
+        # zizmor flags the direct expansion as a template-injection risk.
+        env:
+          CHART_VERSION_INPUT: ${{ inputs.chart_version }}
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
         run: |
           set -euo pipefail
 
@@ -47,8 +53,8 @@ jobs:
             echo "${raw#v}"
           }
 
-          if [ -n "${{ inputs.chart_version }}" ]; then
-            CHART_VERSION="$(normalize_version "${{ inputs.chart_version }}")"
+          if [ -n "$CHART_VERSION_INPUT" ]; then
+            CHART_VERSION="$(normalize_version "$CHART_VERSION_INPUT")"
           elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             CHART_VERSION="$(normalize_version "${GITHUB_REF_NAME}")"
           else
@@ -61,8 +67,8 @@ jobs:
           # `appVersion: "v0.7.1-rc.1"` into Chart.yaml / index.yaml, and Helm
           # then fails to pull `ghcr.io/we-promise/sure:v0.7.1-rc.1` (the real
           # tag is `0.7.1-rc.1`). See #2050.
-          if [ -n "${{ inputs.app_version }}" ]; then
-            APP_VERSION="$(normalize_version "${{ inputs.app_version }}")"
+          if [ -n "$APP_VERSION_INPUT" ]; then
+            APP_VERSION="$(normalize_version "$APP_VERSION_INPUT")"
           elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             APP_VERSION="$(normalize_version "${GITHUB_REF_NAME}")"
           else
