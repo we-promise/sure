@@ -30,10 +30,18 @@ class DS::MenuItem < DesignSystemComponent
     # `tabindex: 0` can't downgrade keyboard/AT semantics.
     html_opts = roving ? merged_opts.except(:role, :tabindex) : merged_opts
 
+    # Merge the contract's ARIA (e.g. aria-checked for selectable rows) with any
+    # caller-supplied aria so neither clobbers the other; the contract wins per-key.
+    attrs = menuitem_attrs
+    if attrs[:aria] && html_opts[:aria]
+      html_opts = html_opts.merge(aria: html_opts[:aria].merge(attrs[:aria]))
+      attrs = attrs.except(:aria)
+    end
+
     if variant == :button
-      button_to href, method: method, class: container_classes, **html_opts, **menuitem_attrs, &block
+      button_to href, method: method, class: container_classes, **html_opts, **attrs, &block
     elsif variant == :link
-      link_to href, class: container_classes, **html_opts, **menuitem_attrs, &block
+      link_to href, class: container_classes, **html_opts, **attrs, &block
     else
       nil
     end
@@ -60,7 +68,15 @@ class DS::MenuItem < DesignSystemComponent
 
   private
     def menuitem_attrs
-      roving ? { role: "menuitem", tabindex: "-1" } : {}
+      return {} unless roving
+
+      # Selectable rows are a single-select group: announce selection state to AT
+      # via menuitemradio + aria-checked, not only the visual check gutter.
+      if selectable?
+        { role: "menuitemradio", tabindex: "-1", aria: { checked: selected ? "true" : "false" } }
+      else
+        { role: "menuitem", tabindex: "-1" }
+      end
     end
 
     def container_classes
