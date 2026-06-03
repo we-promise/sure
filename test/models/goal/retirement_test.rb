@@ -114,4 +114,40 @@ class Goal::RetirementTest < ActiveSupport::TestCase
     assert_not plan.valid?
     assert_includes plan.errors.attribute_names, :adjustments
   end
+
+  test "forecast is nil until a birth year is set" do
+    plan = goals(:retirement_bob)
+    assert_nil plan.forecast
+  end
+
+  test "forecast wiring builds inputs from retirement_params" do
+    plan = goals(:retirement_bob)
+    plan.update!(retirement_params: {
+      "birth_year" => Date.current.year - 45, "retire_age" => 60,
+      "monthly_savings" => 1500, "target_spend" => 2500, "real_return_pct" => 4
+    })
+    plan = Goal.find(plan.id)
+
+    assert_equal 45, plan.current_age
+    inputs = plan.forecast_inputs
+    assert_equal 60, inputs.retire_age
+    assert_equal 95, inputs.terminal_age
+    assert_in_delta 0.04, inputs.real_return, 0.0001
+    assert_equal (1500 * 12).to_d, inputs.annual_savings
+    assert_equal (2500 * 12).to_d, inputs.annual_target_spend
+    assert_equal plan.pension_sources.count, inputs.payouts.length
+
+    assert_instance_of Retirement::Fire::ForecastResult, plan.forecast
+    assert_equal Date.new(Date.current.year - 45 + 60, 1, 1), plan.freedom_date
+  end
+
+  test "freedom_date is clamped to today when retire_age precedes current age" do
+    plan = goals(:retirement_bob)
+    plan.update!(retirement_params: { "birth_year" => Date.current.year - 50, "retire_age" => 40 })
+    plan = Goal.find(plan.id)
+
+    assert_equal 50, plan.current_age
+    assert_equal 50, plan.clamped_retire_age          # not 40
+    assert_equal Date.current.year, plan.freedom_date.year   # not a past year
+  end
 end

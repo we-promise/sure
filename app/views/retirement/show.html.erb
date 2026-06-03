@@ -9,6 +9,39 @@
     <p class="text-subdued text-xs"><%= t("retirement.show.preview_note") %></p>
   </header>
 
+  <%= render "retirement/kpis", plan: @plan %>
+
+  <%# What-if — live recompute on input, persist on save %>
+  <section data-controller="retirement-what-if"
+           data-retirement-what-if-url-value="<%= forecast_retirement_path %>"
+           class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-primary font-medium"><%= t("retirement.what_if.title") %></h2>
+      <p class="text-secondary text-xs"><%= t("retirement.what_if.hint") %></p>
+    </div>
+
+    <%= form_with url: retirement_path, method: :patch, data: { retirement_what_if_target: "form" }, class: "space-y-3" do |form| %>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <% [
+          [ "birth_year", @plan.birth_year ],
+          [ "retire_age", @plan.retire_age ],
+          [ "target_spend", @plan.target_spend ],
+          [ "monthly_savings", @plan.monthly_savings ],
+          [ "real_return_pct", @plan.real_return_pct ]
+        ].each do |field, value| %>
+          <label class="text-xs text-secondary space-y-1">
+            <span class="block"><%= t("retirement.what_if.fields.#{field}") %></span>
+            <%= number_field_tag "retirement[#{field}]", value, step: "any",
+                  autocomplete: "off",
+                  class: "form-field__input w-full",
+                  data: { action: "input->retirement-what-if#preview" } %>
+          </label>
+        <% end %>
+      </div>
+      <%= form.submit t("retirement.what_if.save"), class: "text-sm font-medium text-primary underline cursor-pointer" %>
+    <% end %>
+  </section>
+
   <%# Pension sources %>
   <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
     <div class="flex items-center justify-between">

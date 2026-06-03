@@ -415,6 +415,16 @@ class Family < ApplicationRecord
     !retirement_disabled?
   end
 
+  # Default monthly spending anchor for a retirement plan, in the family's
+  # primary currency / today's money. v1 uses the median monthly expense (a
+  # robust central estimate that already applies Sure's expense exclusions);
+  # the precise trailing-12m 10%-trimmed-mean + its methodology label ship
+  # with the PR4 "Why this target?" card.
+  def retirement_spending_baseline(user: nil)
+    monthly = income_statement(user: user || Current.user).median_expense(interval: "month").to_d
+    Money.new(monthly, primary_currency_code)
+  end
+
   private
     def normalize_enabled_currencies!
       if enabled_currencies.blank?

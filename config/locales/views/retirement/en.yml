@@ -4,7 +4,7 @@ en:
     show:
       title: Retirement
       subtitle: Plan when you can stop working — and what you'll need to get there.
-      preview_note: Preview — data entry only for now. Projections and the plan dashboard arrive in a later update.
+      preview_note: Preview — projections are a single deterministic path in today's money. The polished dashboard arrives in a later update.
       sources_title: Pension sources
       add_source: Add source
       no_sources: No pension sources yet.
@@ -24,6 +24,30 @@ en:
       delete: Delete
       edit: Edit
       delete_confirm: Are you sure? This cannot be undone.
+    update:
+      updated: Plan updated.
+    kpis:
+      set_birth_year_heading: Add your birth year to see projections
+      set_birth_year_body: Set your birth year (and tweak the levers below) to project your freedom date, Coast FIRE point, and how long your money lasts.
+      freedom_date: Freedom date
+      retire_at_age: Age %{age}
+      coast_fire: Coast FIRE
+      coast_hint: Stop saving and still retire on time.
+      not_yet: Not yet
+      money_lasts_to: Money lasts to
+      age: "age %{age}"
+      past_age: "past %{age}"
+      terminal: "~%{amount} left at the end"
+    what_if:
+      title: What-if
+      hint: Change a lever — the projection updates live.
+      save: Save plan
+      fields:
+        birth_year: Birth year
+        retire_age: Retire at age
+        target_spend: Target spend / mo
+        monthly_savings: Save / mo
+        real_return_pct: Real return %
     pension_sources:
       new_title: Add pension source
       edit_title: Edit pension source

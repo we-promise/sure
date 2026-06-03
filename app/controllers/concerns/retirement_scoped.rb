@@ -15,7 +15,10 @@ module RetirementScoped
   private
     def ensure_retirement_enabled!
       return if Current.family.retirement_enabled?(Current.user)
-      raise ActionController::RoutingError, "Not Found"
+      # head :not_found rather than raising ActionController::RoutingError:
+      # raising from a before_action renders the routing debug page in
+      # development (consider_all_requests_local), which is misleading.
+      head :not_found
     end
 
     def load_retirement_plan

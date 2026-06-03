@@ -319,7 +319,8 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :retirement, only: %i[show], controller: "retirement" do
+  resource :retirement, only: %i[show update], controller: "retirement" do
+    patch :forecast, on: :member
     scope module: :retirement do
       resources :pension_sources, only: %i[new create edit update destroy]
       resources :statements, only: %i[new create destroy]
