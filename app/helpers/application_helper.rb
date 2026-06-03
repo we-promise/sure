@@ -35,7 +35,7 @@ module ApplicationHelper
   def icon(key, size: "md", color: "default", custom: false, as_button: false, **opts)
     extra_classes = opts.delete(:class)
     sizes = { xs: "w-3 h-3", sm: "w-4 h-4", md: "w-5 h-5", lg: "w-6 h-6", xl: "w-7 h-7", "2xl": "w-8 h-8" }
-    colors = { default: "text-secondary", white: "text-inverse", success: "text-success", warning: "text-warning", destructive: "text-destructive", info: "text-info", current: "text-current" }
+    colors = { default: "text-secondary", white: "text-inverse", inverse: "text-inverse", success: "text-success", warning: "text-warning", destructive: "text-destructive", info: "text-info", current: "text-current" }
 
     icon_classes = class_names(
       "shrink-0",
@@ -75,6 +75,16 @@ module ApplicationHelper
 
   def page_active?(path)
     current_page?(path) || (request.path.start_with?(path) && path != "/")
+  end
+
+  # Wraps a nav-item hash so a single call performs both halves of a
+  # preview-gated entry: returns `nil` for users without the flag (so the
+  # entry never reaches the rendered nav), and stamps `preview: true` on
+  # the hash for users with the flag (so the partial paints the violet
+  # dot on the icon). Use inside an `Array#compact` nav-items list.
+  def preview_gated_nav_item(item)
+    return nil unless preview_features_enabled?
+    item.merge(preview: true)
   end
 
   # Wrapper around I18n.l to support custom date formats

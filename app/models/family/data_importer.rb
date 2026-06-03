@@ -2,7 +2,15 @@ require "set"
 
 class Family::DataImporter
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
-  ACCOUNTABLE_TYPES = Accountable::TYPES.freeze
+  ACCOUNTABLE_TYPE_CLASSES = {
+    "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
+    "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
+    "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
+  }.freeze
+
+  def self.accountable_class_for(type)
+    ACCOUNTABLE_TYPE_CLASSES[type.to_s]
+  end
 
   def initialize(family, ndjson_content)
     @family = family
@@ -78,11 +86,9 @@ class Family::DataImporter
         accountable_data = data["accountable"] || {}
         accountable_type = data["accountable_type"]
 
-        # Skip if accountable type is not valid
-        next unless ACCOUNTABLE_TYPES.include?(accountable_type)
+        accountable_class = self.class.accountable_class_for(accountable_type)
+        next unless accountable_class
 
-        # Build accountable
-        accountable_class = accountable_type.constantize
         accountable = accountable_class.new
         accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
 
@@ -110,8 +116,9 @@ class Family::DataImporter
         account.save!
 
         # Set opening balance if we have a historical balance and the import
-        # does not provide an explicit opening-anchor valuation for this account.
-        if data["balance"].present? && !@imported_opening_anchor_account_ids.include?(old_id)
+        # does not provide either an explicit opening-anchor valuation or an
+        # authoritative balance-history stream for this account.
+        if data["balance"].present? && !skip_opening_balance_import?(old_id, data)
           manager = Account::OpeningBalanceManager.new(account)
           result = manager.set_opening_balance(
             balance: data["balance"].to_d,
@@ -189,8 +196,8 @@ class Family::DataImporter
           color: data["color"] || Category::UNCATEGORIZED_COLOR,
           lucide_icon: data["lucide_icon"] || "shapes"
         )
-
         category.save!
+
         @id_mappings[:categories][old_id] = category.id
       end
 
@@ -215,8 +222,8 @@ class Family::DataImporter
           name: data["name"],
           color: data["color"] || Tag::COLORS.sample
         )
-
         tag.save!
+
         @id_mappings[:tags][old_id] = tag.id
       end
     end
@@ -231,8 +238,8 @@ class Family::DataImporter
           color: data["color"],
           logo_url: data["logo_url"]
         )
-
         merchant.save!
+
         @id_mappings[:merchants][old_id] = merchant.id
       end
     end
@@ -323,10 +330,7 @@ class Family::DataImporter
         end
 
         # Map tag IDs (optional)
-        new_tag_ids = []
-        if data["tag_ids"].present?
-          new_tag_ids = Array(data["tag_ids"]).map { |old_tag_id| @id_mappings[:tags][old_tag_id] }.compact
-        end
+        new_tag_ids = mapped_tag_ids(data["tag_ids"])
 
         transaction = Transaction.new(
           category_id: new_category_id,
@@ -347,13 +351,80 @@ class Family::DataImporter
 
         entry.save!
 
-        # Add tags through the tagging association
-        new_tag_ids.each do |tag_id|
+        @id_mappings[:transactions][old_id] = transaction.id
+        split_rows = importable_split_rows(data)
+
+        if split_rows.any?
+          @created_entries << entry
+          import_split_lines!(entry, split_rows, fallback_tag_ids: new_tag_ids)
+        else
+          new_tag_ids.each do |tag_id|
+            transaction.taggings.create!(tag_id: tag_id)
+          end
+
+          @created_entries << entry
+        end
+      end
+    end
+
+    def mapped_tag_ids(old_tag_ids)
+      Array(old_tag_ids).map { |old_tag_id| @id_mappings[:tags][old_tag_id] }.compact
+    end
+
+    def importable_split_rows(data)
+      rows = data["split_lines"].presence || data["splitLines"].presence || data["splits"].presence
+      Array(rows).filter_map do |row|
+        next unless row.is_a?(Hash)
+
+        amount = row["amount"] || row["amount_money"] || row["amount_decimal"]
+        next if amount.blank?
+
+        category_id = remap_optional_id(:categories, row["category_id"])
+        merchant_id = remap_optional_id(:merchants, row["merchant_id"])
+
+        {
+          old_id: row["id"],
+          name: row["name"].presence || row["memo"].presence || row["description"].presence || "Imported split",
+          amount: amount.to_d,
+          category_id: category_id,
+          merchant_id: merchant_id,
+          merchant_id_provided: row.key?("merchant_id"),
+          notes: row["notes"],
+          excluded: boolean_import_value(row, "excluded", default: false),
+          tag_ids: mapped_tag_ids(row["tag_ids"]),
+          tag_ids_provided: row.key?("tag_ids"),
+          kind: row["kind"]
+        }
+      end
+    end
+
+    def import_split_lines!(entry, split_rows, fallback_tag_ids:)
+      children = entry.split!(
+        split_rows.map do |row|
+          {
+            name: row[:name],
+            amount: row[:amount],
+            category_id: row[:category_id],
+            excluded: row[:excluded]
+          }
+        end
+      )
+
+      children.zip(split_rows).each do |child_entry, row|
+        transaction = child_entry.entryable
+        transaction.update!(
+          merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
+          kind: row[:kind].presence || transaction.kind
+        )
+        child_entry.update!(notes: row[:notes]) if row[:notes].present?
+
+        tag_ids = row[:tag_ids_provided] ? row[:tag_ids] : fallback_tag_ids
+        tag_ids.each do |tag_id|
           transaction.taggings.create!(tag_id: tag_id)
         end
 
-        @created_entries << entry
-        @id_mappings[:transactions][old_id] = transaction.id
+        @id_mappings[:transactions][row[:old_id]] = transaction.id if row[:old_id].present?
+        @created_entries << child_entry
       end
     end
 
@@ -537,6 +608,12 @@ class Family::DataImporter
 
         account_ids.add(data["account_id"])
       end
+    end
+
+    def skip_opening_balance_import?(old_id, data)
+      @imported_opening_anchor_account_ids.include?(old_id) ||
+        truthy?(data["skip_opening_balance_import"]) ||
+        truthy?(data["authoritative_balance_history"])
     end
 
     def opening_balance_date_for(old_id, data)
