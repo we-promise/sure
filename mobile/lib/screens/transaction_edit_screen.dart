@@ -360,7 +360,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             Consumer<CategoriesProvider>(
               builder: (context, categoriesProvider, _) {
                 return DropdownButtonFormField<String?>(
-                  initialValue: _selectedCategoryId,
+                  value: _selectedCategoryId,
                   decoration: const InputDecoration(
                     labelText: 'Category',
                     prefixIcon: Icon(Icons.category),
@@ -378,7 +378,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             Consumer<MerchantsProvider>(
               builder: (context, merchantsProvider, _) {
                 return DropdownButtonFormField<String?>(
-                  initialValue: _selectedMerchantId,
+                  value: _selectedMerchantId,
                   decoration: const InputDecoration(
                     labelText: 'Merchant',
                     prefixIcon: Icon(Icons.storefront),
