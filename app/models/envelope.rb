@@ -69,16 +69,24 @@ class Envelope < ApplicationRecord
   def total_spent
     return 0.to_d if category_id.nil? || starts_on.nil?
 
-    @total_spent ||= Entry
-      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .joins("LEFT JOIN exchange_rates er ON er.date = entries.date AND er.from_currency = entries.currency AND er.to_currency = #{self.class.connection.quote(currency)}")
-      .where(account_id: family.accounts.visible.select(:id))
-      .where(transactions: { category_id: spend_category_ids })
-      .where(excluded: false)
-      .where("entries.date >= ?", starts_on)
-      .merge(Transaction.excluding_pending)
-      .sum("entries.amount * COALESCE(er.rate, 1)")
-      .to_d
+    @total_spent ||= begin
+      rate_join = ActiveRecord::Base.sanitize_sql_array([
+        "LEFT JOIN exchange_rates er ON er.date = entries.date " \
+        "AND er.from_currency = entries.currency AND er.to_currency = ?",
+        currency
+      ])
+
+      Entry
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .joins(rate_join)
+        .where(account_id: family.accounts.visible.select(:id))
+        .where(transactions: { category_id: spend_category_ids })
+        .where(excluded: false)
+        .where("entries.date >= ?", starts_on)
+        .merge(Transaction.excluding_pending)
+        .sum("entries.amount * COALESCE(er.rate, 1)")
+        .to_d
+    end
   end
 
   # The running available balance. May go negative when spend outpaces
@@ -160,11 +168,13 @@ class Envelope < ApplicationRecord
   private
     # The envelope's category plus any of its subcategories, so spend logged
     # against a child category (e.g. "Flights" under "Holidays") still debits
-    # the envelope — matching how budget parent categories roll up.
+    # the envelope — matching how budget parent categories roll up. Memoized
+    # and read off the (preloaded on the index) association via `map` rather
+    # than `pluck`, so rendering many envelopes doesn't fire a query each.
     def spend_category_ids
       return [] if category.nil?
 
-      [ category.id ] + category.subcategories.pluck(:id)
+      @spend_category_ids ||= [ category.id ] + category.subcategories.map(&:id)
     end
 
     def category_must_belong_to_family

@@ -4,7 +4,7 @@ class EnvelopesController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :envelope_not_found
 
   def index
-    @envelopes = Current.family.envelopes.alphabetically.includes(:category).to_a
+    @envelopes = Current.family.envelopes.alphabetically.includes(category: :subcategories).to_a
     @negative_count = @envelopes.count(&:negative?)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
@@ -73,7 +73,7 @@ class EnvelopesController < ApplicationController
 
   private
     def set_envelope
-      @envelope = Current.family.envelopes.includes(:category).find(params[:id])
+      @envelope = Current.family.envelopes.includes(category: :subcategories).find(params[:id])
     end
 
     def envelope_not_found
