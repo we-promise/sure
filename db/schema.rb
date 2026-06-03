@@ -833,10 +833,42 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.check_constraint "amount > 0::numeric", name: "chk_goal_pledges_amount_positive"
   end
 
+  create_table "goal_retirement_adjustments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "goal_retirement_id", null: false
+    t.integer "from_age", null: false
+    t.integer "to_age"
+    t.decimal "amount_today", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.string "label", null: false
+    t.string "icon"
+    t.integer "ordinal", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["goal_retirement_id"], name: "index_goal_retirement_adjustments_on_goal_retirement_id"
+  end
+
+  create_table "goal_retirement_statements", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "goal_retirement_id", null: false
+    t.uuid "pension_source_id", null: false
+    t.date "received_on", null: false
+    t.decimal "projected_monthly_amount", precision: 19, scale: 4, null: false
+    t.string "projected_currency", null: false
+    t.integer "projected_at_age"
+    t.decimal "current_points", precision: 8, scale: 2
+    t.text "raw_source_doc"
+    t.text "notes"
+    t.boolean "deleted", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["goal_retirement_id"], name: "index_goal_retirement_statements_on_goal_retirement_id"
+    t.index ["pension_source_id", "received_on"], name: "index_retirement_statements_active_by_received_on", where: "(deleted = false)"
+    t.index ["pension_source_id"], name: "index_goal_retirement_statements_on_pension_source_id"
+  end
+
   create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name", null: false
-    t.decimal "target_amount", precision: 19, scale: 4, null: false
+    t.decimal "target_amount", precision: 19, scale: 4
     t.string "currency", null: false
     t.date "target_date"
     t.string "color"
@@ -847,13 +879,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.string "icon"
     t.string "type", default: "Goal", null: false
     t.uuid "user_id"
+    t.jsonb "retirement_params", default: {}, null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id", "type", "state"], name: "index_goals_on_family_type_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.index ["user_id", "type"], name: "index_goals_on_user_and_type_retirement", where: "((type)::text = 'Goal::Retirement'::text)"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
-    t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
+    t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "type::text <> 'Goal'::text OR target_amount IS NOT NULL", name: "chk_goals_savings_requires_target"
     t.check_constraint "type::text <> 'Goal::Retirement'::text OR user_id IS NOT NULL", name: "chk_goals_retirement_requires_owner"
   end
 
@@ -1391,6 +1425,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.string "subtype"
   end
 
+  create_table "pension_sources", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "goal_retirement_id", null: false
+    t.string "name", null: false
+    t.string "kind", null: false
+    t.string "country", null: false
+    t.string "pension_system", null: false
+    t.string "tax_treatment", null: false
+    t.string "payout_shape", null: false
+    t.integer "start_age", null: false
+    t.integer "end_age"
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.decimal "effective_rate_override", precision: 5, scale: 4
+    t.jsonb "params", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["goal_retirement_id"], name: "index_pension_sources_on_goal_retirement_id"
+    t.check_constraint "amount >= 0::numeric", name: "chk_pension_sources_amount_non_negative"
+    t.check_constraint "start_age >= 0 AND start_age <= 120", name: "chk_pension_sources_start_age_range"
+  end
+
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "plaid_item_id", null: false
     t.string "plaid_id", null: false
@@ -1484,6 +1539,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.index ["inflow_transaction_id", "outflow_transaction_id"], name: "idx_on_inflow_transaction_id_outflow_transaction_id_412f8e7e26", unique: true
     t.index ["inflow_transaction_id"], name: "index_rejected_transfers_on_inflow_transaction_id"
     t.index ["outflow_transaction_id"], name: "index_rejected_transfers_on_outflow_transaction_id"
+  end
+
+  create_table "retirement_bucket_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "goal_retirement_id", null: false
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_retirement_bucket_entries_on_account_id"
+    t.index ["goal_retirement_id", "account_id"], name: "index_retirement_bucket_entries_uniqueness", unique: true
+    t.index ["goal_retirement_id"], name: "index_retirement_bucket_entries_on_goal_retirement_id"
   end
 
   create_table "rule_actions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2037,6 +2102,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   add_foreign_key "goal_pledges", "accounts", on_delete: :restrict
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
+  add_foreign_key "goal_retirement_adjustments", "goals", column: "goal_retirement_id", on_delete: :cascade
+  add_foreign_key "goal_retirement_statements", "goals", column: "goal_retirement_id", on_delete: :cascade
+  add_foreign_key "goal_retirement_statements", "pension_sources", on_delete: :cascade
   add_foreign_key "goals", "families", on_delete: :cascade
   add_foreign_key "goals", "users", on_delete: :restrict
   add_foreign_key "holdings", "account_providers"
@@ -2068,6 +2136,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
+  add_foreign_key "pension_sources", "goals", column: "goal_retirement_id", on_delete: :cascade
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
@@ -2076,6 +2145,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
+  add_foreign_key "retirement_bucket_entries", "accounts", on_delete: :cascade
+  add_foreign_key "retirement_bucket_entries", "goals", column: "goal_retirement_id", on_delete: :cascade
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
   add_foreign_key "rule_conditions", "rules"

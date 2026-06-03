@@ -1,0 +1,25 @@
+<%# locals: (statement:, pension_sources:) %>
+<%= styled_form_with model: statement, url: retirement_statements_path, method: :post, class: "space-y-4" do |f| %>
+  <% if statement.errors.any? %>
+    <div class="text-destructive text-sm space-y-1">
+      <% statement.errors.full_messages.each do |message| %><p><%= message %></p><% end %>
+    </div>
+  <% end %>
+
+  <%= f.collection_select :pension_source_id, pension_sources, :id, :name, { label: t("retirement.statements.form.pension_source") } %>
+  <%= f.date_field :received_on, label: t("retirement.statements.form.received_on"), required: true %>
+  <%= f.money_field :projected_monthly_amount, currency_method: :projected_currency, label: t("retirement.statements.form.projected_monthly_amount"), required: true %>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.number_field :projected_at_age, label: t("retirement.statements.form.projected_at_age") %>
+    <%= f.number_field :current_points, step: "0.01", label: t("retirement.statements.form.current_points") %>
+  </div>
+
+  <%= f.text_field :raw_source_doc, label: t("retirement.statements.form.raw_source_doc") %>
+  <%= f.text_area :notes, rows: 2, label: t("retirement.statements.form.notes") %>
+
+  <div class="flex items-center justify-end gap-3 pt-2">
+    <%= link_to t("retirement.statements.form.cancel"), retirement_path, class: "text-sm text-secondary" %>
+    <%= f.submit t("retirement.statements.form.save") %>
+  </div>
+<% end %>

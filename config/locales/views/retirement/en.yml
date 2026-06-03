@@ -4,5 +4,121 @@ en:
     show:
       title: Retirement
       subtitle: Plan when you can stop working — and what you'll need to get there.
-      placeholder_heading: Retirement preview — coming soon
-      placeholder_body: We're building a unified retirement planning surface. You'll be able to set a target spending number, log pension statements, and see your projected freedom date here.
+      preview_note: Preview — data entry only for now. Projections and the plan dashboard arrive in a later update.
+      sources_title: Pension sources
+      add_source: Add source
+      no_sources: No pension sources yet.
+      starts_at_age: Starts at age %{age}
+      per_month: /mo
+      adjustments_title: Adjustments for retirement
+      add_adjustment: Add adjustment
+      no_adjustments: No adjustments yet.
+      from_age: From age %{age}
+      bucket_title: Retirement bucket
+      bucket_hint: Select the accounts that fund your retirement.
+      save_bucket: Save bucket
+      statements_title: Statement journal
+      statements_subtitle: Every annual pension statement you've received — for the audit trail.
+      log_statement: Log statement
+      no_statements: No statements logged yet.
+      delete: Delete
+      edit: Edit
+      delete_confirm: Are you sure? This cannot be undone.
+    pension_sources:
+      new_title: Add pension source
+      edit_title: Edit pension source
+      create:
+        created: Pension source added.
+      update:
+        updated: Pension source updated.
+      destroy:
+        deleted: Pension source removed.
+      kinds:
+        state: State
+        workplace: Workplace
+        other: Other
+      payout_shapes:
+        monthly_for_life: Monthly · for life
+        monthly_fixed_term: Monthly · fixed term
+        lump_sum: Lump sum
+        lump_plus_annuity: Lump + annuity
+      countries:
+        DE: Germany
+        US: United States
+        UK: United Kingdom
+      pension_systems:
+        de_grv: Gesetzliche Rentenversicherung (GRV)
+        de_bav: Betriebliche Altersvorsorge (bAV)
+        de_riester: Riester-Rente
+        us_ss: US Social Security
+        uk_state: UK State Pension
+        uk_workplace: UK Workplace Pension
+        custom: Custom
+      tax_treatments:
+        de_renten: Rente · Besteuerungsanteil
+        de_bav: bAV · deferred
+        de_riester: Riester
+        de_private: Private · post-tax
+        uk_state: UK State Pension
+        uk_dc_drawdown: UK DC · drawdown
+        uk_dc_25pct: UK DC · 25% tax-free
+        uk_isa: ISA · tax-free
+        custom_post_tax: Custom · post-tax
+      form:
+        name: Name
+        kind: Type
+        country: Country
+        pension_system: System
+        tax_treatment: Tax treatment
+        payout_shape: Payout
+        start_age: Start age
+        end_age: End age (fixed term)
+        amount: Monthly amount
+        currency: Currency
+        effective_rate_override: Net rate override (0–1, optional)
+        save: Save source
+        cancel: Cancel
+    statements:
+      new_title: Log statement
+      create:
+        created: Statement logged.
+      destroy:
+        deleted: Statement removed.
+      table:
+        date: Date
+        source: Source
+        points: Points
+        amount: Projected
+        age: At age
+        notes: Notes
+      form:
+        pension_source: Source
+        received_on: Date received
+        projected_monthly_amount: Projected monthly amount
+        projected_currency: Currency
+        projected_at_age: Projected at age
+        current_points: Points
+        raw_source_doc: Document reference
+        notes: Notes
+        save: Log statement
+        cancel: Cancel
+    adjustments:
+      new_title: Add adjustment
+      edit_title: Edit adjustment
+      create:
+        created: Adjustment added.
+      update:
+        updated: Adjustment updated.
+      destroy:
+        deleted: Adjustment removed.
+      form:
+        label: Label
+        amount_today: Monthly change (today's money)
+        currency: Currency
+        from_age: From age
+        to_age: To age (optional)
+        save: Save adjustment
+        cancel: Cancel
+    bucket:
+      update:
+        updated: Retirement bucket updated.

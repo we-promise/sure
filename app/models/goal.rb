@@ -18,7 +18,7 @@ class Goal < ApplicationRecord
            class_name: "GoalPledge"
 
   validates :name, presence: true, length: { maximum: 255 }
-  validates :target_amount, presence: true, numericality: { greater_than: 0 }
+  validates :target_amount, presence: true, numericality: { greater_than: 0 }, if: :target_amount_required?
   validates :currency, presence: true
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_depository
@@ -412,6 +412,13 @@ class Goal < ApplicationRecord
   def editable_by?(user)
     return false if user.nil?
     family_id == user.family_id
+  end
+
+  # Savings goals carry a user-set target. STI subtypes whose target is
+  # derived (e.g. Goal::Retirement, where the FIRE forecast owns it) opt
+  # out so the plan can exist before any target is computed.
+  def target_amount_required?
+    true
   end
 
   private

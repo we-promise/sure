@@ -1,0 +1,24 @@
+<%# locals: (adjustment:) %>
+<%= styled_form_with model: adjustment,
+      url: adjustment.persisted? ? retirement_adjustment_path(adjustment) : retirement_adjustments_path,
+      method: adjustment.persisted? ? :patch : :post,
+      class: "space-y-4" do |f| %>
+  <% if adjustment.errors.any? %>
+    <div class="text-destructive text-sm space-y-1">
+      <% adjustment.errors.full_messages.each do |message| %><p><%= message %></p><% end %>
+    </div>
+  <% end %>
+
+  <%= f.text_field :label, label: t("retirement.adjustments.form.label"), required: true %>
+  <%= f.money_field :amount_today, label: t("retirement.adjustments.form.amount_today"), required: true %>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.number_field :from_age, label: t("retirement.adjustments.form.from_age"), required: true %>
+    <%= f.number_field :to_age, label: t("retirement.adjustments.form.to_age") %>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-2">
+    <%= link_to t("retirement.adjustments.form.cancel"), retirement_path, class: "text-sm text-secondary" %>
+    <%= f.submit t("retirement.adjustments.form.save") %>
+  </div>
+<% end %>

@@ -1,0 +1,40 @@
+<%# locals: (source:) %>
+<%= styled_form_with model: source,
+      url: source.persisted? ? retirement_pension_source_path(source) : retirement_pension_sources_path,
+      method: source.persisted? ? :patch : :post,
+      class: "space-y-4" do |f| %>
+  <% if source.errors.any? %>
+    <div class="text-destructive text-sm space-y-1">
+      <% source.errors.full_messages.each do |message| %><p><%= message %></p><% end %>
+    </div>
+  <% end %>
+
+  <%= f.text_field :name, label: t("retirement.pension_sources.form.name"), required: true %>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.select :kind, PensionSource::KINDS.map { |k| [ t("retirement.pension_sources.kinds.#{k}"), k ] }, { label: t("retirement.pension_sources.form.kind") } %>
+    <%= f.select :country, PensionSource::COUNTRIES.map { |c| [ t("retirement.pension_sources.countries.#{c}"), c ] }, { label: t("retirement.pension_sources.form.country") } %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.select :pension_system, PensionSource::PENSION_SYSTEMS.map { |s| [ t("retirement.pension_sources.pension_systems.#{s}"), s ] }, { label: t("retirement.pension_sources.form.pension_system") } %>
+    <%= f.select :tax_treatment, PensionSource::TAX_TREATMENTS.map { |tt| [ t("retirement.pension_sources.tax_treatments.#{tt}"), tt ] }, { label: t("retirement.pension_sources.form.tax_treatment") } %>
+  </div>
+
+  <%= f.select :payout_shape, PensionSource::PAYOUT_SHAPES.map { |s| [ t("retirement.pension_sources.payout_shapes.#{s}"), s ] }, { label: t("retirement.pension_sources.form.payout_shape") } %>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.number_field :start_age, label: t("retirement.pension_sources.form.start_age"), required: true %>
+    <%= f.number_field :end_age, label: t("retirement.pension_sources.form.end_age") %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.money_field :amount, label: t("retirement.pension_sources.form.amount"), required: true %>
+    <%= f.number_field :effective_rate_override, step: "0.0001", label: t("retirement.pension_sources.form.effective_rate_override") %>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-2">
+    <%= link_to t("retirement.pension_sources.form.cancel"), retirement_path, class: "text-sm text-secondary" %>
+    <%= f.submit t("retirement.pension_sources.form.save") %>
+  </div>
+<% end %>

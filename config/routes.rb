@@ -319,7 +319,14 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :retirement, only: %i[show], controller: "retirement"
+  resource :retirement, only: %i[show], controller: "retirement" do
+    scope module: :retirement do
+      resources :pension_sources, only: %i[new create edit update destroy]
+      resources :statements, only: %i[new create destroy]
+      resources :adjustments, only: %i[new create edit update destroy]
+      resource :bucket, only: %i[update]
+    end
+  end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
