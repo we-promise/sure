@@ -1,6 +1,6 @@
 class Envelopes::AvatarComponent < ApplicationComponent
   SIZES = {
-    "sm" => { box: "w-6 h-6", text: "text-[10px]", radius: "rounded-md" },
+    "sm" => { box: "w-6 h-6", text: "text-xs", radius: "rounded-md" },
     "md" => { box: "w-9 h-9", text: "text-sm", radius: "rounded-lg" },
     "lg" => { box: "w-11 h-11", text: "text-base", radius: "rounded-xl" },
     "xl" => { box: "w-16 h-16", text: "text-2xl", radius: "rounded-2xl" }

@@ -176,6 +176,25 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_equal 0.to_d, envelope.total_spent
   end
 
+  test "budget-excluded kinds (transfers, CC payments) do not debit the envelope" do
+    envelope = build_envelope(months_ago: 0, monthly_contribution: 500)
+    create_transaction(account: @account, amount: 100, date: Date.current, category: @category, kind: "funds_movement")
+    create_transaction(account: @account, amount: 80, date: Date.current, category: @category, kind: "cc_payment")
+
+    assert_equal 0.to_d, envelope.total_spent
+    assert_equal 500.to_d, envelope.current_balance
+  end
+
+  test "recent_entries excludes budget-excluded kinds" do
+    envelope = build_envelope(months_ago: 0)
+    spend = create_transaction(account: @account, amount: 50, date: Date.current, category: @category)
+    transfer = create_transaction(account: @account, amount: 75, date: Date.current, category: @category, kind: "funds_movement")
+
+    ids = envelope.recent_entries.map(&:id)
+    assert_includes ids, spend.id
+    assert_not_includes ids, transfer.id
+  end
+
   test "recent_entries excludes pending transactions" do
     envelope = build_envelope(months_ago: 0)
     posted = create_transaction(account: @account, amount: 50, date: Date.current, category: @category)
