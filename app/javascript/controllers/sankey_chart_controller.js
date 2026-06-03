@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
+import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 
 // Connects to data-controller="sankey-chart"
@@ -509,10 +510,9 @@ export default class extends Controller {
     this.tooltip = d3
       .select(dialog || document.body)
       .append("div")
-      .attr(
-        "class",
-        "bg-container text-primary text-sm font-sans p-2 border border-secondary rounded-lg pointer-events-none absolute z-50 top-0 privacy-sensitive",
-      )
+      // Shared visual contract + this chart's positioning class; opacity is
+      // toggled via inline style below.
+      .attr("class", `${CHART_TOOLTIP_CLASSES} top-0`)
       .style("opacity", 0)
       .style("pointer-events", "none");
   }
