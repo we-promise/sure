@@ -22,31 +22,42 @@ export default class extends Controller {
     presetColors: Array,
   };
 
-  initialize() {
-    this.pickerBtnTarget.addEventListener("click", () => {
-      this.showPaletteSection();
-    });
-
-    this.colorInputTarget.addEventListener("input", (e) => {
-      this.picker.setColor(e.target.value);
-    });
-
-    this.detailsTarget.addEventListener("toggle", (e) => {
+  connect() {
+    // Bound references stored on the instance so disconnect() can remove
+    // them. Without this, every Turbo navigation that re-renders the
+    // picker stacks another listener on the same node.
+    this._onPickerBtnClick = () => this.showPaletteSection();
+    this._onColorInputInput = (e) => this.picker?.setColor(e.target.value);
+    this._onDetailsToggle = (e) => {
       if (!this.colorInputTarget.checkValidity()) {
         e.preventDefault();
         this.colorInputTarget.reportValidity();
         e.target.open = true;
       }
-      this.updatePopupPosition()
-    });
+      this.updatePopupPosition();
+    };
+
+    this.pickerBtnTarget.addEventListener("click", this._onPickerBtnClick);
+    this.colorInputTarget.addEventListener("input", this._onColorInputInput);
+    this.detailsTarget.addEventListener("toggle", this._onDetailsToggle);
+    document.addEventListener("mousedown", this.handleOutsideClick);
 
     this.selectedIcon = null;
 
     if (!this.presetColorsValue.includes(this.colorInputTarget.value)) {
       this.colorPickerRadioBtnTarget.checked = true;
     }
+  }
 
-    document.addEventListener("mousedown", this.handleOutsideClick);
+  disconnect() {
+    this.pickerBtnTarget.removeEventListener("click", this._onPickerBtnClick);
+    this.colorInputTarget.removeEventListener("input", this._onColorInputInput);
+    this.detailsTarget.removeEventListener("toggle", this._onDetailsToggle);
+    document.removeEventListener("mousedown", this.handleOutsideClick);
+    if (this.picker) {
+      this.picker.destroyAndRemove();
+      this.picker = null;
+    }
   }
 
   initPicker() {
@@ -85,8 +96,12 @@ export default class extends Controller {
   }
 
   updateAvatarColors(color) {
-    this.avatarTarget.style.backgroundColor = `${this.#backgroundColor(color)}`;
-    this.avatarTarget.style.color = color;
+    // Update the `--avatar-color` CSS variable instead of overriding
+    // `style.color` / `style.backgroundColor` directly. The `.goal-avatar`
+    // class does theme-aware `color-mix` work off the variable (light mode
+    // darkens the letter, dark mode uses the full color) — overriding the
+    // resolved values inline killed that contrast logic.
+    this.avatarTarget.style.setProperty("--avatar-color", color);
   }
 
   handleIconColorChange(e) {

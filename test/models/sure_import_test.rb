@@ -37,8 +37,23 @@ class SureImportTest < ActiveSupport::TestCase
   end
 
   test "max_row_count is higher than standard imports" do
-    assert_equal 100_000, SureImport.max_row_count
-    assert_equal 100_000, @import.max_row_count
+    with_env_overrides(
+      "SURE_IMPORT_MAX_ROWS" => nil,
+      "SURE_IMPORT_MAX_NDJSON_SIZE_MB" => nil
+    ) do
+      assert_equal 100_000, SureImport.max_row_count
+      assert_equal 100_000, @import.max_row_count
+    end
+  end
+
+  test "max row count and ndjson size can be configured by environment" do
+    with_env_overrides(
+      "SURE_IMPORT_MAX_ROWS" => "150000",
+      "SURE_IMPORT_MAX_NDJSON_SIZE_MB" => "64"
+    ) do
+      assert_equal 150_000, SureImport.max_row_count
+      assert_equal 64.megabytes, SureImport.max_ndjson_size
+    end
   end
 
   test "dry_run totals can be derived from existing line type counts" do
@@ -309,11 +324,14 @@ class SureImportTest < ActiveSupport::TestCase
       } }
     ]))
 
+    initial_transaction_count = @family.entries.where(entryable_type: "Transaction").count
+
     @import.publish
     @import.reload
 
     assert_equal "failed", @import.status
     assert_match(/readback verification mismatch/i, @import.error)
+    assert_equal initial_transaction_count, @family.entries.where(entryable_type: "Transaction").count
     assert_equal "mismatch", @import.readback_verification["status"]
     assert_equal({ "expected" => 1, "actual" => 0 }, @import.readback_verification.dig("mismatches", "transactions"))
   end
@@ -431,6 +449,43 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "Revertable Account", @import.accounts.first.name
   end
 
+  test "import tracks split parent entries for revert" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "split-account",
+        name: "Split Revert Account",
+        balance: "500.00",
+        currency: "USD",
+        accountable_type: "Depository"
+      } },
+      { type: "Transaction", data: {
+        id: "split-parent",
+        account_id: "split-account",
+        date: "2024-01-15",
+        amount: "100.00",
+        name: "Revertable split parent",
+        currency: "USD",
+        split_lines: [
+          { id: "split-child-1", amount: "40.00", name: "Split child one" },
+          { id: "split-child-2", amount: "60.00", name: "Split child two" }
+        ]
+      } }
+    ]))
+
+    @import.publish
+
+    parent_entry = @family.entries.find_by!(name: "Revertable split parent")
+    split_entry_ids = [ parent_entry.id, *parent_entry.child_entries.pluck(:id) ]
+
+    assert parent_entry.split_parent?
+    assert_equal 3, @import.entries.where(id: split_entry_ids).count
+
+    assert_difference -> { Entry.where(id: split_entry_ids).count }, -3 do
+      @import.revert
+    end
+    assert_equal "pending", @import.reload.status
+  end
+
   test "publishes later enqueues job" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -447,6 +502,242 @@ class SureImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "importing", @import.status
+  end
+
+  test "publish_later raises custom error when preflight passes but import is not publishable" do
+    @import.stubs(:validate_sure_preflight!).returns(true)
+    @import.stubs(:publishable?).returns(false)
+
+    assert_no_enqueued_jobs do
+      error = assert_raises SureImport::NotPublishableError do
+        @import.publish_later
+      end
+      assert_equal "Import was uploaded but has no publishable records.", error.message
+    end
+    assert_equal "pending", @import.reload.status
+  end
+
+  test "publish_later restores previous status when enqueue fails" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Queued Account",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "Depository"
+      } }
+    ]))
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    assert_no_enqueued_jobs do
+      error = assert_raises StandardError do
+        @import.publish_later
+      end
+      assert_equal "queue down", error.message
+    end
+
+    assert_equal "pending", @import.reload.status
+  end
+
+  test "preflight reports blocking errors before publish_later enqueues" do
+    @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Blocked Account",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "Depository"
+      } },
+      { type: "Category", data: { id: "category-1", name: "Groceries" } }
+    ]))
+
+    assert_no_enqueued_jobs do
+      assert_raises SureImport::PreflightError do
+        @import.publish_later
+      end
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "Category name \"Groceries\" already exists"
+  end
+
+  test "publish_later reports unsupported records through preflight before publishable check" do
+    attach_ndjson(build_ndjson([
+      { type: "MysteryType", data: { id: "mystery-1" } }
+    ]))
+
+    assert_no_enqueued_jobs do
+      assert_raises SureImport::PreflightError do
+        @import.publish_later
+      end
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "unsupported record type MysteryType"
+  end
+
+  test "publish preflight failure does not partially import records" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Should Not Import",
+        balance: "100",
+        currency: "USD",
+        accountable_type: "NotReal"
+      } }
+    ]))
+
+    assert_no_difference -> { @family.accounts.where(name: "Should Not Import").count } do
+      @import.publish
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "invalid accountable_type"
+  end
+
+  test "preflight catches missing fields unsupported types duplicate valuations and references" do
+    attach_ndjson(build_ndjson([
+      { type: "RecurringTransaction", data: { id: "recurring-1" } },
+      { type: "MysteryType", data: { id: "mystery-1" } },
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Bad Subtype",
+        balance: "100",
+        accountable_type: "Depository",
+        accountable: { subtype: "not-a-subtype" }
+      } },
+      { type: "Valuation", data: { account_id: "account-1", date: "2024-01-01", amount: "100" } },
+      { type: "Valuation", data: { account_id: "account-1", date: "2024-01-01", amount: "101" } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2024-01-02",
+        amount: "-5",
+        tag_ids: [ "missing-tag" ]
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    codes = result.errors.map { |error| error[:code] }
+
+    assert_not result.valid?
+    assert_includes codes, "missing_required_fields"
+    assert_includes codes, "unsupported_record_type"
+    assert_includes codes, "invalid_accountable_subtype"
+    assert_includes codes, "duplicate_valuation"
+    assert_includes codes, "missing_reference"
+  end
+
+  test "preflight rejects invalid accountable types through explicit allowlist" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Bad Accountable",
+        balance: "100",
+        accountable_type: "Kernel",
+        accountable: { subtype: "system" }
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_nil Accountable.from_type("Kernel")
+    assert_equal Depository, Accountable.from_type("Depository")
+    assert_equal [ "invalid_accountable_type" ], result.errors.map { |error| error[:code] }
+    assert_includes result.error_message, 'invalid accountable_type "Kernel"'
+  end
+
+  test "preflight catches duplicate taxonomy names inside ndjson" do
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "category-1", name: "Groceries" } },
+      { type: "Category", data: { id: "category-2", name: "Groceries" } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "duplicate_taxonomy_name"
+    assert_includes result.error_message, "appears more than once"
+  end
+
+  test "preflight rejects split line totals that cannot import atomically" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "split-account",
+        name: "Split Checking",
+        balance: "500.00",
+        currency: "USD",
+        accountable_type: "Depository"
+      } },
+      { type: "Transaction", data: {
+        id: "split-parent",
+        account_id: "split-account",
+        date: "2024-01-15",
+        amount: "100.00",
+        name: "Invalid split parent",
+        currency: "USD",
+        split_lines: [
+          { id: "split-child-1", amount: "40.00", name: "Split child one" },
+          { id: "split-child-2", amount: "50.00", name: "Split child two" }
+        ]
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "split_amount_mismatch"
+
+    assert_no_enqueued_jobs do
+      assert_raises SureImport::PreflightError do
+        @import.publish_later
+      end
+    end
+    assert_equal "failed", @import.reload.status
+  end
+
+  test "strict preflight requires references to be present in the same ndjson" do
+    existing_account = @family.accounts.first
+    existing_parent = @family.categories.create!(
+      name: "Existing Parent",
+      color: "#407706",
+      lucide_icon: "shapes"
+    )
+
+    attach_ndjson(build_ndjson([
+      {
+        type: "Valuation",
+        data: {
+          account_id: existing_account.id,
+          date: "2024-01-01",
+          amount: "100"
+        }
+      },
+      {
+        type: "Category",
+        data: {
+          id: "category-child",
+          name: "Imported Child",
+          parent_id: existing_parent.id
+        }
+      }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_equal(
+      [ "missing_reference", "missing_reference" ],
+      result.errors.map { |error| error[:code] }
+    )
+    assert_includes result.error_message, "references missing account_id"
+    assert_includes result.error_message, "references missing parent_id"
   end
 
   private
@@ -511,5 +802,77 @@ class SureImportTest < ActiveSupport::TestCase
           currency: "USD"
         } }
       ])
+    end
+end
+
+class Import::PreflightTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+  end
+
+  test "SureImport preflight reports strict taxonomy collisions" do
+    @family.tags.create!(name: "Reviewed", color: "#12B76A")
+    ndjson = build_ndjson([
+      { type: "Tag", data: { id: "tag-1", name: "Reviewed" } }
+    ])
+
+    assert_no_difference("Import.count") do
+      response = Import::Preflight.new(
+        family: @family,
+        params: { type: "SureImport", raw_file_content: ndjson }
+      ).call
+      payload = response.payload[:data]
+
+      assert_equal :ok, response.status
+      assert_equal false, payload[:valid]
+      assert_equal "existing_taxonomy_collision", payload[:errors].first[:code]
+    end
+  end
+
+  test "SureImport preflight counts invalid rows instead of validation errors" do
+    ndjson = build_ndjson([
+      [],
+      { type: "Transaction", data: { id: "transaction-1" } }
+    ])
+
+    response = Import::Preflight.new(
+      family: @family,
+      params: { type: "SureImport", raw_file_content: ndjson }
+    ).call
+    payload = response.payload[:data]
+
+    assert_equal :ok, response.status
+    assert_equal 2, payload[:stats][:rows_count]
+    assert_equal 1, payload[:stats][:valid_rows_count]
+    assert_equal 1, payload[:stats][:invalid_rows_count]
+    assert_operator payload[:errors].size, :>, payload[:stats][:invalid_rows_count]
+  end
+
+  test "SureImport preflight handles missing entity counts" do
+    result = Struct.new(:stats, :errors, :warnings, keyword_init: true) do
+      def valid?
+        true
+      end
+    end.new(
+      stats: { rows_count: 1, valid_rows_count: 1, invalid_rows_count: 0 },
+      errors: [],
+      warnings: []
+    )
+    SureImport::Preflight.stubs(:new).returns(stub(call: result))
+
+    response = Import::Preflight.new(
+      family: @family,
+      params: { type: "SureImport", raw_file_content: "{}" }
+    ).call
+    payload = response.payload[:data]
+
+    assert_equal :ok, response.status
+    assert_includes payload[:warnings], "No importable records were found."
+  end
+
+  private
+
+    def build_ndjson(records)
+      records.map(&:to_json).join("\n")
     end
 end
