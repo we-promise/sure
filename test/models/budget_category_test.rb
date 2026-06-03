@@ -255,4 +255,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     @subcategory_inheriting_bc.stubs(:actual_spending).returns(10)
     assert @subcategory_inheriting_bc.visible_on_track?
   end
+
+  test "suggested_daily_spending uses budget.end_date for custom month periods" do
+    @family.update!(month_start_day: 15)
+
+    # Today (Jun 1) is in the calendar month after the budget period start (May 15).
+    # The pre-fix helper compared start_date.month to Date.current.month and returned nil here.
+    travel_to Date.new(2026, 6, 1) do
+      @budget.update!(start_date: Date.new(2026, 5, 15), end_date: Date.new(2026, 6, 14))
+      @parent_budget_category.stubs(:actual_spending).returns(0)
+
+      suggestion = @parent_budget_category.suggested_daily_spending
+
+      assert suggestion, "expected suggested_daily_spending when current period spans calendar months"
+      assert_equal 14, suggestion[:days_remaining]
+    end
+  end
 end

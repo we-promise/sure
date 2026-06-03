@@ -134,13 +134,13 @@ hu:
         next: Tovább
       show:
         invalid_data: "Érvénytelen adatok találhatók, kérjük szerkeszd, amíg minden hibát ki nem javítasz"
-        account_mapping_description: Rendeld hozzá az importált fájl számláit a Maybe meglévő számláihoz. Új számlákat is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
+        account_mapping_description: Rendeld hozzá az importált fájl számláit a %{product_name} meglévő számláihoz. Új számlákat is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
         account_mapping_title: Számlák hozzárendelése
-        account_type_mapping_description: Rendeld hozzá az importált fájl számlatípusait a Maybe típusaihoz.
+        account_type_mapping_description: Rendeld hozzá az importált fájl számlatípusait a %{product_name} típusaihoz.
         account_type_mapping_title: Számlatípusok hozzárendelése
-        category_mapping_description: Rendeld hozzá az importált fájl kategóriáit a Maybe meglévő kategóriáihoz. Új kategóriákat is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
+        category_mapping_description: Rendeld hozzá az importált fájl kategóriáit a %{product_name} meglévő kategóriáihoz. Új kategóriákat is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
         category_mapping_title: Kategóriák hozzárendelése
-        tag_mapping_description: Rendeld hozzá az importált fájl címkéit a Maybe meglévő címkéihez. Új címkéket is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
+        tag_mapping_description: Rendeld hozzá az importált fájl címkéit a %{product_name} meglévő címkéihez. Új címkéket is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
         tag_mapping_title: Címkék hozzárendelése
     uploads:
       update:

@@ -1,0 +1,42 @@
+---
+vi:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Không tìm thấy xác thực OIDC đang chờ xử lý
+      title_link: Liên kết tài khoản OIDC
+      title_create: Tạo tài khoản
+      verify_heading: Xác minh danh tính của bạn
+      verify_description_html: "Để liên kết tài khoản %{provider} của bạn%{email_suffix}, vui lòng xác minh danh tính bằng cách nhập mật khẩu."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Email
+      email_placeholder: Nhập email của bạn
+      password_label: Mật khẩu
+      password_placeholder: Nhập mật khẩu của bạn
+      verify_hint: Điều này giúp đảm bảo chỉ bạn mới có thể liên kết các tài khoản bên ngoài với hồ sơ của mình.
+      submit_link: Liên kết tài khoản
+      create_heading: Tạo tài khoản mới
+      create_description_html: "Không tìm thấy tài khoản nào với email <strong>%{email}</strong>. Nhấp bên dưới để tạo tài khoản mới bằng danh tính %{provider} của bạn."
+      info_email: "Email:"
+      info_name: "Tên:"
+      submit_create: Tạo tài khoản
+      submit_accept_invitation: Chấp nhận lời mời
+      account_creation_disabled: Tạo tài khoản mới qua đăng nhập một lần đã bị tắt. Vui lòng liên hệ với quản trị viên để tạo tài khoản của bạn.
+      cancel: Hủy
+    create_link:
+      no_pending_oidc: Không tìm thấy xác thực OIDC đang chờ xử lý
+    new_user:
+      no_pending_oidc: Không tìm thấy xác thực OIDC đang chờ xử lý
+      title: Hoàn tất tài khoản của bạn
+      heading: Tạo tài khoản của bạn
+      description: Vui lòng xác nhận thông tin của bạn để hoàn tất tạo tài khoản với danh tính %{provider}.
+      email_label: Email (từ nhà cung cấp SSO)
+      first_name_label: Tên
+      first_name_placeholder: Nhập tên của bạn
+      last_name_label: Họ
+      last_name_placeholder: Nhập họ của bạn
+      submit: Tạo tài khoản
+      cancel: Hủy
+    create_user:
+      no_pending_oidc: Không tìm thấy xác thực OIDC đang chờ xử lý
+      account_creation_disabled: Tạo tài khoản SSO đã bị tắt. Vui lòng liên hệ với quản trị viên.
+      account_created: "Chào mừng! Tài khoản của bạn đã được tạo."
