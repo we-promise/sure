@@ -246,4 +246,31 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert draft_account.active?
     assert_redirected_to account_path(draft_account)
   end
+
+  test "address update tolerates a non-String stored return_to without raising" do
+    draft_account = Account.create!(
+      family: @user.family,
+      name: "Draft Property Array",
+      accountable: Property.new,
+      status: "draft",
+      balance: 500000,
+      currency: "USD"
+    )
+
+    # `?return_to[]=foo` makes params[:return_to] an Array; safe_return_to must
+    # reject it via the is_a?(String) guard instead of raising NoMethodError.
+    get new_account_path("return_to" => [ "/transactions" ])
+
+    patch update_address_property_path(draft_account), params: {
+      property: {
+        address_attributes: {
+          line1: "1 Safe St", locality: "NYC", region: "NY", country: "US", postal_code: "10001"
+        }
+      }
+    }
+
+    draft_account.reload
+    assert draft_account.active?
+    assert_redirected_to account_path(draft_account)
+  end
 end
