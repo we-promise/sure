@@ -8,6 +8,9 @@ class Provider::Anthropic < Provider
   DEFAULT_ANTHROPIC_MODEL_PREFIXES = %w[claude].freeze
   DEFAULT_MODEL = "claude-sonnet-4-6"
 
+  # All Claude 3.5+ and 4.x models accept native document content blocks.
+  VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
+
   def self.effective_model
     # Use ENV[].presence rather than ENV.fetch(KEY, default) so the Setting
     # lookup is only performed when the ENV var is actually absent — otherwise
@@ -146,15 +149,56 @@ class Provider::Anthropic < Provider
   end
 
   def supports_pdf_processing?(model: @default_model)
-    false
+    return true if custom_endpoint?
+
+    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
   end
 
   def process_pdf(pdf_content:, model: "", family: nil)
-    raise Error, "process_pdf not yet implemented for Provider::Anthropic"
+    with_provider_response do
+      effective_model = model.presence || @default_model
+      raise Error, "Model does not support PDF processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
+
+      trace = create_langfuse_trace(
+        name: "anthropic.process_pdf",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = PdfProcessor.new(
+        client,
+        model: effective_model,
+        pdf_content: pdf_content,
+        langfuse_trace: trace,
+        family: family
+      ).process
+
+      upsert_langfuse_trace(trace: trace, output: result.to_h)
+
+      result
+    end
   end
 
   def extract_bank_statement(pdf_content:, model: "", family: nil)
-    raise Error, "extract_bank_statement not yet implemented for Provider::Anthropic"
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "anthropic.extract_bank_statement",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = BankStatementExtractor.new(
+        client: client,
+        pdf_content: pdf_content,
+        model: effective_model,
+        langfuse_trace: trace,
+        family: family
+      ).extract
+
+      upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
+
+      result
+    end
   end
 
   def chat_response(
