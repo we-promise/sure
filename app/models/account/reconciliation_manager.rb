@@ -12,7 +12,8 @@ class Account::ReconciliationManager
 
     unless dry_run
       prepared_valuation.save!
-      GoalPledge::Reconciler.new(prepared_valuation).run
+      contribution = valuation_contribution(prepared_valuation, old_balance_components)
+      GoalPledge::Reconciler.new(prepared_valuation, valuation_delta: contribution).run
     end
 
     ReconciliationResult.new(
@@ -41,6 +42,16 @@ class Account::ReconciliationManager
       :error_message,
       keyword_init: true
     )
+
+    # Contribution recorded by this reconciliation: how much the balance moved
+    # vs. the prior balance. This (not the full new balance) is what a
+    # manual_save GoalPledge matches against. A nil prior balance (brand-new
+    # account with no balance record yet) is treated as 0, so the first
+    # reconciliation's full balance is its contribution.
+    def valuation_contribution(valuation, old_balance_components)
+      old_balance = old_balance_components[:balance] || 0
+      valuation.amount.to_d - old_balance.to_d
+    end
 
     def prepare_reconciliation(balance, date, existing_valuation)
       valuation_record = existing_valuation ||
