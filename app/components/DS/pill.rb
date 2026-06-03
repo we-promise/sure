@@ -93,8 +93,13 @@ class DS::Pill < DesignSystemComponent
     p = palette
     case style
     when :filled
+      # Filled = solid / high-emphasis. The tone-500 fill fails white-label AA on
+      # the brighter tones (amber 2.4:1, green 2.6:1, red 4.0:1) and glares on dark
+      # surfaces. Deepen to tone-700 — every `fill` is a `*-500`, so derive -700 —
+      # so the white label clears AA on every tone in both themes.
+      strong_fill = p[:fill].sub("-500)", "-700)")
       <<~CSS.strip.gsub(/\s+/, " ")
-        background-color: #{p[:fill]};
+        background-color: #{strong_fill};
         color: var(--color-white);
         border-color: transparent;
       CSS
