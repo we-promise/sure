@@ -203,4 +203,47 @@ class TransferTest < ActiveSupport::TestCase
     transfer.update!(source_fee_amount: 3, destination_fee_amount: 2)
     assert_equal 5, transfer.total_fee
   end
+
+  test "destination fee larger than amount inverts inflow sign and fails validation" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: 50)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      destination_fee_amount: 150
+    )
+
+    # inflow amount (50) is positive, which means destination is also outflowing
+    assert transfer.invalid?
+    assert_equal "Must have opposite amounts", transfer.errors.full_messages.first
+  end
+
+  test "negative source fee is rejected" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      source_fee_amount: -5
+    )
+
+    assert transfer.invalid?
+    assert_equal [ "Source fee amount must be greater than or equal to 0" ], transfer.errors.full_messages
+  end
+
+  test "negative destination fee is rejected" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      destination_fee_amount: -5
+    )
+
+    assert transfer.invalid?
+    assert_equal [ "Destination fee amount must be greater than or equal to 0" ], transfer.errors.full_messages
+  end
 end
