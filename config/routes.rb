@@ -297,6 +297,8 @@ Rails.application.routes.draw do
   resources :categories, except: :show do
     resources :deletions, only: %i[new create], module: :category
 
+    get :merge, on: :collection
+    post :perform_merge, on: :collection
     post :bootstrap, on: :collection
     delete :destroy_all, on: :collection
   end
@@ -314,6 +316,22 @@ Rails.application.routes.draw do
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
+  end
+
+  resources :goals do
+    member do
+      patch :pause
+      patch :resume
+      patch :complete
+      patch :archive
+      patch :unarchive
+    end
+
+    resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
+      member do
+        patch :renew
+      end
+    end
   end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do
@@ -395,6 +413,7 @@ Rails.application.routes.draw do
       post :merge_duplicate
       post :dismiss_duplicate
       post :unlock
+      patch :tags, action: :update_tags
     end
   end
 
@@ -532,6 +551,10 @@ Rails.application.routes.draw do
         post :preflight, on: :collection
         get :rows, on: :member
       end
+      resources :import_sessions, only: [ :show, :create ] do
+        post :chunks, on: :member, action: :create_chunk
+        post :publish, on: :member
+      end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resource :family_settings, only: [ :show ], controller: :family_settings
@@ -604,6 +627,22 @@ Rails.application.routes.draw do
   end
 
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :akahu_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
       get :select_accounts
