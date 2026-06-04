@@ -131,39 +131,6 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Re-fetch ASPSP list from provider to avoid session cookie overflow.
-    # We do not store full ASPSP metadata in the session to stay within the 4KB limit;
-    # instead, we re-query the provider here for the final authorization parameters.
-    aspsp_data = nil
-    begin
-      provider_for_lookup = @enable_banking_item.enable_banking_provider
-      if provider_for_lookup
-        response = provider_for_lookup.get_aspsps(country: @enable_banking_item.country_code)
-        raw_aspsps = response[:aspsps] || response["aspsps"] || []
-        found = raw_aspsps.find { |a| a[:name] == aspsp_name || a["name"] == aspsp_name }
-        aspsp_data = found&.with_indifferent_access
-      end
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.warn "Enable Banking: could not fetch ASPSP metadata in authorize: #{e.message}"
-    end
-
-    # Block DECOUPLED banks — our OAuth redirect flow doesn't support them
-    if aspsp_data.present?
-      # Adjust psu_type if the bank does not support the requested type
-      supported_types = Array(aspsp_data[:psu_types]).map(&:to_s)
-      if supported_types.any? && !supported_types.include?(psu_type)
-        psu_type = supported_types.first
-      end
-
-      first_method = Array(aspsp_data[:auth_methods]).first
-      approach = first_method&.dig(:approach) || first_method&.dig("approach")
-      if approach == "DECOUPLED"
-        redirect_to settings_providers_path, alert: t(".decoupled_not_supported",
-          default: "This bank uses a separate device authentication method which is not yet supported. Please add this account manually.")
-        return
-      end
-    end
-
     begin
       target_item = if params[:new_connection] == "true"
         Current.family.enable_banking_items.create!(
@@ -181,12 +148,14 @@ class EnableBankingItemsController < ApplicationController
 
       language = I18n.locale.to_s.split("-").first
 
-      redirect_url = target_item.start_authorization(
+      # begin_authorization! re-fetches ASPSP metadata and auto-selects the best
+      # auth method (REDIRECT > DECOUPLED > EMBEDDED). Decoupled/MFA banks proceed
+      # through Enable Banking's hosted SCA page rather than being blocked.
+      redirect_url = target_item.begin_authorization!(
         aspsp_name: aspsp_name,
         redirect_url: enable_banking_callback_url,
         state: target_item.id,
         psu_type: psu_type,
-        aspsp_data: aspsp_data,
         language: language
       )
 
@@ -269,11 +238,11 @@ class EnableBankingItemsController < ApplicationController
     begin
       language = I18n.locale.to_s.split("-").first
 
-      redirect_url = @enable_banking_item.start_authorization(
-        aspsp_name: @enable_banking_item.aspsp_name,
+      # Route through the shared path so reauthorization re-selects the same auth
+      # method (decoupled banks included) instead of falling back to a default.
+      redirect_url = @enable_banking_item.begin_authorization!(
         redirect_url: enable_banking_callback_url,
         state: @enable_banking_item.id,
-        psu_type: @enable_banking_item.psu_type || "personal",
         language: language
       )
 
