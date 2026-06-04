@@ -15,7 +15,8 @@ class CategoryListGroupViewTest < ActionView::TestCase
 
     html = render(partial: "categories/category_list_group", locals: {
       title: "Categories",
-      categories: [ category ]
+      categories: [ category ],
+      family: category.family
     })
 
     assert_includes html, new_category_deletion_path(category)

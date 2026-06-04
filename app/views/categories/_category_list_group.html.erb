@@ -1,8 +1,8 @@
-<%# locals: (title:, categories:, category_groups: nil, category_ids_with_transactions: nil) %>
+<%# locals: (title:, categories:, family: nil, category_groups: nil, category_ids_with_transactions: nil) %>
 <% category_groups ||= Category::Group.for(categories) %>
 <% if category_ids_with_transactions.nil? %>
-  <% category_ids_with_transactions = if categories.any?
-    Category.ids_with_transactions(family: categories.first.family, category_ids: categories.map(&:id))
+  <% category_ids_with_transactions = if categories.any? && family
+    Category.ids_with_transactions(family: family, category_ids: categories.map(&:id))
   else
     {}
   end %>
