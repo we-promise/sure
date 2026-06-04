@@ -1,0 +1,104 @@
+<%# locals: (pocket:, account:, overflow:) %>
+
+<% color = pocket.display_color %>
+<% percent = pocket.allocation_percent(account.balance) %>
+<% circumference = 94.25 %>
+<% dash = (percent * circumference / 100.0).round(1) %>
+
+<div class="bg-container rounded-xl shadow-border-xs p-4 flex flex-col gap-4 group relative">
+
+  <%# ── Top row: icon · title · badge · donut ── %>
+  <div class="flex items-start justify-between gap-2">
+
+    <div class="flex items-start gap-3 min-w-0">
+      <%# Colored circle with initial %>
+      <div class="w-9 h-9 rounded-full flex items-center justify-center text-inverse font-semibold text-sm shrink-0"
+           style="background-color: <%= color %>">
+        <%= pocket.name.first.upcase %>
+      </div>
+
+      <div class="min-w-0 space-y-0.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h3 class="font-medium text-primary leading-tight truncate"><%= pocket.name %></h3>
+          <% if overflow %>
+            <%= render DS::Pill.new(label: t("pockets.pocket.overflow_badge"), tone: :warning, marker: false, show_dot: false) %>
+          <% end %>
+        </div>
+
+        <% if pocket.tag %>
+          <p class="text-xs text-secondary flex items-center gap-1">
+            <%= icon("zap", size: "xs", class: "text-warning shrink-0") %>
+            <span class="truncate"><%= pocket.tag.name %></span>
+          </p>
+        <% else %>
+          <p class="text-xs text-secondary"><%= t("pockets.pocket.manual") %></p>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Donut chart %>
+    <div class="relative shrink-0 w-12 h-12">
+      <svg viewBox="0 0 40 40" class="w-full h-full -rotate-90" aria-hidden="true">
+        <circle cx="20" cy="20" r="15" fill="none"
+                stroke="var(--color-surface-inset)"
+                stroke-width="4" />
+        <circle cx="20" cy="20" r="15" fill="none"
+                stroke="<%= color %>"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-dasharray="<%= dash %> <%= circumference %>" />
+      </svg>
+      <span class="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-primary">
+        <%= percent %>%
+      </span>
+    </div>
+  </div>
+
+  <%# ── Amount ── %>
+  <div>
+    <p class="text-2xl font-semibold text-primary privacy-sensitive leading-tight">
+      <%= format_money pocket.allocated_amount_money %>
+    </p>
+    <p class="text-sm text-secondary privacy-sensitive">
+      <%= t("pockets.pocket.of_balance", balance: format_money(account.balance_money)) %>
+    </p>
+  </div>
+
+  <%# ── Footer ── %>
+  <div class="pt-3 border-t border-primary flex items-center justify-between gap-2">
+    <% if pocket.tag %>
+      <p class="text-xs text-secondary truncate">
+        <%= t("pockets.pocket.auto_fills_from", tag: pocket.tag.name) %>
+      </p>
+    <% else %>
+      <p class="text-xs text-secondary"><%= t("pockets.pocket.no_auto_fill") %></p>
+    <% end %>
+
+    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <% if pocket.tag %>
+        <%= render DS::Link.new(
+          variant: "ghost",
+          icon: "list",
+          href: transactions_path(q: { tags: [ pocket.tag.name ] }),
+          title: t("pockets.pocket.view_transactions"),
+          frame: :_top
+        ) %>
+      <% end %>
+
+      <%= render DS::Link.new(
+        variant: "ghost",
+        icon: "pencil",
+        href: edit_account_pocket_path(account, pocket),
+        frame: :modal
+      ) %>
+
+      <%= button_to account_pocket_path(account, pocket),
+        method: :delete,
+        class: "inline-flex items-center justify-center w-8 h-8 rounded-md text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors",
+        data: { turbo_confirm: t("pockets.destroy.confirm", name: pocket.name) } do %>
+        <%= icon("trash-2", size: "sm") %>
+      <% end %>
+    </div>
+  </div>
+
+</div>

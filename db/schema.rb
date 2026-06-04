@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_03_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1487,6 +1487,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
 
+  create_table "pockets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "allocated_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "currency", default: "", null: false
+    t.uuid "tag_id"
+    t.string "fill_direction", default: "inflows", null: false
+    t.index ["account_id", "tag_id"], name: "index_pockets_on_account_and_tag_unique", unique: true, where: "(tag_id IS NOT NULL)"
+    t.index ["account_id"], name: "index_pockets_on_account_id"
+    t.index ["tag_id"], name: "index_pockets_on_tag_id"
+    t.check_constraint "allocated_amount >= 0::numeric", name: "chk_pockets_allocated_amount_non_negative"
+    t.check_constraint "fill_direction::text = ANY (ARRAY['inflows'::character varying, 'outflows'::character varying, 'both'::character varying]::text[])", name: "chk_pockets_fill_direction"
+  end
+
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -2127,6 +2143,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_153000) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "pockets", "accounts"
+  add_foreign_key "pockets", "tags"
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
