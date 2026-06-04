@@ -29,6 +29,11 @@ class Pocket < ApplicationRecord
     [ (allocated_amount / balance.to_f * 100).round, 100 ].min
   end
 
+  def recompute_from_tag!
+    return unless tag_id.present?
+    update_column(:allocated_amount, tagged_transaction_total(tag_id))
+  end
+
   # increment!/decrement! are intentional here: they skip AR callbacks and validations
   # (including total_pockets_within_account_balance) to avoid re-triggering the Tagging
   # callbacks that called these methods. This means allocated_amount can temporarily exceed

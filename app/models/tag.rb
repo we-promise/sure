@@ -20,6 +20,7 @@ class Tag < ApplicationRecord
 
       if replacement
         taggings.update_all tag_id: replacement.id
+        replacement.pockets.find_each(&:recompute_from_tag!)
       end
 
       destroy!
