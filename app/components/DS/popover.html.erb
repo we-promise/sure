@@ -21,7 +21,7 @@
   <% end %>
 
   <div id="<%= panel_id %>" data-DS--popover-target="content" class="px-2 lg:px-0 max-w-full hidden z-50">
-    <%= tag.div class: "mx-auto min-w-[200px] shadow-border-xs bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
+    <%= tag.div class: "mx-auto min-w-[200px] shadow-border-lg bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
       <%= header %>
 
       <%= tag.div class: class_names("py-1" => !no_padding) do %>

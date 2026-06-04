@@ -9,7 +9,7 @@ class DS::Buttonish < DesignSystemComponent
       icon_classes: "text-primary"
     },
     destructive: {
-      container_classes: "text-inverse bg-red-500 theme-dark:bg-red-400 hover:bg-red-600 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
+      container_classes: "text-inverse bg-red-600 theme-dark:bg-red-400 hover:bg-red-700 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
       icon_classes: "text-inverse"
     },
     outline: {
@@ -55,13 +55,14 @@ class DS::Buttonish < DesignSystemComponent
     }
   }.freeze
 
-  attr_reader :variant, :size, :href, :icon, :icon_position, :text, :full_width, :extra_classes, :frame, :opts
+  attr_reader :variant, :size, :href, :icon, :icon_custom, :icon_position, :text, :full_width, :extra_classes, :frame, :opts
 
-  def initialize(variant: :primary, size: :md, href: nil, text: nil, icon: nil, icon_position: :left, full_width: false, frame: nil, **opts)
+  def initialize(variant: :primary, size: :md, href: nil, text: nil, icon: nil, icon_custom: false, icon_position: :left, full_width: false, frame: nil, **opts)
     @variant = variant.to_s.underscore.to_sym
     @size = size.to_sym
     @href = href
     @icon = icon
+    @icon_custom = icon_custom
     @icon_position = icon_position.to_sym
     @text = text
     @full_width = full_width
