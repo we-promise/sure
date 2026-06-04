@@ -31,7 +31,7 @@ class OnchainWalletAccount::Processor
       return unless security
 
       amount = onchain_wallet_account.current_balance.to_d
-      price = onchain_wallet_account.quantity.positive? ? amount / onchain_wallet_account.quantity : 0
+      price = amount / onchain_wallet_account.quantity
 
       import_adapter.import_holding(
         security: security,
