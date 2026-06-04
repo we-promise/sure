@@ -16,6 +16,40 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#category_#{categories(:food_and_drink).id} [data-testid='category-name']", text: categories(:food_and_drink).name
   end
 
+  test "index avoids per-category subcategory and transaction existence queries" do
+    4.times do |idx|
+      parent = @family.categories.create!(
+        name: "Performance Parent #{idx}",
+        color: "#000000",
+        lucide_icon: "folder"
+      )
+      child = @family.categories.create!(
+        name: "Performance Child #{idx}",
+        color: "#111111",
+        lucide_icon: "folder",
+        parent: parent
+      )
+      transaction = Transaction.create!(category: child)
+      Entry.create!(
+        account: accounts(:depository),
+        entryable: transaction,
+        name: "Performance transaction #{idx}",
+        date: Date.current,
+        amount: 10,
+        currency: "USD"
+      )
+    end
+
+    queries = capture_sql_queries { get categories_url }
+
+    assert_response :success
+    assert_select "[data-testid='category-name']", text: "Performance Parent 0"
+    assert_select "[data-testid='category-name']", text: "Performance Child 0"
+
+    assert_empty queries.grep(/FROM "categories" WHERE "categories"\."parent_id" =/)
+    assert_empty queries.grep(/FROM "transactions" WHERE "transactions"\."category_id" =/)
+  end
+
   test "new" do
     get new_category_url
     assert_response :success
@@ -300,4 +334,21 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to merge_categories_path
     assert Category.exists?(other.id)
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
