@@ -29,6 +29,13 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     assert_text Period.from_key("last_30_days").label_short
   end
 
+  test "trigger accessible name announces the selected period" do
+    render_inline(UI::PeriodPicker.new(selected: "last_90_days", url: "/"))
+
+    label = Period.from_key("last_90_days").label_short
+    assert_selector "button[aria-label='Time period: #{label}']"
+  end
+
   test "extra_params are merged into every option href" do
     render_inline(UI::PeriodPicker.new(
       selected: "last_30_days",
