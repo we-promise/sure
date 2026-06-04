@@ -1,5 +1,6 @@
 class PocketsController < ApplicationController
   before_action :set_account
+  before_action :require_depository_account
   before_action :set_pocket, only: %i[edit update destroy]
   before_action :set_available_tags, only: %i[new create edit update]
 
@@ -63,6 +64,10 @@ class PocketsController < ApplicationController
 
     def set_account
       @account = Current.user.accessible_accounts.find(params[:account_id])
+    end
+
+    def require_depository_account
+      redirect_to account_path(@account), status: :see_other unless @account.depository?
     end
 
     def set_pocket
