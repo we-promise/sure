@@ -55,11 +55,27 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "attachments.json", "all.ndjson" ]
+    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "pockets.csv", "attachments.json", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
       assert_equal expected_files.sort, actual_files.sort
+    end
+  end
+
+  test "exports pockets csv with pocket data" do
+    pocket = @account.pockets.create!(name: "Export Test Pocket", allocated_amount: 500, currency: "USD")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      csv_content = zip.find_entry("pockets.csv").get_input_stream.read
+      rows = CSV.parse(csv_content, headers: true)
+      row = rows.find { |r| r["name"] == pocket.name }
+
+      assert_not_nil row
+      assert_equal @account.name, row["account_name"]
+      assert_equal "500.0", row["allocated_amount"]
     end
   end
 
