@@ -123,9 +123,18 @@ class Provider::IndexaCapital
 
     def with_retries(operation_name, max_retries: MAX_RETRIES)
       retries = 0
+      authentication_retried = false
 
       begin
         yield
+      rescue AuthenticationError => e
+        if retry_authentication?(e, authentication_retried)
+          authentication_retried = true
+          invalidate_token!
+          retry
+        end
+
+        raise
       rescue *RETRYABLE_ERRORS => e
         retries += 1
 
@@ -169,7 +178,22 @@ class Provider::IndexaCapital
     end
 
     def token
-      @token ||= token_auth? ? @api_token : authenticate!
+      @token ||= resolve_token
+    end
+
+    def resolve_token
+      token_auth? ? @api_token : authenticate!
+    end
+
+    def invalidate_token!
+      @token = nil unless token_auth?
+    end
+
+    def retry_authentication?(error, authentication_retried)
+      !authentication_retried &&
+        error.error_type == :unauthorized &&
+        !token_auth? &&
+        @token.present?
     end
 
     def authenticate!
