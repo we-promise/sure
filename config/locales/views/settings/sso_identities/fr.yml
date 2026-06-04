@@ -1,0 +1,7 @@
+---
+fr:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Impossible de dissocier la dernière identité
+        success: Succès

@@ -1,85 +1,174 @@
 ---
 fr:
-  views:
-    settings:
-      payments:
-        renewal: "Votre contribution se poursuit le %{date}."
-        cancellation: "Votre contribution se termine le %{date}."
   settings:
     ai_prompts:
       show:
-        page_title: Prompts IA
-        openai_label: OpenAI
         disable_ai: Désactiver l'assistant IA
-        prompt_instructions: Instructions pour les prompts
         main_system_prompt:
+          subtitle: Instructions fondamentales qui définissent le comportement de
+            l'assistant AI dans toutes les conversations de chat
           title: Prompt Système Principal
-          subtitle: Instructions fondamentales qui définissent le comportement de l'assistant AI dans toutes les conversations de chat
-        transaction_categorizer:
-          title: Catégorisation des transactions
-          subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
         merchant_detector:
+          subtitle: L'IA identifie et enrichit les données de transaction avec des
+            informations sur le marchand
           title: Détection du marchand
-          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le marchand
-    payments:
-      show:
-        page_title: Paiements
-        subscription_subtitle: Mettez à jour les détails de votre carte de crédit
-        subscription_title: Gérer les contributions
+        openai_label: OpenAI
+        page_title: Prompts IA
+        prompt_instructions: Instructions pour les prompts
+        transaction_categorizer:
+          subtitle: L'IA catégorise automatiquement vos transactions en fonction de
+            vos catégories définies
+          title: Catégorisation des transactions
     appearances:
       show:
+        dashboard_subtitle: Personnalisez l'affichage du tableau de bord
+        dashboard_title: Tableau de bord
+        dashboard_two_column_description: Affiche les widgets du tableau de bord sur
+          deux colonnes sur les grands écrans. Lorsque cette option est désactivée,
+          les widgets sont empilés dans une seule colonne.
+        dashboard_two_column_title: Mise en page à deux colonnes
         page_title: Apparence
-        theme_title: Thème
-        theme_subtitle: Choisissez un thème préféré pour l'application
+        split_grouped_description: Affiche les transactions fractionnées groupées
+          sous leur parent dans la liste des transactions. Lorsque cette option est
+          désactivée, les enfants fractionnés apparaissent comme des lignes individuelles.
+        split_grouped_title: Grouper les transactions fractionnées
         theme_dark: Sombre
         theme_light: Clair
+        theme_subtitle: Choisissez un thème préféré pour l'application
         theme_system: Système
-        transactions_title: Transactions
+        theme_title: Thème
         transactions_subtitle: Personnalisez l'affichage des transactions
-        dashboard_title: Tableau de bord
-        dashboard_subtitle: Personnalisez l'affichage du tableau de bord
-        dashboard_two_column_title: Mise en page à deux colonnes
-        dashboard_two_column_description: Affiche les widgets du tableau de bord sur deux colonnes sur les grands écrans. Lorsque cette option est désactivée, les widgets sont empilés dans une seule colonne.
-        split_grouped_title: Grouper les transactions fractionnées
-        split_grouped_description: Affiche les transactions fractionnées groupées sous leur parent dans la liste des transactions. Lorsque cette option est désactivée, les enfants fractionnés apparaissent comme des lignes individuelles.
+        transactions_title: Transactions
+    debugs:
+      show:
+        context:
+          account: compte=%{value}
+          account_provider: account_provider=%{value}
+          family: famille=%{value}
+          provider: fournisseur=%{value}
+          user: utilisateur=%{value}
+        empty: Aucun événement de débogage trouvé.
+        filters:
+          account_id: Identifiant du compte
+          account_provider_id: ID du fournisseur de compte
+          all: Tout
+          category: Catégorie
+          end_date: À
+          family_id: Carte d'identité familiale
+          level: Niveau
+          provider: Fournisseur
+          reset: Réinitialiser
+          source: Origine
+          start_date: De
+          submit: Filtrer
+          user_id: Identifiant utilisateur
+        missing_value: "-"
+        page_title: Débogage
+        subtitle: Événements opérationnels significatifs pour les super administrateurs.
+          Le plus récent en premier.
+        table:
+          category: Catégorie
+          context: Contexte
+          level: Niveau
+          message: Message
+          metadata: Métadonnées
+          source: Origine
+          time: Temps
+          view_metadata: Voir
+        title: Journal des événements de débogage
+    llm_usages:
+      show:
+        avg_cost_per_request: Coût moyen/demande
+        based_on_requests: Basé sur %{with_cost} requêtes sur %{total} avec données
+          de coût
+        col_cost: Coût
+        col_date: Date
+        col_model: Modèle
+        col_operation: Fonctionnement
+        col_tokens: Jetons
+        completion: achèvement
+        cost_by_model: Coût par modèle
+        cost_by_operation: Coût par opération
+        cost_estimates_description: Les coûts sont estimés sur la base des tarifs
+          d'OpenAI à partir de 2025. Les coûts réels peuvent varier. Le prix est par
+          million de jetons et varie selon le modèle. Les modèles personnalisés ou
+          auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total.
+        cost_estimates_title: À propos des estimations de coûts
+        end_date: Date de fin
+        failed: Échec
+        filter: Filtrer
+        no_usage_data: Aucune donnée d'utilisation trouvée pour la période sélectionnée
+        page_title: Utilisation et coûts du LLM
+        prompt: invite
+        recent_usage: Utilisation récente
+        start_date: Date de début
+        subtitle: Suivez votre utilisation de l'IA et les coûts estimés
+        total_cost: Coût total
+        total_requests: Total demandes
+        total_tokens: Total jetons
+    payments:
+      show:
+        choose_level: Choisir le niveau
+        contributions_note: Les contributions à %{product_name} s'afficheront ici.
+        currently_on_plan: Actuellement sur le
+        manage: Gérer
+        not_contributing_emphasis: ne pas contribuer
+        not_contributing_prefix: Vous êtes actuellement
+        page_title: Paiements
+        payment_via_stripe: Paiement via Stripe
+        subscription_subtitle: Mettez à jour les détails de votre carte de crédit
+        subscription_title: Gérer les contributions
+        trial_days_left:
+          one: Les données seront supprimées dans %{count} jour
+          other: Les données seront supprimées dans %{count} jours
+        trialing: J'utilise actuellement la démo ouverte de %{product_name}
     preferences:
       show:
+        additional_currencies_label: Devises supplémentaires
+        base_currency_badge: Devise de base
+        base_currency_label: Devise de base
         country: Pays
+        currencies_more: "+%{count} de plus"
+        currencies_subtitle: Choisissez les devises qui apparaissent dans les champs
+          monétaires de votre %{moniker}
+        currencies_title: Devises de %{moniker}
         currency: Devise
+        currency_search_placeholder: Rechercher des devises
         date_format: Format de date
+        default_account_order: Ordre d'affichage des comptes par défaut
+        default_period: Période par défaut
         general_subtitle: Configurez vos préférences
         general_title: Général
-        default_period: Période par défaut
-        default_account_order: Ordre d'affichage des comptes par défaut
         language: Langue
         language_auto: Langue du navigateur
-        page_title: Préférences
-        timezone: Fuseau horaire
-        month_start_day: Le mois budgétaire commence le
-        month_start_day_hint: Définissez le jour de début de votre mois budgétaire (ex. jour de paie)
-        month_start_day_warning: Vos budgets et vos calculs MTD utiliseront ce jour de début personnalisé au lieu du 1er de chaque mois.
-        currencies_title: "Devises de %{moniker}"
-        currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
-        base_currency_label: Devise de base
-        base_currency_badge: Devise de base
-        additional_currencies_label: Devises supplémentaires
-        no_additional_currencies: Aucune sélectionnée
-        currencies_more: "+%{count} de plus"
         manage_currencies: Gérer les devises
-        manage_currencies_subtitle: Désélectionnez les devises que vous n'utilisez jamais, ou réduisez la liste à quelques-unes seulement.
+        manage_currencies_subtitle: Désélectionnez les devises que vous n'utilisez
+          jamais, ou réduisez la liste à quelques-unes seulement.
+        month_start_day: Le mois budgétaire commence le
+        month_start_day_hint: Définissez le jour de début de votre mois budgétaire
+          (ex. jour de paie)
+        month_start_day_warning: Vos budgets et vos calculs MTD utiliseront ce jour
+          de début personnalisé au lieu du 1er de chaque mois.
+        no_additional_currencies: Aucune sélectionnée
+        no_matching_currencies: Aucune devise trouvée
+        page_title: Préférences
+        preview:
+          description: Activez les fonctionnalités en cours étiquetées Aperçu ou Canary.
+          title: Activer les fonctionnalités d'aperçu
+        save_currencies: Enregistrer les devises
         select_all_currencies: Tout sélectionner
         select_base_only: Devise de base uniquement
-        currency_search_placeholder: Rechercher des devises
-        no_matching_currencies: Aucune devise trouvée
         selected_currencies_count:
           one: "%{count} sélectionnée"
           other: "%{count} sélectionnées"
-        save_currencies: Enregistrer les devises
-        sharing_title: "Partage de %{moniker}"
-        sharing_subtitle: "Contrôlez comment les comptes sont partagés dans votre %{moniker}"
         sharing_default_label: Partage par défaut pour les nouveaux comptes
-        sharing_shared: Partager avec tous les membres
         sharing_private: Garder privé par défaut
+        sharing_shared: Partager avec tous les membres
+        sharing_subtitle: Contrôlez comment les comptes sont partagés dans votre %{moniker}
+        sharing_title: Partage de %{moniker}
+        timezone: Fuseau horaire
+        translations_notice: Veuillez noter que nous travaillons toujours sur des
+          traductions dans différentes langues.
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
@@ -88,27 +177,30 @@ fr:
         not_authorized: Vous n'êtes pas autorisé à supprimer les membres.
       show:
         confirm_delete:
-          body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
+          body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte
+            ? Cette action est irréversible.
           title: Supprimer le compte?
-        confirm_reset:
-          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
-          title: Réinitialiser le compte?
-        confirm_reset_with_sample_data:
-          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
-          title: Réinitialiser le compte et charger des données d'exemple ?
         confirm_remove_invitation:
           body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email}?
           title: Supprimer l'invitation
         confirm_remove_member:
           body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte?
           title: Supprimer le membre
+        confirm_reset:
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera
+            tous vos comptes, catégories, marchands, étiquettes et autres données.
+            Cette action ne peut pas être annulée.
+          title: Réinitialiser le compte?
+        confirm_reset_with_sample_data:
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger
+            des données d'exemple ? Cela supprimera vos données existantes et les
+            remplacera par des données de démonstration afin que vous puissiez explorer
+            Sure en toute sécurité.
+          title: Réinitialiser le compte et charger des données d'exemple ?
         danger_zone_title: Zone dangereuse
         delete_account: Supprimer le compte
-        delete_account_warning: La suppression de votre compte entraînera la suppression permanente de toutes vos données et ne pourra pas être annulée.
-        reset_account: Réinitialiser le compte
-        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, marchands, étiquettes et autres données, mais gardera votre compte utilisateur intact.
-        reset_account_with_sample_data: Réinitialiser et précharger
-        reset_account_with_sample_data_warning: Supprime toutes vos données existantes puis charge des données d'exemple afin que vous puissiez explorer avec un environnement pré-rempli.
+        delete_account_warning: La suppression de votre compte entraînera la suppression
+          permanente de toutes vos données et ne pourra pas être annulée.
         email: E-mail
         first_name: Prénom
         group_form_input_placeholder: Entrez le nom du groupe
@@ -116,7 +208,8 @@ fr:
         group_title: Membres du groupe
         household_form_input_placeholder: Entrez le nom du foyer
         household_form_label: Nom du foyer
-        household_subtitle: Les personnes invitées peuvent se connecter à votre compte %{moniker} et accéder aux ressources partagées.
+        household_subtitle: Les personnes invitées peuvent se connecter à votre compte
+          %{moniker} et accéder aux ressources partagées.
         household_title: Foyer
         invitation_link: Lien d'invitation
         invite_member: Ajouter un membre
@@ -127,101 +220,142 @@ fr:
         profile_title: Personnel
         remove_invitation: Supprimer l'invitation
         remove_member: Supprimer le membre
+        reset_account: Réinitialiser le compte
+        reset_account_warning: La réinitialisation de votre compte supprimera tous
+          vos comptes, catégories, marchands, étiquettes et autres données, mais gardera
+          votre compte utilisateur intact.
+        reset_account_with_sample_data: Réinitialiser et précharger
+        reset_account_with_sample_data_warning: Supprime toutes vos données existantes
+          puis charge des données d'exemple afin que vous puissiez explorer avec un
+          environnement pré-rempli.
         save: Enregistrer
-    securities:
-      show:
-        page_title: Sécurité
-        mfa_title: Authentification à deux facteurs
-        mfa_description: Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code de votre application d'authentification lors de la connexion
-        enable_mfa: Activer 2FA
-        disable_mfa: Désactiver 2FA
-        disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification à deux facteurs ?
-        sso_title: Comptes connectés
-        sso_subtitle: Gérez vos connexions de compte à authentification unique
-        sso_disconnect: Déconnecter
-        sso_last_used: Dernière utilisation
-        sso_never: Jamais
-        sso_no_email: Pas d'email
-        sso_no_identities: Aucun compte SSO connecté
-        sso_connect_hint: Déconnectez-vous et connectez-vous avec un fournisseur SSO pour connecter un compte.
-        sso_confirm_title: Déconnecter le compte ?
-        sso_confirm_body: Êtes-vous sûr(e) de vouloir déconnecter votre compte %{provider} ? Vous pourrez le reconnecter ultérieurement en vous connectant avec ce fournisseur.
-        sso_confirm_button: Déconnecter
-        sso_warning_message: C'est votre seule méthode de connexion. Vous devriez définir un mot de passe dans vos paramètres de sécurité avant de déconnecter, sinon vous pourriez être bloqué(e) hors de votre compte.
-    settings_nav:
-      accounts_label: Comptes
-      advanced_section_title: Avancé
-      ai_prompts_label: Prompts IA
-      api_key_label: Clé API
-      payment_label: Paiement
-      categories_label: Catégories
-      feedback_label: Retour d'information
-      general_section_title: Général
-      imports_label: Importations
-      exports_label: Exportations
-      llm_usage_label: Utilisation LLM
-      logout: Se déconnecter
-      merchants_label: Marchands
-      providers_label: Fournisseurs
-      guides_label: Guides
-      other_section_title: Plus
-      preferences_label: Préférences
-      profile_label: Informations du profil
-      recurring_transactions_label: Récurrentes
-      rules_label: Règles
-      security_label: Sécurité
-      self_hosting_label: Auto-hébergement
-      statement_vault_label: Coffre des relevés
-      tags_label: Étiquettes
-      transactions_section_title: Transactions
-      whats_new_label: Dernières nouvelles
-      api_keys_label: Clés API
-      appearance_label: Apparence
-      bank_sync_label: Synchronisation bancaire
-    settings_nav_link_large:
-      next: Suivant
-      previous: Précédent
-    user_avatar_field:
-      accepted_formats: JPG ou PNG. 5MB max.
-      choose: Charger une photo
-      choose_label: (facultatif)
-      change: Changer de photo
     providers:
-      show:
-        coinbase_title: Coinbase
-      encryption_error:
-        title: Configuration de chiffrement requise
-        message: Les clés de chiffrement Active Record ne sont pas configurées. Veuillez vous assurer que les identifiants de chiffrement (active_record_encryption.primary_key, active_record_encryption.deterministic_key et active_record_encryption.key_derivation_salt) sont correctement définis dans vos identifiants Rails ou variables d'environnement avant d'utiliser les fournisseurs de synchronisation.
-      coinbase_panel:
-        setup_instructions: "Pour connecter Coinbase :"
-        step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>
-        step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir les comptes, voir les transactions)
-        step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
-        api_key_label: Clé API
-        api_key_placeholder: Entrez votre clé API Coinbase
-        api_secret_label: Secret API
-        api_secret_placeholder: Entrez votre secret API Coinbase
-        connect_button: Connecter Coinbase
-        syncing: Synchronisation…
-        sync: Synchroniser
-        disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
+      bank_sync:
+        lede: Connectez des comptes externes pour que les transactions, les soldes
+          et les holdings soient automatiquement transférés vers Sure.
+        page_title: Synchronisation bancaire
       binance_panel:
-        setup_instructions: "Pour connecter Binance, créez une clé API en lecture seule :"
-        step1_html: 'Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestion des API Binance</a>'
-        step2: "Créez une nouvelle clé API avec la permission Enable Reading uniquement"
-        step3: "Collez votre clé API et votre secret ci-dessous"
-        no_withdraw_warning: "Attention : n'activez PAS les permissions de retrait"
-        ip_hint_title: "Liste blanche d'IP requise"
-        ip_hint_body: "Ajoutez l'IP de sortie du serveur de l'application à la liste blanche de la clé API Binance :"
-        ip_hint_contact_admin: "Contactez votre administrateur pour obtenir l'adresse IP de sortie du serveur de l'application."
         api_key_label: Clé API
         api_key_placeholder: Collez votre clé API Binance
         api_secret_label: Secret API
         api_secret_placeholder: Collez votre secret API Binance
         connect_button: Connecter Binance
-        syncing: Synchronisation…
+        disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter Binance ?
+        ip_hint_body: 'Ajoutez l''IP de sortie du serveur de l''application à la liste
+          blanche de la clé API Binance :'
+        ip_hint_contact_admin: Contactez votre administrateur pour obtenir l'adresse
+          IP de sortie du serveur de l'application.
+        ip_hint_title: Liste blanche d'IP requise
+        no_withdraw_warning: 'Attention : n''activez PAS les permissions de retrait'
+        setup_instructions: 'Pour connecter Binance, créez une clé API en lecture
+          seule :'
+        step1_html: Allez dans la <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Gestion des
+          API Binance</a>
+        step2: Créez une nouvelle clé API avec la permission Enable Reading uniquement
+        step3: Collez votre clé API et votre secret ci-dessous
         sync: Synchroniser
-        disconnect_confirm: "Êtes-vous sûr(e) de vouloir déconnecter Binance ?"
+        syncing: Synchronisation…
+      coinbase_panel:
+        api_key_label: Clé API
+        api_key_placeholder: Entrez votre clé API Coinbase
+        api_secret_label: Secret API
+        api_secret_placeholder: Entrez votre secret API Coinbase
+        connect_button: Connecter Coinbase
+        disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion
+          Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
+        setup_instructions: 'Pour connecter Coinbase :'
+        step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres
+          API de Coinbase</a>
+        step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir
+          les comptes, voir les transactions)
+        step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
+        sync: Synchroniser
+        syncing: Synchronisation…
       enable_banking_panel:
-        callback_url_instruction: "Pour l'URL de rappel, utilisez %{callback_url}."
+        callback_url_instruction: Pour l'URL de rappel, utilisez %{callback_url}.
         connection_error: Erreur de connexion
+      encryption_error:
+        message: Les clés de chiffrement Active Record ne sont pas configurées. Veuillez
+          vous assurer que les identifiants de chiffrement (active_record_encryption.primary_key,
+          active_record_encryption.deterministic_key et active_record_encryption.key_derivation_salt)
+          sont correctement définis dans vos identifiants Rails ou variables d'environnement
+          avant d'utiliser les fournisseurs de synchronisation.
+        title: Configuration de chiffrement requise
+      not_authorized: Non autorisé
+      show:
+        coinbase_title: Coinbase
+      status:
+        err: Erreur
+        ok: Connecté
+        warn: Action nécessaire
+      update:
+        no_changes: Aucune modification n'a été apportée
+        updated_successfully: Paramètres du fournisseur mis à jour avec succès
+    securities:
+      show:
+        page_title: Sécurité
+        sso_confirm_body: Êtes-vous sûr(e) de vouloir déconnecter votre compte %{provider}
+          ? Vous pourrez le reconnecter ultérieurement en vous connectant avec ce
+          fournisseur.
+        sso_confirm_button: Déconnecter
+        sso_confirm_title: Déconnecter le compte ?
+        sso_connect_hint: Déconnectez-vous et connectez-vous avec un fournisseur SSO
+          pour connecter un compte.
+        sso_disconnect: Déconnecter
+        sso_last_used: Dernière utilisation
+        sso_never: Jamais
+        sso_no_email: Pas d'email
+        sso_no_identities: Aucun compte SSO connecté
+        sso_subtitle: Gérez vos connexions de compte à authentification unique
+        sso_title: Comptes connectés
+        sso_warning_message: C'est votre seule méthode de connexion. Vous devriez
+          définir un mot de passe dans vos paramètres de sécurité avant de déconnecter,
+          sinon vous pourriez être bloqué(e) hors de votre compte.
+    settings_nav:
+      accounts_label: Comptes
+      advanced_section_title: Avancé
+      ai_prompts_label: Prompts IA
+      api_key_label: Clé API
+      api_keys_label: Clés API
+      appearance_label: Apparence
+      bank_sync_label: Synchronisation bancaire
+      categories_label: Catégories
+      debug_label: Débogage
+      exports_label: Exportations
+      feedback_label: Retour d'information
+      general_section_title: Général
+      guides_label: Guides
+      imports_label: Importations
+      llm_usage_label: Utilisation LLM
+      logout: Se déconnecter
+      merchants_label: Marchands
+      other_section_title: Plus
+      payment_label: Paiement
+      preferences_label: Préférences
+      profile_label: Informations du profil
+      providers_label: Fournisseurs
+      recurring_transactions_label: Récurrentes
+      rules_label: Règles
+      security_label: Sécurité
+      self_hosting_label: Auto-hébergement
+      sso_providers_label: Fournisseurs SSO
+      statement_vault_label: Coffre des relevés
+      tags_label: Étiquettes
+      transactions_section_title: Transactions
+      users_label: Utilisateurs
+      whats_new_label: Dernières nouvelles
+    settings_nav_link_large:
+      next: Suivant
+      previous: Précédent
+    user_avatar_field:
+      accepted_formats: JPG ou PNG. 5MB max.
+      change: Changer de photo
+      choose: Charger une photo
+      choose_label: "(facultatif)"
+  views:
+    settings:
+      payments:
+        cancellation: Votre contribution se termine le %{date}.
+        renewal: Votre contribution se poursuit le %{date}.

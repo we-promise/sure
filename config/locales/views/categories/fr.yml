@@ -10,15 +10,25 @@ fr:
       success: Catégorie créée avec succès
     destroy:
       success: Catégorie supprimée avec succès
+    destroy_all:
+      success: Toutes les catégories supprimées
     edit:
       edit: Éditer la catégorie
     form:
+      auto_adjust: réglage automatique.
+      color: Couleur
+      icon: Icône
+      name_label: Nom
+      parent_category_label: Catégorie parent (facultatif)
       placeholder: Nom de la catégorie
+      poor_contrast: Mauvais contraste, choisissez une couleur plus foncée ou
+      unassigned: "(non attribué)"
     index:
       bootstrap: Utiliser les valeurs par défaut (recommandé)
       categories: Catégories
       categories_expenses: Catégories de dépenses
       categories_incomes: Catégories de revenus
+      delete_all: Supprimer tout
       empty: Aucune catégorie trouvée
       new: Nouvelle catégorie
     menu:
@@ -27,8 +37,16 @@ fr:
       new_category: Nouvelle catégorie
     update:
       success: Catégorie mise à jour avec succès
+    virtual:
+      payment: Paiement
+      trade: Commerce
+      transfer: Transfert
   category:
     dropdowns:
       show:
         bootstrap: Générer les catégories par défaut
         empty: Aucune catégorie trouvée
+        expense: dépense
+        income: revenu
+        match_transfer: Correspondance transfert/paiement
+        one_time: "%{type} unique"

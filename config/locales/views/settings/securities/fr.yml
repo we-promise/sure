@@ -4,7 +4,41 @@ fr:
     securities:
       show:
         disable_mfa: Désactiver la 2FA
-        disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification à deux facteurs ? Cela rendra votre compte moins sécurisé.
+        disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification
+          à deux facteurs ? Cela rendra votre compte moins sécurisé.
         enable_mfa: Activer la 2FA
-        mfa_description: Ajoutez une couche supplémentaire de sécurité à votre compte en exigeant un code de votre application d'authentificateur lors de la connexion
+        mfa_description: Ajoutez une couche supplémentaire de sécurité à votre compte
+          en exigeant un code de votre application d'authentificateur lors de la connexion
+        mfa_disabled_description: Activez 2FA pour ajouter une couche de sécurité
+          supplémentaire à votre compte.
+        mfa_disabled_status_html: L'authentification à deux facteurs est <span class="font-medium
+          text-red-600">désactivée</span>
+        mfa_enabled_description: Votre compte est protégé par une couche de sécurité
+          supplémentaire.
+        mfa_enabled_status_html: L'authentification à deux facteurs est <span class="font-medium
+          text-green-600">activée</span>
         mfa_title: Authentification à deux facteurs
+        webauthn_add: Ajouter un mot de passe ou une clé de sécurité
+        webauthn_added: "%{date} ajouté"
+        webauthn_description: Utilisez un mot de passe, Touch ID, Windows Hello ou
+          une clé de sécurité matérielle comme deuxième facteur lors de la connexion.
+        webauthn_empty: Aucun mot de passe ou clé de sécurité n'est encore enregistré.
+        webauthn_last_used: Dernière utilisation il y a %{time_ago}
+        webauthn_name_label: Nom de la clé
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
+        webauthn_remove: Supprimer
+        webauthn_remove_confirm: Êtes-vous sûr de vouloir supprimer ce mot de passe
+          ou cette clé de sécurité ?
+        webauthn_remove_confirm_body: Vous devrez enregistrer à nouveau ce mot de
+          passe ou cette clé de sécurité avant de pouvoir l'utiliser pour la vérification
+          de la connexion.
+        webauthn_title: Clés d'accès et clés de sécurité
+        webauthn_unsupported: Ce navigateur ne prend pas en charge les mots de passe
+          ou les clés de sécurité.
+  webauthn_credentials:
+    default_name: Clé de sécurité
+    failure: Impossible d'enregistrer ce mot de passe ou cette clé de sécurité. Veuillez
+      réessayer.
+    mfa_required: Activez l'authentification à deux facteurs avant d'ajouter un mot
+      de passe ou une clé de sécurité.
+    success: Clé d'accès ou clé de sécurité supprimée.
