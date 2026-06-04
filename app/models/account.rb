@@ -25,6 +25,7 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :pockets, dependent: :destroy
   # Inverse for recurring transfers where this account is the destination.
   # Account#recurring_transactions only matches account_id; without this
   # association, destroying the destination account would hit the FK
@@ -473,6 +474,14 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  def free_balance
+    balance - pockets.sum(:allocated_amount)
+  end
+
+  def pockets_overflow?
+    pockets.sum(:allocated_amount) > balance
   end
 
   def owned_by?(user)
