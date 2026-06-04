@@ -153,7 +153,7 @@ class TransferTest < ActiveSupport::TestCase
 
   test "transfer with both source and destination fees adjusts validation" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 103)
-    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -97)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -94)
 
     transfer = Transfer.new(
       inflow_transaction: inflow_entry.transaction,

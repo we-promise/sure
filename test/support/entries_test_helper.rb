@@ -69,7 +69,7 @@ module EntriesTestHelper
     from_account.entries.create!(
       name: "Transfer to #{to_account.name}",
       date: date,
-      amount: -total_outflow,
+      amount: total_outflow,
       currency: currency,
       entryable: outflow_transaction
     )
@@ -77,7 +77,7 @@ module EntriesTestHelper
     to_account.entries.create!(
       name: "Transfer from #{from_account.name}",
       date: date,
-      amount: net_inflow,
+      amount: -net_inflow,
       currency: currency,
       entryable: inflow_transaction
     )
