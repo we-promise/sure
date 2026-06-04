@@ -338,7 +338,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "family admin can toggle active for shared linked on-chain account" do
-    other_user = users(:empty)
+    other_user = users(:family_member)
     wallet_item = @user.family.onchain_wallet_items.create!(name: "On-chain Wallets")
     wallet_account = wallet_item.onchain_wallet_accounts.create!(
       chain: "bitcoin",

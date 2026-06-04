@@ -92,7 +92,7 @@ class OnchainWalletItemsController < ApplicationController
     @wallet_accounts = @onchain_wallet_item.onchain_wallet_accounts.where(chain: @chain, wallet_address: @old_address).order(:asset_kind, :symbol)
 
     if @wallet_accounts.empty?
-      return redirect_back_or_to(accounts_path, alert: "Wallet address not found.", status: :see_other)
+      redirect_back_or_to(accounts_path, alert: "Wallet address not found.", status: :see_other)
     end
   end
 

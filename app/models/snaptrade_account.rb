@@ -148,6 +148,8 @@ class SnaptradeAccount < ApplicationRecord
 
     # Only update cash_balance, preserve current_balance (total account value)
     update!(cash_balance: cash_value, raw_balances_payload: data)
+
+    sync_multi_currency_cash_holdings!(data, cash_entry)
   end
 
   # Cash entries from the last balances snapshot that are NOT the one stored in
@@ -169,8 +171,6 @@ class SnaptradeAccount < ApplicationRecord
       next if amount.blank?
       { currency: code, amount: amount }
     end
-
-    sync_multi_currency_cash_holdings!(data, cash_entry)
   end
 
   # Get the SnapTrade provider instance via the parent item

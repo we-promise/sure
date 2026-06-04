@@ -20,6 +20,7 @@ class Provider::EtherscanTest < ActiveSupport::TestCase
 
   test "raises rate limit errors from api payload after exhausting retries" do
     stub_request(:get, "https://api.etherscan.io/v2/api")
+      .with(query: hash_including("action" => "balance"))
       .to_return(status: 200, body: { status: "0", message: "NOTOK", result: "Max rate limit reached" }.to_json, headers: { "Content-Type" => "application/json" })
 
     assert_raises Provider::Etherscan::RateLimitError do

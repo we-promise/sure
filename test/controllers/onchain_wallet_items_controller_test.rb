@@ -52,7 +52,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_match %r{<turbo-stream action="redirect" url="/accounts">}, response.body
+    assert_match %r{<turbo-stream action="redirect" target="/accounts">}, response.body
     assert_equal "Wallet linked.", flash[:notice]
 
     created_account = Account.where.not(id: existing_account_ids).first
