@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_03_160000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_03_161000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1495,13 +1495,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_03_160000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "allocated_amount", precision: 19, scale: 4, default: "0.0", null: false
-    t.string "currency", default: "", null: false
+    t.string "currency", null: false
     t.uuid "tag_id"
     t.string "fill_direction", default: "inflows", null: false
     t.index ["account_id", "tag_id"], name: "index_pockets_on_account_and_tag_unique", unique: true, where: "(tag_id IS NOT NULL)"
     t.index ["account_id"], name: "index_pockets_on_account_id"
     t.index ["tag_id"], name: "index_pockets_on_tag_id"
     t.check_constraint "allocated_amount >= 0::numeric", name: "chk_pockets_allocated_amount_non_negative"
+    t.check_constraint "currency::text <> ''::text", name: "chk_pockets_currency_present"
     t.check_constraint "fill_direction::text = ANY (ARRAY['inflows'::character varying, 'outflows'::character varying, 'both'::character varying]::text[])", name: "chk_pockets_fill_direction"
   end
 
