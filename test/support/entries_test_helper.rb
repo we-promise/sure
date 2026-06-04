@@ -52,20 +52,24 @@ module EntriesTestHelper
       entryable: trade
   end
 
-  def create_transfer(from_account:, to_account:, amount:, date: Date.current, currency: "USD")
+  def create_transfer(from_account:, to_account:, amount:, date: Date.current, currency: "USD", source_fee_amount: 0, destination_fee_amount: 0)
     outflow_transaction = Transaction.create!(kind: "funds_movement")
     inflow_transaction = Transaction.create!(kind: "funds_movement")
 
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
-      inflow_transaction: inflow_transaction
+      inflow_transaction: inflow_transaction,
+      source_fee_amount: source_fee_amount,
+      destination_fee_amount: destination_fee_amount
     )
 
-    # Create entries for both accounts
+    total_outflow = amount.abs + source_fee_amount.to_d
+    net_inflow = amount.abs - destination_fee_amount.to_d
+
     from_account.entries.create!(
       name: "Transfer to #{to_account.name}",
       date: date,
-      amount: -amount.abs,
+      amount: -total_outflow,
       currency: currency,
       entryable: outflow_transaction
     )
@@ -73,7 +77,7 @@ module EntriesTestHelper
     to_account.entries.create!(
       name: "Transfer from #{from_account.name}",
       date: date,
-      amount: amount.abs,
+      amount: net_inflow,
       currency: currency,
       entryable: inflow_transaction
     )

@@ -7,11 +7,13 @@ en:
       success: Transfer removed
     form:
       amount: Amount
+      bank_fees: Bank fees
       calculate_rate_tab: Calculate FX rate
       convert_tab: Convert with FX rate
       date: Date
       destination_amount: Destination amount
       destination_amount_display: "Destination amount: %{amount}"
+      destination_fee: Fee deducted from destination
       exchange_rate: Exchange rate
       exchange_rate_display: "Exchange rate: %{rate}"
       exchange_rate_help: Choose how to enter the transfer amount.
@@ -20,6 +22,7 @@ en:
       income: Income
       select_account: Select account
       source_amount: Source amount
+      source_fee: Fee charged to source
       submit: Create transfer
       to: To
       transfer: Transfer
@@ -43,6 +46,8 @@ en:
       to: To
       date: Date
       amount: Amount
+      source_fee: Source fee
+      destination_fee: Destination fee
       category: Category
       uncategorized: Uncategorized
     update:
