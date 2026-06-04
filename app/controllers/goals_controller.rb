@@ -26,7 +26,7 @@ class GoalsController < ApplicationController
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
-    @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
+    @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: "Depository").visible.count
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
     @show_search = @grid_goals.size > 6
@@ -61,7 +61,7 @@ class GoalsController < ApplicationController
   def create
     @goal = Current.family.goals.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
-    @goal.currency = accounts.first.currency if accounts.any? && @goal.currency.blank?
+    @goal.currency = (accounts.first&.currency || Current.family.primary_currency_code) if @goal.currency.blank?
 
     Goal.transaction do
       accounts.each { |a| @goal.goal_accounts.build(account: a) }
@@ -169,18 +169,24 @@ class GoalsController < ApplicationController
       return [] if ids.blank?
 
       ids = Array(ids).reject(&:blank?)
-      Current.family.accounts.where(accountable_type: "Depository").visible.where(id: ids).to_a
+      Current.user.accessible_accounts.where(accountable_type: "Depository").visible.where(id: ids).to_a
     end
 
     def linkable_accounts_for_new
-      Current.family.accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
+      Current.user.accessible_accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
     end
 
     def sync_linked_accounts!(goal, accounts)
       desired_ids = accounts.map(&:id).to_set
       current_ids = goal.goal_accounts.pluck(:account_id).to_set
 
-      (current_ids - desired_ids).each do |id|
+      # Only unlink accounts the current user can actually see in the picker.
+      # A family goal may be linked to another member's private account, which
+      # never renders as a checkbox — so its absence from the submitted set is
+      # not an intentional removal and must not destroy the link.
+      removable_ids = Current.user.accessible_accounts.where(id: current_ids.to_a).pluck(:id).to_set
+
+      ((current_ids & removable_ids) - desired_ids).each do |id|
         goal.goal_accounts.where(account_id: id).destroy_all
       end
       additions = accounts.reject { |a| current_ids.include?(a.id) }
