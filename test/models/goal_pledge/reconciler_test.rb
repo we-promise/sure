@@ -70,7 +70,7 @@ class GoalPledge::ReconcilerTest < ActiveSupport::TestCase
     assert manual_pledge.reload.status_matched?
   end
 
-  test "manual_save kind does NOT match when the full balance (not the delta) equals nothing near the pledge" do
+  test "manual_save kind does not match when the full balance (not the delta) is unrelated to the pledge" do
     manual_pledge = @pledge.goal.goal_pledges.create!(
       account: @account,
       amount: 150,
@@ -86,7 +86,7 @@ class GoalPledge::ReconcilerTest < ActiveSupport::TestCase
     assert_not manual_pledge.reload.status_matched?
   end
 
-  test "manual_save kind does NOT match a balance decrease" do
+  test "manual_save kind does not match a balance decrease" do
     manual_pledge = @pledge.goal.goal_pledges.create!(
       account: @account,
       amount: 150,

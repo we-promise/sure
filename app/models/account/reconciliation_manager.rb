@@ -48,6 +48,13 @@ class Account::ReconciliationManager
     # manual_save GoalPledge matches against. A nil prior balance (brand-new
     # account with no balance record yet) is treated as 0, so the first
     # reconciliation's full balance is its contribution.
+    #
+    # The delta is only ever consumed for goal-linked accounts, which Goal
+    # validates to be Depository assets (Goal#linked_accounts_must_be_depository).
+    # Balances there are positive, so a save (deposit) is a positive delta and
+    # the reconciler's positive-delta guard is correct. There is no liability
+    # sign concern: a credit-card/loan paydown can't reach pledge matching
+    # because no manual_save pledge can be attached to a non-depository account.
     def valuation_contribution(valuation, old_balance_components)
       old_balance = old_balance_components[:balance] || 0
       valuation.amount.to_d - old_balance.to_d
