@@ -77,7 +77,7 @@
       <p class="text-xs text-secondary"><%= t("pockets.pocket.no_auto_fill") %></p>
     <% end %>
 
-    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
       <% if pocket.tag %>
         <%= render DS::Link.new(
           variant: "ghost",
