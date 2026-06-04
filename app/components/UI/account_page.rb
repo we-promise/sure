@@ -52,7 +52,7 @@ class UI::AccountPage < ApplicationComponent
       [ :activity ]
     end
 
-    base_tabs += [ :pockets ] if account.asset?
+    base_tabs += [ :pockets ] if account.depository?
 
     base_tabs + [ :statements ]
   end

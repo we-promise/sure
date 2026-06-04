@@ -7,6 +7,7 @@ class Pocket < ApplicationRecord
   enum :fill_direction, { inflows: "inflows", outflows: "outflows", both: "both" }, default: :inflows
 
   validates :name, :currency, presence: true
+  validate :account_must_be_depository
   validates :allocated_amount, numericality: { greater_than_or_equal_to: 0 }
   validates :tag_id, uniqueness: { scope: :account_id, allow_nil: true }
   validate :total_pockets_within_account_balance
@@ -96,6 +97,12 @@ class Pocket < ApplicationRecord
           available: account.balance - sibling_total,
           currency: account.currency)
       end
+    end
+
+    def account_must_be_depository
+      return unless account
+
+      errors.add(:account, :not_depository) unless account.depository?
     end
 
     def tag_belongs_to_same_family
