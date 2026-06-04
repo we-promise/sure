@@ -1,24 +1,28 @@
 <%# locals: (pocket:, account:, url:, available_tags:) %>
 
-<%= styled_form_with model: [ account, pocket ], url: url, class: "space-y-4" do |f| %>
+<%= styled_form_with model: [ account, pocket ], url: url, class: "space-y-4",
+    data: { controller: "pocket-form" } do |f| %>
   <%= f.text_field :name,
     label: t("pockets.form.name"),
     required: true,
     autofocus: true,
     placeholder: t("pockets.form.name_placeholder") %>
 
-  <%= f.money_field :allocated_amount,
-    label: t("pockets.form.allocated_amount"),
-    required: true,
-    disable_currency: true %>
+  <div data-pocket-form-target="amountField" style="<%= "opacity:0.5;pointer-events:none" if pocket.tag_id.present? %>">
+    <%= f.money_field :allocated_amount,
+      label: t("pockets.form.allocated_amount"),
+      required: !pocket.tag_id.present?,
+      disable_currency: true,
+      disabled: pocket.tag_id.present? %>
+  </div>
 
   <%= f.collection_select :tag_id,
     available_tags,
     :id, :name,
     { label: t("pockets.form.auto_fill_tag"), prompt: t("pockets.form.no_tag") },
-    {} %>
+    { data: { pocket_form_target: "tagSelect", action: "change->pocket-form#onTagChange" } } %>
 
-  <% if pocket.tag_id.present? %>
+  <div data-pocket-form-target="fillDirectionSection" class="<%= "hidden" unless pocket.tag_id.present? %> space-y-3">
     <%= f.select :fill_direction,
       Pocket.fill_directions.keys.map { |d| [ t("pockets.form.fill_direction.#{d}"), d ] },
       { label: t("pockets.form.fill_direction_label") },
@@ -28,7 +32,7 @@
       <%= icon("zap", size: "sm", class: "shrink-0 mt-0.5 text-warning") %>
       <span><%= t("pockets.form.auto_fill_hint") %></span>
     </div>
-  <% end %>
+  </div>
 
   <% if account.pockets.any? || pocket.persisted? %>
     <div class="bg-container-inset rounded-lg p-3 text-sm text-secondary flex items-center gap-2">

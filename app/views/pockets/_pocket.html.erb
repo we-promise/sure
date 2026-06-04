@@ -30,6 +30,9 @@
             <%= icon("zap", size: "xs", class: "text-warning shrink-0") %>
             <span class="truncate"><%= pocket.tag.name %></span>
           </p>
+          <p class="text-xs text-secondary">
+            <%= t("pockets.pocket.fill_direction.#{pocket.fill_direction}") %>
+          </p>
         <% else %>
           <p class="text-xs text-secondary"><%= t("pockets.pocket.manual") %></p>
         <% end %>
