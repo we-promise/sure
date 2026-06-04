@@ -123,6 +123,28 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal :no_target_date, goal.status
   end
 
+  test "status stays reached for a goal completed while underfunded" do
+    account = Account.create!(
+      family: @family,
+      accountable: Depository.new,
+      name: "Completed Underfunded Savings",
+      currency: "USD",
+      balance: BigDecimal("999.50")
+    )
+
+    goal = @family.goals.create!(
+      name: "Completed Underfunded",
+      target_amount: BigDecimal("1000"),
+      currency: "USD"
+    ) { |new_goal| new_goal.goal_accounts.build(account: account) }
+
+    goal.complete!
+
+    assert_equal BigDecimal("0.5"), goal.remaining_amount
+    assert_equal 100, goal.progress_percent
+    assert_equal :reached, Goal.find(goal.id).status
+  end
+
   test "progress_percent is 0 for empty active goal" do
     fresh = goals(:car_paydown)
     fresh.update!(target_amount: 10_000)

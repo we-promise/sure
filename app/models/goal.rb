@@ -240,14 +240,14 @@ class Goal < ApplicationRecord
     end
   end
 
-  # :reached         → no remaining amount
+  # :reached         → completed, or no remaining amount
   # :on_track        → has target_date and pace >= required monthly
   # :behind          → has target_date and pace < required monthly
   # :no_target_date  → open-ended
   def status
     return @status if defined?(@status)
 
-    @status = if remaining_amount.to_d.zero?
+    @status = if completed? || remaining_amount.to_d.zero?
       :reached
     elsif target_date.nil?
       :no_target_date
