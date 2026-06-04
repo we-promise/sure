@@ -317,16 +317,6 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export pockets
-      @family.accounts.find_each do |account|
-        account.pockets.find_each do |pocket|
-          lines << {
-            type: "Pocket",
-            data: pocket.as_json
-          }.to_json
-        end
-      end
-
       # Export recurring transactions after accounts and merchants so import can remap dependencies.
       @family.recurring_transactions.includes(:account, :merchant).find_each do |recurring_transaction|
         lines << {
