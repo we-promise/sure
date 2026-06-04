@@ -103,6 +103,26 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 100, @goal.progress_percent
   end
 
+  test "progress_percent stays below 100 while remaining amount is positive" do
+    account = Account.create!(
+      family: @family,
+      accountable: Depository.new,
+      name: "Almost There Savings",
+      currency: "USD",
+      balance: BigDecimal("999.50")
+    )
+
+    goal = @family.goals.create!(
+      name: "Almost There",
+      target_amount: BigDecimal("1000"),
+      currency: "USD"
+    ) { |new_goal| new_goal.goal_accounts.build(account: account) }
+
+    assert_equal BigDecimal("0.5"), goal.remaining_amount
+    assert_equal 99, goal.progress_percent
+    assert_equal :no_target_date, goal.status
+  end
+
   test "progress_percent is 0 for empty active goal" do
     fresh = goals(:car_paydown)
     fresh.update!(target_amount: 10_000)
