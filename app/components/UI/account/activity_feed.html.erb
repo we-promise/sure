@@ -18,22 +18,25 @@
                 data: { turbo_frame: :modal }) %>
           <% end %>
 
-          <% unless account.crypto? %>
-            <% if account.investment? %>
-              <% menu.with_item(
-                  variant: "link",
-                  text: t("accounts.show.activity.new_activity"),
-                  icon: "arrow-left-right",
-                  href: new_trade_path(account_id: account.id),
-                  data: { turbo_frame: :modal }) %>
-            <% else %>
-              <% menu.with_item(
-                  variant: "link",
-                  text: t("accounts.show.activity.new_transaction"),
-                  icon: "credit-card",
-                  href: new_transaction_path(account_id: account.id),
-                  data: { turbo_frame: :modal }) %>
-            <% end %>
+          <%# Issue #2167: gate "New activity" on supports_trades? — covers
+              investment accounts AND crypto-exchange. The old `unless crypto?`
+              gate blanket-excluded all crypto, hiding the menu item even from
+              exchange subtypes that DO support manual trades. Crypto wallets
+              still get neither item (sync-only). %>
+          <% if account.supports_trades? %>
+            <% menu.with_item(
+                variant: "link",
+                text: t("accounts.show.activity.new_activity"),
+                icon: "arrow-left-right",
+                href: new_trade_path(account_id: account.id),
+                data: { turbo_frame: :modal }) %>
+          <% elsif !account.crypto? %>
+            <% menu.with_item(
+                variant: "link",
+                text: t("accounts.show.activity.new_transaction"),
+                icon: "credit-card",
+                href: new_transaction_path(account_id: account.id),
+                data: { turbo_frame: :modal }) %>
           <% end %>
 
           <% menu.with_item(
