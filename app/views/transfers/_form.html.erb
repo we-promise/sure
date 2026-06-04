@@ -80,14 +80,14 @@
               label: t(".source_fee"),
               min: 0,
               placeholder: "0.00",
-              step: 0.01,
+              step: "any",
               data: { transfer_form_target: "sourceFee" } %>
 
         <%= f.number_field :destination_fee_amount,
               label: t(".destination_fee"),
               min: 0,
               placeholder: "0.00",
-              step: 0.01,
+              step: "any",
               data: { transfer_form_target: "destinationFee" } %>
       </div>
     <% end %>
