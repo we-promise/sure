@@ -347,7 +347,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1000, @family.currency), totals.income_money
     assert_equal Money.new(900, @family.currency), totals.expense_money
   end
-  
+
   test "excludes investment_contribution transactions from income statement totals" do
     # Issue #1750: an explicit Transfer to an investment account should
     # behave like any other transfer — the money moved between two
