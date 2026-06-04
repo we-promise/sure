@@ -194,5 +194,26 @@
     @variant theme-dark {
       @apply bg-gray-700 hover:bg-gray-700;
     }
+    Horizontally scrollable table wrapper (#2137). `overflow-x: auto` so wide
+    tables scroll instead of clipping (the LLM-usage table was `overflow-hidden`
+    and pushed columns off-screen) or wrapping money mid-digit. The pure-CSS
+    "scroll shadow" gives the missing affordance: the cover gradients
+    (`--table-scroll-bg`, default container-inset) scroll WITH the content
+    (`background-attachment: local`) and hide the fixed shadow gradients at the
+    edges, so a soft edge-shadow only appears when there is more to scroll.
+    Theme-aware via `--color-shadow`. Set `--table-scroll-bg` to match the wrapper.
+  */
+  .table-scroll {
+    --table-scroll-bg: var(--color-container-inset);
+    overflow-x: auto;
+    background:
+      linear-gradient(to right, var(--table-scroll-bg) 30%, transparent),
+      linear-gradient(to left, var(--table-scroll-bg) 30%, transparent) 100% 0,
+      radial-gradient(farthest-side at 0 50%, var(--color-shadow), transparent),
+      radial-gradient(farthest-side at 100% 50%, var(--color-shadow), transparent) 100% 0;
+    background-repeat: no-repeat;
+    background-color: var(--table-scroll-bg);
+    background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+    background-attachment: local, local, scroll, scroll;
   }
 }
