@@ -61,24 +61,26 @@ class OnchainWalletAccount::Processor
         external_id = transaction_external_id(tx)
         next if external_id.blank?
 
-        entry = account.entries.find_or_initialize_by(external_id: external_id, source: "onchain_wallet") do |e|
-          e.entryable = Transaction.new
+        begin
+          entry = account.entries.find_or_initialize_by(external_id: external_id, source: "onchain_wallet") do |e|
+            e.entryable = Transaction.new
+          end
+
+          next if entry.persisted? && !entry.entryable.is_a?(Transaction)
+
+          entry.assign_attributes(
+            date: transaction_date(tx),
+            name: transaction_name(tx),
+            amount: 0,
+            currency: family_currency,
+            excluded: true
+          )
+          entry.entryable.extra = (entry.entryable.extra || {}).deep_merge("onchain_wallet" => tx)
+          entry.save!
+        rescue StandardError => e
+          Rails.logger.warn "OnchainWalletAccount::Processor - transaction import failed for #{external_id}: #{e.message}"
         end
-
-        next if entry.persisted? && !entry.entryable.is_a?(Transaction)
-
-        entry.assign_attributes(
-          date: transaction_date(tx),
-          name: transaction_name(tx),
-          amount: 0,
-          currency: family_currency,
-          excluded: true
-        )
-        entry.entryable.extra = (entry.entryable.extra || {}).deep_merge("onchain_wallet" => tx)
-        entry.save!
       end
-    rescue StandardError => e
-      Rails.logger.warn "OnchainWalletAccount::Processor - transaction import failed: #{e.message}"
     end
 
     def raw_transactions

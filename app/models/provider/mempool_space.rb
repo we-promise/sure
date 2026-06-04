@@ -39,7 +39,10 @@ class Provider::MempoolSpace
       transactions.concat(batch)
       break if batch.size < PAGE_SIZE
 
-      path = "/address/#{address}/txs/chain/#{batch.last.fetch("txid")}"
+      last_txid = batch.last&.dig("txid")
+      raise ApiError, "Missing txid in paginated response" if last_txid.blank?
+
+      path = "/address/#{address}/txs/chain/#{last_txid}"
     end
 
     transactions

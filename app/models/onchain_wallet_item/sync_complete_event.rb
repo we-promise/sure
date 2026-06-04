@@ -20,6 +20,6 @@ class OnchainWalletItem::SyncCompleteEvent
       locals: { onchain_wallet_item: @onchain_wallet_item }
     )
   rescue StandardError => e
-    Rails.logger.warn("OnchainWalletItem::SyncCompleteEvent failed for #{@onchain_wallet_item.id}: #{e.class}")
+    Rails.logger.warn("OnchainWalletItem::SyncCompleteEvent failed for #{@onchain_wallet_item.id}: #{e.class} - #{e.message}")
   end
 end

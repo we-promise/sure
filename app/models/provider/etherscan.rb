@@ -29,6 +29,7 @@ class Provider::Etherscan
 
   def initialize(api_key:, max_retries: DEFAULT_MAX_RETRIES, retry_base_delay: DEFAULT_RETRY_BASE_DELAY)
     @api_key = api_key.to_s.strip
+    raise AuthenticationError, "Etherscan API key is required" if @api_key.blank?
     @max_retries = max_retries
     @retry_base_delay = retry_base_delay
   end

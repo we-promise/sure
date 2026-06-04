@@ -79,7 +79,7 @@ class OnchainWalletItem < ApplicationRecord
   end
 
   def institution_display_name
-    institution_name.presence || name.presence || "On-chain Wallets"
+    institution_name.presence || name.presence || I18n.t("onchain_wallet_items.onchain_wallet_item.fallback_name")
   end
 
   def set_onchain_institution_defaults!
