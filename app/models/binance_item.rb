@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BinanceItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -78,27 +78,6 @@ class BinanceItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue StandardError => e
-        Rails.logger.error "BinanceItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
-
   def upsert_binance_snapshot!(payload)
     update!(raw_payload: payload)
   end
@@ -156,4 +135,10 @@ class BinanceItem < ApplicationRecord
       institution_color: "#F0B90B"
     )
   end
+
+  private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

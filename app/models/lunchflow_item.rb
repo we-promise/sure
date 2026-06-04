@@ -1,5 +1,5 @@
 class LunchflowItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, Account::SchedulesBalanceSyncs
 
   DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
 
@@ -57,29 +57,6 @@ class LunchflowItem < ApplicationRecord
         Rails.logger.error "LunchflowItem #{id} - Failed to process account #{lunchflow_account.id}: #{e.message}"
         results << { lunchflow_account_id: lunchflow_account.id, success: false, error: e.message }
         # Continue processing other accounts even if one fails
-      end
-    end
-
-    results
-  end
-
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    # Only schedule syncs for active accounts
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "LunchflowItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-        # Continue scheduling other accounts even if one fails
       end
     end
 
@@ -169,4 +146,10 @@ class LunchflowItem < ApplicationRecord
   rescue URI::InvalidURIError
     DEFAULT_BASE_URL
   end
+
+  private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

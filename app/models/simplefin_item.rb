@@ -1,5 +1,5 @@
 class SimplefinItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, Account::SchedulesBalanceSyncs
   include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -230,16 +230,6 @@ class SimplefinItem < ApplicationRecord
     by_id.values
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.each do |account|
-      account.sync_later(
-        parent_sync: parent_sync,
-        window_start_date: window_start_date,
-        window_end_date: window_end_date
-      )
-    end
-  end
-
   def upsert_simplefin_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot,
@@ -464,6 +454,13 @@ class SimplefinItem < ApplicationRecord
   end
 
   private
+
+    # SimpleFIN #accounts returns a plain Array (not an Account relation), so schedule all
+    # linked accounts — including disabled/pending-deletion — matching pre-refactor behavior.
+    def balance_sync_accounts
+      accounts
+    end
+
     # Parse sync_stats, handling cases where it might be a raw JSON string
     # (e.g., from console testing or bypassed serialization)
     def parse_sync_stats(sync_stats)

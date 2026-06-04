@@ -1,4 +1,16 @@
 class Balance::ReverseCalculator < Balance::BaseCalculator
+  def initialize(account, window_start_date: nil)
+    super(account)
+    @window_start_date = window_start_date
+    @fell_back = nil
+  end
+
+  # True when a window was provided and we successfully limited recalculation to that range.
+  def incremental?
+    raise "incremental? must not be called before calculate" if @window_start_date.present? && @fell_back.nil?
+    @window_start_date.present? && @fell_back == false
+  end
+
   def calculate
     Rails.logger.tagged("Balance::ReverseCalculator") do
       # Since it's a reverse sync, we're starting with the "end of day" balance components and
@@ -9,8 +21,10 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       )
       end_non_cash_balance = account.current_anchor_balance - end_cash_balance
 
+      calc_start_date = resolve_calc_start_date
+
       # Calculates in reverse-chronological order (End of day -> Start of day)
-      account.current_anchor_date.downto(account.opening_anchor_date).map do |date|
+      account.current_anchor_date.downto(calc_start_date).map do |date|
         flows = flows_for_date(date)
         valuation = sync_cache.get_valuation(date)
 
@@ -67,6 +81,40 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
   end
 
   private
+
+    def resolve_calc_start_date
+      if @window_start_date.present?
+        if multi_currency_account?
+          Rails.logger.info("Account has multi-currency entries or is foreign, falling back to full reverse recalculation")
+          @fell_back = true
+          return account.opening_anchor_date
+        end
+
+        prior = prior_balance
+
+        if prior
+          Rails.logger.info("Incremental reverse sync from #{@window_start_date}, preserving balances before #{@window_start_date}")
+          @fell_back = false
+          return [ @window_start_date, account.opening_anchor_date ].max
+        else
+          Rails.logger.info("No persisted balance found for #{@window_start_date - 1}, falling back to full reverse recalculation")
+          @fell_back = true
+        end
+      end
+
+      account.opening_anchor_date
+    end
+
+    def multi_currency_account?
+      account.entries.where.not(currency: account.currency).exists? ||
+        account.currency != account.family.currency
+    end
+
+    def prior_balance
+      account.balances
+        .where(currency: account.currency)
+        .find_by(date: @window_start_date - 1)
+    end
 
     # Negative entries amount on an "asset" account means, "account value has increased"
     # Negative entries amount on a "liability" account means, "account debt has decreased"

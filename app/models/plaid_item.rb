@@ -1,5 +1,5 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, Account::SchedulesBalanceSyncs
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -83,17 +83,6 @@ class PlaidItem < ApplicationRecord
     end
   end
 
-  # Once all the data is fetched, we can schedule account syncs to calculate historical balances
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.each do |account|
-      account.sync_later(
-        parent_sync: parent_sync,
-        window_start_date: window_start_date,
-        window_end_date: window_end_date
-      )
-    end
-  end
-
   # Saves the raw data fetched from Plaid API for this item
   def upsert_plaid_snapshot!(item_snapshot)
     assign_attributes(
@@ -122,6 +111,13 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+
+    # Plaid #accounts returns a plain Array (not an Account relation), so schedule all
+    # linked accounts — including disabled/pending-deletion — matching pre-refactor behavior.
+    def balance_sync_accounts
+      accounts
+    end
+
     def remove_plaid_item
       return unless plaid_provider.present?
 

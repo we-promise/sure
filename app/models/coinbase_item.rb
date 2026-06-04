@@ -1,5 +1,5 @@
 class CoinbaseItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Account::SchedulesBalanceSyncs
   include Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -72,27 +72,6 @@ class CoinbaseItem < ApplicationRecord
         Rails.logger.error "CoinbaseItem #{id} - Failed to process account #{coinbase_account.id}: #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n")
         results << { coinbase_account_id: coinbase_account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
-
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "CoinbaseItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
       end
     end
 
@@ -174,4 +153,10 @@ class CoinbaseItem < ApplicationRecord
       institution_color: "#0052FF"
     )
   end
+
+  private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

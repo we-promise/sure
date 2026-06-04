@@ -1,5 +1,5 @@
 class MercuryItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Account::SchedulesBalanceSyncs
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -76,27 +76,6 @@ class MercuryItem < ApplicationRecord
 
   # TODO: Customize sync scheduling if needed
   # This method schedules sync jobs for all linked accounts.
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    return [] if accounts.empty?
-
-    results = []
-    accounts.visible.each do |account|
-      begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
-        results << { account_id: account.id, success: true }
-      rescue => e
-        Rails.logger.error "MercuryItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
-        results << { account_id: account.id, success: false, error: e.message }
-      end
-    end
-
-    results
-  end
-
   def upsert_mercury_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -174,4 +153,10 @@ class MercuryItem < ApplicationRecord
   def effective_base_url
     base_url.presence || "https://api.mercury.com/api/v1"
   end
+
+  private
+
+    def schedule_account_syncs_report_results?
+      true
+    end
 end

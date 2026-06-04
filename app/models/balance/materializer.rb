@@ -73,6 +73,7 @@ class Balance::Materializer
       )
     end
 
+    # Called only from #materialize_balances after #calculate_balances, so calculator.incremental? is safe.
     def purge_stale_balances
       sorted_balances = @balances.sort_by(&:date)
 
@@ -80,7 +81,7 @@ class Balance::Materializer
         # In incremental forward-sync, even when no balances were calculated for the window
         # (e.g. window_start_date is beyond the last entry), purge stale tail records that
         # now fall beyond the prior-balance boundary so orphaned future rows are cleaned up.
-        if strategy == :forward && calculator.incremental? && account.opening_anchor_date <= @window_start_date - 1
+        if @window_start_date.present? && calculator.respond_to?(:incremental?) && calculator.incremental? && account.opening_anchor_date <= @window_start_date - 1
           deleted_count = account.balances.delete_by(
             "date < ? OR date > ?",
             account.opening_anchor_date,
@@ -98,7 +99,7 @@ class Balance::Materializer
       # Use opening_anchor_date as the lower purge bound to preserve them.
       # We ask the calculator whether it actually ran incrementally — it may have
       # fallen back to a full recalculation, in which case we use the normal bound.
-      oldest_valid_date = if strategy == :forward && calculator.incremental?
+      oldest_valid_date = if calculator.respond_to?(:incremental?) && calculator.incremental?
         account.opening_anchor_date
       else
         sorted_balances.first.date
@@ -110,7 +111,7 @@ class Balance::Materializer
 
     def calculator
       @calculator ||= if strategy == :reverse
-        Balance::ReverseCalculator.new(account)
+        Balance::ReverseCalculator.new(account, window_start_date: @window_start_date)
       else
         Balance::ForwardCalculator.new(account, window_start_date: @window_start_date)
       end
