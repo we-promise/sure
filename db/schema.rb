@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_04_101014) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -43,6 +43,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
     t.index ["user_id"], name: "index_account_shares_on_user_id"
     t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying, 'read_write'::character varying, 'read_only'::character varying]::text[])", name: "chk_account_shares_permission"
+  end
+
+  create_table "family_memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "family_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_memberships_on_family_id"
+    t.index ["user_id", "family_id"], name: "index_family_memberships_on_user_id_and_family_id", unique: true
+    t.index ["user_id"], name: "index_family_memberships_on_user_id"
   end
 
   create_table "account_statements", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2087,6 +2097,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
   add_foreign_key "eval_samples", "eval_datasets"
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
+  add_foreign_key "family_memberships", "families"
+  add_foreign_key "family_memberships", "users"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict

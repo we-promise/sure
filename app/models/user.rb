@@ -20,6 +20,8 @@ class User < ApplicationRecord
   end
 
   belongs_to :family
+  has_many :family_memberships, dependent: :destroy
+  has_many :families, -> { distinct }, through: :family_memberships
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
   belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
@@ -121,12 +123,25 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
-  def accessible_accounts
-    family.accounts.accessible_by(self)
+  def available_families
+    [ family, *families ].compact.uniq { |candidate| candidate.id }
   end
 
-  def finance_accounts
-    family.accounts.included_in_finances_for(self)
+  def active_family(current_session = Current.session)
+    current_family_id = current_session&.get_active_family_id
+    available_families.find { |candidate| candidate.id.to_s == current_family_id.to_s } || family
+  end
+
+  def accessible_accounts(family_scope = active_family)
+    return Account.none if family_scope.blank?
+
+    family_scope.accounts.accessible_by(self)
+  end
+
+  def finance_accounts(family_scope = active_family)
+    return Account.none if family_scope.blank?
+
+    family_scope.accounts.included_in_finances_for(self)
   end
 
   def display_name
@@ -152,7 +167,7 @@ class User < ApplicationRecord
   def ai_available?
     return true unless Rails.application.config.app_mode.self_hosted?
 
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+    effective_type = ENV["ASSISTANT_TYPE"].presence || active_family&.assistant_type.presence || "builtin"
 
     case effective_type
     when "external"
@@ -300,7 +315,7 @@ class User < ApplicationRecord
     return nil unless default_account_id.present?
 
     account = default_account
-    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == active_family&.id
 
     account
   end

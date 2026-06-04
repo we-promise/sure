@@ -49,6 +49,21 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "unique-user@example.com", @user.reload.email
   end
 
+  test "available_families includes the primary and membership families once" do
+    additional_family = Family.create!(name: "Business")
+    FamilyMembership.create!(user: @user, family: additional_family)
+
+    assert_equal [ @user.family, additional_family ].map(&:id).sort, @user.available_families.map(&:id).sort
+    assert_equal 2, @user.available_families.count
+    assert_equal @user.available_families.map(&:id), @user.available_families.map(&:id).uniq
+  end
+
+  test "active_family falls back to primary family when session has no active family" do
+    session = @user.sessions.create!
+
+    assert_equal @user.family, @user.active_family(session)
+  end
+
   test "display name" do
     user = User.new(email: "user@example.com")
     assert_equal "user@example.com", user.display_name
