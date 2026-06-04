@@ -95,12 +95,13 @@
         frame: :modal
       ) %>
 
-      <%= button_to account_pocket_path(account, pocket),
+      <%= render DS::Button.new(
+        variant: "ghost",
+        icon: "trash-2",
+        href: account_pocket_path(account, pocket),
         method: :delete,
-        class: "inline-flex items-center justify-center w-8 h-8 rounded-md text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors",
-        data: { turbo_confirm: t("pockets.destroy.confirm", name: pocket.name) } do %>
-        <%= icon("trash-2", size: "sm") %>
-      <% end %>
+        data: { turbo_confirm: t("pockets.destroy.confirm", name: pocket.name) }
+      ) %>
     </div>
   </div>
 
