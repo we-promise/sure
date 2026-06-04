@@ -15,6 +15,7 @@
     </span>
 
     <%= render DS::Disclosure.new(
+          variant: :bare,
           summary_class: "cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary",
           data: {
             color_icon_picker_target: "details",

@@ -1,7 +1,7 @@
 class DS::Disclosure < DesignSystemComponent
   renders_one :summary_content
 
-  VARIANTS = %i[default card card_inset inline].freeze
+  VARIANTS = %i[default card card_inset inline bare].freeze
 
   attr_reader :title, :align, :open, :variant, :summary_class_override, :opts
 
@@ -24,6 +24,11 @@ class DS::Disclosure < DesignSystemComponent
   # a form, or a "Manage connections" lazy-load opener). Caller provides
   # the summary text (and optional chevron) via the `summary_content`
   # slot.
+  #
+  # `:bare` — like `:default` on the `<details>` element (`group` only),
+  # but content is yielded without the in-flow `mt-2` wrapper. Use for
+  # popovers anchored with absolute/fixed positioning inside the panel
+  # (e.g. goal/category color-icon pickers).
   #
   # In card / inline variants, callers should pass their own
   # `summary_content` slot; the built-in title rendering assumes the
@@ -75,6 +80,8 @@ class DS::Disclosure < DesignSystemComponent
       # provides the visual. Keep cursor + focus-visible ring + matching
       # alpha-black-300 token used by the card variants for consistency.
       "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 rounded-sm"
+    when :bare
+      "list-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300"
     else
       "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300"
     end
