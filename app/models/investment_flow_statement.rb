@@ -1,6 +1,16 @@
 class InvestmentFlowStatement
   include Monetizable
 
+  CONTRIBUTIONS_TOTAL_SQL = Arel.sql(
+    "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Contribution' " \
+    "THEN entries.amount ELSE 0 END)), 0)"
+  )
+  WITHDRAWALS_TOTAL_SQL = Arel.sql(
+    "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' " \
+    "THEN entries.amount ELSE 0 END)), 0)"
+  )
+  private_constant :CONTRIBUTIONS_TOTAL_SQL, :WITHDRAWALS_TOTAL_SQL
+
   attr_reader :family, :user
 
   def initialize(family, user: nil)
@@ -21,10 +31,10 @@ class InvestmentFlowStatement
       scope = scope.joins(entry: :account).merge(Account.included_in_finances_for(user))
     end
 
-    transactions = scope
-
-    contributions = transactions.where(investment_activity_label: "Contribution").sum("entries.amount").abs
-    withdrawals = transactions.where(investment_activity_label: "Withdrawal").sum("entries.amount").abs
+    contributions, withdrawals = scope.pick(
+      CONTRIBUTIONS_TOTAL_SQL,
+      WITHDRAWALS_TOTAL_SQL
+    )
 
     PeriodTotals.new(
       contributions: Money.new(contributions, family.currency),
