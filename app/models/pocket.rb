@@ -29,6 +29,11 @@ class Pocket < ApplicationRecord
     [ (allocated_amount / balance.to_f * 100).round, 100 ].min
   end
 
+  # increment!/decrement! are intentional here: they skip AR callbacks and validations
+  # (including total_pockets_within_account_balance) to avoid re-triggering the Tagging
+  # callbacks that called these methods. This means allocated_amount can temporarily exceed
+  # the account balance under concurrent tagging — pockets_overflow? surfaces that to the user.
+  # The DB check constraint (chk_pockets_allocated_amount_non_negative) remains the hard floor.
   def apply_tagging(tagging)
     amount = tagging_transaction_amount(tagging)
     return unless amount
