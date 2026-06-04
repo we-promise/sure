@@ -150,6 +150,73 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "can create transfer with source fee" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.last
+    assert_equal 3, transfer.source_fee_amount
+    assert_equal 0, transfer.destination_fee_amount
+    # Outflow should be amount + source_fee = 100 + 3 = 103
+    assert_equal 103, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(amount - destination_fee) = -(100 - 0) = -100
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+  end
+
+  test "can create transfer with destination fee" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          destination_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.last
+    assert_equal 0, transfer.source_fee_amount
+    assert_equal 3, transfer.destination_fee_amount
+    # Outflow should be amount + source_fee = 100 + 0 = 100
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(amount - destination_fee) = -(100 - 3) = -97
+    assert_equal(-97, transfer.inflow_transaction.entry.amount)
+  end
+
+  test "can create transfer with both source and destination fees" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: 2,
+          destination_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.last
+    assert_equal 2, transfer.source_fee_amount
+    assert_equal 3, transfer.destination_fee_amount
+    # Outflow = 100 + 2 = 102
+    assert_equal 102, transfer.outflow_transaction.entry.amount
+    # Inflow = -(100 - 3) = -97
+    assert_equal(-97, transfer.inflow_transaction.entry.amount)
+  end
+
   test "exchange_rate endpoint returns same_currency for matching currencies" do
     get exchange_rate_url, params: {
       from: "USD",

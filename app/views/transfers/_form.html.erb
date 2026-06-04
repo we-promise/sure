@@ -74,6 +74,26 @@
   </section>
 
   <section>
+    <%= render DS::Disclosure.new(title: t(".bank_fees"), open: false, variant: :inline) do %>
+      <div class="space-y-2 pt-2">
+        <%= f.number_field :source_fee_amount,
+              label: t(".source_fee"),
+              min: 0,
+              placeholder: "0.00",
+              step: 0.01,
+              data: { transfer_form_target: "sourceFee" } %>
+
+        <%= f.number_field :destination_fee_amount,
+              label: t(".destination_fee"),
+              min: 0,
+              placeholder: "0.00",
+              step: 0.01,
+              data: { transfer_form_target: "destinationFee" } %>
+      </div>
+    <% end %>
+  </section>
+
+  <section>
     <%= f.submit t(".submit") %>
   </section>
 <% end %>

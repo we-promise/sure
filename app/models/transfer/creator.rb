@@ -1,10 +1,12 @@
 class Transfer::Creator
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil)
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
     @date = date
     @amount = amount.to_d
+    @source_fee_amount = source_fee_amount.to_d
+    @destination_fee_amount = destination_fee_amount.to_d
 
     if exchange_rate.present?
       rate_value = exchange_rate.to_d
@@ -19,7 +21,9 @@ class Transfer::Creator
     transfer = Transfer.new(
       inflow_transaction: inflow_transaction,
       outflow_transaction: outflow_transaction,
-      status: "confirmed"
+      status: "confirmed",
+      source_fee_amount: source_fee_amount,
+      destination_fee_amount: destination_fee_amount
     )
 
     if transfer.save
@@ -31,7 +35,7 @@ class Transfer::Creator
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate
+    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount
 
     def outflow_transaction
       name = "#{name_prefix} to #{destination_account.name}"
@@ -41,7 +45,7 @@ class Transfer::Creator
         kind: kind,
         category: (investment_contributions_category if kind == "investment_contribution"),
         entry: source_account.entries.build(
-          amount: amount.abs,
+          amount: amount.abs + source_fee_amount,
           currency: source_account.currency,
           date: date,
           name: name,
@@ -57,10 +61,12 @@ class Transfer::Creator
     def inflow_transaction
       name = "#{name_prefix} from #{source_account.name}"
 
+      net_inflow = inflow_converted_amount - destination_fee_amount
+
       Transaction.new(
         kind: "funds_movement",
         entry: destination_account.entries.build(
-          amount: inflow_converted_money.amount.abs * -1,
+          amount: net_inflow * -1,
           currency: destination_account.currency,
           date: date,
           name: name,
@@ -69,15 +75,14 @@ class Transfer::Creator
       )
     end
 
-    # If destination account has different currency, its transaction should show up as converted
-    # Uses user-provided exchange rate if available, otherwise requires a provider rate
-    def inflow_converted_money
+    # Converts the transfer amount to the destination currency
+    def inflow_converted_amount
       Money.new(amount.abs, source_account.currency)
            .exchange_to(
              destination_account.currency,
              date: date,
              custom_rate: exchange_rate
-           )
+           ).amount
     end
 
     # The "expense" side of a transfer is treated different in analytics based on where it goes.
