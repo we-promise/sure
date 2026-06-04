@@ -180,7 +180,13 @@ class GoalsController < ApplicationController
       desired_ids = accounts.map(&:id).to_set
       current_ids = goal.goal_accounts.pluck(:account_id).to_set
 
-      (current_ids - desired_ids).each do |id|
+      # Only unlink accounts the current user can actually see in the picker.
+      # A family goal may be linked to another member's private account, which
+      # never renders as a checkbox — so its absence from the submitted set is
+      # not an intentional removal and must not destroy the link.
+      removable_ids = Current.user.accessible_accounts.where(id: current_ids.to_a).pluck(:id).to_set
+
+      ((current_ids & removable_ids) - desired_ids).each do |id|
         goal.goal_accounts.where(account_id: id).destroy_all
       end
       additions = accounts.reject { |a| current_ids.include?(a.id) }

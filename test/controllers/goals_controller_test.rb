@@ -150,6 +150,28 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ @connected.id ], @goal.reload.goal_accounts.pluck(:account_id)
   end
 
+  test "update preserves a linked account the current user cannot access" do
+    # Regression for #2172 review: a family goal can be linked to a private
+    # account owned by another member. That account is never rendered in the
+    # picker, so its absence from the submitted set must not unlink it.
+    private_account = Account.create!(
+      family: @user.family,
+      owner: users(:family_member),
+      accountable: Depository.new,
+      name: "Member Private Checking",
+      currency: @goal.currency,
+      balance: 100
+    )
+    @goal.goal_accounts.create!(account: private_account)
+
+    patch goal_url(@goal), params: { goal: { account_ids: [ @depository.id ] } }
+
+    assert_redirected_to goal_path(@goal)
+    linked = @goal.reload.goal_accounts.pluck(:account_id)
+    assert_includes linked, private_account.id, "inaccessible private link must be preserved"
+    assert_includes linked, @depository.id
+  end
+
   test "update with empty account_ids re-renders with error" do
     patch goal_url(@goal), params: { goal: { account_ids: [ "" ] } }
     assert_response :unprocessable_entity
