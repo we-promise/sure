@@ -16,6 +16,9 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
   test "period totals aggregate contributions and withdrawals in one query" do
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
 
+    @account.share_with!(users(:new_email), permission: "read_only", include_in_finances: true)
+    @account.share_with!(users(:intro_user), permission: "read_only", include_in_finances: true)
+
     create_flow(label: "Contribution", amount: -125, date: period.start_date)
     create_flow(label: "Contribution", amount: 25, date: period.start_date + 1.day)
     create_flow(label: "Withdrawal", amount: 45, date: period.start_date + 1.day)
@@ -35,6 +38,7 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal 1, aggregate_queries.size
     assert_includes aggregate_queries.first, "transactions.investment_activity_label = 'Withdrawal'"
     assert_empty queries.grep(/"transactions"\."investment_activity_label" = \$\d/)
+    assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
   end
 
   private

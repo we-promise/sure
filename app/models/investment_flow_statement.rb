@@ -28,7 +28,8 @@ class InvestmentFlowStatement
       .where(investment_activity_label: %w[Contribution Withdrawal])
 
     if user
-      scope = scope.joins(entry: :account).merge(Account.included_in_finances_for(user))
+      account_ids = family.accounts.included_in_finances_for(user).select(:id)
+      scope = scope.where(entries: { account_id: account_ids })
     end
 
     contributions, withdrawals = scope.pick(
