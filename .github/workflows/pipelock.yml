@@ -30,3 +30,4 @@ jobs:
             docs/hosting/ai.md
             app/models/provider/binance.rb
             workers/preview/package-lock.json
+            test/models/provider/coinbase_test.rb
