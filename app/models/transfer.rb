@@ -11,6 +11,7 @@ class Transfer < ApplicationRecord
   validate :transfer_has_opposite_amounts_or_fees
   validate :transfer_within_date_range
   validate :transfer_has_same_family
+  validate :fees_must_be_non_negative
 
   class << self
     def kind_for_account(account)
@@ -148,12 +149,17 @@ class Transfer < ApplicationRecord
       inflow_amount = inflow_entry.amount
       outflow_amount = outflow_entry.amount
 
+      errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
+
       if inflow_entry.currency == outflow_entry.currency
         total_fee = source_fee_amount.to_d + destination_fee_amount.to_d
         errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != total_fee
-      else
-        errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
       end
+    end
+
+    def fees_must_be_non_negative
+      errors.add(:source_fee_amount, :greater_than_or_equal_to, count: 0) if source_fee_amount.to_d.negative?
+      errors.add(:destination_fee_amount, :greater_than_or_equal_to, count: 0) if destination_fee_amount.to_d.negative?
     end
 
     def transfer_within_date_range
