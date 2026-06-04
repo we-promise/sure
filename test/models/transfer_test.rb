@@ -181,14 +181,14 @@ class TransferTest < ActiveSupport::TestCase
 
   test "has_source_fee? returns true when source fee present" do
     transfer = transfers(:one)
-    transfer.update!(source_fee_amount: 5)
+    transfer.update_column(:source_fee_amount, 5)
     assert transfer.has_source_fee?
     assert transfer.has_fees?
   end
 
   test "has_destination_fee? returns true when destination fee present" do
     transfer = transfers(:one)
-    transfer.update!(destination_fee_amount: 5)
+    transfer.update_column(:destination_fee_amount, 5)
     assert transfer.has_destination_fee?
     assert transfer.has_fees?
   end
@@ -200,7 +200,7 @@ class TransferTest < ActiveSupport::TestCase
 
   test "total_fee sums source and destination fees" do
     transfer = transfers(:one)
-    transfer.update!(source_fee_amount: 3, destination_fee_amount: 2)
+    transfer.update_columns(source_fee_amount: 3, destination_fee_amount: 2)
     assert_equal 5, transfer.total_fee
   end
 
