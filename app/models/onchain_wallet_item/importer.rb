@@ -127,7 +127,6 @@ class OnchainWalletItem::Importer
       ensure_sure_account!(eth_account)
 
       token_holdings.each do |holding|
-        next unless holding[:quantity].positive?
         next unless selected_contracts.include?(holding[:contract])
 
         token_account = upsert_wallet_account(

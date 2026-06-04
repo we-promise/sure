@@ -76,6 +76,50 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
     assert_not item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "erc20", token_contract: skipped_contract)
   end
 
+  test "ethereum sync updates tracked token to zero when balance is fully spent" do
+    item = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets", etherscan_api_key: "key")
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    tracked_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+
+    # Pre-existing tracked token with a non-zero balance
+    item.onchain_wallet_accounts.create!(
+      chain: "ethereum",
+      wallet_address: address,
+      asset_kind: "erc20",
+      token_contract: tracked_contract,
+      symbol: "USDC",
+      name: "USD Coin",
+      currency: "USD",
+      quantity: 5.0,
+      current_balance: 5.0
+    )
+
+    # Simulate transfers that net to zero (received then sent same amount)
+    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: address, contract: tracked_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
+      {
+        "contractAddress" => tracked_contract,
+        "tokenSymbol" => "USDC",
+        "tokenName" => "USD Coin",
+        "tokenDecimal" => "6",
+        "value" => "5000000",
+        "from" => address,
+        "to" => "0x1111111111111111111111111111111111111111",
+        "hash" => "#{tracked_contract}-out-hash"
+      }
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(item).import_wallet!(chain: "ethereum", address: address)
+
+    account = item.onchain_wallet_accounts.find_by(token_contract: tracked_contract)
+    assert account, "Tracked token account should still exist"
+    assert_equal 0.to_d, account.quantity
+    assert_equal 0.to_d, account.current_balance
+  end
+
   test "ethereum provider sync does not import newly discovered token contracts" do
     item = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets", etherscan_api_key: "key")
     address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
