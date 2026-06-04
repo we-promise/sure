@@ -1,6 +1,7 @@
 class PocketsController < ApplicationController
   before_action :set_account
   before_action :require_depository_account
+  before_action :require_manage_account, only: %i[new create edit update destroy]
   before_action :set_pocket, only: %i[edit update destroy]
   before_action :set_available_tags, only: %i[new create edit update]
 
@@ -52,13 +53,15 @@ class PocketsController < ApplicationController
   private
 
     def render_pocket_streams(notice)
+      flash.now[:notice] = notice
       render turbo_stream: [
         turbo_stream.replace("modal", ""),
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@account, :pockets_content),
           partial: "accounts/pockets/index",
           locals: { account: @account }
-        )
+        ),
+        *flash_notification_stream_items
       ]
     end
 
@@ -68,6 +71,13 @@ class PocketsController < ApplicationController
 
     def require_depository_account
       redirect_to account_path(@account), status: :see_other unless @account.depository?
+    end
+
+    def require_manage_account
+      permission = @account.permission_for(Current.user)
+      unless permission.in?([ :owner, :full_control ])
+        redirect_to account_path(@account), alert: t("accounts.not_authorized")
+      end
     end
 
     def set_pocket
