@@ -489,8 +489,10 @@ class TransactionsController < ApplicationController
     end
 
     def set_new_transaction_form_options
-      @account_currencies = accessible_accounts.pluck(:id, :currency).to_h
-      @manual_accounts = accessible_accounts
+      accessible_accounts_scope = accessible_accounts
+
+      @account_currencies = accessible_accounts_scope.pluck(:id, :currency).to_h
+      @manual_accounts = accessible_accounts_scope
         .manual
         .active
         .alphabetically
