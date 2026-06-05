@@ -69,65 +69,118 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   end
 
   def create
-    family = current_resource_owner.family
+  family = current_resource_owner.family
 
-    # Validate account_id is present
-    unless account_id_param.present?
-      render json: {
-        error: "validation_failed",
-        message: "Account ID is required",
-        errors: [ "Account ID is required" ]
-      }, status: :unprocessable_entity
-      return
-    end
+  # Validate account_id is present
+  unless account_id_param.present?
+    render json: {
+      error: "validation_failed",
+      message: "Account ID is required",
+      errors: [ "Account ID is required" ]
+    }, status: :unprocessable_entity
+    return
+  end
 
-    if idempotency_source_param.present? && idempotency_external_id.blank?
-      render json: {
-        error: "validation_failed",
-        message: "Source requires external_id",
-        errors: [ "Source requires external_id" ]
-      }, status: :unprocessable_entity
-      return
-    end
+  if idempotency_source_param.present? && idempotency_external_id.blank?
+    render json: {
+      error: "validation_failed",
+      message: "Source requires external_id",
+      errors: [ "Source requires external_id" ]
+    }, status: :unprocessable_entity
+    return
+  end
 
-    account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
+  account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
 
-    if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
-      return render_existing_idempotent_entry(existing_entry)
-    end
+  if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
+    return render_existing_idempotent_entry(existing_entry)
+  end
 
-    @entry = account.entries.new(entry_params_for_create)
+  # Handle channel payment: auto-generate a secondary record on the funding account
+  if channel_payment_requested?
+    funding_account = family.accounts.writable_by(current_resource_owner).find(funding_account_id_param)
 
-    if @entry.save
+    ApplicationRecord.transaction do
+      # Record A: on the payment channel account (e.g., Alipay)
+      # excluded: true → does NOT affect channel account balance
+      @entry = account.entries.new(entry_params_for_create.merge(excluded: true))
+      @entry.save!
+      @entry.transaction.update!(
+        channel: channel_payment_param,
+        channel_payment: true
+      )
+
+      # Record B: auto-generated on the funding account (e.g., bank card)
+      # excluded: false → DOES affect bank card balance (normal expense)
+      channel_name = channel_payment_param.presence || "Channel"
+      secondary_entry = funding_account.entries.new(
+        name: "#{channel_name} payment",
+        date: @entry.date,
+        amount: @entry.amount,
+        currency: @entry.currency,
+        notes: "Auto-generated from #{channel_name} channel transaction",
+        entryable_type: "Transaction",
+        entryable_attributes: {
+          category_id: nil,
+          merchant_id: nil
+        }
+      )
+      secondary_entry.save!
+      secondary_entry.transaction.update!(
+        channel_record: true,
+        channel: channel_payment_param,
+        channel_record_parent_id: @entry.transaction.id
+      )
+
       @entry.sync_account_later
+      secondary_entry.sync_account_later
       @entry.lock_saved_attributes!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       @transaction = @entry.transaction
-      render :show, status: :created
-    else
-      render json: {
-        error: "validation_failed",
-        message: "Transaction could not be created",
-        errors: @entry.errors.full_messages
-      }, status: :unprocessable_entity
     end
+
+    render :show, status: :created
+    return
+  end
+
+  @entry = account.entries.new(entry_params_for_create)
+
+  if @entry.save
+    @entry.sync_account_later
+    @entry.lock_saved_attributes!
+    @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+
+    @transaction = @entry.transaction
+    render :show, status: :created
+  else
+    render json: {
+      error: "validation_failed",
+      message: "Transaction could not be created",
+      errors: @entry.errors.full_messages
+    }, status: :unprocessable_entity
+  end
 
   rescue ActiveRecord::RecordNotUnique
-    if idempotency_key_requested? && account && (existing_entry = existing_idempotent_entry(account))
-      render_existing_idempotent_entry(existing_entry)
-    else
-      raise
-    end
+  if idempotency_key_requested? && account && (existing_entry = existing_idempotent_entry(account))
+    render_existing_idempotent_entry(existing_entry)
+  else
+    raise
+  end
+  rescue ActiveRecord::RecordNotFound => e
+  render json: {
+    error: "not_found",
+    message: e.message
+  }, status: :not_found
   rescue => e
-    Rails.logger.error "TransactionsController#create error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
+  Rails.logger.error "TransactionsController#create error: #{e.message}"
+  Rails.logger.error e.backtrace.join("\n")
 
-    render json: {
-      error: "internal_server_error",
-      message: "An unexpected error occurred"
-    }, status: :internal_server_error
-end
+  render json: {
+    error: "internal_server_error",
+    message: "An unexpected error occurred"
+  }, status: :internal_server_error
+  end
 
   def update
     if @entry.split_child?
@@ -308,7 +361,8 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :channel, :channel_payment,
+        :funding_account_id, tag_ids: []
       )
     end
 
@@ -427,6 +481,20 @@ end
       else
         amount       # Use as provided
       end
+    end
+
+    # Channel payment helpers
+    def channel_payment_requested?
+      ActiveModel::Type::Boolean.new.cast(transaction_params[:channel_payment]) &&
+        funding_account_id_param.present?
+    end
+
+    def channel_payment_param
+      transaction_params[:channel]
+    end
+
+    def funding_account_id_param
+      transaction_params[:funding_account_id].presence
     end
 
     def safe_page_param

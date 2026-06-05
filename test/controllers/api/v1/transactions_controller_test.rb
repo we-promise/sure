@@ -757,6 +757,69 @@ end
     assert transaction_data["transfer"].key?("other_account")
   end
 
+  test "should create channel payment with auto-generated bank record" do
+    # Create a channel account (e.g., Alipay) and a funding account (bank card)
+    channel_account = @family.accounts.create!(
+      name: "Alipay Test",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    funding_account = @family.accounts.create!(
+      name: "Bank Card Test",
+      balance: 5000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    entry_count_before = Entry.count
+    txn_count_before = Transaction.count
+
+    post api_v1_transactions_url, params: {
+      transaction: {
+        account_id: channel_account.id,
+        date: Date.current.to_s,
+        amount: 98.97,
+        name: "Starbucks - Grande Latte",
+        nature: "expense",
+        currency: "USD",
+        channel: "alipay",
+        channel_payment: true,
+        funding_account_id: funding_account.id
+      }
+    }, headers: api_headers(@api_key), as: :json
+
+    assert_response :created
+
+    # Two entries should have been created
+    assert_equal entry_count_before + 2, Entry.count
+    assert_equal txn_count_before + 2, Transaction.count
+
+    body = JSON.parse(response.body)
+
+    # Primary record (channel side) — balance NOT affected
+    assert body["channel_payment"], "Primary record should have channel_payment: true"
+    assert_equal "alipay", body["channel"]
+    assert_equal "Starbucks - Grande Latte", body["name"]
+
+    # Verify the channel account entry is excluded (no balance impact)
+    primary_entry = Entry.find_by!(entryable_id: body["id"], entryable_type: "Transaction")
+    assert primary_entry.excluded?, "Channel account entry should be excluded from balance"
+
+    # Check channel_record_child is present in response
+    assert body["channel_record_child"].present?, "Response should include channel_record_child"
+
+    # Secondary record (bank side) — balance IS affected
+    child = body["channel_record_child"]
+    assert child["id"].present?
+    assert_equal "Alipay payment", child["name"]
+    assert_equal funding_account.id, child["account"]["id"]
+
+    secondary_entry = Entry.find_by!(entryable_id: child["id"], entryable_type: "Transaction")
+    assert_not secondary_entry.excluded?, "Bank card entry should NOT be excluded from balance"
+  end
+
   private
 
     def api_headers(api_key)

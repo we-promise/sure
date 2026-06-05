@@ -741,6 +741,16 @@ RSpec.configure do |config|
               other_account: { '$ref' => '#/components/schemas/Account', nullable: true }
             }
           },
+          ChannelRecordSide: {
+            type: :object,
+            required: %w[id amount name account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              amount: { type: :string },
+              name: { type: :string },
+              account: { '$ref' => '#/components/schemas/Account' }
+            }
+          },
           RecurringTransaction: {
             type: :object,
             required: %w[id amount amount_cents currency expected_day_of_month last_occurrence_date next_expected_date status occurrence_count manual created_at updated_at],
@@ -800,6 +810,11 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/Tag' }
               },
               transfer: { '$ref' => '#/components/schemas/Transfer', nullable: true },
+              channel: { type: :string, nullable: true },
+              channel_payment: { type: :boolean, nullable: true },
+              channel_record: { type: :boolean, nullable: true },
+              channel_record_parent: { '$ref' => '#/components/schemas/ChannelRecordSide', nullable: true },
+              channel_record_child: { '$ref' => '#/components/schemas/ChannelRecordSide', nullable: true },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
             }

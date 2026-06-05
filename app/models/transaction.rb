@@ -84,6 +84,15 @@ class Transaction < ApplicationRecord
   # they represent real cash outflow from a budgeting perspective.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
+  # Channel payment associations
+  belongs_to :channel_record_parent, class_name: "Transaction", optional: true
+  has_one :channel_record_child, class_name: "Transaction", foreign_key: :channel_record_parent_id, dependent: :destroy
+
+  # Channel payment scopes
+  scope :channel_payments, -> { where(channel_payment: true) }
+  scope :channel_records, -> { where(channel_record: true) }
+  scope :excluding_channel_records, -> { where(channel_record: false) }
+
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
     "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",

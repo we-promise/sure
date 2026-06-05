@@ -176,7 +176,10 @@ RSpec.describe 'API V1 Transactions', type: :request do
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
+              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' },
+              channel: { type: :string, description: 'Payment channel name (e.g., "alipay", "wechat_pay", "paypal")' },
+              channel_payment: { type: :boolean, description: 'Mark as channel payment — if true, requires funding_account_id' },
+              funding_account_id: { type: :string, format: :uuid, description: 'Bank card/account ID that actually funded this channel payment' }
             },
             required: %w[account_id date amount name]
           }

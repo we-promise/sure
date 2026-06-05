@@ -86,3 +86,32 @@ end
 # Additional metadata
 json.created_at transaction.created_at.iso8601
 json.updated_at transaction.updated_at.iso8601
+
+# Channel payment fields
+json.channel transaction.channel if transaction.channel.present?
+json.channel_payment transaction.channel_payment if transaction.channel_payment
+json.channel_record transaction.channel_record if transaction.channel_record
+
+if transaction.channel_record_parent_id.present?
+  json.channel_record_parent do
+    json.id transaction.channel_record_parent.id
+    json.amount transaction.channel_record_parent.entry.amount_money.format
+    json.name transaction.channel_record_parent.entry.name
+    json.account do
+      json.id transaction.channel_record_parent.entry.account.id
+      json.name transaction.channel_record_parent.entry.account.name
+    end
+  end
+end
+
+if transaction.channel_record_child.present?
+  json.channel_record_child do
+    json.id transaction.channel_record_child.id
+    json.amount transaction.channel_record_child.entry.amount_money.format
+    json.name transaction.channel_record_child.entry.name
+    json.account do
+      json.id transaction.channel_record_child.entry.account.id
+      json.name transaction.channel_record_child.entry.account.name
+    end
+  end
+end
