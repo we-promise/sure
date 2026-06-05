@@ -72,23 +72,33 @@ class Pocket < ApplicationRecord
     end
 
     def tagged_transaction_total(tag_id)
-      query = Entry.joins(
+      # Use DISTINCT to prevent double-counting when a transaction has multiple taggings
+      # for the same tag. Filter by currency to avoid mixing FX entries in other currencies.
+      subq = Entry.joins(
         "INNER JOIN transactions ON transactions.id = entries.entryable_id
            AND entries.entryable_type = 'Transaction'"
       ).joins(
         "INNER JOIN taggings ON taggings.taggable_id = transactions.id
            AND taggings.taggable_type = 'Transaction'"
-      ).where(entries: { account_id: account_id })
+      ).where(entries: { account_id: account_id, currency: currency })
        .where(taggings: { tag_id: tag_id })
+       .select("DISTINCT entries.id, entries.amount")
 
-      query = query.where(direction_condition) if direction_condition
-      query.sum("ABS(entries.amount)")
+      subq = subq.where(direction_condition) if direction_condition
+
+      ApplicationRecord.connection.select_value(
+        "SELECT COALESCE(SUM(ABS(amount)), 0) FROM (#{subq.to_sql}) deduplicated_entries"
+      ).to_d
     end
 
     def tagging_transaction_amount(tagging)
       return nil unless tagging.taggable_type == "Transaction"
 
-      amount = tagging.taggable.entry&.amount
+      entry = tagging.taggable.entry
+      return nil unless entry
+      return nil unless entry.currency == currency
+
+      amount = entry.amount
       return nil unless amount
 
       case fill_direction
