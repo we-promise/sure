@@ -1,14 +1,5 @@
 <%# locals: (sankey_data:, period:) %>
 <div id="cashflow-sankey-chart">
-  <div class="flex justify-end items-center gap-4 px-4 mb-4">
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
-      <%= form.select :period,
-                Period.as_options,
-                { selected: period.key },
-                data: { "auto-submit-form-target": "auto" },
-                class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-    <% end %>
-  </div>
   <% if sankey_data[:links].present? %>
     <div class="w-full h-96">
       <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data %>
