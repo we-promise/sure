@@ -15,26 +15,52 @@ class AuthService {
   static const String _apiKeyKey = 'api_key';
   static const String _authModeKey = 'auth_mode';
 
+  String _responseErrorMessage(dynamic responseData, String fallback) {
+    if (responseData is! Map) return fallback;
+
+    return _messageFromErrorValue(responseData['error']) ??
+        _messageFromErrorValue(responseData['errors']) ??
+        fallback;
+  }
+
+  String? _messageFromErrorValue(Object? value) {
+    if (value == null) return null;
+
+    if (value is String) {
+      final message = value.trim();
+      return message.isEmpty ? null : message;
+    }
+
+    if (value is Iterable) {
+      final message = value
+          .map(_messageFromErrorValue)
+          .whereType<String>()
+          .where((part) => part.isNotEmpty)
+          .join(', ');
+      return message.isEmpty ? null : message;
+    }
+
+    if (value is Map) {
+      final message = value.values
+          .map(_messageFromErrorValue)
+          .whereType<String>()
+          .where((part) => part.isNotEmpty)
+          .join(', ');
+      if (message.isNotEmpty) return message;
+
+      final encoded = jsonEncode(value);
+      return encoded.isEmpty ? null : encoded;
+    }
+
+    final message = value.toString().trim();
+    return message.isEmpty ? null : message;
+  }
+
   void _logAuthException(String operation, Object error) {
     LogService.instance.error(
       'AuthService',
       '$operation failed with ${error.runtimeType}',
     );
-  }
-
-  String _responseError(Map<String, dynamic> responseData, String fallback) {
-    final error = responseData['error'];
-    if (error is String && error.isNotEmpty) return error;
-
-    final errors = responseData['errors'];
-    if (errors is List) {
-      final joined = errors.whereType<Object>().join(', ');
-      if (joined.isNotEmpty) return joined;
-    } else if (errors is String && errors.isNotEmpty) {
-      return errors;
-    }
-
-    return fallback;
   }
 
   Future<Map<String, dynamic>> login({
@@ -100,7 +126,7 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': _responseError(responseData, 'Login failed'),
+          'error': _responseErrorMessage(responseData, 'Login failed'),
         };
       }
     } on SocketException catch (e) {
@@ -199,7 +225,7 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': _responseError(responseData, 'Signup failed'),
+          'error': _responseErrorMessage(responseData, 'Signup failed'),
         };
       }
     } on SocketException catch (e) {
@@ -517,7 +543,8 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': _responseError(responseData, 'Account linking failed'),
+          'error':
+              _responseErrorMessage(responseData, 'Account linking failed'),
         };
       }
     } on SocketException catch (e) {
@@ -575,7 +602,8 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': _responseError(responseData, 'Account creation failed'),
+          'error':
+              _responseErrorMessage(responseData, 'Account creation failed'),
         };
       }
     } on SocketException catch (e) {
@@ -617,7 +645,7 @@ class AuthService {
 
       return {
         'success': false,
-        'error': _responseError(responseData, 'Failed to enable AI'),
+        'error': _responseErrorMessage(responseData, 'Failed to enable AI'),
       };
     } catch (e) {
       _logAuthException('Enable AI', e);
