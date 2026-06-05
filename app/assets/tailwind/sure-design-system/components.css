@@ -27,6 +27,10 @@
 
   .focus-ring:focus-visible,
   .focus-ring-within:focus-within {
+    /* Note: consumers carrying `transition-colors` animate this in over
+       150ms — Tailwind v4's color transition list includes outline-color.
+       Combined with the transparent base above, that reads as a quick
+       fade-in rather than a pop, never a flash through currentColor. */
     outline-color: var(--color-focus-ring);
   }
 
