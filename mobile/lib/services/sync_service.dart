@@ -126,6 +126,8 @@ class SyncService with ChangeNotifier {
             nature: transaction.nature,
             notes: transaction.notes,
             categoryId: transaction.categoryId,
+            merchantId: transaction.merchantId,
+            tagIds: transaction.tagIds,
           );
 
           if (result['success'] == true) {
