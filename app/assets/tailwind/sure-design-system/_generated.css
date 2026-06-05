@@ -15,7 +15,7 @@
   --color-info: var(--color-blue-600);
   --color-shadow: --alpha(var(--color-black) / 6%);
   --color-link: var(--color-blue-600);
-  --color-focus-ring: var(--color-alpha-black-400);
+  --color-focus-ring: var(--color-alpha-black-700);
   --color-tertiary: var(--color-alpha-black-100);
   --color-surface: var(--color-gray-50);
   --color-surface-hover: var(--color-gray-100);
@@ -217,7 +217,7 @@
     --color-info: var(--color-blue-500);
     --color-shadow: --alpha(var(--color-white) / 8%);
     --color-link: var(--color-blue-500);
-    --color-focus-ring: var(--color-alpha-white-400);
+    --color-focus-ring: var(--color-alpha-white-700);
     --color-tertiary: var(--color-alpha-white-200);
     --color-surface: var(--color-black);
     --color-surface-hover: var(--color-gray-800);
