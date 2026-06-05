@@ -71,6 +71,14 @@ class Sync < ApplicationRecord
       query
     end
 
+    # True iff the family has any pending/syncing Sync — across its own row,
+    # its accounts, and every Syncable provider `*_items` association. Built
+    # on `for_family` so new provider integrations are picked up automatically
+    # via `family_syncable_associations` reflection (no hand-rolled list).
+    def any_incomplete_for?(family)
+      for_family(family).incomplete.exists?
+    end
+
     private
       def account_syncable_ids(family, resource_owner)
         (resource_owner ? resource_owner.accessible_accounts : family.accounts)

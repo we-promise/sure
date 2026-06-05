@@ -77,7 +77,10 @@ class Provider::Anthropic::AutoCategorizer
                   category_name: {
                     type: [ "string", "null" ],
                     description: "Matched category name from the user's categories, or null when uncertain.",
-                    enum: user_categories.map { |c| c[:name] }
+                    # `null` must be in the enum too: JSON Schema `enum` restricts
+                    # values to the listed set, so without it Claude can't abstain
+                    # even though the prompt + type allow null (forced miscategorization).
+                    enum: user_categories.map { |c| c[:name] } + [ nil ]
                   }
                 },
                 required: [ "transaction_id", "category_name" ],

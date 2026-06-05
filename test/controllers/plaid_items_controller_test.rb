@@ -6,6 +6,58 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "new redirects with friendly alert when Plaid rejects link_token request for unauthorized products" do
+    # Reproduces issue #1792: the Plaid client account isn't enabled for the
+    # requested products, so Plaid returns an actionable error message. We
+    # should surface that message instead of letting the modal frame render
+    # blank.
+    plaid_provider = mock
+    Provider::Registry.stubs(:plaid_provider_for_region).with(:us).returns(plaid_provider)
+
+    error_body = {
+      "error_code" => "INVALID_PRODUCT",
+      "error_message" => "Your account is not enabled for the following products: [\"investments\" \"liabilities\" \"transactions\"]. To request access, visit https://dashboard.plaid.com/overview/request-products or contact Sales or your Account Manager."
+    }.to_json
+    plaid_provider.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_body)
+    )
+
+    get new_plaid_item_url(accountable_type: "Investment")
+
+    assert_redirected_to accounts_path
+    assert_match(/not enabled for the following products/, flash[:alert])
+  end
+
+  test "new redirects with generic alert when Plaid raises an unclassified error" do
+    plaid_provider = mock
+    Provider::Registry.stubs(:plaid_provider_for_region).with(:us).returns(plaid_provider)
+
+    plaid_provider.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 500, response_body: { "error_code" => "INTERNAL_SERVER_ERROR" }.to_json)
+    )
+
+    get new_plaid_item_url
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("plaid_items.errors.link_token_generic"), flash[:alert]
+  end
+
+  test "edit redirects with friendly alert when Plaid rejects update link_token request" do
+    plaid_item = plaid_items(:one)
+    error_body = {
+      "error_code" => "INVALID_PRODUCT",
+      "error_message" => "Your account is not enabled for the following products: [\"transactions\"]."
+    }.to_json
+    PlaidItem.any_instance.expects(:get_update_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_body)
+    )
+
+    get edit_plaid_item_url(plaid_item)
+
+    assert_redirected_to accounts_path
+    assert_match(/not enabled for the following products/, flash[:alert])
+  end
+
   test "create" do
     @plaid_provider = mock
     Provider::Registry.expects(:plaid_provider_for_region).with("us").returns(@plaid_provider)

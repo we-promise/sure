@@ -3,10 +3,16 @@ class Provider::Anthropic::PdfProcessor
 
   TOOL_NAME = "report_document_analysis".freeze
 
-  # Anthropic's native document block accepts PDFs up to 32 MB / 100 pages.
-  # We guard the size limit upstream to avoid base64-encoding a 100 MB blob
-  # in vain (peak heap ~270 MB before the API rejects it).
-  MAX_PDF_BYTES = 32 * 1024 * 1024
+  # Anthropic enforces a 32 MB limit on the whole Messages *request body*, and
+  # the PDF travels base64-encoded (~4/3 larger) inside that body alongside the
+  # JSON envelope (instructions, tool schema). So a 32 MB raw PDF would encode
+  # to ~42 MB and be rejected. Cap the raw bytes at 3/4 of the request budget,
+  # minus a generous envelope reserve, so the encoded request stays under the
+  # limit. Guarding upstream also avoids base64-encoding an over-size blob in
+  # vain (peak heap before the API would reject it).
+  MAX_REQUEST_BYTES = 32 * 1024 * 1024
+  REQUEST_ENVELOPE_BYTES = 1 * 1024 * 1024
+  MAX_PDF_BYTES = (MAX_REQUEST_BYTES - REQUEST_ENVELOPE_BYTES) * 3 / 4
 
   attr_reader :client, :model, :pdf_content, :langfuse_trace, :family
 
@@ -22,7 +28,7 @@ class Provider::Anthropic::PdfProcessor
     raise Provider::Anthropic::Error, "PDF content is required" if pdf_content.blank?
     if pdf_content.bytesize > MAX_PDF_BYTES
       raise Provider::Anthropic::Error,
-            "PDF exceeds Anthropic's 32 MB limit (#{pdf_content.bytesize} bytes)"
+            "PDF is too large (#{pdf_content.bytesize} bytes); base64-encoded it would exceed Anthropic's 32 MB request limit"
     end
 
     span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
@@ -115,7 +121,7 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def instructions
-      <<~INSTRUCTIONS.strip_heredoc
+      <<~INSTRUCTIONS
         You analyze financial documents. For the attached PDF, classify the document type,
         summarize it, and extract key metadata. Return the result via the report_document_analysis tool.
 

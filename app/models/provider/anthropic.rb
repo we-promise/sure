@@ -259,7 +259,12 @@ class Provider::Anthropic < Provider
           usage: usage,
           trace: trace
         )
-        record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
+        # Record once. On a normal stream `on_partial` never fires (it only runs
+        # from stream_chat_response's rescue on a mid-stream error, which
+        # re-raises past here), so today this is the sole recorder. Guard it
+        # anyway so a future change that emits partial usage on success can't
+        # silently double-bill — the symptom we chased in the #1984 review.
+        record_llm_usage(family: family, model: model, operation: "chat", usage: usage) unless partial_usage_recorded
 
         parsed
       rescue => e
@@ -442,7 +447,9 @@ class Provider::Anthropic < Provider
       estimated_cost = LlmUsage.calculate_cost(
         model: model,
         prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens
+        completion_tokens: completion_tokens,
+        cache_creation_tokens: usage["cache_creation_input_tokens"],
+        cache_read_tokens: usage["cache_read_input_tokens"]
       )
 
       family.llm_usages.create!(
