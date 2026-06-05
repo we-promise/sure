@@ -135,42 +135,22 @@ class SnaptradeAccount < ApplicationRecord
     # Deep convert each balance entry to ensure we have hashes
     data = Array(balances_data).map { |b| sdk_object_to_hash(b).with_indifferent_access }
 
-    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! triggered (#{data.size} entries)"
-    Rails.logger.debug { "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}" }
+    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
 
     # Find cash balance (usually in USD or account currency)
     cash_entry = data.find { |b| b.dig(:currency, :code) == currency } ||
                  data.find { |b| b.dig(:currency, :code) == "USD" } ||
                  data.first
 
-    transaction do
-      cash_value = cash_entry ? cash_entry[:cash] : cash_balance
+    if cash_entry
+      cash_value = cash_entry[:cash]
+      Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}"
 
-      # Persist full balances snapshot so non_primary_cash_entries can surface
-      # non-primary-currency cash as holdings (issue #1809).
-      update!(cash_balance: cash_value, raw_balances_payload: data)
-
-      sync_multi_currency_cash_holdings!(data, cash_entry)
-    end
-  end
-
-  # Returns non-primary-currency cash entries from the stored balances payload.
-  # Used by HoldingsProcessor to surface secondary-currency cash as synthetic
-  # holdings (issue #1809).
-  def non_primary_cash_entries
-    entries = Array(raw_balances_payload).map do |entry|
-      entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
+      # Only update cash_balance, preserve current_balance (total account value)
+      update!(cash_balance: cash_value)
     end
 
-    primary_code = primary_cash_entry(entries)&.dig(:currency, :code)
-
-    entries.filter_map do |e|
-      code = e.dig(:currency, :code)
-      next if code.blank? || code == primary_code
-      amount = e[:cash]
-      next if amount.blank?
-      { currency: code, amount: amount }
-    end
+    sync_multi_currency_cash_holdings!(data, cash_entry)
   end
 
   # Get the SnapTrade provider instance via the parent item
@@ -247,15 +227,6 @@ class SnaptradeAccount < ApplicationRecord
       end
 
       stale_scope.destroy_all
-    end
-
-    # Shared logic for selecting the primary cash entry from a list of balance
-    # entries. Used by both upsert_balances! and non_primary_cash_entries so
-    # both stay in sync.
-    def primary_cash_entry(entries)
-      entries.find { |b| b.dig(:currency, :code) == currency } ||
-        entries.find { |b| b.dig(:currency, :code) == "USD" } ||
-        entries.first
     end
 
     # Enqueue a background job to clean up the SnapTrade connection

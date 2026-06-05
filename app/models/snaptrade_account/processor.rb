@@ -21,9 +21,7 @@ class SnaptradeAccount::Processor
     holdings_count = snaptrade_account.raw_holdings_payload&.size || 0
     Rails.logger.info "SnaptradeAccount::Processor - Holdings payload has #{holdings_count} items"
 
-    # Run the holdings processor when there are security holdings OR
-    # non-primary-currency cash to surface as synthetic cash holdings (#1809).
-    if snaptrade_account.raw_holdings_payload.present? || snaptrade_account.non_primary_cash_entries.any?
+    if snaptrade_account.raw_holdings_payload.present?
       Rails.logger.info "SnaptradeAccount::Processor - Processing holdings..."
       SnaptradeAccount::HoldingsProcessor.new(snaptrade_account).process
     else

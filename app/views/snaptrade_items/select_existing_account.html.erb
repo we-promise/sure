@@ -14,13 +14,7 @@
         <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
         <p class="text-secondary"><%= t("snaptrade_items.select_existing_account.no_accounts", default: "No unlinked SnapTrade accounts available.") %></p>
         <p class="text-sm text-secondary mt-2"><%= t("snaptrade_items.select_existing_account.connect_hint", default: "You may need to connect a brokerage first.") %></p>
-        <%= render DS::Link.new(
-          text: t("snaptrade_items.select_existing_account.settings_link", default: "Go to Provider Settings"),
-          href: settings_providers_path,
-          variant: :primary,
-          size: :sm,
-          class: "mt-4"
-        ) %>
+        <%= link_to t("snaptrade_items.select_existing_account.settings_link", default: "Go to Provider Settings"), settings_providers_path, class: "btn btn--primary btn--sm mt-4" %>
       </div>
     <% else %>
       <div class="space-y-4">
