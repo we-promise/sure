@@ -40,17 +40,17 @@ class Pocket < ApplicationRecord
   # the account balance under concurrent tagging — pockets_overflow? surfaces that to the user.
   # The DB check constraint (chk_pockets_allocated_amount_non_negative) remains the hard floor.
   def apply_tagging(tagging)
-    amount = tagging_transaction_amount(tagging)
-    return unless amount
+    delta = tagging_transaction_delta(tagging)
+    return unless delta
 
-    increment!(:allocated_amount, amount)
+    adjust_by(delta)
   end
 
   def reverse_tagging(tagging)
-    amount = tagging_transaction_amount(tagging)
-    return unless amount
+    delta = tagging_transaction_delta(tagging)
+    return unless delta
 
-    decrement!(:allocated_amount, [ amount, allocated_amount ].min)
+    adjust_by(-delta)
   end
 
   private
@@ -72,8 +72,6 @@ class Pocket < ApplicationRecord
     end
 
     def tagged_transaction_total(tag_id)
-      # Use DISTINCT to prevent double-counting when a transaction has multiple taggings
-      # for the same tag. Filter by currency to avoid mixing FX entries in other currencies.
       subq = Entry.joins(
         "INNER JOIN transactions ON transactions.id = entries.entryable_id
            AND entries.entryable_type = 'Transaction'"
@@ -84,14 +82,22 @@ class Pocket < ApplicationRecord
        .where(taggings: { tag_id: tag_id })
        .select("DISTINCT entries.id, entries.amount")
 
-      subq = subq.where(direction_condition) if direction_condition
-
-      ApplicationRecord.connection.select_value(
-        "SELECT COALESCE(SUM(ABS(amount)), 0) FROM (#{subq.to_sql}) deduplicated_entries"
-      ).to_d
+      if fill_direction == "both"
+        # Net = incomes - expenses, floored at 0.
+        # DB convention: income = negative amount, expense = positive → SUM(-amount) gives net.
+        ApplicationRecord.connection.select_value(
+          "SELECT GREATEST(0, COALESCE(SUM(-amount), 0)) FROM (#{subq.to_sql}) deduplicated_entries"
+        ).to_d
+      else
+        subq = subq.where(direction_condition)
+        ApplicationRecord.connection.select_value(
+          "SELECT COALESCE(SUM(ABS(amount)), 0) FROM (#{subq.to_sql}) deduplicated_entries"
+        ).to_d
+      end
     end
 
-    def tagging_transaction_amount(tagging)
+    # Returns a signed delta: positive = add to pocket, negative = subtract from pocket.
+    def tagging_transaction_delta(tagging)
       return nil unless tagging.taggable_type == "Transaction"
 
       entry = tagging.taggable.entry
@@ -102,9 +108,17 @@ class Pocket < ApplicationRecord
       return nil unless amount
 
       case fill_direction
-      when "inflows"  then amount < 0 ? amount.abs : nil
-      when "outflows" then amount > 0 ? amount : nil
-      else amount.abs
+      when "inflows"  then amount < 0 ? amount.abs : nil  # income only, always positive
+      when "outflows" then amount > 0 ? amount : nil      # expense only, always positive
+      else -amount  # income (neg in DB) → positive delta; expense (pos in DB) → negative delta
+      end
+    end
+
+    def adjust_by(delta)
+      if delta >= 0
+        increment!(:allocated_amount, delta)
+      else
+        decrement!(:allocated_amount, [ delta.abs, allocated_amount ].min)
       end
     end
 

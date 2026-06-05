@@ -75,9 +75,9 @@ class PocketTest < ActiveSupport::TestCase
   # Auto-fill via Tagging
 
   test "creating a tagging fills linked pocket" do
-    # Use a fresh entry so sibling_tagging_exists? finds no pre-existing tagging
+    # Use a fresh income entry (amount < 0 in DB) so income fills the pocket
     entry = Entry.create!(account: @account, entryable: Transaction.new,
-      date: 1.day.ago.to_date, name: "Fresh expense", amount: 10, currency: "USD")
+      date: 1.day.ago.to_date, name: "Fresh income", amount: -10, currency: "USD")
 
     assert_difference "@tagged_pocket.reload.allocated_amount", entry.amount.abs do
       Tagging.create!(tag: tags(:one), taggable: entry.entryable)
@@ -86,7 +86,7 @@ class PocketTest < ActiveSupport::TestCase
 
   test "destroying a tagging unfills linked pocket" do
     entry = Entry.create!(account: @account, entryable: Transaction.new,
-      date: 1.day.ago.to_date, name: "Fresh expense", amount: 10, currency: "USD")
+      date: 1.day.ago.to_date, name: "Fresh income", amount: -10, currency: "USD")
     tagging = Tagging.create!(tag: tags(:one), taggable: entry.entryable)
 
     assert_difference "@tagged_pocket.reload.allocated_amount", -entry.amount.abs do
@@ -247,7 +247,7 @@ class PocketTest < ActiveSupport::TestCase
     assert_equal 300, pocket.reload.allocated_amount
 
     pocket.update!(fill_direction: :both)
-    assert_equal 400, pocket.reload.allocated_amount
+    assert_equal 200, pocket.reload.allocated_amount  # 300 income - 100 expense = 200
   end
 
   test "destroy cannot push pocket below zero" do
