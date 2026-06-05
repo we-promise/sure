@@ -194,6 +194,9 @@
     @variant theme-dark {
       @apply bg-gray-700 hover:bg-gray-700;
     }
+  }
+
+  /*
     Horizontally scrollable table wrapper (#2137). `overflow-x: auto` so wide
     tables scroll instead of clipping (the LLM-usage table was `overflow-hidden`
     and pushed columns off-screen) or wrapping money mid-digit. The pure-CSS
