@@ -43,10 +43,36 @@ class VectorStore::RegistryTest < ActiveSupport::TestCase
     end
   end
 
-  test "adapter returns VectorStore::Pgvector instance when pgvector configured" do
+  test "adapter returns VectorStore::Pgvector instance when pgvector configured and available" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
     ClimateControl.modify(VECTOR_STORE_PROVIDER: "pgvector") do
       adapter = VectorStore::Registry.adapter
       assert_instance_of VectorStore::Pgvector, adapter
+    end
+  end
+
+  test "adapter is nil when pgvector is selected but unavailable" do
+    VectorStore::Pgvector.stubs(:available?).returns(false)
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "pgvector") do
+      assert_nil VectorStore::Registry.adapter
+      assert_not VectorStore.configured?
+    end
+  end
+
+  test "adapter is nil for the anthropic default when pgvector is unavailable" do
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(false)
+    VectorStore::Registry.stubs(:openai_access_token).returns(nil)
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: nil) do
+      assert_nil VectorStore::Registry.adapter
+    end
+  end
+
+  test "adapter builds pgvector for the anthropic default when available" do
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: nil) do
+      assert_instance_of VectorStore::Pgvector, VectorStore::Registry.adapter
     end
   end
 

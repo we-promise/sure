@@ -70,6 +70,12 @@ class VectorStore::Registry
       end
 
       def build_pgvector
+        # Gate on availability (extension present, or table already created)
+        # so an Anthropic-default install on a Postgres without pgvector
+        # degrades to the assistant's "provider_not_configured" message
+        # instead of raising raw PG errors mid-chat.
+        return nil unless VectorStore::Pgvector.available?
+
         VectorStore::Pgvector.new
       end
 
