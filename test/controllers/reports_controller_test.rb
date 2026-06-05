@@ -226,22 +226,38 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
   test "filter_account_id cannot bypass finance account scoping" do
     member = users(:family_member)
+    allowed_account = accounts(:depository)
     private_account = accounts(:investment)
 
+    assert_includes member.finance_accounts.pluck(:id), allowed_account.id
     assert_not_includes member.finance_accounts.pluck(:id), private_account.id
 
-    category = @family.categories.create!(name: "LEAKED_REPORTS_CATEGORY", color: "#737373", lucide_icon: "circle")
+    leaked_category = @family.categories.create!(name: "LEAKED_REPORTS_CATEGORY", color: "#737373", lucide_icon: "circle")
+    allowed_category = @family.categories.create!(name: "ALLOWED_REPORTS_CATEGORY", color: "#737373", lucide_icon: "circle")
+
     private_account.entries.create!(
       name: "Admin-only spend",
       date: Date.current,
       amount: -25,
       currency: "USD",
-      entryable: Transaction.new(category: category, kind: "standard")
+      entryable: Transaction.new(category: leaked_category, kind: "standard")
+    )
+    allowed_account.entries.create!(
+      name: "Shared checking spend",
+      date: Date.current,
+      amount: -15,
+      currency: "USD",
+      entryable: Transaction.new(category: allowed_category, kind: "standard")
     )
 
     sign_in member
 
     get reports_path(period_type: :monthly, filter_account_id: private_account.id)
+    refute_includes @response.body, "LEAKED_REPORTS_CATEGORY"
+    refute_includes @response.body, "ALLOWED_REPORTS_CATEGORY"
+
+    get reports_path(period_type: :monthly, filter_account_id: allowed_account.id)
+    assert_includes @response.body, "ALLOWED_REPORTS_CATEGORY"
     refute_includes @response.body, "LEAKED_REPORTS_CATEGORY"
   end
 
