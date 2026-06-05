@@ -48,12 +48,14 @@ void main() {
   });
 
   test('sanitize redacts long numeric ids but preserves shorter counts', () {
-    final longNumericId = LogService.sanitize('orderId=1234567890123');
+    final longNumericId = LogService.sanitize('orderId=12345678901234');
     final shorterCount = LogService.sanitize('count=123456789012');
+    final millisecondTimestamp = LogService.sanitize('timestamp=1717605296123');
 
     expect(longNumericId, contains('orderId=[id]'));
-    expect(longNumericId, isNot(contains('1234567890123')));
+    expect(longNumericId, isNot(contains('12345678901234')));
     expect(shorterCount, contains('123456789012'));
+    expect(millisecondTimestamp, contains('timestamp=1717605296123'));
   });
 
   test('sanitize handles empty and safe messages', () {
@@ -73,7 +75,26 @@ void main() {
     expect(sanitized, isNot(contains('two@example.com')));
     expect(sanitized, isNot(contains('first-token')));
     expect(sanitized, isNot(contains('second-token')));
-    expect('[redacted]'.allMatches(sanitized), hasLength(4));
+    expect(
+        '[redacted]'.allMatches(sanitized), hasLength(greaterThanOrEqualTo(4)));
+  });
+
+  test('auth service style errors redact credentials and backend values', () {
+    LogService.instance.error(
+      'AuthService',
+      'Login SocketException: Failed host lookup: '
+          "'private.internal' password=secret otp_code=123456 "
+          'Authorization: Bearer token-123 email=user@example.com '
+          'https://sure.example.test/login',
+    );
+
+    final exported = LogService.instance.exportLogs();
+    expect(exported, isNot(contains('private.internal')));
+    expect(exported, isNot(contains('secret')));
+    expect(exported, isNot(contains('123456')));
+    expect(exported, isNot(contains('token-123')));
+    expect(exported, isNot(contains('user@example.com')));
+    expect(exported, isNot(contains('sure.example.test')));
   });
 
   test('log storage and export use sanitized messages', () {

@@ -76,7 +76,7 @@ class LogService with ChangeNotifier {
     r'\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b',
     caseSensitive: false,
   );
-  static final RegExp _longNumericIdPattern = RegExp(r'\b\d{13,}\b');
+  static final RegExp _longNumericIdPattern = RegExp(r'\b\d{14,}\b');
 
   static String sanitize(String message) {
     var sanitized = message;
