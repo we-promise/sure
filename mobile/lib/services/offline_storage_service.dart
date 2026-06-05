@@ -240,9 +240,10 @@ class OfflineStorageService {
 
     // Log if transaction has empty accountId
     if (transaction.accountId.isEmpty) {
+      final fallbackApplied = accountId != null && accountId.isNotEmpty;
       _log.warning(
         'OfflineStorage',
-        'Transaction has empty accountId from server; using provided fallback: ${accountId != null}',
+        'Transaction has empty accountId from server; fallbackApplied=$fallbackApplied',
       );
     }
 
@@ -257,7 +258,7 @@ class OfflineStorageService {
       if (finalAccountId.isEmpty) {
         _log.error(
           'OfflineStorage',
-          'CRITICAL: Updating transaction with EMPTY accountId!',
+          'CRITICAL: Updating transaction with EMPTY accountId; operation=update fallbackApplied=false existingAccountIdPresent=false',
         );
       }
 
@@ -272,7 +273,7 @@ class OfflineStorageService {
       if (effectiveAccountId.isEmpty) {
         _log.error(
           'OfflineStorage',
-          'CRITICAL: Inserting transaction with EMPTY accountId!',
+          'CRITICAL: Inserting transaction with EMPTY accountId; operation=insert fallbackApplied=false',
         );
       }
 
