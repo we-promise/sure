@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module CsvFormulaSanitizer
-  FORMULA_PREFIX = /\A[=+\-@]/
+  FORMULA_PREFIX = /\A[=+\-@\t\r]/
 
   module_function
 
