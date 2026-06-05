@@ -10,21 +10,35 @@
     on the same element, so the ring silently vanished on shadowed controls.
     `outline` is a separate property with no such conflict, and it doubles as the
     forced-colors (Windows high-contrast) indicator. `:focus-visible` only, so it
-    never shows for mouse/touch. `.focus-ring-within` (and `.form-field`) mirror
-    it onto a wrapper whose focus lands on a child input.
+    never shows for mouse/touch. `.focus-ring-within` mirrors it onto a wrapper
+    whose focus lands on a child input. `.form-field` deliberately does NOT
+    adopt it: form fields keep their original always-on soft halo (ring-4 at
+    low alpha) — a resting decoration, not a keyboard-only indicator.
   */
-  .focus-ring:focus-visible,
-  .focus-ring-within:focus-within,
-  .form-field:focus-within {
-    outline: 2px solid var(--color-focus-ring);
+  /* Base: an always-present transparent outline so consumers that carry
+     `transition-all` (or any transition touching outline-color) animate
+     transparent -> token instead of passing through `currentColor` — the
+     latter reads as a black border flashing in and out. */
+  .focus-ring,
+  .focus-ring-within {
+    outline: 2px solid transparent;
     outline-offset: 0;
+  }
+
+  .focus-ring:focus-visible,
+  .focus-ring-within:focus-within {
+    outline-color: var(--color-focus-ring);
   }
 
   /* Forms */
   .form-field {
     @apply flex flex-col gap-1 relative px-3 py-2 rounded-md border bg-container border-secondary shadow-xs w-full;
-    @apply focus-within:border-secondary focus-within:shadow-none;
+    @apply focus-within:border-secondary focus-within:shadow-none focus-within:ring-4 focus-within:ring-alpha-black-200;
     @apply transition-all duration-300;
+
+    @variant theme-dark {
+      @apply focus-within:ring-alpha-white-300;
+    }
 
     /* Add styles for multiple select within form fields */
     select[multiple] {
