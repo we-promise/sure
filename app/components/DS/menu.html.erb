@@ -6,7 +6,7 @@
   <% end %>
 
   <div id="<%= menu_id %>" data-DS--menu-target="content" class="px-2 lg:px-0 max-w-full hidden z-50" role="menu">
-    <%= tag.div class: "mx-auto min-w-[200px] shadow-border-xs bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
+    <%= tag.div class: "mx-auto min-w-[200px] shadow-border-lg bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
       <%= tag.div class: class_names("py-1" => !no_padding) do %>
         <% items.each do |item| %>
           <%= item %>
