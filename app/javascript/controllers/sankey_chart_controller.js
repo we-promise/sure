@@ -550,7 +550,9 @@ export default class extends Controller {
   // what's hovered. No color swatch — the hover highlight on the diagram
   // itself already says which ribbon the card belongs to.
   #tooltipContext(label) {
-    return `<div class="text-xs text-secondary mb-1 truncate">${label}</div>`;
+    // max-w-64 gives truncate a constraint to fire against — an absolute
+    // tooltip otherwise grows to fit and never ellipsizes deep flows.
+    return `<div class="max-w-64 text-xs text-secondary mb-1 truncate">${label}</div>`;
   }
 
   #showTooltip(event, value, percentage, contextHtml = null) {

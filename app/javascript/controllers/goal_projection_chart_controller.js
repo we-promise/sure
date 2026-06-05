@@ -449,6 +449,10 @@ export default class extends Controller {
     // hand-copied class string that drifted from the other charts the moment
     // the contract changed.
     const tooltip = createChartTooltip(root);
+    // This tooltip snaps between discrete dates (not raw cursor positions),
+    // so the glide reads as easing, not lag. Cursor-following tooltips must
+    // not do this — see the .chart-tooltip comment in components.css.
+    tooltip.style.transition = "left 80ms ease-out, top 80ms ease-out";
     const tooltipDate = document.createElement("div");
     tooltipDate.className = CHART_TOOLTIP_CONTEXT_CLASSES;
     const tooltipValue = document.createElement("div");
@@ -461,12 +465,13 @@ export default class extends Controller {
     tooltip.replaceChildren(tooltipDate, tooltipValue, tooltipRelation);
 
     const setRelation = (amount) => {
-      const target = Number(data.target_amount) || 0;
-      if (target <= 0 || !data.target_amount_short_label) {
+      // `targetAmount` is _draw()'s outer const (data.target_amount) — no
+      // local copy, which previously shadowed the `target` date const.
+      if (targetAmount <= 0 || !data.target_amount_short_label) {
         tooltipRelation.style.display = "none";
         return;
       }
-      const percent = Math.round((amount / target) * 100);
+      const percent = Math.round((amount / targetAmount) * 100);
       tooltipRelation.textContent = this.targetRelationTemplateValue
         .replace("{percent}", percent)
         .replace("{target}", data.target_amount_short_label);
