@@ -6,6 +6,7 @@ import '../models/offline_transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/transactions_provider.dart';
+import '../screens/transaction_edit_screen.dart';
 import '../screens/transaction_form_screen.dart';
 import '../widgets/category_filter.dart';
 import '../widgets/sync_status_badge.dart';
@@ -247,6 +248,19 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _editTransaction(OfflineTransaction transaction) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TransactionEditScreen(transaction: transaction),
+      ),
+    );
+
+    if (updated == true && mounted) {
+      await _loadTransactions();
     }
   }
 
@@ -579,6 +593,30 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                           color: colorScheme.onSurfaceVariant,
                                         ),
                                   ),
+                                  if (transaction.merchantName != null ||
+                                      transaction.tagNames.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children: [
+                                        if (transaction.merchantName != null)
+                                          Chip(
+                                            label: Text(transaction.merchantName!),
+                                            visualDensity: VisualDensity.compact,
+                                          ),
+                                        ...transaction.tagNames
+                                            .where((name) => name.isNotEmpty)
+                                            .map(
+                                              (name) => Chip(
+                                                label: Text(name),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                              ),
+                                            ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -596,12 +634,30 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                           compact: true,
                                         ),
                                       ),
-                                    Text(
-                                      '${displayInfo['prefix']}${displayInfo['displayAmount']}',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: displayInfo['color'] as Color,
-                                          ),
+                                    if (!_isSelectionMode &&
+                                        transaction.syncStatus ==
+                                            SyncStatus.synced)
+                                      SizedBox(
+                                        width: 36,
+                                        height: 36,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          tooltip: 'Edit transaction',
+                                          visualDensity: VisualDensity.compact,
+                                          padding: EdgeInsets.zero,
+                                          onPressed: () =>
+                                              _editTransaction(transaction),
+                                        ),
+                                      ),
+                                    Flexible(
+                                      child: Text(
+                                        '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: displayInfo['color'] as Color,
+                                            ),
+                                      ),
                                     ),
                                   ],
                                 ),
