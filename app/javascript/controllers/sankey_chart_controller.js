@@ -520,9 +520,18 @@ export default class extends Controller {
   #showTooltip(event, value, percentage, title = null) {
     if (!this.tooltip) this.#createTooltip();
 
+    // Node titles are user-named categories; escape them since this goes
+    // through .html() (the previous interpolation injected them raw).
+    const esc = (s) =>
+      String(s).replace(
+        /[&<>"']/g,
+        (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+      );
+    const valueLine = `<span class="font-medium tabular-nums">${this.#formatCurrency(value)}</span> <span class="text-secondary">(${percentage || 0}%)</span>`;
     const content = title
-      ? `${title}<br/>${this.#formatCurrency(value)} (${percentage || 0}%)`
-      : `${this.#formatCurrency(value)} (${percentage || 0}%)`;
+      ? `<div class="text-xs text-secondary mb-1">${esc(title)}</div><div>${valueLine}</div>`
+      : valueLine;
 
     const isInDialog = !!this.element.closest("dialog");
     const x = isInDialog ? event.clientX : event.pageX;

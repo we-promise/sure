@@ -1,5 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import {
+  createChartTooltip,
+  CHART_TOOLTIP_CONTEXT_CLASSES,
+  CHART_TOOLTIP_VALUE_CLASSES,
+} from "utils/chart_tooltip";
 
 // Projection chart for a goal. Renders:
 //   - Saved area + line from goal creation → today (solid)
@@ -439,10 +444,15 @@ export default class extends Controller {
     // clobber a stylesheet `position: fixed/sticky/absolute` with our
     // own `relative`. Read the computed style instead.
     if (getComputedStyle(root).position === "static") root.style.position = "relative";
-    const tooltip = document.createElement("div");
-    tooltip.className = "bg-container text-primary text-sm font-sans absolute p-2 border border-secondary rounded-lg pointer-events-none z-50 privacy-sensitive";
-    tooltip.style.display = "none";
-    root.appendChild(tooltip);
+    // Shared visual contract (utils/chart_tooltip) — this used to be a
+    // hand-copied class string that drifted from the other charts the moment
+    // the contract changed.
+    const tooltip = createChartTooltip(root);
+    const tooltipDate = document.createElement("div");
+    tooltipDate.className = CHART_TOOLTIP_CONTEXT_CLASSES;
+    const tooltipValue = document.createElement("div");
+    tooltipValue.className = CHART_TOOLTIP_VALUE_CLASSES;
+    tooltip.replaceChildren(tooltipDate, tooltipValue);
 
     const overlay = svg
       .append("rect")
@@ -485,7 +495,7 @@ export default class extends Controller {
       const hoverX = x(hoverDate);
       crosshair.attr("x1", hoverX).attr("x2", hoverX).style("display", null);
 
-      const lines = [dateFmt(hoverDate)];
+      tooltipDate.textContent = dateFmt(hoverDate);
 
       if (future) {
         // Projection segment: interpolate along the dashed line; saved dot
@@ -494,7 +504,7 @@ export default class extends Controller {
         const projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
         hoverProjDot.attr("cx", hoverX).attr("cy", y(projValue)).style("display", null);
         hoverSavedDot.style("display", "none");
-        lines.push(this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency)));
+        tooltipValue.textContent = this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency));
       } else {
         // Saved segment: hoverDate is already snapped to nearest savedSeries
         // entry above, so reuse that entry directly instead of running
@@ -502,11 +512,9 @@ export default class extends Controller {
         const savedPoint = savedSeries.find((p) => p.date.getTime() === hoverDate.getTime()) || savedSeries[savedSeries.length - 1];
         hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
         hoverProjDot.style("display", "none");
-        lines.push(this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency)));
+        tooltipValue.textContent = this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency));
       }
 
-      tooltip.textContent = lines.join("\n");
-      tooltip.style.whiteSpace = "pre";
       tooltip.style.display = "block";
       const tipRect = tooltip.getBoundingClientRect();
       const left = Math.min(width - tipRect.width - 4, Math.max(4, xPos + 12));

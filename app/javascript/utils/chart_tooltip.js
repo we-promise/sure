@@ -11,8 +11,20 @@
 // Not to be confused with DS::Tooltip — that is the info-icon hint primitive
 // (bg-inverse, aria-describedby, anchored to a static trigger). This is a
 // data-card surface created and updated inside D3 handler code.
+// Visual target: the borderless soft-shadow card from the design reference —
+// generous padding, large radius, no edge ring in light mode (the shadow alone
+// defines the surface). Dark mode keeps a 1px alpha ring because a shadow is
+// nearly invisible against dark surfaces and the card would otherwise melt
+// into the chart background.
 export const CHART_TOOLTIP_CLASSES =
-  "bg-container text-primary text-sm font-sans absolute p-3 rounded-xl shadow-lg shadow-border-xs pointer-events-none z-50 privacy-sensitive";
+  "bg-container text-primary text-sm font-sans absolute p-4 rounded-2xl shadow-xl theme-dark:ring-1 theme-dark:ring-alpha-white-200 pointer-events-none z-50 privacy-sensitive";
+
+// Content conventions (kept here so the controllers stay aligned):
+//   - context line (date / node title): `text-xs text-secondary mb-1`
+//   - value figures: `font-medium tabular-nums`, secondary parentheticals in
+//     `text-secondary`
+export const CHART_TOOLTIP_CONTEXT_CLASSES = "text-xs text-secondary mb-1";
+export const CHART_TOOLTIP_VALUE_CLASSES = "font-medium tabular-nums";
 
 // Convenience factory for the raw-DOM idiom (no d3.select). Creates a hidden
 // tooltip div carrying the shared contract and appends it to `parent`.
