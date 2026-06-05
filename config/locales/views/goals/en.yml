@@ -223,9 +223,6 @@ en:
       days_left:
         one: 1 day left
         other: "%{count} days left"
-      days_left_by:
-        one: 1 day left · by %{date}
-        other: "%{count} days left · by %{date}"
       pace_with_target: "%{avg}/mo · target %{target}/mo"
       pace_no_target: "%{avg}/mo avg"
       footer_paused: Paused

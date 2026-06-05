@@ -41,8 +41,8 @@ export default class extends Controller {
       this._defaultAvatarHTML = this.avatarPreviewTarget.innerHTML;
     }
     this.updateSuggested();
-    // Edit form arrives pre-filled (valid) so this enables immediately; new
-    // form arrives empty so the submit starts disabled.
+    // Edit form arrives pre-filled (valid) so this clears immediately; new
+    // form arrives empty so the submit starts visually disabled.
     this.refreshSubmitState();
   }
 
@@ -94,16 +94,22 @@ export default class extends Controller {
     return name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk;
   }
 
+  // `aria-disabled` instead of the `disabled` attribute: a truly disabled
+  // default submit also blocks Enter-key implicit submission, so an invalid
+  // form would be a dead button with every inline error still hidden. With
+  // aria-disabled the button keeps its not-allowed affordance (styled via the
+  // DS `aria-disabled:` variants) while clicks and Enter still reach
+  // validateOnSubmit, which surfaces the errors and moves focus.
   refreshSubmitState() {
     if (this.hasSubmitButtonTarget) {
-      this.submitButtonTarget.disabled = !this.isValid();
+      this.submitButtonTarget.setAttribute("aria-disabled", String(!this.isValid()));
     }
   }
 
-  // Backstop for the disabled button: covers the funding-accounts group (a
-  // checkbox group can't carry native `required`) and any path that re-enables
-  // the button out from under us. Surfaces the inline errors and focuses the
-  // first offending field instead of a silent no-op.
+  // The real gate for the submit: covers the funding-accounts group (a
+  // checkbox group can't carry native `required`) and everything the
+  // aria-disabled affordance merely hints at. Surfaces the inline errors and
+  // focuses the first offending field instead of a silent no-op.
   validateOnSubmit(event) {
     if (this.isValid()) return;
 
@@ -124,7 +130,13 @@ export default class extends Controller {
       this.accountsErrorTarget.classList.remove("hidden");
     }
 
-    const firstInvalid = nameEmpty ? this.nameInputTarget : amountInvalid ? this.amountInputTarget : null;
+    const firstInvalid = nameEmpty
+      ? this.nameInputTarget
+      : amountInvalid
+        ? this.amountInputTarget
+        : noAccount
+          ? this.linkedAccountCheckboxTargets[0]
+          : null;
     firstInvalid?.focus();
   }
 
