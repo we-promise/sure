@@ -48,7 +48,7 @@ class SnaptradeAccount::HoldingsProcessor
         amount = parse_decimal(entry[:amount])
         next if amount.nil?
 
-        security = Security.cash_for(account, currency: entry[:currency])
+        security = Security.cash_for_currency(entry[:currency])
 
         Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing #{entry[:currency]} cash holding"
 
