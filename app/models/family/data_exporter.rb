@@ -545,6 +545,7 @@ class Family::DataExporter
 
     def serialize_rule_for_export(rule)
       {
+        id: rule.id,
         name: rule.name,
         resource_type: rule.resource_type,
         active: rule.active,
