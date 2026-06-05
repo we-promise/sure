@@ -38,7 +38,16 @@ export default class extends Controller {
 
   #arm() {
     if (this.#userIsInteracting()) return; // mid-form: wait for a manual refresh
-    this._timer = setTimeout(() => this.refresh(), this.autoRefreshDelayValue);
+    // Re-check at fire time, not just arm time: the post-dialog reveal often
+    // lands on a form the dialog was sitting on, and the user resumes typing
+    // inside this window (a morph would wipe their non-turbo-permanent
+    // input). A dialog opened during the window is the same hazard — the
+    // refresh would close it. Either way, bail and leave the toast visible
+    // for a manual refresh, matching the mid-form behavior.
+    this._timer = setTimeout(() => {
+      if (this.#userIsInteracting() || this.#dialogOpen()) return;
+      this.refresh();
+    }, this.autoRefreshDelayValue);
   }
 
   #deferUntilDialogCloses() {
@@ -52,6 +61,10 @@ export default class extends Controller {
     // replaced by a newer broadcast while the dialog is still open stays
     // subscribed, and its now-detached controller fires #reveal()/#arm() on
     // close — a spurious auto-refresh from a stale toast.
+    //
+    // Known edge: if this dialog leaves the DOM without firing `close` (e.g.
+    // a morph removes it), the toast stays hidden until the next broadcast
+    // replaces it. Acceptable: the next sync re-delivers the toast.
     this._deferredDialog = dialog;
     this._dialogCloseHandler = () => this.#onDialogClose();
     dialog.addEventListener("close", this._dialogCloseHandler, { once: true });
