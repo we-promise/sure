@@ -77,7 +77,7 @@ class OnchainWalletAccount::Processor
           )
           entry.entryable.extra = (entry.entryable.extra || {}).deep_merge("onchain_wallet" => tx)
           entry.save!
-        rescue StandardError => e
+        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
           Rails.logger.warn "OnchainWalletAccount::Processor - transaction import failed for #{external_id}: #{e.message}"
         end
       end

@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[destroy unlink confirm_unlink select_provider toggle_active]
   include Periodable
 
   def index
@@ -98,13 +98,6 @@ class AccountsController < ApplicationController
   end
 
   def toggle_active
-    @account = Current.user.accessible_accounts.find(params[:id])
-    permission = @account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control ]) || can_admin_manage_onchain_account?(@account)
-      redirect_to account_path(@account), alert: t("accounts.not_authorized")
-      return
-    end
-
     if @account.active?
       @account.disable!
     elsif @account.disabled?
@@ -251,9 +244,6 @@ class AccountsController < ApplicationController
       end
     end
 
-    def can_admin_manage_onchain_account?(account)
-      Current.user.admin? && account.linked_to?("OnchainWalletAccount")
-    end
 
     def build_statement_tab_data
       return unless statement_tab_active?

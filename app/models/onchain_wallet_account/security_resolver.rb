@@ -10,9 +10,9 @@ class OnchainWalletAccount::SecurityResolver
       ticker,
       **resolver_options
     ).resolve
-  rescue StandardError => e
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound, ArgumentError => e
     Rails.logger.warn "OnchainWalletAccount::SecurityResolver - resolver failed for #{symbol}: #{e.message}"
-    mic = resolver_options[:exchange_operating_mic]
+    mic = resolver_options[:exchange_operating_mic] || EXCHANGE_MIC
     Security.find_or_initialize_by(ticker: "CRYPTO:#{symbol.to_s.upcase}", exchange_operating_mic: mic).tap do |security|
       security.name = name.presence || symbol.to_s.upcase if security.name.blank?
       security.offline = true unless security.offline
