@@ -452,7 +452,6 @@ export default class extends Controller {
           d.value,
           d.percentage,
           this.#tooltipContext(
-            d.source.color,
             `${this.#esc(d.source.name)} → ${this.#esc(d.target.name)}`,
           ),
         );
@@ -480,7 +479,7 @@ export default class extends Controller {
           event,
           d.value,
           d.percentage,
-          this.#tooltipContext(d.color, this.#esc(d.name)),
+          this.#tooltipContext(this.#esc(d.name)),
         );
       })
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
@@ -509,7 +508,7 @@ export default class extends Controller {
           event,
           d.value,
           d.percentage,
-          this.#tooltipContext(d.color, this.#esc(d.name)),
+          this.#tooltipContext(this.#esc(d.name)),
         );
       })
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
@@ -547,11 +546,11 @@ export default class extends Controller {
     );
   }
 
-  // Context line shared by node and link tooltips: a swatch dot tying the
-  // card to the hovered ribbon/node color, plus the (escaped) name(s).
-  #tooltipContext(color, label) {
-    const dot = `<span class="inline-block shrink-0 rounded-full" style="width: 8px; height: 8px; background: ${this.#esc(color || "var(--color-gray-400)")};"></span>`;
-    return `<div class="flex items-center gap-1.5 text-xs text-secondary mb-1">${dot}<span class="min-w-0 truncate">${label}</span></div>`;
+  // Context line shared by node and link tooltips: the (escaped) name(s) of
+  // what's hovered. No color swatch — the hover highlight on the diagram
+  // itself already says which ribbon the card belongs to.
+  #tooltipContext(label) {
+    return `<div class="text-xs text-secondary mb-1 truncate">${label}</div>`;
   }
 
   #showTooltip(event, value, percentage, contextHtml = null) {
