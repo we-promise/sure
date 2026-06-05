@@ -7,8 +7,10 @@ class VectorStore::Registry
 
   class << self
     # Returns the configured adapter instance.
-    # Reads from VECTOR_STORE_PROVIDER env var, falling back to :openai
-    # when OpenAI credentials are present.
+    # Reads from VECTOR_STORE_PROVIDER env var; without an explicit override,
+    # Anthropic installs (Setting.llm_provider == "anthropic") default to
+    # :pgvector, and anything else falls back to :openai when OpenAI
+    # credentials are present.
     def adapter
       name = adapter_name
       return nil unless name

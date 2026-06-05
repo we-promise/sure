@@ -162,7 +162,7 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     mock_conn.expects(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(false)
     mock_conn.expects(:extension_enabled?).with("vector").returns(false)
     mock_conn.expects(:enable_extension).with("vector")
-    mock_conn.expects(:create_table).with(VectorStore::Pgvector::TABLE_NAME, id: :uuid)
+    mock_conn.expects(:create_table).with(VectorStore::Pgvector::TABLE_NAME, id: :uuid, if_not_exists: true)
     mock_conn.expects(:add_index).times(3)
     adapter.stubs(:connection).returns(mock_conn)
 

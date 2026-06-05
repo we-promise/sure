@@ -164,7 +164,12 @@ class VectorStore::Pgvector < VectorStore::Base
       end
 
       connection.enable_extension("vector") unless connection.extension_enabled?("vector")
-      connection.create_table(TABLE_NAME, id: :uuid) do |t|
+      # if_not_exists on the DDL (not a Mutex) is the right concurrency guard
+      # here: adapter instances are built per call and never shared across
+      # threads, so the realistic race is two *processes* (e.g. web + Sidekiq)
+      # provisioning at once. IF NOT EXISTS makes the loser's DDL a no-op
+      # instead of a duplicate-relation error.
+      connection.create_table(TABLE_NAME, id: :uuid, if_not_exists: true) do |t|
         t.string :store_id, null: false
         t.string :file_id, null: false
         t.string :filename
@@ -174,10 +179,10 @@ class VectorStore::Pgvector < VectorStore::Base
         t.jsonb :metadata, null: false, default: {}
         t.timestamps null: false
       end
-      connection.add_index TABLE_NAME, :store_id
-      connection.add_index TABLE_NAME, :file_id
+      connection.add_index TABLE_NAME, :store_id, if_not_exists: true
+      connection.add_index TABLE_NAME, :file_id, if_not_exists: true
       connection.add_index TABLE_NAME, [ :store_id, :file_id, :chunk_index ], unique: true,
-        name: "index_vector_store_chunks_on_store_file_chunk"
+        name: "index_vector_store_chunks_on_store_file_chunk", if_not_exists: true
       @schema_ensured = true
     rescue StandardError => e
       raise VectorStore::Error, "pgvector store unavailable: #{e.message}"
