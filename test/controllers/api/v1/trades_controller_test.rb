@@ -8,6 +8,8 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     @family = @admin.family
     @investment = accounts(:investment)
     @security = securities(:aapl)
+    @trade_entry = entries(:trade)
+    @trade = @trade_entry.entryable
 
     @member = users(:family_member)
     @member.api_keys.active.destroy_all
@@ -18,6 +20,15 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       source: "web",
       display_key: "test_member_#{SecureRandom.hex(8)}"
     )
+  end
+
+  test "index excludes trades from inaccessible accounts" do
+    get api_v1_trades_url, headers: api_headers(@member_key)
+
+    assert_response :success
+
+    trade_ids = JSON.parse(response.body)["trades"].map { |trade| trade["id"] }
+    assert_not_includes trade_ids, @trade.id
   end
 
   test "should not create trade on account without write permission" do
@@ -34,9 +45,27 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
                security_id: @security.id
              }
            },
-           headers: { "X-Api-Key" => @member_key.plain_key }
+           headers: api_headers(@member_key)
     end
 
     assert_response :not_found
+  end
+
+  test "should not update trade on account without write permission" do
+    patch api_v1_trade_url(@trade),
+          params: { trade: { notes: "Blocked update" } },
+          headers: api_headers(@member_key)
+
+    assert_response :not_found
+    assert_not_equal "Blocked update", @trade_entry.reload.notes
+  end
+
+  test "should not destroy trade on account without write permission" do
+    assert_no_difference -> { Trade.count } do
+      delete api_v1_trade_url(@trade), headers: api_headers(@member_key)
+    end
+
+    assert_response :not_found
+    assert Trade.exists?(@trade.id)
   end
 end

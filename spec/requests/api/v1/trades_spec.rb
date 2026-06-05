@@ -81,6 +81,7 @@ RSpec.describe 'API V1 Trades', type: :request do
     get 'List trades' do
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
+      description 'Returns trades for accounts accessible to the authenticated user, excluding accounts pending deletion.'
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
@@ -223,8 +224,9 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'account not found' do
+      response '404', 'account not found or not writable' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        description 'Returned when the account does not exist or the authenticated user lacks write access to it.'
 
         let(:body) do
           {
@@ -305,8 +307,9 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'trade not found' do
+      response '404', 'trade not found or not accessible' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        description 'Returned when the trade does not exist or belongs to an account the authenticated user cannot access.'
 
         let(:id) { SecureRandom.uuid }
 
@@ -359,8 +362,9 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'trade not found' do
+      response '404', 'trade not found or not writable' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        description 'Returned when the trade does not exist or belongs to an account the authenticated user cannot write to.'
 
         let(:id) { SecureRandom.uuid }
 
@@ -381,8 +385,9 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'trade not found' do
+      response '404', 'trade not found or not writable' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        description 'Returned when the trade does not exist or belongs to an account the authenticated user cannot write to.'
 
         let(:id) { SecureRandom.uuid }
 

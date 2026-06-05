@@ -126,10 +126,10 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     def set_trade
-      @trade = if action_name.in?(%w[update destroy])
-        write_trades_scope.find(params[:id])
-      else
+      @trade = if action_name == "show"
         read_trades_scope.find(params[:id])
+      else
+        write_trades_scope.find(params[:id])
       end
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
