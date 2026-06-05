@@ -175,8 +175,8 @@ ru:
     types:
       credit_card: Кредитная карта
       crypto: Крипто
-      depository: Наличные
-      investment: Инвестиции
+      depository: Наличность
+      investment: Инвестиция
       loan: Кредит
       other_asset: Другой актив
       other_liability: Другое обязательство
