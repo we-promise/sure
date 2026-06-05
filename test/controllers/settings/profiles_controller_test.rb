@@ -128,7 +128,6 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
       accountable: Depository.new
     )
     legacy_account.update_columns(owner_id: @member.id)
-    FamilyMembership.create!(user: @member, family: @admin.family)
     membership = @admin.family.family_memberships.find_by!(user: @member)
 
     sign_in @admin
@@ -151,7 +150,6 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
       role: "member",
       inviter: @admin
     )
-    FamilyMembership.create!(user: @member, family: @admin.family)
     membership = @admin.family.family_memberships.find_by!(user: @member)
 
     sign_in @admin

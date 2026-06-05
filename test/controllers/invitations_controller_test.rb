@@ -112,8 +112,8 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @admin, invitation.inviter
   end
 
-  test "inviting an existing user as guest applies intro defaults" do
-    existing_user = users(:empty)
+  test "inviting an existing user in the same family as guest applies intro defaults" do
+    existing_user = users(:family_member)
     existing_user.update!(
       role: :member,
       ui_layout: :dashboard,
