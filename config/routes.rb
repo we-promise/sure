@@ -536,6 +536,10 @@ Rails.application.routes.draw do
         post :preflight, on: :collection
         get :rows, on: :member
       end
+      resources :import_sessions, only: [ :show, :create ] do
+        post :chunks, on: :member, action: :create_chunk
+        post :publish, on: :member
+      end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resource :family_settings, only: [ :show ], controller: :family_settings
