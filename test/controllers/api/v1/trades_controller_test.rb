@@ -20,6 +20,20 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       source: "web",
       display_key: "test_member_#{SecureRandom.hex(8)}"
     )
+
+    @admin.api_keys.active.destroy_all
+    @admin_read_key = ApiKey.create!(
+      user: @admin,
+      name: "Admin Read",
+      scopes: [ "read" ],
+      source: "web",
+      display_key: "test_admin_read_#{SecureRandom.hex(8)}"
+    )
+  end
+
+  test "should reject index without API key" do
+    get api_v1_trades_url
+    assert_response :unauthorized
   end
 
   test "index excludes trades from inaccessible accounts" do
@@ -27,8 +41,35 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
 
-    trade_ids = JSON.parse(response.body)["trades"].map { |trade| trade["id"] }
+    response_data = JSON.parse(response.body)
+    assert response_data.key?("trades")
+    trade_ids = response_data.fetch("trades", []).map { |trade| trade["id"] }
     assert_not_includes trade_ids, @trade.id
+  end
+
+  test "should show trade with read access to account" do
+    get api_v1_trade_url(@trade), headers: api_headers(@admin_read_key)
+
+    assert_response :success
+    assert_equal @trade.id, JSON.parse(response.body).dig("trade", "id")
+  end
+
+  test "should reject create with read-only API key" do
+    post api_v1_trades_url,
+         params: {
+           trade: {
+             account_id: @investment.id,
+             type: "buy",
+             date: Date.current,
+             qty: 1,
+             price: 100,
+             currency: "USD",
+             security_id: @security.id
+           }
+         },
+         headers: api_headers(@admin_read_key)
+
+    assert_response :forbidden
   end
 
   test "should not create trade on account without write permission" do
