@@ -2,6 +2,7 @@
 en:
   transactions:
     bulk_updates:
+      permission_error: Some transactions could not be updated due to permissions
       new:
         cancel: Cancel
         category_label: Category
