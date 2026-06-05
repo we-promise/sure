@@ -528,7 +528,7 @@ export default class extends Controller {
         (c) =>
           ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
       );
-    const valueLine = `<span class="font-medium tabular-nums">${this.#formatCurrency(value)}</span> <span class="text-secondary">(${percentage || 0}%)</span>`;
+    const valueLine = `<span class="font-mono font-medium tabular-nums">${this.#formatCurrency(value)}</span> <span class="text-secondary">(${percentage || 0}%)</span>`;
     const content = title
       ? `<div class="text-xs text-secondary mb-1">${esc(title)}</div><div>${valueLine}</div>`
       : valueLine;
