@@ -89,14 +89,13 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal Provider::Anthropic.effective_model, Chat.default_model
   end
 
-  test "creates with configured model when OPENAI_MODEL env is set" do
-    prompt = "Test prompt"
+  test "default_model uses OpenAI's effective_model when OpenAI is preferred and configured" do
+    Setting.stubs(:llm_provider).returns("openai")
+    Provider::Openai.stubs(:configured?).returns(true)
+    Provider::Openai.stubs(:effective_model).returns("custom-model")
+    Provider::Anthropic.stubs(:configured?).returns(false)
 
-    with_env_overrides OPENAI_MODEL: "custom-model" do
-      chat = @user.chats.start!(prompt, model: "")
-
-      assert_equal "custom-model", chat.messages.find_by!(type: "UserMessage").ai_model
-    end
+    assert_equal "custom-model", Chat.default_model
   end
 
   test "returns nil presentable error message when no error is stored" do

@@ -7,19 +7,22 @@ class InvitationTest < ActiveSupport::TestCase
     @inviter = @invitation.inviter
   end
 
-  test "accept_for adds user to family when email matches" do
+  test "accept_for adds membership without moving an existing user to another family" do
     user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    assert user.family_id != @family.id
-
+    original_family_id = user.family_id
+    original_role = user.role
     invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
-    assert invitation.pending?
-    result = invitation.accept_for(user)
 
-    assert result
+    assert_difference("FamilyMembership.count", 1) do
+      result = invitation.accept_for(user)
+
+      assert result
+    end
+
     user.reload
-    assert_equal @family.id, user.family_id
-    assert_equal "member", user.role
+    assert_equal original_family_id, user.family_id
+    assert_equal original_role, user.role
+    assert FamilyMembership.exists?(user: user, family: @family)
     invitation.reload
     assert invitation.accepted_at.present?
   end
@@ -43,9 +46,12 @@ class InvitationTest < ActiveSupport::TestCase
     invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
     original_family_id = user.family_id
 
-    result = invitation.accept_for(user)
+    assert_no_difference("FamilyMembership.count") do
+      result = invitation.accept_for(user)
 
-    assert result
+      assert result
+    end
+
     user.reload
     assert_equal original_family_id, user.family_id
     assert_equal "admin", user.role
@@ -134,13 +140,17 @@ class InvitationTest < ActiveSupport::TestCase
 
     invitation = @family.invitations.create!(email: owner.email, role: "member", inviter: @inviter)
 
-    result = invitation.accept_for(owner)
+    assert_difference("FamilyMembership.count", 1) do
+      result = invitation.accept_for(owner)
 
-    assert_not result, "accept_for must refuse to rehome a user away from accounts they own"
+      assert result, "existing users should join another family without being rehomed"
+    end
+
     owner.reload
-    assert_equal owner_family.id, owner.family_id, "user.family_id must not be silently overwritten"
+    assert_equal owner_family.id, owner.family_id, "user.family_id must remain unchanged"
+    assert FamilyMembership.exists?(user: owner, family: @family)
     invitation.reload
-    assert_nil invitation.accepted_at, "invitation must remain pending so a new flow can recover"
+    assert invitation.accepted_at.present?
     assert owner_family.accounts.exists?, "original family's accounts must remain intact"
   end
 
@@ -158,16 +168,34 @@ class InvitationTest < ActiveSupport::TestCase
 
     invitation = @family.invitations.create!(email: member.email, role: "member", inviter: @inviter)
 
-    result = invitation.accept_for(member)
+    assert_difference("FamilyMembership.count", 1) do
+      result = invitation.accept_for(member)
 
-    assert result, "a non-owner member must be free to join another family"
+      assert result, "a non-owner member must be free to join another family"
+    end
+
     member.reload
-    assert_equal @family.id, member.family_id
+    assert_equal source_family.id, member.family_id
+    assert FamilyMembership.exists?(user: member, family: @family)
   end
 
   test "would_orphan_owned_accounts? is false when invitee owns no accounts" do
     user = users(:empty)
     user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+
+    assert_not invitation.would_orphan_owned_accounts?(user)
+  end
+
+  test "would_orphan_owned_accounts? is false when invitee owns accounts in another family" do
+    user = users(:empty)
+    source_family = families(:empty)
+    user.update_columns(family_id: source_family.id, role: "admin")
+    account = source_family.accounts.create!(
+      name: "Legacy savings", balance: 100, currency: "USD",
+      accountable: Depository.new
+    )
+    account.update_columns(owner_id: user.id)
     invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
 
     assert_not invitation.would_orphan_owned_accounts?(user)

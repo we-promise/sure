@@ -309,6 +309,7 @@ class UserTest < ActiveSupport::TestCase
     previous = Setting.openai_access_token
     with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
       Setting.openai_access_token = nil
+      Provider::Anthropic.stubs(:configured?).returns(false)
       assert_not @user.ai_available?
     end
   ensure

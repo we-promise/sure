@@ -64,6 +64,14 @@ module ActiveSupport
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors) unless ENV["DISABLE_PARALLELIZATION"] == "true"
 
+    setup do
+      Current.reset
+    end
+
+    teardown do
+      Current.reset
+    end
+
     # https://github.com/simplecov-ruby/simplecov/issues/718#issuecomment-538201587
     if ENV["COVERAGE"] == "true"
       parallelize_setup do |worker|

@@ -2,7 +2,7 @@ class AccountSharingsController < ApplicationController
   before_action :set_account
 
   def show
-    @family_members = Current.family.users.where.not(id: @account.owner_id).where(active: true)
+    @family_members = Current.family.members.where.not(id: @account.owner_id).where(active: true)
     @account_shares = @account.account_shares.includes(:user).index_by(&:user_id)
   end
 
@@ -21,7 +21,7 @@ class AccountSharingsController < ApplicationController
       return
     end
 
-    eligible_members = Current.family.users.where.not(id: @account.owner_id).where(active: true)
+    eligible_members = Current.family.members.where.not(id: @account.owner_id).where(active: true)
 
     AccountShare.transaction do
       sharing_members_params.each do |member_params|
