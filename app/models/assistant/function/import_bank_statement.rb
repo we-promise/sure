@@ -93,6 +93,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     end
 
     # Extract transactions from the PDF using provider
+    # TODO(#2113): hardcoded to OpenAI. Provider::Anthropic implements
+    # extract_bank_statement (PR #1985); this should honor Setting.llm_provider.
     provider = Provider::Registry.get_provider(:openai)
     unless provider
       return {

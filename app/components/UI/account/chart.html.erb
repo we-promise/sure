@@ -17,23 +17,23 @@
       </div>
     </div>
 
-    <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
-      <div class="flex items-center gap-2">
-        <% if account.supports_trades? %>
+    <div class="flex items-center gap-2">
+      <% if account.supports_trades? %>
+        <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
           <%= form.select :chart_view,
             [[t(".views.total_value"), "balance"], [t(".views.holdings"), "holdings_balance"], [t(".views.cash"), "cash_balance"]],
             { selected: view },
             class: "bg-container border border-secondary rounded-lg text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0",
             data: { "auto-submit-form-target": "auto" } %>
         <% end %>
+      <% end %>
 
-        <%= form.select :period,
-                    Period.as_options,
-                    { selected: period.key },
-                    data: { "auto-submit-form-target": "auto" },
-                    class: "bg-container border border-secondary rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-      </div>
-    <% end %>
+      <%= render UI::PeriodPicker.new(
+        selected: period,
+        url: account_path(account),
+        extra_params: account.supports_trades? ? { chart_view: view } : {}
+      ) %>
+    </div>
   </div>
 
   <%= turbo_frame_tag dom_id(@account, :chart_details) do %>
