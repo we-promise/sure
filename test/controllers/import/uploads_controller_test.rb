@@ -35,6 +35,22 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "CSV uploaded successfully.", flash[:notice]
   end
 
+  test "account select does not leak unshared family accounts (#1803)" do
+    sign_in users(:family_member)
+
+    get import_upload_url(@import)
+
+    assert_response :success
+    assert_match "Checking Account", response.body,
+      "Expected the shared account to appear in the account select"
+    refute_match "Collectable Account", response.body,
+      "Account select must not leak unshared assets to a non-owner family member"
+    refute_match "IOU (personal debt to friend)", response.body,
+      "Account select must not leak unshared liabilities to a non-owner family member"
+    refute_match "Plaid Depository Account", response.body,
+      "Account select must not leak unshared connected accounts to a non-owner family member"
+  end
+
   test "invalid csv cannot be uploaded" do
     patch import_upload_url(@import), params: {
       import: {
