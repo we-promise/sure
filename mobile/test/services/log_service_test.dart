@@ -37,6 +37,15 @@ void main() {
     expect(sanitized, isNot(contains('local_123')));
   });
 
+  test('sanitize redacts long numeric ids but preserves shorter counts', () {
+    final longNumericId = LogService.sanitize('orderId=1234567890123');
+    final shorterCount = LogService.sanitize('count=123456789012');
+
+    expect(longNumericId, contains('orderId=[id]'));
+    expect(longNumericId, isNot(contains('1234567890123')));
+    expect(shorterCount, contains('123456789012'));
+  });
+
   test('sanitize handles empty and safe messages', () {
     expect(LogService.sanitize(''), '');
 

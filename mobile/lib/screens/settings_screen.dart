@@ -110,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       LogService.instance.warning(
         'SettingsScreen',
-        'Failed to load custom headers: ${e.runtimeType}',
+        'Failed to load custom headers: $e',
       );
       // Keep the existing _customHeaders state so the screen remains usable.
     }
