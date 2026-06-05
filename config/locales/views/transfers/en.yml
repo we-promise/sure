@@ -47,6 +47,8 @@ en:
       date: Date
       amount: Amount
       bank_charges: Bank Charges
+      outgoing_fee: Outgoing transfer fee
+      incoming_fee: Incoming transfer fee
       category: Category
       uncategorized: Uncategorized
     update:
