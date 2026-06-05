@@ -40,7 +40,7 @@ ru:
         withdrawals: Выводы
       net_worth_chart:
         data_not_available: Нет данных за выбранный период
-        title: Чистая стоимость
+        title: Свободные средства
       new: Новое
       no_account_empty_state:
         new_account: Новый счёт

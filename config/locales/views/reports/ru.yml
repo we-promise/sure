@@ -148,7 +148,7 @@ ru:
         liabilities: Обязательства
         no_liabilities: Нет обязательств
         this_period: за этот период
-        title: Чистая стоимость
+        title: Свободные средства
       spending:
         amount: Сумма
         category: Категория
