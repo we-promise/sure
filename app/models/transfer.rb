@@ -152,9 +152,13 @@ class Transfer < ApplicationRecord
       errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
 
       if inflow_entry.currency == outflow_entry.currency
+        # Same-currency: verify the fee-adjusted amounts balance exactly.
         total_fee = source_fee_amount.to_d + destination_fee_amount.to_d
         errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != total_fee
       end
+      # Cross-currency: only the sign-direction check above is enforced.
+      # Exchange-rate volatility makes an exact fee-adjusted balance
+      # impractical, so we skip it here.
     end
 
     def fees_must_be_non_negative

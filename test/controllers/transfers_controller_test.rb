@@ -151,6 +151,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can create transfer with source fee" do
+    transfer = nil
     assert_difference "Transfer.count", 1 do
       post transfers_url, params: {
         transfer: {
@@ -161,9 +162,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
           source_fee_amount: 3
         }
       }
+      transfer = Transfer.order(created_at: :desc).first!
     end
-
-    transfer = Transfer.last
     assert_equal 3, transfer.source_fee_amount
     assert_equal 0, transfer.destination_fee_amount
     # Outflow should be amount + source_fee = 100 + 3 = 103
@@ -173,6 +173,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can create transfer with destination fee" do
+    transfer = nil
     assert_difference "Transfer.count", 1 do
       post transfers_url, params: {
         transfer: {
@@ -183,9 +184,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
           destination_fee_amount: 3
         }
       }
+      transfer = Transfer.order(created_at: :desc).first!
     end
 
-    transfer = Transfer.last
     assert_equal 0, transfer.source_fee_amount
     assert_equal 3, transfer.destination_fee_amount
     # Outflow should be amount + source_fee = 100 + 0 = 100
@@ -195,6 +196,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can create transfer with both source and destination fees" do
+    transfer = nil
     assert_difference "Transfer.count", 1 do
       post transfers_url, params: {
         transfer: {
@@ -206,9 +208,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
           destination_fee_amount: 3
         }
       }
+      transfer = Transfer.order(created_at: :desc).first!
     end
 
-    transfer = Transfer.last
     assert_equal 2, transfer.source_fee_amount
     assert_equal 3, transfer.destination_fee_amount
     # Outflow = 100 + 2 = 102

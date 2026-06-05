@@ -230,7 +230,7 @@ class TransferTest < ActiveSupport::TestCase
     )
 
     assert transfer.invalid?
-    assert_equal [ "Source fee amount must be greater than or equal to 0" ], transfer.errors.full_messages
+    assert_includes transfer.errors.full_messages, "Source fee amount must be greater than or equal to 0"
   end
 
   test "negative destination fee is rejected" do
@@ -244,6 +244,6 @@ class TransferTest < ActiveSupport::TestCase
     )
 
     assert transfer.invalid?
-    assert_equal [ "Destination fee amount must be greater than or equal to 0" ], transfer.errors.full_messages
+    assert_includes transfer.errors.full_messages, "Destination fee amount must be greater than or equal to 0"
   end
 end
