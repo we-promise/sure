@@ -8,6 +8,7 @@ class SnaptradeAccount < ApplicationRecord
     encrypts :raw_transactions_payload
     encrypts :raw_holdings_payload
     encrypts :raw_activities_payload
+    encrypts :raw_balances_payload
   end
 
   belongs_to :snaptrade_item
@@ -126,31 +127,43 @@ class SnaptradeAccount < ApplicationRecord
   # NOTE: This only updates cash_balance, NOT current_balance.
   # current_balance represents total account value (holdings + cash)
   # and is set by upsert_from_snaptrade! from the balance.total field.
-  #
-  # SnapTrade may return cash positions in multiple currencies (e.g. $6,161 USD
-  # plus $10 CAD). The primary-currency cash goes into the single cash_balance
-  # field on the account; all additional-currency cash positions are stored as
-  # synthetic "cash holdings" on the linked Sure account so no balance is lost.
   def upsert_balances!(balances_data)
     # Deep convert each balance entry to ensure we have hashes
     data = Array(balances_data).map { |b| sdk_object_to_hash(b).with_indifferent_access }
 
     Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
 
-    # Find cash balance (usually in USD or account currency)
-    cash_entry = data.find { |b| b.dig(:currency, :code) == currency } ||
-                 data.find { |b| b.dig(:currency, :code) == "USD" } ||
-                 data.first
+    # The primary entry (account currency → USD → first) stays in cash_balance;
+    # the full set is persisted so the processor can surface non-primary-currency
+    # cash as holdings (issue #1809).
+    cash_entry = primary_cash_entry(data)
 
-    if cash_entry
-      cash_value = cash_entry[:cash]
-      Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}"
+    cash_value = cash_entry ? cash_entry[:cash] : cash_balance
+    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}, persisting #{data.size} entrie(s)"
 
-      # Only update cash_balance, preserve current_balance (total account value)
-      update!(cash_balance: cash_value)
+    # Only update cash_balance, preserve current_balance (total account value)
+    update!(cash_balance: cash_value, raw_balances_payload: data)
+  end
+
+  # Cash entries from the last balances snapshot that are NOT the one stored in
+  # cash_balance. The primary entry (account currency → USD → first) lives in
+  # cash_balance; the rest are surfaced as synthetic cash holdings so
+  # multi-currency cash isn't discarded (issue #1809). Excludes the actual
+  # primary currency — including the USD fallback — to avoid double-counting.
+  def non_primary_cash_entries
+    entries = Array(raw_balances_payload).map do |entry|
+      entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
     end
 
-    sync_multi_currency_cash_holdings!(data, cash_entry)
+    primary_code = primary_cash_entry(entries)&.dig(:currency, :code)
+
+    entries.filter_map do |e|
+      code = e.dig(:currency, :code)
+      next if code.blank? || code == primary_code
+      amount = e[:cash]
+      next if amount.blank?
+      { currency: code, amount: amount }
+    end
   end
 
   # Get the SnapTrade provider instance via the parent item
@@ -165,68 +178,13 @@ class SnaptradeAccount < ApplicationRecord
 
   private
 
-    # Sync any non-primary-currency cash positions as synthetic cash holdings.
-    # The "primary" cash entry (selected by upsert_balances!) goes into
-    # cash_balance; everything else becomes a holding so multi-currency cash is
-    # not silently dropped.
-    def sync_multi_currency_cash_holdings!(balance_entries, primary_cash_entry)
-      acct = current_account
-      return unless acct.present?
-
-      today = Date.current
-      active_security_ids = []
-
-      balance_entries.each do |entry|
-        next if entry.equal?(primary_cash_entry)
-
-        code = entry.dig(:currency, :code).to_s.upcase
-        unless code.match?(/\A[A-Z]{3}\z/)
-          Rails.logger.warn "SnaptradeAccount##{id} upsert_balances! - skipping non-ISO currency code #{code.inspect}" if code.present?
-          next
-        end
-
-        amount = parse_decimal(entry[:cash])
-        next if amount.nil? || amount <= 0
-
-        security = Security.cash_for_currency(code)
-
-        holding = acct.holdings.find_or_initialize_by(
-          security: security,
-          date: today,
-          currency: code
-        )
-        holding.assign_attributes(
-          qty: 1,
-          price: amount,
-          amount: amount,
-          account_provider_id: account_provider&.id
-        )
-        holding.save!
-
-        active_security_ids << security.id
-      end
-
-      cleanup_stale_cash_holdings!(acct, today, active_security_ids)
-    end
-
-    # Remove synthetic per-currency cash holdings for this account/provider on
-    # `date` whose security is not in `keep_security_ids`. Scopes to securities
-    # whose ticker matches CASH-<3-char-currency> so per-account synthetic cash
-    # (CASH-<uuid>) is left untouched.
-    def cleanup_stale_cash_holdings!(acct, date, keep_security_ids)
-      stale_scope = acct.holdings
-        .joins(:security)
-        .where(securities: { kind: "cash" })
-        .where("LENGTH(securities.ticker) = 8 AND securities.ticker LIKE 'CASH-%'")
-        .where(date: date)
-
-      stale_scope = stale_scope.where.not(security_id: keep_security_ids) if keep_security_ids.any?
-
-      if account_provider.present?
-        stale_scope = stale_scope.where(account_provider_id: account_provider.id)
-      end
-
-      stale_scope.destroy_all
+    # Selects the primary cash entry from a list of indifferent-access balance
+    # hashes: account currency first, then USD, then the first entry. Shared by
+    # upsert_balances! and non_primary_cash_entries so both stay in sync.
+    def primary_cash_entry(entries)
+      entries.find { |b| b.dig(:currency, :code) == currency } ||
+        entries.find { |b| b.dig(:currency, :code) == "USD" } ||
+        entries.first
     end
 
     # Enqueue a background job to clean up the SnapTrade connection
