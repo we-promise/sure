@@ -22,10 +22,11 @@ export const CHART_TOOLTIP_CLASSES =
 
 // Content conventions (kept here so the controllers stay aligned):
 //   - context line (date / node title): `text-xs text-secondary mb-1`
-//   - money / numeric figures: mono + tabular so digits don't jitter while
-//     the scrubber moves; secondary parentheticals in `text-secondary`
+//   - money / numeric figures: tabular-nums so digits don't jitter while the
+//     scrubber moves (sans, not mono — the app's money convention everywhere
+//     else); secondary parentheticals in `text-secondary`
 export const CHART_TOOLTIP_CONTEXT_CLASSES = "text-xs text-secondary mb-1";
-export const CHART_TOOLTIP_VALUE_CLASSES = "font-mono font-medium tabular-nums";
+export const CHART_TOOLTIP_VALUE_CLASSES = "font-medium tabular-nums";
 
 // Convenience factory for the raw-DOM idiom (no d3.select). Creates a hidden
 // tooltip div carrying the shared contract and appends it to `parent`.

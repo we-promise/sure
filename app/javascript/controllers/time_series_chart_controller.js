@@ -389,7 +389,7 @@ export default class extends Controller {
         ${datum.date_formatted}
       </div>
       <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2 text-primary font-mono font-medium tabular-nums">
+        <div class="flex items-center gap-2 text-primary font-medium tabular-nums">
           <div class="flex items-center justify-center h-4 w-4">
             ${this._getTrendIcon(datum)}
           </div>
@@ -400,7 +400,7 @@ export default class extends Controller {
           datum.trend.value === 0
             ? `<span class="w-20"></span>`
             : `
-          <span class="font-mono tabular-nums" style="color: ${datum.trend.color};">
+          <span class="tabular-nums" style="color: ${datum.trend.color};">
             ${this._extractFormattedValue(datum.trend.value)} (${datum.trend.percent_formatted})
           </span>
         `

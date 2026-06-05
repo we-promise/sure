@@ -556,7 +556,7 @@ export default class extends Controller {
   #showTooltip(event, value, percentage, contextHtml = null) {
     if (!this.tooltip) this.#createTooltip();
 
-    const valueLine = `<span class="font-mono font-medium tabular-nums">${this.#formatCurrency(value)}</span> <span class="text-secondary">(${percentage || 0}%)</span>`;
+    const valueLine = `<span class="font-medium tabular-nums">${this.#formatCurrency(value)}</span> <span class="text-secondary">(${percentage || 0}%)</span>`;
     const content = contextHtml
       ? `${contextHtml}<div>${valueLine}</div>`
       : valueLine;
