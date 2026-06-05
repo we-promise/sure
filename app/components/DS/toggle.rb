@@ -24,7 +24,7 @@ class DS::Toggle < DesignSystemComponent
        # `prefers-reduced-motion`; reduced-motion users get a snap.
        "motion-safe:transition-colors motion-safe:duration-300",
        "after:content-[''] after:block after:bg-white after:absolute after:rounded-full",
-       "after:top-0.5 after:left-0.5 after:w-4 after:h-4",
+       "after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:shadow-sm",
        "motion-safe:after:transition-transform motion-safe:after:duration-300 motion-safe:after:ease-in-out",
        "peer-checked:bg-success peer-checked:after:translate-x-4",
        # Canonical focus ring (#2136), driven from the sr-only input via

@@ -9,7 +9,6 @@ vi:
     authorize:
       authorization_failed: "Không thể khởi tạo ủy quyền: %{message}"
       bank_required: Vui lòng chọn ngân hàng.
-      decoupled_not_supported: Ngân hàng này sử dụng phương thức xác thực thiết bị riêng biệt chưa được hỗ trợ. Vui lòng thêm tài khoản này thủ công.
       invalid_redirect: URL ủy quyền nhận được không hợp lệ. Vui lòng thử lại.
       redirect_uri_not_allowed: Chuyển hướng không được phép. Vui lòng cấu hình `%{callback_url}` trong cài đặt ứng dụng Enable Banking của bạn.
       unexpected_error: Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.

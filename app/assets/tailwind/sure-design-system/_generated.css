@@ -26,7 +26,7 @@
   --color-container-inset: var(--color-gray-50);
   --color-container-inset-hover: var(--color-gray-100);
   --color-nav-indicator: var(--color-black);
-  --color-toggle-track: var(--color-gray-100);
+  --color-toggle-track: var(--color-gray-300);
   --color-destructive-subtle: var(--color-red-200);
   --color-gray-25: #FAFAFA;
   --color-gray-50: #F7F7F7;
@@ -296,7 +296,7 @@
   @apply text-gray-400;
 
   @variant theme-dark {
-    @apply text-gray-500;
+    @apply text-gray-400;
   }
 }
 
@@ -344,7 +344,7 @@
   @apply border-alpha-black-300;
 
   @variant theme-dark {
-    @apply border-alpha-white-400;
+    @apply border-alpha-white-500;
   }
 }
 
@@ -352,7 +352,7 @@
   @apply border-alpha-black-200;
 
   @variant theme-dark {
-    @apply border-alpha-white-300;
+    @apply border-alpha-white-400;
   }
 }
 
@@ -364,7 +364,7 @@
   @apply border-alpha-black-50;
 
   @variant theme-dark {
-    @apply border-alpha-white-100;
+    @apply border-alpha-white-200;
   }
 }
 
@@ -377,7 +377,7 @@
 }
 
 @utility border-destructive {
-  @apply border-red-500;
+  @apply border-red-600;
 
   @variant theme-dark {
     @apply border-red-400;
@@ -449,7 +449,7 @@
 }
 
 @utility button-bg-destructive {
-  @apply bg-red-500;
+  @apply bg-red-600;
 
   @variant theme-dark {
     @apply bg-red-400;
@@ -457,7 +457,7 @@
 }
 
 @utility button-bg-destructive-hover {
-  @apply bg-red-600;
+  @apply bg-red-700;
 
   @variant theme-dark {
     @apply bg-red-500;
