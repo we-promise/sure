@@ -61,6 +61,14 @@ class LogService with ChangeNotifier {
   static final RegExp _bearerTokenPattern =
       RegExp(r'\bBearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false);
   static final RegExp _urlPattern = RegExp(r'https?://[^\s,}]+');
+  static final RegExp _hostLookupPattern = RegExp(
+    r"(Failed host lookup:\s*)'[^']+'",
+    caseSensitive: false,
+  );
+  static final RegExp _socketAddressPattern = RegExp(
+    r'\b(address|host)\s*=\s*([^\s,}]+)',
+    caseSensitive: false,
+  );
   static final RegExp _emailPattern = RegExp(
       r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b',
       caseSensitive: false);
@@ -83,6 +91,10 @@ class LogService with ChangeNotifier {
     sanitized = sanitized
         .replaceAll(_bearerTokenPattern, 'Bearer [redacted]')
         .replaceAll(_urlPattern, '[url]')
+        .replaceAllMapped(
+            _hostLookupPattern, (match) => "${match.group(1)}'[host]'")
+        .replaceAllMapped(
+            _socketAddressPattern, (match) => '${match.group(1)}=[host]')
         .replaceAll(_emailPattern, '[email]')
         .replaceAll(_uuidPattern, '[id]')
         .replaceAll(_longNumericIdPattern, '[id]');

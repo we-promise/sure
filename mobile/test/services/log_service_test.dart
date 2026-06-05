@@ -23,6 +23,16 @@ void main() {
     expect(sanitized, contains('[redacted]'));
   });
 
+  test('sanitize redacts host-only socket error backends', () {
+    final sanitized = LogService.sanitize(
+      "SocketException: Failed host lookup: 'private.internal' "
+      '(OS Error: nodename nor servname provided, errno = 8)',
+    );
+
+    expect(sanitized, contains("Failed host lookup: '[host]'"));
+    expect(sanitized, isNot(contains('private.internal')));
+  });
+
   test('sanitize redacts financial and merchant values', () {
     final sanitized = LogService.sanitize(
       'name=Coffee amount=123.45 merchantName="Corner Store" '

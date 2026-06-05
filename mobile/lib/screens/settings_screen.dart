@@ -35,6 +35,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isTogglingBiometric = false;
   List<CustomProxyHeader> _customHeaders = [];
 
+  String _displayInitial(String? displayName) {
+    final trimmed = displayName?.trim() ?? '';
+    return trimmed.isEmpty ? 'U' : trimmed[0].toUpperCase();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -444,8 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           radius: 30,
                           backgroundColor: colorScheme.primary,
                           child: Text(
-                            authProvider.user?.displayName[0].toUpperCase() ??
-                                'U',
+                            _displayInitial(authProvider.user?.displayName),
                             style: TextStyle(
                               fontSize: 24,
                               color: colorScheme.onPrimary,
