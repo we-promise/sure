@@ -32,13 +32,25 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
+    exchange_rate_value = transfer_params[:exchange_rate].presence
+    if exchange_rate_value
+      rate_d = exchange_rate_value.to_d
+      if rate_d <= 0
+        @transfer = Transfer.new
+        @transfer.errors.add(:exchange_rate, :greater_than, count: 0)
+        @from_account_id = transfer_params[:from_account_id]
+        set_accounts
+        return render :new, status: :unprocessable_entity
+      end
+    end
+
     @transfer = Transfer::Creator.new(
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
       date: transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current,
       amount: transfer_params[:amount].to_d,
-      exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
+      exchange_rate: exchange_rate_value&.to_d,
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount]
     ).create
