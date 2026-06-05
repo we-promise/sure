@@ -68,11 +68,7 @@ class IncomeStatement::Totals
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
+        #{nearest_exchange_rate_lateral_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND ae.excluded = false
           AND a.family_id = :family_id
@@ -96,11 +92,7 @@ class IncomeStatement::Totals
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
+        #{nearest_exchange_rate_lateral_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND (
             at.investment_activity_label IS NULL
@@ -161,6 +153,26 @@ class IncomeStatement::Totals
 
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
+    # Issue #1143: when no exchange_rate row exists for the exact transaction
+    # date, the previous LEFT JOIN matched no row and `COALESCE(er.rate, 1)`
+    # silently converted at 1:1 — e.g. NZD 117 displayed as ¥117 against a CNY
+    # budget. Look up the nearest stored rate for the same currency pair
+    # (preferring most-recent on ties) so the join only returns NULL when no
+    # rate is stored for the pair at all, mirroring the Ruby-side fallback in
+    # ExchangeRate#find_or_fetch_rate. The unique index on
+    # (from_currency, to_currency, date) keeps the per-row LATERAL cheap.
+    def nearest_exchange_rate_lateral_sql
+      <<~SQL.strip
+        LEFT JOIN LATERAL (
+          SELECT rate FROM exchange_rates
+          WHERE from_currency = ae.currency
+            AND to_currency = :target_currency
+          ORDER BY ABS(date - ae.date) ASC, date DESC
+          LIMIT 1
+        ) er ON true
+      SQL
     end
 
     def validate_date_range!
