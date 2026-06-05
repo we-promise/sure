@@ -9,7 +9,6 @@ fr:
     authorize:
       authorization_failed: Échec de l'initiation de l'autorisation
       bank_required: Veuillez sélectionner une banque.
-      decoupled_not_supported: Cette banque utilise une méthode d'authentification sur un appareil séparé qui n'est pas encore prise en charge. Veuillez ajouter ce compte manuellement.
       invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
       redirect_uri_not_allowed: Redirection non autorisée. Veuillez configurer `%{callback_url}` dans les paramètres de votre application Enable Banking.
       unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer.

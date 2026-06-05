@@ -1,6 +1,8 @@
 ---
 en:
   UI:
+    period_picker:
+      aria_label: "Time period: %{period}"
     account:
       activity_feed:
         toggle_selection_checkboxes: Toggle selection

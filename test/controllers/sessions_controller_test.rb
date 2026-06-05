@@ -112,9 +112,10 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{/auth/openid_connect}, @response.body
     assert_match /Sign in with Keycloak/, @response.body
 
-    # Google-branded button
+    # Google-branded button — DS outline button carrying Google's official
+    # multi-color "G" mark (one of its brand hexes proves the inline SVG rendered).
     assert_match %r{/auth/google_oauth2}, @response.body
-    assert_match /gsi-material-button/, @response.body
+    assert_match /#4285F4/i, @response.body
     assert_match /Sign in with Google/, @response.body
   end
 
