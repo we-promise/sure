@@ -706,4 +706,38 @@ class IncomeStatementTest < ActiveSupport::TestCase
                     "EUR 100 should convert via the nearest stored rate (1.25 -> $125), not silent 1:1 fallback"
     assert_in_delta 125, expense_totals.total, 0.001
   end
+
+  # Codex P2 follow-up on #1143: the LATERAL nearest-rate lookup must be bounded
+  # to the same backward window as `ExchangeRate::Provided#find_or_fetch_rate`
+  # (NEAREST_RATE_LOOKBACK_DAYS), otherwise an unrelated years-old import would
+  # silently convert today's transaction at a stale rate instead of falling
+  # through to the COALESCE 1:1 fallback.
+  test "totals: ignores stale exchange rate outside lookback window and falls back to 1:1" do
+    today = Date.current
+    fx_family = Family.create!(name: "FX Family Stale", currency: "USD")
+    fx_family.categories.create!(name: "Income")
+    eur_account = fx_family.accounts.create!(
+      name: "EUR Bank",
+      currency: "EUR",
+      balance: 0,
+      accountable: Depository.new
+    )
+    food_cat = fx_family.categories.create!(name: "Food")
+
+    create_transaction(account: eur_account, amount: 100, currency: "EUR",
+                       date: today, category: food_cat)
+    # Only stored rate is well outside NEAREST_RATE_LOOKBACK_DAYS (5).
+    ExchangeRate.create!(
+      from_currency: "EUR", to_currency: "USD",
+      date: today - (ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS + 1).days,
+      rate: BigDecimal("1.25")
+    )
+
+    expense_totals = IncomeStatement.new(fx_family).expense_totals(period: Period.last_30_days)
+
+    food_total = expense_totals.category_totals.find { |ct| ct.category.id == food_cat.id }
+    assert_in_delta 100, food_total.total, 0.001,
+                    "Stale rate outside the lookback window must not be applied; expect 1:1 COALESCE fallback (EUR 100 -> 100 in family currency)"
+    assert_in_delta 100, expense_totals.total, 0.001
+  end
 end
