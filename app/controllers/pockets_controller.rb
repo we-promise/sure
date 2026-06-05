@@ -55,7 +55,7 @@ class PocketsController < ApplicationController
     def render_pocket_streams(notice)
       flash.now[:notice] = notice
       render turbo_stream: [
-        turbo_stream.replace("modal", ""),
+        turbo_stream.replace("modal", view_context.turbo_frame_tag("modal")),
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@account, :pockets_content),
           partial: "accounts/pockets/index",

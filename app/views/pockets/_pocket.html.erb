@@ -82,7 +82,7 @@
         <%= render DS::Link.new(
           variant: "ghost",
           icon: "list",
-          href: transactions_path(q: { tags: [ pocket.tag.name ] }),
+          href: transactions_path(q: { tags: [ pocket.tag.name ], accounts: [ account.name ] }),
           title: t("pockets.pocket.view_transactions"),
           frame: :_top
         ) %>

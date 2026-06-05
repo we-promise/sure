@@ -8,16 +8,26 @@ class Tagging < ApplicationRecord
   private
 
     def fill_linked_pocket
-      # Skip if a sibling tagging for this same (tag, transaction) pair already exists —
-      # duplicate taggings (e.g. from re-imports) must not double-increment the pocket.
+      return unless (pocket = linked_pocket)
+      # Fast path: skip without acquiring the lock if a sibling already exists.
       return if sibling_tagging_exists?
-      linked_pocket&.apply_tagging(self)
+
+      # Re-check under a row lock to prevent concurrent duplicate taggings
+      # (e.g. parallel re-imports) from double-incrementing the pocket.
+      pocket.with_lock do
+        next if sibling_tagging_exists?
+        pocket.apply_tagging(self)
+      end
     end
 
     def unfill_linked_pocket
-      # Only unfill if this was the last tagging for this (tag, transaction) pair.
+      return unless (pocket = linked_pocket)
       return if sibling_tagging_exists?
-      linked_pocket&.reverse_tagging(self)
+
+      pocket.with_lock do
+        next if sibling_tagging_exists?
+        pocket.reverse_tagging(self)
+      end
     end
 
     def sibling_tagging_exists?
@@ -29,6 +39,11 @@ class Tagging < ApplicationRecord
     def linked_pocket
       return unless taggable_type == "Transaction"
 
+      # taggable.entry traverses the has_one :entry on Transaction.
+      # For AR-mediated destroys this is always populated (belongs_to dependent: :destroy
+      # fires as before_destroy, so the Entry row is still present when this runs).
+      # For raw SQL deletes (delete_all) the entry may be gone; the nil guard below
+      # ensures we fail silently rather than raising.
       account = taggable.entry&.account
       return unless account
 

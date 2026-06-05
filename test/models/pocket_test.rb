@@ -250,6 +250,119 @@ class PocketTest < ActiveSupport::TestCase
     assert_equal 200, pocket.reload.allocated_amount  # 300 income - 100 expense = 200
   end
 
+  # allocation_percent
+
+  test "allocation_percent returns correct percentage" do
+    assert_equal 20, @pocket.allocation_percent(5000)
+  end
+
+  test "allocation_percent is capped at 100 even when overallocated" do
+    @pocket.allocated_amount = 9999
+    assert_equal 100, @pocket.allocation_percent(100)
+  end
+
+  test "allocation_percent returns 0 when balance is zero" do
+    assert_equal 0, @pocket.allocation_percent(0)
+  end
+
+  test "allocation_percent returns 0 when balance is nil" do
+    assert_equal 0, @pocket.allocation_percent(nil)
+  end
+
+  # Validations
+
+  test "account must be a depository" do
+    pocket = accounts(:credit_card).pockets.new(name: "Bad", allocated_amount: 0, currency: "USD")
+    assert_not pocket.valid?
+    assert pocket.errors[:account].any?
+  end
+
+  test "tag must belong to the same family as the account" do
+    other_family_tag = families(:empty).tags.create!(name: "Other")
+    pocket = @account.pockets.new(name: "Bad tag", allocated_amount: 0, currency: "USD", tag: other_family_tag)
+    assert_not pocket.valid?
+    assert pocket.errors[:tag].any?
+  end
+
+  # Currency isolation
+
+  test "tagging an entry with a different currency does not affect pocket" do
+    entry = Entry.create!(account: @account, entryable: Transaction.new,
+                          date: 1.day.ago.to_date, name: "EUR deposit", amount: -50, currency: "EUR")
+
+    assert_no_difference "@tagged_pocket.reload.allocated_amount" do
+      Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    end
+  end
+
+  # apply_tagging / reverse_tagging in :both mode (vacation pocket)
+
+  test "both direction increments pocket on income" do
+    entry = Entry.create!(account: @account, entryable: Transaction.new,
+                          date: 1.day.ago.to_date, name: "income", amount: -100, currency: "USD")
+
+    assert_difference "@tagged_pocket.reload.allocated_amount", 100 do
+      Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    end
+  end
+
+  test "both direction decrements pocket on expense" do
+    @tagged_pocket.update_column(:allocated_amount, 200)
+    entry = Entry.create!(account: @account, entryable: Transaction.new,
+                          date: 1.day.ago.to_date, name: "expense", amount: 60, currency: "USD")
+
+    assert_difference "@tagged_pocket.reload.allocated_amount", -60 do
+      Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    end
+  end
+
+  # recompute_from_tag!
+
+  test "recompute_from_tag! sets allocated_amount from current tagged transactions" do
+    fresh_account = Account.create!(
+      family: families(:dylan_family), owner: users(:family_admin),
+      accountable: Depository.new, name: "Recompute Account",
+      balance: 5000, currency: "USD", status: "active"
+    )
+    fresh_tag = families(:dylan_family).tags.create!(name: "RecomputeTag")
+    entry = Entry.create!(account: fresh_account, entryable: Transaction.new,
+                          date: 1.day.ago.to_date, name: "salary", amount: -400, currency: "USD")
+    Tagging.create!(tag: fresh_tag, taggable: entry.entryable)
+
+    pocket = fresh_account.pockets.create!(name: "Recompute Pocket", allocated_amount: 0, currency: "USD",
+                                           tag: fresh_tag)
+    pocket.update_column(:allocated_amount, 0)
+    pocket.recompute_from_tag!
+
+    assert_equal 400, pocket.reload.allocated_amount
+  end
+
+  test "destroying an entry via AR decrements the linked pocket" do
+    fresh_account = Account.create!(
+      family: families(:dylan_family), owner: users(:family_admin),
+      accountable: Depository.new, name: "Destroy Chain Account",
+      balance: 5000, currency: "USD", status: "active"
+    )
+    fresh_tag = families(:dylan_family).tags.create!(name: "DestroyChainTag")
+    entry = Entry.create!(account: fresh_account, entryable: Transaction.new,
+                          date: 1.day.ago.to_date, name: "salary", amount: -300, currency: "USD")
+    Tagging.create!(tag: fresh_tag, taggable: entry.entryable)
+
+    pocket = fresh_account.pockets.create!(name: "Destroy Pocket", allocated_amount: 0, currency: "USD",
+                                           tag: fresh_tag)
+    assert_equal 300, pocket.reload.allocated_amount
+
+    assert_difference "pocket.reload.allocated_amount", -300 do
+      entry.destroy!
+    end
+  end
+
+  test "recompute_from_tag! is a no-op when pocket has no tag" do
+    @pocket.update_column(:allocated_amount, 999)
+    @pocket.recompute_from_tag!
+    assert_equal 999, @pocket.reload.allocated_amount
+  end
+
   test "destroy cannot push pocket below zero" do
     @tagged_pocket.update_column(:allocated_amount, 0)
     transaction = transactions(:one)
