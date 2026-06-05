@@ -163,7 +163,7 @@
   .chart-tooltip {
     background: var(--color-container);
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 10px 12px;
     box-shadow:
       0 0 0 1px var(--color-alpha-black-50),
       0 8px 24px rgba(11, 11, 11, 0.12);
