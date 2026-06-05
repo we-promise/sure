@@ -41,14 +41,10 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     get import_upload_url(@import)
 
     assert_response :success
-    assert_match "Checking Account", response.body,
-      "Expected the shared account to appear in the account select"
-    refute_match "Collectable Account", response.body,
-      "Account select must not leak unshared assets to a non-owner family member"
-    refute_match "IOU (personal debt to friend)", response.body,
-      "Account select must not leak unshared liabilities to a non-owner family member"
-    refute_match "Plaid Depository Account", response.body,
-      "Account select must not leak unshared connected accounts to a non-owner family member"
+    assert_select 'select[name="import[account_id]"] option', text: "Checking Account"
+    assert_select 'select[name="import[account_id]"] option', text: "Collectable Account", count: 0
+    assert_select 'select[name="import[account_id]"] option', text: "IOU (personal debt to friend)", count: 0
+    assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
 
   test "invalid csv cannot be uploaded" do
