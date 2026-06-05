@@ -11,11 +11,18 @@ class Provider::MempoolSpace
 
   BASE_URL = "https://mempool.space/api".freeze
   MIN_REQUEST_INTERVAL = 60.0 / 250.0
+  DEFAULT_MAX_RETRIES = 3
+  DEFAULT_RETRY_BASE_DELAY = 1.0
   ADDRESS_PATTERN = /\A(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,90}\z/i
   PAGE_SIZE = 25
 
   base_uri BASE_URL
   default_options.merge!({ timeout: 30 }.merge(httparty_ssl_options))
+
+  def initialize(max_retries: DEFAULT_MAX_RETRIES, retry_base_delay: DEFAULT_RETRY_BASE_DELAY)
+    @max_retries = max_retries
+    @retry_base_delay = retry_base_delay
+  end
 
   def valid_address?(address)
     address.to_s.match?(ADDRESS_PATTERN)
@@ -63,9 +70,19 @@ class Provider::MempoolSpace
     end
 
     def get_json(path)
-      throttle_request
-      response = self.class.get(path)
-      handle_response(response)
+      attempts = 0
+      begin
+        attempts += 1
+        throttle_request
+        response = self.class.get(path)
+        handle_response(response)
+      rescue RateLimitError => e
+        raise if attempts > @max_retries
+        delay = @retry_base_delay * (2**(attempts - 1))
+        Rails.logger.warn "Provider::MempoolSpace - rate limited (attempt #{attempts}/#{@max_retries}): #{e.message}; sleeping #{delay}s"
+        sleep(delay)
+        retry
+      end
     end
 
     def throttle_request
