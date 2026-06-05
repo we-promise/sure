@@ -55,6 +55,13 @@ class Account::ReconciliationManager
     # the reconciler's positive-delta guard is correct. There is no liability
     # sign concern: a credit-card/loan paydown can't reach pledge matching
     # because no manual_save pledge can be attached to a non-depository account.
+    #
+    # NOTE: the prior balance comes from the balances table, which is
+    # recomputed asynchronously after this valuation saves. A second same-day
+    # reconcile that lands before that sync derives its delta from the
+    # pre-first-reconcile balance and can miss its pledge; it self-heals on
+    # the next re-save after the sync (the date/amount tolerance keeps the
+    # pledge open and retryable).
     def valuation_contribution(valuation, old_balance_components)
       old_balance = old_balance_components[:balance] || 0
       valuation.amount.to_d - old_balance.to_d
