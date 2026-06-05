@@ -3,7 +3,7 @@ class Transactions::BulkUpdatesController < ApplicationController
   end
 
   def create
-    requested_ids = Array(bulk_update_params[:entry_ids]).map(&:to_i)
+    requested_ids = Array(bulk_update_params[:entry_ids])
     writable_account_ids = Current.family.accounts.writable_by(Current.user).pluck(:id)
     annotatable_account_ids = Current.family.accounts
       .joins(:account_shares)
