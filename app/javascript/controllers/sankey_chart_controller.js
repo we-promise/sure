@@ -445,7 +445,17 @@ export default class extends Controller {
     linkPaths
       .on("mouseenter", (event, d) => {
         applyHover([d]);
-        this.#showTooltip(event, d.value, d.percentage);
+        // A link is a flow between two named nodes — without the names the
+        // value floats context-free (the old tooltip showed only "$X (Y%)").
+        this.#showTooltip(
+          event,
+          d.value,
+          d.percentage,
+          this.#tooltipContext(
+            d.source.color,
+            `${this.#esc(d.source.name)} → ${this.#esc(d.target.name)}`,
+          ),
+        );
       })
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
       .on("mouseleave", () => {
@@ -466,7 +476,12 @@ export default class extends Controller {
           (l) => l.source === d || l.target === d,
         );
         applyHover(connectedLinks);
-        this.#showTooltip(event, d.value, d.percentage, d.name);
+        this.#showTooltip(
+          event,
+          d.value,
+          d.percentage,
+          this.#tooltipContext(d.color, this.#esc(d.name)),
+        );
       })
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
       .on("click", (event, d) => {
@@ -490,7 +505,12 @@ export default class extends Controller {
           (l) => l.source === d || l.target === d,
         );
         applyHover(connectedLinks);
-        this.#showTooltip(event, d.value, d.percentage, d.name);
+        this.#showTooltip(
+          event,
+          d.value,
+          d.percentage,
+          this.#tooltipContext(d.color, this.#esc(d.name)),
+        );
       })
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
       .on("click", (event, d) => {
@@ -517,20 +537,29 @@ export default class extends Controller {
       .style("pointer-events", "none");
   }
 
-  #showTooltip(event, value, percentage, title = null) {
+  // Node names are user-named categories; escape anything interpolated into
+  // .html() (the previous code injected them raw).
+  #esc(s) {
+    return String(s).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+    );
+  }
+
+  // Context line shared by node and link tooltips: a swatch dot tying the
+  // card to the hovered ribbon/node color, plus the (escaped) name(s).
+  #tooltipContext(color, label) {
+    const dot = `<span class="inline-block shrink-0 rounded-full" style="width: 8px; height: 8px; background: ${this.#esc(color || "var(--color-gray-400)")};"></span>`;
+    return `<div class="flex items-center gap-1.5 text-xs text-secondary mb-1">${dot}<span class="min-w-0 truncate">${label}</span></div>`;
+  }
+
+  #showTooltip(event, value, percentage, contextHtml = null) {
     if (!this.tooltip) this.#createTooltip();
 
-    // Node titles are user-named categories; escape them since this goes
-    // through .html() (the previous interpolation injected them raw).
-    const esc = (s) =>
-      String(s).replace(
-        /[&<>"']/g,
-        (c) =>
-          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-      );
     const valueLine = `<span class="font-mono font-medium tabular-nums">${this.#formatCurrency(value)}</span> <span class="text-secondary">(${percentage || 0}%)</span>`;
-    const content = title
-      ? `<div class="text-xs text-secondary mb-1">${esc(title)}</div><div>${valueLine}</div>`
+    const content = contextHtml
+      ? `${contextHtml}<div>${valueLine}</div>`
       : valueLine;
 
     const isInDialog = !!this.element.closest("dialog");

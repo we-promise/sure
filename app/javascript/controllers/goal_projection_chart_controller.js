@@ -23,6 +23,7 @@ export default class extends Controller {
     todayLabel: { type: String, default: "Today" },
     projectedTemplate: { type: String, default: "Projected: {amount}" },
     savedTemplate: { type: String, default: "Saved: {amount}" },
+    targetRelationTemplate: { type: String, default: "{percent}% of {target} target" },
   };
 
   connect() {
@@ -452,7 +453,25 @@ export default class extends Controller {
     tooltipDate.className = CHART_TOOLTIP_CONTEXT_CLASSES;
     const tooltipValue = document.createElement("div");
     tooltipValue.className = CHART_TOOLTIP_VALUE_CLASSES;
-    tooltip.replaceChildren(tooltipDate, tooltipValue);
+    // Relation line: where this value sits against the goal target. Tertiary
+    // so the hierarchy stays date < value > relation; hidden when the goal
+    // has no positive target to compare against.
+    const tooltipRelation = document.createElement("div");
+    tooltipRelation.className = "text-xs text-subdued mt-0.5";
+    tooltip.replaceChildren(tooltipDate, tooltipValue, tooltipRelation);
+
+    const setRelation = (amount) => {
+      const target = Number(data.target_amount) || 0;
+      if (target <= 0 || !data.target_amount_short_label) {
+        tooltipRelation.style.display = "none";
+        return;
+      }
+      const percent = Math.round((amount / target) * 100);
+      tooltipRelation.textContent = this.targetRelationTemplateValue
+        .replace("{percent}", percent)
+        .replace("{target}", data.target_amount_short_label);
+      tooltipRelation.style.display = "";
+    };
 
     const overlay = svg
       .append("rect")
@@ -505,6 +524,7 @@ export default class extends Controller {
         hoverProjDot.attr("cx", hoverX).attr("cy", y(projValue)).style("display", null);
         hoverSavedDot.style("display", "none");
         tooltipValue.textContent = this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency));
+        setRelation(projValue);
       } else {
         // Saved segment: hoverDate is already snapped to nearest savedSeries
         // entry above, so reuse that entry directly instead of running
@@ -513,6 +533,7 @@ export default class extends Controller {
         hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
         hoverProjDot.style("display", "none");
         tooltipValue.textContent = this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency));
+        setRelation(savedPoint.value);
       }
 
       tooltip.style.display = "block";
