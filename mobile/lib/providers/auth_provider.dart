@@ -127,7 +127,10 @@ class AuthProvider with ChangeNotifier {
         otpCode: otpCode,
       );
 
-      LogService.instance.debug('AuthProvider', 'Login result: $result');
+      LogService.instance.debug(
+        'AuthProvider',
+        'Login result received: success=${result['success'] == true}, mfa_required=${result['mfa_required'] == true}',
+      );
 
       if (result['success'] == true) {
         _tokens = result['tokens'] as AuthTokens?;
@@ -141,7 +144,8 @@ class AuthProvider with ChangeNotifier {
         if (result['mfa_required'] == true) {
           _mfaRequired = true;
           _showMfaInput = true; // Show MFA input field
-          LogService.instance.debug('AuthProvider', 'MFA required! Setting _showMfaInput to true');
+          LogService.instance.debug(
+              'AuthProvider', 'MFA required! Setting _showMfaInput to true');
 
           // If user already submitted an OTP code, this is likely an invalid OTP error
           // Show the error message so user knows the code was wrong
@@ -182,7 +186,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.loginWithApiKey(apiKey: apiKey);
 
-      LogService.instance.debug('AuthProvider', 'API key login result: $result');
+      LogService.instance.debug(
+        'AuthProvider',
+        'API key login result received: success=${result['success'] == true}',
+      );
 
       if (result['success'] == true) {
         _apiKey = apiKey;
@@ -198,8 +205,10 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
-      LogService.instance.error('AuthProvider', 'API key login error: $e\n$stackTrace');
-      _errorMessage = 'Unable to connect. Please check your network and try again.';
+      LogService.instance
+          .error('AuthProvider', 'API key login error: $e\n$stackTrace');
+      _errorMessage =
+          'Unable to connect. Please check your network and try again.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -260,12 +269,14 @@ class AuthProvider with ChangeNotifier {
         deviceInfo: deviceInfo,
       );
 
-      final launched = await launchUrl(Uri.parse(ssoUrl), mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(Uri.parse(ssoUrl),
+          mode: LaunchMode.externalApplication);
       if (!launched) {
         _errorMessage = 'Unable to open browser for sign-in.';
       }
     } catch (e, stackTrace) {
-      LogService.instance.error('AuthProvider', 'SSO launch error: $e\n$stackTrace');
+      LogService.instance
+          .error('AuthProvider', 'SSO launch error: $e\n$stackTrace');
       _errorMessage = 'Unable to start sign-in. Please try again.';
     } finally {
       _isLoading = false;
@@ -307,7 +318,8 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
-      LogService.instance.error('AuthProvider', 'SSO callback error: $e\n$stackTrace');
+      LogService.instance
+          .error('AuthProvider', 'SSO callback error: $e\n$stackTrace');
       _errorMessage = 'Sign-in failed. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -350,7 +362,8 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
-      LogService.instance.error('AuthProvider', 'SSO link error: $e\n$stackTrace');
+      LogService.instance
+          .error('AuthProvider', 'SSO link error: $e\n$stackTrace');
       _errorMessage = 'Failed to link account. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -393,7 +406,8 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
-      LogService.instance.error('AuthProvider', 'SSO create account error: $e\n$stackTrace');
+      LogService.instance
+          .error('AuthProvider', 'SSO create account error: $e\n$stackTrace');
       _errorMessage = 'Failed to create account. Please try again.';
       _isLoading = false;
       notifyListeners();
