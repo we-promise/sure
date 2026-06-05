@@ -18,11 +18,6 @@
                 data: { turbo_frame: :modal }) %>
           <% end %>
 
-          <%# Issue #2167: gate "New activity" on supports_trades? — covers
-              investment accounts AND crypto-exchange. The old `unless crypto?`
-              gate blanket-excluded all crypto, hiding the menu item even from
-              exchange subtypes that DO support manual trades. Crypto wallets
-              still get neither item (sync-only). %>
           <% if account.supports_trades? %>
             <% menu.with_item(
                 variant: "link",
