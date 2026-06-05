@@ -155,6 +155,9 @@ class Transfer < ApplicationRecord
         total_fee = source_fee_amount.to_d + destination_fee_amount.to_d
         errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != total_fee
       end
+      # Cross-currency transfers: only sign-direction is validated above; the
+      # fee-adjusted balance is not checked because exchange rates make exact
+      # balancing impractical. This matches the original pre-fee behavior.
     end
 
     def fees_must_be_non_negative
