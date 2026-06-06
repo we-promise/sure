@@ -46,15 +46,18 @@ class InvitationTest < ActiveSupport::TestCase
     invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
     original_family_id = user.family_id
 
-    assert_no_difference("FamilyMembership.count") do
-      result = invitation.accept_for(user)
-
-      assert result
-    end
+    # 2D: always find_or_create membership — if none exists, it creates one
+    result = invitation.accept_for(user)
+    assert result
 
     user.reload
     assert_equal original_family_id, user.family_id
     assert_equal "admin", user.role
+
+    membership = user.membership_for(@family)
+    assert_not_nil membership, "should create a membership for the invited role"
+    assert_equal "admin", membership.role
+
     invitation.reload
     assert invitation.accepted_at.present?
   end
