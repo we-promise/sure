@@ -112,8 +112,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _log.debug('CalendarScreen',
         'Starting to calculate daily changes for ${transactions.length} transactions');
 
-    for (var index = 0; index < transactions.length; index++) {
-      final transaction = transactions[index];
+    for (var transaction in transactions) {
       try {
         final date = DateTime.parse(transaction.date);
         final dateKey = DateFormat('yyyy-MM-dd').format(date);
@@ -134,7 +133,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ? '${sanitizedError.substring(0, 120)}...'
             : sanitizedError;
         _log.error('CalendarScreen',
-            'Failed to process transaction at index $index for calendar: $errorSummary');
+            'Failed to process transaction for calendar: $errorSummary');
       }
     }
 

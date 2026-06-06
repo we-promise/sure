@@ -15,6 +15,13 @@ class AuthService {
   static const String _apiKeyKey = 'api_key';
   static const String _authModeKey = 'auth_mode';
 
+  void _logAuthException(String operation, Object error) {
+    LogService.instance.error(
+      'AuthService',
+      '$operation failed with ${error.runtimeType}',
+    );
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -83,44 +90,38 @@ class AuthService {
               'Login failed',
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Login SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Login TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } on HttpException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Login HttpException: $e\n$stackTrace');
+    } on HttpException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on FormatException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Login FormatException: $e\n$stackTrace');
+    } on FormatException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on TypeError catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Login TypeError: $e\n$stackTrace');
+    } on TypeError catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Login unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -190,44 +191,38 @@ class AuthService {
               'Signup failed',
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Signup SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Signup TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } on HttpException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Signup HttpException: $e\n$stackTrace');
+    } on HttpException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on FormatException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Signup FormatException: $e\n$stackTrace');
+    } on FormatException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on TypeError catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Signup TypeError: $e\n$stackTrace');
+    } on TypeError catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'Signup unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -269,44 +264,38 @@ class AuthService {
           'error': responseData['error'] ?? 'Token refresh failed',
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'RefreshToken SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'RefreshToken TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } on HttpException catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'RefreshToken HttpException: $e\n$stackTrace');
+    } on HttpException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on FormatException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'RefreshToken FormatException: $e\n$stackTrace');
+    } on FormatException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on TypeError catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'RefreshToken TypeError: $e\n$stackTrace');
+    } on TypeError catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'RefreshToken unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -348,23 +337,20 @@ class AuthService {
           'error': 'Login failed (status ${response.statusCode})',
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'API key login SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('API key login', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'API key login TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('API key login', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'API key login unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('API key login', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -459,23 +445,20 @@ class AuthService {
         'tokens': tokens,
         'user': user,
       };
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'SSO exchange SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('SSO exchange', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'SSO exchange TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('SSO exchange', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error(
-          'AuthService', 'SSO exchange unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO exchange', e);
       return {
         'success': false,
         'error': 'Failed to exchange authorization code',
@@ -532,9 +515,8 @@ class AuthService {
       return {'success': false, 'error': 'Network unavailable'};
     } on TimeoutException {
       return {'success': false, 'error': 'Request timed out'};
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'SSO link error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO link', e);
       return {'success': false, 'error': 'Failed to link account'};
     }
   }
@@ -591,9 +573,8 @@ class AuthService {
       return {'success': false, 'error': 'Network unavailable'};
     } on TimeoutException {
       return {'success': false, 'error': 'Request timed out'};
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthService', 'SSO create account error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO create account', e);
       return {'success': false, 'error': 'Failed to create account'};
     }
   }

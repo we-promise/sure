@@ -45,11 +45,11 @@ class LogService with ChangeNotifier {
 
   static final List<RegExp> _businessDataPatterns = [
     RegExp(
-      r'\b(local[-_]?id|account[-_]?id|server[-_]?id|transaction[-_]?id|merchant[-_]?id|category[-_]?id|tag[-_]?ids?|user[-_]?id|backend[-_]?url|base[-_]?url|amount|merchant[-_]?name|transaction[-_]?name|name|email|first[-_]?name|last[-_]?name)\b\s*[:=]\s*("[^"]*"|[^\s,}]+)',
+      r'\b(local[-_]?id|account[-_]?id|server[-_]?id|transaction[-_]?id|merchant[-_]?id|category[-_]?id|tag[-_]?ids?|user[-_]?id|backend[-_]?url|base[-_]?url|amount|account[-_]?name|merchant[-_]?name|category[-_]?name|display[-_]?name|transaction[-_]?name|email|first[-_]?name|last[-_]?name)\b\s*[:=]\s*("[^"]*"|[^\s,}]+)',
       caseSensitive: false,
     ),
     RegExp(
-      r'"(local[-_]?id|account[-_]?id|server[-_]?id|transaction[-_]?id|merchant[-_]?id|category[-_]?id|tag[-_]?ids?|user[-_]?id|backend[-_]?url|base[-_]?url|amount|merchant[-_]?name|transaction[-_]?name|email|first[-_]?name|last[-_]?name)"\s*:\s*("[^"]*"|[0-9.]+|true|false|null)',
+      r'"(local[-_]?id|account[-_]?id|server[-_]?id|transaction[-_]?id|merchant[-_]?id|category[-_]?id|tag[-_]?ids?|user[-_]?id|backend[-_]?url|base[-_]?url|amount|account[-_]?name|merchant[-_]?name|category[-_]?name|display[-_]?name|transaction[-_]?name|email|first[-_]?name|last[-_]?name)"\s*:\s*("[^"]*"|[0-9.]+|true|false|null)',
       caseSensitive: false,
     ),
   ];
@@ -62,7 +62,7 @@ class LogService with ChangeNotifier {
       RegExp(r'\bBearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false);
   static final RegExp _urlPattern = RegExp(r'https?://[^\s,}]+');
   static final RegExp _hostLookupPattern = RegExp(
-    r"(Failed host lookup:\s*)'[^']+'",
+    r'''(Failed host lookup:\s*)['"]?[^'"\s)]+['"]?''',
     caseSensitive: false,
   );
   static final RegExp _socketAddressPattern = RegExp(
@@ -92,7 +92,7 @@ class LogService with ChangeNotifier {
         .replaceAll(_bearerTokenPattern, 'Bearer [redacted]')
         .replaceAll(_urlPattern, '[url]')
         .replaceAllMapped(
-            _hostLookupPattern, (match) => "${match.group(1)}'[host]'")
+            _hostLookupPattern, (match) => '${match.group(1)}[host]')
         .replaceAllMapped(
             _socketAddressPattern, (match) => '${match.group(1)}=[host]')
         .replaceAll(_emailPattern, '[email]')
@@ -145,6 +145,7 @@ class LogService with ChangeNotifier {
 
   String exportLogs() {
     final buffer = StringBuffer();
+    // Log messages are sanitized before storage; export should preserve them.
     for (final log in _logs) {
       buffer.writeln(
           '${log.formattedTime} [${log.level}][${log.tag}] ${log.message}');

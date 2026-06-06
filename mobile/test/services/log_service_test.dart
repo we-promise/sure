@@ -29,13 +29,20 @@ void main() {
       '(OS Error: nodename nor servname provided, errno = 8)',
     );
 
-    expect(sanitized, contains("Failed host lookup: '[host]'"));
+    expect(sanitized, contains('Failed host lookup: [host]'));
     expect(sanitized, isNot(contains('private.internal')));
+
+    final unquoted = LogService.sanitize(
+      'SocketException: Failed host lookup: private.internal '
+      '(OS Error: lookup failed)',
+    );
+    expect(unquoted, contains('Failed host lookup: [host]'));
+    expect(unquoted, isNot(contains('private.internal')));
   });
 
   test('sanitize redacts financial and merchant values', () {
     final sanitized = LogService.sanitize(
-      'name=Coffee amount=123.45 merchantName="Corner Store" '
+      'transactionName=Coffee amount=123.45 merchantName="Corner Store" '
       '"transaction_id":"txn_123","local_id":"local_123"',
     );
 
@@ -61,7 +68,9 @@ void main() {
   test('sanitize handles empty and safe messages', () {
     expect(LogService.sanitize(''), '');
 
-    const message = 'Fetched 25 transactions on page 2 with syncStatus=pending';
+    const message = 'Fetched 25 transactions on page 2 with syncStatus=pending '
+        'filename=main.dart pageName=transactions hostname=localhost '
+        'animationName=fadeIn';
     expect(LogService.sanitize(message), message);
   });
 
@@ -100,7 +109,7 @@ void main() {
   test('log storage and export use sanitized messages', () {
     LogService.instance.info(
       'Test',
-      'Saved transaction name=Coffee amount=9.99 email=user@example.com',
+      'Saved transaction transactionName=Coffee amount=9.99 email=user@example.com',
     );
 
     expect(LogService.instance.logs, hasLength(1));
@@ -143,11 +152,15 @@ void main() {
 
   test('sanitize preserves safe operational diagnostics', () {
     final sanitized = LogService.sanitize(
-      'Fetched 25 transactions on page 2 with syncStatus=pending',
+      'Fetched 25 transactions on page 2 with syncStatus=pending '
+      'filename=main.dart pageName=transactions hostname=localhost',
     );
 
     expect(sanitized, contains('Fetched 25 transactions'));
     expect(sanitized, contains('page 2'));
     expect(sanitized, contains('syncStatus=pending'));
+    expect(sanitized, contains('filename=main.dart'));
+    expect(sanitized, contains('pageName=transactions'));
+    expect(sanitized, contains('hostname=localhost'));
   });
 }
