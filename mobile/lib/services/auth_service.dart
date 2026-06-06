@@ -63,6 +63,27 @@ class AuthService {
     );
   }
 
+  User? _parseResponseUser(Map<String, dynamic> responseData, String source) {
+    final rawUser = responseData['user'];
+    if (rawUser == null) return null;
+
+    _logUserPayloadShape(source, rawUser);
+    return User.fromJson(rawUser);
+  }
+
+  Future<void> _saveSession(AuthTokens tokens, User? user) async {
+    try {
+      await _saveTokens(tokens);
+      if (user != null) {
+        await _saveUser(user);
+      }
+    } catch (_) {
+      await _storage.delete(key: _tokenKey);
+      await _storage.delete(key: _userKey);
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -98,18 +119,10 @@ class AuthService {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Store tokens
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'login');
 
-        // Store user data - parse once and reuse
-        User? user;
-        if (responseData['user'] != null) {
-          final rawUser = responseData['user'];
-          _logUserPayloadShape('login', rawUser);
-          user = User.fromJson(rawUser);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
@@ -204,18 +217,10 @@ class AuthService {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
-        // Store tokens
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'signup');
 
-        // Store user data - parse once and reuse
-        User? user;
-        if (responseData['user'] != null) {
-          final rawUser = responseData['user'];
-          _logUserPayloadShape('signup', rawUser);
-          user = User.fromJson(rawUser);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
@@ -471,11 +476,13 @@ class AuthService {
         'expires_in': data['expires_in'] ?? 0,
         'created_at': data['created_at'] ?? 0,
       });
-      await _saveTokens(tokens);
 
-      _logUserPayloadShape('sso_exchange', data['user']);
-      final user = User.fromJson(data['user']);
-      await _saveUser(user);
+      final user = _parseResponseUser(data, 'sso_exchange');
+      if (user == null) {
+        throw const FormatException('Missing user payload');
+      }
+
+      await _saveSession(tokens, user);
 
       return {
         'success': true,
@@ -526,14 +533,9 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'sso_link');
 
-        User? user;
-        if (responseData['user'] != null) {
-          _logUserPayloadShape('sso_link', responseData['user']);
-          user = User.fromJson(responseData['user']);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
@@ -585,14 +587,9 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'sso_create_account');
 
-        User? user;
-        if (responseData['user'] != null) {
-          _logUserPayloadShape('sso_create_account', responseData['user']);
-          user = User.fromJson(responseData['user']);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,

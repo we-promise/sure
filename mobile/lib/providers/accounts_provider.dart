@@ -165,35 +165,21 @@ class AccountsProvider with ChangeNotifier {
         if (e is SocketException) {
           _errorMessage =
               'Network error. Please check your internet connection and try again.';
-          _log.error(
-              'AccountsProvider', 'SocketException while fetching accounts');
         } else if (e is TimeoutException) {
           _errorMessage =
               'Request timed out. Please check your connection and try again.';
-          _log.error(
-              'AccountsProvider', 'TimeoutException while fetching accounts');
         } else if (e is FormatException) {
           _errorMessage = 'Server response error. Please try again later.';
-          _log.error(
-              'AccountsProvider', 'FormatException while fetching accounts');
         } else if (e.toString().contains('401') ||
             e.toString().contains('unauthorized')) {
           _errorMessage = 'unauthorized';
-          _log.error(
-              'AccountsProvider', 'Unauthorized error while fetching accounts');
         } else if (e.toString().contains('HandshakeException') ||
             e.toString().contains('certificate') ||
             e.toString().contains('SSL')) {
           _errorMessage =
               'Secure connection error. Please check your internet connection and try again.';
-          _log.error('AccountsProvider',
-              'SSL/Certificate error while fetching accounts');
         } else {
           _errorMessage = 'Something went wrong. Please try again.';
-          _log.error(
-            'AccountsProvider',
-            'Unhandled fetchAccounts failure with ${e.runtimeType}',
-          );
         }
       }
       _isLoading = false;
