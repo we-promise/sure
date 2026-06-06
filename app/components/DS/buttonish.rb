@@ -77,7 +77,13 @@ class DS::Buttonish < DesignSystemComponent
 
   def container_classes(override_classes = nil)
     class_names(
-      "font-medium whitespace-nowrap",
+      # Tailwind v4 preflight sets `cursor: pointer` on all <button>s, which
+      # also applies while disabled. Override so disabled buttons read as
+      # non-interactive. The aria-disabled twins cover buttons that gate via
+      # `aria-disabled` to stay clickable/focusable (e.g. submit buttons whose
+      # click handler surfaces validation errors — a truly disabled default
+      # submit would also swallow Enter-key implicit submission).
+      "font-medium whitespace-nowrap disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,
