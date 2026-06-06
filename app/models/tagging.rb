@@ -39,11 +39,10 @@ class Tagging < ApplicationRecord
     def linked_pocket
       return unless taggable_type == "Transaction"
 
-      # taggable.entry traverses the has_one :entry on Transaction.
-      # For AR-mediated destroys this is always populated (belongs_to dependent: :destroy
-      # fires as before_destroy, so the Entry row is still present when this runs).
-      # For raw SQL deletes (delete_all) the entry may be gone; the nil guard below
-      # ensures we fail silently rather than raising.
+      # taggable.entry may be nil if the Entry row was already deleted
+      # (e.g. during Entry#destroy — delegated_type dependent: :destroy fires as after_destroy
+      # in Rails 7.2, so Entry is gone before Transaction/Taggings cascade).
+      # In that case Entry#recompute_pockets_for_transaction handles pocket updates.
       account = taggable.entry&.account
       return unless account
 
