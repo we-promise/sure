@@ -30,7 +30,6 @@ en:
       manual: "Manual"
       auto_fills_from: "Auto-fills from \"%{tag}\""
       no_auto_fill: "No auto-fill linked"
-      of_balance: "of %{balance}"
       view_transactions: "View tagged transactions"
       fill_direction:
         inflows: "Deposits only"

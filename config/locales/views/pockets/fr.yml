@@ -1,0 +1,49 @@
+---
+fr:
+  pockets:
+    index:
+      new: "Nouvelle enveloppe"
+      total_allocated: "Alloué"
+      free_balance: "Solde libre"
+      empty: "Aucune enveloppe. Créez-en une pour commencer à allouer des fonds."
+      overflow_warning: "Les enveloppes allouées dépassent le solde actuel du compte."
+    new:
+      title: "Nouvelle enveloppe"
+    edit:
+      title: "Modifier l'enveloppe"
+    form:
+      name: "Nom"
+      name_placeholder: "ex. Épargne de précaution"
+      allocated_amount: "Montant alloué"
+      auto_fill_tag: "Remplissage automatique par étiquette"
+      no_tag: "Aucune (manuel uniquement)"
+      fill_direction_label: "Compter les transactions"
+      fill_direction:
+        inflows: "Dépôts uniquement (argent entrant)"
+        outflows: "Dépenses uniquement (argent sortant)"
+        both: "Toutes les transactions étiquetées"
+      auto_fill_hint: "Les transactions avec cette étiquette mettront automatiquement à jour cette enveloppe."
+      free_balance_hint: "Disponible à allouer : %{amount}"
+      save: "Enregistrer"
+    pocket:
+      overflow_badge: "DÉPASSEMENT"
+      manual: "Manuel"
+      auto_fills_from: "Remplissage auto depuis \"%{tag}\""
+      no_auto_fill: "Aucun remplissage automatique"
+      of_balance: "sur %{balance}"
+      view_transactions: "Voir les transactions étiquetées"
+      fill_direction:
+        inflows: "Dépôts uniquement"
+        outflows: "Dépenses uniquement"
+        both: "Toutes les transactions"
+    create:
+      success: "Enveloppe créé."
+    update:
+      success: "Enveloppe mis à jour."
+    destroy:
+      confirm: "Supprimer l'enveloppe \"%{name}\" ?"
+      success: "Enveloppe supprimé."
+  accounts:
+    show:
+      tabs:
+        pockets: "Enveloppes"
