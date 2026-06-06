@@ -250,6 +250,15 @@ class Category < ApplicationRecord
     subcategory? ? "#{parent.name} > #{name}" : name
   end
 
+  # Returns name prefixed with non-breaking-space indent when the category is a
+  # subcategory. Used in `<select>` dropdowns to visually convey the hierarchy
+  # alongside `Category.alphabetically_by_hierarchy`, which keeps each subcategory
+  # grouped under its parent. Uses the `parent_id` column directly (not
+  # `subcategory?`) to avoid an N+1 `belongs_to :parent` lookup per row.
+  def name_with_indent
+    parent_id.present? ? "    #{name}" : name
+  end
+
   # Predicate: is this the synthetic "Uncategorized" category?
   def uncategorized?
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)

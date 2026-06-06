@@ -10,7 +10,7 @@ class TransfersController < ApplicationController
   end
 
   def show
-    @categories = Current.family.categories.alphabetically
+    @categories = Current.family.categories.alphabetically_by_hierarchy
 
     # Whether the current user can hit `mark_as_recurring`: feature flag on,
     # AND they have write access to BOTH transfer endpoints. Gating the
