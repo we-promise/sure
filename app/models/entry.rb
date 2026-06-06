@@ -87,6 +87,18 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
+  def self.name_suggestions_for(
+    family:,
+    query:,
+    limit: Entry::NameSuggestions::DEFAULT_LIMIT,
+    scope: nil
+  )
+    base = family.entries
+    base = base.where(id: scope.select(:id)) if scope.present?
+
+    Entry::NameSuggestions.new(scope: base, query: query, limit: limit).call
+  end
+
   # Uncategorized, non-transfer transaction entries on draft or active accounts.
   # Caller is responsible for scoping to accessible entries before applying this scope.
   scope :uncategorized_transactions, -> {

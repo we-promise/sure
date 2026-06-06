@@ -12,6 +12,7 @@
 
 ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
@@ -636,6 +637,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.boolean "import_locked", default: false, null: false
     t.uuid "parent_entry_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
+    t.index "lower(regexp_replace(TRIM(BOTH FROM name), ' +'::text, ' '::text, 'g'::text)) gin_trgm_ops", name: "index_entries_on_normalized_name_for_transaction_suggestions", where: "(((entryable_type)::text = 'Transaction'::text) AND (parent_entry_id IS NULL) AND (name IS NOT NULL) AND ((name)::text <> ''::text))", using: :gin
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"

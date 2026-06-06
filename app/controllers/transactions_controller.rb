@@ -4,14 +4,13 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
+  before_action :ensure_json_format, :validate_name_suggestions_query_length, only: :name_suggestions
 
   def new
     prefill_params_from_duplicate!
     super
     apply_duplicate_attributes!
-    @income_categories = Current.family.categories.incomes.alphabetically
-    @expense_categories = Current.family.categories.expenses.alphabetically
-    @categories = Current.family.categories.alphabetically
+    load_new_form_options
   end
 
   def index
@@ -68,6 +67,16 @@ class TransactionsController < ApplicationController
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
 
+  def name_suggestions
+    render json: {
+      suggestions: Entry.name_suggestions_for(
+        family: Current.family,
+        query: params[:query],
+        scope: Current.accessible_entries
+      )
+    }
+  end
+
   def clear_filter
     updated_params = {
       "q" => search_params,
@@ -117,6 +126,7 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
       end
     else
+      load_new_form_options
       render :new, status: :unprocessable_entity
     end
   end
@@ -555,6 +565,18 @@ class TransactionsController < ApplicationController
 
     def preferences_params
       params.require(:preferences).permit(collapsed_sections: {})
+    end
+
+    def load_new_form_options
+      @categories = Current.family.categories.alphabetically
+    end
+
+    def ensure_json_format
+      head :not_acceptable unless request.format.json?
+    end
+
+    def validate_name_suggestions_query_length
+      head :bad_request if params[:query].to_s.length > Entry::NameSuggestions::MAX_QUERY_LENGTH
     end
 
     # Helper methods for convert_to_trade
