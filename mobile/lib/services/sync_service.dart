@@ -235,7 +235,9 @@ class SyncService with ChangeNotifier {
       _log.info('SyncService', '========== SYNC FROM SERVER START ==========');
       _log.info(
         'SyncService',
-        'Fetching transactions from server with scoped account filter: ${accountId != null}',
+        accountId == null
+            ? 'Fetching transactions for all accounts'
+            : 'Fetching transactions for scoped account',
       );
 
       List<Transaction> allTransactions = [];

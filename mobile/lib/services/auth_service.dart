@@ -22,6 +22,21 @@ class AuthService {
     );
   }
 
+  String _responseError(Map<String, dynamic> responseData, String fallback) {
+    final error = responseData['error'];
+    if (error is String && error.isNotEmpty) return error;
+
+    final errors = responseData['errors'];
+    if (errors is List) {
+      final joined = errors.whereType<Object>().join(', ');
+      if (joined.isNotEmpty) return joined;
+    } else if (errors is String && errors.isNotEmpty) {
+      return errors;
+    }
+
+    return fallback;
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -85,9 +100,7 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ??
-              responseData['errors']?.join(', ') ??
-              'Login failed',
+          'error': _responseError(responseData, 'Login failed'),
         };
       }
     } on SocketException catch (e) {
@@ -186,9 +199,7 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ??
-              responseData['errors']?.join(', ') ??
-              'Signup failed',
+          'error': _responseError(responseData, 'Signup failed'),
         };
       }
     } on SocketException catch (e) {
@@ -506,14 +517,14 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ??
-              responseData['errors']?.join(', ') ??
-              'Account linking failed',
+          'error': _responseError(responseData, 'Account linking failed'),
         };
       }
-    } on SocketException {
+    } on SocketException catch (e) {
+      _logAuthException('SSO link', e);
       return {'success': false, 'error': 'Network unavailable'};
-    } on TimeoutException {
+    } on TimeoutException catch (e) {
+      _logAuthException('SSO link', e);
       return {'success': false, 'error': 'Request timed out'};
     } catch (e) {
       _logAuthException('SSO link', e);
@@ -564,14 +575,14 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ??
-              responseData['errors']?.join(', ') ??
-              'Account creation failed',
+          'error': _responseError(responseData, 'Account creation failed'),
         };
       }
-    } on SocketException {
+    } on SocketException catch (e) {
+      _logAuthException('SSO create account', e);
       return {'success': false, 'error': 'Network unavailable'};
-    } on TimeoutException {
+    } on TimeoutException catch (e) {
+      _logAuthException('SSO create account', e);
       return {'success': false, 'error': 'Request timed out'};
     } catch (e) {
       _logAuthException('SSO create account', e);
@@ -606,14 +617,13 @@ class AuthService {
 
       return {
         'success': false,
-        'error': responseData['error'] ??
-            responseData['errors']?.join(', ') ??
-            'Failed to enable AI',
+        'error': _responseError(responseData, 'Failed to enable AI'),
       };
     } catch (e) {
+      _logAuthException('Enable AI', e);
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': 'Network error',
       };
     }
   }

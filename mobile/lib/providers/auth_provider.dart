@@ -58,6 +58,13 @@ class AuthProvider with ChangeNotifier {
     _loadStoredAuth();
   }
 
+  void _logAuthException(String operation, Object error) {
+    LogService.instance.error(
+      'AuthProvider',
+      '$operation failed with ${error.runtimeType}',
+    );
+  }
+
   Future<void> _loadStoredAuth() async {
     _isLoading = true;
     _isInitializing = true;
@@ -169,7 +176,9 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Connection error: ${e.toString()}';
+      _logAuthException('Login', e);
+      _errorMessage =
+          'Unable to connect. Please check your network and try again.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -204,9 +213,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthProvider', 'API key login error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('API key login', e);
       _errorMessage =
           'Unable to connect. Please check your network and try again.';
       _isLoading = false;
@@ -250,7 +258,9 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Connection error: ${e.toString()}';
+      _logAuthException('Signup', e);
+      _errorMessage =
+          'Unable to connect. Please check your network and try again.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -274,9 +284,8 @@ class AuthProvider with ChangeNotifier {
       if (!launched) {
         _errorMessage = 'Unable to open browser for sign-in.';
       }
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthProvider', 'SSO launch error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO launch', e);
       _errorMessage = 'Unable to start sign-in. Please try again.';
     } finally {
       _isLoading = false;
@@ -317,9 +326,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthProvider', 'SSO callback error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO callback', e);
       _errorMessage = 'Sign-in failed. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -361,9 +369,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthProvider', 'SSO link error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO link', e);
       _errorMessage = 'Failed to link account. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -405,9 +412,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e, stackTrace) {
-      LogService.instance
-          .error('AuthProvider', 'SSO create account error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO create account', e);
       _errorMessage = 'Failed to create account. Please try again.';
       _isLoading = false;
       notifyListeners();
