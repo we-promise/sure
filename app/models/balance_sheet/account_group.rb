@@ -34,7 +34,14 @@ class BalanceSheet::AccountGroup
   end
 
   def total
-    accounts.sum(&:converted_balance)
+    # Mirror BalanceSheet::ClassificationGroup#total: exclude accounts the
+    # current user has opted out of their finances (shared accounts with
+    # include_in_finances = false). Otherwise group totals — and the weights
+    # derived from them — disagree with the filtered classification/net-worth
+    # totals shown on the same page.
+    accounts
+      .select { |a| a.respond_to?(:included_in_finances?) ? a.included_in_finances? : true }
+      .sum(&:converted_balance)
   end
 
   def weight
