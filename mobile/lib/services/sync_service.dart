@@ -89,7 +89,10 @@ class SyncService with ChangeNotifier {
           }
         } catch (e) {
           // Mark as failed
-          _log.error('SyncService', 'Delete exception: $e');
+          _log.error(
+            'SyncService',
+            'Delete failed with ${e.runtimeType}',
+          );
           await _offlineStorage.updateTransactionSyncStatus(
             localId: transaction.localId,
             syncStatus: SyncStatus.failed,
@@ -117,7 +120,10 @@ class SyncService with ChangeNotifier {
         error: failureCount > 0 ? lastError : null,
       );
     } catch (e) {
-      _log.error('SyncService', 'Sync pending deletes exception: $e');
+      _log.error(
+        'SyncService',
+        'Sync pending deletes failed with ${e.runtimeType}',
+      );
       return SyncResult(
         success: false,
         syncedCount: successCount,
@@ -198,7 +204,10 @@ class SyncService with ChangeNotifier {
           }
         } catch (e) {
           // Mark as failed
-          _log.error('SyncService', 'Upload exception: $e');
+          _log.error(
+            'SyncService',
+            'Upload failed with ${e.runtimeType}',
+          );
           await _offlineStorage.updateTransactionSyncStatus(
             localId: transaction.localId,
             syncStatus: SyncStatus.failed,
@@ -226,7 +235,10 @@ class SyncService with ChangeNotifier {
         error: failureCount > 0 ? lastError : null,
       );
     } catch (e) {
-      _log.error('SyncService', 'Sync pending transactions exception: $e');
+      _log.error(
+        'SyncService',
+        'Sync pending transactions failed with ${e.runtimeType}',
+      );
       return SyncResult(
         success: false,
         syncedCount: successCount,
@@ -257,7 +269,10 @@ class SyncService with ChangeNotifier {
 
       return result;
     } catch (e) {
-      _log.error('SyncService', 'syncPendingTransactions exception: $e');
+      _log.error(
+        'SyncService',
+        'syncPendingTransactions failed with ${e.runtimeType}',
+      );
       _isSyncing = false;
       _syncError = e.toString();
       notifyListeners();
@@ -280,6 +295,8 @@ class SyncService with ChangeNotifier {
       data: {'scoped_account': accountId != null},
     );
     var telemetrySpanFinished = false;
+    var telemetrySucceeded = false;
+    Object? telemetryThrowable;
 
     Future<void> finishTelemetrySpan({
       required bool success,
@@ -384,7 +401,6 @@ class SyncService with ChangeNotifier {
         } else {
           _log.error('SyncService',
               'Server returned error on page $currentPage: ${result['error']}');
-          await finishTelemetrySpan(success: false);
           TelemetryService.instance.addBreadcrumb(
             'sync',
             'transactions_fetch_failed',
@@ -441,7 +457,7 @@ class SyncService with ChangeNotifier {
           'transaction_count': allTransactions.length,
         },
       );
-      await finishTelemetrySpan(success: true);
+      telemetrySucceeded = true;
       _lastSyncTime = DateTime.now();
       notifyListeners();
 
@@ -450,11 +466,11 @@ class SyncService with ChangeNotifier {
         syncedCount: allTransactions.length,
       );
     } catch (e, stackTrace) {
-      _log.error('SyncService', 'Exception in syncFromServer: $e');
-      await finishTelemetrySpan(
-        success: false,
-        throwable: e,
+      _log.error(
+        'SyncService',
+        'syncFromServer failed with ${e.runtimeType}',
       );
+      telemetryThrowable = e;
       await TelemetryService.instance.captureHandledException(
         e,
         stackTrace,
@@ -463,6 +479,11 @@ class SyncService with ChangeNotifier {
       return SyncResult(
         success: false,
         error: e.toString(),
+      );
+    } finally {
+      await finishTelemetrySpan(
+        success: telemetrySucceeded,
+        throwable: telemetryThrowable,
       );
     }
   }
@@ -579,7 +600,7 @@ class SyncService with ChangeNotifier {
         error: _syncError,
       );
     } catch (e, stackTrace) {
-      _log.error('SyncService', 'Full sync exception: $e');
+      _log.error('SyncService', 'Full sync failed with ${e.runtimeType}');
       await TelemetryService.instance.captureHandledException(
         e,
         stackTrace,

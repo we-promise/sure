@@ -64,7 +64,10 @@ class TelemetryService {
   static final TelemetryService instance = TelemetryService();
 
   final TelemetryConfig _config;
-  final SentryNavigatorObserver _navigatorObserver = SentryNavigatorObserver();
+  final SentryNavigatorObserver _navigatorObserver = SentryNavigatorObserver(
+    enableAutoTransactions: false,
+    routeNameExtractor: scrubRouteSettings,
+  );
   bool _initialized = false;
 
   TelemetryService({TelemetryConfig? config})
@@ -107,20 +110,21 @@ class TelemetryService {
           options.beforeSend = filterEvent;
           options.beforeSendTransaction = filterTransaction;
           options.beforeBreadcrumb = filterBreadcrumb;
+          _initialized = true;
         },
         appRunner: () async {
           appRunnerStarted = true;
           await appRunner();
         },
       );
-      _initialized = true;
     } catch (e, stackTrace) {
       if (appRunnerStarted) rethrow;
 
       _initialized = false;
       LogService.instance.warning(
         'Telemetry',
-        'Sentry initialization failed; continuing without telemetry: $e\n$stackTrace',
+        'Sentry initialization failed; continuing without telemetry: '
+            '${e.runtimeType}\n${stackTrace.runtimeType}',
       );
       await appRunner();
     }
@@ -295,7 +299,7 @@ class TelemetryService {
     return transaction.copyWith(
       transaction: transaction.transaction == null
           ? null
-          : _sanitizeFreeformText(transaction.transaction!),
+          : scrubRouteName(transaction.transaction!),
       breadcrumbs: breadcrumbs?.cast<Breadcrumb>(),
       request: transaction.request == null
           ? null
@@ -383,26 +387,46 @@ class TelemetryService {
   }
 
   static bool _isSensitiveKey(String key) {
-    final normalized = key.toLowerCase();
-    const sensitiveFragments = [
+    final normalized = _normalizeDataKey(key);
+    const sensitiveKeys = {
       'authorization',
       'token',
+      'access_token',
+      'refresh_token',
+      'auth_token',
       'password',
       'secret',
       'api_key',
       'apikey',
+      'x_api_key',
       'header',
+      'headers',
+      'auth_header',
+      'custom_proxy_header',
+      'custom_proxy_headers',
       'url',
       'uri',
       'host',
+      'backend_url',
+      'base_url',
       'email',
-      'name',
       'amount',
-      'account',
-      'transaction',
-      'merchant',
-      'category',
-      'tag',
+      'account_id',
+      'server_id',
+      'transaction_id',
+      'merchant_id',
+      'category_id',
+      'tag_id',
+      'tag_ids',
+      'user_id',
+      'local_id',
+      'account_name',
+      'merchant_name',
+      'category_name',
+      'display_name',
+      'transaction_name',
+      'first_name',
+      'last_name',
       'payload',
       'body',
       'chat',
@@ -411,12 +435,9 @@ class TelemetryService {
       'sqlite',
       'database',
       'path',
-      'local_id',
-      'server_id',
-      'user_id',
-    ];
+    };
 
-    return sensitiveFragments.any(normalized.contains);
+    return sensitiveKeys.contains(normalized);
   }
 
   static Map<String, String> _sanitizeTags(Map<String, String> tags) {
@@ -431,7 +452,10 @@ class TelemetryService {
   }
 
   static SentryRequest _scrubRequest(SentryRequest request) {
-    return SentryRequest(method: request.method);
+    return SentryRequest(
+      method: request.method,
+      url: _scrubUrlToPath(request.url),
+    );
   }
 
   static SentryUser? _scrubUser(SentryUser? user) {
@@ -481,7 +505,64 @@ class TelemetryService {
   static void _logTelemetryFailure(String action, Object error) {
     LogService.instance.warning(
       'Telemetry',
-      '$action failed; continuing without interrupting app flow: $error',
+      '$action failed; continuing without interrupting app flow: '
+          '${error.runtimeType}',
     );
+  }
+
+  static RouteSettings? scrubRouteSettings(RouteSettings? settings) {
+    if (settings == null) return null;
+
+    return RouteSettings(
+      name: settings.name == null ? null : scrubRouteName(settings.name!),
+    );
+  }
+
+  static String scrubRouteName(String value) {
+    final sanitized = _sanitizeFreeformText(value);
+    final parsed = Uri.tryParse(sanitized);
+    final rawPath = parsed?.hasAbsolutePath == true ? parsed!.path : sanitized;
+    final path = rawPath.split('?').first;
+
+    final scrubbed = path.split('/').map((segment) {
+      if (segment.isEmpty) return segment;
+      if (_looksLikeRouteIdentifier(segment)) return ':id';
+
+      return segment;
+    }).join('/');
+
+    return scrubbed.length > 240 ? scrubbed.substring(0, 240) : scrubbed;
+  }
+
+  static String? _scrubUrlToPath(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+
+    final parsed = Uri.tryParse(value);
+    final path = parsed == null || parsed.path.isEmpty ? value : parsed.path;
+    final scrubbed = scrubRouteName(path);
+
+    return scrubbed.isEmpty ? null : scrubbed;
+  }
+
+  static String _normalizeDataKey(String key) {
+    return key
+        .replaceAllMapped(
+          RegExp(r'([a-z0-9])([A-Z])'),
+          (match) => '${match.group(1)}_${match.group(2)}',
+        )
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+  }
+
+  static bool _looksLikeRouteIdentifier(String segment) {
+    return RegExp(r'^\d+$').hasMatch(segment) ||
+        RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        ).hasMatch(segment) ||
+        RegExp(r'^[a-z]+_[a-z0-9_-]{8,}$', caseSensitive: false)
+            .hasMatch(segment) ||
+        RegExp(r'^[0-9a-f]{16,}$', caseSensitive: false).hasMatch(segment);
   }
 }

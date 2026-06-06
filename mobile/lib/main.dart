@@ -238,8 +238,10 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
         _handleDeepLink(uri);
       }
     }).catchError((e, stackTrace) {
-      LogService.instance
-          .error('DeepLinks', 'Initial link error: $e\n$stackTrace');
+      LogService.instance.error(
+        'DeepLinks',
+        'Initial link failed with ${e.runtimeType}',
+      );
       unawaited(TelemetryService.instance.captureHandledException(
         e,
         stackTrace,
@@ -251,8 +253,10 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
     _linkSubscription = _appLinks.uriLinkStream.listen(
       (uri) => _handleDeepLink(uri),
       onError: (e, stackTrace) {
-        LogService.instance
-            .error('DeepLinks', 'Link stream error: $e\n$stackTrace');
+        LogService.instance.error(
+          'DeepLinks',
+          'Link stream failed with ${e.runtimeType}',
+        );
         unawaited(TelemetryService.instance.captureHandledException(
           e,
           stackTrace,

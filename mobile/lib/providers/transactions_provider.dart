@@ -71,7 +71,10 @@ class TransactionsProvider with ChangeNotifier {
         }
       }).catchError((e) {
         if (!_isDisposed) {
-          _log.error('TransactionsProvider', 'Auto-sync failed: $e');
+          _log.error(
+            'TransactionsProvider',
+            'Auto-sync failed with ${e.runtimeType}',
+          );
         }
       }).whenComplete(() {
         if (!_isDisposed) {
@@ -142,7 +145,10 @@ class TransactionsProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Error in fetchTransactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'fetchTransactions failed with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
@@ -243,7 +249,10 @@ class TransactionsProvider with ChangeNotifier {
         }).catchError((e) {
           if (_isDisposed) return;
 
-          _log.error('TransactionsProvider', 'Exception during upload: $e');
+          _log.error(
+            'TransactionsProvider',
+            'Upload failed with ${e.runtimeType}',
+          );
           _error = 'Failed to upload transaction. It will sync when online.';
           notifyListeners();
         });
@@ -254,7 +263,10 @@ class TransactionsProvider with ChangeNotifier {
 
       return true; // Always return true because it's saved locally
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to create transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to create transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -336,7 +348,10 @@ class TransactionsProvider with ChangeNotifier {
       _error = result['error'] as String? ?? 'Failed to update transaction';
       return false;
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to update transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to update transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       return false;
     } finally {
@@ -386,7 +401,10 @@ class TransactionsProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to delete transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to delete transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -439,7 +457,9 @@ class TransactionsProvider with ChangeNotifier {
       }
     } catch (e) {
       _log.error(
-          'TransactionsProvider', 'Failed to delete multiple transactions: $e');
+        'TransactionsProvider',
+        'Failed to delete multiple transactions with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -475,7 +495,10 @@ class TransactionsProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to undo transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to undo transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -507,7 +530,10 @@ class TransactionsProvider with ChangeNotifier {
         _error = result.error;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to sync transactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to sync transactions with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;

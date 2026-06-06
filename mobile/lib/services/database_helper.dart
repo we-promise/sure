@@ -47,7 +47,7 @@ class DatabaseHelper {
       return _database!;
     } catch (e, stackTrace) {
       _log.error('DatabaseHelper',
-          'Error initializing local database sure_offline.db: $e');
+          'Error initializing local database sure_offline.db: ${e.runtimeType}');
       unawaited(TelemetryService.instance.captureHandledException(
         e,
         stackTrace,
@@ -78,7 +78,9 @@ class DatabaseHelper {
       );
     } catch (e, stackTrace) {
       _log.error(
-          'DatabaseHelper', 'Error opening database file "$filePath": $e');
+        'DatabaseHelper',
+        'Error opening database file "$filePath": ${e.runtimeType}',
+      );
       unawaited(TelemetryService.instance.captureHandledException(
         e,
         stackTrace,
@@ -157,7 +159,10 @@ class DatabaseHelper {
         ON transactions(server_id)
       ''');
     } catch (e, stackTrace) {
-      _log.error('DatabaseHelper', 'Error creating local database schema: $e');
+      _log.error(
+        'DatabaseHelper',
+        'Error creating local database schema: ${e.runtimeType}',
+      );
       unawaited(TelemetryService.instance.captureHandledException(
         e,
         stackTrace,

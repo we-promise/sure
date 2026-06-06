@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sure_mobile/services/telemetry_service.dart';
@@ -45,11 +46,21 @@ void main() {
         'amount': '123.45',
         'backend_url': 'https://sure.example.test',
         'message': 'raw response body',
+        'page_count': 3,
+        'success_message': 'finished',
+        'stage': 'sync',
+        'hostname': 'localhost',
+        'storage_path': 'cache/logs',
         'status': 'completed',
       });
 
       expect(sanitized, containsPair('page', 2));
       expect(sanitized, containsPair('success', true));
+      expect(sanitized, containsPair('page_count', 3));
+      expect(sanitized, containsPair('success_message', 'finished'));
+      expect(sanitized, containsPair('stage', 'sync'));
+      expect(sanitized, containsPair('hostname', 'localhost'));
+      expect(sanitized, containsPair('storage_path', 'cache/logs'));
       expect(sanitized, containsPair('status', 'completed'));
       expect(sanitized, isNot(contains('transaction_id')));
       expect(sanitized, isNot(contains('accountId')));
@@ -145,6 +156,8 @@ void main() {
       final filtered = TelemetryService.filterEvent(event, Hint())!;
       final userJson = filtered.user!.toJson().toString();
 
+      expect(filtered.user, isNotNull);
+      expect(filtered.user!.id, 'redacted');
       expect(userJson, isNot(contains('user@example.com')));
       expect(userJson, isNot(contains('full name')));
     });
@@ -156,6 +169,48 @@ void main() {
       );
 
       expect(TelemetryService.filterBreadcrumb(crumb, Hint()), isNull);
+    });
+
+    test('filters breadcrumbs before they leave the device', () {
+      final crumb = Breadcrumb(
+        category: 'sync',
+        message: 'Fetched email=user@example.com amount=123.45',
+        data: {
+          'page_count': 2,
+          'success_message': 'completed',
+          'account_id': 'acct_123',
+          'merchantName': 'Corner Store',
+        },
+      );
+
+      final filtered = TelemetryService.filterBreadcrumb(crumb, Hint())!;
+
+      expect(filtered.message, isNot(contains('user@example.com')));
+      expect(filtered.message, isNot(contains('123.45')));
+      expect(filtered.data, containsPair('page_count', 2));
+      expect(filtered.data, containsPair('success_message', 'completed'));
+      expect(filtered.data, isNot(contains('account_id')));
+      expect(filtered.data, isNot(contains('merchantName')));
+    });
+
+    test('scrubs navigator route ids and drops route arguments', () {
+      final settings = TelemetryService.scrubRouteSettings(
+        const RouteSettings(
+          name: '/accounts/123/transactions',
+          arguments: {'account_id': 'acct_123'},
+        ),
+      )!;
+
+      expect(settings.name, '/accounts/:id/transactions');
+      expect(settings.arguments, isNull);
+      expect(
+        TelemetryService.scrubRouteName('/accounts/acct_12345678/transactions'),
+        '/accounts/:id/transactions',
+      );
+      expect(
+        TelemetryService.scrubRouteName('/api/v1/auth/login'),
+        '/api/v1/auth/login',
+      );
     });
 
     test('sanitizes event messages, exceptions, request data, and tags', () {
@@ -192,7 +247,7 @@ void main() {
       expect(filtered.message!.formatted, isNot(contains('123.45')));
       expect(
           filtered.exceptions!.single.value, isNot(contains('sure.example')));
-      expect(filtered.request!.url, isNull);
+      expect(filtered.request!.url, '/api/transactions');
       expect(filtered.request!.data, isNull);
       expect(filtered.request!.headers, isEmpty);
       expect(

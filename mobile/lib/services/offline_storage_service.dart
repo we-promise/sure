@@ -59,7 +59,10 @@ class OfflineStorageService {
       _log.info('OfflineStorage', 'Transaction saved successfully');
       return transaction;
     } catch (e) {
-      _log.error('OfflineStorage', 'Failed to save transaction: $e');
+      _log.error(
+        'OfflineStorage',
+        'Failed to save transaction with ${e.runtimeType}',
+      );
       rethrow;
     }
   }
