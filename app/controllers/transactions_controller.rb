@@ -35,7 +35,7 @@ class TransactionsController < ApplicationController
     if account_ids_on_page.any?
       @pocket_by_account_and_tag = Pocket.where.not(tag_id: nil)
                                          .where(account_id: account_ids_on_page)
-                                         .each_with_object({}) { |p, h| h[[p.account_id, p.tag_id]] = p }
+                                         .each_with_object({}) { |p, h| h[[ p.account_id, p.tag_id ]] = p }
     end
 
     # Preload split parent data
