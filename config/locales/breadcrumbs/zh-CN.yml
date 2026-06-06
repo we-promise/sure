@@ -1,6 +1,87 @@
 ---
 zh-CN:
   breadcrumbs:
+    account_sharings: 账户共享
+    account_statements: 对账单库
+    accounts: 账户
+    ai_prompts: AI 提示词
+    api_key: API 密钥
+    api_keys: API 密钥
+    appearance: 外观
+    appearances: 外观
+    bank_sync: 银行同步
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: 预算分类
+    budgets: 预算
+    categories: 分类
+    categorize: 分类
+    chats: 聊天
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: 信用卡
+    cryptos: 加密资产
+    dashboard: 仪表盘
+    debug: 调试
+    debugs: 调试
+    depositories: 现金账户
+    enable_banking_items: Enable Banking
     exports: 导出
+    family_exports: 导出
+    family_merchants: 商户
+    guides: 指南
+    holdings: 持仓
     home: 主页
+    hostings: 自托管
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: 模拟会话
     imports: 导入
+    indexa_capital_items: Indexa Capital
+    intro: 介绍
+    investments: 投资
+    invitations: 邀请
+    invite_codes: 邀请码
+    kraken_items: Kraken
+    llm_usage: LLM 用量
+    llm_usages: LLM 用量
+    loans: 贷款
+    lunchflow_items: Lunch Flow
+    merchants: 商户
+    mercury_items: Mercury
+    messages: 消息
+    mfa: 双重验证
+    oidc_accounts: OIDC 账户
+    onboardings: 入门
+    other_assets: 其他资产
+    other_liabilities: 其他负债
+    payments: 付款
+    pending_duplicate_merges: 重复项审核
+    plaid_items: Plaid
+    preferences: 偏好设置
+    profile: 个人资料
+    profiles: 个人资料
+    properties: 房产
+    providers: 提供商
+    recurring_transactions: 循环交易
+    registrations: 注册
+    reports: 报表
+    rules: 规则
+    securities: 证券
+    security: 证券
+    self_hosting: 自托管
+    sessions: 登录
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: 拆分
+    sso_identities: SSO 连接
+    sso_providers: SSO 提供商
+    subscriptions: 订阅
+    tags: 标签
+    trades: 交易
+    transactions: 交易
+    transfer_matches: 转账匹配
+    transfers: 转账
+    users: 用户
+    valuations: 估值
+    vehicles: 车辆

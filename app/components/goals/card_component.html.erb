@@ -1,0 +1,53 @@
+<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-container-hover transition-colors p-6 <%= "opacity-75" if goal.paused? || goal.archived? %>"
+     <% if filterable %> data-goals-filter-target="card"<% end %>
+     data-goal-name="<%= goal.name %>"
+     data-goal-status="<%= goal.display_status %>">
+  <div class="flex items-start gap-3">
+    <%= render Goals::AvatarComponent.new(goal: goal, size: "lg") %>
+    <div class="min-w-0 flex-1">
+      <%# Name owns its row at full width — the status pill moved to the meta
+          line below so it stops eating the title space on narrow cards. %>
+      <p class="text-base font-medium text-primary truncate">
+        <a href="<%= goal_path(goal) %>"
+           aria-label="<%= aria_label %>"
+           class="before:absolute before:inset-0 before:rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100">
+          <%= goal.name %>
+        </a>
+      </p>
+      <div class="flex items-center gap-2 mt-0.5">
+        <%= render Goals::StatusPillComponent.new(goal: goal) %>
+        <% if secondary_line.present? %>
+          <p class="min-w-0 text-xs text-subdued truncate"><%= secondary_line %></p>
+        <% end %>
+      </div>
+    </div>
+
+    <%# shrink-0 keeps the ring at full size; the name block shrinks first. %>
+    <div class="shrink-0">
+      <%= render DS::ProgressRing.new(percent: progress_percent, tone: ring_tone) %>
+    </div>
+  </div>
+
+  <div class="mt-5">
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-xl font-medium text-primary tabular-nums privacy-sensitive"><%= goal.current_balance_money.format(precision: 0) %></span>
+      <span class="text-xs text-subdued tabular-nums privacy-sensitive">/ <%= goal.target_amount_money.format(precision: 0) %></span>
+    </div>
+    <% if pace_line %>
+      <p class="text-xs text-subdued tabular-nums mt-1 privacy-sensitive"><%= pace_line %></p>
+    <% end %>
+  </div>
+
+  <%# flex-wrap + gap so the account label and the footer line wrap onto
+      separate lines under a gap when cramped, instead of butting together
+      (the "1 accountcatch up" run-on at narrow card widths). %>
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+    <div class="flex items-center gap-2 min-w-0">
+      <%= render Goals::AccountStackComponent.new(accounts: linked_accounts, color_map: goal.account_color_map) %>
+      <span class="text-xs text-subdued whitespace-nowrap"><%= linked_accounts_count_label %></span>
+    </div>
+    <span class="text-xs text-subdued tabular-nums <%= "privacy-sensitive" if footer_has_money? %>">
+      <%= footer_line %><% if has_pending_pledge? %> · <%= t("goals.goal_card.pending_count", count: pending_pledges_count) %><% end %>
+    </span>
+  </div>
+</div>
