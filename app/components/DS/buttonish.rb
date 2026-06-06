@@ -34,16 +34,25 @@ class DS::Buttonish < DesignSystemComponent
     }
   }.freeze
 
+  # Icon-only containers share a height rail with the text buttons of the
+  # same size (sm ≈ 28px, md ≈ 36px, lg ≈ 48px), so a mixed row — icon
+  # trigger next to text buttons, the most common header layout — lines up
+  # instead of mixing 32/44px squares with 36px buttons.
+  #
+  # pointer-coarse restores the 44px square on touch devices: the visual
+  # rail is a pointer-precision tradeoff, and WCAG 2.5.5's 44x44 target
+  # minimum is about fingers, not mice. Coarse-pointer users get the full
+  # target; fine-pointer users get the aligned row.
   SIZES = {
     sm: {
       container_classes: "px-2 py-1",
-      icon_container_classes: "inline-flex items-center justify-center w-8 h-8",
+      icon_container_classes: "inline-flex items-center justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-md",
       text_classes: "text-sm"
     },
     md: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-11 h-11",
+      icon_container_classes: "inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
     },
