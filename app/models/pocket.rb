@@ -16,11 +16,20 @@ class Pocket < ApplicationRecord
   after_save :sync_from_tag, if: -> { saved_change_to_tag_id? || saved_change_to_fill_direction? }
 
   PALETTE = %w[#875BF7 #6471EB #4DA568 #E99537 #DB5A54 #DF4E92 #61C9EA #805DEE].freeze
+  COLORS = Category::COLORS
+  ICONS = Category.icon_codes
+
+  validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_blank: true
+  validates :icon, inclusion: { in: -> { Category.icon_codes }, allow_nil: true }
 
   monetize :allocated_amount
 
   def display_color
-    tag&.color.presence || PALETTE[id.bytes.sum % PALETTE.size]
+    color.presence || tag&.color.presence || PALETTE[id.bytes.sum % PALETTE.size]
+  end
+
+  def display_icon
+    icon.presence || "wallet"
   end
 
   def allocation_percent(balance)

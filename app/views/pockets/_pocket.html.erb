@@ -1,20 +1,21 @@
 <%# locals: (pocket:, account:, overflow:) %>
 
 <% color = pocket.display_color %>
+<% pocket_icon = pocket.display_icon %>
 <% percent = pocket.allocation_percent(account.balance) %>
 <% circumference = 94.25 %>
 <% dash = (percent * circumference / 100.0).round(1) %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4 flex flex-col gap-4 group relative">
 
-  <%# ── Top row: icon · title · badge · donut ── %>
+  <%# ── Top row: avatar · title · badge · donut ── %>
   <div class="flex items-start justify-between gap-2">
 
     <div class="flex items-start gap-3 min-w-0">
-      <%# Colored circle with initial %>
-      <div class="w-9 h-9 rounded-full flex items-center justify-center text-inverse font-semibold text-sm shrink-0"
-           style="background-color: <%= color %>">
-        <%= pocket.name.first.upcase %>
+      <%# Goal-style avatar with chosen icon %>
+      <div class="goal-avatar w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+           style="--avatar-color: <%= color %>">
+        <%= icon(pocket_icon, size: "sm", color: "current") %>
       </div>
 
       <div class="min-w-0 space-y-0.5">

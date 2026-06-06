@@ -2,6 +2,10 @@
 
 <%= styled_form_with model: [ account, pocket ], url: url, class: "space-y-4",
     data: { controller: "pocket-form" } do |f| %>
+  <div class="flex justify-center">
+    <%= render "goals/color_picker", form: f, colors: Pocket::COLORS, icons: Pocket::ICONS %>
+  </div>
+
   <%= f.text_field :name,
     label: t("pockets.form.name"),
     required: true,
