@@ -94,7 +94,7 @@ class PocketsController < ApplicationController
     end
 
     def pocket_params
-      permitted = params.require(:pocket).permit(:name, :allocated_amount, :tag_id, :fill_direction, :color, :icon)
+      permitted = params.require(:pocket).permit(:name, :description, :allocated_amount, :tag_id, :fill_direction, :color, :icon)
       # When a tag drives auto-fill, the amount is computed from transactions — ignore any manual input
       final_tag_id = permitted.key?(:tag_id) ? permitted[:tag_id].presence : @pocket&.tag_id
       final_tag_id.present? ? permitted.except(:allocated_amount) : permitted

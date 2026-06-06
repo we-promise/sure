@@ -5,6 +5,7 @@ en:
       new: "New pocket"
       total_allocated: "Allocated"
       free_balance: "Free balance"
+      free_label: "Free"
       empty: "No pockets yet. Create one to start allocating funds."
       overflow_warning: "Allocated pockets exceed the current account balance."
     new:
@@ -14,6 +15,8 @@ en:
     form:
       name: "Name"
       name_placeholder: "e.g. Emergency fund"
+      description: "Description"
+      description_placeholder: "e.g. 3 months of expenses"
       allocated_amount: "Allocated amount"
       auto_fill_tag: "Auto-fill from tag"
       no_tag: "None (manual only)"

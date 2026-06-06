@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_06_220701) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_06_232506) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1501,6 +1501,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_06_220701) do
     t.string "fill_direction", default: "inflows", null: false
     t.string "color"
     t.string "icon"
+    t.string "description"
     t.index ["account_id", "tag_id"], name: "index_pockets_on_account_and_tag_unique", unique: true, where: "(tag_id IS NOT NULL)"
     t.index ["account_id"], name: "index_pockets_on_account_id"
     t.index ["tag_id"], name: "index_pockets_on_tag_id"

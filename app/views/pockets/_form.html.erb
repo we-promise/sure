@@ -12,6 +12,11 @@
     autofocus: true,
     placeholder: t("pockets.form.name_placeholder") %>
 
+  <%= f.text_area :description,
+    label: t("pockets.form.description"),
+    placeholder: t("pockets.form.description_placeholder"),
+    rows: 2 %>
+
   <div data-pocket-form-target="amountField" style="<%= "opacity:0.5;pointer-events:none" if pocket.tag_id.present? %>">
     <%= f.money_field :allocated_amount,
       label: t("pockets.form.allocated_amount"),
@@ -20,11 +25,33 @@
       disabled: pocket.tag_id.present? %>
   </div>
 
-  <%= f.collection_select :tag_id,
-    available_tags,
-    :id, :name,
-    { label: t("pockets.form.auto_fill_tag"), prompt: t("pockets.form.no_tag") },
-    { data: { pocket_form_target: "tagSelect", action: "change->pocket-form#onTagChange" } } %>
+  <div>
+    <span class="block text-sm font-medium text-primary mb-2"><%= t("pockets.form.auto_fill_tag") %></span>
+    <div class="flex flex-wrap gap-2">
+      <label class="cursor-pointer">
+        <%= f.radio_button :tag_id, "",
+            class: "sr-only peer",
+            data: { pocket_form_target: "tagRadio", action: "change->pocket-form#onTagChange" } %>
+        <span class="flex items-center px-3 py-1.5 rounded-full border border-primary text-xs font-medium text-secondary select-none
+                     peer-checked:bg-container-inset peer-checked:text-primary transition-colors">
+          <%= t("pockets.form.no_tag") %>
+        </span>
+      </label>
+
+      <% available_tags.each do |tag| %>
+        <label class="cursor-pointer">
+          <%= f.radio_button :tag_id, tag.id,
+              class: "sr-only peer",
+              data: { pocket_form_target: "tagRadio", action: "change->pocket-form#onTagChange" } %>
+          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary text-xs font-medium text-secondary select-none
+                       peer-checked:bg-container-inset peer-checked:text-primary transition-colors">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: <%= tag.color %>"></span>
+            <%= tag.name %>
+          </span>
+        </label>
+      <% end %>
+    </div>
+  </div>
 
   <div data-pocket-form-target="fillDirectionSection" class="<%= "hidden" unless pocket.tag_id.present? %> space-y-3">
     <%= f.select :fill_direction,

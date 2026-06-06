@@ -1,14 +1,18 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["amountField", "tagSelect", "fillDirectionSection"];
+  static targets = ["amountField", "tagRadio", "fillDirectionSection"];
 
   connect() {
-    this.#toggle(this.tagSelectTarget.value !== "");
+    this.#toggle(this.#selectedTagId() !== "");
   }
 
   onTagChange() {
-    this.#toggle(this.tagSelectTarget.value !== "");
+    this.#toggle(this.#selectedTagId() !== "");
+  }
+
+  #selectedTagId() {
+    return this.tagRadioTargets.find(r => r.checked)?.value ?? "";
   }
 
   #toggle(hasTag) {
