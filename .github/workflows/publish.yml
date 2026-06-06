@@ -399,6 +399,7 @@ jobs:
 
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Determine source branch for tag
@@ -497,7 +498,10 @@ jobs:
       - name: Commit and push version bump
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -510,20 +514,39 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Bump version to next iteration after ${{ github.ref_name }} release"
+          COMMIT_MESSAGE="Bump version to next iteration after ${{ github.ref_name }} release"
+          git commit -m "$COMMIT_MESSAGE"
 
           echo "Pushing to branch: $SOURCE_BRANCH"
 
-          # Push with retry logic
+          # Push directly when allowed. If the target branch is protected, fall back
+          # to opening a pull request so the workflow still completes successfully.
           attempts=0
-          until git push origin HEAD:$SOURCE_BRANCH; do
+          until git push origin HEAD:"refs/heads/${SOURCE_BRANCH}"; do
             attempts=$((attempts + 1))
             if [[ $attempts -ge 4 ]]; then
-              echo "ERROR: Failed to push after 4 attempts." >&2
-              exit 1
+              echo "Direct push failed after 4 attempts; creating a pull request instead."
+              break
             fi
             delay=$((2 ** attempts))
             echo "Push failed (attempt $attempts). Retrying in ${delay} seconds..."
             sleep ${delay}
-            git pull --rebase origin $SOURCE_BRANCH
+            git fetch origin "${SOURCE_BRANCH}"
+            git rebase "origin/${SOURCE_BRANCH}"
           done
+
+          if [[ $attempts -lt 4 ]]; then
+            exit 0
+          fi
+
+          SAFE_TAG=$(echo "${{ github.ref_name }}" | tr -c '[:alnum:]._-' '-')
+          BUMP_BRANCH="automation/bump-version-after-${SAFE_TAG}-${GITHUB_RUN_ID}"
+
+          git push --force-with-lease origin HEAD:"refs/heads/${BUMP_BRANCH}"
+
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$BUMP_BRANCH" \
+            --base "$SOURCE_BRANCH" \
+            --title "$COMMIT_MESSAGE" \
+            --body "This automated PR bumps .sure-version and charts/sure/Chart.yaml after the ${{ github.ref_name }} pre-release. It was opened because the workflow could not push directly to ${SOURCE_BRANCH}."
