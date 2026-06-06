@@ -90,4 +90,37 @@ class DS::PillTest < ViewComponent::TestCase
     # `inline-block.rounded-full` to avoid matching the parent pill.
     assert_no_selector "span.inline-block.rounded-full"
   end
+
+  test "truncate: true lets the pill shrink and ellipsizes the label" do
+    render_inline(DS::Pill.new(label: "A very long category name", marker: false, truncate: true))
+
+    pill = page.find("span[title='A very long category name']")
+    assert_includes pill[:class], "max-w-full"
+    assert_includes pill[:class], "min-w-0"
+    refute_includes pill[:class], "shrink-0"
+    refute_includes pill[:class], "whitespace-nowrap"
+    assert_selector "span.min-w-0.truncate", text: "A very long category name"
+  end
+
+  test "default pills keep intrinsic width (no truncation chrome)" do
+    render_inline(DS::Pill.new(label: "Active", marker: false))
+
+    pill = page.find("span", text: "Active")
+    assert_includes pill[:class], "shrink-0"
+    assert_includes pill[:class], "whitespace-nowrap"
+    assert_no_selector "span.truncate"
+  end
+
+  test "label_testid stamps data-testid on the label span" do
+    render_inline(DS::Pill.new(label: "Groceries", marker: false, label_testid: "category-name"))
+
+    assert_selector "span[data-testid='category-name']", text: "Groceries"
+  end
+
+  test "icon_size passes through to the icon helper" do
+    render_inline(DS::Pill.new(label: "Food", marker: false, icon: "utensils", icon_size: "sm"))
+
+    # sm maps to w-4 h-4 in the icon helper's size table.
+    assert_selector "svg.w-4.h-4"
+  end
 end
