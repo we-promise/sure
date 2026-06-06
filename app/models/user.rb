@@ -20,7 +20,7 @@ class User < ApplicationRecord
   end
 
   belongs_to :family
-  has_many :family_memberships, dependent: :destroy
+  has_many :family_memberships, dependent: :destroy, inverse_of: :user
   has_many :families, -> { distinct }, through: :family_memberships
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
   belongs_to :default_account, class_name: "Account", optional: true

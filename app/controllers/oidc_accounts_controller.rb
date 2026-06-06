@@ -165,6 +165,8 @@ class OidcAccountsController < ApplicationController
       session.delete(:pending_oidc_auth)
 
       @session = create_session_for(@user)
+      # Set the active family to the invited family for new users
+      @session.set_active_family_id(invitation.family_id) if invitation.present?
       notice = if invitation.present?
         t("invitations.accept_choice.joined_household")
       elsif accept_pending_invitation_for(@user)

@@ -50,8 +50,7 @@ class Invitation < ApplicationRecord
   end
 
   def would_orphan_owned_accounts?(user)
-    return false if user.blank?
-
+    # Intentionally stubbed for Phase 1 — orphan check will be implemented in a later phase
     false
   end
 

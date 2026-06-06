@@ -1,6 +1,6 @@
 class FamilyMembership < ApplicationRecord
-  belongs_to :user
-  belongs_to :family
+  belongs_to :user, inverse_of: :family_memberships
+  belongs_to :family, inverse_of: :family_memberships
 
   VALID_ROLES = %w[admin member guest].freeze
 

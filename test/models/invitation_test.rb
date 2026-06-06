@@ -131,7 +131,7 @@ class InvitationTest < ActiveSupport::TestCase
     assert_includes invitation.errors[:email], "has already been invited to this family"
   end
 
-  test "accept_for refuses when invitee owns accounts that would be orphaned" do
+  test "accept_for allows existing users to join another family without being rehomed" do
     owner = users(:empty)
     owner_family = families(:empty)
     owner.update_columns(family_id: owner_family.id, role: "admin")
