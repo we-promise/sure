@@ -122,9 +122,10 @@ class OidcAccountsController < ApplicationController
     )
 
     if invitation.present?
-      # Accept the pending invitation: join the existing family
-      @user.family_id = invitation.family_id
-      @user.role = invitation.role
+      # Accept via membership — no longer migrates family_id
+      # New user still needs a home family; old users keep theirs
+      @user.family = Family.new
+      @user.role = User.role_for_new_family_creator
     else
       # Create new family for this user
       @user.family = Family.new
@@ -152,8 +153,13 @@ class OidcAccountsController < ApplicationController
         )
       end
 
-      # Mark invitation as accepted if one was used
-      invitation&.update!(accepted_at: Time.current)
+      # Mark invitation as accepted — create membership (no longer migrates family_id)
+      if invitation.present?
+        invitation.update!(accepted_at: Time.current)
+        FamilyMembership.find_or_create_by!(user: @user, family: invitation.family) do |m|
+          m.role = invitation.role.to_s
+        end
+      end
 
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)

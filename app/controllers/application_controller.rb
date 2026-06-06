@@ -29,6 +29,9 @@ class ApplicationController < ActionController::Base
       return false unless invitation
       return false unless invitation.accept_for(user)
 
+      # Switch active family to the newly joined one
+      Current.session&.set_active_family_id(invitation.family_id)
+
       session.delete(:pending_invitation_token)
       true
     end

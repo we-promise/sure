@@ -132,6 +132,25 @@ class User < ApplicationRecord
     available_families.find { |candidate| candidate.id.to_s == current_family_id.to_s } || family
   end
 
+  # ── Membership role bridge (PR 2D) ──
+
+  def membership_for(family_scope = active_family)
+    return nil unless family_scope
+    family_memberships.find_by(family_id: family_scope.id)
+  end
+
+  def role_for(family_scope = active_family)
+    membership_for(family_scope)&.role || role
+  end
+
+  def admin_for?(family_scope = active_family)
+    role_for(family_scope) == "admin"
+  end
+
+  def member_of?(family_scope = active_family)
+    membership_for(family_scope).present?
+  end
+
   def accessible_accounts(family_scope = active_family)
     return Account.none if family_scope.blank?
 
