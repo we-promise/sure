@@ -538,6 +538,10 @@ class Entry < ApplicationRecord
     def recompute_pockets_for_transaction
       return unless transaction?
 
+      if entryable.nil?
+        return
+      end
+
       entryable.taggings.each do |tagging|
         pocket = account.pockets.find_by(tag_id: tagging.tag_id)
         pocket&.recompute_from_tag!
