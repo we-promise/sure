@@ -28,6 +28,14 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
+    # Pocket fill indicators — keyed by [account_id, tag_id] for cross-account correctness
+    account_ids_on_page = @transactions.map { |t| t.entry.account_id }.uniq
+    if account_ids_on_page.any?
+      @pocket_by_account_and_tag = Pocket.where.not(tag_id: nil)
+                                         .where(account_id: account_ids_on_page)
+                                         .each_with_object({}) { |p, h| h[[ p.account_id, p.tag_id ]] = p }
+    end
+
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
 

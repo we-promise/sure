@@ -1,0 +1,108 @@
+<%# locals: (pocket:, account:, overflow:) %>
+
+<% color = pocket.display_color %>
+<% pocket_icon = pocket.display_icon %>
+<% percent = pocket.allocation_percent(account.balance) %>
+<% circumference = 94.25 %>
+<% dash = (percent * circumference / 100.0).round(1) %>
+
+<div class="bg-container rounded-xl shadow-border-xs flex flex-col group relative overflow-hidden">
+
+  <%# ── Pocket color accent ── %>
+  <div class="h-0.5 w-full shrink-0" style="background-color: <%= color %>"></div>
+
+  <%# ── Header: avatar · name · meta ── %>
+  <div class="px-4 pt-3.5 pb-3 flex items-start gap-3">
+    <div class="goal-avatar w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+         style="--avatar-color: <%= color %>">
+      <%= icon(pocket_icon, size: "sm", color: "current") %>
+    </div>
+
+    <div class="min-w-0 flex-1 space-y-0.5">
+      <div class="flex items-center gap-2 flex-wrap">
+        <h3 class="font-medium text-primary leading-tight truncate"><%= pocket.name %></h3>
+        <% if overflow %>
+          <%= render DS::Pill.new(label: t("pockets.pocket.overflow_badge"), tone: :warning, marker: false, show_dot: false) %>
+        <% end %>
+      </div>
+
+      <% if pocket.tag %>
+        <p class="text-xs text-secondary flex items-center gap-1">
+          <%= icon("zap", size: "xs", class: "text-warning shrink-0") %>
+          <span class="truncate"><%= pocket.tag.name %></span>
+          <span class="shrink-0">·</span>
+          <span class="shrink-0"><%= t("pockets.pocket.fill_direction.#{pocket.fill_direction}") %></span>
+        </p>
+      <% else %>
+        <p class="text-xs text-secondary"><%= t("pockets.pocket.manual") %></p>
+      <% end %>
+
+      <%# Description — always in DOM; invisible when blank to keep card height consistent %>
+      <p class="text-xs text-secondary italic truncate <%= "invisible" unless pocket.description.present? %>">
+        <%= pocket.description.presence || "&nbsp;".html_safe %>
+      </p>
+    </div>
+  </div>
+
+  <%# ── Metric: amount + donut on same row ── %>
+  <div class="px-4 pb-4 flex items-center justify-between gap-3">
+    <p class="text-2xl font-semibold text-primary privacy-sensitive leading-none">
+      <%= format_money pocket.allocated_amount_money %>
+    </p>
+
+    <div class="relative shrink-0 w-14 h-14">
+      <svg viewBox="0 0 40 40" class="w-full h-full -rotate-90" aria-hidden="true">
+        <circle cx="20" cy="20" r="15" fill="none"
+                stroke="var(--color-surface-inset)"
+                stroke-width="3.5" />
+        <circle cx="20" cy="20" r="15" fill="none"
+                stroke="<%= color %>"
+                stroke-width="3.5"
+                stroke-linecap="round"
+                stroke-dasharray="<%= dash %> <%= circumference %>" />
+      </svg>
+      <span class="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-primary">
+        <%= percent %>%
+      </span>
+    </div>
+  </div>
+
+  <%# ── Footer ── %>
+  <div class="px-4 py-3 border-t border-primary flex items-center justify-between gap-2">
+    <% if pocket.tag %>
+      <p class="text-xs text-secondary truncate">
+        <%= t("pockets.pocket.auto_fills_from", tag: pocket.tag.name) %>
+      </p>
+    <% else %>
+      <p class="text-xs text-secondary"><%= t("pockets.pocket.no_auto_fill") %></p>
+    <% end %>
+
+    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+      <% if pocket.tag %>
+        <%= render DS::Link.new(
+          variant: "ghost",
+          icon: "list",
+          href: transactions_path(q: { tags: [ pocket.tag.name ], accounts: [ account.name ] }),
+          title: t("pockets.pocket.view_transactions"),
+          frame: :_top
+        ) %>
+      <% end %>
+
+      <%= render DS::Link.new(
+        variant: "ghost",
+        icon: "pencil",
+        href: edit_account_pocket_path(account, pocket),
+        frame: :modal
+      ) %>
+
+      <%= render DS::Button.new(
+        variant: "ghost",
+        icon: "trash-2",
+        href: account_pocket_path(account, pocket),
+        method: :delete,
+        data: { turbo_confirm: t("pockets.destroy.confirm", name: pocket.name) }
+      ) %>
+    </div>
+  </div>
+
+</div>

@@ -2,6 +2,12 @@
   <% dialog.with_header(title: t(".delete_tag"), subtitle: t(".explanation", tag_name: @tag.name)) %>
 
   <% dialog.with_body do %>
+    <% if @tag.pockets.any? %>
+      <p class="text-warning mb-4 text-sm">
+        <%= t(".linked_pockets_warning", count: @tag.pockets.count) %>
+      </p>
+    <% end %>
+
     <%= styled_form_with url: tag_deletions_path(@tag),
                        data: {
                          turbo: false,

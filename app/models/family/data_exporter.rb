@@ -35,6 +35,10 @@ class Family::DataExporter
       zipfile.put_next_entry("rules.csv")
       zipfile.write generate_rules_csv
 
+      # Add pockets.csv
+      zipfile.put_next_entry("pockets.csv")
+      zipfile.write generate_pockets_csv
+
       # Add attachment manifest metadata. Binary file payloads are not included.
       zipfile.put_next_entry("attachments.json")
       zipfile.write generate_attachments_manifest
@@ -153,6 +157,27 @@ class Family::DataExporter
             serialize_conditions_for_csv(rule.conditions),
             serialize_actions_for_csv(rule.actions)
           ]
+        end
+      end
+    end
+
+    def generate_pockets_csv
+      CSV.generate do |csv|
+        csv << [ "id", "account_name", "name", "allocated_amount", "currency", "fill_direction", "tag", "created_at" ]
+
+        @family.accounts.find_each do |account|
+          account.pockets.includes(:tag).find_each do |pocket|
+            csv << [
+              pocket.id,
+              account.name,
+              pocket.name,
+              pocket.allocated_amount.to_s,
+              pocket.currency,
+              pocket.fill_direction,
+              pocket.tag&.name,
+              pocket.created_at.iso8601
+            ]
+          end
         end
       end
     end

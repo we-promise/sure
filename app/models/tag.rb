@@ -3,6 +3,7 @@ class Tag < ApplicationRecord
   has_many :taggings, dependent: :destroy
   has_many :transactions, through: :taggings, source: :taggable, source_type: "Transaction"
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
+  has_many :pockets, dependent: :destroy
 
   validates :name, presence: true, uniqueness: { scope: :family }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
@@ -19,6 +20,7 @@ class Tag < ApplicationRecord
 
       if replacement
         taggings.update_all tag_id: replacement.id
+        replacement.pockets.find_each(&:recompute_from_tag!)
       end
 
       destroy!
