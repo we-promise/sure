@@ -7,6 +7,7 @@ import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/log_service.dart';
+import '../utils/amount_parser.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -88,10 +89,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final transactions = transactionsProvider.transactions;
       _log.info('CalendarScreen', 'Loaded ${transactions.length} transactions for account ${_selectedAccount!.name}');
 
-      if (transactions.isNotEmpty) {
-        _log.debug('CalendarScreen', 'Sample transaction - name: ${transactions.first.name}, amount: ${transactions.first.amount}, nature: ${transactions.first.nature}');
-      }
-
       // Store transactions for date filtering
       _transactions = List.from(transactions);
 
@@ -114,23 +111,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final date = DateTime.parse(transaction.date);
         final dateKey = DateFormat('yyyy-MM-dd').format(date);
 
-        // Parse amount with proper sign handling
-        String trimmedAmount = transaction.amount.trim();
-        trimmedAmount = trimmedAmount.replaceAll('\u2212', '-'); // Normalize minus sign
-
-        // Detect if the amount has a negative sign
-        bool hasNegativeSign = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
-
-        // Remove all non-numeric characters except decimal point and minus sign
-        String numericString = trimmedAmount.replaceAll(RegExp(r'[^\d.\-]'), '');
-
-        // Parse the numeric value
-        double amount = double.tryParse(numericString.replaceAll('-', '')) ?? 0.0;
-
-        // Apply the sign from the string
-        if (hasNegativeSign) {
-          amount = -amount;
-        }
+        var amount = AmountParser.parse(transaction.amount).value;
 
         // For asset accounts, flip the sign to match accounting conventions
         // For liability accounts, also flip the sign
@@ -138,12 +119,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
           amount = -amount;
         }
 
-        _log.debug('CalendarScreen', 'Processing transaction ${transaction.name} - date: $dateKey, raw amount: ${transaction.amount}, parsed: $amount, isAsset: ${_selectedAccount?.isAsset}, isLiability: ${_selectedAccount?.isLiability}');
+        _log.debug('CalendarScreen', 'Processing transaction date: $dateKey, parsed amount sign adjusted');
 
         changes[dateKey] = (changes[dateKey] ?? 0.0) + amount;
         _log.debug('CalendarScreen', 'Date $dateKey now has total: ${changes[dateKey]}');
-      } catch (e) {
-        _log.error('CalendarScreen', 'Failed to parse transaction date: ${transaction.date}, error: $e');
+      } catch (_) {
+        _log.error('CalendarScreen', 'Failed to process transaction for calendar');
       }
     }
 
@@ -248,9 +229,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildTransactionTile(Transaction transaction) {
     // Parse amount to determine if positive or negative
-    String trimmedAmount = transaction.amount.trim();
-    trimmedAmount = trimmedAmount.replaceAll('\u2212', '-');
-    bool isNegative = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
+    var isNegative = false;
+    try {
+      isNegative = AmountParser.parse(transaction.amount).value < 0;
+    } on FormatException {
+      // Keep the dialog renderable if the server returns a malformed amount.
+    }
 
     // For asset accounts, flip the sign interpretation
     if (_selectedAccount?.isAsset == true || _selectedAccount?.isLiability == true) {
