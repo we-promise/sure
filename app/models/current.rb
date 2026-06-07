@@ -32,7 +32,7 @@ class Current < ActiveSupport::CurrentAttributes
   def accessible_entries
     current_family = family
     return current_family&.entries unless user
-    return current_family.entries.none if current_family.blank?
+    return Entry.none if current_family.blank?
 
     current_family.entries.joins(:account).merge(Account.accessible_by(user))
   end
