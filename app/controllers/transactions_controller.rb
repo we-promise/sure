@@ -100,6 +100,11 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(account)
 
+    if params.dig(:entry, :funding_account_id).present?
+      funding_account = Current.user.accessible_accounts.find(params.dig(:entry, :funding_account_id))
+      return create_channel_payment(account, funding_account)
+    end
+
     @entry = account.entries.new(entry_params)
 
     if @entry.save
@@ -467,6 +472,9 @@ class TransactionsController < ApplicationController
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
+      # funding_account_id is a routing param only — strip before mass-assigning to Entry
+      entry_params.delete(:funding_account_id)
+
       nature = entry_params.delete(:nature)
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
@@ -663,5 +671,73 @@ class TransactionsController < ApplicationController
       end
 
       [ qty, price ]
+    end
+
+    def create_channel_payment(channel_account, funding_account)
+      amount = entry_params[:amount]
+      date = entry_params[:date] || Date.current
+      currency = entry_params[:currency] || Current.family.currency
+      name = entry_params[:name]
+      notes = entry_params[:notes]
+      ea = entry_params[:entryable_attributes] || {}
+
+      channel_entry = nil
+      funding_entry = nil
+
+      ActiveRecord::Base.transaction do
+        channel_entry = channel_account.entries.create!(
+          name: name,
+          date: date,
+          amount: amount,
+          currency: currency,
+          notes: notes,
+          excluded: true,
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: ea[:category_id],
+            merchant_id: ea[:merchant_id],
+            tag_ids: ea[:tag_ids] || [],
+            extra: (ea[:extra] || {}).merge(
+              "channel_payment" => true,
+              "funding_account_id" => funding_account.id
+            )
+          }
+        )
+
+        funding_entry = funding_account.entries.create!(
+          name: "#{channel_account.name} - #{name}",
+          date: date,
+          amount: amount,
+          currency: currency,
+          notes: notes,
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: ea[:category_id],
+            merchant_id: ea[:merchant_id],
+            tag_ids: ea[:tag_ids] || [],
+            channel_record_parent_id: channel_entry.transaction.id,
+            extra: (ea[:extra] || {}).merge(
+              "channel_auto_record" => true
+            )
+          }
+        )
+      end
+
+      channel_entry.sync_account_later
+      funding_entry.sync_account_later
+      channel_entry.lock_saved_attributes!
+      channel_entry.mark_user_modified!
+      funding_entry.lock_saved_attributes!
+      funding_entry.mark_user_modified!
+
+      flash[:notice] = t(".created")
+
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(channel_entry.account) }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(channel_entry.account)) }
+      end
+    rescue ActiveRecord::RecordNotFound
+      flash[:alert] = "Funding account not found"
+      redirect_back_or_to root_path
     end
 end

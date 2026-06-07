@@ -97,6 +97,26 @@
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>
       <div class="space-y-2">
+        <% if @entry.transaction.extra&.dig("channel_payment") %>
+          <% linked_account = Current.family.accounts.find_by(id: @entry.transaction.extra["funding_account_id"]) %>
+          <% linked_child = @entry.transaction.channel_child_records.first %>
+          <div class="mx-3 rounded-lg border border-secondary p-3 text-sm">
+            <div class="font-medium text-primary"><%= t(".channel_payment_label") %></div>
+            <% if linked_account %>
+              <p class="text-secondary"><%= t(".funding_account_text", account: linked_account.name) %></p>
+            <% end %>
+            <% if linked_child %>
+              <p class="mt-1"><%= link_to t(".view_auto_generated"), entry_path(linked_child.entry), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "hover:underline" %></p>
+            <% end %>
+          </div>
+        <% elsif @entry.transaction.channel_record_parent.present? %>
+          <div class="mx-3 rounded-lg border border-secondary p-3 text-sm">
+            <div class="font-medium text-primary"><%= t(".auto_generated_label") %></div>
+            <p class="text-secondary"><%= t(".auto_generated_text") %></p>
+            <p class="mt-1"><%= link_to t(".view_channel_record"), entry_path(@entry.transaction.channel_record_parent.entry), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "hover:underline" %></p>
+          </div>
+        <% end %>
+
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
