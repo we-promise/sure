@@ -571,6 +571,15 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          MerchantImportResult: {
+            type: :object,
+            required: %w[imported skipped merchants],
+            properties: {
+              imported: { type: :integer, description: 'Number of merchants successfully created' },
+              skipped: { type: :integer, description: 'Number of rows skipped (duplicates or invalid)' },
+              merchants: { type: :array, items: { '$ref' => '#/components/schemas/MerchantDetail' } }
+            }
+          },
           Tag: {
             type: :object,
             required: %w[id name color],
