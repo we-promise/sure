@@ -544,6 +544,33 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should create channel payment with funding_account_id" do
+    channel_account = accounts(:credit_card) # payment channel account
+    funding_account = accounts(:depository)  # bank card / source
+
+    transaction_params = {
+      transaction: {
+        account_id: channel_account.id,
+        funding_account_id: funding_account.id,
+        name: "Starbucks Latte",
+        amount: 98.97,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    assert_difference("Entry.count", 2) do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal "Starbucks Latte", response_data["name"]
+  end
+
   # UPDATE action tests
   test "should update transaction with valid parameters" do
     update_params = {
