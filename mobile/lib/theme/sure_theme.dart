@@ -18,6 +18,8 @@ class SureTheme {
       onSecondary: tokens.textInverse,
       error: tokens.destructive,
       onError: tokens.textInverse,
+      errorContainer: tokens.destructiveSubtle,
+      onErrorContainer: tokens.textPrimary,
       surface: tokens.surface,
       onSurface: tokens.textPrimary,
       surfaceContainerHighest: tokens.containerInset,

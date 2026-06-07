@@ -16,6 +16,9 @@ void main() {
     expect(theme.colorScheme.surface, SureTokens.light.surface);
     expect(theme.colorScheme.onSurface, SureTokens.light.textPrimary);
     expect(theme.colorScheme.error, SureTokens.light.destructive);
+    expect(
+        theme.colorScheme.errorContainer, SureTokens.light.destructiveSubtle);
+    expect(theme.colorScheme.onErrorContainer, SureTokens.light.textPrimary);
     expect(theme.scaffoldBackgroundColor, SureTokens.light.surface);
     expect(theme.cardTheme.color, SureTokens.light.container);
   });
@@ -30,6 +33,8 @@ void main() {
     expect(theme.colorScheme.surface, SureTokens.dark.surface);
     expect(theme.colorScheme.onSurface, SureTokens.dark.textPrimary);
     expect(theme.colorScheme.error, SureTokens.dark.destructive);
+    expect(theme.colorScheme.errorContainer, SureTokens.dark.destructiveSubtle);
+    expect(theme.colorScheme.onErrorContainer, SureTokens.dark.textPrimary);
     expect(theme.scaffoldBackgroundColor, SureTokens.dark.surface);
     expect(theme.cardTheme.color, SureTokens.dark.container);
   });
