@@ -3,7 +3,7 @@ class DS::Disclosure < DesignSystemComponent
 
   VARIANTS = %i[default card card_inset inline bare].freeze
 
-  attr_reader :title, :align, :open, :variant, :summary_class_override, :opts
+  attr_reader :title, :align, :open, :variant, :summary_class_override, :summary_aria_label, :opts
 
   # `:default` — bg-surface summary, no chrome on the `<details>`. Use
   # for inline expanders that sit inside a parent card (the summary
@@ -33,12 +33,13 @@ class DS::Disclosure < DesignSystemComponent
   # In card / inline variants, callers should pass their own
   # `summary_content` slot; the built-in title rendering assumes the
   # `:default` shape.
-  def initialize(title: nil, align: "right", open: false, variant: :default, summary_class: nil, **opts)
+  def initialize(title: nil, align: "right", open: false, variant: :default, summary_class: nil, summary_aria_label: nil, **opts)
     @title = title
     @align = align.to_sym
     @open = open
     @variant = variant&.to_sym
     @summary_class_override = summary_class
+    @summary_aria_label = summary_aria_label
     @opts = opts
 
     raise ArgumentError, "Invalid variant: #{@variant.inspect}. Must be one of #{VARIANTS.inspect}" unless VARIANTS.include?(@variant)
@@ -85,5 +86,9 @@ class DS::Disclosure < DesignSystemComponent
     else
       "px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300"
     end
+  end
+
+  def summary_aria_attrs
+    summary_aria_label.present? ? { label: summary_aria_label } : {}
   end
 end

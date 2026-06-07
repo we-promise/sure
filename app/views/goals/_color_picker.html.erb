@@ -16,7 +16,8 @@
 
     <%= render DS::Disclosure.new(
           variant: :bare,
-          summary_class: "cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary",
+          summary_aria_label: t("goals.color_picker.trigger_label"),
+          summary_class: "list-none cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
           data: {
             color_icon_picker_target: "details",
             action: "mousedown->color-icon-picker#handleOutsideClick"

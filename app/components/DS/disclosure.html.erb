@@ -1,5 +1,5 @@
 <%= tag.details class: details_classes, open: open, **details_opts do %>
-  <%= tag.summary class: summary_classes do %>
+  <%= tag.summary class: summary_classes, aria: summary_aria_attrs do %>
     <% if summary_content? %>
       <% if variant.in?(%i[default bare]) %>
         <%# `:default` summary is already `flex justify-between`, so
