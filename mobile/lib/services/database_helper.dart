@@ -201,8 +201,7 @@ class DatabaseHelper {
       return localId;
     }
     final db = await database;
-    _log.debug('DatabaseHelper',
-        'Inserting transaction: local_id=${transaction['local_id']}, account_id="${transaction['account_id']}", server_id=${transaction['server_id']}');
+    _log.debug('DatabaseHelper', 'Inserting transaction into local database');
     await db.insert(
       'transactions',
       transaction,
@@ -235,8 +234,7 @@ class DatabaseHelper {
     final db = await database;
 
     if (accountId != null) {
-      _log.debug('DatabaseHelper',
-          'Querying transactions WHERE account_id = "$accountId"');
+      _log.debug('DatabaseHelper', 'Querying scoped transactions');
       final results = await db.query(
         'transactions',
         where: 'account_id = ?',
