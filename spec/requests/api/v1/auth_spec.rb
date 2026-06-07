@@ -371,6 +371,16 @@ RSpec.describe 'API V1 Auth', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
+
+      response '403', 'ai unavailable — backend has no AI provider configured' do
+        schema type: :object,
+               properties: {
+                 error:   { type: :string, example: 'ai_unavailable' },
+                 message: { type: :string, example: 'AI is not available for your account' }
+               },
+               required: %w[error message]
+        run_test!
+      end
     end
   end
 end
