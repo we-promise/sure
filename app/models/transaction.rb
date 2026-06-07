@@ -7,7 +7,7 @@ class Transaction < ApplicationRecord
 
   has_many :channel_child_records, class_name: "Transaction",
            foreign_key: :channel_record_parent_id,
-           dependent: :nullify
+           dependent: :destroy
 
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings

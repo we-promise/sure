@@ -98,6 +98,12 @@ en:
       tab_transactions: Transactions
       tab_upcoming: Upcoming
       uncategorized: "(uncategorized)"
+      channel_payment_label: Payment channel record
+      funding_account_text: "Funding source: %{account}"
+      view_auto_generated: View auto-generated funding record
+      auto_generated_label: Auto-generated funding record
+      auto_generated_text: This record was generated automatically from a payment channel transaction.
+      view_channel_record: View original channel record
       additional_details: "Additional details"
       payee: "Payee"
       description: "Description"
@@ -148,6 +154,10 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      channel: Channel
+      channel_tooltip: Transaction created in a payment channel and excluded from balance
+      auto_generated: Auto
+      auto_generated_tooltip: Automatically generated funding-side transaction
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions
