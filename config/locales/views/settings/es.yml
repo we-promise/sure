@@ -42,6 +42,10 @@ es:
         theme_light: Claro
         theme_subtitle: Elige un tema preferido para la aplicación
         theme_system: Sistema
+        modals_title: Modales
+        modals_subtitle: Personalizar el comportamiento de los modales
+        disable_modal_click_outside_title: Mantener modales abiertos al hacer clic fuera
+        disable_modal_click_outside_description: Evita que los modales se cierren al hacer clic fuera. Útil para evitar perder cambios no guardados accidentalmente.
         theme_title: Tema
         timezone: Zona horaria
         month_start_day: El mes de presupuesto comienza el

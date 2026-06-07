@@ -25,6 +25,10 @@ nb:
         theme_light: Lys
         theme_subtitle: Velg et foretrukket tema for appen
         theme_system: System
+        modals_title: Modaler
+        modals_subtitle: Tilpass oppførselen til modaler
+        disable_modal_click_outside_title: Hold modaler åpne ved klikk utenfor
+        disable_modal_click_outside_description: Forhindrer at modaler lukkes ved klikk utenfor. Nyttig for å unngå å miste ulagrede endringer ved et uhell.
         theme_title: Tema
         timezone: Tidssone
     profiles:

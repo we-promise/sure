@@ -41,6 +41,10 @@ de:
         theme_light: Hell
         theme_subtitle: Wähle ein bevorzugtes Design für die App
         theme_system: System
+        modals_title: Modale Fenster
+        modals_subtitle: Verhalten der modalen Fenster anpassen
+        disable_modal_click_outside_title: Modale Fenster bei Klick außerhalb geöffnet lassen
+        disable_modal_click_outside_description: Verhindert das Schließen modaler Fenster beim Klicken außerhalb. Nützlich, um ungespeicherte Änderungen nicht versehentlich zu verlieren.
         theme_title: Design
         timezone: Zeitzone
         month_start_day: Budgetmonat beginnt am
