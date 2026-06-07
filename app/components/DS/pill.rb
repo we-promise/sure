@@ -16,7 +16,8 @@ class DS::Pill < DesignSystemComponent
     neutral:     :gray
   }.freeze
 
-  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon, :marker, :custom_color
+  attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon, :marker, :custom_color,
+              :truncate, :label_testid, :icon_size
 
   # Generic inline pill primitive. Two modes:
   #
@@ -50,8 +51,17 @@ class DS::Pill < DesignSystemComponent
   #   `SEMANTIC_TONE_ALIASES`.
   # - Sure has full violet / indigo / fuchsia / amber / green / gray /
   #   red ramps in the design system; this component picks named tokens
-  #   at render time. No raw hex.
-  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: nil, dot_only: false, title: nil, icon: nil, marker: true, custom_color: nil)
+  #   at render time. No raw hex — except `custom_color:`, which exists for
+  #   user-defined entities (categories, tags) whose hue is data, not design.
+  # - `truncate: true` lets the pill shrink inside a `min-w-0` parent and
+  #   ellipsize its label instead of overflowing (dense table cells like the
+  #   transaction row's category column). Default pills stay `shrink-0`.
+  # - `label_testid:` stamps `data-testid` on the label span for system /
+  #   controller tests that need to target the text node.
+  # - `icon_size:` passes through to the icon helper (default "xs"; the
+  #   category badge uses "sm" to keep its established glyph size).
+  def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: nil, dot_only: false, title: nil, icon: nil, marker: true, custom_color: nil,
+                 truncate: false, label_testid: nil, icon_size: "xs")
     resolved_tone = SEMANTIC_TONE_ALIASES.fetch(tone.to_sym, tone.to_sym)
     @label = label || I18n.t("ds.pill.default_label", default: "Beta")
     @tone = TONES.include?(resolved_tone) ? resolved_tone : :violet
@@ -65,6 +75,9 @@ class DS::Pill < DesignSystemComponent
     @icon = icon
     @marker = marker
     @custom_color = custom_color
+    @truncate = truncate
+    @label_testid = label_testid
+    @icon_size = icon_size
   end
 
   def palette
@@ -149,7 +162,10 @@ class DS::Pill < DesignSystemComponent
 
   def container_classes
     base = [
-      "inline-flex items-center align-middle font-medium whitespace-nowrap shrink-0",
+      "inline-flex items-center align-middle font-medium",
+      # Truncating pills must be allowed to shrink (and let the label span
+      # ellipsize); everything else keeps its intrinsic width.
+      truncate ? "max-w-full min-w-0" : "whitespace-nowrap shrink-0",
       "border leading-none"
     ]
 
