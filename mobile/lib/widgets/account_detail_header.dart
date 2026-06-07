@@ -97,11 +97,13 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
       }
       if (balancesResult['success'] == true) {
         _balances = (balancesResult['balances'] as List<dynamic>? ?? [])
-            .cast<AccountBalance>();
+            .whereType<AccountBalance>()
+            .toList();
       }
       if (holdingsResult?['success'] == true) {
         _holdings = (holdingsResult?['holdings'] as List<dynamic>? ?? [])
-            .cast<AccountHolding>();
+            .whereType<AccountHolding>()
+            .toList();
       }
       if (accountResult['success'] != true &&
           balancesResult['success'] != true) {

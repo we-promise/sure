@@ -3,10 +3,13 @@ import 'package:http/http.dart' as http;
 import '../models/account.dart';
 import '../models/account_balance.dart';
 import '../models/account_holding.dart';
+import '../utils/json_parsing.dart';
 import 'api_config.dart';
 import 'log_service.dart';
 
 class AccountDetailService {
+  static const int _holdingsPageSize = 100;
+
   final http.Client _client;
   final bool _ownsClient;
 
@@ -96,33 +99,58 @@ class AccountDetailService {
     required String accountId,
     int perPage = 5,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/holdings').replace(
-      queryParameters: {
-        'account_id': accountId,
-        'per_page': perPage.toString(),
-      },
-    );
+    final displayLimit = perPage.clamp(1, _holdingsPageSize).toInt();
 
     try {
-      final response = await _client
-          .get(url, headers: ApiConfig.getAuthHeaders(accessToken))
-          .timeout(const Duration(seconds: 30));
+      final firstPage = await _getHoldingsPage(
+        accessToken: accessToken,
+        accountId: accountId,
+        page: 1,
+      );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        final holdings = (responseData['holdings'] as List<dynamic>? ?? [])
-            .map(
-              (json) => AccountHolding.fromJson(json as Map<String, dynamic>),
-            )
-            .toList();
-
-        return {'success': true, 'holdings': holdings};
+      if (!firstPage.success) {
+        return _failureFromStatus(
+          firstPage.statusCode,
+          'Failed to fetch holdings',
+        );
       }
 
-      return _failureFromStatus(
-        response.statusCode,
-        'Failed to fetch holdings',
-      );
+      final currentHoldings = <AccountHolding>[];
+      DateTime? currentDate;
+      final totalPages = firstPage.totalPages < 1 ? 1 : firstPage.totalPages;
+
+      for (var page = totalPages; page >= 1; page -= 1) {
+        final holdingsPage = page == 1
+            ? firstPage
+            : await _getHoldingsPage(
+                accessToken: accessToken,
+                accountId: accountId,
+                page: page,
+              );
+
+        if (!holdingsPage.success) {
+          return _failureFromStatus(
+            holdingsPage.statusCode,
+            'Failed to fetch holdings',
+          );
+        }
+
+        for (final holding in holdingsPage.holdings.reversed) {
+          currentDate ??= holding.date;
+          if (!_sameDate(holding.date, currentDate)) {
+            return {
+              'success': true,
+              'holdings': _topHoldings(currentHoldings, displayLimit),
+            };
+          }
+          currentHoldings.add(holding);
+        }
+      }
+
+      return {
+        'success': true,
+        'holdings': _topHoldings(currentHoldings, displayLimit),
+      };
     } catch (e) {
       _logFailure('getHoldings', e);
       return {
@@ -130,6 +158,65 @@ class AccountDetailService {
         'error': 'Unable to load holdings. Please try again later.',
       };
     }
+  }
+
+  Future<_HoldingsPage> _getHoldingsPage({
+    required String accessToken,
+    required String accountId,
+    required int page,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/holdings').replace(
+      queryParameters: {
+        'account_id': accountId,
+        'page': page.toString(),
+        'per_page': _holdingsPageSize.toString(),
+      },
+    );
+
+    final response = await _client
+        .get(url, headers: ApiConfig.getAuthHeaders(accessToken))
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      return _HoldingsPage.failure(response.statusCode);
+    }
+
+    final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+    final holdings = (responseData['holdings'] as List<dynamic>? ?? [])
+        .map(
+          (json) => AccountHolding.fromJson(json as Map<String, dynamic>),
+        )
+        .toList();
+    final pagination = responseData['pagination'] as Map<String, dynamic>?;
+    final totalPages = JsonParsing.parseInt(pagination?['total_pages']) ?? 1;
+
+    return _HoldingsPage.success(
+      holdings: holdings,
+      totalPages: totalPages,
+    );
+  }
+
+  List<AccountHolding> _topHoldings(
+    List<AccountHolding> holdings,
+    int displayLimit,
+  ) {
+    final sorted = holdings.toList()
+      ..sort(
+        (left, right) =>
+            _amountValue(right.amount).compareTo(_amountValue(left.amount)),
+      );
+    return sorted.take(displayLimit).toList();
+  }
+
+  double _amountValue(String amount) {
+    final numeric = amount.replaceAll(RegExp(r'[^\d.-]'), '');
+    return double.tryParse(numeric) ?? 0;
+  }
+
+  bool _sameDate(DateTime left, DateTime right) {
+    return left.year == right.year &&
+        left.month == right.month &&
+        left.day == right.day;
   }
 
   Map<String, dynamic> _failureFromStatus(int statusCode, String fallback) {
@@ -146,4 +233,22 @@ class AccountDetailService {
       '$operation failed with ${error.runtimeType}',
     );
   }
+}
+
+class _HoldingsPage {
+  final bool success;
+  final int statusCode;
+  final List<AccountHolding> holdings;
+  final int totalPages;
+
+  _HoldingsPage.success({
+    required this.holdings,
+    required this.totalPages,
+  })  : success = true,
+        statusCode = 200;
+
+  _HoldingsPage.failure(this.statusCode)
+      : success = false,
+        holdings = const [],
+        totalPages = 1;
 }

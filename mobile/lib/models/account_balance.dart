@@ -23,10 +23,16 @@ class AccountBalance {
     return AccountBalance(
       id: json['id'].toString(),
       date: JsonParsing.parseRequiredDateTime(json['date'], 'account balance'),
-      currency: json['currency'] as String,
-      balance: json['balance'] as String,
+      currency: JsonParsing.parseRequiredString(
+        json['currency'],
+        'account balance currency',
+      ),
+      balance: JsonParsing.parseRequiredString(
+        json['balance'],
+        'account balance',
+      ),
       balanceCents: JsonParsing.parseInt(json['balance_cents']),
-      cashBalance: json['cash_balance'] as String?,
+      cashBalance: JsonParsing.parseString(json['cash_balance']),
       cashBalanceCents: JsonParsing.parseInt(json['cash_balance_cents']),
     );
   }

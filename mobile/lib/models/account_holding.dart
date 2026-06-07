@@ -22,17 +22,30 @@ class AccountHolding {
   });
 
   factory AccountHolding.fromJson(Map<String, dynamic> json) {
-    final security = json['security'] as Map<String, dynamic>?;
+    final securityJson = json['security'];
+    final security = securityJson is Map<String, dynamic> ? securityJson : null;
 
     return AccountHolding(
       id: json['id'].toString(),
       date: JsonParsing.parseRequiredDateTime(json['date'], 'account holding'),
-      quantity: json['qty'].toString(),
-      price: json['price'] as String,
-      amount: json['amount'] as String,
-      currency: json['currency'] as String,
-      ticker: security?['ticker'] as String?,
-      securityName: security?['name'] as String?,
+      quantity: JsonParsing.parseRequiredString(
+        json['qty'],
+        'account holding quantity',
+      ),
+      price: JsonParsing.parseRequiredString(
+        json['price'],
+        'account holding price',
+      ),
+      amount: JsonParsing.parseRequiredString(
+        json['amount'],
+        'account holding amount',
+      ),
+      currency: JsonParsing.parseRequiredString(
+        json['currency'],
+        'account holding currency',
+      ),
+      ticker: JsonParsing.parseString(security?['ticker']),
+      securityName: JsonParsing.parseString(security?['name']),
     );
   }
 }

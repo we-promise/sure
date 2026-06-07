@@ -211,11 +211,15 @@ void main() {
           expect(request.method, 'GET');
           expect(request.url.path, '/api/v1/holdings');
           expect(request.url.queryParameters['account_id'], 'acct_1');
+          expect(request.url.queryParameters['page'], '1');
+          expect(request.url.queryParameters['per_page'], '100');
           return http.Response(
             '{"holdings":[{"id":"holding_1","date":"2026-06-01",'
             '"qty":"4.0","price":"\$10.00","amount":"\$40.00",'
             '"currency":"USD","security":{"ticker":"SURE",'
-            '"name":"Sure Inc."}}]}',
+            '"name":"Sure Inc."}}],'
+            '"pagination":{"page":1,"per_page":100,"total_count":1,'
+            '"total_pages":1}}',
             200,
           );
         }),
@@ -231,15 +235,147 @@ void main() {
       expect(result['holdings'].single.amount, r'$40.00');
     });
 
+    test('fetches latest holdings page before returning top holdings',
+        () async {
+      var requestCount = 0;
+      final service = AccountDetailService(
+        client: MockClient((request) async {
+          requestCount += 1;
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/v1/holdings');
+          expect(request.url.queryParameters['account_id'], 'acct_1');
+          expect(request.url.queryParameters['per_page'], '100');
+
+          if (requestCount == 1) {
+            expect(request.url.queryParameters['page'], '1');
+            return http.Response(
+              '{"holdings":[{"id":"old_holding","date":"2025-01-01",'
+              '"qty":"1.0","price":"\$5.00","amount":"\$5.00",'
+              '"currency":"USD","security":{"ticker":"OLD",'
+              '"name":"Old Holding"}}],'
+              '"pagination":{"page":1,"per_page":100,"total_count":4,'
+              '"total_pages":2}}',
+              200,
+            );
+          }
+
+          expect(request.url.queryParameters['page'], '2');
+          return http.Response(
+            '{"holdings":[{"id":"stale_same_page","date":"2026-05-31",'
+            '"qty":"1.0","price":"\$5.00","amount":"\$5.00",'
+            '"currency":"USD","security":{"ticker":"STALE",'
+            '"name":"Stale Holding"}},'
+            '{"id":"small_current","date":"2026-06-01",'
+            '"qty":"1.0","price":"\$10.00","amount":"\$10.00",'
+            '"currency":"USD","security":{"ticker":"SMALL",'
+            '"name":"Small Holding"}},'
+            '{"id":"large_current","date":"2026-06-01",'
+            '"qty":"1.0","price":"\$125.00","amount":"\$125.00",'
+            '"currency":"USD","security":{"ticker":"LARGE",'
+            '"name":"Large Holding"}}],'
+            '"pagination":{"page":2,"per_page":100,"total_count":4,'
+            '"total_pages":2}}',
+            200,
+          );
+        }),
+      );
+
+      final result = await service.getHoldings(
+        accessToken: 'token',
+        accountId: 'acct_1',
+        perPage: 1,
+      );
+
+      expect(result['success'], true);
+      expect(requestCount, 2);
+      expect(result['holdings'], hasLength(1));
+      expect(result['holdings'].single.ticker, 'LARGE');
+    });
+
+    test('parses non-string account balance and holding scalar values',
+        () async {
+      var requestCount = 0;
+      final service = AccountDetailService(
+        client: MockClient((request) async {
+          requestCount += 1;
+
+          if (request.url.path == '/api/v1/accounts/acct_1') {
+            return http.Response(
+              '{"id":"acct_1","name":123,"balance":1200.5,'
+              '"cash_balance":200,"currency":840,'
+              '"classification":true,"account_type":"investment",'
+              '"subtype":42,"status":1,"institution_name":987,'
+              '"institution_domain":654}',
+              200,
+            );
+          }
+
+          if (request.url.path == '/api/v1/balances') {
+            return http.Response(
+              '{"balances":[{"id":"bal_1","date":"2026-06-01",'
+              '"currency":840,"balance":1200.5,'
+              '"cash_balance":200}]}',
+              200,
+            );
+          }
+
+          if (request.url.path == '/api/v1/holdings') {
+            return http.Response(
+              '{"holdings":[{"id":"holding_1","date":"2026-06-01",'
+              '"qty":4,"price":10,"amount":40,"currency":840,'
+              '"security":{"ticker":123,"name":456}}],'
+              '"pagination":{"page":1,"per_page":100,"total_count":1,'
+              '"total_pages":1}}',
+              200,
+            );
+          }
+
+          return http.Response('{}', 404);
+        }),
+      );
+
+      final accountResult = await service.getAccountDetail(
+        accessToken: 'token',
+        accountId: 'acct_1',
+      );
+      final balancesResult = await service.getBalances(
+        accessToken: 'token',
+        accountId: 'acct_1',
+      );
+      final holdingsResult = await service.getHoldings(
+        accessToken: 'token',
+        accountId: 'acct_1',
+      );
+
+      expect(requestCount, 3);
+      expect(accountResult['success'], true);
+      expect(accountResult['account'].cashBalance, '200');
+      expect(accountResult['account'].subtype, '42');
+      expect(accountResult['account'].institutionDomain, '654');
+      expect(balancesResult['success'], true);
+      expect(balancesResult['balances'].single.currency, '840');
+      expect(balancesResult['balances'].single.balance, '1200.5');
+      expect(balancesResult['balances'].single.cashBalance, '200');
+      expect(holdingsResult['success'], true);
+      expect(holdingsResult['holdings'].single.price, '10');
+      expect(holdingsResult['holdings'].single.amount, '40');
+      expect(holdingsResult['holdings'].single.currency, '840');
+      expect(holdingsResult['holdings'].single.ticker, '123');
+      expect(holdingsResult['holdings'].single.securityName, '456');
+    });
+
     test('returns generic error for malformed holding dates', () async {
       final service = AccountDetailService(
         client: MockClient((request) async {
           expect(request.method, 'GET');
           expect(request.url.path, '/api/v1/holdings');
+          expect(request.url.queryParameters['page'], '1');
           return http.Response(
             '{"holdings":[{"id":"holding_1","date":"not-a-date",'
             '"qty":"4.0","price":"\$10.00","amount":"\$40.00",'
-            '"currency":"USD"}]}',
+            '"currency":"USD"}],'
+            '"pagination":{"page":1,"per_page":100,"total_count":1,'
+            '"total_pages":1}}',
             200,
           );
         }),

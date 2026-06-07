@@ -38,18 +38,27 @@ class Account {
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
       id: json['id'].toString(),
-      name: json['name'] as String,
-      balance: json['balance'] as String,
+      name: JsonParsing.parseRequiredString(json['name'], 'account name'),
+      balance: JsonParsing.parseRequiredString(
+        json['balance'],
+        'account balance',
+      ),
       balanceCents: JsonParsing.parseInt(json['balance_cents']),
-      cashBalance: json['cash_balance'] as String?,
+      cashBalance: JsonParsing.parseString(json['cash_balance']),
       cashBalanceCents: JsonParsing.parseInt(json['cash_balance_cents']),
-      currency: json['currency'] as String,
-      classification: json['classification'] as String?,
-      accountType: json['account_type'] as String,
-      subtype: json['subtype'] as String?,
-      status: json['status'] as String?,
-      institutionName: json['institution_name'] as String?,
-      institutionDomain: json['institution_domain'] as String?,
+      currency: JsonParsing.parseRequiredString(
+        json['currency'],
+        'account currency',
+      ),
+      classification: JsonParsing.parseString(json['classification']),
+      accountType: JsonParsing.parseRequiredString(
+        json['account_type'],
+        'account type',
+      ),
+      subtype: JsonParsing.parseString(json['subtype']),
+      status: JsonParsing.parseString(json['status']),
+      institutionName: JsonParsing.parseString(json['institution_name']),
+      institutionDomain: JsonParsing.parseString(json['institution_domain']),
       createdAt: JsonParsing.parseDateTime(json['created_at']),
       updatedAt: JsonParsing.parseDateTime(json['updated_at']),
     );
