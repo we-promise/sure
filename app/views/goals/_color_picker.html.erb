@@ -14,15 +14,16 @@
       <% end %>
     </span>
 
-    <%= render DS::Disclosure.new(
-          summary_class: "cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary",
-          data: {
-            color_icon_picker_target: "details",
-            action: "mousedown->color-icon-picker#handleOutsideClick"
-          }) do |d| %>
-      <% d.with_summary_content do %>
+    <%# Raw <details> instead of DS::Disclosure: the disclosure wraps its body
+        in an `mt-2` div that lives in normal flow, which pushed the form down
+        ~8px every time this absolutely-positioned popover opened. %>
+    <details class="group"
+             data-color-icon-picker-target="details"
+             data-action="mousedown->color-icon-picker#handleOutsideClick">
+      <summary aria-label="<%= t("goals.color_picker.trigger_label") %>"
+               class="list-none cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300">
         <%= icon("pen", size: "xs") %>
-      <% end %>
+      </summary>
 
       <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-container p-3 border border-alpha-black-25 rounded-2xl shadow-xs w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto"
            data-color-icon-picker-target="popup">
@@ -68,6 +69,6 @@
           </div>
         </div>
       </div>
-    <% end %>
+    </details>
   </div>
 </div>

@@ -16,7 +16,7 @@ PINNED_ACTION = /\A[^@\s]+@[a-f0-9]{40}\z/
 EXPECTED_ACTION_PINS = {
   "actions/checkout" => "93cb6efe18208431cddfb8368fd83d5badbf9bfd", # v5
   "actions/download-artifact" => "018cc2cf5baa6db3ef3c5f8a56943fffe632ef53", # v6
-  "actions/github-script" => "f28e40c7f34bde8b3046d885e986cb6290c5673b", # v7
+  "actions/github-script" => "ed597411d8f924073f98dfc5c65a23a2325f34cd", # v8
   "actions/setup-node" => "48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e", # v6
   "actions/upload-artifact" => "b7c566a772e6b6bfb58ed0dc250532a479d7789f" # v6
 }.freeze
