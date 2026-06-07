@@ -219,6 +219,8 @@ class TransactionsProvider with ChangeNotifier {
           categoryId: categoryId,
           merchantId: merchantId,
           tagIds: tagIds == null || tagIds.isEmpty ? null : tagIds,
+          externalId: localTransaction.localId,
+          source: TransactionsService.mobileIdempotencySource,
         )
             .then((result) async {
           if (_isDisposed) return;
