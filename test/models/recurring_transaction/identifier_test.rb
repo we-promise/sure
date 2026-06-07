@@ -277,7 +277,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     end
   end
 
-  test "updates manual recurring variance across month boundary" do
+  test "updates manual recurring variance across 1 to 31 month boundary" do
     travel_to Date.new(2026, 6, 7) do
       account = @family.accounts.first
       name = "Boundary Performance Subscription"
@@ -313,6 +313,76 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
       assert_equal 1, recurring.occurrence_count
       assert_equal 72, recurring.expected_amount_min
       assert_equal Date.new(2026, 5, 31), recurring.last_occurrence_date
+    end
+  end
+
+  test "updates manual recurring variance for expected end of month in February" do
+    account = @family.accounts.first
+
+    travel_to Date.new(2026, 3, 7) do
+      name = "Non Leap Boundary Subscription"
+      recurring = @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 82,
+        currency: "USD",
+        expected_day_of_month: 31,
+        last_occurrence_date: 3.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 0,
+        status: "active",
+        manual: true
+      )
+
+      transaction = Transaction.create!(
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: Date.new(2026, 2, 28),
+        amount: 82,
+        currency: "USD",
+        name: name,
+        entryable: transaction
+      )
+
+      @identifier.identify_recurring_patterns
+
+      recurring.reload
+      assert_equal 1, recurring.occurrence_count
+      assert_equal Date.new(2026, 2, 28), recurring.last_occurrence_date
+    end
+
+    travel_to Date.new(2024, 3, 7) do
+      name = "Leap Boundary Subscription"
+      recurring = @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 92,
+        currency: "USD",
+        expected_day_of_month: 31,
+        last_occurrence_date: 3.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 0,
+        status: "active",
+        manual: true
+      )
+
+      transaction = Transaction.create!(
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: Date.new(2024, 2, 29),
+        amount: 92,
+        currency: "USD",
+        name: name,
+        entryable: transaction
+      )
+
+      @identifier.identify_recurring_patterns
+
+      recurring.reload
+      assert_equal 1, recurring.occurrence_count
+      assert_equal Date.new(2024, 2, 29), recurring.last_occurrence_date
     end
   end
 

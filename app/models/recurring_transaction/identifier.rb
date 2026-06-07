@@ -239,7 +239,7 @@ class RecurringTransaction
         return false unless entry.currency == recurring.currency
         return false if recurring.account_id.present? && entry.account_id != recurring.account_id
 
-        expected_day = recurring.expected_day_of_month
+        expected_day = [ recurring.expected_day_of_month, entry.date.end_of_month.day ].min
         day = entry.date.day
         return false if circular_distance(day, expected_day) > 2
 
