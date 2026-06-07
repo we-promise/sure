@@ -978,6 +978,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.text "conditions"
     t.text "actions"
     t.integer "source_row_number", null: false
+    t.string "merchant_color"
+    t.string "merchant_website"
     t.index ["import_id", "source_row_number"], name: "index_import_rows_on_import_id_and_source_row_number", unique: true
     t.index ["import_id"], name: "index_import_rows_on_import_id"
     t.check_constraint "source_row_number > 0", name: "chk_import_rows_source_row_number_positive"
