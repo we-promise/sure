@@ -1,18 +1,38 @@
+import '../utils/json_parsing.dart';
+
 class Account {
   final String id;
   final String name;
   final String balance;
+  final int? balanceCents;
+  final String? cashBalance;
+  final int? cashBalanceCents;
   final String currency;
   final String? classification;
   final String accountType;
+  final String? subtype;
+  final String? status;
+  final String? institutionName;
+  final String? institutionDomain;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Account({
     required this.id,
     required this.name,
     required this.balance,
+    this.balanceCents,
+    this.cashBalance,
+    this.cashBalanceCents,
     required this.currency,
     this.classification,
     required this.accountType,
+    this.subtype,
+    this.status,
+    this.institutionName,
+    this.institutionDomain,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory Account.fromJson(Map<String, dynamic> json) {
@@ -20,9 +40,18 @@ class Account {
       id: json['id'].toString(),
       name: json['name'] as String,
       balance: json['balance'] as String,
+      balanceCents: JsonParsing.parseInt(json['balance_cents']),
+      cashBalance: json['cash_balance'] as String?,
+      cashBalanceCents: JsonParsing.parseInt(json['cash_balance_cents']),
       currency: json['currency'] as String,
       classification: json['classification'] as String?,
       accountType: json['account_type'] as String,
+      subtype: json['subtype'] as String?,
+      status: json['status'] as String?,
+      institutionName: json['institution_name'] as String?,
+      institutionDomain: json['institution_domain'] as String?,
+      createdAt: JsonParsing.parseDateTime(json['created_at']),
+      updatedAt: JsonParsing.parseDateTime(json['updated_at']),
     );
   }
 
