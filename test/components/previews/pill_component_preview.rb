@@ -69,4 +69,19 @@ class PillComponentPreview < ViewComponent::Preview
     render DS::Pill.new(label: "Past due", tone: :error, marker: false, size: :md)
   end
   # @!endgroup
+
+  # The categories/_badge recipe: user-chosen hex via custom_color, icon at
+  # "sm", and truncate so the label ellipsizes inside a tight min-w-0 column.
+  # @display container_classes max-w-[140px]
+  def category_badge_truncating
+    render DS::Pill.new(
+      label: "Subscriptions & Memberships",
+      custom_color: "#7c3aed",
+      icon: "credit-card",
+      icon_size: "sm",
+      marker: false,
+      size: :md,
+      truncate: true
+    )
+  end
 end
