@@ -468,9 +468,12 @@ class TransactionsController < ApplicationController
 
     def entry_params
       entry_params = params.require(:entry).permit(
-        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type, :funding_account_id,
+        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
+
+      # funding_account_id is a routing param only — strip before mass-assigning to Entry
+      entry_params.delete(:funding_account_id)
 
       nature = entry_params.delete(:nature)
 
