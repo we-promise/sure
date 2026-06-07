@@ -225,6 +225,16 @@
                 enabled: true %>
             <% end %>
 
+            <% if params[:type].nil? || params[:type] == "MerchantImport" %>
+              <%= render "imports/import_option",
+                type: "MerchantImport",
+                icon_name: "store",
+                icon_bg_class: "bg-orange-500/5",
+                icon_text_class: "text-orange-500",
+                label: t(".import_merchants"),
+                enabled: true %>
+            <% end %>
+
             <% if params[:type].nil? || params[:type] == "RuleImport" %>
               <%= render "imports/import_option",
                 type: "RuleImport",
