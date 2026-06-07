@@ -45,7 +45,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ?? 'AI features not enabled',
-          'ai_available': responseData['ai_available'] ?? false,
+          'ai_available': responseData['ai_available'] ?? true,
         };
       } else {
         final responseData = jsonDecode(response.body);

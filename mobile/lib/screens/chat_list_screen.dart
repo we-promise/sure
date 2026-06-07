@@ -469,10 +469,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openNewChat,
-        tooltip: 'New Chat',
-        child: const Icon(Icons.add),
+      floatingActionButton: Consumer<ChatProvider>(
+        builder: (context, chatProvider, _) {
+          if (chatProvider.featureDisabled || chatProvider.aiUnavailable) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton(
+            onPressed: _openNewChat,
+            tooltip: 'New Chat',
+            child: const Icon(Icons.add),
+          );
+        },
       ),
     );
   }
