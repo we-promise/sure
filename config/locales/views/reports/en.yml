@@ -142,6 +142,7 @@ en:
       title: Investment Performance
       portfolio_value: Portfolio Value
       total_return: Total Return
+      period_return: Period Return
       contributions: Period Contributions
       withdrawals: Period Withdrawals
       top_holdings: Top Holdings
@@ -228,6 +229,7 @@ en:
         title: Investments
         portfolio_value: Portfolio Value
         total_return: Total Return
+        period_return: Period Return
         contributions: Contributions
         withdrawals: Withdrawals
         this_period: this period

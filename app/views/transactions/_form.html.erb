@@ -1,7 +1,6 @@
-<%# locals: (entry:, categories:) %>
+<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
 
-<% account_currencies = Current.family.accounts.map { |a| [a.id, a.currency] }.to_h.to_json %>
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies } do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
@@ -19,25 +18,25 @@
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>
     <% else %>
-      <%= f.collection_select :account_id, accessible_accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis", data: { transaction_form_target: "account", action: "change->transaction-form#checkCurrencyDifference" } %>
+      <%= f.collection_select :account_id, manual_accounts, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis", data: { transaction_form_target: "account", action: "change->transaction-form#checkCurrencyDifference" } %>
     <% end %>
 
-    <%= f.money_field :amount, 
-      label: t(".amount"), 
+    <%= f.money_field :amount,
+      label: t(".amount"),
       required: true,
       container_class: "money-field-wrapper",
       amount_data: { transaction_form_target: "amount", action: "input->transaction-form#onAmountChange" },
       currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
-      
+
     <%= f.fields_for :entryable do |ef| %>
       <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category"), variant: :badge, searchable: true } %>
     <% end %>
-    
-    <%= f.date_field :date, 
-      label: t(".date"), 
-      required: true, 
-      min: Entry.min_supported_date, 
-      max: Date.current, 
+
+    <%= f.date_field :date,
+      label: t(".date"),
+      required: true,
+      min: Entry.min_supported_date,
+      max: Date.current,
       value: f.object.date || Date.current,
       data: { transaction_form_target: "date", action: "change->transaction-form#checkCurrencyDifference" } %>
 
@@ -61,6 +60,7 @@
         nil,
         id: "transaction_form_destination_amount",
         class: "form-field__input",
+        autocomplete: "off",
         min: "0",
         step: "0.00000001",
         placeholder: "92",
@@ -83,29 +83,28 @@
   </section>
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
-    <%= f.fields_for :entryable do |ef| %>
-      <%= ef.collection_select :merchant_id,
-                Current.family.available_merchants_for(Current.user).alphabetically,
-                :id, :name,
-                { include_blank: t(".none"),
-                  label: t(".merchant_label"),
-                  variant: :logo,
-                  searchable: true,
-                  menu_placement: :auto } %>
-      <%= ef.select :tag_ids,
-                    Current.family.tags.alphabetically.pluck(:name, :id),
-                    {
-                      include_blank: t(".none"),
-                      multiple: true,
-                      label:    t(".tags_label")
-                    },
-                    { "data-controller": "multi-select" } %>
-    <% end %>
-    <%= f.text_area :notes,
-                    label: t(".note_label"),
-                    placeholder: t(".note_placeholder"),
-                    rows: 5,
-                    "data-auto-submit-form-target": "auto" %>
+    <section class="space-y-2">
+      <%= f.fields_for :entryable do |ef| %>
+        <%= ef.collection_select :merchant_id,
+                  merchants,
+                  :id, :name,
+                  { include_blank: t(".none"),
+                    label: t(".merchant_label"),
+                    variant: :logo,
+                    searchable: true,
+                    menu_placement: :auto } %>
+        <%= render DS::TagSelect.new(
+              form: ef,
+              tags: tags,
+              selected_ids: ef.object.tag_ids
+            ) %>
+      <% end %>
+      <%= f.text_area :notes,
+                      label: t(".note_label"),
+                      placeholder: t(".note_placeholder"),
+                      rows: 5,
+                      "data-auto-submit-form-target": "auto" %>
+    </section>
   <% end %>
 
   <section>

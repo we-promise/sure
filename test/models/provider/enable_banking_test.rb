@@ -61,4 +61,47 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 1, 17), error.corrected_date_from
     assert error.wrong_transactions_period?
   end
+
+  test "start_authorization includes auth_method in the request body when provided" do
+    captured_body = nil
+    response = OpenStruct.new(
+      code: 200,
+      body: { url: "https://api.enablebanking.com/auth/abc", authorization_id: "auth_1" }.to_json
+    )
+
+    Provider::EnableBanking.expects(:post).with do |_url, options|
+      captured_body = JSON.parse(options[:body])
+      true
+    end.returns(response)
+
+    @provider.start_authorization(
+      aspsp_name: "VR Bank in Holstein",
+      aspsp_country: "DE",
+      redirect_url: "https://app.example.com/callback",
+      auth_method: "decoupled_app"
+    )
+
+    assert_equal "decoupled_app", captured_body["auth_method"]
+  end
+
+  test "start_authorization omits auth_method when not provided" do
+    captured_body = nil
+    response = OpenStruct.new(
+      code: 200,
+      body: { url: "https://api.enablebanking.com/auth/abc", authorization_id: "auth_1" }.to_json
+    )
+
+    Provider::EnableBanking.expects(:post).with do |_url, options|
+      captured_body = JSON.parse(options[:body])
+      true
+    end.returns(response)
+
+    @provider.start_authorization(
+      aspsp_name: "ING-DiBa AG",
+      aspsp_country: "DE",
+      redirect_url: "https://app.example.com/callback"
+    )
+
+    assert_not captured_body.key?("auth_method")
+  end
 end

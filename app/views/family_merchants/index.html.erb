@@ -1,14 +1,23 @@
 <%= content_for :page_title, t(".title") %>
 <%= content_for :page_actions do %>
+  <%= render DS::Menu.new do |menu| %>
+    <% menu.with_item(
+        variant: "link",
+        text: t(".merge"),
+        href: merge_family_merchants_path,
+        frame: :modal,
+        icon: "combine") %>
+  <% end %>
   <%= render DS::Link.new(
-    text: t(".merge"),
+    text: t(".import"),
     variant: "outline",
-    href: merge_family_merchants_path,
-    frame: :modal
+    icon: "upload",
+    href: new_import_path(type: "MerchantImport")
   ) %>
   <%= render DS::Link.new(
     text: t(".new"),
     variant: "primary",
+    icon: "plus",
     href: new_family_merchant_path,
     frame: :modal
   ) %>
@@ -19,10 +28,10 @@
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
       <p><%= t(".family_title", moniker: family_moniker) %></p>
       <span class="text-subdued">&middot;</span>
-      <p><%= @family_merchants.count %></p>
+      <p><%= @all_family_merchants.count %></p>
     </div>
 
-    <% if @family_merchants.any? %>
+    <% if @all_family_merchants.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
           <table class="w-full">
@@ -37,6 +46,10 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div class="pt-4">
+        <%= render "shared/pagination", pagy: @pagy_family_merchants %>
       </div>
     <% else %>
       <div class="flex justify-center items-center py-12">
@@ -58,7 +71,7 @@
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
       <p><%= t(".provider_title") %></p>
       <span class="text-subdued">&middot;</span>
-      <p><%= @provider_merchants.count %></p>
+      <p><%= @all_provider_merchants.count %></p>
     </div>
 
     <div class="p-4 bg-container-inset border border-secondary rounded-lg">
@@ -84,7 +97,7 @@
       </div>
     <% end %>
 
-    <% if @provider_merchants.any? %>
+    <% if @all_provider_merchants.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
           <table class="w-full">
@@ -100,6 +113,10 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div class="pt-4">
+        <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
       </div>
     <% else %>
       <div class="flex justify-center items-center py-8">
