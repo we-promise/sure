@@ -6,7 +6,7 @@ class UserMenuViewTest < ActionView::TestCase
     Current.session = user.sessions.create!
     additional_family = Family.create!(name: "Business")
     FamilyMembership.create!(user: user, family: additional_family)
-    stubs(:self_hosted?).returns(false)
+    view.singleton_class.define_method(:self_hosted?) { false }
 
     html = render(partial: "users/user_menu", locals: { user: user })
 
