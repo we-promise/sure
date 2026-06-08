@@ -28,6 +28,9 @@ class OfflineStorageService {
     String? serverId,
     SyncStatus syncStatus = SyncStatus.pending,
   }) async {
+    // Generated once when the transaction enters the offline queue, then
+    // persisted as transactions.local_id and reused as the mobile idempotency
+    // key on every replay attempt.
     final localId = _uuid.v4();
 
     _log.info(
