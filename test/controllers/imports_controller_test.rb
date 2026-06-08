@@ -367,6 +367,11 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   test "PDF import account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
     pdf_import = imports(:pdf_with_rows)
+    # The fixture has no attached pdf_file and no statement, so
+    # ImportsController#show would redirect to the upload page. The
+    # partial under test only renders for an uploaded PDF — stub the
+    # state so we exercise the actual account-select scoping path.
+    PdfImport.any_instance.stubs(:pdf_uploaded?).returns(true)
 
     get import_url(pdf_import)
 
