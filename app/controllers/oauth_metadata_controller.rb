@@ -21,7 +21,7 @@ class OauthMetadataController < ApplicationController
       token_endpoint: "#{configured_base_url}/oauth/token",
       registration_endpoint: "#{configured_base_url}/register",
       response_types_supported: [ "code" ],
-      grant_types_supported: [ "authorization_code", "client_credentials" ],
+      grant_types_supported: [ "authorization_code" ],
       code_challenge_methods_supported: [ "S256" ],
       scopes_supported: [ "read_write" ]
     }
