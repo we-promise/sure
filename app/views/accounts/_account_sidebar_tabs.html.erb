@@ -3,7 +3,7 @@
 <% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours do %>
 <div id="account-sidebar-tabs">
   <% if family.missing_data_provider? %>
-    <details class="group bg-yellow-tint-10 rounded-lg p-2 text-yellow-600 mb-3 text-xs">
+    <details class="group bg-warning/10 rounded-lg p-2 text-warning mb-3 text-xs">
       <summary class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
           <%= icon "triangle-alert", size: "sm", color: "warning" %>
@@ -15,7 +15,7 @@
       <div class="text-xs py-2 space-y-2">
         <p><%= t("accounts.sidebar.missing_data_description", product: product_name) %></p>
         <p>
-          <%= link_to t("accounts.sidebar.configure_providers"), settings_hosting_path, class: "text-yellow-600 underline" %>
+          <%= link_to t("accounts.sidebar.configure_providers"), settings_hosting_path, class: "text-warning underline" %>
         </p>
       </div>
     </details>
