@@ -96,9 +96,7 @@
                       </span>
                     <% end %>
                     <% if transaction.refund? %>
-                      <span class="text-info" title="<%= t('.refund_tooltip') %>">
-                        <%= icon "corner-down-left", size: "sm", color: "current" %>
-                      </span>
+                      <%= render DS::Tooltip.new(text: t(".refund_tooltip"), icon: "corner-down-left", size: "sm", color: "info", as: :span) %>
                     <% end %>
 
                     <%# Pending indicator %>
