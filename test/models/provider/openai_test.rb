@@ -8,6 +8,22 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "effective_model defers to ENV when set without consulting Setting" do
+    with_env_overrides OPENAI_MODEL: "custom-model" do
+      Setting.expects(:openai_model).never
+
+      assert_equal "custom-model", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model falls back to default when nothing set" do
+    with_env_overrides OPENAI_MODEL: nil do
+      Setting.stubs(:openai_model).returns(nil)
+
+      assert_equal Provider::Openai::DEFAULT_MODEL, Provider::Openai.effective_model
+    end
+  end
+
   test "openai errors are automatically raised" do
     VCR.use_cassette("openai/chat/error") do
       response = @openai.chat_response("Test", model: "invalid-model-that-will-trigger-api-error")

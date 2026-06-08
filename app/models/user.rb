@@ -20,6 +20,8 @@ class User < ApplicationRecord
   end
 
   belongs_to :family
+  has_many :family_memberships, dependent: :destroy, inverse_of: :user
+  has_many :families, -> { distinct }, through: :family_memberships
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
   belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
@@ -61,6 +63,7 @@ class User < ApplicationRecord
 
   before_validation :apply_ui_layout_defaults
   before_validation :apply_role_based_ui_defaults
+  after_create :ensure_primary_family_membership!
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
@@ -121,12 +124,50 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
-  def accessible_accounts
-    family.accounts.accessible_by(self)
+  def available_families
+    [ family, *families ].compact.uniq { |candidate| candidate.id }
   end
 
-  def finance_accounts
-    family.accounts.included_in_finances_for(self)
+  def active_family(current_session = Current.session)
+    current_family_id = current_session&.get_active_family_id
+    available_families.find { |candidate| candidate.id.to_s == current_family_id.to_s } || family
+  end
+
+  # ── Membership role bridge (PR 2D) ──
+
+  def membership_for(family_scope = active_family)
+    return nil unless family_scope
+    family_memberships.find_by(family_id: family_scope.id)
+  end
+
+  def role_for(family_scope = active_family)
+    membership_for(family_scope)&.role || role
+  end
+
+  def admin_for?(family_scope = active_family)
+    role_for(family_scope) == "admin"
+  end
+
+  def member_of?(family_scope = active_family)
+    membership_for(family_scope).present?
+  end
+
+  def accessible_accounts(family_scope = active_family)
+    return Account.none if family_scope.blank?
+
+    family_scope.accounts.accessible_by(self)
+  end
+
+  def finance_accounts(family_scope = active_family)
+    return Account.none if family_scope.blank?
+
+    family_scope.accounts.included_in_finances_for(self)
+  end
+
+  def ensure_primary_family_membership!
+    family_memberships.find_or_create_by!(family: family) do |membership|
+      membership.role = role_for_primary_membership
+    end
   end
 
   def display_name
@@ -152,7 +193,7 @@ class User < ApplicationRecord
   def ai_available?
     return true unless Rails.application.config.app_mode.self_hosted?
 
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+    effective_type = ENV["ASSISTANT_TYPE"].presence || active_family&.assistant_type.presence || "builtin"
 
     case effective_type
     when "external"
@@ -300,7 +341,7 @@ class User < ApplicationRecord
     return nil unless default_account_id.present?
 
     account = default_account
-    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == active_family&.id
 
     account
   end
@@ -437,6 +478,10 @@ class User < ApplicationRecord
 
     def skip_password_validation?
       skip_password_validation == true
+    end
+
+    def role_for_primary_membership
+      admin? ? "admin" : role
     end
 
     def default_dashboard_section_order

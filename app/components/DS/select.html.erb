@@ -8,7 +8,7 @@
             value: @selected_value,
             data: {
               "form-dropdown-target": "input",
-              "auto-submit-target": "auto",
+              "auto-submit-form-target": "auto",
               **(options.dig(:html_options, :data) || {})
             } %>
         <%# `aria-expanded` reflects MENU open/closed state — managed by the

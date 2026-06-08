@@ -38,23 +38,28 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
   test "should add existing user to household when inviting their email" do
     existing_user = users(:empty)
     assert existing_user.family_id != @admin.family_id
+    original_family_id = existing_user.family_id
+    original_role = existing_user.role
 
     assert_difference("Invitation.count") do
-      assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
-        post invitations_url, params: {
-          invitation: {
-            email: existing_user.email,
-            role: "member"
+      assert_difference("FamilyMembership.count", 1) do
+        assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
+          post invitations_url, params: {
+            invitation: {
+              email: existing_user.email,
+              role: "member"
+            }
           }
-        }
+        end
       end
     end
 
     invitation = Invitation.order(created_at: :desc).first
     assert invitation.accepted_at.present?, "Invitation should be accepted"
     existing_user.reload
-    assert_equal @admin.family_id, existing_user.family_id
-    assert_equal "member", existing_user.role
+    assert_equal original_family_id, existing_user.family_id
+    assert_equal original_role, existing_user.role
+    assert FamilyMembership.exists?(user: existing_user, family: @admin.family)
     assert_redirected_to settings_profile_path
     assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
   end
@@ -107,8 +112,8 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @admin, invitation.inviter
   end
 
-  test "inviting an existing user as guest applies intro defaults" do
-    existing_user = users(:empty)
+  test "inviting an existing user in the same family as guest applies intro defaults" do
+    existing_user = users(:family_member)
     existing_user.update!(
       role: :member,
       ui_layout: :dashboard,

@@ -23,6 +23,8 @@ class Family < ApplicationRecord
   SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
+  has_many :family_memberships, dependent: :destroy, inverse_of: :family
+  has_many :members, through: :family_memberships, source: :user
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 

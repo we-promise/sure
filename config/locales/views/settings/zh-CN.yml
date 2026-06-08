@@ -160,6 +160,7 @@ zh-CN:
     profiles:
       destroy:
         cannot_remove_self: 您不能把自己从账户中移除。
+        member_owns_household_data: 成员仍在当前账本中拥有账户，无法移除。请先转移或删除这些账户。
         member_removal_failed: 移除成员时出现问题。
         member_removed: 成员已成功移除。
         not_authorized: 您没有权限移除成员。

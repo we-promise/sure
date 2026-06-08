@@ -3,10 +3,12 @@ class Current < ActiveSupport::CurrentAttributes
 
   attribute :session
 
-  delegate :family, to: :user, allow_nil: true
-
   def user
     impersonated_user || session&.user
+  end
+
+  def family
+    session&.active_family || user&.active_family(session)
   end
 
   def impersonated_user
@@ -28,7 +30,10 @@ class Current < ActiveSupport::CurrentAttributes
   end
 
   def accessible_entries
-    return family&.entries unless user
-    family.entries.joins(:account).merge(Account.accessible_by(user))
+    current_family = family
+    return current_family&.entries unless user
+    return Entry.none if current_family.blank?
+
+    current_family.entries.joins(:account).merge(Account.accessible_by(user))
   end
 end

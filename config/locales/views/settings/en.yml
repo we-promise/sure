@@ -161,6 +161,7 @@ en:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
         member_owns_other_family_data: This member still owns accounts in another household and cannot be removed. Transfer or remove those accounts first.
+        member_owns_household_data: This member still owns accounts in this household and cannot be removed. Transfer or remove those accounts first.
         member_removal_failed: There was a problem removing the member.
         member_removed: Member was successfully removed.
         not_authorized: You are not authorized to remove members.

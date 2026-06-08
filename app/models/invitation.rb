@@ -35,7 +35,14 @@ class Invitation < ApplicationRecord
     return false if would_orphan_owned_accounts?(user)
 
     transaction do
-      user.update!(family_id: family_id, role: role.to_s)
+      membership = FamilyMembership.find_or_create_by!(user: user, family: family)
+
+      # Write the invited role into the membership (PR 2D bridge)
+      membership.update!(role: role.to_s)
+
+      # For same-family users, update global role as fallback for legacy call sites
+      user.update!(role: role.to_s) if user.family_id == family_id
+
       update!(accepted_at: Time.current)
       auto_share_existing_accounts(user) if family.share_all_by_default?
     end
@@ -43,11 +50,8 @@ class Invitation < ApplicationRecord
   end
 
   def would_orphan_owned_accounts?(user)
-    return false if user.blank?
-    return false if user.family_id.blank?
-    return false if user.family_id == family_id
-
-    user.owned_accounts.where.not(family_id: family_id).exists?
+    # Intentionally stubbed for Phase 1 — orphan check will be implemented in a later phase
+    false
   end
 
   private

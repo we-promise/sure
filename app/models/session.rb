@@ -24,6 +24,24 @@ class Session < ApplicationRecord
     save!
   end
 
+  def get_active_family_id
+    data["active_family_id"]
+  end
+
+  def set_active_family_id(family_id)
+    data["active_family_id"] = family_id
+    save!
+  end
+
+  def active_family
+    return unless user
+
+    family_id = get_active_family_id
+    return user.family if family_id.blank?
+
+    user.available_families.find { |candidate| candidate.id.to_s == family_id.to_s } || user.family
+  end
+
   private
 
     def capture_session_info

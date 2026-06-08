@@ -41,9 +41,10 @@
       <% end %>
       <div class="bg-container-inset rounded-xl p-1">
         <div class="px-4 py-2">
-          <p class="uppercase text-xs text-secondary font-medium"><%= Current.family.name %> &middot; <%= Current.family.users.size %></p>
+          <p class="uppercase text-xs text-secondary font-medium"><%= Current.family.name %> &middot; <%= @memberships.size %></p>
         </div>
-        <% @users.each do |user| %>
+        <% @memberships.each do |membership| %>
+          <% user = membership.user %>
           <div class="flex gap-2 mt-2 items-center bg-container p-4 shadow-border-xs rounded-lg">
             <div class="w-9 h-9 shrink-0">
               <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials %>
@@ -57,7 +58,7 @@
                 <%= render DS::Button.new(
                   variant: "icon",
                   icon: "x",
-                  href: settings_profile_path(user_id: user),
+                  href: settings_profile_path(membership_id: membership.id),
                   method: :delete,
                   confirm: CustomConfirm.for_resource_deletion(user.display_name, high_severity: true)
                 ) %>

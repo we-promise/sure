@@ -1,6 +1,9 @@
 <%# locals: (user:, placement: "right-start", offset: 16, intro_mode: false) %>
 
 <% intro_mode = local_assigns.fetch(:intro_mode, false) %>
+<% family_options = user.available_families.map { |family| { value: family.id, label: family.name, object: family } } %>
+<% current_family = user.active_family(Current.session) %>
+<% current_family_label = current_family&.name || family_options.first&.dig(:label) %>
 
 <div data-testid="user-menu">
   <%# `DS::Popover` (not `DS::Menu`) because the panel includes a
@@ -48,6 +51,25 @@
       <%# `roving: false` keeps these items in the normal Tab order. The parent
           `DS::Popover` has no arrow-key roving handler and is not a `role="menu"`
           container, so the default `tabindex="-1"` would skip every item. %>
+      <% if family_options.many? %>
+        <%= styled_form_with scope: :current_session, url: current_session_path, method: :put, class: "px-3 py-2 border-b border-tertiary", data: { controller: "auto-submit-form" } do |form| %>
+          <%= render DS::Select.new(
+            form: form,
+            method: :active_family_id,
+            items: family_options,
+            selected: current_family&.id,
+            label: t(".switch_ledger"),
+            placeholder: current_family_label,
+            html_options: {
+              data: {
+                "auto-submit-form-target": "auto",
+                "autosubmit-trigger-event": "change"
+              }
+            }
+          ) %>
+        <% end %>
+      <% end %>
+
       <%= render DS::MenuItem.new(
         variant: "link",
         roving: false,

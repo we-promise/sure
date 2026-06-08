@@ -112,7 +112,9 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
 
     created_user = User.find_by(email: invitation.email)
+    assert_equal invitation.family_id, created_user.family_id
     assert_equal "guest", created_user.role
+    assert_equal "guest", created_user.membership_for(invitation.family).role
     assert created_user.ui_layout_intro?
     assert_not created_user.show_sidebar?
     assert_not created_user.show_ai_sidebar?
