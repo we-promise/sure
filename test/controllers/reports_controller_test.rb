@@ -193,6 +193,40 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".text-center.py-8.text-subdued", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
   end
 
+  test "index avoids residual category lazy loads" do
+    account = accounts(:depository)
+
+    4.times do |idx|
+      parent = @family.categories.create!(
+        name: "Reports Parent #{idx}",
+        color: "#000000",
+        lucide_icon: "folder"
+      )
+      child = @family.categories.create!(
+        name: "Reports Child #{idx}",
+        color: "#111111",
+        lucide_icon: "folder",
+        parent: parent
+      )
+      entry = account.entries.create!(
+        name: "Reports transaction #{idx}",
+        date: Date.current,
+        amount: 10 + idx,
+        currency: "USD",
+        entryable: Transaction.new(
+          category: child,
+          kind: "standard"
+        )
+      )
+      assert entry.persisted?
+    end
+
+    queries = capture_sql_queries { get reports_path(period_type: :monthly) }
+
+    assert_response :ok
+    assert_empty queries.grep(/SELECT "categories"\.\* FROM "categories" WHERE "categories"\."id" = \$1 LIMIT \$2/)
+  end
+
   test "export transactions with API key authentication" do
     # Use an active API key with read permissions
     api_key = api_keys(:active_key)
@@ -373,4 +407,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "button[disabled][aria-label=?]", I18n.t("reports.index.next_period")
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
