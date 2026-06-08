@@ -119,6 +119,10 @@ class AccountDetailService {
       DateTime? currentDate;
       final totalPages = firstPage.totalPages < 1 ? 1 : firstPage.totalPages;
 
+      // Holdings are chronological, so the latest positions are at the end of
+      // the final page. Walk backward only until the date changes; this keeps
+      // the common case to page 1 + latest page while still handling accounts
+      // whose current positions span a page boundary.
       for (var page = totalPages; page >= 1; page -= 1) {
         final holdingsPage = page == 1
             ? firstPage

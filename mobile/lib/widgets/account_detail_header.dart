@@ -32,6 +32,9 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
   String? _error;
   List<AccountBalance> _balances = [];
   List<AccountHolding> _holdings = [];
+  bool _disposed = false;
+  bool _accountDetailServiceClosed = false;
+  int _activeDetailLoads = 0;
 
   @override
   void initState() {
@@ -41,12 +44,18 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
   }
 
   Future<void> _loadDetails() async {
+    if (_disposed) return;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
+    if (_disposed) return;
+
     if (accessToken == null) {
       await authProvider.logout();
       return;
     }
+
+    _activeDetailLoads += 1;
 
     if (mounted) {
       setState(() {
@@ -55,62 +64,67 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
       });
     }
 
-    final results = await Future.wait([
-      _accountDetailService.getAccountDetail(
-        accessToken: accessToken,
-        accountId: widget.account.id,
-      ),
-      _accountDetailService.getBalances(
-        accessToken: accessToken,
-        accountId: widget.account.id,
-      ),
-    ]);
+    try {
+      final results = await Future.wait([
+        _accountDetailService.getAccountDetail(
+          accessToken: accessToken,
+          accountId: widget.account.id,
+        ),
+        _accountDetailService.getBalances(
+          accessToken: accessToken,
+          accountId: widget.account.id,
+        ),
+      ]);
 
-    final accountResult = results[0];
-    final balancesResult = results[1];
-    final resolvedAccount =
-        accountResult['success'] == true && accountResult['account'] is Account
-            ? accountResult['account'] as Account
-            : _account;
+      final accountResult = results[0];
+      final balancesResult = results[1];
+      final resolvedAccount = accountResult['success'] == true &&
+              accountResult['account'] is Account
+          ? accountResult['account'] as Account
+          : _account;
 
-    Map<String, dynamic>? holdingsResult;
-    if (_supportsHoldings(resolvedAccount)) {
-      holdingsResult = await _accountDetailService.getHoldings(
-        accessToken: accessToken,
-        accountId: widget.account.id,
-      );
+      Map<String, dynamic>? holdingsResult;
+      if (_supportsHoldings(resolvedAccount)) {
+        holdingsResult = await _accountDetailService.getHoldings(
+          accessToken: accessToken,
+          accountId: widget.account.id,
+        );
+      }
+
+      if (!mounted || _disposed) return;
+
+      if (accountResult['error'] == 'unauthorized' ||
+          balancesResult['error'] == 'unauthorized' ||
+          holdingsResult?['error'] == 'unauthorized') {
+        await authProvider.logout();
+        return;
+      }
+
+      setState(() {
+        if (accountResult['success'] == true &&
+            accountResult['account'] is Account) {
+          _account = resolvedAccount;
+        }
+        if (balancesResult['success'] == true) {
+          _balances = (balancesResult['balances'] as List<dynamic>? ?? [])
+              .whereType<AccountBalance>()
+              .toList();
+        }
+        if (holdingsResult?['success'] == true) {
+          _holdings = (holdingsResult?['holdings'] as List<dynamic>? ?? [])
+              .whereType<AccountHolding>()
+              .toList();
+        }
+        if (accountResult['success'] != true &&
+            balancesResult['success'] != true) {
+          _error = 'Account details are temporarily unavailable';
+        }
+        _isLoading = false;
+      });
+    } finally {
+      _activeDetailLoads -= 1;
+      _closeOwnedAccountDetailServiceIfIdle();
     }
-
-    if (!mounted) return;
-
-    if (accountResult['error'] == 'unauthorized' ||
-        balancesResult['error'] == 'unauthorized' ||
-        holdingsResult?['error'] == 'unauthorized') {
-      await authProvider.logout();
-      return;
-    }
-
-    setState(() {
-      if (accountResult['success'] == true &&
-          accountResult['account'] is Account) {
-        _account = resolvedAccount;
-      }
-      if (balancesResult['success'] == true) {
-        _balances = (balancesResult['balances'] as List<dynamic>? ?? [])
-            .whereType<AccountBalance>()
-            .toList();
-      }
-      if (holdingsResult?['success'] == true) {
-        _holdings = (holdingsResult?['holdings'] as List<dynamic>? ?? [])
-            .whereType<AccountHolding>()
-            .toList();
-      }
-      if (accountResult['success'] != true &&
-          balancesResult['success'] != true) {
-        _error = 'Account details are temporarily unavailable';
-      }
-      _isLoading = false;
-    });
   }
 
   bool _supportsHoldings(Account account) {
@@ -120,10 +134,19 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
 
   @override
   void dispose() {
-    if (_ownsAccountDetailService) {
-      _accountDetailService.close();
-    }
+    _disposed = true;
+    _closeOwnedAccountDetailServiceIfIdle();
     super.dispose();
+  }
+
+  void _closeOwnedAccountDetailServiceIfIdle() {
+    if (_ownsAccountDetailService &&
+        _disposed &&
+        _activeDetailLoads == 0 &&
+        !_accountDetailServiceClosed) {
+      _accountDetailService.close();
+      _accountDetailServiceClosed = true;
+    }
   }
 
   @override
@@ -180,7 +203,8 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
             ),
             if (_account.institutionName != null ||
                 _account.subtype != null ||
-                _account.cashBalance != null) ...[
+                _account.cashBalance != null ||
+                _account.status != null) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -201,10 +225,11 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                       label: 'Cash ${_account.cashBalance}',
                       icon: Icons.payments_outlined,
                     ),
-                  _DetailChip(
-                    label: _account.status ?? 'cached',
-                    icon: Icons.sync,
-                  ),
+                  if (_account.status != null)
+                    _DetailChip(
+                      label: _account.status!,
+                      icon: Icons.sync,
+                    ),
                 ],
               ),
             ],
