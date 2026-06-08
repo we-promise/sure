@@ -1,4 +1,17 @@
 class Assistant::Responder
+  # Raised when the LLM keeps requesting tool calls past the per-turn cap.
+  # Caught by Assistant::Builtin#respond_to → chat.add_error so the user sees
+  # an actionable message instead of a perpetual "Thinking…" indicator (#2241).
+  class ToolCallLimitError < StandardError; end
+
+  # Cap on follow-up tool-roundtrips per user turn. The first response (which
+  # may itself request tools) is NOT counted — this is the number of
+  # additional LLM-tool roundtrips after that. Capped to keep recursive
+  # tool-call loops from running up unbounded spend on paid APIs, but
+  # overridable via `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` for self-hosted
+  # deployments where the model is local and the cost is just latency.
+  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 5
+
   def initialize(message:, instructions:, function_tool_caller:, llm:)
     @message = message
     @instructions = instructions
@@ -24,7 +37,7 @@ class Assistant::Responder
         response_handled = true
 
         if response.function_requests.any?
-          handle_follow_up_response(response)
+          handle_follow_up_response(response, iteration: 1)
         else
           emit(:response, { id: response.id })
         end
@@ -36,7 +49,7 @@ class Assistant::Responder
     # For synchronous (non-streaming) responses, handle function requests if not already handled by streamer
     unless response_handled
       if response && response.function_requests.any?
-        handle_follow_up_response(response)
+        handle_follow_up_response(response, iteration: 1)
       elsif response
         emit(:response, { id: response.id })
       end
@@ -46,14 +59,22 @@ class Assistant::Responder
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
 
-    def handle_follow_up_response(response)
+    # Execute the tool requests on `response`, send the results back to the
+    # LLM, and iterate if the follow-up itself requests more tools — capped
+    # at `max_tool_call_iterations`. The previous implementation silently
+    # dropped second-round function requests, leaving the assistant message
+    # in "pending" forever (#2241).
+    def handle_follow_up_response(response, iteration:)
+      next_response = nil
+      next_response_handled = false
+
       streamer = proc do |chunk|
         case chunk.type
         when "output_text"
           emit(:output_text, chunk.data)
         when "response"
-          # We do not currently support function executions for a follow-up response (avoid recursive LLM calls that could lead to high spend)
-          emit(:response, { id: chunk.data.id })
+          next_response = chunk.data
+          next_response_handled = true
         end
       end
 
@@ -64,12 +85,38 @@ class Assistant::Responder
         function_tool_calls: function_tool_calls
       })
 
-      # Get follow-up response with tool call results
-      get_llm_response(
+      sync_response = get_llm_response(
         streamer: streamer,
         function_results: function_tool_calls.map(&:to_result),
         previous_response_id: response.id
       )
+
+      next_response ||= sync_response unless next_response_handled
+
+      return unless next_response
+
+      if next_response.function_requests.any?
+        if iteration >= max_tool_call_iterations
+          raise ToolCallLimitError,
+                "Assistant reached the per-turn tool-call limit of #{max_tool_call_iterations}. " \
+                "Try a more specific question, or raise " \
+                "ASSISTANT_MAX_TOOL_CALL_ITERATIONS (currently #{max_tool_call_iterations}) " \
+                "if you're self-hosting against a local model."
+        end
+        handle_follow_up_response(next_response, iteration: iteration + 1)
+      else
+        emit(:response, { id: next_response.id })
+      end
+    end
+
+    def max_tool_call_iterations
+      @max_tool_call_iterations ||= begin
+        raw = ENV["ASSISTANT_MAX_TOOL_CALL_ITERATIONS"]
+        parsed = Integer(raw, 10) rescue nil
+        # Reject zero/negative so the loop can't be configured into a no-op
+        # that silently regresses the original bug.
+        parsed && parsed.positive? ? parsed : DEFAULT_MAX_TOOL_CALL_ITERATIONS
+      end
     end
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil)

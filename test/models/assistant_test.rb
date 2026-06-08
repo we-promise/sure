@@ -183,6 +183,137 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+  test "iterates tool calls across multiple follow-up rounds within the cap" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
+    Assistant::Function::GetIncomeStatement.any_instance.stubs(:call).returns("income").once
+
+    # Call #1: function request for get_accounts
+    call1_chunk = provider_response_chunk(
+      id: "1", model: "gpt-4.1", messages: [],
+      function_requests: [ provider_function_request(id: "1", call_id: "1", function_name: "get_accounts", function_args: "{}") ]
+    )
+    # Call #2: follow-up *also* requests a tool (the case the previous
+    # implementation dropped silently — issue #2241).
+    call2_chunk = provider_response_chunk(
+      id: "2", model: "gpt-4.1", messages: [],
+      function_requests: [ provider_function_request(id: "2", call_id: "2", function_name: "get_income_statement", function_args: "{}") ]
+    )
+    # Call #3: final text answer
+    call3_text = [ provider_text_chunk("Final "), provider_text_chunk("answer.") ]
+    call3_chunk = provider_response_chunk(
+      id: "3", model: "gpt-4.1", messages: [ provider_message(id: "1", text: call3_text.join) ], function_requests: []
+    )
+
+    # Expectations defined in reverse runtime order to match the pattern
+    # used by the existing "responds with tool function calls" test above
+    # (mocha's matching for repeat expectations on the same method).
+    sequence = sequence("provider_chat_response")
+
+    @provider.expects(:chat_response).with do |_p, **options|
+      call3_text.each { |c| options[:streamer].call(c) }
+      options[:streamer].call(call3_chunk)
+      true
+    end.returns(provider_success_response(call3_chunk.data)).once.in_sequence(sequence)
+
+    @provider.expects(:chat_response).with do |_p, **options|
+      options[:streamer].call(call2_chunk)
+      true
+    end.returns(provider_success_response(call2_chunk.data)).once.in_sequence(sequence)
+
+    @provider.expects(:chat_response).with do |_p, **options|
+      options[:streamer].call(call1_chunk)
+      true
+    end.returns(provider_success_response(call1_chunk.data)).once.in_sequence(sequence)
+
+    assert_difference "AssistantMessage.count", 1 do
+      @assistant.respond_to(@message)
+    end
+
+    message = @chat.messages.ordered.where(type: "AssistantMessage").last
+    assert_equal "complete", message.status, "second-round tool calls must still complete the message"
+    assert_equal "Final answer.", message.content
+  end
+
+  test "surfaces error and does not leave message pending when tool-call cap is exceeded" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
+
+    call1_chunk = provider_response_chunk(
+      id: "1", model: "gpt-4.1", messages: [],
+      function_requests: [ provider_function_request(id: "1", call_id: "1", function_name: "get_accounts", function_args: "{}") ]
+    )
+    # Follow-up that itself requests another tool — would normally iterate,
+    # but the cap below clamps to 1 follow-up round.
+    call2_chunk = provider_response_chunk(
+      id: "2", model: "gpt-4.1", messages: [],
+      function_requests: [ provider_function_request(id: "2", call_id: "2", function_name: "get_accounts", function_args: "{}") ]
+    )
+
+    # Reverse-order definition mirrors the "responds with tool function calls"
+    # pattern above.
+    sequence = sequence("provider_chat_response")
+
+    @provider.expects(:chat_response).with do |_p, **options|
+      options[:streamer].call(call2_chunk)
+      true
+    end.returns(provider_success_response(call2_chunk.data)).once.in_sequence(sequence)
+
+    @provider.expects(:chat_response).with do |_p, **options|
+      options[:streamer].call(call1_chunk)
+      true
+    end.returns(provider_success_response(call1_chunk.data)).once.in_sequence(sequence)
+
+    captured_error = nil
+    @chat.expects(:add_error).with do |e|
+      captured_error = e
+      true
+    end.once
+
+    # Mirror the production job flow (Chat#ask_assistant_later): a persisted
+    # AssistantMessage starts in `pending` and is handed to the responder.
+    # This is the state #2241 reproduced — message sat persisted-pending
+    # forever because the second-round function_requests were silently
+    # dropped.
+    pending_message = AssistantMessage.create!(
+      chat: @chat, content: "", ai_model: @message.ai_model, status: :pending
+    )
+
+    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "1") do
+      @assistant.respond_to(@message, assistant_message: pending_message)
+    end
+
+    assert_instance_of Assistant::Responder::ToolCallLimitError, captured_error
+    assert_match(/tool-call limit/i, captured_error.message)
+    # Builtin's rescue branch destroys a blank pending message on error;
+    # either way the UI must not be left hanging on "Thinking…".
+    assert_empty @chat.messages.where(type: "AssistantMessage", status: "pending"),
+                 "no AssistantMessage should remain pending after the cap is hit"
+  end
+
+  test "ASSISTANT_MAX_TOOL_CALL_ITERATIONS falls back to default when zero or unparseable" do
+    responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
+
+    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "0") do
+      assert_equal Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS,
+                   responder.send(:max_tool_call_iterations)
+    end
+
+    # Re-create so the per-instance memoization doesn't carry over.
+    responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
+    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "not-a-number") do
+      assert_equal Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS,
+                   responder.send(:max_tool_call_iterations)
+    end
+
+    responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
+    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "12") do
+      assert_equal 12, responder.send(:max_tool_call_iterations)
+    end
+  end
+
   test "for_chat returns Builtin by default" do
     assert_instance_of Assistant::Builtin, Assistant.for_chat(@chat)
   end
