@@ -75,6 +75,7 @@ class Assistant::Responder
     # provider in this generic class or replaying outputs with stale
     # call_ids on the Responses API, neither of which fits the scope of
     # the original bug fix.
+    def handle_follow_up_response(response, iteration:)
       next_response = nil
       next_response_handled = false
 

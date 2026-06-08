@@ -28,12 +28,11 @@ class Chat < ApplicationRecord
   ].freeze
 
   # ToolCallLimitError raised by Assistant::Responder when the LLM keeps
-  # requesting tools past the per-turn cap (#2241). Matched here so the user
-  # sees an actionable "raise the cap or refine the question" message instead
-  # of the generic "Failed to generate a response" fallback.
-  TOOL_CALL_LIMIT_PATTERNS = [
-    /tool[-_ ]call limit/i
-  ].freeze
+  # requesting tools past the per-turn cap (#2241). Matches the technical
+  # message's "tool-call limit of N" shape and captures N so we can
+  # re-resolve the localized user-facing string with the correct cap
+  # interpolated — instead of returning the raw exception text to the view.
+  TOOL_CALL_LIMIT_CAP_PATTERN = /tool[-_ ]call limit of (\d+)/i
 
   belongs_to :user
 
@@ -162,9 +161,13 @@ class Chat < ApplicationRecord
         I18n.t("chat.errors.temporarily_unavailable")
       elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
         I18n.t("chat.errors.misconfigured")
-      elsif TOOL_CALL_LIMIT_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-        # The technical message embeds the cap, so surface it verbatim here.
-        normalized_message
+      elsif (cap_match = normalized_message.match(TOOL_CALL_LIMIT_CAP_PATTERN))
+        # Re-resolve through I18n so the user-facing payload stays
+        # locale-controlled (Brakeman flagged returning normalized_message
+        # verbatim — even with `<%= %>` escaping it broadens the taint
+        # surface to arbitrary exception text). The extracted digits are
+        # safe to interpolate.
+        I18n.t("chat.errors.tool_call_limit_exceeded", max: cap_match[1])
       else
         I18n.t("chat.errors.default")
       end
