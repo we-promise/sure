@@ -69,6 +69,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2592000, response_data["expires_in"] # 30 days
     assert response_data["created_at"].present?
 
+    assert FamilyMembership.exists?(user: new_user, family: new_user.family)
+
     # Verify the device was created
     created_user = User.find(response_data["user"]["id"])
     device = created_user.mobile_devices.first
@@ -166,6 +168,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     new_user = User.find(response_data["user"]["id"])
     assert_equal "admin", new_user.role
     assert new_user.family.present?
+    assert_equal "admin", new_user.membership_for(new_user.family).role
   end
 
   test "should require invite code when enabled" do
@@ -703,6 +706,39 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should be consumed
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "SSO create account from invitation creates membership" do
+    invitation = invitations(:one)
+    invitation.update!(email: "mobile-invited@example.com", role: "guest")
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-invited",
+      email: invitation.email,
+      first_name: "Mobile",
+      last_name: "Invited",
+      name: "Mobile Invited",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: false
+    }, expires_in: 10.minutes)
+
+    assert_difference([ "User.count", "OidcIdentity.count" ], 1) do
+      assert_difference("FamilyMembership.count", 1) do
+        post "/api/v1/auth/sso_create_account", params: {
+          linking_code: linking_code,
+          first_name: "Mobile",
+          last_name: "Invited"
+        }
+      end
+    end
+
+    assert_response :success
+    created_user = User.find_by!(email: invitation.email)
+    assert_equal invitation.family_id, created_user.family_id
+    assert_equal "guest", created_user.membership_for(invitation.family).role
+    assert invitation.reload.accepted_at.present?
   end
 
   test "should reject SSO create account when not allowed" do

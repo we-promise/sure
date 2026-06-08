@@ -203,7 +203,7 @@ module Api
         )
 
         if invitation.present?
-          # Accept the pending invitation: join the existing family
+          # Accept the pending invitation: join the existing family.
           user.family_id = invitation.family_id
           user.role = invitation.role
         else
@@ -214,22 +214,39 @@ module Api
           user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
         end
 
-        if user.save
-          # Mark invitation as accepted if one was used
-          invitation&.update!(accepted_at: Time.current)
+        token_response = nil
+        begin
+          ActiveRecord::Base.transaction do
+            unless user.save
+              render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+              raise ActiveRecord::Rollback
+            end
 
-          OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+            if invitation.present? && !invitation.accept_for(user)
+              render json: { errors: [ "Invitation could not be accepted" ] }, status: :unprocessable_entity
+              raise ActiveRecord::Rollback
+            end
 
-          SsoAuditLog.log_jit_account_created!(
-            user: user,
-            provider: cached[:provider],
-            request: request
-          )
+            OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
 
-          issue_mobile_tokens(user, cached[:device_info])
-        else
-          render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+            SsoAuditLog.log_jit_account_created!(
+              user: user,
+              provider: cached[:provider],
+              request: request
+            )
+
+            device_info = cached[:device_info]
+            device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
+            device = MobileDevice.upsert_device!(user, device_info)
+            token_response = device.issue_token!
+          end
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.error("[Auth] SSO account creation failed: #{e.class} - #{e.message}")
+          render json: { error: "Failed to create account" }, status: :unprocessable_entity
+          return
         end
+
+        render json: token_response.merge(user: mobile_user_payload(user)) if token_response
       end
 
       def enable_ai

@@ -64,6 +64,32 @@ class UserTest < ActiveSupport::TestCase
     assert_equal @user.family, @user.active_family(session)
   end
 
+  test "new users create primary family membership" do
+    user = User.create!(
+      email: "primary-membership@example.com",
+      password: "Password1!",
+      family: Family.new,
+      role: "admin"
+    )
+
+    membership = user.family_memberships.find_by(family: user.family)
+    assert_not_nil membership
+    assert_equal "admin", membership.role
+  end
+
+  test "super admins create admin primary family membership" do
+    user = User.create!(
+      email: "super-primary-membership@example.com",
+      password: "Password1!",
+      family: Family.new,
+      role: "super_admin"
+    )
+
+    membership = user.family_memberships.find_by(family: user.family)
+    assert_not_nil membership
+    assert_equal "admin", membership.role
+  end
+
   test "display name" do
     user = User.new(email: "user@example.com")
     assert_equal "user@example.com", user.display_name

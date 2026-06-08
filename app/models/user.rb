@@ -63,6 +63,7 @@ class User < ApplicationRecord
 
   before_validation :apply_ui_layout_defaults
   before_validation :apply_role_based_ui_defaults
+  after_create :ensure_primary_family_membership!
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
@@ -161,6 +162,12 @@ class User < ApplicationRecord
     return Account.none if family_scope.blank?
 
     family_scope.accounts.included_in_finances_for(self)
+  end
+
+  def ensure_primary_family_membership!
+    family_memberships.find_or_create_by!(family: family) do |membership|
+      membership.role = role_for_primary_membership
+    end
   end
 
   def display_name
@@ -471,6 +478,10 @@ class User < ApplicationRecord
 
     def skip_password_validation?
       skip_password_validation == true
+    end
+
+    def role_for_primary_membership
+      admin? ? "admin" : role
     end
 
     def default_dashboard_section_order

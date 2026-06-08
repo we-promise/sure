@@ -137,14 +137,21 @@ class OidcAccountsController < ApplicationController
       @user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
     end
 
-    if @user.save
-      # Create the OIDC (or other SSO) identity
+    unless @user.valid?
+      render :new_user, status: :unprocessable_entity
+      return
+    end
+
+    invitation_accepted = true
+
+    ActiveRecord::Base.transaction do
+      @user.save!
+
       identity = OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
         @user
       )
 
-      # Only log JIT account creation if identity was successfully created
       if identity.persisted?
         SsoAuditLog.log_jit_account_created!(
           user: @user,
@@ -153,31 +160,31 @@ class OidcAccountsController < ApplicationController
         )
       end
 
-      # Mark invitation as accepted — create membership (no longer migrates family_id)
       if invitation.present?
-        invitation.update!(accepted_at: Time.current)
-        FamilyMembership.find_or_create_by!(user: @user, family: invitation.family) do |m|
-          m.role = invitation.role.to_s
-        end
+        invitation_accepted = invitation.accept_for(@user)
+        raise ActiveRecord::Rollback unless invitation_accepted
       end
-
-      # Clear pending auth from session
-      session.delete(:pending_oidc_auth)
 
       @session = create_session_for(@user)
-      # Set the active family to the invited family for new users
       @session.set_active_family_id(invitation.family_id) if invitation.present?
-      notice = if invitation.present?
-        t("invitations.accept_choice.joined_household")
-      elsif accept_pending_invitation_for(@user)
-        t("invitations.accept_choice.joined_household")
-      else
-        t(".account_created")
-      end
-      redirect_to root_path, notice: notice
-    else
-      render :new_user, status: :unprocessable_entity
     end
+
+    unless invitation_accepted
+      @user.errors.add(:base, "Invitation could not be accepted")
+      render :new_user, status: :unprocessable_entity
+      return
+    end
+
+    session.delete(:pending_oidc_auth)
+
+    notice = if invitation.present?
+      t("invitations.accept_choice.joined_household")
+    elsif accept_pending_invitation_for(@user)
+      t("invitations.accept_choice.joined_household")
+    else
+      t(".account_created")
+    end
+    redirect_to root_path, notice: notice
   end
 
   private

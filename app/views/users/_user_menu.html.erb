@@ -52,7 +52,7 @@
           `DS::Popover` has no arrow-key roving handler and is not a `role="menu"`
           container, so the default `tabindex="-1"` would skip every item. %>
       <% if family_options.many? %>
-        <%= styled_form_with url: current_session_path, method: :put, class: "px-3 py-2 border-b border-tertiary", data: { controller: "auto-submit-form" } do |form| %>
+        <%= styled_form_with scope: :current_session, url: current_session_path, method: :put, class: "px-3 py-2 border-b border-tertiary", data: { controller: "auto-submit-form" } do |form| %>
           <%= render DS::Select.new(
             form: form,
             method: :active_family_id,

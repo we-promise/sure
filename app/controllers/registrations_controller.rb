@@ -72,8 +72,14 @@ class RegistrationsController < ApplicationController
           raise ActiveRecord::Rollback
         end
 
-        @invitation&.update!(accepted_at: Time.current)
+        if @invitation.present?
+          unless @invitation.accept_for(@user)
+            raise ActiveRecord::Rollback
+          end
+        end
+
         @session = create_session_for(@user)
+        @session.set_active_family_id(@invitation.family_id) if @invitation.present?
         success = true
       end
 
