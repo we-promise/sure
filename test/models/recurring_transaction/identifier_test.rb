@@ -234,6 +234,48 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal names.size, @family.recurring_transactions.where(name: names).count
   end
 
+  test "keeps automatic recurring lookup amount-scoped" do
+    account = @family.accounts.first
+    name = "Tiered Performance Subscription"
+
+    recurring_transactions = [ 40, 55 ].map do |amount|
+      create_name_pattern_entries(
+        account: account,
+        name: name,
+        amount: amount,
+        day: 5
+      )
+
+      @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: amount,
+        currency: "USD",
+        expected_day_of_month: 5,
+        last_occurrence_date: 4.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 1,
+        status: "active"
+      )
+    end
+
+    queries = nil
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      queries = capture_sql_queries do
+        @identifier.identify_recurring_patterns
+      end
+    end
+
+    recurring_lookup_queries = queries.grep(
+      /SELECT "recurring_transactions"\.\* FROM "recurring_transactions" WHERE .*"recurring_transactions"\."name" = .*LIMIT/
+    )
+
+    assert_empty recurring_lookup_queries
+    recurring_transactions.each do |recurring|
+      assert_equal 3, recurring.reload.occurrence_count
+    end
+  end
+
   test "updates manual recurring variance without per-recurring entry lookups" do
     account = @family.accounts.first
     names = Array.new(4) { |index| "Manual Performance Subscription #{index}" }

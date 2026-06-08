@@ -195,6 +195,9 @@ class RecurringTransaction
 
     private
       def recurring_transaction_lookup_key(recurring_or_attributes)
+        # Keep this aligned with the non-transfer recurring transaction unique
+        # indexes. Automatic recurring rows are amount-scoped; variable manual
+        # amounts are tracked separately in expected_amount_*.
         amount = recurring_or_attributes.respond_to?(:amount) ? recurring_or_attributes.amount : recurring_or_attributes[:amount]
         currency = recurring_or_attributes.respond_to?(:currency) ? recurring_or_attributes.currency : recurring_or_attributes[:currency]
         account_id = recurring_or_attributes.respond_to?(:account_id) ? recurring_or_attributes.account_id : recurring_or_attributes[:account_id]
@@ -221,6 +224,9 @@ class RecurringTransaction
           .select("entries.*, transactions.merchant_id AS transaction_merchant_id")
           .order(date: :desc)
 
+        # Legacy manual rows without account_id can match any account in the
+        # family, so only push account filtering into SQL when every row is
+        # account-scoped.
         if account_ids.any? && recurring_transactions.all? { |recurring| recurring.account_id.present? }
           entries = entries.where(entries: { account_id: account_ids })
         end
