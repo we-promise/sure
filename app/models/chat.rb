@@ -27,6 +27,14 @@ class Chat < ApplicationRecord
     /access token/i
   ].freeze
 
+  # ToolCallLimitError raised by Assistant::Responder when the LLM keeps
+  # requesting tools past the per-turn cap (#2241). Matched here so the user
+  # sees an actionable "raise the cap or refine the question" message instead
+  # of the generic "Failed to generate a response" fallback.
+  TOOL_CALL_LIMIT_PATTERNS = [
+    /tool[-_ ]call limit/i
+  ].freeze
+
   belongs_to :user
 
   has_one :viewer, class_name: "User", foreign_key: :last_viewed_chat_id, dependent: :nullify # "Last chat user has viewed"
@@ -154,6 +162,9 @@ class Chat < ApplicationRecord
         I18n.t("chat.errors.temporarily_unavailable")
       elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
         I18n.t("chat.errors.misconfigured")
+      elsif TOOL_CALL_LIMIT_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+        # The technical message embeds the cap, so surface it verbatim here.
+        normalized_message
       else
         I18n.t("chat.errors.default")
       end

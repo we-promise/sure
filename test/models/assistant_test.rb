@@ -206,26 +206,27 @@ class AssistantTest < ActiveSupport::TestCase
       id: "3", model: "gpt-4.1", messages: [ provider_message(id: "1", text: call3_text.join) ], function_requests: []
     )
 
-    # Expectations defined in reverse runtime order to match the pattern
-    # used by the existing "responds with tool function calls" test above
-    # (mocha's matching for repeat expectations on the same method).
-    sequence = sequence("provider_chat_response")
-
-    @provider.expects(:chat_response).with do |_p, **options|
-      call3_text.each { |c| options[:streamer].call(c) }
-      options[:streamer].call(call3_chunk)
+    # Use one dynamic expectation with a counter — mocha's per-call matching
+    # of multiple `in_sequence` expectations re-runs each `with` block's side
+    # effects during exploration, which makes the streamer mis-fire when each
+    # block calls `streamer.call(...)`. One expectation, one with-block, no
+    # ambiguity.
+    invocation = 0
+    @provider.expects(:chat_response).times(3).with do |_prompt, **options|
+      invocation += 1
+      case invocation
+      when 1 then options[:streamer].call(call1_chunk)
+      when 2 then options[:streamer].call(call2_chunk)
+      when 3
+        call3_text.each { |c| options[:streamer].call(c) }
+        options[:streamer].call(call3_chunk)
+      end
       true
-    end.returns(provider_success_response(call3_chunk.data)).once.in_sequence(sequence)
-
-    @provider.expects(:chat_response).with do |_p, **options|
-      options[:streamer].call(call2_chunk)
-      true
-    end.returns(provider_success_response(call2_chunk.data)).once.in_sequence(sequence)
-
-    @provider.expects(:chat_response).with do |_p, **options|
-      options[:streamer].call(call1_chunk)
-      true
-    end.returns(provider_success_response(call1_chunk.data)).once.in_sequence(sequence)
+    end.returns(
+      provider_success_response(call1_chunk.data),
+      provider_success_response(call2_chunk.data),
+      provider_success_response(call3_chunk.data)
+    )
 
     assert_difference "AssistantMessage.count", 1 do
       @assistant.respond_to(@message)
@@ -234,6 +235,12 @@ class AssistantTest < ActiveSupport::TestCase
     message = @chat.messages.ordered.where(type: "AssistantMessage").last
     assert_equal "complete", message.status, "second-round tool calls must still complete the message"
     assert_equal "Final answer.", message.content
+    # Both rounds' tool calls must persist, not just the last one — Builtin's
+    # listener used to overwrite on each `:response` event (#2253 review).
+    assert_equal 2, message.tool_calls.size,
+                 "expected both round-1 (get_accounts) and round-2 (get_income_statement) tool calls persisted"
+    function_names = message.tool_calls.map(&:function_name).sort
+    assert_equal [ "get_accounts", "get_income_statement" ], function_names
   end
 
   test "surfaces error and does not leave message pending when tool-call cap is exceeded" do
@@ -252,19 +259,20 @@ class AssistantTest < ActiveSupport::TestCase
       function_requests: [ provider_function_request(id: "2", call_id: "2", function_name: "get_accounts", function_args: "{}") ]
     )
 
-    # Reverse-order definition mirrors the "responds with tool function calls"
-    # pattern above.
-    sequence = sequence("provider_chat_response")
-
-    @provider.expects(:chat_response).with do |_p, **options|
-      options[:streamer].call(call2_chunk)
+    # Single dynamic expectation (see the multi-iteration test above for
+    # rationale).
+    invocation = 0
+    @provider.expects(:chat_response).times(2).with do |_prompt, **options|
+      invocation += 1
+      case invocation
+      when 1 then options[:streamer].call(call1_chunk)
+      when 2 then options[:streamer].call(call2_chunk)
+      end
       true
-    end.returns(provider_success_response(call2_chunk.data)).once.in_sequence(sequence)
-
-    @provider.expects(:chat_response).with do |_p, **options|
-      options[:streamer].call(call1_chunk)
-      true
-    end.returns(provider_success_response(call1_chunk.data)).once.in_sequence(sequence)
+    end.returns(
+      provider_success_response(call1_chunk.data),
+      provider_success_response(call2_chunk.data)
+    )
 
     captured_error = nil
     @chat.expects(:add_error).with do |e|
@@ -293,24 +301,19 @@ class AssistantTest < ActiveSupport::TestCase
                  "no AssistantMessage should remain pending after the cap is hit"
   end
 
-  test "ASSISTANT_MAX_TOOL_CALL_ITERATIONS falls back to default when zero or unparseable" do
-    responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
-
-    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "0") do
-      assert_equal Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS,
-                   responder.send(:max_tool_call_iterations)
-    end
-
-    # Re-create so the per-instance memoization doesn't carry over.
-    responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
-    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "not-a-number") do
-      assert_equal Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS,
-                   responder.send(:max_tool_call_iterations)
-    end
-
-    responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
-    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "12") do
-      assert_equal 12, responder.send(:max_tool_call_iterations)
+  test "ASSISTANT_MAX_TOOL_CALL_ITERATIONS falls back to default when zero, negative, or unparseable" do
+    # Re-create per case so the per-instance memoization doesn't carry over.
+    [
+      [ "0", Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS ],
+      [ "-1", Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS ],
+      [ "not-a-number", Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS ],
+      [ "12", 12 ]
+    ].each do |env_value, expected|
+      responder = Assistant::Responder.new(message: @message, instructions: nil, function_tool_caller: nil, llm: nil)
+      with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => env_value) do
+        assert_equal expected, responder.send(:max_tool_call_iterations),
+                     "ASSISTANT_MAX_TOOL_CALL_ITERATIONS=#{env_value.inspect} should resolve to #{expected}"
+      end
     end
   end
 

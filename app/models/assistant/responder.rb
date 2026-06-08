@@ -64,7 +64,17 @@ class Assistant::Responder
     # at `max_tool_call_iterations`. The previous implementation silently
     # dropped second-round function requests, leaving the assistant message
     # in "pending" forever (#2241).
-    def handle_follow_up_response(response, iteration:)
+    #
+    # Note: each recursive call sends only the CURRENT round's
+    # function_results to the LLM. On OpenAI's Responses API this is correct
+    # — `previous_response_id` chains server-side state. On the generic
+    # OpenAI-compatible path (LiteLLM / Ollama / LM Studio) and Anthropic,
+    # there's no server-side chain, so the next-round LLM doesn't see prior
+    # in-turn tool results. Provider-aware accumulation belongs in a
+    # follow-up PR — fixing it here would require either branching on the
+    # provider in this generic class or replaying outputs with stale
+    # call_ids on the Responses API, neither of which fits the scope of
+    # the original bug fix.
       next_response = nil
       next_response_handled = false
 
@@ -98,10 +108,7 @@ class Assistant::Responder
       if next_response.function_requests.any?
         if iteration >= max_tool_call_iterations
           raise ToolCallLimitError,
-                "Assistant reached the per-turn tool-call limit of #{max_tool_call_iterations}. " \
-                "Try a more specific question, or raise " \
-                "ASSISTANT_MAX_TOOL_CALL_ITERATIONS (currently #{max_tool_call_iterations}) " \
-                "if you're self-hosting against a local model."
+                I18n.t("chat.errors.tool_call_limit_exceeded", max: max_tool_call_iterations)
         end
         handle_follow_up_response(next_response, iteration: iteration + 1)
       else
