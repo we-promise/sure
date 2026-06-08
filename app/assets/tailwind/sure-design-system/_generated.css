@@ -447,7 +447,7 @@
 }
 
 @utility button-bg-destructive {
-  @apply bg-red-500;
+  @apply bg-red-600;
 
   @variant theme-dark {
     @apply bg-red-400;
@@ -455,7 +455,7 @@
 }
 
 @utility button-bg-destructive-hover {
-  @apply bg-red-600;
+  @apply bg-red-700;
 
   @variant theme-dark {
     @apply bg-red-500;
