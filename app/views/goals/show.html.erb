@@ -224,7 +224,7 @@
             <% end %>
           </div>
         </div>
-        <div class="flex-1 min-h-[200px]"
+        <div class="flex-1 min-h-[200px] privacy-sensitive"
              data-controller="goal-projection-chart"
              data-goal-projection-chart-data-value="<%= @goal.projection_payload.to_json %>"
              data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: @goal.name) %>"

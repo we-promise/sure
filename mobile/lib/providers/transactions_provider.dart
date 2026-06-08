@@ -102,8 +102,10 @@ class TransactionsProvider with ChangeNotifier {
         accountId: accountId,
       );
 
-      _log.debug('TransactionsProvider',
-          'Loaded ${localTransactions.length} transactions from local storage (accountId: $accountId)');
+      _log.debug(
+        'TransactionsProvider',
+        'Loaded ${localTransactions.length} transactions from local storage${accountId != null ? " with account filter" : ""}',
+      );
 
       _transactions = localTransactions;
       notifyListeners();
@@ -114,8 +116,10 @@ class TransactionsProvider with ChangeNotifier {
           'Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
 
       if (isOnline && (forceSync || localTransactions.isEmpty)) {
-        _log.debug('TransactionsProvider',
-            'Syncing from server for accountId: $accountId');
+        _log.debug(
+          'TransactionsProvider',
+          'Syncing transactions from server${accountId != null ? " with account filter" : ""}',
+        );
         final result = await _syncService.syncFromServer(
           accessToken: accessToken,
           accountId: accountId,
@@ -168,8 +172,10 @@ class TransactionsProvider with ChangeNotifier {
     try {
       final isOnline = _connectivityService?.isOnline ?? false;
 
-      _log.info('TransactionsProvider',
-          'Creating transaction: $name, amount: $amount, online: $isOnline');
+      _log.info(
+        'TransactionsProvider',
+        'Creating transaction locally, online: $isOnline',
+      );
 
       // ALWAYS save locally first (offline-first strategy)
       final localTransaction = await _offlineStorage.saveTransaction(
@@ -189,8 +195,7 @@ class TransactionsProvider with ChangeNotifier {
         syncStatus: SyncStatus.pending, // Start as pending
       );
 
-      _log.info('TransactionsProvider',
-          'Transaction saved locally with ID: ${localTransaction.localId}');
+      _log.info('TransactionsProvider', 'Transaction saved locally');
 
       // Reload transactions to show the new one immediately
       await fetchTransactions(accessToken: accessToken, accountId: accountId);
@@ -446,8 +451,10 @@ class TransactionsProvider with ChangeNotifier {
     required String localId,
     required SyncStatus syncStatus,
   }) async {
-    _log.info('TransactionsProvider',
-        'Undoing transaction $localId with status $syncStatus');
+    _log.info(
+      'TransactionsProvider',
+      'Undoing transaction with status $syncStatus',
+    );
 
     try {
       final success =
