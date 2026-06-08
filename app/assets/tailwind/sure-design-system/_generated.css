@@ -11,7 +11,7 @@
   --color-black: #0B0B0B;
   --color-success: var(--color-green-700);
   --color-warning: var(--color-yellow-600);
-  --color-destructive: var(--color-red-600);
+  --color-destructive: var(--color-red-500);
   --color-info: var(--color-blue-600);
   --color-shadow: --alpha(var(--color-black) / 6%);
   --color-link: var(--color-blue-600);
@@ -375,7 +375,7 @@
 }
 
 @utility border-destructive {
-  @apply border-red-600;
+  @apply border-red-500;
 
   @variant theme-dark {
     @apply border-red-400;
@@ -447,7 +447,7 @@
 }
 
 @utility button-bg-destructive {
-  @apply bg-red-600;
+  @apply bg-red-500;
 
   @variant theme-dark {
     @apply bg-red-400;
@@ -455,7 +455,7 @@
 }
 
 @utility button-bg-destructive-hover {
-  @apply bg-red-700;
+  @apply bg-red-600;
 
   @variant theme-dark {
     @apply bg-red-500;
