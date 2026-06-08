@@ -90,7 +90,8 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.pluck(:id).to_set
+    current_categories_by_id = family.categories.reload.index_by(&:id)
+    current_category_ids = current_categories_by_id.keys.to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
@@ -98,7 +99,7 @@ class Budget < ApplicationRecord
     # Create missing categories
     categories_to_add.each do |category_id|
       budget_categories.create!(
-        category_id: category_id,
+        category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
         currency: family.currency
       )
