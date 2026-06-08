@@ -7,9 +7,12 @@
          else :neutral
          end
 %>
+<%# Provider connection state is genuine live status — keep the indicator dot
+    (badge mode is dot-less by default; this is a deliberate opt-in). %>
 <%= render DS::Pill.new(
   label: t("settings.providers.status.#{status}"),
   tone: tone,
   marker: false,
+  show_dot: true,
   size: :sm
 ) %>

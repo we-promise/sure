@@ -175,7 +175,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 2, coinstats_account.raw_transactions_payload.count
   end
 
-  test "handles rate limit error during transactions fetch gracefully" do
+  test "bails and preserves wallet snapshot when transactions fetch is rate limited" do
     crypto = Crypto.create!
     account = @family.accounts.create!(
       accountable: crypto,
@@ -186,6 +186,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     coinstats_account = @coinstats_item.coinstats_accounts.create!(
       name: "Ethereum Wallet",
       currency: "USD",
+      current_balance: 1000,
       raw_payload: { address: "0x123abc", blockchain: "ethereum" }
     )
     AccountProvider.create!(account: account, provider: coinstats_account)
@@ -202,24 +203,24 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
       .with("ethereum:0x123abc")
       .returns(success_response(bulk_response))
 
-    @mock_provider.expects(:extract_wallet_balance)
-      .with(bulk_response, "0x123abc", "ethereum")
-      .returns(balance_data)
+    @mock_provider.expects(:extract_wallet_balance).never
 
-    # Bulk transaction fetch fails with error - returns error response from fetch_transactions_for_accounts
     @mock_provider.expects(:get_wallet_transactions)
       .with("ethereum:0x123abc")
-      .raises(Provider::Coinstats::Error.new("Rate limited"))
+      .raises(Provider::Coinstats::RateLimitError.new("Rate limited"))
 
-    # When bulk fetch fails, extract_wallet_transactions is not called (bulk_transactions_data is nil)
+    @mock_provider.expects(:extract_wallet_transactions).never
 
     importer = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider)
-    result = importer.import
 
-    # Should still succeed since balance was updated
-    assert result[:success]
-    assert_equal 1, result[:accounts_updated]
-    assert_equal 0, result[:transactions_imported]
+    assert_no_changes -> { coinstats_account.reload.current_balance.to_f } do
+      result = importer.import
+
+      refute result[:success]
+      assert_equal 0, result[:accounts_updated]
+      assert_equal 1, result[:accounts_failed]
+      assert_equal 0, result[:transactions_imported]
+    end
   end
 
   test "preserves exchange portfolio snapshot when portfolio coin fetch is missing" do
@@ -780,6 +781,53 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
   end
 
   # DeFi / staking tests
+
+  test "skips DeFi sync for unsupported blockchains" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Bitcoin Wallet",
+      balance: 4500,
+      currency: "USD"
+    )
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitcoin Wallet",
+      currency: "USD",
+      account_id: "bitcoin",
+      raw_payload: { address: "bc1qbtc456", blockchain: "bitcoin" }
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    balance_data = [
+      { coinId: "bitcoin", name: "Bitcoin", symbol: "BTC", amount: 0.1, price: 45000 }
+    ]
+    bulk_response = [
+      { blockchain: "bitcoin", address: "bc1qbtc456", connectionId: "bitcoin", balances: balance_data }
+    ]
+    bulk_transactions_response = [
+      { blockchain: "bitcoin", address: "bc1qbtc456", connectionId: "bitcoin", transactions: [] }
+    ]
+
+    @mock_provider.expects(:get_wallet_defi).never
+    @mock_provider.expects(:get_wallet_balances)
+      .with("bitcoin:bc1qbtc456")
+      .returns(success_response(bulk_response))
+    @mock_provider.expects(:extract_wallet_balance)
+      .with(bulk_response, "bc1qbtc456", "bitcoin")
+      .returns(balance_data)
+    @mock_provider.expects(:get_wallet_transactions)
+      .with("bitcoin:bc1qbtc456")
+      .returns(success_response(bulk_transactions_response))
+    @mock_provider.expects(:extract_wallet_transactions)
+      .with(bulk_transactions_response, "bc1qbtc456", "bitcoin")
+      .returns([])
+
+    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    assert result[:success]
+    assert_equal 1, result[:accounts_updated]
+    assert_equal 4500.0, coinstats_account.reload.current_balance.to_f
+  end
 
   test "creates DeFi account with balance equal to total position value, not quantity * price" do
     crypto = Crypto.create!

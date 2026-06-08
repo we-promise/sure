@@ -67,7 +67,7 @@
         <% end %>
 
         <%= render DS::Menu.new do |menu| %>
-          <% if unlinked_count.to_i > 0 %>
+          <% if binance_item.unlinked_accounts_count > 0 %>
             <% menu.with_item(
               variant: "link",
               text: t(".import_accounts_menu"),
@@ -110,10 +110,10 @@
           provider_item: binance_item
         ) %>
 
-        <% if unlinked_count.to_i > 0 && binance_item.accounts.empty? %>
-          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+        <% if binance_item.unlinked_accounts_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center bg-surface border border-primary rounded-xl">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
-            <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
+            <p class="text-secondary text-sm text-center"><%= t(".setup_description") %></p>
             <%= render DS::Link.new(
               text: t(".setup_action"),
               icon: "plus",
