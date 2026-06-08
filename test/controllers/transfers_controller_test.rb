@@ -163,7 +163,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    transfer = Transfer.last
+    transfer = Transfer.order(created_at: :desc).first
     assert_equal 3, transfer.source_fee_amount
     assert_equal 0, transfer.destination_fee_amount
     # Outflow should be amount + source_fee = 100 + 3 = 103
@@ -185,7 +185,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    transfer = Transfer.last
+    transfer = Transfer.order(created_at: :desc).first
     assert_equal 0, transfer.source_fee_amount
     assert_equal 3, transfer.destination_fee_amount
     # Outflow should be amount + source_fee = 100 + 0 = 100
@@ -208,7 +208,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    transfer = Transfer.last
+    transfer = Transfer.order(created_at: :desc).first
     assert_equal 2, transfer.source_fee_amount
     assert_equal 3, transfer.destination_fee_amount
     # Outflow = 100 + 2 = 102
