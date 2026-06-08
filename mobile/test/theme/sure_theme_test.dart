@@ -21,6 +21,10 @@ void main() {
     expect(theme.colorScheme.onErrorContainer, SureTokens.light.textPrimary);
     expect(theme.scaffoldBackgroundColor, SureTokens.light.surface);
     expect(theme.cardTheme.color, SureTokens.light.container);
+    expect(
+      theme.elevatedButtonTheme.style?.minimumSize?.resolve({}),
+      const Size(double.infinity, 50),
+    );
   });
 
   test('dark theme uses Sure token values', () {
@@ -37,6 +41,10 @@ void main() {
     expect(theme.colorScheme.onErrorContainer, SureTokens.dark.textPrimary);
     expect(theme.scaffoldBackgroundColor, SureTokens.dark.surface);
     expect(theme.cardTheme.color, SureTokens.dark.container);
+    expect(
+      theme.elevatedButtonTheme.style?.minimumSize?.resolve({}),
+      const Size(double.infinity, 50),
+    );
   });
 
   testWidgets('app wires Sure light and dark themes', (tester) async {

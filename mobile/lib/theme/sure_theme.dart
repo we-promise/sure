@@ -65,7 +65,7 @@ class SureTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(0, 50),
+          minimumSize: const Size(double.infinity, 50),
           backgroundColor: tokens.buttonPrimary,
           foregroundColor: tokens.textInverse,
           disabledBackgroundColor: tokens.containerInset,
