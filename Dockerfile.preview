@@ -101,6 +101,31 @@ summarize_log_tail() {
     cut -c 1-1600
 }
 
+fail_preview() {
+  local detail="$1"
+  trap - ERR
+  emit_status failed "$detail"
+  exit 1
+}
+
+postgres_cluster_snapshot() {
+  local snapshot=""
+  local cluster_status
+  local postgres_log
+
+  if command -v pg_lsclusters >/dev/null 2>&1; then
+    cluster_status="$(pg_lsclusters 2>&1 | tr '\n' '|' | sed 's/"/'"'"'/g' | cut -c 1-500)"
+    snapshot="clusters=${cluster_status}"
+  fi
+
+  postgres_log="/var/log/postgresql/postgresql-${PG_VERSION}-main.log"
+  if [ -f "$postgres_log" ]; then
+    snapshot="${snapshot} log=$(summarize_log_tail "$postgres_log" postgres)"
+  fi
+
+  printf '%s' "$snapshot"
+}
+
 trap 'emit_status failed "preview-entrypoint failed on line ${LINENO}"' ERR
 emit_status boot "preview-entrypoint started"
 
@@ -125,8 +150,7 @@ for i in {1..10}; do
 done
 
 if [ "$REDIS_READY" -ne 1 ]; then
-  echo "Redis did not become ready in time"
-  exit 1
+  fail_preview "redis did not become ready in time"
 fi
 
 # Start PostgreSQL
@@ -134,13 +158,15 @@ echo "Starting PostgreSQL..."
 emit_status postgres-start "starting postgres"
 PG_VERSION=$(ls /etc/postgresql/ | sort -V | tail -1)
 if [ -z "$PG_VERSION" ]; then
-  echo "Could not determine installed PostgreSQL version"
-  exit 1
+  fail_preview "could not determine installed PostgreSQL version"
 fi
 if sudo pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" main status > /dev/null 2>&1; then
   emit_status postgres-already-running "postgres cluster already running"
 else
-  sudo pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" main start
+  POSTGRES_START_LOG=/tmp/postgres-start.log
+  if ! sudo pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" main start >"$POSTGRES_START_LOG" 2>&1; then
+    fail_preview "pg_ctlcluster start failed: $(summarize_log_tail "$POSTGRES_START_LOG" pg_ctlcluster-start) | $(postgres_cluster_snapshot)"
+  fi
 fi
 
 # Wait for PostgreSQL to be ready
@@ -156,8 +182,7 @@ for i in {1..30}; do
 done
 
 if [ "$POSTGRES_READY" -ne 1 ]; then
-  echo "PostgreSQL did not become ready in time"
-  exit 1
+  fail_preview "postgres did not become ready in time: $(postgres_cluster_snapshot)"
 fi
 
 # Create database user and database if they don't exist
