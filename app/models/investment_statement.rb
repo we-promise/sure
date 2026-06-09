@@ -238,11 +238,7 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= begin
-      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
-      scope = scope.included_in_finances_for(user) if user
-      scope
-    end
+    @investment_accounts ||= load_investment_accounts
   end
 
   private
@@ -290,7 +286,13 @@ class InvestmentStatement
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
 
     def investment_account_ids
-      @investment_account_ids ||= investment_accounts.pluck(:id)
+      @investment_account_ids ||= investment_accounts.map(&:id)
+    end
+
+    def load_investment_accounts
+      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = scope.included_in_finances_for(user) if user
+      scope.to_a
     end
 
     def load_current_holdings
@@ -305,11 +307,23 @@ class InvestmentStatement
 
       ActiveRecord::Associations::Preloader.new(
         records: holdings,
-        associations: [ :security, :account ]
+        associations: [ :security ]
       ).call
+
+      assign_preloaded_accounts(holdings)
 
       Holding::CalculatedAvgCosts.new(holdings).apply!
       holdings
+    end
+
+    def assign_preloaded_accounts(holdings)
+      accounts_by_id = investment_accounts.index_by(&:id)
+
+      holdings.each do |holding|
+        account = accounts_by_id[holding.account_id]
+        holding.association(:account).target = account
+        holding.association(:account).loaded!
+      end
     end
 
     def totals_query(trades_scope:)

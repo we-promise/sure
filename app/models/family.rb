@@ -252,7 +252,8 @@ class Family < ApplicationRecord
   end
 
   def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+    @balance_sheets_by_user ||= {}
+    @balance_sheets_by_user[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
   def income_statement(user: Current.user)

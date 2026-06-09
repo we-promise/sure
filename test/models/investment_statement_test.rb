@@ -271,6 +271,31 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1, holdings_queries.size
   end
 
+  test "investment_accounts load once without repeated batched account queries" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+    security = Security.create!(ticker: "ACCT", name: "Account Security")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      statement.investment_accounts.map(&:currency)
+      statement.portfolio_value
+      holdings = statement.current_holdings
+      holdings.each { |holding| holding.account.balance }
+      statement.top_holdings(limit: 5)
+    end
+
+    accounts_queries = queries.grep(/FROM "accounts"/)
+    assert_equal 1, accounts_queries.size
+    assert_empty queries.grep(/FROM "accounts" WHERE "accounts"\."id" IN/)
+  end
+
   test "current_holdings preloads calculated average costs in one batch query" do
     account = create_investment_account(balance: 10_000, currency: "USD")
 
