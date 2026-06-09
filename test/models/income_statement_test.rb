@@ -39,6 +39,17 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "period totals do not query categories by id when filtering subcategories" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    queries = capture_sql_queries do
+      income_statement.net_category_totals(period: period)
+    end
+
+    assert_empty queries.grep(/FROM "categories" WHERE "categories"\."id" =/)
+  end
+
   test "memoizes expense and income period totals across repeated calculations" do
     income_statement = IncomeStatement.new(@family)
     period = Period.last_30_days
@@ -671,4 +682,21 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal 1, totals_query_calls
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
