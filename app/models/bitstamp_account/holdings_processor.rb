@@ -45,8 +45,10 @@ class BitstampAccount::HoldingsProcessor
       return unless security
 
       amount_usd = total * price_usd.to_d
-      amount, _stale, _rate_date = convert_from_usd(amount_usd)
-      price, _price_stale, _price_rate_date = convert_from_usd(price_usd.to_d)
+      amount, amount_stale, _rate_date = convert_from_usd(amount_usd)
+      price, price_stale, _price_rate_date = convert_from_usd(price_usd.to_d)
+
+      return if (amount_stale || price_stale) && target_currency != "USD"
 
       import_adapter.import_holding(
         security: security,
