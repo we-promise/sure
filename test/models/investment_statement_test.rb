@@ -271,6 +271,29 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1, holdings_queries.size
   end
 
+  test "dashboard exchange rates load once across balance sheet and investment widgets" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    account = create_investment_account(balance: 10_000, currency: "EUR")
+    security = Security.create!(ticker: "FX", name: "FX Security")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "EUR",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    queries = capture_sql_queries do
+      @family.balance_sheet.net_worth
+      statement = InvestmentStatement.new(@family, user: nil)
+      statement.portfolio_value
+      statement.current_holdings.each { |holding| holding.amount }
+    end
+
+    exchange_rate_queries = queries.grep(/FROM "exchange_rates"/)
+    assert_equal 1, exchange_rate_queries.size
+  end
+
   test "investment_accounts load once without repeated batched account queries" do
     account = create_investment_account(balance: 10_000, currency: "USD")
     security = Security.create!(ticker: "ACCT", name: "Account Security")

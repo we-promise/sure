@@ -256,6 +256,19 @@ class Family < ApplicationRecord
     @balance_sheets_by_user[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
+  # Memoizes exchange rates for the request so balance sheet, investment summary,
+  # and other dashboard widgets share one batched lookup per target date.
+  def exchange_rates_for(currencies, date: Date.current)
+    @exchange_rates_for ||= {}
+    cache = (@exchange_rates_for[date] ||= {})
+    target_currency = primary_currency_code
+
+    missing = currencies.compact.uniq.reject { |code| code == target_currency || cache.key?(code) }
+    cache.merge!(ExchangeRate.rates_for(missing, to: target_currency, date: date)) if missing.any?
+
+    cache
+  end
+
   def income_statement(user: Current.user)
     IncomeStatement.new(self, user: user)
   end

@@ -252,7 +252,7 @@ class InvestmentStatement
                     .compact
                     .uniq
                     .reject { |c| c == family.currency }
-        ExchangeRate.rates_for(foreign, to: family.currency, date: Date.current)
+        family.exchange_rates_for(foreign, date: Date.current)
       end
     end
 

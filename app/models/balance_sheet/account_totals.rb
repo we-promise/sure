@@ -90,7 +90,7 @@ class BalanceSheet::AccountTotals
     def exchange_rates
       @exchange_rates ||= begin
         foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
-        ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
+        family.exchange_rates_for(foreign_currencies, date: Date.current)
       end
     end
 

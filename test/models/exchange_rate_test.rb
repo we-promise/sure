@@ -82,6 +82,34 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal friday, result.date
   end
 
+  test "rates_for loads cached rates in one batched query" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.3)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.75)
+
+    queries = capture_sql_queries do
+      rates = ExchangeRate.rates_for(%w[EUR GBP CAD], to: "USD", date: Date.current)
+      assert_in_delta 1.1, rates["EUR"]
+      assert_in_delta 1.3, rates["GBP"]
+      assert_in_delta 0.75, rates["CAD"]
+    end
+
+    assert_empty queries.grep(/FROM "exchange_rates" WHERE "exchange_rates"\."from_currency" =/)
+    assert_equal 1, queries.grep(/FROM "exchange_rates" WHERE "exchange_rates"\."from_currency" IN/).size
+  end
+
+  test "rates_for batch loads nearest rates within lookback window" do
+    friday = 1.day.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: friday, rate: 1.1)
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.3)
+
+    @provider.expects(:fetch_exchange_rate).never
+
+    rates = ExchangeRate.rates_for(%w[EUR GBP], to: "USD", date: Date.current)
+    assert_in_delta 1.1, rates["EUR"]
+    assert_in_delta 1.3, rates["GBP"]
+  end
+
   test "does not reuse cached rate outside lookback window" do
     old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
     ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)
@@ -95,4 +123,21 @@ class ExchangeRateTest < ActiveSupport::TestCase
     result = ExchangeRate.find_or_fetch_rate(from: "USD", to: "JPY", date: Date.current)
     assert_equal 155.0, result.rate
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end

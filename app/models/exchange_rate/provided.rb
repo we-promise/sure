@@ -56,8 +56,13 @@ module ExchangeRate::Provided
     # Batch-fetches exchange rates for multiple source currencies.
     # Returns a hash mapping each currency to its numeric rate, defaulting to 1 when unavailable.
     def rates_for(currencies, to:, date: Date.current)
-      currencies.uniq.each_with_object({}) do |currency, map|
-        rate = find_or_fetch_rate(from: currency, to: to, date: date)
+      unique = currencies.compact.uniq.reject { |currency| currency == to }
+      return {} if unique.empty?
+
+      cached_rates = cached_rates_for(unique, to: to, date: date)
+
+      unique.each_with_object({}) do |currency, map|
+        rate = cached_rates[currency] || find_or_fetch_rate(from: currency, to: to, date: date)
         if rate.nil?
           Rails.logger.warn("No exchange rate found for #{currency}/#{to} on #{date}, using 1")
         elsif rate.date != date
@@ -66,6 +71,26 @@ module ExchangeRate::Provided
         map[currency] = rate&.rate || 1
       end
     end
+
+    def cached_rates_for(currencies, to:, date: Date.current)
+      return {} if currencies.empty?
+
+      exact_rates = where(from_currency: currencies, to_currency: to, date: date)
+                        .index_by(&:from_currency)
+
+      missing = currencies - exact_rates.keys
+      return exact_rates if missing.empty?
+
+      lookback_start = date - NEAREST_RATE_LOOKBACK_DAYS
+      nearest_rates = where(from_currency: missing, to_currency: to)
+                        .where(date: lookback_start..date)
+                        .select("DISTINCT ON (exchange_rates.from_currency) exchange_rates.*")
+                        .order(Arel.sql("exchange_rates.from_currency, exchange_rates.date DESC"))
+                        .index_by(&:from_currency)
+
+      exact_rates.merge(nearest_rates)
+    end
+    private :cached_rates_for
 
     # @return [Integer] The number of exchange rates synced
     def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
