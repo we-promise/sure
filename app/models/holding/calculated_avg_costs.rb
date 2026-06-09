@@ -15,18 +15,32 @@ class Holding::CalculatedAvgCosts
 
   private
     def fetch_averages
-      values_clause = @holdings.map do |holding|
-        ActiveRecord::Base.sanitize_sql_array([
-          "(?::uuid, ?::uuid, ?::date, ?, ?)",
+      ActiveRecord::Base.connection.select_all(sanitized_averages_sql).each_with_object({}) do |row, memo|
+        memo[holding_key_from_row(row)] = {
+          total_cost: row["total_cost"].to_d,
+          total_qty: row["total_qty"].to_d,
+          currency: row["holding_currency"]
+        }
+      end
+    end
+
+    def sanitized_averages_sql
+      values_clause = ([ "(?::uuid, ?::uuid, ?::date, ?, ?)" ] * @holdings.size).join(", ")
+      bindings = @holdings.flat_map do |holding|
+        [
           holding.account_id,
           holding.security_id,
           holding.date,
           holding.account.currency,
           holding.currency
-        ])
-      end.join(", ")
+        ]
+      end
 
-      sql = <<~SQL
+      ActiveRecord::Base.sanitize_sql_array([ averages_sql(values_clause), *bindings ])
+    end
+
+    def averages_sql(values_clause)
+      <<~SQL
         WITH holding_specs(account_id, security_id, as_of_date, target_currency, holding_currency) AS (
           VALUES #{values_clause}
         )
@@ -56,14 +70,6 @@ class Holding::CalculatedAvgCosts
           holding_specs.holding_currency
         HAVING SUM(trades.qty) > 0
       SQL
-
-      ActiveRecord::Base.connection.select_all(sql).each_with_object({}) do |row, memo|
-        memo[holding_key_from_row(row)] = {
-          total_cost: row["total_cost"].to_d,
-          total_qty: row["total_qty"].to_d,
-          currency: row["holding_currency"]
-        }
-      end
     end
 
     def holding_key(holding)
@@ -71,6 +77,9 @@ class Holding::CalculatedAvgCosts
     end
 
     def holding_key_from_row(row)
-      [ row["account_id"], row["security_id"], row["as_of_date"].to_date, row["holding_currency"] ]
+      as_of_date = row["as_of_date"]
+      as_of_date = as_of_date.to_date if as_of_date.is_a?(String)
+
+      [ row["account_id"], row["security_id"], as_of_date, row["holding_currency"] ]
     end
 end
