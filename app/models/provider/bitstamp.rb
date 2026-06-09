@@ -60,11 +60,10 @@ class Provider::Bitstamp
     def authenticated_get(endpoint, params = {})
       path = "#{API_PREFIX}/#{endpoint}"
       query_string = params.presence ? URI.encode_www_form(params) : ""
-      signed_path = query_string.present? ? "#{path}?#{query_string}" : path
       nonce = SecureRandom.uuid
       timestamp = (Time.now.to_f * 1000).to_i.to_s
 
-      signature = sign("GET", signed_path, nonce, timestamp, "", "")
+      signature = sign("GET", path, nonce, timestamp, "", "", query_string: query_string)
 
       headers = {
         "X-Auth" => "BITSTAMP #{api_key}",
@@ -85,7 +84,7 @@ class Provider::Bitstamp
       payload = body_params.any? ? URI.encode_www_form(body_params) : ""
       content_type = payload.present? ? "application/x-www-form-urlencoded" : ""
 
-      signature = sign("POST", path, nonce, timestamp, content_type, payload)
+      signature = sign("POST", path, nonce, timestamp, content_type, payload, query_string: "")
 
       headers = {
         "X-Auth" => "BITSTAMP #{api_key}",
@@ -105,13 +104,13 @@ class Provider::Bitstamp
       handle_response(response)
     end
 
-    def sign(http_verb, path, nonce, timestamp, content_type, payload)
+    def sign(http_verb, path, nonce, timestamp, content_type, payload, query_string: "")
       message = [
         "BITSTAMP #{api_key}",
         http_verb,
         "www.bitstamp.net",
         path,
-        "",
+        query_string,
         content_type,
         nonce,
         timestamp,
