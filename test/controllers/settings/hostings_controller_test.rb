@@ -152,6 +152,22 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "falls back to openai when stored llm_provider is invalid" do
+    with_self_hosting do
+      Setting.llm_provider = "bogus"
+      Provider::Openai.stubs(:configured?).returns(false)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "select[name=?] option[selected][value=?]", "setting[llm_provider]", "openai"
+      assert_select ":match('text', ?)", I18n.t("settings.hostings.llm_provider_selector.not_configured_hint", provider: I18n.t("settings.hostings.llm_provider_selector.provider_openai"))
+      assert_no_match(/translation missing/i, @response.body)
+    end
+  ensure
+    Setting.llm_provider = nil
+  end
+
   test "rejects unknown llm_provider values" do
     with_self_hosting do
       Setting.llm_provider = "openai"

@@ -1,5 +1,5 @@
 <%
-  active = Setting.llm_provider
+  active = Setting.llm_provider.to_s.downcase == "anthropic" ? "anthropic" : "openai"
   locked = ENV["LLM_PROVIDER"].present?
   providers = [ [ "openai", t(".provider_openai") ], [ "anthropic", t(".provider_anthropic") ] ]
   active_configured = active == "anthropic" ? Provider::Anthropic.configured? : Provider::Openai.configured?
