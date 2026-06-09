@@ -222,6 +222,18 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 5.0, trend.percent, 0.1
   end
 
+  test "totals skips cache when there are no investment accounts" do
+    Rails.cache.expects(:fetch).never
+
+    totals = @statement.totals(period: Period.current_month)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.dividends
+    assert_equal Money.new(0, "USD"), totals.interest
+    assert_equal 0, totals.trades_count
+  end
+
   test "totals aggregate directly from trade entries" do
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
     shared_user = users(:new_email)
@@ -275,21 +287,5 @@ class InvestmentStatementTest < ActiveSupport::TestCase
           currency: account.currency
         )
       )
-    end
-
-    def capture_sql_queries
-      queries = []
-      callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        next if payload[:cached]
-        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
-
-        queries << payload[:sql].squish
-      end
-
-      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-        yield
-      end
-
-      queries
     end
 end
