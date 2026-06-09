@@ -182,6 +182,18 @@ class Settings::HostingsController < ApplicationController
         unless parsed.is_a?(URI::HTTP)
           raise Setting::ValidationError, t(".invalid_anthropic_base_url")
         end
+        # A custom Anthropic-compatible endpoint requires a model — Provider::Anthropic
+        # raises without one. Validate the pair together (mirrors the OpenAI branch), using
+        # the submitted model when present so a blanked model field is caught too.
+        effective_model =
+          if hosting_params.key?(:anthropic_model)
+            hosting_params[:anthropic_model].to_s.strip
+          else
+            Setting.anthropic_model.to_s.strip
+          end
+        if effective_model.blank?
+          raise Setting::ValidationError, t(".anthropic_model_required_for_base_url")
+        end
         Setting.anthropic_base_url = raw_base_url
       end
     end

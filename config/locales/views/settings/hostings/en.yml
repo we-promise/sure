@@ -92,12 +92,12 @@ en:
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       llm_provider_selector:
         title: AI Provider
-        description: Choose which LLM powers chat, transaction categorization, merchant detection, and PDF processing.
+        description: Choose which LLM powers AI chat. Batch operations (transaction categorization, merchant detection, and PDF processing) currently always use OpenAI.
         env_configured_message: Successfully configured through the LLM_PROVIDER environment variable.
         provider_label: Active LLM provider
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
-        provider_help: Switching providers takes effect on the next chat or batch operation. Make sure the chosen provider's credentials are configured below.
+        provider_help: Switching providers takes effect on the next chat. Make sure the chosen provider's credentials are configured below.
         data_retention_heading: Data handling
         data_retention_openai: "OpenAI: API inputs are not used to train models by default. Standard retention is 30 days for trust & safety."
         data_retention_anthropic: "Anthropic: API inputs are not used to train models by default. Standard retention is 30 days for trust & safety."
@@ -198,6 +198,7 @@ en:
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
+        anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected

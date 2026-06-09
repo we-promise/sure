@@ -22,6 +22,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     ))
   end
 
+  teardown do
+    # These tests persist global Setting.* values; reset them so state can't
+    # leak into later (order-dependent) tests.
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider].each do |key|
+      Setting.public_send("#{key}=", nil)
+    end
+  end
+
   test "cannot edit when self hosting is disabled" do
     @provider.stubs(:usage).returns(@usage_response)
 
@@ -119,6 +127,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
       patch settings_hosting_url, params: { setting: { anthropic_base_url: "" } }
 
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "requires anthropic model when a custom base_url is set" do
+    with_self_hosting do
+      Setting.anthropic_base_url = nil
+      Setting.anthropic_model = nil
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "https://bedrock.example.com" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Anthropic Model is required/, flash[:alert])
       assert_nil Setting.anthropic_base_url
     end
   end
