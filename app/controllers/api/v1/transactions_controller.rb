@@ -330,7 +330,7 @@ end
           kind: transaction_params[:kind],
           refund_of_transaction_id: transaction_params[:refund_of_transaction_id],
           tag_ids: transaction_params[:tag_ids] || []
-        }
+        }.compact
       }
       if idempotency_key_requested?
         entry_params[:external_id] = idempotency_external_id
