@@ -57,6 +57,21 @@ class Transaction::RefundTest < ActiveSupport::TestCase
     assert entry.entryable.valid?
   end
 
+  test "refund_of_transaction_id must belong to same family" do
+    original_entry = create_transaction(account: @checking_account, amount: 200, category: @groceries)
+    original_txn   = original_entry.entryable
+
+    other_family_account = families(:dylan_family).accounts.create!(
+      name: "Other Checking", currency: "USD", balance: 5000, accountable: Depository.new
+    )
+    refund_entry = create_transaction(account: other_family_account, amount: -50, kind: "refund")
+    refund_txn   = refund_entry.entryable
+    refund_txn.refund_of_transaction = original_txn
+
+    assert_not refund_txn.valid?
+    assert_includes refund_txn.errors[:refund_of_transaction_id], "must belong to the same family"
+  end
+
   # ---------------------------------------------------------------------------
   # Entry#classification
   # ---------------------------------------------------------------------------

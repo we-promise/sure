@@ -308,7 +308,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :kind, :refund_of_transaction_id, tag_ids: []
       )
     end
 
@@ -327,6 +327,8 @@ end
         entryable_attributes: {
           category_id: transaction_params[:category_id],
           merchant_id: transaction_params[:merchant_id],
+          kind: transaction_params[:kind],
+          refund_of_transaction_id: transaction_params[:refund_of_transaction_id],
           tag_ids: transaction_params[:tag_ids] || []
         }
       }
@@ -346,7 +348,9 @@ end
         entryable_attributes: {
           id: @entry.entryable_id,
           category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id]
+          merchant_id: transaction_params[:merchant_id],
+          kind: transaction_params[:kind],
+          refund_of_transaction_id: transaction_params[:refund_of_transaction_id]
           # Note: tag_ids handled separately in update action to distinguish
           # "not provided" from "explicitly set to empty"
         }.compact_blank
