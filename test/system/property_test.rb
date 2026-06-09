@@ -13,9 +13,15 @@ class PropertiesEditTest < ApplicationSystemTestCase
 
   test "can persist property subtype" do
     click_link "[system test] Property Account"
-    find("[data-testid='account-menu']").click
-    click_on "Edit"
-    assert_equal "single_family_home", find("#account_accountable_attributes_subtype").value
+    assert_text "Estimated property value", wait: 10
+
+    within_testid("account-menu") do
+      find("button").click
+      click_on "Edit"
+    end
+
+    assert_selector "dialog[open]", wait: 10
+    assert_selector "#account_accountable_attributes_subtype option[selected][value='single_family_home']", wait: 10
   end
 
   private
