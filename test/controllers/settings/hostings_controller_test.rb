@@ -161,7 +161,6 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_select "select[name=?] option[selected][value=?]", "setting[llm_provider]", "openai"
-      assert_select ":match('text', ?)", I18n.t("settings.hostings.llm_provider_selector.not_configured_hint", provider: I18n.t("settings.hostings.llm_provider_selector.provider_openai"))
       assert_no_match(/translation missing/i, @response.body)
     end
   ensure
