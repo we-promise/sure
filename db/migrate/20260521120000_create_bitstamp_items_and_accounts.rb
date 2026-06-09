@@ -4,7 +4,7 @@ class CreateBitstampItemsAndAccounts < ActiveRecord::Migration[7.2]
   def change
     create_table :bitstamp_items, id: :uuid do |t|
       t.references :family, null: false, foreign_key: true, type: :uuid
-      t.string :name
+      t.string :name, null: false
 
       t.string :institution_name
       t.string :institution_domain
@@ -18,8 +18,8 @@ class CreateBitstampItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.datetime :sync_start_date
       t.jsonb :raw_payload
 
-      t.text :api_key
-      t.text :api_secret
+      t.text :api_key, null: false
+      t.text :api_secret, null: false
 
       t.timestamps
     end
@@ -29,10 +29,10 @@ class CreateBitstampItemsAndAccounts < ActiveRecord::Migration[7.2]
     create_table :bitstamp_accounts, id: :uuid do |t|
       t.references :bitstamp_item, null: false, foreign_key: true, type: :uuid
 
-      t.string :name
+      t.string :name, null: false
       t.string :account_id, null: false
-      t.string :account_type
-      t.string :currency
+      t.string :account_type, null: false
+      t.string :currency, null: false
       t.decimal :current_balance, precision: 19, scale: 4
 
       t.jsonb :institution_metadata
