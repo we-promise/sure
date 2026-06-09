@@ -1,0 +1,92 @@
+---
+nl:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Verbind een Interactive Brokers Flex Web Service-rapport
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Verwijderen bezig
+      flex_web_service: Flex Web Service
+      syncing: Synchroniseren
+      requires_update: Inloggegevens vereisen aandacht
+      error: Fout
+      synced: Gesynchroniseerd %{time} geleden. %{summary}.
+      never_synced: Nooit gesynchroniseerd.
+      setup_accounts: Accounts instellen
+      delete: Verwijderen
+      accounts_need_setup: Accounts moeten worden ingesteld
+      accounts_need_setup_description: Sommige accounts van IBKR moeten worden gekoppeld aan Sure-accounts.
+      no_accounts_discovered: Nog geen IBKR-accounts gevonden.
+      no_accounts_discovered_description: Voer een synchronisatie uit nadat u uw Flex-query hebt geconfigureerd om accounts te vinden.
+    setup_accounts:
+      page_title: Interactive Brokers-accounts instellen
+      dialog_title: Stel uw Interactive Brokers-accounts in
+      subtitle: Selecteer welke IBKR-effectenaccounts u wilt koppelen.
+      info_box:
+        title: IBKR Flex-query-import
+        items:
+          item_1: Posities met actuele koersen en aantallen
+          item_2: Kostprijsbasis per positie
+          item_3: Transacties, dividenden, commissies en kasstortingen of -opnames
+        warning: Historische activiteit is beperkt tot het rapportvenster van de Flex-query
+      status:
+        fetching_accounts: Accounts ophalen van Interactive Brokers...
+        no_accounts_found_title: Geen accounts gevonden.
+        no_accounts_found_description: Sure kon geen IBKR-accounts vinden in het meest recente Flex-rapport.
+      available_accounts:
+        title: Beschikbare accounts
+        account_type_investment: Beleggingen
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Account-ID: %{account_id}"
+      link_existing:
+        description: Of koppel een gevonden IBKR-account aan een bestaand handmatig beleggingsaccount.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Selecteer een account...
+      linked_accounts:
+        title: Al gekoppeld
+        linked_to_html: "Gekoppeld aan: %{account}"
+      buttons:
+        refresh: Vernieuwen
+        cancel: Annuleren
+        back_to_settings: Terug naar instellingen
+        create_selected_accounts: Geselecteerde accounts aanmaken
+        link: Koppelen
+        done: Klaar
+    sync_status:
+      no_accounts: Nog geen IBKR-accounts gevonden
+      all_linked:
+        one: 1 account gekoppeld
+        other: "%{count} accounts gekoppeld"
+      partial: "%{linked} gekoppeld, %{unlinked} moeten worden ingesteld"
+    select_existing_account:
+      title: Interactive Brokers-account koppelen
+      no_accounts_available: Er zijn nog geen niet-gekoppelde Interactive Brokers-accounts beschikbaar.
+      run_sync_hint: "Voer een synchronisatie uit via Instellingen > Providers nadat u uw Flex-query hebt bijgewerkt."
+      wait_for_sync: Wacht tot de synchronisatie voor accountdetectie is voltooid.
+      balance: Saldo
+      link: Koppelen
+      cancel: Annuleren
+    create:
+      success: Interactive Brokers succesvol geconfigureerd.
+    update:
+      success: Interactive Brokers-configuratie succesvol bijgewerkt.
+    destroy:
+      success: Interactive Brokers-verbinding is in de wachtrij voor verwijdering geplaatst.
+    select_accounts:
+      not_configured: Interactive Brokers is niet geconfigureerd.
+    link_existing_account:
+      not_found: Account of Interactive Brokers-configuratie niet gevonden.
+      only_manual_investment: Alleen handmatige beleggingsaccounts kunnen aan Interactive Brokers worden gekoppeld.
+      already_linked: Dit Interactive Brokers-account is al gekoppeld.
+      success: Succesvol gekoppeld aan Interactive Brokers-account.
+      failed: Koppelen aan Interactive Brokers-account mislukt.
+    complete_account_setup:
+      success:
+        one: "%{count} Interactive Brokers-account succesvol aangemaakt."
+        other: "%{count} Interactive Brokers-accounts succesvol aangemaakt."
+      none_selected: Er zijn geen accounts geselecteerd.
+      none_created: Er zijn geen accounts aangemaakt.

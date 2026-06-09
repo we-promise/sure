@@ -74,6 +74,13 @@ void main() {
     expect(LogService.sanitize(message), message);
   });
 
+  test('sanitize preserves safe name-adjacent operational fields', () {
+    const message =
+        'filename=main.dart pageName=transactions stage=boot successMessage=ok';
+
+    expect(LogService.sanitize(message), message);
+  });
+
   test('sanitize redacts repeated sensitive values', () {
     final sanitized = LogService.sanitize(
       'email=one@example.com email=two@example.com '
