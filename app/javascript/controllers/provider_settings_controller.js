@@ -29,7 +29,10 @@ export default class extends Controller {
   }
 
   select(event) {
-    const provider = event.currentTarget.dataset.provider;
+    // Works for both the desktop segmented buttons (data-provider) and the
+    // mobile <select> fallback (its value).
+    const el = event.currentTarget;
+    const provider = el.dataset.provider || el.value;
     if (!provider || provider === this.activeValue) return;
 
     // Set the field explicitly before submitting: `activeValueChanged` runs on

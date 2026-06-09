@@ -19,20 +19,33 @@
                        url: settings_hosting_path,
                        method: :patch,
                        data: { "provider-settings-target": "form" } do |form| %>
-    <%= form.hidden_field :llm_provider, value: active, data: { "provider-settings-target": "field" } %>
+    <%# Mobile: native picker. The segmented tabs overflow < sm once there are
+        3+ providers, so below sm we fall back to a <select> — which is also the
+        submitted field (the desktop tabs set its value via the controller). %>
+    <div class="sm:hidden">
+      <%= form.select :llm_provider,
+                      options_for_select(providers.map { |key, label| [ label, key ] }, active),
+                      { label: t(".provider_label") },
+                      { disabled: locked,
+                        data: { "provider-settings-target": "field",
+                                action: (locked ? nil : "change->provider-settings#select") } } %>
+    </div>
 
-    <%= render DS::SegmentedControl.new(full_width: true, aria_label: t(".provider_label")) do |sc| %>
-      <% providers.each do |key, label| %>
-        <% sc.with_segment(label,
-             active: active == key,
-             disabled: locked,
-             data: {
-               "provider-settings-target": "segment",
-               provider: key,
-               action: (locked ? nil : "click->provider-settings#select")
-             }) %>
+    <%# Desktop / tablet: segmented tabs (room to spare up to ~5 providers). %>
+    <div class="hidden sm:block">
+      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t(".provider_label")) do |sc| %>
+        <% providers.each do |key, label| %>
+          <% sc.with_segment(label,
+               active: active == key,
+               disabled: locked,
+               data: {
+                 "provider-settings-target": "segment",
+                 provider: key,
+                 action: (locked ? nil : "click->provider-settings#select")
+               }) %>
+        <% end %>
       <% end %>
-    <% end %>
+    </div>
   <% end %>
 
   <p class="text-xs text-secondary"><%= t(".provider_help") %></p>
