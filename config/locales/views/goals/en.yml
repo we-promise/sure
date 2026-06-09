@@ -153,6 +153,7 @@ en:
         today_marker: Today
         tooltip_projected: "Projected: %{amount}"
         tooltip_saved: "Saved: %{amount}"
+        tooltip_target_relation: "%{percent}% of %{target} target"
       catch_up:
         title: "Save %{amount}/mo more to catch up"
         body: "Current pace %{avg}/mo · required %{required}/mo to hit your target."

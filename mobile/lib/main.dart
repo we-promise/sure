@@ -19,6 +19,7 @@ import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
 import 'services/preferences_service.dart';
+import 'services/telemetry_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,9 @@ void main() async {
   // Add initial log entry
   LogService.instance.info('App', 'Sure app starting...');
 
-  runApp(const SureApp());
+  await TelemetryService.instance.initialize(
+    appRunner: () => runApp(const SureApp()),
+  );
 }
 
 class SureApp extends StatelessWidget {
@@ -73,91 +76,93 @@ class SureApp extends StatelessWidget {
         ),
       ],
       child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) => MaterialApp(
-        title: 'Sure Finances',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          fontFamily: 'Geist',
-          fontFamilyFallback: const [
-            'Inter',
-            'Arial',
-            'sans-serif',
-          ],
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6366F1),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            filled: true,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        darkTheme: ThemeData(
-          fontFamily: 'Geist',
-          fontFamilyFallback: const [
-            'Inter',
-            'Arial',
-            'sans-serif',
-          ],
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6366F1),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            filled: true,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        themeMode: themeProvider.themeMode,
-        routes: {
-          '/config': (context) => const BackendConfigScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/home': (context) => const MainNavigationScreen(),
-        },
-        home: const AppWrapper(),
-      )),
+          builder: (context, themeProvider, _) => MaterialApp(
+                title: 'Sure Finances',
+                debugShowCheckedModeBanner: false,
+                navigatorObservers:
+                    TelemetryService.instance.navigatorObservers,
+                theme: ThemeData(
+                  fontFamily: 'Geist',
+                  fontFamilyFallback: const [
+                    'Inter',
+                    'Arial',
+                    'sans-serif',
+                  ],
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xFF6366F1),
+                    brightness: Brightness.light,
+                  ),
+                  useMaterial3: true,
+                  appBarTheme: const AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                  ),
+                  cardTheme: CardThemeData(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                  ),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                darkTheme: ThemeData(
+                  fontFamily: 'Geist',
+                  fontFamilyFallback: const [
+                    'Inter',
+                    'Arial',
+                    'sans-serif',
+                  ],
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xFF6366F1),
+                    brightness: Brightness.dark,
+                  ),
+                  useMaterial3: true,
+                  appBarTheme: const AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                  ),
+                  cardTheme: CardThemeData(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                  ),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                themeMode: themeProvider.themeMode,
+                routes: {
+                  '/config': (context) => const BackendConfigScreen(),
+                  '/login': (context) => const LoginScreen(),
+                  '/home': (context) => const MainNavigationScreen(),
+                },
+                home: const AppWrapper(),
+              )),
     );
   }
 }
@@ -224,29 +229,71 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
 
     // Handle deep link that launched the app (cold start)
     _appLinks.getInitialLink().then((uri) {
-      if (uri != null) _handleDeepLink(uri);
+      if (uri != null) {
+        TelemetryService.instance.addBreadcrumb(
+          'deep_links',
+          'initial_link_received',
+          data: {'recognized': _isSsoCallback(uri)},
+        );
+        _handleDeepLink(uri);
+      }
     }).catchError((e, stackTrace) {
-      LogService.instance.error('DeepLinks', 'Initial link error: $e\n$stackTrace');
+      LogService.instance.error(
+        'DeepLinks',
+        'Initial link failed with ${e.runtimeType}',
+      );
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'deep_links.initial_link',
+      ));
     });
 
     // Listen for deep links while app is running
     _linkSubscription = _appLinks.uriLinkStream.listen(
       (uri) => _handleDeepLink(uri),
       onError: (e, stackTrace) {
-        LogService.instance.error('DeepLinks', 'Link stream error: $e\n$stackTrace');
+        LogService.instance.error(
+          'DeepLinks',
+          'Link stream failed with ${e.runtimeType}',
+        );
+        unawaited(TelemetryService.instance.captureHandledException(
+          e,
+          stackTrace,
+          operation: 'deep_links.stream',
+        ));
       },
     );
   }
 
   void _handleDeepLink(Uri uri) {
-    if (uri.scheme == 'sureapp' && uri.host == 'oauth') {
+    final isSsoCallback = _isSsoCallback(uri);
+    TelemetryService.instance.addBreadcrumb(
+      'deep_links',
+      'link_received',
+      data: {'recognized': isSsoCallback},
+    );
+
+    if (isSsoCallback) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       authProvider.handleSsoCallback(uri);
     }
   }
 
+  bool _isSsoCallback(Uri uri) =>
+      uri.scheme == 'sureapp' && uri.host == 'oauth';
+
   Future<void> _checkBackendConfig() async {
-    final hasUrl = await ApiConfig.initialize();
+    final hasUrl = await TelemetryService.instance.traceAsync(
+      'app.backend_config_check',
+      'Backend configuration check',
+      ApiConfig.initialize,
+    );
+    TelemetryService.instance.addBreadcrumb(
+      'app',
+      'backend_config_checked',
+      data: {'configured': hasUrl},
+    );
     if (mounted) {
       setState(() {
         _hasBackendUrl = hasUrl;
