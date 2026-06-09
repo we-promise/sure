@@ -89,7 +89,7 @@ class HoldingTest < ActiveSupport::TestCase
 
     # Lost $60, or -1.59%
     assert_equal Money.new(-60), @nvda.trend.value
-    assert_in_delta -1.6, @nvda.trend.percent, 0.001
+    assert_in_delta(-1.6, @nvda.trend.percent, 0.001)
   end
 
   test "avg_cost returns nil when no trades exist and no stored cost_basis" do
