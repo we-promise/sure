@@ -97,10 +97,10 @@ en:
         provider_label: Active LLM provider
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
-        provider_help: Switching providers takes effect on the next chat. Make sure the chosen provider's credentials are configured below.
+        provider_help: Switching providers takes effect on the next chat. Configure the active provider's credentials below.
+        not_configured_hint: "Add a %{provider} API key below to activate it."
         data_retention_heading: Data handling
-        data_retention_openai: "OpenAI: API inputs are not used to train models by default. Standard retention is 30 days for trust & safety."
-        data_retention_anthropic: "Anthropic: API inputs are not used to train models by default. Standard retention is 30 days for trust & safety."
+        data_retention: API inputs are not used to train models by default; the providers' hosted APIs retain data for ~30 days for trust & safety. Custom or self-hosted endpoints follow your own policy.
       anthropic_settings:
         title: Anthropic (Claude)
         description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
@@ -128,7 +128,7 @@ en:
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
         budget_heading: Token Budget
-        budget_description: Applies to every LLM call — chat history, auto-categorization, merchant detection, and PDF processing. Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
+        budget_description: Applies to OpenAI-compatible calls (chat, auto-categorization, merchant detection, and PDF processing). Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
         context_window_label: Context Window (Optional)
         context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
         max_response_tokens_label: Max Response Tokens (Optional)

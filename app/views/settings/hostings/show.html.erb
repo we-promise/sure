@@ -3,10 +3,18 @@
   <%= render "settings/hostings/assistant_settings" %>
 <% end %>
 <%= settings_section title: t(".general") do %>
-    <div class="space-y-6">
+  <div class="space-y-6"
+       data-controller="provider-settings"
+       data-provider-settings-active-value="<%= Setting.llm_provider %>">
     <%= render "settings/hostings/llm_provider_selector" %>
-    <%= render "settings/hostings/openai_settings" %>
-    <%= render "settings/hostings/anthropic_settings" %>
+    <%= tag.div data: { "provider-settings-target": "panel", provider: "openai" },
+                hidden: Setting.llm_provider != "openai" do %>
+      <%= render "settings/hostings/openai_settings" %>
+    <% end %>
+    <%= tag.div data: { "provider-settings-target": "panel", provider: "anthropic" },
+                hidden: Setting.llm_provider != "anthropic" do %>
+      <%= render "settings/hostings/anthropic_settings" %>
+    <% end %>
     <%= render "settings/hostings/brand_fetch_settings" %>
   </div>
 <% end %>
