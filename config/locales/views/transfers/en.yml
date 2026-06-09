@@ -47,6 +47,8 @@ en:
       date: Date
       amount: Amount
       bank_charges: Bank Charges
+      source_fee: Source fee
+      destination_fee: Destination fee
       category: Category
       uncategorized: Uncategorized
     update:
