@@ -298,11 +298,14 @@ class InvestmentStatement
     def load_current_holdings
       return [] unless investment_accounts.any?
 
-      holdings = Holding
+      latest_holding_ids = Holding
         .where(account_id: investment_account_ids)
-        .where.not(qty: 0)
-        .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.*")
+        .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
         .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+
+      holdings = Holding
+        .where(id: latest_holding_ids)
+        .where.not(qty: 0)
         .to_a
 
       ActiveRecord::Associations::Preloader.new(

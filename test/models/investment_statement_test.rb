@@ -43,6 +43,22 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 2921.92, @statement.portfolio_value, 0.001
   end
 
+  test "current_holdings excludes sold positions whose latest snapshot has zero qty" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+    security = Security.create!(ticker: "SOLD", name: "Sold Security")
+
+    Holding.create!(
+      account: account, security: security, date: 5.days.ago.to_date,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 0, price: 100, amount: 0, currency: "USD"
+    )
+
+    assert_empty @statement.current_holdings
+  end
+
   test "current_holdings includes holdings from every investment account regardless of currency" do
     usd_account = create_investment_account(balance: 2100, currency: "USD")
     eur_account = create_investment_account(balance: 2000, currency: "EUR")
