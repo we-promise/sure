@@ -22,10 +22,10 @@ export default class extends Controller {
     this.cardTargets.forEach((card) => {
       const name = card.dataset.providerName ?? "";
       const region = card.dataset.providerRegion ?? "";
-      const kind = card.dataset.providerKind ?? "";
-      const haystack = `${name} ${region} ${kind}`;
+      const kindTokens = (card.dataset.providerKind ?? "").split(/\s+/);
+      const haystack = `${name} ${region} ${kindTokens.join(" ")}`;
       const matchesQuery = !query || haystack.includes(query);
-      const matchesKind = activeKind === "all" || kind === activeKind;
+      const matchesKind = activeKind === "all" || kindTokens.includes(activeKind);
       const visible = matchesQuery && matchesKind;
       card.classList.toggle("hidden", !visible);
       if (visible) visibleCount++;

@@ -9,30 +9,65 @@ class SnaptradeAccount::HoldingsProcessor
     return unless account.present?
 
     holdings_data = @snaptrade_account.raw_holdings_payload
-    return if holdings_data.blank?
 
-    Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
+    if holdings_data.present?
+      Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
 
-    # Log sample of first holding to understand structure
-    if holdings_data.first
-      sample = holdings_data.first
-      Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Sample holding keys: #{sample.keys.first(10).join(', ')}"
-      if sample["symbol"] || sample[:symbol]
-        symbol_sample = sample["symbol"] || sample[:symbol]
-        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Symbol data keys: #{symbol_sample.keys.first(10).join(', ')}" if symbol_sample.is_a?(Hash)
+      # Log sample of first holding to understand structure
+      if holdings_data.first
+        sample = holdings_data.first
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Sample holding keys: #{sample.keys.first(10).join(', ')}"
+        if sample["symbol"] || sample[:symbol]
+          symbol_sample = sample["symbol"] || sample[:symbol]
+          Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Symbol data keys: #{symbol_sample.keys.first(10).join(', ')}" if symbol_sample.is_a?(Hash)
+        end
+      end
+
+      holdings_data.each_with_index do |holding_data, idx|
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
+        process_holding(holding_data.with_indifferent_access)
+      rescue => e
+        Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
+        Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
       end
     end
 
-    holdings_data.each_with_index do |holding_data, idx|
-      Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
-      process_holding(holding_data.with_indifferent_access)
-    rescue => e
-      Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
-    end
+    # Always run, even with no security holdings — secondary-currency cash
+    # should still be surfaced (issue #1809).
+    process_cash_holdings
   end
 
   private
+
+    # Surface cash held in currencies other than the account's primary currency
+    # as synthetic cash holdings (issue #1809). The primary currency stays in
+    # account.cash_balance; without this, SnapTrade's secondary-currency cash
+    # (e.g. USD cash in a CAD account) was silently discarded.
+    def process_cash_holdings
+      @snaptrade_account.non_primary_cash_entries.each do |entry|
+        amount = parse_decimal(entry[:amount])
+        next if amount.nil?
+
+        security = Security.cash_for(account, currency: entry[:currency])
+
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing #{entry[:currency]} cash holding"
+
+        import_adapter.import_holding(
+          security: security,
+          quantity: amount,
+          amount: amount,
+          currency: entry[:currency],
+          date: Date.current,
+          price: 1,
+          external_id: "snaptrade_cash_#{entry[:currency].to_s.downcase}",
+          account_provider_id: @snaptrade_account.account_provider&.id,
+          source: "snaptrade",
+          delete_future_holdings: false
+        )
+      rescue => e
+        Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to import #{entry[:currency]} cash holding: #{e.class} - #{e.message}"
+      end
+    end
 
     def account
       @snaptrade_account.current_account

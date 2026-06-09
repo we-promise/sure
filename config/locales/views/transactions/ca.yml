@@ -163,7 +163,9 @@ ca:
       none: "(cap)"
       note_label: Notes
       note_placeholder: Introdueix una nota
+      create_tag: Crea
       submit: Afegeix transacció
+      tag_search_placeholder: Cerca o crea una etiqueta
       tags_label: Etiquetes
       transfer: Transferència
     header:

@@ -29,9 +29,9 @@
     <div class="p-4 bg-surface-inset rounded-lg">
       <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
       <div class="flex items-baseline gap-2 flex-wrap">
-        <span class="text-lg font-semibold text-success break-words privacy-sensitive"><%= net_worth_metrics[:total_assets].format %></span>
+        <span class="text-lg font-semibold text-primary break-words privacy-sensitive"><%= net_worth_metrics[:total_assets].format %></span>
         <span class="text-xs text-subdued shrink-0">-</span>
-        <span class="text-lg font-semibold text-destructive break-words privacy-sensitive"><%= net_worth_metrics[:total_liabilities].format %></span>
+        <span class="text-lg font-semibold text-primary break-words privacy-sensitive"><%= net_worth_metrics[:total_liabilities].format %></span>
       </div>
     </div>
   </div>
@@ -52,7 +52,7 @@
           <% net_worth_metrics[:asset_groups].each_with_index do |group, idx| %>
             <tr class="<%= idx < net_worth_metrics[:asset_groups].size - 1 ? "table-divider" : "" %>">
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-secondary"><%= group[:name] %></td>
-              <td class="py-3 px-4 lg:px-6 text-sm font-medium text-right text-success privacy-sensitive"><%= group[:total].format %></td>
+              <td class="py-3 px-4 lg:px-6 text-sm font-medium text-right text-primary privacy-sensitive"><%= group[:total].format %></td>
             </tr>
           <% end %>
           <% if net_worth_metrics[:asset_groups].empty? %>
@@ -79,7 +79,7 @@
           <% net_worth_metrics[:liability_groups].each_with_index do |group, idx| %>
             <tr class="<%= idx < net_worth_metrics[:liability_groups].size - 1 ? "table-divider" : "" %>">
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-secondary"><%= group[:name] %></td>
-              <td class="py-3 px-4 lg:px-6 text-sm font-medium text-right text-destructive privacy-sensitive"><%= group[:total].format %></td>
+              <td class="py-3 px-4 lg:px-6 text-sm font-medium text-right text-primary privacy-sensitive"><%= group[:total].format %></td>
             </tr>
           <% end %>
           <% if net_worth_metrics[:liability_groups].empty? %>
