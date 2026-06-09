@@ -1,6 +1,36 @@
 require "set"
 
 class Family::DataImporter
+  MissingReferenceError = Class.new(StandardError) do
+    attr_reader :code, :details
+
+    def initialize(record_type:, source_type:, source_id:)
+      @code = "missing_source_reference"
+      @details = {
+        record_type: record_type,
+        source_type: source_type,
+        source_id: source_id
+      }
+
+      super("#{record_type} references missing #{source_type} source id #{source_id}")
+    end
+  end
+
+  InvalidRecordError = Class.new(StandardError) do
+    attr_reader :code, :details
+
+    def initialize(record_type:, field:, value:)
+      @code = "invalid_import_record"
+      @details = {
+        record_type: record_type,
+        field: field,
+        value: value
+      }
+
+      super("#{record_type} has invalid #{field}: #{value.inspect}")
+    end
+  end
+
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
@@ -12,9 +42,41 @@ class Family::DataImporter
     ACCOUNTABLE_TYPE_CLASSES[type.to_s]
   end
 
-  def initialize(family, ndjson_content)
+  MAPPING_TYPES = {
+    accounts: "Account",
+    categories: "Category",
+    tags: "Tag",
+    merchants: "Merchant",
+    recurring_transactions: "RecurringTransaction",
+    transactions: "Transaction",
+    budgets: "Budget",
+    securities: "Security",
+    rules: "Rule"
+  }.freeze
+  SUMMARY_KEYS = {
+    "Account" => "accounts",
+    "Balance" => "balances",
+    "Category" => "categories",
+    "Tag" => "tags",
+    "Merchant" => "merchants",
+    "RecurringTransaction" => "recurring_transactions",
+    "Transaction" => "transactions",
+    "Transfer" => "transfers",
+    "RejectedTransfer" => "rejected_transfers",
+    "Trade" => "trades",
+    "Holding" => "holdings",
+    "Valuation" => "valuations",
+    "Budget" => "budgets",
+    "BudgetCategory" => "budget_categories",
+    "Rule" => "rules"
+  }.freeze
+
+  def initialize(family, ndjson_content, import_session: nil, import: nil)
     @family = family
     @ndjson_content = ndjson_content
+    @import_session = import_session
+    @import = import
+    @strict_references = import_session.present?
     @id_mappings = {
       accounts: {},
       categories: {},
@@ -23,11 +85,13 @@ class Family::DataImporter
       recurring_transactions: {},
       transactions: {},
       budgets: {},
-      securities: {}
+      securities: {},
+      rules: {}
     }
     @security_cache = {}
     @created_accounts = []
     @created_entries = []
+    @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
   end
 
   def import!
@@ -54,7 +118,7 @@ class Family::DataImporter
       import_rules(records["Rule"] || [])
     end
 
-    { accounts: @created_accounts, entries: @created_entries }
+    { accounts: @created_accounts, entries: @created_entries, summary: compact_summary }
   end
 
   private
@@ -79,6 +143,128 @@ class Family::DataImporter
       records
     end
 
+    def empty_summary_bucket
+      { "created" => 0, "updated" => 0, "skipped" => 0, "failed" => 0 }
+    end
+
+    def compact_summary
+      @summary.select { |_entity_type, counts| counts.values.any?(&:positive?) }
+    end
+
+    def increment_summary(record_type, status)
+      @summary[SUMMARY_KEYS.fetch(record_type)].tap do |counts|
+        counts[status.to_s] = counts.fetch(status.to_s, 0) + 1
+      end
+    end
+
+    def map_source!(mapping_key, source_id, target)
+      return if source_id.blank? || target.blank?
+
+      @id_mappings[mapping_key][source_id] = target.id
+      return unless @import_session
+
+      source_type = MAPPING_TYPES.fetch(mapping_key)
+      mapping = @import_session.source_mappings.find_or_initialize_by(
+        family: @family,
+        source_type: source_type,
+        source_id: source_id
+      )
+      mapping.target = target
+      mapping.save!
+    end
+
+    def mapped_id(mapping_key, old_id, record_type:, required: true)
+      if old_id.blank?
+        missing_reference(record_type, mapping_key, "(blank)") if required
+        return
+      end
+
+      return @id_mappings[mapping_key][old_id] if @id_mappings[mapping_key].key?(old_id)
+
+      source_type = MAPPING_TYPES.fetch(mapping_key)
+      mapping = @import_session&.source_mappings&.find_by(
+        family: @family,
+        source_type: source_type,
+        source_id: old_id
+      )
+
+      if mapping
+        @id_mappings[mapping_key][old_id] = mapping.target_id
+        return mapping.target_id
+      end
+
+      if required && @strict_references
+        raise MissingReferenceError.new(
+          record_type: record_type,
+          source_type: source_type,
+          source_id: old_id
+        )
+      end
+
+      nil
+    end
+
+    def mapped_record(mapping_key, old_id, scope, record_type:)
+      target_id = mapped_id(mapping_key, old_id, record_type: record_type, required: false)
+      return if target_id.blank?
+
+      scope.find_by(id: target_id)
+    end
+
+    def missing_reference(record_type, mapping_key, old_id)
+      if @strict_references
+        increment_summary(record_type, :failed)
+        raise MissingReferenceError.new(
+          record_type: record_type,
+          source_type: MAPPING_TYPES.fetch(mapping_key),
+          source_id: old_id
+        )
+      end
+
+      increment_summary(record_type, :skipped)
+      nil
+    end
+
+    def require_source_id!(record_type, source_id)
+      return if source_id.present? || !@strict_references
+
+      increment_summary(record_type, :failed)
+      raise MissingReferenceError.new(
+        record_type: record_type,
+        source_type: record_type,
+        source_id: "(blank)"
+      )
+    end
+
+    def invalid_record!(record_type, field, value)
+      if @strict_references
+        increment_summary(record_type, :failed)
+        raise InvalidRecordError.new(record_type: record_type, field: field, value: value)
+      end
+
+      increment_summary(record_type, :skipped)
+      nil
+    end
+
+    def session_entry_source
+      return unless @import_session
+
+      "sure_import_session:#{@import_session.id}"
+    end
+
+    def session_entry_external_id(record_type, source_id)
+      return if @import_session.blank? || source_id.blank?
+
+      "#{record_type}:#{source_id}"
+    end
+
+    def session_imported_entry(account, record_type, source_id)
+      external_id = session_entry_external_id(record_type, source_id)
+      return if external_id.blank?
+
+      account.entries.find_by(source: session_entry_source, external_id: external_id)
+    end
+
     def import_accounts(records)
       records.each do |record|
         data = record["data"]
@@ -86,26 +272,41 @@ class Family::DataImporter
         accountable_data = data["accountable"] || {}
         accountable_type = data["accountable_type"]
 
+        require_source_id!("Account", old_id)
+
         accountable_class = self.class.accountable_class_for(accountable_type)
-        next unless accountable_class
 
-        accountable = accountable_class.new
-        accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
-
-        # Copy any other accountable attributes
-        safe_accountable_attrs = %w[subtype locked_attributes]
-        safe_accountable_attrs.each do |attr|
-          if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
-            accountable.send("#{attr}=", accountable_data[attr])
-          end
+        unless accountable_class
+          invalid_record!("Account", "accountable_type", accountable_type)
+          next
         end
 
-        account = @family.accounts.build(
+        account = mapped_record(:accounts, old_id, @family.accounts, record_type: "Account")
+        created = account.blank?
+
+        if account
+          accountable = account.accountable
+        else
+          # Build accountable
+          accountable = accountable_class.new
+          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+
+          # Copy any other accountable attributes
+          safe_accountable_attrs = %w[subtype locked_attributes]
+          safe_accountable_attrs.each do |attr|
+            if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
+              accountable.send("#{attr}=", accountable_data[attr])
+            end
+          end
+
+          account = @family.accounts.build(accountable: accountable)
+        end
+
+        account.assign_attributes(
           name: data["name"],
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
-          accountable: accountable,
           subtype: data["subtype"],
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
@@ -118,7 +319,7 @@ class Family::DataImporter
         # Set opening balance if we have a historical balance and the import
         # does not provide either an explicit opening-anchor valuation or an
         # authoritative balance-history stream for this account.
-        if data["balance"].present? && !skip_opening_balance_import?(old_id, data)
+        if created && data["balance"].present? && !skip_opening_balance_import?(old_id, data)
           manager = Account::OpeningBalanceManager.new(account)
           result = manager.set_opening_balance(
             balance: data["balance"].to_d,
@@ -127,8 +328,9 @@ class Family::DataImporter
           log_failed_opening_balance_import(account, old_id, result) unless result.success?
         end
 
-        @id_mappings[:accounts][old_id] = account.id
-        @created_accounts << account
+        map_source!(:accounts, old_id, account)
+        @created_accounts << account if created
+        increment_summary("Account", created ? :created : :updated)
       end
     end
 
@@ -139,16 +341,23 @@ class Family::DataImporter
     def import_balances(records)
       records.each do |record|
         data = record["data"] || {}
-        new_account_id = @id_mappings[:accounts][data["account_id"]]
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Balance")
         balance_date = parse_import_date(data["date"])
-        next if new_account_id.blank? || balance_date.blank? || data["balance"].blank?
+        next if new_account_id.blank?
+
+        if balance_date.blank? || data["balance"].blank?
+          increment_summary("Balance", :skipped)
+          next
+        end
 
         account = @family.accounts.find(new_account_id)
         currency = data["currency"].presence || account.currency
         balance = account.balances.find_or_initialize_by(date: balance_date, currency: currency)
+        created = balance.new_record?
 
         balance.assign_attributes(imported_balance_attributes(data))
         balance.save!
+        increment_summary("Balance", created ? :created : :updated)
       end
     end
 
@@ -188,24 +397,30 @@ class Family::DataImporter
         old_id = data["id"]
         parent_id = data["parent_id"]
 
+        require_source_id!("Category", old_id)
+
         # Store parent relationship for second pass
         parent_mappings[old_id] = parent_id if parent_id.present?
 
-        category = @family.categories.build(
+        category = mapped_record(:categories, old_id, @family.categories, record_type: "Category")
+        created = category.blank?
+        category ||= @family.categories.build
+
+        category.assign_attributes(
           name: data["name"],
           color: data["color"] || Category::UNCATEGORIZED_COLOR,
           classification_unused: data["classification_unused"] || data["classification"] || "expense",
           lucide_icon: data["lucide_icon"] || "shapes"
         )
         category.save!
-
-        @id_mappings[:categories][old_id] = category.id
+        map_source!(:categories, old_id, category)
+        increment_summary("Category", created ? :created : :updated)
       end
 
       # Second pass: establish parent relationships
       parent_mappings.each do |old_id, old_parent_id|
-        new_id = @id_mappings[:categories][old_id]
-        new_parent_id = @id_mappings[:categories][old_parent_id]
+        new_id = mapped_id(:categories, old_id, record_type: "Category")
+        new_parent_id = mapped_id(:categories, old_parent_id, record_type: "Category")
 
         next unless new_id && new_parent_id
 
@@ -219,13 +434,22 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
-        tag = @family.tags.build(
+        require_source_id!("Tag", old_id)
+
+        tag = mapped_record(:tags, old_id, @family.tags, record_type: "Tag")
+        created = tag.blank?
+        tag ||= @family.tags.build
+        color = data["color"] || tag.color
+        # Keep replayed session imports deterministic when the source omits a color.
+        color ||= Tag::COLORS.first if created
+
+        tag.assign_attributes(
           name: data["name"],
-          color: data["color"] || Tag::COLORS.sample
+          color: color
         )
         tag.save!
-
-        @id_mappings[:tags][old_id] = tag.id
+        map_source!(:tags, old_id, tag)
+        increment_summary("Tag", created ? :created : :updated)
       end
     end
 
@@ -234,14 +458,20 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
-        merchant = @family.merchants.build(
+        require_source_id!("Merchant", old_id)
+
+        merchant = mapped_record(:merchants, old_id, @family.merchants, record_type: "Merchant")
+        created = merchant.blank?
+        merchant ||= @family.merchants.build
+
+        merchant.assign_attributes(
           name: data["name"],
           color: data["color"],
           logo_url: data["logo_url"]
         )
         merchant.save!
-
-        @id_mappings[:merchants][old_id] = merchant.id
+        map_source!(:merchants, old_id, merchant)
+        increment_summary("Merchant", created ? :created : :updated)
       end
     end
 
@@ -250,10 +480,20 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
-        new_account_id = remap_optional_id(:accounts, data["account_id"])
+        require_source_id!("RecurringTransaction", old_id)
+
+        recurring_transaction = mapped_record(
+          :recurring_transactions,
+          old_id,
+          @family.recurring_transactions,
+          record_type: "RecurringTransaction"
+        )
+        created = recurring_transaction.blank?
+
+        new_account_id = remap_optional_id(:accounts, data["account_id"], record_type: "RecurringTransaction")
         next if data["account_id"].present? && new_account_id.blank?
 
-        new_merchant_id = remap_optional_id(:merchants, data["merchant_id"])
+        new_merchant_id = remap_optional_id(:merchants, data["merchant_id"], record_type: "RecurringTransaction")
         next if data["merchant_id"].present? && new_merchant_id.blank?
 
         expected_day_of_month = recurring_expected_day_for(data["expected_day_of_month"])
@@ -262,7 +502,8 @@ class Family::DataImporter
         next_expected_date = parse_import_date(data["next_expected_date"])
         next unless last_occurrence_date && next_expected_date
 
-        recurring_transaction = @family.recurring_transactions.build(
+        recurring_transaction ||= @family.recurring_transactions.build
+        recurring_transaction.assign_attributes(
           account_id: new_account_id,
           merchant_id: new_merchant_id,
           amount: data["amount"].to_d,
@@ -280,14 +521,15 @@ class Family::DataImporter
         )
 
         recurring_transaction.save!
-        @id_mappings[:recurring_transactions][old_id] = recurring_transaction.id
+        map_source!(:recurring_transactions, old_id, recurring_transaction)
+        increment_summary("RecurringTransaction", created ? :created : :updated)
       end
     end
 
-    def remap_optional_id(mapping_key, old_id)
+    def remap_optional_id(mapping_key, old_id, record_type:)
       return if old_id.blank?
 
-      @id_mappings[mapping_key][old_id]
+      mapped_id(mapping_key, old_id, record_type: record_type)
     end
 
     def recurring_transaction_status_for(status)
@@ -312,8 +554,10 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
+        require_source_id!("Transaction", old_id)
+
         # Map account ID
-        new_account_id = @id_mappings[:accounts][data["account_id"]]
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Transaction")
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
@@ -321,55 +565,69 @@ class Family::DataImporter
         # Map category ID (optional)
         new_category_id = nil
         if data["category_id"].present?
-          new_category_id = @id_mappings[:categories][data["category_id"]]
+          new_category_id = mapped_id(:categories, data["category_id"], record_type: "Transaction")
         end
 
         # Map merchant ID (optional)
         new_merchant_id = nil
         if data["merchant_id"].present?
-          new_merchant_id = @id_mappings[:merchants][data["merchant_id"]]
+          new_merchant_id = mapped_id(:merchants, data["merchant_id"], record_type: "Transaction")
         end
 
         # Map tag IDs (optional)
-        new_tag_ids = mapped_tag_ids(data["tag_ids"])
+        new_tag_ids = mapped_tag_ids(data["tag_ids"], record_type: "Transaction")
 
-        transaction = Transaction.new(
+        entry = session_imported_entry(account, "Transaction", old_id)
+        transaction = entry&.entryable if entry&.entryable.is_a?(Transaction)
+        created = transaction.blank?
+
+        transaction ||= Transaction.new
+        transaction.assign_attributes(
           category_id: new_category_id,
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
 
-        entry = Entry.new(
+        entry ||= Entry.new(entryable: transaction)
+        entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),
           amount: data["amount"].to_d,
           name: data["name"] || "Imported transaction",
           currency: data["currency"] || account.currency,
           notes: data["notes"],
-          excluded: data["excluded"] || false,
-          entryable: transaction
+          excluded: data["excluded"] || false
         )
+        if @import_session
+          entry.external_id = session_entry_external_id("Transaction", old_id)
+          entry.source = session_entry_source
+        end
 
         entry.save!
 
-        @id_mappings[:transactions][old_id] = transaction.id
+        map_source!(:transactions, old_id, transaction)
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
-          @created_entries << entry
+          @created_entries << entry if created
           import_split_lines!(entry, split_rows, fallback_tag_ids: new_tag_ids)
         else
+          transaction.taggings.destroy_all unless created
           new_tag_ids.each do |tag_id|
             transaction.taggings.create!(tag_id: tag_id)
           end
 
-          @created_entries << entry
+          @created_entries << entry if created
         end
+
+        increment_summary("Transaction", created ? :created : :updated)
       end
     end
 
-    def mapped_tag_ids(old_tag_ids)
-      Array(old_tag_ids).map { |old_tag_id| @id_mappings[:tags][old_tag_id] }.compact
+    def mapped_tag_ids(old_tag_ids, record_type:)
+      Array(old_tag_ids).map do |old_tag_id|
+        mapped_id(:tags, old_tag_id, record_type: record_type)
+      end.compact
     end
 
     def importable_split_rows(data)
@@ -380,8 +638,8 @@ class Family::DataImporter
         amount = row["amount"] || row["amount_money"] || row["amount_decimal"]
         next if amount.blank?
 
-        category_id = remap_optional_id(:categories, row["category_id"])
-        merchant_id = remap_optional_id(:merchants, row["merchant_id"])
+        category_id = remap_optional_id(:categories, row["category_id"], record_type: "Transaction")
+        merchant_id = remap_optional_id(:merchants, row["merchant_id"], record_type: "Transaction")
 
         {
           old_id: row["id"],
@@ -392,7 +650,7 @@ class Family::DataImporter
           merchant_id_provided: row.key?("merchant_id"),
           notes: row["notes"],
           excluded: boolean_import_value(row, "excluded", default: false),
-          tag_ids: mapped_tag_ids(row["tag_ids"]),
+          tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
           kind: row["kind"]
         }
@@ -424,7 +682,7 @@ class Family::DataImporter
           transaction.taggings.create!(tag_id: tag_id)
         end
 
-        @id_mappings[:transactions][row[:old_id]] = transaction.id if row[:old_id].present?
+        map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
         @created_entries << child_entry
       end
     end
@@ -432,31 +690,60 @@ class Family::DataImporter
     def import_transfers(records)
       records.each do |record|
         data = record["data"]
-        inflow_transaction_id = @id_mappings[:transactions][data["inflow_transaction_id"]]
-        outflow_transaction_id = @id_mappings[:transactions][data["outflow_transaction_id"]]
+        inflow_transaction_id = mapped_id(:transactions, data["inflow_transaction_id"], record_type: "Transfer")
+        outflow_transaction_id = mapped_id(:transactions, data["outflow_transaction_id"], record_type: "Transfer")
         next unless inflow_transaction_id && outflow_transaction_id
 
-        Transfer.find_or_create_by!(
+        transfer = Transfer.find_or_create_by!(
           inflow_transaction_id: inflow_transaction_id,
           outflow_transaction_id: outflow_transaction_id
         ) do |transfer|
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
+        apply_transfer_transaction_kinds!(transfer)
+        increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
+    end
+
+    def apply_transfer_transaction_kinds!(transfer)
+      destination_account = transfer.inflow_transaction.entry.account
+      outflow_kind = imported_transfer_outflow_kind(transfer)
+      outflow_attrs = { kind: outflow_kind }
+      if outflow_kind == "investment_contribution" && transfer.outflow_transaction.category_id.blank?
+        outflow_attrs[:category] = destination_account.family.investment_contributions_category
+      end
+
+      transfer.outflow_transaction.update!(outflow_attrs)
+      transfer.inflow_transaction.update!(kind: "funds_movement")
+    end
+
+    def imported_transfer_outflow_kind(transfer)
+      source_account = transfer.outflow_transaction.entry.account
+      destination_account = transfer.inflow_transaction.entry.account
+      return "loan_payment" if destination_account.loan?
+      return "cc_payment" if destination_account.liability?
+      return "investment_contribution" if investment_account?(destination_account) && !investment_account?(source_account)
+
+      "funds_movement"
+    end
+
+    def investment_account?(account)
+      account.investment? || account.crypto?
     end
 
     def import_rejected_transfers(records)
       records.each do |record|
         data = record["data"]
-        inflow_transaction_id = @id_mappings[:transactions][data["inflow_transaction_id"]]
-        outflow_transaction_id = @id_mappings[:transactions][data["outflow_transaction_id"]]
+        inflow_transaction_id = mapped_id(:transactions, data["inflow_transaction_id"], record_type: "RejectedTransfer")
+        outflow_transaction_id = mapped_id(:transactions, data["outflow_transaction_id"], record_type: "RejectedTransfer")
         next unless inflow_transaction_id && outflow_transaction_id
 
-        RejectedTransfer.find_or_create_by!(
+        rejected_transfer = RejectedTransfer.find_or_create_by!(
           inflow_transaction_id: inflow_transaction_id,
           outflow_transaction_id: outflow_transaction_id
         )
+        increment_summary("RejectedTransfer", rejected_transfer.previously_new_record? ? :created : :updated)
       end
     end
 
@@ -471,9 +758,12 @@ class Family::DataImporter
     def import_trades(records)
       records.each do |record|
         data = record["data"]
+        old_id = data["id"]
+
+        require_source_id!("Trade", old_id)
 
         # Map account ID
-        new_account_id = @id_mappings[:accounts][data["account_id"]]
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Trade")
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
@@ -490,34 +780,47 @@ class Family::DataImporter
           exchange_operating_mic: data["exchange_operating_mic"]
         )
 
-        trade = Trade.new(
+        entry = session_imported_entry(account, "Trade", old_id)
+        trade = entry&.entryable if entry&.entryable.is_a?(Trade)
+        created = trade.blank?
+
+        trade ||= Trade.new
+        trade.assign_attributes(
           security: security,
           qty: data["qty"].to_d,
           price: data["price"].to_d,
           currency: data["currency"] || account.currency
         )
 
-        entry = Entry.new(
+        entry ||= Entry.new(entryable: trade)
+        entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),
           amount: data["amount"].to_d,
           name: "#{data["qty"].to_d >= 0 ? 'Buy' : 'Sell'} #{ticker}",
-          currency: data["currency"] || account.currency,
-          entryable: trade
+          currency: data["currency"] || account.currency
         )
+        if @import_session
+          entry.external_id = session_entry_external_id("Trade", old_id)
+          entry.source = session_entry_source
+        end
 
         entry.save!
-        @created_entries << entry
+        @created_entries << entry if created
+        increment_summary("Trade", created ? :created : :updated)
       end
     end
 
     def import_holdings(records)
-      accounts_by_id = @family.accounts.where(id: records.filter_map { |record| @id_mappings[:accounts][record.dig("data", "account_id")] }).index_by(&:id)
+      account_ids = records.filter_map do |record|
+        mapped_id(:accounts, record.dig("data", "account_id"), record_type: "Holding", required: false)
+      end
+      accounts_by_id = @family.accounts.where(id: account_ids).index_by(&:id)
 
       records.each do |record|
         data = record["data"]
 
-        new_account_id = @id_mappings[:accounts][data["account_id"]]
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Holding")
         next unless new_account_id
 
         account = accounts_by_id[new_account_id]
@@ -552,33 +855,46 @@ class Family::DataImporter
           security_locked: truthy?(data["security_locked"]) || false
         }
 
-        upsert_imported_holding!(account, security, holding_date, holding_currency, holding_attributes)
+        created = upsert_imported_holding!(account, security, holding_date, holding_currency, holding_attributes)
+        increment_summary("Holding", created ? :created : :updated)
       end
     end
 
     def import_valuations(records)
       records.each do |record|
         data = record["data"]
+        old_id = data["id"]
+
+        require_source_id!("Valuation", old_id)
 
         # Map account ID
-        new_account_id = @id_mappings[:accounts][data["account_id"]]
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Valuation")
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
 
-        valuation = Valuation.new(kind: valuation_kind_for(data["kind"]))
+        entry = session_imported_entry(account, "Valuation", old_id)
+        valuation = entry&.entryable if entry&.entryable.is_a?(Valuation)
+        created = valuation.blank?
+        valuation ||= Valuation.new
+        valuation.kind = valuation_kind_for(data["kind"])
 
-        entry = Entry.new(
+        entry ||= Entry.new(entryable: valuation)
+        entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),
           amount: data["amount"].to_d,
           name: data["name"] || "Valuation",
-          currency: data["currency"] || account.currency,
-          entryable: valuation
+          currency: data["currency"] || account.currency
         )
+        if @import_session
+          entry.external_id = session_entry_external_id("Valuation", old_id)
+          entry.source = session_entry_source
+        end
 
         entry.save!
-        @created_entries << entry
+        @created_entries << entry if created
+        increment_summary("Valuation", created ? :created : :updated)
       end
     end
 
@@ -650,7 +966,13 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
-        budget = @family.budgets.build(
+        require_source_id!("Budget", old_id)
+
+        budget = mapped_record(:budgets, old_id, @family.budgets, record_type: "Budget")
+        created = budget.blank?
+        budget ||= @family.budgets.build
+
+        budget.assign_attributes(
           start_date: Date.parse(data["start_date"].to_s),
           end_date: Date.parse(data["end_date"].to_s),
           budgeted_spending: data["budgeted_spending"]&.to_d,
@@ -659,7 +981,8 @@ class Family::DataImporter
         )
 
         budget.save!
-        @id_mappings[:budgets][old_id] = budget.id
+        map_source!(:budgets, old_id, budget)
+        increment_summary("Budget", created ? :created : :updated)
       end
     end
 
@@ -668,35 +991,48 @@ class Family::DataImporter
         data = record["data"]
 
         # Map budget ID
-        new_budget_id = @id_mappings[:budgets][data["budget_id"]]
+        new_budget_id = mapped_id(:budgets, data["budget_id"], record_type: "BudgetCategory")
         next unless new_budget_id
 
         # Map category ID
-        new_category_id = @id_mappings[:categories][data["category_id"]]
+        new_category_id = mapped_id(:categories, data["category_id"], record_type: "BudgetCategory")
         next unless new_category_id
 
         budget = @family.budgets.find(new_budget_id)
 
-        budget_category = budget.budget_categories.build(
+        budget_category = budget.budget_categories.find_or_initialize_by(category_id: new_category_id)
+        created = budget_category.new_record?
+        budget_category.assign_attributes(
           category_id: new_category_id,
           budgeted_spending: data["budgeted_spending"].to_d,
           currency: data["currency"] || budget.currency
         )
 
         budget_category.save!
+        increment_summary("BudgetCategory", created ? :created : :updated)
       end
     end
 
     def import_rules(records)
       records.each do |record|
         data = record["data"]
+        old_id = data["id"]
 
-        rule = @family.rules.build(
+        require_source_id!("Rule", old_id)
+
+        rule = mapped_record(:rules, old_id, @family.rules, record_type: "Rule")
+        created = rule.blank?
+        rule ||= @family.rules.build
+
+        rule.assign_attributes(
           name: data["name"],
           resource_type: data["resource_type"] || "transaction",
           active: data["active"] || false,
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil
         )
+
+        rule.conditions.destroy_all unless created
+        rule.actions.destroy_all unless created
 
         # Build conditions
         (data["conditions"] || []).each do |condition_data|
@@ -709,6 +1045,8 @@ class Family::DataImporter
         end
 
         rule.save!
+        map_source!(:rules, old_id, rule)
+        increment_summary("Rule", created ? :created : :updated)
       end
     end
 
@@ -845,8 +1183,9 @@ class Family::DataImporter
         return security
       end
 
-      if old_security_id.present? && @id_mappings[:securities][old_security_id]
-        security = Security.find(@id_mappings[:securities][old_security_id])
+      mapped_security_id = mapped_id(:securities, old_security_id, record_type: "Security", required: false)
+      if old_security_id.present? && mapped_security_id
+        security = Security.find(mapped_security_id)
         apply_security_metadata(security, normalized_ticker, attributes)
         @security_cache[cache_key] = security
         return security
@@ -856,7 +1195,7 @@ class Family::DataImporter
       apply_security_metadata(security, normalized_ticker, attributes)
 
       @security_cache[cache_key] = security
-      @id_mappings[:securities][old_security_id] = security.id if old_security_id.present?
+      map_source!(:securities, old_security_id, security) if old_security_id.present?
       security
     end
 
@@ -901,6 +1240,7 @@ class Family::DataImporter
 
     def upsert_imported_holding!(account, security, date, currency, attributes)
       holding = account.holdings.find_or_initialize_by(security: security, date: date, currency: currency)
+      created = holding.new_record?
       holding.assign_attributes(attributes)
 
       begin
@@ -908,7 +1248,10 @@ class Family::DataImporter
       rescue ActiveRecord::RecordNotUnique
         existing = account.holdings.find_by!(security: security, date: date, currency: currency)
         existing.update!(attributes)
+        created = false
       end
+
+      created
     end
 
     def security_kind_for(value)

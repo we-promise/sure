@@ -101,8 +101,10 @@ class Goal < ApplicationRecord
       100
     elsif target_amount.to_d.zero?
       0
+    elsif remaining_amount.to_d.zero?
+      100
     else
-      [ ((current_balance.to_d / target_amount.to_d) * 100).round, 100 ].min
+      ((current_balance.to_d / target_amount.to_d) * 100).floor.clamp(0, 99)
     end
   end
 
@@ -238,14 +240,14 @@ class Goal < ApplicationRecord
     end
   end
 
-  # :reached         → progress_percent >= 100
+  # :reached         → completed, or no remaining amount
   # :on_track        → has target_date and pace >= required monthly
   # :behind          → has target_date and pace < required monthly
   # :no_target_date  → open-ended
   def status
     return @status if defined?(@status)
 
-    @status = if progress_percent >= 100
+    @status = if completed? || remaining_amount.to_d.zero?
       :reached
     elsif target_date.nil?
       :no_target_date

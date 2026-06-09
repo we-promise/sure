@@ -90,6 +90,47 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "new form excludes same-family accounts not shared with the current user" do
+    # Regression for #2168: funding-account picker leaked accounts owned by
+    # other family members that were never shared with the current user.
+    private_account = Account.create!(
+      family: @user.family,
+      owner: users(:family_member),
+      accountable: Depository.new,
+      name: "Member Private Checking",
+      currency: "USD",
+      balance: 100
+    )
+
+    get new_goal_url
+    assert_response :success
+    assert_no_match(/Member Private Checking/, response.body)
+    assert_no_match(/goal_account_ids_#{private_account.id}/, response.body)
+  end
+
+  test "create rejects a same-family account not shared with the current user" do
+    private_account = Account.create!(
+      family: @user.family,
+      owner: users(:family_member),
+      accountable: Depository.new,
+      name: "Member Private Checking",
+      currency: "USD",
+      balance: 100
+    )
+
+    assert_no_difference "Goal.count" do
+      post goals_url, params: {
+        goal: {
+          name: "Sneaky goal",
+          target_amount: "1000",
+          color: "#4da568",
+          account_ids: [ private_account.id ]
+        }
+      }
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "update modifies identity fields" do
     patch goal_url(@goal), params: { goal: { name: "Renamed" } }
     assert_redirected_to goal_path(@goal)
@@ -107,6 +148,28 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     patch goal_url(@goal), params: { goal: { account_ids: [ @connected.id ] } }
     assert_redirected_to goal_path(@goal)
     assert_equal [ @connected.id ], @goal.reload.goal_accounts.pluck(:account_id)
+  end
+
+  test "update preserves a linked account the current user cannot access" do
+    # Regression for #2172 review: a family goal can be linked to a private
+    # account owned by another member. That account is never rendered in the
+    # picker, so its absence from the submitted set must not unlink it.
+    private_account = Account.create!(
+      family: @user.family,
+      owner: users(:family_member),
+      accountable: Depository.new,
+      name: "Member Private Checking",
+      currency: @goal.currency,
+      balance: 100
+    )
+    @goal.goal_accounts.create!(account: private_account)
+
+    patch goal_url(@goal), params: { goal: { account_ids: [ @depository.id ] } }
+
+    assert_redirected_to goal_path(@goal)
+    linked = @goal.reload.goal_accounts.pluck(:account_id)
+    assert_includes linked, private_account.id, "inaccessible private link must be preserved"
+    assert_includes linked, @depository.id
   end
 
   test "update with empty account_ids re-renders with error" do

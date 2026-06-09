@@ -2,16 +2,14 @@
 
 <div data-controller="goal-form"
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
+     data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
      data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>">
-  <% if goal.errors[:base].any? %>
-    <%= render "shared/form_errors", model: goal %>
-  <% end %>
-
   <%= styled_form_with model: goal,
                        url: goal.persisted? ? goal_path(goal) : goals_path,
                        method: goal.persisted? ? :patch : :post,
-                       class: "space-y-5" do |f| %>
+                       class: "space-y-5",
+                       data: { action: "submit->goal-form#validateOnSubmit" } do |f| %>
     <div class="flex justify-center">
       <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
     </div>
@@ -23,17 +21,17 @@
                        required: true,
                        label: t("goals.form.fields.name"),
                        data: { goal_form_target: "nameInput", action: "input->goal-form#nameChanged" } %>
-      <p class="hidden mt-1.5 text-xs text-destructive" data-goal-form-target="nameError"><%= t("goals.form.errors.name_required") %></p>
+      <p class="<%= "hidden" unless goal.errors[:name].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="nameError"><%= t("goals.form.errors.name_required") %></p>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3 items-start">
       <div>
         <%= f.money_field :target_amount,
                           label: t("goals.form.fields.target_amount"),
                           hide_currency: true,
                           required: true,
                           amount_data: { goal_form_target: "amountInput", action: "input->goal-form#suggestedChanged" } %>
-        <p class="hidden mt-1.5 text-xs text-destructive" data-goal-form-target="amountError"><%= t("goals.form.errors.amount_required") %></p>
+        <p class="<%= "hidden" unless goal.errors[:target_amount].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="amountError"><%= t("goals.form.errors.amount_required") %></p>
       </div>
       <%= f.date_field :target_date,
                        label: t("goals.form.fields.target_date"),
@@ -74,7 +72,7 @@
           </div>
         <% end %>
       </div>
-      <p class="hidden mt-1.5 text-xs text-destructive" data-goal-form-target="accountsError"><%= t("goals.form.errors.accounts_required") %></p>
+      <p class="<%= "hidden" unless goal.errors[:base].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="accountsError"><%= t("goals.form.errors.accounts_required") %></p>
     </div>
 
     <%= f.text_area :notes,
@@ -83,7 +81,8 @@
                     placeholder: t("goals.form.fields.notes_placeholder") %>
 
     <div class="flex justify-end pt-2">
-      <%= f.submit goal.persisted? ? t("goals.form.save") : t("goals.form.create") %>
+      <%= f.submit goal.persisted? ? t("goals.form.save") : t("goals.form.create"),
+                   data: { goal_form_target: "submitButton" } %>
     </div>
   <% end %>
 </div>
