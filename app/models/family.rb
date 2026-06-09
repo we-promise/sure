@@ -256,6 +256,20 @@ class Family < ApplicationRecord
     @balance_sheets_by_user[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
+  # Loads visible, accessible accounts once per request for dashboard, sidebar, and balance sheet.
+  def visible_accessible_accounts(user: Current.user)
+    @visible_accessible_accounts_by_user ||= {}
+    user_key = user&.id
+    version = accounts.maximum(:updated_at)&.to_i
+    entry = @visible_accessible_accounts_by_user[user_key]
+
+    return entry[:accounts] if entry && entry[:version] == version
+
+    accounts_list = load_visible_accessible_accounts(user)
+    @visible_accessible_accounts_by_user[user_key] = { version: version, accounts: accounts_list }
+    accounts_list
+  end
+
   # Memoizes exchange rates for the request so balance sheet, investment summary,
   # and other dashboard widgets share one batched lookup per target date.
   def exchange_rates_for(currencies, date: Date.current)
@@ -423,6 +437,19 @@ class Family < ApplicationRecord
   end
 
   private
+    def load_visible_accessible_accounts(user)
+      scope = accounts.visible.with_attached_logo
+                .includes(
+                  :account_shares,
+                  :accountable,
+                  :plaid_account,
+                  :simplefin_account,
+                  account_providers: :provider
+                )
+      scope = scope.accessible_by(user) if user
+      scope.to_a
+    end
+
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted

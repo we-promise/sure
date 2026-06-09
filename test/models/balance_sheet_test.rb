@@ -104,6 +104,23 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 5000, asset_groups.find { |ag| ag.name == OtherAsset.display_name }.total
   end
 
+  test "visible accessible accounts load once across balance sheet widgets" do
+    user = users(:family_admin)
+    create_account(balance: 1000, accountable: Depository.new)
+
+    queries = capture_sql_queries do
+      @family.visible_accessible_accounts(user: user)
+      balance_sheet = @family.balance_sheet(user: user)
+      balance_sheet.net_worth
+      balance_sheet.account_groups
+      @family.visible_accessible_accounts(user: user)
+    end
+
+    accessible_queries = queries.grep(/FROM "accounts".*account_shares/)
+    assert_equal 1, accessible_queries.size
+    assert_empty queries.grep(/FROM "accounts".*AND "accounts"\."id" IN/)
+  end
+
   test "calculates liability group totals" do
     create_account(balance: 1000, accountable: CreditCard.new)
     create_account(balance: 2000, accountable: CreditCard.new)
@@ -122,5 +139,21 @@ class BalanceSheetTest < ActiveSupport::TestCase
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes
       account
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
     end
 end
