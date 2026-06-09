@@ -12,11 +12,12 @@ class PropertiesEditTest < ApplicationSystemTestCase
   end
 
   test "can persist property subtype" do
-    click_link "[system test] Property Account"
+    visit account_url(@property_account)
     assert_text "Estimated property value", wait: 10
 
     within_testid("account-menu") do
       find("button").click
+      assert_selector "a", text: "Edit", visible: true, wait: 10
       click_on "Edit"
     end
 
@@ -62,10 +63,10 @@ class PropertiesEditTest < ApplicationSystemTestCase
       # Verify account was created and is now active
       assert_text account_name
 
-      created_account = Account.order(:created_at).last
-      assert_equal "active", created_account.status
-      assert_equal 500000, created_account.balance
-      assert_equal "123 Main St", created_account.property.address.line1
-      assert_equal "San Francisco", created_account.property.address.locality
+      @property_account = Account.order(:created_at).last
+      assert_equal "active", @property_account.status
+      assert_equal 500000, @property_account.balance
+      assert_equal "123 Main St", @property_account.property.address.line1
+      assert_equal "San Francisco", @property_account.property.address.locality
     end
 end
