@@ -1,0 +1,29 @@
+---
+nl:
+  account_sharings:
+    show:
+      title: Account delen
+      subtitle: Bepaal wie dit account kan zien en ermee kan werken
+      member: Lid
+      permission: Toestemming
+      shared: Gedeeld
+      no_members: Geen andere leden in uw %{moniker} om mee te delen
+      permissions:
+        full_control: Volledige controle
+        full_control_description: Kan transacties bekijken, bewerken en beheren
+        read_write: Kan annoteren
+        read_write_description: Kan categoriseren, taggen en notities toevoegen
+        read_only: Alleen weergeven
+        read_only_description: Kan alleen accountgegevens bekijken
+      save: Deelinstellingen opslaan
+      owner_label: "Eigenaar: %{name}"
+      shared_with_count:
+        one: Gedeeld met 1 lid
+        other: "Gedeeld met %{count} leden"
+      include_in_finances: Opnemen in mijn budgetten en rapporten
+      exclude_from_finances: Uitsluiten van mijn budgetten en rapporten
+      finance_toggle_description: Dit account meetellen in uw vermogen, budgetten en rapporten
+    update:
+      success: Deelinstellingen bijgewerkt
+      not_owner: Alleen de accounteigenaar kan het delen beheren
+      finance_toggle_success: Voorkeur voor financiële opname bijgewerkt
