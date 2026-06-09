@@ -136,6 +136,25 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(30), @amzn.trend.value
   end
 
+  test "CalculatedAvgCosts preloads average cost for multiple holdings in one query" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
+    create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date)
+    create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current)
+
+    expected_amzn = @amzn.avg_cost
+    expected_nvda = @nvda.avg_cost
+
+    queries = capture_sql_queries do
+      Holding::CalculatedAvgCosts.new([ @amzn, @nvda ]).apply!
+    end
+
+    assert_equal expected_amzn, @amzn.avg_cost
+    assert_equal expected_nvda, @nvda.avg_cost
+    assert_equal 1, queries.grep(/WITH holding_specs/).size
+    assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
+  end
+
   # Cost basis source tracking tests
 
   test "cost_basis_replaceable_by? returns false when locked" do
@@ -453,5 +472,21 @@ class HoldingTest < ActiveSupport::TestCase
         price: price,
         amount: qty * price,
         currency: "USD"
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
     end
 end

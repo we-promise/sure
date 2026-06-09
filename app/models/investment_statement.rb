@@ -67,19 +67,7 @@ class InvestmentStatement
   # their native currency; callers that aggregate across accounts must convert
   # to family currency via convert_to_family_currency.
   def current_holdings
-    return Holding.none unless investment_accounts.any?
-
-    # Get the latest holding for each security per account
-    Holding
-      .where(account_id: investment_account_ids)
-      .where.not(qty: 0)
-      .where(
-        id: Holding
-          .where(account_id: investment_account_ids)
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-      )
-      .includes(:security, :account)
+    @current_holdings ||= load_current_holdings
   end
 
   # Top holdings by family-currency value
@@ -303,6 +291,25 @@ class InvestmentStatement
 
     def investment_account_ids
       @investment_account_ids ||= investment_accounts.pluck(:id)
+    end
+
+    def load_current_holdings
+      return [] unless investment_accounts.any?
+
+      holdings = Holding
+        .where(account_id: investment_account_ids)
+        .where.not(qty: 0)
+        .where(
+          id: Holding
+            .where(account_id: investment_account_ids)
+            .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
+            .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+        )
+        .includes(:security, :account)
+        .to_a
+
+      Holding::CalculatedAvgCosts.new(holdings).apply!
+      holdings
     end
 
     def totals_query(trades_scope:)

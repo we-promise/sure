@@ -1,6 +1,7 @@
 require "test_helper"
 
 class InvestmentStatementTest < ActiveSupport::TestCase
+  include EntriesTestHelper
   setup do
     @family = families(:empty)
     # families(:empty) defaults to currency "USD"
@@ -222,6 +223,31 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 5.0, trend.percent, 0.1
   end
 
+  test "current_holdings preloads calculated average costs in one batch query" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+
+    3.times do |idx|
+      security = Security.create!(ticker: "PERF#{idx}", name: "Performance #{idx}")
+      create_trade(security, account: account, qty: 10, price: 100 + idx, date: 1.day.ago.to_date)
+      Holding.create!(
+        account: account, security: security, date: Date.current,
+        qty: 10, price: 110 + idx, amount: (110 + idx) * 10, currency: "USD"
+      )
+    end
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      holdings = statement.current_holdings
+      holdings.each(&:trend)
+      statement.unrealized_gains_trend
+    end
+
+    assert_equal 3, statement.current_holdings.size
+    assert_equal 1, queries.grep(/WITH holding_specs/).size
+    assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
@@ -231,5 +257,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         currency: currency,
         accountable: Investment.new
       )
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
     end
 end
