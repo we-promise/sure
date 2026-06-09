@@ -90,6 +90,7 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
+    # Category changes can leave the association memoized before this sync runs.
     current_categories_by_id = family.categories.reload.index_by(&:id)
     current_category_ids = current_categories_by_id.keys.to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
