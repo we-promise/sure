@@ -219,4 +219,32 @@
     background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
     background-attachment: local, local, scroll, scroll;
   }
+
+  /*
+    Chart hover tooltip surface (see utils/chart_tooltip.js for the JS-side
+    contract). Matches the design reference exactly: hairline border ring
+    composed with a soft 8/24 drop shadow (Tailwind shadow utilities don't
+    compose, hence the component class), 10px radius, 10x12 padding. Dark
+    mode swaps the ring to alpha-white; the drop shadow is near-invisible
+    there, which is fine — the ring carries the edge.
+
+    No position transition here on purpose: cursor-following tooltips
+    (sankey, time-series) update left/top every mousemove and a transition
+    makes them trail the pointer. Snap-positioned tooltips (goal projection,
+    which jumps between dates) opt into the 80ms glide via inline style.
+  */
+  .chart-tooltip {
+    background: var(--color-container);
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow:
+      0 0 0 1px var(--color-alpha-black-50),
+      0 8px 24px rgba(11, 11, 11, 0.12);
+
+    @variant theme-dark {
+      box-shadow:
+        0 0 0 1px var(--color-alpha-white-50),
+        0 8px 24px rgba(11, 11, 11, 0.12);
+    }
+  }
 }
