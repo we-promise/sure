@@ -301,8 +301,12 @@ class InvestmentStatement
         .where.not(qty: 0)
         .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.*")
         .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-        .includes(:security, :account)
         .to_a
+
+      ActiveRecord::Associations::Preloader.new(
+        records: holdings,
+        associations: [ :security, :account ]
+      ).call
 
       Holding::CalculatedAvgCosts.new(holdings).apply!
       holdings

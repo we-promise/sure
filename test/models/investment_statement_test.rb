@@ -223,6 +223,32 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 5.0, trend.percent, 0.1
   end
 
+  test "current_holdings preloads securities without per-id queries" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+
+    3.times do |idx|
+      security = Security.create!(ticker: "SEC#{idx}", name: "Security #{idx}")
+      Holding.create!(
+        account: account, security: security, date: Date.current,
+        qty: 10, price: 100 + idx, amount: (100 + idx) * 10, currency: "USD",
+        cost_basis: 90, cost_basis_locked: true
+      )
+    end
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      statement.current_holdings.each do |holding|
+        holding.security.logo_url
+        holding.ticker
+        holding.name
+      end
+    end
+
+    assert_empty queries.grep(/FROM "securities" WHERE "securities"\."id" =/)
+    assert_equal 1, queries.grep(/FROM "securities" WHERE "securities"\."id" IN/).size
+  end
+
   test "current_holdings memoizes across repeated dashboard calculations" do
     account = create_investment_account(balance: 10_000, currency: "USD")
     security = Security.create!(ticker: "MEMO", name: "Memo Security")
