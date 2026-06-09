@@ -180,6 +180,21 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
+  test "index eager loads rule actions" do
+    3.times do |idx|
+      rule = @user.family.rules.build(resource_type: "transaction", name: "Performance rule #{idx}")
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "perf-#{idx}")
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.save!
+    end
+
+    queries = capture_sql_queries { get rules_url }
+
+    assert_response :success
+    assert_empty queries.grep(/FROM "rule_actions" WHERE "rule_actions"\."rule_id" =/),
+                 "Expected no per-rule rule_actions queries, got: #{queries.grep(/FROM "rule_actions"/).inspect}"
+  end
+
   test "index renders when rule has empty compound condition" do
     malformed_rule = @user.family.rules.build(resource_type: "transaction")
     malformed_rule.conditions.build(condition_type: "compound", operator: "and")
@@ -242,4 +257,21 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to rules_url
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
