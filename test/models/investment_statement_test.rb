@@ -43,6 +43,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 2921.92, @statement.portfolio_value, 0.001
   end
 
+  test "current_holdings returns a relation for downstream includes" do
+    assert_kind_of ActiveRecord::Relation, @statement.current_holdings
+  end
+
   test "current_holdings excludes sold positions whose latest snapshot has zero qty" do
     account = create_investment_account(balance: 10_000, currency: "USD")
     security = Security.create!(ticker: "SOLD", name: "Sold Security")
@@ -254,7 +258,8 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     statement = InvestmentStatement.new(@family, user: nil)
 
     queries = capture_sql_queries do
-      statement.current_holdings.each do |holding|
+      materialized = statement.send(:materialized_current_holdings)
+      materialized.each do |holding|
         holding.security.logo_url
         holding.ticker
         holding.name
@@ -325,9 +330,8 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     queries = capture_sql_queries do
       statement.investment_accounts.map(&:currency)
       statement.portfolio_value
-      holdings = statement.current_holdings
-      holdings.each { |holding| holding.account.balance }
       statement.top_holdings(limit: 5)
+      statement.send(:materialized_current_holdings).each { |holding| holding.account.balance }
     end
 
     accounts_queries = queries.grep(/FROM "accounts"/)
@@ -350,12 +354,12 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     statement = InvestmentStatement.new(@family, user: nil)
 
     queries = capture_sql_queries do
-      holdings = statement.current_holdings
+      holdings = statement.send(:materialized_current_holdings)
       holdings.each(&:trend)
       statement.unrealized_gains_trend
     end
 
-    assert_equal 3, statement.current_holdings.size
+    assert_equal 3, statement.current_holdings.count
     assert_equal 1, queries.grep(/WITH holding_specs/).size
     assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
   end

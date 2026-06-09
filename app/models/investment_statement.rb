@@ -63,17 +63,16 @@ class InvestmentStatement
     Money.new(holdings_value, family.currency)
   end
 
-  # All current holdings across investment accounts. Holdings are returned in
-  # their native currency; callers that aggregate across accounts must convert
-  # to family currency via convert_to_family_currency.
+  # All current holdings across investment accounts. Returns an ActiveRecord::Relation
+  # so callers can chain `.includes(...)` (e.g. reports). Holdings are in their native
+  # currency; callers that aggregate across accounts must convert via convert_to_family_currency.
   def current_holdings
-    @current_holdings ||= load_current_holdings
+    @current_holdings ||= current_holdings_relation
   end
 
   # Top holdings by family-currency value
   def top_holdings(limit: 5)
-    current_holdings
-      .to_a
+    materialized_current_holdings
       .sort_by { |h| -convert_to_family_currency(h.amount, h.currency) }
       .first(limit)
   end
@@ -81,7 +80,7 @@ class InvestmentStatement
   # Portfolio allocation by security. Weights and amounts are computed in the
   # family's currency so cross-currency holdings compare correctly.
   def allocation
-    converted = current_holdings.to_a.map do |holding|
+    converted = materialized_current_holdings.map do |holding|
       [ holding, convert_to_family_currency(holding.amount, holding.currency) ]
     end
 
@@ -102,7 +101,7 @@ class InvestmentStatement
 
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
-    current_holdings.sum do |holding|
+    materialized_current_holdings.sum do |holding|
       trend = holding.trend
       trend ? convert_to_family_currency(trend.value, holding.currency) : 0
     end
@@ -124,7 +123,7 @@ class InvestmentStatement
   end
 
   def unrealized_gains_trend
-    holdings = current_holdings.to_a
+    holdings = materialized_current_holdings
     return nil if holdings.empty?
 
     # Only include holdings with known cost basis in the calculation
@@ -217,7 +216,7 @@ class InvestmentStatement
 
   # Day change across portfolio, summed in family currency
   def day_change
-    changes = current_holdings.to_a.filter_map do |h|
+    changes = materialized_current_holdings.filter_map do |h|
       t = h.day_change
       next nil unless t
       curr = t.current.is_a?(Money) ? t.current.amount : t.current
@@ -247,7 +246,7 @@ class InvestmentStatement
     def exchange_rates
       @exchange_rates ||= begin
         account_currencies = investment_accounts.map(&:currency)
-        holding_currencies = current_holdings.map(&:currency)
+        holding_currencies = materialized_current_holdings.map(&:currency)
         foreign = (account_currencies + holding_currencies)
                     .compact
                     .uniq
@@ -295,18 +294,23 @@ class InvestmentStatement
       scope.to_a
     end
 
-    def load_current_holdings
-      return [] unless investment_accounts.any?
+    def current_holdings_relation
+      return Holding.none unless investment_accounts.any?
 
       latest_holding_ids = Holding
         .where(account_id: investment_account_ids)
         .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
         .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
 
-      holdings = Holding
-        .where(id: latest_holding_ids)
-        .where.not(qty: 0)
-        .to_a
+      Holding.where(id: latest_holding_ids).where.not(qty: 0)
+    end
+
+    def materialized_current_holdings
+      @materialized_current_holdings ||= preload_current_holdings(current_holdings.to_a)
+    end
+
+    def preload_current_holdings(holdings)
+      return holdings if holdings.empty?
 
       ActiveRecord::Associations::Preloader.new(
         records: holdings,
@@ -314,7 +318,6 @@ class InvestmentStatement
       ).call
 
       assign_preloaded_accounts(holdings)
-
       Holding::CalculatedAvgCosts.new(holdings).apply!
       holdings
     end
