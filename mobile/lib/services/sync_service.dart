@@ -7,6 +7,7 @@ import 'transactions_service.dart';
 import 'accounts_service.dart';
 import 'connectivity_service.dart';
 import 'log_service.dart';
+import 'telemetry_service.dart';
 
 class SyncService with ChangeNotifier {
   final OfflineStorageService _offlineStorage = OfflineStorageService();
@@ -32,8 +33,21 @@ class SyncService with ChangeNotifier {
       final pendingDeletes = await _offlineStorage.getPendingDeletes();
       _log.info('SyncService',
           'Found ${pendingDeletes.length} pending deletes to process');
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'pending_delete_replay_started',
+        data: {'count': pendingDeletes.length},
+      );
 
       if (pendingDeletes.isEmpty) {
+        TelemetryService.instance.addBreadcrumb(
+          'sync',
+          'pending_delete_replay_finished',
+          data: {
+            'success_count': 0,
+            'failure_count': 0,
+          },
+        );
         return SyncResult(success: true, syncedCount: 0);
       }
 
@@ -75,7 +89,10 @@ class SyncService with ChangeNotifier {
           }
         } catch (e) {
           // Mark as failed
-          _log.error('SyncService', 'Delete exception: $e');
+          _log.error(
+            'SyncService',
+            'Delete failed with ${e.runtimeType}',
+          );
           await _offlineStorage.updateTransactionSyncStatus(
             localId: transaction.localId,
             syncStatus: SyncStatus.failed,
@@ -87,6 +104,14 @@ class SyncService with ChangeNotifier {
 
       _log.info('SyncService',
           'Delete complete: $successCount success, $failureCount failed');
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'pending_delete_replay_finished',
+        data: {
+          'success_count': successCount,
+          'failure_count': failureCount,
+        },
+      );
 
       return SyncResult(
         success: failureCount == 0,
@@ -95,7 +120,10 @@ class SyncService with ChangeNotifier {
         error: failureCount > 0 ? lastError : null,
       );
     } catch (e) {
-      _log.error('SyncService', 'Sync pending deletes exception: $e');
+      _log.error(
+        'SyncService',
+        'Sync pending deletes failed with ${e.runtimeType}',
+      );
       return SyncResult(
         success: false,
         syncedCount: successCount,
@@ -117,8 +145,21 @@ class SyncService with ChangeNotifier {
           await _offlineStorage.getPendingTransactions();
       _log.info('SyncService',
           'Found ${pendingTransactions.length} pending transactions to upload');
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'pending_upload_replay_started',
+        data: {'count': pendingTransactions.length},
+      );
 
       if (pendingTransactions.isEmpty) {
+        TelemetryService.instance.addBreadcrumb(
+          'sync',
+          'pending_upload_replay_finished',
+          data: {
+            'success_count': 0,
+            'failure_count': 0,
+          },
+        );
         return SyncResult(success: true, syncedCount: 0);
       }
 
@@ -138,6 +179,8 @@ class SyncService with ChangeNotifier {
             categoryId: transaction.categoryId,
             merchantId: transaction.merchantId,
             tagIds: transaction.tagIds,
+            externalId: transaction.localId,
+            source: TransactionsService.mobileIdempotencySource,
           );
 
           if (result['success'] == true) {
@@ -163,7 +206,10 @@ class SyncService with ChangeNotifier {
           }
         } catch (e) {
           // Mark as failed
-          _log.error('SyncService', 'Upload exception: $e');
+          _log.error(
+            'SyncService',
+            'Upload failed with ${e.runtimeType}',
+          );
           await _offlineStorage.updateTransactionSyncStatus(
             localId: transaction.localId,
             syncStatus: SyncStatus.failed,
@@ -175,6 +221,14 @@ class SyncService with ChangeNotifier {
 
       _log.info('SyncService',
           'Upload complete: $successCount success, $failureCount failed');
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'pending_upload_replay_finished',
+        data: {
+          'success_count': successCount,
+          'failure_count': failureCount,
+        },
+      );
 
       return SyncResult(
         success: failureCount == 0,
@@ -183,7 +237,10 @@ class SyncService with ChangeNotifier {
         error: failureCount > 0 ? lastError : null,
       );
     } catch (e) {
-      _log.error('SyncService', 'Sync pending transactions exception: $e');
+      _log.error(
+        'SyncService',
+        'Sync pending transactions failed with ${e.runtimeType}',
+      );
       return SyncResult(
         success: false,
         syncedCount: successCount,
@@ -214,7 +271,10 @@ class SyncService with ChangeNotifier {
 
       return result;
     } catch (e) {
-      _log.error('SyncService', 'syncPendingTransactions exception: $e');
+      _log.error(
+        'SyncService',
+        'syncPendingTransactions failed with ${e.runtimeType}',
+      );
       _isSyncing = false;
       _syncError = e.toString();
       notifyListeners();
@@ -231,6 +291,29 @@ class SyncService with ChangeNotifier {
     required String accessToken,
     String? accountId,
   }) async {
+    final telemetrySpan = TelemetryService.instance.startSpan(
+      'sync.transactions_fetch',
+      'Mobile transaction fetch',
+      data: {'scoped_account': accountId != null},
+    );
+    var telemetrySpanFinished = false;
+    var telemetrySucceeded = false;
+    Object? telemetryThrowable;
+
+    Future<void> finishTelemetrySpan({
+      required bool success,
+      Object? throwable,
+    }) async {
+      if (telemetrySpanFinished) return;
+
+      telemetrySpanFinished = true;
+      await TelemetryService.instance.finishSpan(
+        telemetrySpan,
+        success: success,
+        throwable: throwable,
+      );
+    }
+
     try {
       _log.info('SyncService', '========== SYNC FROM SERVER START ==========');
       _log.info(
@@ -238,6 +321,11 @@ class SyncService with ChangeNotifier {
         accountId == null
             ? 'Fetching transactions for all accounts'
             : 'Fetching transactions for scoped account',
+      );
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'transactions_fetch_started',
+        data: {'scoped_account': accountId != null},
       );
 
       List<Transaction> allTransactions = [];
@@ -249,6 +337,15 @@ class SyncService with ChangeNotifier {
       while (currentPage <= totalPages) {
         _log.info('SyncService',
             '>>> Fetching page $currentPage of $totalPages (perPage: $perPage)');
+        TelemetryService.instance.addBreadcrumb(
+          'sync',
+          'transactions_fetch_page',
+          data: {
+            'page': currentPage,
+            'total_pages': totalPages,
+            'per_page': perPage,
+          },
+        );
 
         final result = await _transactionsService.getTransactions(
           accessToken: accessToken,
@@ -306,6 +403,11 @@ class SyncService with ChangeNotifier {
         } else {
           _log.error('SyncService',
               'Server returned error on page $currentPage: ${result['error']}');
+          TelemetryService.instance.addBreadcrumb(
+            'sync',
+            'transactions_fetch_failed',
+            data: {'page': currentPage},
+          );
           return SyncResult(
             success: false,
             error: result['error'] as String? ?? 'Failed to sync from server',
@@ -349,6 +451,15 @@ class SyncService with ChangeNotifier {
 
       _log.info(
           'SyncService', '========== SYNC FROM SERVER COMPLETE ==========');
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'transactions_fetch_finished',
+        data: {
+          'page_count': currentPage - 1,
+          'transaction_count': allTransactions.length,
+        },
+      );
+      telemetrySucceeded = true;
       _lastSyncTime = DateTime.now();
       notifyListeners();
 
@@ -356,11 +467,25 @@ class SyncService with ChangeNotifier {
         success: true,
         syncedCount: allTransactions.length,
       );
-    } catch (e) {
-      _log.error('SyncService', 'Exception in syncFromServer: $e');
+    } catch (e, stackTrace) {
+      _log.error(
+        'SyncService',
+        'syncFromServer failed with ${e.runtimeType}',
+      );
+      telemetryThrowable = e;
+      await TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'sync.transactions_fetch',
+      );
       return SyncResult(
         success: false,
         error: e.toString(),
+      );
+    } finally {
+      await finishTelemetrySpan(
+        success: telemetrySucceeded,
+        throwable: telemetryThrowable,
       );
     }
   }
@@ -409,6 +534,7 @@ class SyncService with ChangeNotifier {
     }
 
     _log.info('SyncService', '==== Full Sync Started ====');
+    TelemetryService.instance.addBreadcrumb('sync', 'full_sync_started');
     _isSyncing = true;
     _syncError = null;
     notifyListeners();
@@ -453,6 +579,16 @@ class SyncService with ChangeNotifier {
 
       _log.info('SyncService',
           '==== Full Sync Complete: ${allSuccess ? "SUCCESS" : "PARTIAL/FAILED"} ====');
+      TelemetryService.instance.addBreadcrumb(
+        'sync',
+        'full_sync_finished',
+        data: {
+          'success': allSuccess,
+          'delete_failures': deleteResult.failedCount ?? 0,
+          'upload_failures': uploadResult.failedCount ?? 0,
+          'downloaded_count': downloadResult.syncedCount ?? 0,
+        },
+      );
 
       notifyListeners();
 
@@ -465,8 +601,13 @@ class SyncService with ChangeNotifier {
             (deleteResult.failedCount ?? 0) + (uploadResult.failedCount ?? 0),
         error: _syncError,
       );
-    } catch (e) {
-      _log.error('SyncService', 'Full sync exception: $e');
+    } catch (e, stackTrace) {
+      _log.error('SyncService', 'Full sync failed with ${e.runtimeType}');
+      await TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'sync.full',
+      );
       _isSyncing = false;
       _syncError = e.toString();
       notifyListeners();

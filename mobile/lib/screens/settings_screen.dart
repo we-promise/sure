@@ -115,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       LogService.instance.warning(
         'SettingsScreen',
-        'Failed to load custom headers: $e',
+        'Failed to load custom headers with ${e.runtimeType}',
       );
       // Keep the existing _customHeaders state so the screen remains usable.
     }
@@ -172,14 +172,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       } catch (e) {
         final log = LogService.instance;
-        log.error('Settings', 'Failed to clear local data: $e');
+        log.error(
+          'Settings',
+          'Failed to clear local data with ${e.runtimeType}',
+        );
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to clear local data: $e'),
+            const SnackBar(
+              content: Text('Failed to clear local data.'),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
+              duration: Duration(seconds: 3),
             ),
           );
         }
@@ -417,9 +420,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      LogService.instance.warning(
+        'Settings',
+        'Failed to save custom proxy headers with ${e.runtimeType}',
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save custom proxy headers: $e'),
+          content: const Text('Failed to save custom proxy headers.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
