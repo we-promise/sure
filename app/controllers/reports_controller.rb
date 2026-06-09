@@ -111,17 +111,18 @@ class ReportsController < ApplicationController
       @previous_period = build_previous_period
 
       # Get aggregated data
-      @current_income_totals = Current.family.income_statement.income_totals(period: @period)
-      @current_expense_totals = Current.family.income_statement.expense_totals(period: @period)
+      @income_statement = Current.family.income_statement(user: Current.user)
+      @current_income_totals = @income_statement.income_totals(period: @period)
+      @current_expense_totals = @income_statement.expense_totals(period: @period)
 
-      @previous_income_totals = Current.family.income_statement.income_totals(period: @previous_period)
-      @previous_expense_totals = Current.family.income_statement.expense_totals(period: @previous_period)
+      @previous_income_totals = @income_statement.income_totals(period: @previous_period)
+      @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
 
       # Calculate summary metrics
       @summary_metrics = build_summary_metrics
 
       # Build trend data (last 6 months)
-      @trends_data = build_trends_data
+      @trends_data = build_trends_data(income_statement: @income_statement)
 
       # Net worth metrics
       @net_worth_metrics = build_net_worth_metrics
@@ -245,7 +246,7 @@ class ReportsController < ApplicationController
       when :ytd
         Date.current.beginning_of_year.to_date
       when :last_6_months
-        6.months.ago.beginning_of_month.to_date
+        (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
@@ -319,7 +320,7 @@ class ReportsController < ApplicationController
       nil
     end
 
-    def build_trends_data
+    def build_trends_data(income_statement:)
       # Generate month-by-month data based on the current period filter
       trends = []
 
@@ -336,8 +337,8 @@ class ReportsController < ApplicationController
 
         period = Period.custom(start_date: month_start, end_date: month_end)
 
-        income = Current.family.income_statement.income_totals(period: period).total
-        expenses = Current.family.income_statement.expense_totals(period: period).total
+        income = income_statement.income_totals(period: period).total
+        expenses = income_statement.expense_totals(period: period).total
 
         trends << {
           month: month_start.strftime("%b %Y"),
@@ -478,11 +479,11 @@ class ReportsController < ApplicationController
       return { has_investments: false } unless investment_accounts.any?
 
       period_totals = investment_statement.totals(period: @period)
-
       {
         has_investments: true,
         portfolio_value: investment_statement.portfolio_value_money,
         unrealized_trend: investment_statement.unrealized_gains_trend,
+        period_return_trend: investment_statement.period_return_trend(period: @period),
         period_contributions: period_totals.contributions,
         period_withdrawals: period_totals.withdrawals,
         top_holdings: investment_statement.top_holdings(limit: 5),

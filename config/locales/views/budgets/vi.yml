@@ -1,0 +1,97 @@
+---
+vi:
+  budgets:
+    budget_donut:
+      spent: "Đã chi"
+      new_budget: "Ngân sách mới"
+      of_budget: "trong %{amount}"
+      unused: "Chưa dùng"
+    budget_header:
+      today: "Hôm nay"
+    budget_nav:
+      categories: Danh mục
+      setup: Thiết lập
+    over_allocation_warning:
+      over_allocated_message: "Bạn đã phân bổ vượt ngân sách. Vui lòng điều chỉnh lại."
+      fix_allocations: "Sửa phân bổ"
+    actuals_summary:
+      income: "Thu nhập"
+      expenses: "Chi tiêu"
+    budgeted_summary:
+      expected_income: "Thu nhập dự kiến"
+      budgeted: "Đã lập ngân sách"
+      earned: "%{amount} đã kiếm được"
+      over: "%{amount} vượt"
+      left: "%{amount} còn lại"
+      spent: "%{amount} đã chi"
+    edit:
+      setup_title: "Thiết lập ngân sách"
+      setup_description: "Nhập thu nhập hàng tháng và chi tiêu kế hoạch bên dưới để thiết lập ngân sách."
+      budgeted_spending: "Chi tiêu theo ngân sách"
+      expected_income: "Thu nhập dự kiến"
+      autosuggest_title: "Tự động đề xuất ngân sách thu nhập & chi tiêu"
+      autosuggest_description: "Dựa trên lịch sử giao dịch. AI có thể mắc lỗi, hãy xác minh trước khi tiếp tục."
+      continue: "Tiếp tục"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: Số tiền
+        edit: Chỉnh sửa
+        title: Danh mục
+      on_track_categories:
+        short_title: Đúng kế hoạch
+        title: Đúng kế hoạch
+      over_budget_categories:
+        short_title: Vượt ngân sách
+        title: Vượt ngân sách
+      filter:
+        all: Tất cả
+        on_track: Đúng kế hoạch
+        over_budget: Vượt ngân sách
+      tabs:
+        actual: Thực tế
+        budgeted: Ngân sách
+    copy_previous_prompt:
+      title: "Thiết lập ngân sách"
+      description: "Bạn có thể sao chép ngân sách từ %{source_name} hoặc bắt đầu mới."
+      copy_button: "Sao chép từ %{source_name}"
+      fresh_button: "Bắt đầu mới"
+    copy_previous:
+      success: "Đã sao chép ngân sách từ %{source_name}"
+      no_source: "Không tìm thấy ngân sách trước để sao chép"
+      already_initialized: "Ngân sách này đã được thiết lập"
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Vượt ngân sách <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: còn lại để phân bổ
+      over_set: "> 100% đã đặt"
+      percent_set: "%{percent} đã đặt"
+    budget_category_form:
+      monthly_average: "%{amount}/tháng tb"
+      shared_placeholder: Chia sẻ
+      shared_title: Để trống để dùng chung ngân sách của danh mục cha
+    confirm_button:
+      confirm: "Xác nhận"
+    no_categories:
+      oops: "Ối!"
+      no_categories_message: "Bạn chưa tạo hoặc gán danh mục chi tiêu nào cho giao dịch."
+      use_defaults: "Dùng mặc định (khuyến nghị)"
+      new_category: "Danh mục mới"
+    index:
+      title: "Chỉnh sửa ngân sách danh mục"
+      description: "Điều chỉnh ngân sách danh mục để đặt giới hạn chi tiêu. Số tiền chưa phân bổ sẽ tự động gán là chưa phân loại."
+    show:
+      category: "Danh mục"
+      overview: "Tổng quan"
+      spending: "Chi tiêu %{date}"
+      status: "Trạng thái"
+      overspent: "chi quá"
+      left: "còn lại"
+      budgeted: "Ngân sách"
+      monthly_average_spending: "Chi tiêu trung bình hàng tháng"
+      monthly_median_spending: "Chi tiêu trung vị hàng tháng"
+      recent_transactions: "Giao dịch gần đây"
+      view_all_transactions: "Xem tất cả giao dịch trong danh mục"
+      no_transactions: "Không tìm thấy giao dịch trong kỳ ngân sách này."

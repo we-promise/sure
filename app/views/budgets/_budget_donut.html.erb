@@ -8,7 +8,7 @@
           <span><%= t(".spent") %></span>
         </div>
 
-        <div class="mb-2 text-3xl font-medium privacy-sensitive <%= budget.available_to_spend.negative? ? "text-red-500" : "text-primary" %>">
+        <div data-donut-chart-target="amount" class="mb-2 text-3xl font-medium privacy-sensitive whitespace-nowrap <%= budget.available_to_spend.negative? ? "text-destructive" : "text-primary" %>">
           <%= format_money(budget.actual_spending_money) %>
         </div>
 
@@ -21,7 +21,7 @@
           href: edit_budget_path(budget)
         ) %>
       <% else %>
-        <div class="text-subdued text-3xl mb-2 privacy-sensitive">
+        <div data-donut-chart-target="amount" class="text-subdued text-3xl mb-2 privacy-sensitive whitespace-nowrap">
           <span><%= format_money Money.new(0, budget.currency || budget.family.currency) %></span>
         </div>
 
@@ -42,7 +42,7 @@
             <p class="text-sm text-secondary"><%= bc.category.name %></p>
           </div>
 
-          <p class="text-3xl font-medium privacy-sensitive <%= bc.available_to_spend.negative? ? "text-red-500" : "text-primary" %>">
+          <p data-donut-chart-target="amount" class="text-3xl font-medium privacy-sensitive whitespace-nowrap <%= bc.available_to_spend.negative? ? "text-destructive" : "text-primary" %>">
             <%= format_money(bc.actual_spending_money) %>
           </p>
 
@@ -61,7 +61,7 @@
     <div id="segment_unused" class="hidden">
       <p class="text-sm text-secondary text-center mb-2"><%= t(".unused") %></p>
 
-      <p class="text-3xl font-medium text-primary privacy-sensitive">
+      <p data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap">
         <%= format_money(budget.available_to_spend_money) %>
       </p>
     </div>

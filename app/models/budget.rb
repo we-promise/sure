@@ -31,27 +31,24 @@ class Budget < ApplicationRecord
     end
 
     def budget_date_valid?(date, family:)
-      budget_start = if family.uses_custom_month_start?
-        family.custom_month_start_for(date)
-      else
-        date.beginning_of_month
-      end
-
+      budget_start, _ = period_for(date, family: family)
       budget_start >= oldest_valid_budget_date(family) &&
         budget_start <= latest_valid_budget_start_date(family)
+    end
+
+    def period_for(date, family:)
+      if family.uses_custom_month_start?
+        [ family.custom_month_start_for(date), family.custom_month_end_for(date) ]
+      else
+        [ date.beginning_of_month, date.end_of_month ]
+      end
     end
 
     def find_or_bootstrap(family, start_date:, user: nil)
       return nil unless budget_date_valid?(start_date, family: family)
 
       Budget.transaction do
-        if family.uses_custom_month_start?
-          budget_start = family.custom_month_start_for(start_date)
-          budget_end = family.custom_month_end_for(start_date)
-        else
-          budget_start = start_date.beginning_of_month
-          budget_end = start_date.end_of_month
-        end
+        budget_start, budget_end = period_for(start_date, family: family)
 
         budget = Budget.find_or_create_by!(
           family: family,

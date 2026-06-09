@@ -24,7 +24,13 @@
             <div class="flex items-center gap-2">
               <%= tag.p provider_display_name, class: "font-medium text-primary" %>
               <% if manual_sync_required %>
-                <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"><%= t(".manual_sync") %></span>
+                <%= render DS::Pill.new(
+                  label: t(".manual_sync"),
+                  tone: :warning,
+                  marker: false,
+                  show_dot: false,
+                  size: :sm
+                ) %>
               <% end %>
               <% if sophtron_item.scheduled_for_deletion? %>
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
