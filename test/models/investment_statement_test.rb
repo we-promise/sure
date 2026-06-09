@@ -223,6 +223,28 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 5.0, trend.percent, 0.1
   end
 
+  test "current_holdings memoizes across repeated dashboard calculations" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+    security = Security.create!(ticker: "MEMO", name: "Memo Security")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      statement.current_holdings
+      statement.top_holdings(limit: 5)
+      statement.unrealized_gains_trend
+    end
+
+    holdings_queries = queries.grep(/SELECT DISTINCT ON \(holdings\.account_id, holdings\.security_id\)/)
+    assert_equal 1, holdings_queries.size
+  end
+
   test "current_holdings preloads calculated average costs in one batch query" do
     account = create_investment_account(balance: 10_000, currency: "USD")
 

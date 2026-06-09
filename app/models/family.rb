@@ -327,7 +327,8 @@ class Family < ApplicationRecord
   end
 
   def investment_statement(user: Current.user)
-    InvestmentStatement.new(self, user: user)
+    @investment_statements_by_user ||= {}
+    @investment_statements_by_user[user&.id] ||= InvestmentStatement.new(self, user: user)
   end
 
   def eu?

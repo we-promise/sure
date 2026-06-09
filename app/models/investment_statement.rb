@@ -251,7 +251,7 @@ class InvestmentStatement
     def exchange_rates
       @exchange_rates ||= begin
         account_currencies = investment_accounts.map(&:currency)
-        holding_currencies = Holding.where(account_id: investment_account_ids).distinct.pluck(:currency)
+        holding_currencies = current_holdings.map(&:currency)
         foreign = (account_currencies + holding_currencies)
                     .compact
                     .uniq
@@ -299,12 +299,8 @@ class InvestmentStatement
       holdings = Holding
         .where(account_id: investment_account_ids)
         .where.not(qty: 0)
-        .where(
-          id: Holding
-            .where(account_id: investment_account_ids)
-            .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-            .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-        )
+        .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.*")
+        .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
         .includes(:security, :account)
         .to_a
 
