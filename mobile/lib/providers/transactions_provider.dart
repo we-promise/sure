@@ -71,7 +71,10 @@ class TransactionsProvider with ChangeNotifier {
         }
       }).catchError((e) {
         if (!_isDisposed) {
-          _log.error('TransactionsProvider', 'Auto-sync failed: $e');
+          _log.error(
+            'TransactionsProvider',
+            'Auto-sync failed with ${e.runtimeType}',
+          );
         }
       }).whenComplete(() {
         if (!_isDisposed) {
@@ -102,8 +105,10 @@ class TransactionsProvider with ChangeNotifier {
         accountId: accountId,
       );
 
-      _log.debug('TransactionsProvider',
-          'Loaded ${localTransactions.length} transactions from local storage (accountId: $accountId)');
+      _log.debug(
+        'TransactionsProvider',
+        'Loaded ${localTransactions.length} transactions from local storage${accountId != null ? " with account filter" : ""}',
+      );
 
       _transactions = localTransactions;
       notifyListeners();
@@ -114,8 +119,10 @@ class TransactionsProvider with ChangeNotifier {
           'Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
 
       if (isOnline && (forceSync || localTransactions.isEmpty)) {
-        _log.debug('TransactionsProvider',
-            'Syncing from server for accountId: $accountId');
+        _log.debug(
+          'TransactionsProvider',
+          'Syncing transactions from server${accountId != null ? " with account filter" : ""}',
+        );
         final result = await _syncService.syncFromServer(
           accessToken: accessToken,
           accountId: accountId,
@@ -138,7 +145,10 @@ class TransactionsProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Error in fetchTransactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'fetchTransactions failed with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
@@ -168,8 +178,10 @@ class TransactionsProvider with ChangeNotifier {
     try {
       final isOnline = _connectivityService?.isOnline ?? false;
 
-      _log.info('TransactionsProvider',
-          'Creating transaction: $name, amount: $amount, online: $isOnline');
+      _log.info(
+        'TransactionsProvider',
+        'Creating transaction locally, online: $isOnline',
+      );
 
       // ALWAYS save locally first (offline-first strategy)
       final localTransaction = await _offlineStorage.saveTransaction(
@@ -189,8 +201,7 @@ class TransactionsProvider with ChangeNotifier {
         syncStatus: SyncStatus.pending, // Start as pending
       );
 
-      _log.info('TransactionsProvider',
-          'Transaction saved locally with ID: ${localTransaction.localId}');
+      _log.info('TransactionsProvider', 'Transaction saved locally');
 
       // Reload transactions to show the new one immediately
       await fetchTransactions(accessToken: accessToken, accountId: accountId);
@@ -214,6 +225,8 @@ class TransactionsProvider with ChangeNotifier {
           categoryId: categoryId,
           merchantId: merchantId,
           tagIds: tagIds == null || tagIds.isEmpty ? null : tagIds,
+          externalId: localTransaction.localId,
+          source: TransactionsService.mobileIdempotencySource,
         )
             .then((result) async {
           if (_isDisposed) return;
@@ -238,7 +251,10 @@ class TransactionsProvider with ChangeNotifier {
         }).catchError((e) {
           if (_isDisposed) return;
 
-          _log.error('TransactionsProvider', 'Exception during upload: $e');
+          _log.error(
+            'TransactionsProvider',
+            'Upload failed with ${e.runtimeType}',
+          );
           _error = 'Failed to upload transaction. It will sync when online.';
           notifyListeners();
         });
@@ -249,7 +265,10 @@ class TransactionsProvider with ChangeNotifier {
 
       return true; // Always return true because it's saved locally
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to create transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to create transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -331,7 +350,10 @@ class TransactionsProvider with ChangeNotifier {
       _error = result['error'] as String? ?? 'Failed to update transaction';
       return false;
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to update transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to update transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       return false;
     } finally {
@@ -381,7 +403,10 @@ class TransactionsProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to delete transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to delete transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -434,7 +459,9 @@ class TransactionsProvider with ChangeNotifier {
       }
     } catch (e) {
       _log.error(
-          'TransactionsProvider', 'Failed to delete multiple transactions: $e');
+        'TransactionsProvider',
+        'Failed to delete multiple transactions with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -446,8 +473,10 @@ class TransactionsProvider with ChangeNotifier {
     required String localId,
     required SyncStatus syncStatus,
   }) async {
-    _log.info('TransactionsProvider',
-        'Undoing transaction $localId with status $syncStatus');
+    _log.info(
+      'TransactionsProvider',
+      'Undoing transaction with status $syncStatus',
+    );
 
     try {
       final success =
@@ -468,7 +497,10 @@ class TransactionsProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to undo transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to undo transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -500,7 +532,10 @@ class TransactionsProvider with ChangeNotifier {
         _error = result.error;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to sync transactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to sync transactions with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
