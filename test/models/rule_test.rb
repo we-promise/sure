@@ -262,9 +262,9 @@ class RuleTest < ActiveSupport::TestCase
 
   test "total_affected_resource_count deduplicates overlapping rules" do
     # Create transactions
-    transaction_entry1 = create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 50)
-    transaction_entry2 = create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 100)
-    transaction_entry3 = create_transaction(date: Date.current, account: @account, name: "Target", amount: 75)
+    create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 50)
+    create_transaction(date: Date.current, account: @account, name: "Whole Foods", amount: 100)
+    create_transaction(date: Date.current, account: @account, name: "Target", amount: 75)
 
     # Rule 1: Match transactions with name "Whole Foods" (matches txn 1 and 2)
     rule1 = Rule.create!(
@@ -347,5 +347,23 @@ class RuleTest < ActiveSupport::TestCase
 
     assert_nil transaction_entry2.transaction.category,
       "Transaction on other account should not be categorized"
+  end
+
+  test "preloaded actions preserve id order" do
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "ordering-test") ],
+      actions: [
+        Rule::Action.new(action_type: "exclude_transaction"),
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id)
+      ]
+    )
+
+    expected_ids = rule.actions.order(:id).pluck(:id)
+    preloaded_rule = Rule.includes(:actions).find(rule.id)
+
+    assert_equal expected_ids.first, preloaded_rule.actions.first.id
+    assert_equal expected_ids, preloaded_rule.actions.map(&:id)
   end
 end
