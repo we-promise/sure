@@ -64,8 +64,8 @@ class InvestmentStatement
   end
 
   # All current holdings across investment accounts. Returns an ActiveRecord::Relation
-  # so callers can chain `.includes(...)` (e.g. reports). Holdings are in their native
-  # currency; callers that aggregate across accounts must convert via convert_to_family_currency.
+  # without preloads so callers can chain `.includes(...)` (see ReportsController).
+  # Internal aggregation methods use materialized_current_holdings for batched preloads.
   def current_holdings
     @current_holdings ||= current_holdings_relation
   end

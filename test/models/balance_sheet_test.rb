@@ -119,6 +119,7 @@ class BalanceSheetTest < ActiveSupport::TestCase
     accessible_queries = queries.grep(/FROM "accounts".*account_shares/)
     assert_equal 1, accessible_queries.size
     assert_empty queries.grep(/FROM "accounts".*AND "accounts"\."id" IN/)
+    assert_empty queries.grep(/SELECT MAX\("accounts"\."updated_at"\)/i)
   end
 
   test "calculates liability group totals" do
@@ -139,21 +140,5 @@ class BalanceSheetTest < ActiveSupport::TestCase
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes
       account
-    end
-
-    def capture_sql_queries
-      queries = []
-      callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        next if payload[:cached]
-        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
-
-        queries << payload[:sql].squish
-      end
-
-      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-        yield
-      end
-
-      queries
     end
 end

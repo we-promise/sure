@@ -258,16 +258,7 @@ class Family < ApplicationRecord
 
   # Loads visible, accessible accounts once per request for dashboard, sidebar, and balance sheet.
   def visible_accessible_accounts(user: Current.user)
-    @visible_accessible_accounts_by_user ||= {}
-    user_key = user&.id
-    version = accounts.maximum(:updated_at)&.to_i
-    entry = @visible_accessible_accounts_by_user[user_key]
-
-    return entry[:accounts] if entry && entry[:version] == version
-
-    accounts_list = load_visible_accessible_accounts(user)
-    @visible_accessible_accounts_by_user[user_key] = { version: version, accounts: accounts_list }
-    accounts_list
+    (@visible_accessible_accounts_by_user ||= {})[user&.id] ||= load_visible_accessible_accounts(user)
   end
 
   # Memoizes exchange rates for the request so balance sheet, investment summary,

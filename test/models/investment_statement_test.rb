@@ -47,6 +47,24 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_kind_of ActiveRecord::Relation, @statement.current_holdings
   end
 
+  test "current_holdings supports downstream includes for association access" do
+    account = create_investment_account(balance: 10_000, cash_balance: 0)
+    security = Security.create!(ticker: "AAPL", name: "Apple Inc.")
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+
+    statement = InvestmentStatement.new(@family)
+    queries = capture_sql_queries do
+      holdings = statement.current_holdings.includes(account: :accountable).to_a
+      holdings.each { |holding| holding.account.tax_treatment }
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/)
+    assert_equal 1, account_queries.size
+  end
+
   test "current_holdings excludes sold positions whose latest snapshot has zero qty" do
     account = create_investment_account(balance: 10_000, currency: "USD")
     security = Security.create!(ticker: "SOLD", name: "Sold Security")
@@ -373,21 +391,5 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         currency: currency,
         accountable: Investment.new
       )
-    end
-
-    def capture_sql_queries
-      queries = []
-      callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        next if payload[:cached]
-        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
-
-        queries << payload[:sql].squish
-      end
-
-      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-        yield
-      end
-
-      queries
     end
 end
