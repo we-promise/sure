@@ -190,7 +190,7 @@
       "cwe_id": [
         1104
       ],
-      "note": "Rails 7.2 is the project's supported major version until a planned upgrade; track separately from app security scans."
+      "note": "Rails 7.2.3.1 EOL 2026-08-09. Upgrade plan: move to Rails 8 before that date; until then stay on 7.2 per .cursor/rules/general-rules.mdc (ActiveRecord::Migration[7.2], not 8.0). Remove this ignore when the Rails 8 upgrade merges."
     }
   ],
   "brakeman_version": "7.1.2"
