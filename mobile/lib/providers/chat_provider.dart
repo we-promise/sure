@@ -15,7 +15,7 @@ class ChatProvider with ChangeNotifier {
   bool _isSendingMessage = false;
   bool _isWaitingForResponse = false;
   String? _errorMessage;
-  bool _featureDisabled = false;
+  bool _aiConsentRequired = false;
   bool _aiUnavailable = false;
   Timer? _pollingTimer;
   DateTime? _pollingStartTime;
@@ -39,7 +39,7 @@ class ChatProvider with ChangeNotifier {
   bool get isWaitingForResponse => _isWaitingForResponse;
   bool get isPolling => _pollingTimer != null;
   String? get errorMessage => _errorMessage;
-  bool get featureDisabled => _featureDisabled;
+  bool get aiConsentRequired => _aiConsentRequired;
   bool get aiUnavailable => _aiUnavailable;
 
   /// Fetch list of chats
@@ -50,7 +50,7 @@ class ChatProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     _errorMessage = null;
-    _featureDisabled = false;
+    _aiConsentRequired = false;
     _aiUnavailable = false;
     notifyListeners();
 
@@ -66,7 +66,7 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = null;
       } else if (result['error'] == 'feature_disabled') {
         final aiAvailable = result['ai_available'] as bool? ?? true;
-        _featureDisabled = aiAvailable;
+        _aiConsentRequired = aiAvailable;
         _aiUnavailable = !aiAvailable;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
@@ -89,19 +89,19 @@ class ChatProvider with ChangeNotifier {
       final result = await _chatService.enableAi(accessToken: accessToken);
 
       if (result['success'] == true) {
-        _featureDisabled = false;
+        _aiConsentRequired = false;
         _aiUnavailable = false;
         await fetchChats(accessToken: accessToken);
         return true;
       } else if (result['error'] == 'ai_unavailable') {
-        _featureDisabled = false;
+        _aiConsentRequired = false;
         _aiUnavailable = true;
         _isLoading = false;
         notifyListeners();
         return false;
       } else if (result['error'] == 'unauthorized') {
-        // Clear featureDisabled so the generic error state renders the message
-        _featureDisabled = false;
+        // Clear aiConsentRequired so the generic error state renders the message
+        _aiConsentRequired = false;
         _errorMessage = 'Session expired. Please sign in again.';
         _isLoading = false;
         notifyListeners();

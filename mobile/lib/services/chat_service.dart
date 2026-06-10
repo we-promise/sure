@@ -378,8 +378,7 @@ class ChatService {
       } else if (response.statusCode == 403) {
         final responseData = jsonDecode(response.body);
         final error = (responseData['error'] ?? '').toString();
-        final isAiUnavailable = error == 'ai_unavailable' ||
-            error.toLowerCase().contains('ai is not available');
+        final isAiUnavailable = error == 'ai_unavailable';
         return {
           'success': false,
           'error': isAiUnavailable ? 'ai_unavailable' : 'insufficient_scope',
