@@ -27,7 +27,15 @@ namespace :platform_bootstrap do
   end
 
   def secret_value(env_key, prompt)
-    return ENV.fetch(env_key) if ENV.key?(env_key)
+    if ENV.key?(env_key)
+      value = ENV.fetch(env_key)
+      if value.strip.empty?
+        message = "Set #{env_key} to a non-empty value or unset it to use an interactive prompt"
+        raise ArgumentError, message
+      end
+
+      return value
+    end
 
     unless $stdin.tty?
       raise ArgumentError, "Set #{env_key} or run this task from an interactive TTY"
@@ -40,13 +48,10 @@ namespace :platform_bootstrap do
   end
 
   def env_key_for(owner)
-    case owner.fetch(:email)
-    when "adminF0@bookeepz.net"
-      "ADMIN_F0_PASSWORD"
-    when "adminF1@bookeepz.net"
-      "ADMIN_F1_PASSWORD"
-    else
-      raise ArgumentError, "No password environment variable configured for #{owner.fetch(:email)}"
-    end
+    email = owner.fetch(:email)
+    match = email.match(/\Aadmin(F\d+)@bookeepz\.net\z/i)
+    raise ArgumentError, "No password environment variable configured for #{email}" unless match
+
+    "ADMIN_#{match[1].upcase}_PASSWORD"
   end
 end
