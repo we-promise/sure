@@ -53,7 +53,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       // sensible defaults; the user can re-enter and re-save.
       LogService.instance.warning(
         'BackendConfigScreen',
-        'Failed to load saved backend config: $e',
+        'Failed to load saved backend config with ${e.runtimeType}',
       );
     } finally {
       if (mounted) {
