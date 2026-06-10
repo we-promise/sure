@@ -234,6 +234,29 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal syncs.map(&:id).sort, Sync.for_family(family).where(id: syncs.map(&:id)).pluck(:id).sort
   end
 
+  test "any_incomplete_for? fires on a Sync against any Syncable provider item association" do
+    family = families(:dylan_family)
+    Sync.for_family(family).incomplete.find_each(&:destroy)
+    assert_not Sync.any_incomplete_for?(family)
+
+    mercury_item = mercury_items(:one)
+    incomplete = Sync.create!(syncable: mercury_item, status: :pending)
+    assert Sync.any_incomplete_for?(family),
+           "any_incomplete_for? should report true for an in-flight Mercury sync"
+
+    incomplete.update!(status: :completed)
+    assert_not Sync.any_incomplete_for?(family)
+  end
+
+  test "any_incomplete_for? fires on a Sync against the family itself" do
+    family = families(:dylan_family)
+    Sync.for_family(family).incomplete.find_each(&:destroy)
+    assert_not Sync.any_incomplete_for?(family)
+
+    Sync.create!(syncable: family, status: :syncing)
+    assert Sync.any_incomplete_for?(family)
+  end
+
   test "api error payload is present for failed syncs without raw error text" do
     sync = Sync.create!(syncable: accounts(:depository), status: :failed)
 

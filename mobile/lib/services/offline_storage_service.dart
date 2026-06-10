@@ -21,12 +21,23 @@ class OfflineStorageService {
     String? notes,
     String? categoryId,
     String? categoryName,
+    String? merchantId,
+    String? merchantName,
+    List<String> tagIds = const [],
+    List<String> tagNames = const [],
     String? serverId,
     SyncStatus syncStatus = SyncStatus.pending,
   }) async {
-    _log.info('OfflineStorage', 'saveTransaction called: name=$name, amount=$amount, accountId=$accountId, syncStatus=$syncStatus');
-
+    // Generated once when the transaction enters the offline queue, then
+    // persisted as transactions.local_id and reused as the mobile idempotency
+    // key on every replay attempt.
     final localId = _uuid.v4();
+
+    _log.info(
+      'OfflineStorage',
+      'saveTransaction called with syncStatus=$syncStatus',
+    );
+
     final transaction = OfflineTransaction(
       id: serverId,
       localId: localId,
@@ -39,36 +50,41 @@ class OfflineStorageService {
       notes: notes,
       categoryId: categoryId,
       categoryName: categoryName,
+      merchantId: merchantId,
+      merchantName: merchantName,
+      tagIds: tagIds,
+      tagNames: tagNames,
       syncStatus: syncStatus,
     );
 
     try {
       await _dbHelper.insertTransaction(transaction.toDatabaseMap());
-      _log.info('OfflineStorage', 'Transaction saved successfully with localId: $localId');
+      _log.info('OfflineStorage', 'Transaction saved successfully');
       return transaction;
     } catch (e) {
-      _log.error('OfflineStorage', 'Failed to save transaction: $e');
+      _log.error(
+        'OfflineStorage',
+        'Failed to save transaction with ${e.runtimeType}',
+      );
       rethrow;
     }
   }
 
   Future<List<OfflineTransaction>> getTransactions({String? accountId}) async {
-    _log.debug('OfflineStorage', 'getTransactions called with accountId: $accountId');
-    final transactionMaps = await _dbHelper.getTransactions(accountId: accountId);
-    _log.debug('OfflineStorage', 'Retrieved ${transactionMaps.length} transaction maps from database');
-
-    if (transactionMaps.isNotEmpty && accountId != null) {
-      _log.debug('OfflineStorage', 'Sample transaction account_ids:');
-      for (int i = 0; i < transactionMaps.take(3).length; i++) {
-        final map = transactionMaps[i];
-        _log.debug('OfflineStorage', '  - Transaction ${map['server_id']}: account_id="${map['account_id']}"');
-      }
-    }
+    _log.debug(
+      'OfflineStorage',
+      'getTransactions called${accountId != null ? " with account filter" : ""}',
+    );
+    final transactionMaps =
+        await _dbHelper.getTransactions(accountId: accountId);
+    _log.debug('OfflineStorage',
+        'Retrieved ${transactionMaps.length} transaction maps from database');
 
     final transactions = transactionMaps
         .map((map) => OfflineTransaction.fromDatabaseMap(map))
         .toList();
-    _log.debug('OfflineStorage', 'Returning ${transactions.length} transactions');
+    _log.debug(
+        'OfflineStorage', 'Returning ${transactions.length} transactions');
     return transactions;
   }
 
@@ -123,12 +139,15 @@ class OfflineStorageService {
 
   /// Mark a transaction for pending deletion (offline delete)
   Future<void> markTransactionForDeletion(String serverId) async {
-    _log.info('OfflineStorage', 'Marking transaction $serverId for pending deletion');
+    _log.info('OfflineStorage', 'Marking transaction for pending deletion');
 
     // Find the transaction by server ID
     final existing = await getTransactionByServerId(serverId);
     if (existing == null) {
-      _log.warning('OfflineStorage', 'Transaction $serverId not found, cannot mark for deletion');
+      _log.warning(
+        'OfflineStorage',
+        'Transaction not found, cannot mark for deletion',
+      );
       return;
     }
 
@@ -138,28 +157,36 @@ class OfflineStorageService {
       updatedAt: DateTime.now(),
     );
 
-    await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
-    _log.info('OfflineStorage', 'Transaction ${existing.localId} marked as pending_delete');
+    await _dbHelper.updateTransaction(
+        existing.localId, updated.toDatabaseMap());
+    _log.info('OfflineStorage', 'Transaction marked as pending_delete');
   }
 
   /// Undo a pending transaction operation (either pending create or pending delete)
-  Future<bool> undoPendingTransaction(String localId, SyncStatus currentStatus) async {
-    _log.info('OfflineStorage', 'Undoing pending transaction $localId with status $currentStatus');
+  Future<bool> undoPendingTransaction(
+      String localId, SyncStatus currentStatus) async {
+    _log.info(
+      'OfflineStorage',
+      'Undoing pending transaction with status $currentStatus',
+    );
 
     final existing = await getTransactionByLocalId(localId);
     if (existing == null) {
-      _log.warning('OfflineStorage', 'Transaction $localId not found, cannot undo');
+      _log.warning('OfflineStorage', 'Transaction not found, cannot undo');
       return false;
     }
 
     if (currentStatus == SyncStatus.pending) {
       // For pending creates: delete the transaction completely
-      _log.info('OfflineStorage', 'Deleting pending create transaction $localId');
+      _log.info('OfflineStorage', 'Deleting pending create transaction');
       await deleteTransaction(localId);
       return true;
     } else if (currentStatus == SyncStatus.pendingDelete) {
       // For pending deletes: restore to synced status
-      _log.info('OfflineStorage', 'Restoring pending delete transaction $localId to synced');
+      _log.info(
+        'OfflineStorage',
+        'Restoring pending delete transaction to synced',
+      );
       final updated = existing.copyWith(
         syncStatus: SyncStatus.synced,
         updatedAt: DateTime.now(),
@@ -168,21 +195,19 @@ class OfflineStorageService {
       return true;
     }
 
-    _log.warning('OfflineStorage', 'Cannot undo transaction with status $currentStatus');
+    _log.warning(
+        'OfflineStorage', 'Cannot undo transaction with status $currentStatus');
     return false;
   }
 
-  Future<void> syncTransactionsFromServer(List<Transaction> serverTransactions) async {
-    _log.info('OfflineStorage', 'syncTransactionsFromServer called with ${serverTransactions.length} transactions from server');
-
-    // Log first transaction's accountId for debugging
-    if (serverTransactions.isNotEmpty) {
-      final firstTx = serverTransactions.first;
-      _log.info('OfflineStorage', 'First transaction: id=${firstTx.id}, accountId="${firstTx.accountId}", name="${firstTx.name}"');
-    }
+  Future<void> syncTransactionsFromServer(
+      List<Transaction> serverTransactions) async {
+    _log.info('OfflineStorage',
+        'syncTransactionsFromServer called with ${serverTransactions.length} transactions from server');
 
     // Use upsert logic instead of clear + insert to preserve recently uploaded transactions
-    _log.info('OfflineStorage', 'Upserting all transactions from server (preserving pending/failed)');
+    _log.info('OfflineStorage',
+        'Upserting all transactions from server (preserving pending/failed)');
 
     int upsertedCount = 0;
     int emptyAccountIdCount = 0;
@@ -196,9 +221,11 @@ class OfflineStorageService {
       }
     }
 
-    _log.info('OfflineStorage', 'Upserted $upsertedCount transactions from server');
+    _log.info(
+        'OfflineStorage', 'Upserted $upsertedCount transactions from server');
     if (emptyAccountIdCount > 0) {
-      _log.error('OfflineStorage', 'WARNING: $emptyAccountIdCount transactions had EMPTY accountId!');
+      _log.error('OfflineStorage',
+          'WARNING: $emptyAccountIdCount transactions had EMPTY accountId!');
     }
   }
 
@@ -212,13 +239,18 @@ class OfflineStorageService {
     }
 
     // If accountId is provided and transaction.accountId is empty, use the provided one
-    final effectiveAccountId = transaction.accountId.isEmpty && accountId != null
-        ? accountId
-        : transaction.accountId;
+    final effectiveAccountId =
+        transaction.accountId.isEmpty && accountId != null
+            ? accountId
+            : transaction.accountId;
 
     // Log if transaction has empty accountId
     if (transaction.accountId.isEmpty) {
-      _log.warning('OfflineStorage', 'Transaction ${transaction.id} has empty accountId from server! Provided accountId: $accountId, effective: $effectiveAccountId');
+      final fallbackApplied = accountId != null && accountId.isNotEmpty;
+      _log.warning(
+        'OfflineStorage',
+        'Transaction has empty accountId from server; fallbackApplied=$fallbackApplied',
+      );
     }
 
     // Check if we already have this transaction
@@ -226,31 +258,29 @@ class OfflineStorageService {
 
     if (existing != null) {
       // Update existing transaction, preserving its accountId if effectiveAccountId is empty
-      final finalAccountId = effectiveAccountId.isEmpty ? existing.accountId : effectiveAccountId;
+      final finalAccountId =
+          effectiveAccountId.isEmpty ? existing.accountId : effectiveAccountId;
 
       if (finalAccountId.isEmpty) {
-        _log.error('OfflineStorage', 'CRITICAL: Updating transaction ${transaction.id} with EMPTY accountId!');
+        _log.error(
+          'OfflineStorage',
+          'CRITICAL: Updating transaction with EMPTY accountId; operation=update fallbackApplied=false existingAccountIdPresent=false',
+        );
       }
 
-      final updated = OfflineTransaction(
-        id: transaction.id,
-        localId: existing.localId,
+      final updated = existing.mergeServerTransaction(
+        transaction,
         accountId: finalAccountId,
-        name: transaction.name,
-        date: transaction.date,
-        amount: transaction.amount,
-        currency: transaction.currency,
-        nature: transaction.nature,
-        notes: transaction.notes,
-        categoryId: transaction.categoryId ?? existing.categoryId,
-        categoryName: transaction.categoryName ?? existing.categoryName,
-        syncStatus: SyncStatus.synced,
       );
-      await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());
+      await _dbHelper.updateTransaction(
+          existing.localId, updated.toDatabaseMap());
     } else {
       // Insert new transaction
       if (effectiveAccountId.isEmpty) {
-        _log.error('OfflineStorage', 'CRITICAL: Inserting transaction ${transaction.id} with EMPTY accountId!');
+        _log.error(
+          'OfflineStorage',
+          'CRITICAL: Inserting transaction with EMPTY accountId; operation=insert fallbackApplied=false',
+        );
       }
 
       final offlineTransaction = OfflineTransaction(
@@ -265,6 +295,10 @@ class OfflineStorageService {
         notes: transaction.notes,
         categoryId: transaction.categoryId,
         categoryName: transaction.categoryName,
+        merchantId: transaction.merchantId,
+        merchantName: transaction.merchantName,
+        tagIds: transaction.tagIds,
+        tagNames: transaction.tagNames,
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());
@@ -291,15 +325,17 @@ class OfflineStorageService {
   }
 
   Future<void> saveAccounts(List<Account> accounts) async {
-    final accountMaps = accounts.map((account) => {
-      'id': account.id,
-      'name': account.name,
-      'balance': account.balance,
-      'currency': account.currency,
-      'classification': account.classification,
-      'account_type': account.accountType,
-      'synced_at': DateTime.now().toIso8601String(),
-    }).toList();
+    final accountMaps = accounts
+        .map((account) => {
+              'id': account.id,
+              'name': account.name,
+              'balance': account.balance,
+              'currency': account.currency,
+              'classification': account.classification,
+              'account_type': account.accountType,
+              'synced_at': DateTime.now().toIso8601String(),
+            })
+        .toList();
 
     await _dbHelper.insertAccounts(accountMaps);
   }

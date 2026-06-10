@@ -1,0 +1,20 @@
+<%= render DS::Menu.new(variant: :button, placement: placement) do |menu| %>
+  <% menu.with_button(
+       type: "button",
+       class: "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0",
+       aria: { label: t(".aria_label", period: selected_label, default: "Time period: %{period}") }
+     ) do %>
+    <span class="whitespace-nowrap"><%= selected_label %></span>
+    <%= helpers.icon("chevron-down", size: "sm") %>
+  <% end %>
+
+  <% periods.each do |period| %>
+    <% menu.with_item(
+         variant: :link,
+         text: period.label_short,
+         href: href_for(period.key),
+         frame: frame,
+         selected: selected?(period.key)
+       ) %>
+  <% end %>
+<% end %>

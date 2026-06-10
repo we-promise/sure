@@ -75,9 +75,18 @@ class PropertiesController < ApplicationController
       if @account.draft?
         @account.activate!
 
+        # The property setup wizard (create → balances → address) is multi-step,
+        # so the original `?return_to=` only survives in the session (captured by
+        # StoreLocation), not as a threaded form param. Honor it on completion so
+        # flows like the savings-goals "Add an account" CTA land back where they
+        # started instead of on the account page. Sanitized + consumed: the
+        # turbo_stream branch below isn't covered by Rails' redirect host-guard,
+        # so an unsafe value must not reach stream_redirect_to.
+        return_path = safe_return_to(session.delete(:return_to)) || account_path(@account)
+
         respond_to do |format|
-          format.html { redirect_to account_path(@account) }
-          format.turbo_stream { stream_redirect_to account_path(@account) }
+          format.html { redirect_to return_path }
+          format.turbo_stream { stream_redirect_to return_path }
         end
       else
         @success_message = "Address updated successfully."
