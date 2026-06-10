@@ -11,7 +11,8 @@
   - Creates or updates the four configured families.
   - Creates or updates two owner users.
   - Assigns both owners to the primary family named `Risingstone infra pvt ltd`.
-  - Uses a `requires_new: true` transaction.
+  - Uses a `requires_new: true` transaction and a PostgreSQL transaction-level advisory lock to serialize overlapping bootstrap runs.
+  - On rerun, keeps existing owner display/sidebar preferences while still updating family, role, password, and missing onboarding timestamps.
   - Supports dry-run by validating writes, rolling back, and returning safe preview objects.
 - `test/services/platform_bootstrap/multi_company_owners_test.rb`
   - Covers create, update/idempotency, dry-run rollback, password validation, and write-count behavior.

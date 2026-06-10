@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "zlib"
+
 module PlatformBootstrap
   class MultiCompanyOwners
     COMPANY_NAMES = [
@@ -17,6 +19,7 @@ module PlatformBootstrap
     ].freeze
 
     SPECIAL_CHARACTER_PATTERN = /[!@#$%^&*(),.?":{}|<>]/
+    ADVISORY_LOCK_KEY = Zlib.crc32("platform_bootstrap:multi_company_owners")
 
     Result = Data.define(:families, :users, :dry_run) do
       def success?
@@ -36,6 +39,7 @@ module PlatformBootstrap
       users = nil
 
       ActiveRecord::Base.transaction(requires_new: true) do
+        acquire_advisory_lock!
         families = upsert_families
         users = upsert_users(primary_family: families.fetch(PRIMARY_FAMILY_NAME))
 
@@ -56,6 +60,13 @@ module PlatformBootstrap
         dry_run == true
       end
 
+      def acquire_advisory_lock!
+        return unless ActiveRecord::Base.connection.adapter_name == "PostgreSQL"
+
+        sql = ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", ADVISORY_LOCK_KEY ])
+        ActiveRecord::Base.connection.execute(sql)
+      end
+
       def upsert_families
         COMPANY_NAMES.index_with do |name|
           family = Family.find_or_initialize_by(name: name)
@@ -73,17 +84,22 @@ module PlatformBootstrap
           user = User.find_or_initialize_by(email: email)
 
           user.assign_attributes(
-            first_name: owner.fetch(:label),
-            last_name: nil,
             family: primary_family,
             role: :super_admin,
             password: password,
             password_confirmation: password,
-            onboarded_at: user.onboarded_at || Time.current,
-            ui_layout: :dashboard,
-            show_sidebar: true,
-            show_ai_sidebar: true
+            onboarded_at: user.onboarded_at || Time.current
           )
+
+          if user.new_record?
+            user.assign_attributes(
+              first_name: owner.fetch(:label),
+              last_name: nil,
+              ui_layout: :dashboard,
+              show_sidebar: true,
+              show_ai_sidebar: true
+            )
+          end
 
           user.save!
           user

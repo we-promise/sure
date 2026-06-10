@@ -45,6 +45,18 @@ module PlatformBootstrap
 
     test "rerun updates existing records without duplicating families or users" do
       MultiCompanyOwners.new(passwords: PASSWORDS).call
+      custom_onboarded_at = 2.days.ago.change(usec: 0)
+      custom_family = Family.create!(name: "Custom holding company", currency: "INR", locale: I18n.default_locale.to_s)
+
+      User.find_by!(email: "adminf0@bookeepz.net").update!(
+        first_name: "Custom",
+        last_name: "Owner",
+        family: custom_family,
+        role: :admin,
+        onboarded_at: custom_onboarded_at,
+        show_sidebar: false,
+        show_ai_sidebar: false
+      )
 
       updated_passwords = {
         "adminF0@bookeepz.net" => "OwnerF0New!2026",
@@ -69,11 +81,57 @@ module PlatformBootstrap
 
       admin_f0 = User.find_by!(email: "adminf0@bookeepz.net")
       admin_f1 = User.find_by!(email: "adminf1@bookeepz.net")
+      primary_family = Family.find_by!(name: "Risingstone infra pvt ltd")
 
       assert admin_f0.authenticate("OwnerF0New!2026")
       assert admin_f1.authenticate("OwnerF1New!2026")
       assert_equal "super_admin", admin_f0.role
       assert_equal "super_admin", admin_f1.role
+      assert_equal primary_family, admin_f0.family
+      assert_equal "Custom", admin_f0.first_name
+      assert_equal "Owner", admin_f0.last_name
+      assert_equal custom_onboarded_at, admin_f0.onboarded_at
+      assert_not admin_f0.show_sidebar
+      assert_not admin_f0.show_ai_sidebar
+    end
+
+    test "requests advisory lock before bootstrap writes" do
+      service = MultiCompanyOwners.new(passwords: PASSWORDS)
+      primary_family = Family.new(name: "Risingstone infra pvt ltd")
+      families = { "Risingstone infra pvt ltd" => primary_family }
+      sequence = sequence("multi-company bootstrap lock")
+
+      service.expects(:acquire_advisory_lock!).once.in_sequence(sequence)
+      service.expects(:upsert_families).once.in_sequence(sequence).returns(families)
+      service.expects(:upsert_users).with(primary_family: primary_family).once.in_sequence(sequence).returns([])
+
+      result = service.call
+
+      assert_equal [ primary_family ], result.families
+      assert_empty result.users
+    end
+
+    test "PostgreSQL advisory lock executes transaction lock SQL" do
+      service = MultiCompanyOwners.new(passwords: PASSWORDS)
+      connection = ActiveRecord::Base.connection
+      expected_sql = ActiveRecord::Base.sanitize_sql_array(
+        [ "SELECT pg_advisory_xact_lock(?)", MultiCompanyOwners::ADVISORY_LOCK_KEY ]
+      )
+
+      connection.stubs(:adapter_name).returns("PostgreSQL")
+      connection.expects(:execute).with(expected_sql).once
+
+      service.send(:acquire_advisory_lock!)
+    end
+
+    test "advisory lock is skipped for non-PostgreSQL adapters" do
+      service = MultiCompanyOwners.new(passwords: PASSWORDS)
+      connection = ActiveRecord::Base.connection
+
+      connection.stubs(:adapter_name).returns("SQLite")
+      connection.expects(:execute).never
+
+      service.send(:acquire_advisory_lock!)
     end
 
     test "dry run validates but rolls back changes" do
