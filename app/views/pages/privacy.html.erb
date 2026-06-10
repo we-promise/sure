@@ -4,8 +4,12 @@
   <div class="w-full max-w-md sm:max-w-lg lg:max-w-2xl">
     <div class="bg-container border border-primary rounded-xl p-6 sm:p-8 shadow-sm">
       <div class="text-center">
-        <h1 class="text-xl sm:text-2xl font-bold text-primary mb-4"><%= t(".heading") %></h1>
-        <p class="text-sm sm:text-base text-subdued"><%= t(".placeholder") %></p>
+        <h1 class="text-xl sm:text-2xl font-bold text-primary mb-4">
+          <%= @country_name ? t(".heading_country", country: @country_name) : t(".heading") %>
+        </h1>
+        <p class="text-sm sm:text-base text-subdued">
+          <%= @country_name ? t(".placeholder_country", country: @country_name) : t(".placeholder") %>
+        </p>
       </div>
     </div>
   </div>

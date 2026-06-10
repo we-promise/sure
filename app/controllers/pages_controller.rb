@@ -66,11 +66,15 @@ class PagesController < ApplicationController
     render layout: "blank"
   end
 
+  COUNTRY_NAMES = { "rw" => "Rwanda", "za" => "South Africa" }.freeze
+
   def privacy
+    @country_name = COUNTRY_NAMES[params[:country]]
     render layout: "blank"
   end
 
   def terms
+    @country_name = COUNTRY_NAMES[params[:country]]
     render layout: "blank"
   end
 

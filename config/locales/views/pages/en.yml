@@ -7,10 +7,14 @@ en:
       title: Privacy Policy
       heading: Privacy Policy
       placeholder: Privacy policy content will be displayed here.
+      heading_country: "%{country} Privacy Policy"
+      placeholder_country: "Privacy policy for %{country} will be available here soon."
     terms:
       title: Terms of Service
       heading: Terms of Service
       placeholder: Terms of service content will be displayed here.
+      heading_country: "%{country} Terms of Service"
+      placeholder_country: "Terms of service for %{country} will be available here soon."
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"

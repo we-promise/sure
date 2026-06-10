@@ -40,8 +40,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         orElse: () => _supportedCountries.first,
       )['name']!;
 
-  static String get _privacyUrl => '${ApiConfig.baseUrl}/privacy';
-  static String get _termsUrl => '${ApiConfig.baseUrl}/terms';
+  String get _privacyUrl => '${ApiConfig.baseUrl}/privacy/${_selectedCountryCode.toLowerCase()}';
+  String get _termsUrl => '${ApiConfig.baseUrl}/terms/${_selectedCountryCode.toLowerCase()}';
   static const _consentVersion = '1.0';
 
   @override
