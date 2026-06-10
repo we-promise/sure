@@ -79,6 +79,9 @@ module PlatformBootstrap
       end
 
       assert_includes error.message, "Missing password for adminF1@bookeepz.net"
+      assert_equal 0, Family.where(name: COMPANY_NAMES).count
+      assert_nil User.find_by(email: "adminf0@bookeepz.net")
+      assert_nil User.find_by(email: "adminf1@bookeepz.net")
     end
 
     test "rejects weak passwords before writing records" do
@@ -94,6 +97,7 @@ module PlatformBootstrap
       assert_includes error.message, "Password for adminF0@bookeepz.net must be at least 8 characters"
       assert_equal 0, Family.where(name: COMPANY_NAMES).count
       assert_nil User.find_by(email: "adminf0@bookeepz.net")
+      assert_nil User.find_by(email: "adminf1@bookeepz.net")
     end
   end
 end
