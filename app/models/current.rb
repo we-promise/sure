@@ -1,7 +1,7 @@
 class Current < ActiveSupport::CurrentAttributes
   attribute :user_agent, :ip_address
-
   attribute :session
+  attribute :visible_accessible_accounts_cache
 
   delegate :family, to: :user, allow_nil: true
 

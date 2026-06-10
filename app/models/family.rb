@@ -258,7 +258,8 @@ class Family < ApplicationRecord
 
   # Loads visible, accessible accounts once per request for dashboard, sidebar, and balance sheet.
   def visible_accessible_accounts(user: Current.user)
-    (@visible_accessible_accounts_by_user ||= {})[user&.id] ||= load_visible_accessible_accounts(user)
+    cache = (Current.visible_accessible_accounts_cache ||= {})
+    cache[[ id, user&.id ]] ||= load_visible_accessible_accounts(user)
   end
 
   # Memoizes exchange rates for the request so balance sheet, investment summary,
