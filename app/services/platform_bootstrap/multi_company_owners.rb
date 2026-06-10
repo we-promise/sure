@@ -82,6 +82,7 @@ module PlatformBootstrap
           email = normalize_email(owner.fetch(:email))
           password = passwords.fetch(email)
           user = User.find_or_initialize_by(email: email)
+          existing_preferences = user.persisted? ? owner_preferences(user) : nil
 
           user.assign_attributes(
             family: primary_family,
@@ -102,8 +103,26 @@ module PlatformBootstrap
           end
 
           user.save!
+          restore_owner_preferences(user, existing_preferences) if existing_preferences
           user
         end
+      end
+
+      def owner_preferences(user)
+        user.slice(
+          "first_name",
+          "last_name",
+          "ui_layout",
+          "show_sidebar",
+          "show_ai_sidebar"
+        )
+      end
+
+      def restore_owner_preferences(user, preferences)
+        return if preferences.all? { |attribute, value| user.public_send(attribute) == value }
+
+        user.update_columns(preferences)
+        user.reload
       end
 
       def dry_run_previews(families:, users:)

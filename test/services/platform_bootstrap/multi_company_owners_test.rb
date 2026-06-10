@@ -52,8 +52,9 @@ module PlatformBootstrap
         first_name: "Custom",
         last_name: "Owner",
         family: custom_family,
-        role: :admin,
+        role: :guest,
         onboarded_at: custom_onboarded_at,
+        ui_layout: :intro,
         show_sidebar: false,
         show_ai_sidebar: false
       )
@@ -91,6 +92,7 @@ module PlatformBootstrap
       assert_equal "Custom", admin_f0.first_name
       assert_equal "Owner", admin_f0.last_name
       assert_equal custom_onboarded_at, admin_f0.onboarded_at
+      assert_equal "intro", admin_f0.ui_layout
       assert_not admin_f0.show_sidebar
       assert_not admin_f0.show_ai_sidebar
     end
