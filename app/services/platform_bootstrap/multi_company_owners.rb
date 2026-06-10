@@ -16,6 +16,8 @@ module PlatformBootstrap
       { email: "adminF1@bookeepz.net", label: "F0-SU-2" }
     ].freeze
 
+    SPECIAL_CHARACTER_PATTERN = /[!@#$%^&*(),.?":{}|<>]/
+
     Result = Data.define(:families, :users, :dry_run) do
       def success?
         true
@@ -102,7 +104,7 @@ module PlatformBootstrap
           ("must be at least 8 characters" if password.length < 8),
           ("must include both uppercase and lowercase letters" unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)),
           ("must include at least one number" unless password.match?(/\d/)),
-          ("must include at least one special character" unless password.match?(/[!@#$%^&*(),.?:{}|<>]/))
+          ("must include at least one special character" unless password.match?(SPECIAL_CHARACTER_PATTERN))
         ].compact
       end
 

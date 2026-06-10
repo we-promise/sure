@@ -91,6 +91,23 @@ module PlatformBootstrap
       assert_nil User.find_by(email: "adminf1@bookeepz.net")
     end
 
+    test "accepts double quote as a special password character" do
+      quoted_passwords = {
+        "adminF0@bookeepz.net" => "OwnerF0Pass\"2026",
+        "adminF1@bookeepz.net" => "OwnerF1Pass\"2026"
+      }
+
+      result = nil
+
+      assert_no_difference -> { Family.count } do
+        assert_no_difference -> { User.count } do
+          result = MultiCompanyOwners.new(passwords: quoted_passwords, dry_run: true).call
+        end
+      end
+
+      assert result.success?
+    end
+
     test "rejects missing password for required owner" do
       error = nil
 
