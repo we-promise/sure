@@ -25,6 +25,7 @@ jobs:
       head_sha: ${{ steps.preview.outputs.head_sha }}
       is_fork: ${{ steps.preview.outputs.is_fork }}
       pr_number: ${{ steps.preview.outputs.pr_number }}
+      resolution_source: ${{ steps.preview.outputs.resolution_source }}
       should_deploy: ${{ steps.preview.outputs.should_deploy }}
 
     steps:
@@ -39,7 +40,7 @@ jobs:
 
       - name: Resolve preview request
         id: preview
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const { resolvePreviewRequest } = require('./trusted-preview-resolver/workers/preview/deploy/resolve_preview_request.cjs');
@@ -65,7 +66,7 @@ jobs:
       - name: Create GitHub Deployment
         if: env.IS_FORK == 'false'
         id: deployment
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const prNumber = process.env.PR_NUMBER;
@@ -105,6 +106,7 @@ jobs:
       HEAD_SHA: ${{ needs.preview-gate.outputs.head_sha }}
       IS_FORK: ${{ needs.preview-gate.outputs.is_fork }}
       PR_NUMBER: ${{ needs.preview-gate.outputs.pr_number }}
+      RESOLUTION_SOURCE: ${{ needs.preview-gate.outputs.resolution_source }}
 
     steps:
       - name: Checkout trusted preview tooling
@@ -202,11 +204,16 @@ jobs:
           cp trusted/workers/preview/tsconfig.json "$preview_dir/tsconfig.json"
           cp trusted/workers/preview/wrangler.toml "$preview_dir/wrangler.toml"
           cp -R trusted/workers/preview/src "$preview_dir/src"
+          mkdir -p "$preview_dir/deploy"
+          cp trusted/workers/preview/deploy/redact_preview_log.sh "$preview_dir/deploy/redact_preview_log.sh"
+          cp trusted/workers/preview/deploy/render_preview_config.cjs "$preview_dir/deploy/render_preview_config.cjs"
+          chmod 0755 "$preview_dir/deploy/redact_preview_log.sh"
 
           diagnostics_nonce="$(openssl rand -hex 32)"
           sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" "$preview_dir/wrangler.toml"
           sed -i "s/\${PR_NUMBER}/${PR_NUMBER}/g" "$preview_dir/src/index.ts"
           sed -i "s/\${PREVIEW_DIAGNOSTICS_NONCE}/${diagnostics_nonce}/g" "$preview_dir/src/index.ts"
+          cp "$preview_dir/wrangler.toml" "$preview_dir/wrangler.source.toml"
 
           if grep -F "\${PREVIEW_DIAGNOSTICS_NONCE}" "$preview_dir/src/index.ts" >/dev/null; then
             echo "Preview diagnostics nonce placeholder was not replaced" >&2
@@ -243,34 +250,30 @@ jobs:
           set -euo pipefail
 
           cd "$RUNNER_TEMP/sure-preview-worker"
+          source_config="$RUNNER_TEMP/sure-preview-worker/wrangler.source.toml"
           config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"
           image_tag="sure-preview-pr-${PR_NUMBER}:${HEAD_SHA}"
+          temporary_image_ref="registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/${image_tag}"
           push_log="$RUNNER_TEMP/wrangler-containers-push.log"
           clean_log="$RUNNER_TEMP/wrangler-containers-push.clean.log"
+          push_status=0
 
           # wrangler containers push validates wrangler.toml, so point the trusted
-          # config at the loaded CI image before replacing it with the registry ref.
-          LOCAL_IMAGE_TAG="$image_tag" node - "$config_path" <<'NODE'
-          const fs = require('node:fs');
+          # config at a registry-shaped ref while it pushes the verified local image.
+          PREVIEW_IMAGE_REF="$temporary_image_ref" node ./deploy/render_preview_config.cjs render "$source_config" "$config_path"
+          cp "$config_path" "$RUNNER_TEMP/wrangler-push.toml"
 
-          const configPath = process.argv[2];
-          const imageTag = process.env.LOCAL_IMAGE_TAG;
-
-          if (!/^sure-preview-pr-[1-9][0-9]*:[a-f0-9]{40}$/.test(imageTag || '')) {
-            throw new Error('Expected local preview image tag for wrangler containers push');
-          }
-
-          const original = fs.readFileSync(configPath, 'utf8');
-          const updated = original.replace(/image = "[^"]+"/, `image = ${JSON.stringify(imageTag)}`);
-          if (updated === original) {
-            throw new Error('Expected wrangler.toml to contain an image entry to rewrite before push');
-          }
-          fs.writeFileSync(configPath, updated);
-          NODE
-
-          ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log"
+          set +e
+          ./node_modules/.bin/wrangler containers push "$image_tag" 2>&1 | tee "$push_log" | ./deploy/redact_preview_log.sh
+          push_status=${PIPESTATUS[0]}
+          set -e
           perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$push_log" > "$clean_log"
-          image_ref=$(grep -Eo 'registry\.cloudflare\.com/[^[:space:]]+' "$clean_log" | tail -n 1 | tr -d '\r')
+
+          if [ "$push_status" -ne 0 ]; then
+            exit "$push_status"
+          fi
+
+          image_ref="$(node ./deploy/render_preview_config.cjs find "$clean_log")"
 
           if [ -z "$image_ref" ]; then
             echo "Could not find Cloudflare registry image reference in wrangler output" >&2
@@ -285,27 +288,17 @@ jobs:
         run: |
           set -euo pipefail
 
+          source_config="$RUNNER_TEMP/sure-preview-worker/wrangler.source.toml"
           config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"
-          # Use Node instead of sed so the replacement preserves TOML string syntax.
-          node - "$config_path" <<'NODE'
-          const fs = require('node:fs');
+          # Render from the preserved trusted source template so the push-time
+          # registry ref cannot make the final deploy rewrite stateful.
+          PREVIEW_IMAGE_REF="$IMAGE_REF" node "$RUNNER_TEMP/sure-preview-worker/deploy/render_preview_config.cjs" render "$source_config" "$config_path"
+          cp "$config_path" "$RUNNER_TEMP/wrangler-final.toml"
 
-          const configPath = process.argv[2];
-          const imageRef = process.env.IMAGE_REF;
-
-          if (!imageRef || !imageRef.startsWith('registry.cloudflare.com/')) {
-            throw new Error('Expected a Cloudflare registry image reference');
-          }
-
-          const original = fs.readFileSync(configPath, 'utf8');
-          const updated = original.replace(/image = "[^"]+"/, `image = ${JSON.stringify(imageRef)}`);
-          if (updated === original) {
-            throw new Error('Expected wrangler.toml to contain an image entry to rewrite');
-          }
-          fs.writeFileSync(configPath, updated);
-          NODE
-
-          cat "$config_path"
+          # Print a redacted copy for logs without mutating the config used by deploy.
+          redacted_config="$RUNNER_TEMP/wrangler-redacted.toml"
+          "$RUNNER_TEMP/sure-preview-worker/deploy/redact_preview_log.sh" < "$config_path" > "$redacted_config"
+          cat "$redacted_config"
 
       - name: Deploy to Cloudflare Containers
         id: deploy
@@ -321,7 +314,11 @@ jobs:
           clean_deploy_log="$RUNNER_TEMP/wrangler-deploy.clean.log"
 
           deploy_once() {
-            ./node_modules/.bin/wrangler deploy --config wrangler.toml --var "PR_NUMBER:${PR_NUMBER}" 2>&1 | tee "$deploy_log"
+            set +e
+            ./node_modules/.bin/wrangler deploy --config wrangler.toml --var "PR_NUMBER:${PR_NUMBER}" 2>&1 | tee "$deploy_log" | ./deploy/redact_preview_log.sh
+            local deploy_status=${PIPESTATUS[0]}
+            set -e
+            return "$deploy_status"
           }
 
           if ! deploy_once; then
@@ -356,26 +353,65 @@ jobs:
         run: |
           set -euo pipefail
 
-          diagnostics_file="$RUNNER_TEMP/preview-diagnostics.json"
+          diagnostics_dir="$RUNNER_TEMP/preview-diagnostics"
+          diagnostics_file="$diagnostics_dir/preview-diagnostics.json"
+          latest_metrics_file="$diagnostics_dir/latest-metrics.json"
+          polls_log="$diagnostics_dir/metrics-polls.log"
+          summary_file="$diagnostics_dir/summary.md"
           last_error=""
+          mkdir -p "$diagnostics_dir"
 
           for attempt in $(seq 1 40); do
             if curl -fsS --connect-timeout 5 --max-time 15 "$PREVIEW_URL/_container_status" -o "$diagnostics_file"; then
-              if jq -e '.previewReady == true or .previewFailed == true' "$diagnostics_file" >/dev/null; then
-                break
+              if jq -e . "$diagnostics_file" >/dev/null 2>&1; then
+                jq -c --argjson attempt "$attempt" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                  '{attempt: $attempt, at: $at, previewReady: (.previewReady // false), previewFailed: (.previewFailed // false), progress: (.progress // {}), timings: (.timings // {})}' \
+                  "$diagnostics_file" >> "$polls_log"
+                jq '{previewReady: (.previewReady // false), previewFailed: (.previewFailed // false), progress: (.progress // {}), timings: (.timings // {})}' "$diagnostics_file" > "$latest_metrics_file"
+
+                if jq -e '.previewReady == true or .previewFailed == true' "$diagnostics_file" >/dev/null; then
+                  break
+                fi
+              else
+                last_error="invalid diagnostics JSON on attempt ${attempt}"
+                raw_snippet="$(head -c 2048 "$diagnostics_file")"
+                latest_metrics_snapshot="none"
+                if [ -f "$latest_metrics_file" ]; then
+                  latest_metrics_snapshot="$(head -c 2048 "$latest_metrics_file")"
+                fi
+                jq -nc --argjson attempt "$attempt" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg error "$last_error" --arg latestMetrics "$latest_metrics_snapshot" --arg rawSnippet "$raw_snippet" \
+                  '{attempt: $attempt, at: $at, error: $error, latestMetrics: $latestMetrics, rawSnippet: $rawSnippet}' >> "$polls_log"
               fi
             else
               last_error="curl failed on attempt ${attempt}"
+              jq -nc --argjson attempt "$attempt" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg error "$last_error" \
+                '{attempt: $attempt, at: $at, error: $error}' >> "$polls_log"
             fi
 
             sleep 3
           done
 
-          if [ ! -s "$diagnostics_file" ]; then
+          if [ ! -s "$diagnostics_file" ] || ! jq -e . "$diagnostics_file" >/dev/null 2>&1; then
             jq -n --arg error "${last_error:-preview diagnostics unavailable}" \
               --arg url "$PREVIEW_URL" \
               '{previewReady: false, previewFailed: false, error: $error, previewUrl: $url}' > "$diagnostics_file"
           fi
+
+          jq '{previewReady: (.previewReady // false), previewFailed: (.previewFailed // false), progress: (.progress // {}), timings: (.timings // {}), error: (.error // null)}' "$diagnostics_file" > "$latest_metrics_file"
+          {
+            echo "# Preview diagnostics"
+            echo
+            echo "- PR: ${PR_NUMBER}"
+            echo "- Commit: ${HEAD_SHA}"
+            echo "- Preview URL: ${PREVIEW_URL}"
+            echo "- Preview ready: $(jq -r '.previewReady // false' "$diagnostics_file")"
+            echo "- Preview failed: $(jq -r '.previewFailed // false' "$diagnostics_file")"
+            echo "- Phase: $(jq -r '.progress.phase // "unknown"' "$diagnostics_file")"
+            echo "- Stage: $(jq -r '.progress.stage // "unknown"' "$diagnostics_file")"
+            echo "- Seconds to Rails ready: $(jq -r '.timings.secondsToRailsReady // "unknown"' "$diagnostics_file")"
+            echo "- Seconds to demo data ready: $(jq -r '.timings.secondsToDemoDataReady // "unknown"' "$diagnostics_file")"
+            echo "- Seconds to preview ready: $(jq -r '.timings.secondsToPreviewReady // "unknown"' "$diagnostics_file")"
+          } > "$summary_file"
 
           jq -c . "$diagnostics_file"
 
@@ -402,16 +438,97 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: preview-diagnostics-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}
-          path: ${{ runner.temp }}/preview-diagnostics.json
+          path: ${{ runner.temp }}/preview-diagnostics
           if-no-files-found: error
           retention-days: 3
+
+      - name: Collect preview failure diagnostics
+        if: failure()
+        run: |
+          set -euo pipefail
+
+          diagnostics_dir="$RUNNER_TEMP/preview-failure-diagnostics"
+          manifest_file="$RUNNER_TEMP/preview-image/sure-preview-image.manifest.json"
+          redaction_helper="$RUNNER_TEMP/sure-preview-worker/deploy/redact_preview_log.sh"
+          mkdir -p "$diagnostics_dir"
+
+          jq -n \
+            --arg artifactName "$ARTIFACT_NAME" \
+            --arg headSha "$HEAD_SHA" \
+            --arg isFork "$IS_FORK" \
+            --arg prNumber "$PR_NUMBER" \
+            --arg resolutionSource "$RESOLUTION_SOURCE" \
+            '{
+              artifactName: $artifactName,
+              headSha: $headSha,
+              isFork: $isFork,
+              prNumber: $prNumber,
+              resolutionSource: $resolutionSource
+            }' > "$diagnostics_dir/preview-request.json"
+
+          sanitize_copy() {
+            local source="$1"
+            local destination="$2"
+            if [ -f "$source" ]; then
+              if [ -x "$redaction_helper" ]; then
+                "$redaction_helper" < "$source" > "$destination"
+              else
+                cp "$source" "$destination"
+              fi
+            fi
+          }
+
+          if [ -f "$manifest_file" ]; then
+            jq '{
+              artifactVersion,
+              archivePath,
+              archiveSha256,
+              headSha,
+              imageId,
+              imageTag,
+              prNumber
+            }' "$manifest_file" > "$diagnostics_dir/preview-image-manifest.json"
+          fi
+
+          sanitize_copy "$RUNNER_TEMP/sure-preview-worker/wrangler.source.toml" "$diagnostics_dir/wrangler-source.toml"
+          sanitize_copy "$RUNNER_TEMP/wrangler-push.toml" "$diagnostics_dir/wrangler-push.toml"
+          sanitize_copy "$RUNNER_TEMP/wrangler-final.toml" "$diagnostics_dir/wrangler-final.toml"
+          sanitize_copy "$RUNNER_TEMP/sure-preview-worker/wrangler.toml" "$diagnostics_dir/wrangler.toml"
+          sanitize_copy "$RUNNER_TEMP/wrangler-containers-push.clean.log" "$diagnostics_dir/wrangler-containers-push.log"
+          if [ -f "$RUNNER_TEMP/wrangler-deploy.clean.log" ]; then
+            sanitize_copy "$RUNNER_TEMP/wrangler-deploy.clean.log" "$diagnostics_dir/wrangler-deploy.log"
+          else
+            sanitize_copy "$RUNNER_TEMP/wrangler-deploy.log" "$diagnostics_dir/wrangler-deploy.log"
+          fi
+
+          find "$diagnostics_dir" -maxdepth 1 -type f -print
+
+      - name: Upload preview failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: preview-failure-diagnostics-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}
+          path: ${{ runner.temp }}/preview-failure-diagnostics
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Prepare cleanup metadata
+        if: success()
+        run: |
+          set -euo pipefail
+
+          metadata_dir="$RUNNER_TEMP/preview-cleanup-metadata"
+          mkdir -p "$metadata_dir"
+          "$RUNNER_TEMP/sure-preview-worker/deploy/redact_preview_log.sh" \
+            < "$RUNNER_TEMP/sure-preview-worker/wrangler.toml" \
+            > "$metadata_dir/wrangler.toml"
 
       - name: Store cleanup metadata
         if: success()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: preview-cleanup-pr-${{ env.PR_NUMBER }}
-          path: ${{ runner.temp }}/sure-preview-worker/wrangler.toml
+          path: ${{ runner.temp }}/preview-cleanup-metadata/wrangler.toml
           retention-days: 2
 
   deployment_status:
@@ -434,7 +551,7 @@ jobs:
 
     steps:
       - name: Update Deployment Status
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const state = process.env.DEPLOY_RESULT === 'success' ? 'success' : 'failure';
@@ -464,7 +581,7 @@ jobs:
 
     steps:
       - name: Comment on PR
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const previewUrl = process.env.PREVIEW_URL;
