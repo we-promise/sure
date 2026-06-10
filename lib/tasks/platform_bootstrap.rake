@@ -5,12 +5,12 @@ require "io/console"
 namespace :platform_bootstrap do
   desc "Create Risingstone/Mahetel company workspaces and platform owner super admins"
   task multi_company_owners: :environment do
-    dry_run = ENV["DRY_RUN"] == "true"
+    dry_run = ActiveModel::Type::Boolean.new.cast(ENV["DRY_RUN"])
 
-    passwords = {
-      "adminF0@bookeepz.net" => secret_value("ADMIN_F0_PASSWORD", "Password for adminF0@bookeepz.net"),
-      "adminF1@bookeepz.net" => secret_value("ADMIN_F1_PASSWORD", "Password for adminF1@bookeepz.net")
-    }
+    passwords = PlatformBootstrap::MultiCompanyOwners::OWNERS.to_h do |owner|
+      email = owner.fetch(:email)
+      [ email, secret_value(env_key_for(owner), "Password for #{email}") ]
+    end
 
     result = PlatformBootstrap::MultiCompanyOwners.new(passwords: passwords, dry_run: dry_run).call
 
@@ -33,9 +33,20 @@ namespace :platform_bootstrap do
       raise ArgumentError, "Set #{env_key} or run this task from an interactive TTY"
     end
 
-    print "#{prompt}: "
+    $stderr.print "#{prompt}: "
     value = $stdin.noecho(&:gets).to_s.chomp
-    puts
+    $stderr.puts
     value
+  end
+
+  def env_key_for(owner)
+    case owner.fetch(:email)
+    when "adminF0@bookeepz.net"
+      "ADMIN_F0_PASSWORD"
+    when "adminF1@bookeepz.net"
+      "ADMIN_F1_PASSWORD"
+    else
+      raise ArgumentError, "No password environment variable configured for #{owner.fetch(:email)}"
+    end
   end
 end
