@@ -261,6 +261,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, "entries.account_id IN"
     assert_includes aggregate_queries.first, "entries.excluded = false"
     assert_no_match(/FROM \(SELECT "trades"\.\*/, aggregate_queries.first)
+    # account_ids is pre-scoped to the family's visible accounts, so the
+    # aggregate trusts that input and no longer joins back to accounts.
+    assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
   private
