@@ -42,6 +42,10 @@ module PlatformBootstrap
         raise ActiveRecord::Rollback if dry_run?
       end
 
+      if dry_run?
+        families, users = dry_run_previews(families: families, users: users)
+      end
+
       Result.new(families: families.values, users: users, dry_run: dry_run?)
     end
 
@@ -84,6 +88,32 @@ module PlatformBootstrap
           user.save!
           user
         end
+      end
+
+      def dry_run_previews(families:, users:)
+        family_previews = families.transform_values do |family|
+          Family.new(
+            name: family.name,
+            currency: family.currency,
+            locale: family.locale
+          )
+        end
+
+        user_previews = users.map do |user|
+          User.new(
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            family: family_previews.fetch(user.family.name),
+            role: user.role,
+            onboarded_at: user.onboarded_at,
+            ui_layout: user.ui_layout,
+            show_sidebar: user.show_sidebar,
+            show_ai_sidebar: user.show_ai_sidebar
+          )
+        end
+
+        [ family_previews, user_previews ]
       end
 
       def validate_passwords!

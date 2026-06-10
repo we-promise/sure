@@ -89,6 +89,25 @@ module PlatformBootstrap
       assert_equal 0, Family.where(name: COMPANY_NAMES).count
       assert_nil User.find_by(email: "adminf0@bookeepz.net")
       assert_nil User.find_by(email: "adminf1@bookeepz.net")
+      assert_dry_run_previews result
+    end
+
+    test "rolls back family writes when owner save fails" do
+      invalid_user = User.new(email: "adminf0@bookeepz.net")
+      invalid_user.errors.add(:base, "forced failure")
+      User.any_instance.stubs(:save!).raises(ActiveRecord::RecordInvalid.new(invalid_user))
+
+      assert_no_difference -> { Family.count } do
+        assert_no_difference -> { User.count } do
+          assert_raises(ActiveRecord::RecordInvalid) do
+            MultiCompanyOwners.new(passwords: PASSWORDS).call
+          end
+        end
+      end
+
+      assert_equal 0, Family.where(name: COMPANY_NAMES).count
+      assert_nil User.find_by(email: "adminf0@bookeepz.net")
+      assert_nil User.find_by(email: "adminf1@bookeepz.net")
     end
 
     test "accepts double quote as a special password character" do
@@ -106,6 +125,7 @@ module PlatformBootstrap
       end
 
       assert result.success?
+      assert_dry_run_previews result
     end
 
     test "rejects missing password for required owner" do
@@ -146,5 +166,12 @@ module PlatformBootstrap
       assert_nil User.find_by(email: "adminf0@bookeepz.net")
       assert_nil User.find_by(email: "adminf1@bookeepz.net")
     end
+
+    private
+      def assert_dry_run_previews(result)
+        assert result.families.all? { |family| !family.persisted? && family.id.nil? }
+        assert result.users.all? { |user| !user.persisted? && user.id.nil? }
+        assert result.users.map(&:family).all? { |family| !family.persisted? && family.id.nil? }
+      end
   end
 end
