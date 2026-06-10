@@ -70,7 +70,9 @@ class PagesController < ApplicationController
 
   def privacy
     @country_name = COUNTRY_NAMES[params[:country]]
-    render layout: "blank"
+    country = params[:country]
+    template = country && lookup_context.template_exists?("pages/privacy_#{country}", [], false) ? "pages/privacy_#{country}" : "pages/privacy"
+    render template, layout: "blank"
   end
 
   def terms
