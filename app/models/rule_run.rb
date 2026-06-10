@@ -43,4 +43,20 @@ class RuleRun < ApplicationRecord
       end
     end
   end
+
+  def fail_job!(error_message:)
+    with_lock do
+      decrement!(:pending_jobs_count) if pending_jobs_count.positive?
+
+      combined_error_message = [ self.error_message.presence, error_message.presence ]
+        .compact
+        .uniq
+        .join("\n")
+
+      update!(
+        status: "failed",
+        error_message: combined_error_message
+      )
+    end
+  end
 end
