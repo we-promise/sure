@@ -94,7 +94,7 @@ rtk env RAILWAY_CALLER=skill:use-railway@1.2.5 RAILWAY_AGENT_SESSION=railway-ski
 Confirm the JSON shows the intended target before continuing:
 
 ```text
-project: sure
+project: stellar-enjoyment
 environment: production
 service: sure-web
 ```
@@ -190,10 +190,10 @@ Expected: only intended source changes plus any already-known untracked files su
 Run:
 
 ```bash
-rtk git log --oneline -n 4
+rtk git log --oneline -n 12
 ```
 
-Expected: recent commits include the service, rake task, and runbook changes.
+Expected: recent history includes the multi-company bootstrap service, test, task, and runbook commits.
 
 ## Self-Review
 
