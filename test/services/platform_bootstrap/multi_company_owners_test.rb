@@ -15,7 +15,13 @@ module PlatformBootstrap
     ].freeze
 
     test "creates four company families and two super admin owners" do
-      result = MultiCompanyOwners.new(passwords: PASSWORDS).call
+      result = nil
+
+      assert_difference -> { Family.count }, 4 do
+        assert_difference -> { User.count }, 2 do
+          result = MultiCompanyOwners.new(passwords: PASSWORDS).call
+        end
+      end
 
       assert result.success?
 
@@ -45,7 +51,13 @@ module PlatformBootstrap
         "adminF1@bookeepz.net" => "OwnerF1New!2026"
       }
 
-      result = MultiCompanyOwners.new(passwords: updated_passwords).call
+      result = nil
+
+      assert_no_difference -> { Family.count } do
+        assert_no_difference -> { User.count } do
+          result = MultiCompanyOwners.new(passwords: updated_passwords).call
+        end
+      end
 
       assert result.success?
       assert_equal 1, User.where(email: "adminf0@bookeepz.net").count
@@ -65,7 +77,13 @@ module PlatformBootstrap
     end
 
     test "dry run validates but rolls back changes" do
-      result = MultiCompanyOwners.new(passwords: PASSWORDS, dry_run: true).call
+      result = nil
+
+      assert_no_difference -> { Family.count } do
+        assert_no_difference -> { User.count } do
+          result = MultiCompanyOwners.new(passwords: PASSWORDS, dry_run: true).call
+        end
+      end
 
       assert result.success?
       assert_equal 0, Family.where(name: COMPANY_NAMES).count
@@ -74,8 +92,14 @@ module PlatformBootstrap
     end
 
     test "rejects missing password for required owner" do
-      error = assert_raises(ArgumentError) do
-        MultiCompanyOwners.new(passwords: { "adminF0@bookeepz.net" => "OwnerF0Pass!2026" }).call
+      error = nil
+
+      assert_no_difference -> { Family.count } do
+        assert_no_difference -> { User.count } do
+          error = assert_raises(ArgumentError) do
+            MultiCompanyOwners.new(passwords: { "adminF0@bookeepz.net" => "OwnerF0Pass!2026" }).call
+          end
+        end
       end
 
       assert_includes error.message, "Missing password for adminF1@bookeepz.net"
@@ -90,8 +114,14 @@ module PlatformBootstrap
         "adminF1@bookeepz.net" => "OwnerF1Pass!2026"
       }
 
-      error = assert_raises(ArgumentError) do
-        MultiCompanyOwners.new(passwords: weak_passwords).call
+      error = nil
+
+      assert_no_difference -> { Family.count } do
+        assert_no_difference -> { User.count } do
+          error = assert_raises(ArgumentError) do
+            MultiCompanyOwners.new(passwords: weak_passwords).call
+          end
+        end
       end
 
       assert_includes error.message, "Password for adminF0@bookeepz.net must be at least 8 characters"
