@@ -77,6 +77,9 @@ en:
     destroy:
       success: Goal deleted.
       archive_first: Archive the goal before deleting it.
+    "perform_transition!":
+      success: Goal status updated.
+      invalid_transition: Goal can't change to that status from its current state.
     pause:
       success: Goal paused.
       invalid_transition: Goal can't be paused from its current state.

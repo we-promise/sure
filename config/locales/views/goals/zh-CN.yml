@@ -77,6 +77,9 @@ zh-CN:
     destroy:
       success: 目标已删除。
       archive_first: 删除前请先归档该目标。
+    "perform_transition!":
+      success: 目标状态已更新。
+      invalid_transition: 目标当前状态不能切换到该状态。
     pause:
       success: 目标已暂停。
       invalid_transition: 目标当前状态不能暂停。
