@@ -52,4 +52,34 @@ class TaxWorkbookImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to tax_workbook_import_url(created_import)
     assert_equal I18n.t("tax_workbook_imports.create.success"), flash[:notice]
   end
+
+  test "admin duplicate upload redirects to index with validation alert" do
+    xlsx = TaxWorkbook::TemplateGenerator.new.call
+
+    post tax_workbook_imports_url, params: {
+      tax_workbook_import: {
+        file: uploaded_file(
+          filename: "india_tax_april_2026.xlsx",
+          content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+          content: xlsx
+        )
+      }
+    }
+    assert_response :redirect
+
+    assert_no_difference "TaxWorkbookImport.count" do
+      post tax_workbook_imports_url, params: {
+        tax_workbook_import: {
+          file: uploaded_file(
+            filename: "india_tax_april_2026_copy.xlsx",
+            content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+            content: xlsx
+          )
+        }
+      }
+    end
+
+    assert_redirected_to tax_workbook_imports_url
+    assert_match(/Checksum/, flash[:alert])
+  end
 end

@@ -34,7 +34,7 @@ class TaxWorkbookImportsController < ApplicationController
 
     if result.success?
       redirect_to tax_workbook_import_path(result.import), notice: t("tax_workbook_imports.create.success")
-    elsif result.import.present?
+    elsif result.import&.persisted?
       redirect_to tax_workbook_import_path(result.import), alert: t("tax_workbook_imports.create.failure")
     else
       redirect_to tax_workbook_imports_path, alert: import_failure_alert(result.errors)
