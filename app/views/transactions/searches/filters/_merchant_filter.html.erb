@@ -10,7 +10,7 @@
         }
       ) %>
   <div class="my-2" id="list" data-list-filter-target="list">
-    <% Current.family.assigned_merchants_for(Current.user).alphabetically.each do |merchant| %>
+    <% (@filter_merchants || Current.family.cached_assigned_merchants_for(Current.user)).each do |merchant| %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= merchant.name %>">
         <%= form.check_box :merchants,
                            {

@@ -27,7 +27,11 @@
       ) %>
 
       <% popover.with_custom_content do %>
-        <%= render "transactions/searches/menu", form: form %>
+        <%= turbo_frame_tag "transaction-filters-menu",
+            src: search_menu_transactions_path(q: @q, page: params[:page], per_page: params[:per_page]),
+            loading: :lazy do %>
+          <p class="text-sm text-secondary p-3"><%= t("transactions.searches.menu.loading") %></p>
+        <% end %>
       <% end %>
     <% end %>
 
