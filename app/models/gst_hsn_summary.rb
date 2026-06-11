@@ -10,4 +10,12 @@ class GstHsnSummary < ApplicationRecord
   validates :gstin, length: { maximum: 15 }
   validates :quantity, :taxable_value, :igst, :cgst, :sgst_ugst, :cess,
             numericality: { greater_than_or_equal_to: 0 }
+  validate :tax_workbook_import_belongs_to_family
+
+  private
+    def tax_workbook_import_belongs_to_family
+      return if tax_workbook_import.blank? || family.blank? || tax_workbook_import.family_id == family_id
+
+      errors.add(:tax_workbook_import, "must belong to the same family")
+    end
 end

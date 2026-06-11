@@ -174,4 +174,55 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_not deduction.valid?
     assert_includes deduction.errors[:section_code], "is not included in the list"
   end
+
+  test "parsed records require the import to belong to the same family" do
+    other_family = families(:empty)
+
+    [
+      GstOutwardLine.new(family: other_family, tax_workbook_import: @import, source_row_number: 2, tax_period_month: Date.new(2026, 4, 1), gstin: "27ABCDE1234F1Z5", gstr1_table_code: "4A", invoice_no: "INV-001", invoice_date: Date.new(2026, 4, 10)),
+      Gst3bSummary.new(family: other_family, tax_workbook_import: @import, source_row_number: 2, tax_period_month: Date.new(2026, 4, 1), gstin: "27ABCDE1234F1Z5", section_code: "3.1(a)"),
+      GstHsnSummary.new(family: other_family, tax_workbook_import: @import, source_row_number: 2, tax_period_month: Date.new(2026, 4, 1), gstin: "27ABCDE1234F1Z5", hsn_code: "9983", bucket: "B2B"),
+      TdsChallan.new(family: other_family, tax_workbook_import: @import, source_row_number: 2, tax_period_quarter: "Q1", tan: "MUMR12345A", challan_ref: "CH-001"),
+      TdsDeduction.new(family: other_family, tax_workbook_import: @import, source_row_number: 2, tax_period_month: Date.new(2026, 4, 1), tax_period_quarter: "Q1", deductor_tan: "MUMR12345A", deductee_pan_or_aadhaar: "ABCDE1234F", section_code: "194C")
+    ].each do |record|
+      assert_not record.valid?, "#{record.class.name} should reject cross-family import"
+      assert_includes record.errors[:tax_workbook_import], "must belong to the same family"
+    end
+  end
+
+  test "tds deductions require challan to match family and import" do
+    other_import = TaxWorkbookImport.create!(
+      family: @family,
+      uploaded_by: users(:family_admin),
+      filename: "other-tax-workbook.xlsx",
+      content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+      byte_size: 1024,
+      checksum: "d" * 64,
+      template_version: "2026-06-11",
+      status: "pending"
+    )
+    other_challan = TdsChallan.create!(
+      family: @family,
+      tax_workbook_import: other_import,
+      source_row_number: 2,
+      tax_period_quarter: "Q1",
+      tan: "MUMR12345A",
+      challan_ref: "CH-OTHER"
+    )
+
+    deduction = TdsDeduction.new(
+      family: @family,
+      tax_workbook_import: @import,
+      tds_challan: other_challan,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "194C"
+    )
+
+    assert_not deduction.valid?
+    assert_includes deduction.errors[:tds_challan], "must belong to the same tax workbook import"
+  end
 end

@@ -16,4 +16,25 @@ class TdsDeduction < ApplicationRecord
   validates :amount_paid, :tds_amount, :surcharge, :cess,
             numericality: { greater_than_or_equal_to: 0 }
   validates :tds_rate_pct, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validate :tax_workbook_import_belongs_to_family
+  validate :tds_challan_matches_import
+
+  private
+    def tax_workbook_import_belongs_to_family
+      return if tax_workbook_import.blank? || family.blank? || tax_workbook_import.family_id == family_id
+
+      errors.add(:tax_workbook_import, "must belong to the same family")
+    end
+
+    def tds_challan_matches_import
+      return if tds_challan.blank?
+
+      if family.present? && tds_challan.family_id != family_id
+        errors.add(:tds_challan, "must belong to the same family")
+      end
+
+      if tax_workbook_import.present? && tds_challan.tax_workbook_import_id != tax_workbook_import_id
+        errors.add(:tds_challan, "must belong to the same tax workbook import")
+      end
+    end
 end

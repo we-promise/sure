@@ -143,12 +143,31 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
       deductee_pan_or_aadhaar: "ABCDE1234F",
       section_code: "194C",
       amount_paid: 1000,
-      tds_amount: 100
+      tds_amount: 100,
+      surcharge: 10,
+      cess: 5
     )
 
     assert_equal BigDecimal("190"), import.gst_tax_total
     assert_equal BigDecimal("1000"), import.gst_taxable_total
     assert_equal BigDecimal("100"), import.tds_total
+  end
+
+  test "preserves import when uploader is deleted" do
+    user = users(:family_member)
+    import = @family.tax_workbook_imports.create!(
+      uploaded_by: user,
+      filename: "uploader-delete-tax-workbook.xlsx",
+      content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+      byte_size: 1024,
+      checksum: "d" * 64,
+      template_version: "2026-06-11",
+      status: "pending"
+    )
+
+    user.destroy!
+
+    assert_nil import.reload.uploaded_by
   end
 
   test "destroys parsed records with the import" do

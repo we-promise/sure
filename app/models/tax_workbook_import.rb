@@ -42,7 +42,7 @@ class TaxWorkbookImport < ApplicationRecord
   end
 
   def tds_total
-    tds_deductions.sum(Arel.sql("tds_amount + surcharge + cess"))
+    tds_deductions.sum(:tds_amount)
   end
 
   private

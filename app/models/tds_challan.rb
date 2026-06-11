@@ -9,4 +9,12 @@ class TdsChallan < ApplicationRecord
   validates :tan, length: { maximum: 10 }
   validates :tax, :interest, :fee, :penalty, :others, :total_amount,
             numericality: { greater_than_or_equal_to: 0 }
+  validate :tax_workbook_import_belongs_to_family
+
+  private
+    def tax_workbook_import_belongs_to_family
+      return if tax_workbook_import.blank? || family.blank? || tax_workbook_import.family_id == family_id
+
+      errors.add(:tax_workbook_import, "must belong to the same family")
+    end
 end
