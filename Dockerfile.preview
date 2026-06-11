@@ -152,10 +152,9 @@ ruby -rsocket -e '
       next
     end
     begin
-      begin
-        client.readpartial(4096)
-      rescue StandardError
-      end
+      # Never read from the client: the response is static, and a blocking read
+      # would let one silent connection (e.g. a bare TCP port probe) wedge this
+      # single-threaded loop and starve every later probe.
       client.write("HTTP/1.1 503 Service Unavailable\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: #{body.bytesize}\r\nRetry-After: 3\r\nConnection: close\r\n\r\n#{body}")
     rescue StandardError
     ensure
