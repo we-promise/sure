@@ -99,7 +99,7 @@
              data-goals-filter-empty-both-value="<%= t(".search.empty_with_both", query: "__QUERY__") %>"
              data-goals-filter-empty-default-value="<%= t(".search.empty") %>">
       <% if @linkable_account_count > 0 %>
-        <div class="flex items-center justify-end mb-3">
+        <div class="flex items-center justify-end mb-4">
           <%= render DS::Link.new(
             text: t(".new_goal"),
             variant: "primary",
