@@ -8,6 +8,18 @@ class LoanTest < ActiveSupport::TestCase
     assert_includes loan.errors[:subtype], "is not included in the list"
   end
 
+  test "original_balance reads from initial_balance column when set" do
+    account = Account.create!(
+      family: families(:dylan_family),
+      name: "Test Mortgage",
+      balance: 80_000,
+      currency: "USD",
+      accountable: Loan.create!(initial_balance: 100_000, rate_type: "fixed")
+    )
+
+    assert_equal 100_000, account.loan.original_balance.amount
+  end
+
   test "calculates correct monthly payment for fixed rate loan" do
     loan_account = Account.create! \
       family: families(:dylan_family),

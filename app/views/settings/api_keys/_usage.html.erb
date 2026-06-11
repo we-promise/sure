@@ -1,0 +1,8 @@
+<%# locals: (api_key:, title:, description:) %>
+<div class="bg-surface-inset rounded-xl p-4">
+  <h4 class="font-medium text-primary mb-3"><%= title %></h4>
+  <p class="text-secondary text-sm mb-3"><%= description %></p>
+  <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary break-all">
+    curl -H "X-Api-Key: <%= api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
+  </div>
+</div>

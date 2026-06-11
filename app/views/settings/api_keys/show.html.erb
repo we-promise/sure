@@ -1,4 +1,13 @@
-<% if @newly_created && @plain_key %>
+<%= content_for :page_actions do %>
+  <%= render DS::Link.new(
+    text: t(".current_api_key.back_to_keys"),
+    href: settings_api_keys_path,
+    variant: "secondary",
+    icon: "chevron-left"
+  ) %>
+<% end %>
+
+<% if @newly_created %>
   <%= content_for :page_title, t(".newly_created.page_title") %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-4">
@@ -13,54 +22,33 @@
           ) %>
           <div class="flex-1">
             <h3 class="font-medium text-primary"><%= t(".newly_created.heading") %></h3>
-            <p class="text-secondary text-sm mt-1"><%= t(".newly_created.key_ready", name: @current_api_key.name) %></p>
+            <p class="text-secondary text-sm mt-1"><%= t(".newly_created.key_ready", name: @api_key.name) %></p>
           </div>
         </div>
       </div>
 
-      <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3"><%= t(".newly_created.your_api_key") %></h4>
-        <p class="text-secondary text-sm mb-3"><%= t(".newly_created.copy_store_securely") %></p>
+      <%= render "settings/api_keys/key_reveal",
+          api_key: @api_key,
+          heading: t(".newly_created.your_api_key"),
+          description: t(".newly_created.copy_store_securely"),
+          copy_label: t(".newly_created.copy_api_key") %>
 
-        <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
-          <div class="flex items-center justify-between gap-3">
-            <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
-            <%= render DS::Button.new(
-              text: t(".newly_created.copy_api_key"),
-              variant: "ghost",
-              icon: "copy",
-              data: { action: "clipboard#copy" }
-            ) %>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3"><%= t(".newly_created.how_to_use") %></h4>
-        <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.usage_instructions", product_name: product_name) %></p>
-        <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary">
-          curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
-        </div>
-      </div>
+      <%= render "settings/api_keys/usage",
+          api_key: @api_key,
+          title: t(".newly_created.how_to_use"),
+          description: t(".current_api_key.usage_instructions", product_name: product_name) %>
 
       <div class="flex justify-end pt-4 border-t border-primary">
         <%= render DS::Link.new(
           text: t(".newly_created.continue"),
-          href: settings_api_key_path,
+          href: settings_api_keys_path,
           variant: "primary"
         ) %>
       </div>
     </div>
   </div>
-<% elsif @current_api_key %>
+<% else %>
   <%= content_for :page_title, t(".current_api_key.title") %>
-  <%= content_for :page_actions do %>
-    <%= render DS::Link.new(
-      text: t(".current_api_key.regenerate_key"),
-      href: new_settings_api_key_path(regenerate: true),
-      variant: "secondary"
-    ) %>
-  <% end %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
@@ -73,124 +61,40 @@
           ) %>
 
           <div class="text-sm space-y-1">
-            <p class="text-primary font-medium"><%= @current_api_key.name %></p>
-            <p class="text-secondary">
-              <%= t(".current_api_key.created_ago", time: time_ago_in_words(@current_api_key.created_at)) %>
-              <% if @current_api_key.last_used_at %>
-                • <%= t(".current_api_key.last_used_ago", time: time_ago_in_words(@current_api_key.last_used_at)) %>
-              <% else %>
-                • <%= t(".current_api_key.never_used") %>
-              <% end %>
-            </p>
+            <p class="text-primary font-medium"><%= @api_key.name %></p>
+            <%= render "settings/api_keys/key_meta", api_key: @api_key %>
           </div>
         </div>
 
-        <div class="rounded-md bg-success px-2 py-1">
-          <p class="text-success-foreground font-medium text-xs"><%= t(".current_api_key.active") %></p>
-        </div>
+        <%= render "settings/api_keys/status_indicator" %>
       </div>
 
       <div class="bg-surface-inset rounded-xl p-4">
         <h4 class="font-medium text-primary mb-3"><%= t(".current_api_key.permissions") %></h4>
-        <div class="flex flex-wrap gap-2">
-          <% @current_api_key.scopes.each do |scope| %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 button-bg-primary text-inverse rounded-full text-xs font-medium">
-              <%= icon("shield-check", class: "w-3 h-3") %>
-              <%= case scope
-                  when "read" then t(".current_api_key.scope_read_only")
-                  when "read_write" then t(".current_api_key.scope_read_write")
-                  else scope.humanize
-                  end %>
-            </span>
-          <% end %>
-        </div>
+        <%= render "settings/api_keys/scope_badges", scopes: @api_key.scopes %>
       </div>
 
-      <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3"><%= t(".current_api_key.title") %></h4>
-        <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.copy_store_securely") %></p>
+      <%= render "settings/api_keys/key_reveal",
+          api_key: @api_key,
+          heading: t(".current_api_key.title"),
+          description: t(".current_api_key.copy_store_securely"),
+          copy_label: t(".current_api_key.copy_api_key") %>
 
-        <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
-          <div class="flex items-center justify-between gap-3">
-            <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
-            <%= render DS::Button.new(
-              text: t(".current_api_key.copy_api_key"),
-              variant: "ghost",
-              icon: "copy",
-              data: { action: "clipboard#copy" }
-            ) %>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3"><%= t(".current_api_key.usage_instructions_title") %></h4>
-        <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.usage_instructions", product_name: product_name) %></p>
-        <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary">
-          curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
-        </div>
-      </div>
+      <%= render "settings/api_keys/usage",
+          api_key: @api_key,
+          title: t(".current_api_key.usage_instructions_title"),
+          description: t(".current_api_key.usage_instructions", product_name: product_name) %>
 
       <div class="flex justify-end pt-4 border-t border-primary">
         <%= render DS::Button.new(
           text: t(".current_api_key.revoke_key"),
-          href: settings_api_key_path,
+          href: settings_api_key_path(@api_key),
           method: :delete,
           variant: "destructive",
           data: {
             turbo_confirm: t(".current_api_key.revoke_confirmation")
           }
         ) %>
-      </div>
-    </div>
-  </div>
-<% else %>
-  <%= content_for :page_title, t(".no_api_key.title") %>
-  <%= content_for :page_actions do %>
-    <%= render DS::Link.new(
-      text: t(".no_api_key.create_api_key"),
-      href: new_settings_api_key_path,
-      variant: "primary"
-    ) %>
-  <% end %>
-
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <div class="space-y-4">
-      <div class="p-3 shadow-border-xs bg-container rounded-lg">
-        <div class="flex items-start gap-3">
-          <%= render DS::FilledIcon.new(
-            icon: "key",
-            rounded: true,
-            size: "lg"
-          ) %>
-          <div class="flex-1">
-            <h3 class="font-medium text-primary"><%= t(".no_api_key.heading", product_name: product_name) %></h3>
-            <p class="text-secondary text-sm mt-1"><%= t(".no_api_key.description") %></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3"><%= t(".no_api_key.what_you_can_do") %></h4>
-        <ul class="space-y-2 text-sm text-secondary">
-          <li class="flex items-start gap-2">
-            <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span><%= t(".no_api_key.feature_1") %></span>
-          </li>
-          <li class="flex items-start gap-2">
-            <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span><%= t(".no_api_key.feature_2") %></span>
-          </li>
-          <li class="flex items-start gap-2">
-            <%= icon("check", class: "w-4 h-4 text-primary mt-0.5") %>
-            <span><%= t(".no_api_key.feature_3") %></span>
-          </li>
-        </ul>
-      </div>
-
-      <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-2"><%= t(".no_api_key.security_note_title") %></h4>
-        <p class="text-secondary text-sm"><%= t(".no_api_key.security_note") %></p>
       </div>
     </div>
   </div>
