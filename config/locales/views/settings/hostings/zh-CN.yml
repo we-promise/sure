@@ -208,6 +208,8 @@ zh-CN:
         no_health_check_note: 此提供商暂无健康检查。
       disconnect_external_assistant:
         external_assistant_disconnected: 外部助手已断开连接。
+      ensure_admin:
+        not_authorized: 您没有执行此操作的权限。
       ensure_super_admin_for_onboarding:
         not_authorized: 只有超级管理员可以访问此设置。
       sync_auto_sync_scheduler!:

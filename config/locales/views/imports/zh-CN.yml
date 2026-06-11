@@ -161,6 +161,8 @@ zh-CN:
         tag_mapping_description: 将导入文件中的所有标签分配到 %{product_name} 中现有的标签。您也可以添加新标签，或将其保留为未分类。
         tag_mapping_title: 分配您的标签
     uploads:
+      handle_qif_upload:
+        qif_uploaded: QIF 文件上传成功。
       update:
         qif_uploaded: QIF 文件上传成功。
       show:
