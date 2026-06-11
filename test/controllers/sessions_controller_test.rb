@@ -20,7 +20,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:openid_connect] = nil
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
@@ -29,7 +29,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
+      }.compact,
+      credentials: id_token ? { id_token: id_token } : {}
     })
   end
 
@@ -181,7 +182,76 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to verify_mfa_path
     assert_equal @user.id, session[:mfa_user_id]
+    # Invariant: OIDC MFA handoff must set TTL + attempt counter so verify_code
+    # actually enforces them (otherwise the 5-min TTL is silently skipped).
+    assert session[:mfa_started_at].present?, "OIDC MFA handoff must set mfa_started_at for TTL enforcement"
+    assert_equal 0, session[:mfa_attempts]
     assert_not Session.exists?(user_id: @user.id)
+  end
+
+  test "OIDC logout hints survive MFA verification (federated logout works post-MFA)" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "fake-id-token-for-rp-logout"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert_equal "fake-id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    # Positive: OIDC logout hints must still be present so destroy can redirect
+    # to the IdP for RP-initiated logout.
+    assert_equal "fake-id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
+
+    # Negative: mfa_* handoff keys must be wiped after successful verification.
+    # The preserve list is intentionally narrow — anything not explicitly listed
+    # in SESSION_KEYS_PRESERVED_ON_RESET must not survive a privilege change.
+    assert_nil session[:mfa_user_id]
+    assert_nil session[:mfa_started_at]
+    assert_nil session[:mfa_attempts]
+  end
+
+  test "OIDC MFA flow enforces 5-min TTL (regression: TTL was skipped for OIDC)" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert session[:mfa_started_at].present?, "OIDC MFA handoff must seed mfa_started_at for TTL to fire"
+
+    # Travel past TTL — even a valid TOTP must be rejected and the user
+    # bounced back to sign-in. Previously the TTL was silently skipped because
+    # mfa_started_at was absent from the OIDC handoff.
+    travel_to(6.minutes.from_now) do
+      totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+      post verify_mfa_path, params: { code: totp.now }
+      assert_redirected_to new_session_path
+      assert_not Session.exists?(user_id: @user.id)
+      assert_nil session[:mfa_user_id]
+    end
   end
 
   test "redirects to account linking when no OIDC identity exists" do
@@ -678,5 +748,62 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     # Follow redirect to verify we're on the link page (not logged in)
     follow_redirect!
     assert_response :success
+  end
+
+  # ── Security tests added with pentest fixes ──────────────────────────────────
+
+  test "session fixation: new session created on login (reset_session)" do
+    get new_session_url # establish session
+    old_session_id = session.id
+    # Seed a sentinel to prove the old session was actually cleared, not just
+    # that session.id happened to differ.
+    session[:pre_auth_sentinel] = "seed"
+
+    sign_in @user
+
+    assert_nil session[:pre_auth_sentinel], "Pre-auth session data should be cleared by reset_session"
+    assert_not_equal old_session_id, session.id, "Session ID should change on login to prevent fixation"
+  end
+
+  test "session fixation: pending invitation token survives reset_session" do
+    invitation = invitations(:one)
+
+    # GET /sessions/new?invitation=<token> triggers store_pending_invitation_if_valid,
+    # which puts the token into the session BEFORE the POST that calls reset_session.
+    get new_session_url(invitation: invitation.token)
+
+    # Signing in as a user whose email doesn't match the invitation means
+    # accept_pending_invitation_for short-circuits without consuming the token,
+    # so the post-reset session should still carry it — which can only happen
+    # if reset_session_preserving_pending_invitation restored it.
+    sign_in @user
+
+    assert_equal invitation.token, session[:pending_invitation_token],
+      "Token must be preserved across reset_session so accept_pending_invitation_for can honor it"
+  end
+
+  # F-04: Session TTL — absolute (30d) and idle (24h) expiry enforced server-side.
+  test "session is expired after 30d absolute TTL" do
+    sign_in @user
+    db_session = Session.order(created_at: :desc).find_by!(user_id: @user.id)
+
+    # Backdate the session past the absolute TTL.
+    db_session.update_columns(created_at: 31.days.ago, updated_at: 1.hour.ago)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(db_session.id), "Expired session should be destroyed"
+  end
+
+  test "session is expired after 24h idle TTL" do
+    sign_in @user
+    db_session = Session.order(created_at: :desc).find_by!(user_id: @user.id)
+
+    # Session is young in absolute terms but idle beyond the idle TTL.
+    db_session.update_columns(created_at: 2.days.ago, updated_at: 25.hours.ago)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(db_session.id), "Idle-expired session should be destroyed"
   end
 end
