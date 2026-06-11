@@ -1,0 +1,61 @@
+<%
+  active = Setting.llm_provider.to_s.downcase == "anthropic" ? "anthropic" : "openai"
+  locked = ENV["LLM_PROVIDER"].present?
+  providers = [ [ "openai", t(".provider_openai") ], [ "anthropic", t(".provider_anthropic") ] ]
+  active_configured = active == "anthropic" ? Provider::Anthropic.configured? : Provider::Openai.configured?
+%>
+
+<div class="space-y-3">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if locked %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: { "provider-settings-target": "form" } do |form| %>
+    <%# Mobile: native picker. The segmented tabs overflow < sm once there are
+        3+ providers, so below sm we fall back to a <select> — which is also the
+        submitted field (the desktop tabs set its value via the controller). %>
+    <div class="sm:hidden">
+      <%= form.select :llm_provider,
+                      options_for_select(providers.map { |key, label| [ label, key ] }, active),
+                      { label: t(".provider_label") },
+                      { disabled: locked,
+                        data: { "provider-settings-target": "field",
+                                action: (locked ? nil : "change->provider-settings#select") } } %>
+    </div>
+
+    <%# Desktop / tablet: segmented tabs (room to spare up to ~5 providers). %>
+    <div class="hidden sm:block">
+      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t(".provider_label")) do |sc| %>
+        <% providers.each do |key, label| %>
+          <% sc.with_segment(label,
+               active: active == key,
+               disabled: locked,
+               data: {
+                 "provider-settings-target": "segment",
+                 provider: key,
+                 action: (locked ? nil : "click->provider-settings#select")
+               }) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <p class="text-xs text-secondary"><%= t(".provider_help") %></p>
+
+  <% if !locked && !active_configured %>
+    <p class="text-xs text-warning"><%= t(".not_configured_hint", provider: t(".provider_#{active}")) %></p>
+  <% end %>
+
+  <div class="rounded-md border border-secondary p-3 bg-container-inset text-xs text-secondary space-y-1">
+    <p class="font-medium text-primary"><%= t(".data_retention_heading") %></p>
+    <p><%= t(".data_retention") %></p>
+  </div>
+</div>

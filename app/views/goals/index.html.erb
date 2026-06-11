@@ -1,4 +1,8 @@
-<div class="space-y-8 pb-6 lg:pb-12">
+<%# @container so the KPI strip + card grids respond to the actual content
+    width (which shrinks when the account / AI sidebars are open) rather than
+    the viewport. Viewport breakpoints kept 3 columns in a narrow center
+    column and crushed the cards. %>
+<div class="@container space-y-8 pb-6 lg:pb-12">
   <header>
     <div class="flex items-center gap-2">
       <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
@@ -11,7 +15,7 @@
     <%= render "empty_state", linkable_account_count: @linkable_account_count %>
   <% else %>
     <%# KPI strip. Contributed last 30d (with prior-30d comparison) / Needs / On track %>
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <section class="grid grid-cols-1 @3xl:grid-cols-3 gap-3">
       <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
         <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.contributed_label") %></p>
         <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive">
@@ -117,7 +121,11 @@
                   action: "input->goals-filter#filter"
                 }
               ) %>
-          <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl">
+          <%# overflow-x-auto + nowrap chips: the segmented control scrolls
+              horizontally when the column is too narrow for all six chips,
+              rather than wrapping "On track" mid-label or forcing the row
+              wider than the viewport. %>
+          <div class="inline-flex items-center gap-1 p-1 bg-surface-inset rounded-xl overflow-x-auto max-w-full">
             <% %w[all on_track behind no_target_date paused completed].each do |status| %>
               <% active = status == "all" %>
               <button type="button"
@@ -125,7 +133,7 @@
                       data-action="click->goals-filter#selectChip"
                       data-status="<%= status %>"
                       aria-pressed="<%= active %>"
-                      class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100 <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
+                      class="shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100 <%= active ? "bg-container shadow-border-xs text-primary" : "text-secondary" %>">
                 <%= t(".chips.#{status}") %>
               </button>
             <% end %>
@@ -139,7 +147,7 @@
           <span class="text-subdued">·</span>
           <span class="tabular-nums" data-goals-filter-target="count"><%= @grid_goals.size %></span>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5" data-goals-filter-target="grid">
+        <div class="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-3.5" data-goals-filter-target="grid">
           <% @grid_goals.each do |goal| %>
             <%= render Goals::CardComponent.new(goal: goal) %>
           <% end %>
@@ -179,7 +187,7 @@
               <span class="tabular-nums"><%= @archived_goals.size %></span>
             </span>
           <% end %>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div class="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-3.5">
             <% @archived_goals.each do |goal| %>
               <%= render Goals::CardComponent.new(goal: goal, filterable: false) %>
             <% end %>

@@ -8,6 +8,7 @@ import '../providers/categories_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_edit_screen.dart';
 import '../screens/transaction_form_screen.dart';
+import '../widgets/account_detail_header.dart';
 import '../widgets/category_filter.dart';
 import '../widgets/sync_status_badge.dart';
 import '../services/log_service.dart';
@@ -356,8 +357,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           ),
         ],
       ),
-      body: Consumer<TransactionsProvider>(
-        builder: (context, transactionsProvider, child) {
+      body: Column(
+        children: [
+          AccountDetailHeader(account: widget.account),
+          Expanded(
+            child: Consumer<TransactionsProvider>(
+              builder: (context, transactionsProvider, child) {
           if (transactionsProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -708,7 +713,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               ],
             ),
           );
-        },
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTransactionForm,
