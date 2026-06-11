@@ -150,7 +150,7 @@ module TaxWorkbook
             values = Array(raw_values)
             next if values.all? { |value| value.nil? || value.to_s.strip.empty? }
 
-            headers[normalize_sheet_name(sheet.name)] = values.map { |value| value.to_s.strip }
+            headers[normalize_sheet_name(sheet.name)] = values.map(&:to_s)
             break
           end
         end

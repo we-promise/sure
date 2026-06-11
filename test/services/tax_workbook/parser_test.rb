@@ -84,6 +84,32 @@ class TaxWorkbook::ParserTest < ActiveSupport::TestCase
     end
   end
 
+  test "stores validation errors for missing required sheets without parsed rows" do
+    upload = workbook_upload(
+      filename: "india_tax_missing_sheet.xlsx",
+      content: workbook_without_sheet("tds_deductions")
+    )
+
+    assert_difference "TaxWorkbookImport.count", 1 do
+      result = TaxWorkbook::Parser.new(family: @family, uploaded_by: @user, file: upload).call
+
+      assert_not result.success?
+
+      import = result.import
+      assert_predicate import, :persisted?
+      assert_equal "failed", import.status
+      assert import.source_file.attached?
+      assert_equal({}, result.import.row_counts)
+      assert_empty import.gst_outward_lines
+      assert_empty import.gst3b_summaries
+      assert_empty import.gst_hsn_summaries
+      assert_empty import.tds_challans
+      assert_empty import.tds_deductions
+      assert_includes import.validation_errors.map { |error| error["sheet"] }, "tds_deductions"
+      assert_includes import.validation_errors.map { |error| error["message"] }, "Missing required sheet"
+    end
+  end
+
   private
     def workbook_upload(filename:, content:)
       uploaded_file(
@@ -94,14 +120,26 @@ class TaxWorkbook::ParserTest < ActiveSupport::TestCase
     end
 
     def workbook_with_invalid_headers
-      package = Axlsx::Package.new(author: "Sure")
-
-      TaxWorkbook::Template::SHEET_NAMES.each do |sheet_name|
-        headers = if sheet_name == "gst_outward_lines"
-          TaxWorkbook::Template.headers_for(sheet_name).dup.tap { |value| value[1] = "Invoice No" }
+      workbook_with_sheets do |sheet_name|
+        if sheet_name == "gst_outward_lines"
+          TaxWorkbook::Template.headers_for(sheet_name).dup.tap { |value| value[1] = "invoice_no " }
         else
           TaxWorkbook::Template.headers_for(sheet_name)
         end
+      end
+    end
+
+    def workbook_without_sheet(omitted_sheet_name)
+      workbook_with_sheets(except: omitted_sheet_name)
+    end
+
+    def workbook_with_sheets(except: nil)
+      package = Axlsx::Package.new(author: "Sure")
+
+      TaxWorkbook::Template::SHEET_NAMES.each do |sheet_name|
+        next if sheet_name == except
+
+        headers = block_given? ? yield(sheet_name) : TaxWorkbook::Template.headers_for(sheet_name)
 
         package.workbook.add_worksheet(name: sheet_name) do |sheet|
           sheet.add_row headers
