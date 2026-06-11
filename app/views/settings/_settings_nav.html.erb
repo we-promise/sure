@@ -34,6 +34,7 @@ nav_sections = [
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
+        { label: t(".tax_calculations_label"), path: tax_workbook_imports_path, icon: "file-spreadsheet" },
         { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
         { label: t(".users_label"), path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
       ]

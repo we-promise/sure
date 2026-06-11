@@ -1,0 +1,55 @@
+---
+en:
+  tax_workbook_imports:
+    create:
+      success: Tax workbook imported successfully.
+      failure: Tax workbook import failed. Review the import details for errors.
+    destroy:
+      success: Tax workbook import deleted.
+    download:
+      missing: Source workbook is no longer attached.
+    index:
+      title: Tax Calculations
+      upload_title: Import India tax workbook
+      upload_description: Upload a validated GST and TDS workbook, or download the latest template first.
+      template_link: Download template
+      records_link: View tax records
+      file_label: Workbook file
+      file_hint: XLSX only. Up to %{max_size_mb}MB per workbook.
+      upload_button: Import workbook
+      empty: No tax workbooks have been imported yet.
+      table:
+        title: Imported workbooks
+        headers:
+          created_at: Imported
+          filename: File
+          status: Status
+          totals: Totals
+          actions: Actions
+        totals: "GST taxable %{gst} · TDS %{tds}"
+        view: View import
+        download: Download workbook
+    show:
+      title: Tax Workbook Import
+      status_label: "Status: %{status}"
+      uploaded_by: "Uploaded by %{email}"
+      download: Download workbook
+      delete: Delete import
+      delete_confirmation: Are you sure you want to delete this tax workbook import?
+      details_title: Import details
+      row_counts_title: Imported rows
+      row_counts_empty: No parsed rows were stored for this import.
+      validation_errors_title: Validation errors
+      validation_errors_empty: No validation errors were recorded.
+      row_number: "Row %{row}"
+      unknown: "-"
+      totals:
+        gst_taxable: GST taxable total
+        gst_tax: GST tax total
+        tds_total: TDS total
+      details:
+        entity_name: Entity
+        gstin: GSTIN
+        tan: TAN
+        period: Filing period
+        template_version: Template version

@@ -2,7 +2,7 @@
 Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement].freeze
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement TaxWorkbookImport].freeze
 
     included do
       include Authentication
@@ -32,6 +32,8 @@ Rails.application.config.to_prepare do
           transaction_attachment_authorized?(attachment)
         when "AccountStatement"
           account_statement_attachment_authorized?(attachment)
+        when "TaxWorkbookImport"
+          tax_workbook_import_attachment_authorized?(attachment)
         else
           false
         end
@@ -51,6 +53,15 @@ Rails.application.config.to_prepare do
         return false if statement.nil?
 
         statement.viewable_by?(Current.user)
+      rescue ActiveRecord::RecordNotFound
+        false
+      end
+
+      def tax_workbook_import_attachment_authorized?(attachment)
+        import = attachment.record
+        return false if import.nil?
+
+        Current.user&.admin? && Current.family == import.family
       rescue ActiveRecord::RecordNotFound
         false
       end

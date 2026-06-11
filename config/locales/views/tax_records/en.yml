@@ -1,0 +1,22 @@
+---
+en:
+  tax_records:
+    index:
+      title: Tax Records
+      search_label: Search GST outward lines
+      search_placeholder: Search by invoice, GSTIN, or recipient GSTIN/UIN
+      search_submit: Search
+      reset: Clear
+      empty: No GST outward lines match this search.
+      unknown: "-"
+      totals:
+        gst_taxable: GST taxable total
+        tds_total: TDS total
+      table:
+        title: GST outward lines
+        headers:
+          invoice_no: Invoice
+          invoice_date: Invoice date
+          gstin: GSTIN
+          recipient: Recipient GSTIN/UIN
+          taxable_value: Taxable value

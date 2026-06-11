@@ -194,6 +194,15 @@ Rails.application.routes.draw do
       get :download
     end
   end
+  resources :tax_workbook_imports, only: %i[index show create destroy] do
+    collection do
+      get :template
+    end
+
+    member do
+      get :download
+    end
+  end
 
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
@@ -464,6 +473,7 @@ Rails.application.routes.draw do
       patch :reject
     end
   end
+  resources :tax_records, only: :index
 
   # Convenience routes for polymorphic paths
   # Example: account_path(Account.new(accountable: Depository.new)) => /depositories/123

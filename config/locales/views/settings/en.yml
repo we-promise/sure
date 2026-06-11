@@ -253,6 +253,7 @@ en:
       self_hosting_label: Self-Hosting
       sso_providers_label: SSO Providers
       statement_vault_label: Statement Vault
+      tax_calculations_label: Tax Calculations
       tags_label: Tags
       transactions_section_title: Transactions
       users_label: Users

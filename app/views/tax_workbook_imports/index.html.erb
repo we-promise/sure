@@ -1,0 +1,102 @@
+<%= content_for :page_title, t(".title") %>
+
+<%= settings_section title: t(".title") do %>
+  <div class="space-y-4">
+    <div class="rounded-xl bg-container-inset p-4">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-primary"><%= t(".upload_title") %></p>
+          <p class="text-xs text-secondary"><%= t(".upload_description") %></p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <%= link_to template_tax_workbook_imports_path,
+                      class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+            <%= icon("download", size: "sm") %>
+            <%= t(".template_link") %>
+          <% end %>
+
+          <%= link_to tax_records_path,
+                      class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+            <%= icon("table", size: "sm") %>
+            <%= t(".records_link") %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <%= styled_form_with url: tax_workbook_imports_path, scope: :tax_workbook_import, multipart: true, class: "grid gap-3 lg:grid-cols-[1fr_auto]" do |form| %>
+          <div>
+            <%= form.label :file, t(".file_label"), class: "form-field__label" %>
+            <%= form.file_field :file,
+                                accept: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+                                class: "form-field__input" %>
+            <p class="mt-2 text-xs text-secondary"><%= t(".file_hint", max_size_mb: TaxWorkbookImport::MAX_FILE_SIZE / 1.megabyte) %></p>
+          </div>
+          <div class="lg:self-end">
+            <%= form.submit t(".upload_button") %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".table.title") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @pagy.count %></p>
+      </div>
+
+      <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+        <% if @imports.any? %>
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th class="px-3 py-3 text-left min-w-56"><%= t(".table.headers.created_at") %></th>
+                <th class="px-3 py-3 text-left min-w-56"><%= t(".table.headers.filename") %></th>
+                <th class="px-3 py-3 text-left min-w-32"><%= t(".table.headers.status") %></th>
+                <th class="px-3 py-3 text-left min-w-40"><%= t(".table.headers.totals") %></th>
+                <th class="px-3 py-3 text-right min-w-28"><%= t(".table.headers.actions") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @imports.each do |import| %>
+                <tr id="<%= dom_id(import) %>" class="border-b border-subdued hover:bg-surface-hover">
+                  <td class="px-3 py-3 text-sm text-secondary"><%= l(import.created_at, format: :long) %></td>
+                  <td class="px-3 py-3">
+                    <%= link_to tax_workbook_import_path(import), class: "text-sm font-medium text-primary hover:underline" do %>
+                      <%= import.filename %>
+                    <% end %>
+                  </td>
+                  <td class="px-3 py-3 text-sm text-secondary"><%= import.status.humanize %></td>
+                  <td class="px-3 py-3 text-sm text-secondary">
+                    <%= t(".table.totals", gst: number_with_precision(import.gst_taxable_total, precision: 2), tds: number_with_precision(import.tds_total, precision: 2)) %>
+                  </td>
+                  <td class="px-3 py-3">
+                    <div class="flex items-center justify-end gap-3">
+                      <%= link_to tax_workbook_import_path(import), aria: { label: t(".table.view") } do %>
+                        <%= icon("eye", class: "w-5 h-5 text-primary" ) %>
+                      <% end %>
+                      <% if import.source_file.attached? %>
+                        <%= link_to download_tax_workbook_import_path(import), aria: { label: t(".table.download") } do %>
+                          <%= icon("download", class: "w-5 h-5 text-primary" ) %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="py-8 text-center text-sm font-medium text-secondary"><%= t(".empty") %></p>
+        <% end %>
+      </div>
+
+      <% if @pagy.pages > 1 %>
+        <div class="px-3 py-2">
+          <%= render "shared/pagination", pagy: @pagy %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

@@ -1,0 +1,80 @@
+<%= content_for :page_title, t(".title") %>
+
+<%= settings_section title: t(".title") do %>
+  <div class="space-y-4">
+    <div class="grid gap-4 lg:grid-cols-[1fr_16rem_16rem]">
+      <div class="rounded-xl bg-container-inset p-4">
+        <%= form_with url: tax_records_path, method: :get, scope: :q, class: "space-y-3" do |form| %>
+          <div>
+            <%= form.label :search, t(".search_label"), class: "form-field__label" %>
+            <%= form.text_field :search,
+                                value: @q[:search],
+                                placeholder: t(".search_placeholder"),
+                                class: "form-field__input" %>
+          </div>
+          <div class="flex items-center gap-3">
+            <%= form.submit t(".search_submit") %>
+            <% if @q[:search].present? %>
+              <%= link_to tax_records_path, class: "text-sm font-medium text-primary hover:text-primary-hover" do %>
+                <%= t(".reset") %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="rounded-xl bg-container-inset p-4">
+        <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.gst_taxable") %></p>
+        <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@gst_taxable_total, precision: 2) %></p>
+      </div>
+
+      <div class="rounded-xl bg-container-inset p-4">
+        <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.tds_total") %></p>
+        <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@tds_total, precision: 2) %></p>
+      </div>
+    </div>
+
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".table.title") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @pagy.count %></p>
+      </div>
+
+      <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+        <% if @gst_outward_lines.any? %>
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th class="px-3 py-3 text-left min-w-40"><%= t(".table.headers.invoice_no") %></th>
+                <th class="px-3 py-3 text-left min-w-32"><%= t(".table.headers.invoice_date") %></th>
+                <th class="px-3 py-3 text-left min-w-40"><%= t(".table.headers.gstin") %></th>
+                <th class="px-3 py-3 text-left min-w-40"><%= t(".table.headers.recipient") %></th>
+                <th class="px-3 py-3 text-right min-w-32"><%= t(".table.headers.taxable_value") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @gst_outward_lines.each do |line| %>
+                <tr class="border-b border-subdued hover:bg-surface-hover">
+                  <td class="px-3 py-3 text-sm font-medium text-primary"><%= line.invoice_no %></td>
+                  <td class="px-3 py-3 text-sm text-secondary"><%= l(line.invoice_date) %></td>
+                  <td class="px-3 py-3 text-sm text-secondary"><%= line.gstin %></td>
+                  <td class="px-3 py-3 text-sm text-secondary"><%= line.recipient_gstin_or_uin.presence || t(".unknown") %></td>
+                  <td class="px-3 py-3 text-right text-sm text-secondary"><%= number_with_precision(line.taxable_value, precision: 2) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="py-8 text-center text-sm font-medium text-secondary"><%= t(".empty") %></p>
+        <% end %>
+      </div>
+
+      <% if @pagy.pages > 1 %>
+        <div class="px-3 py-2">
+          <%= render "shared/pagination", pagy: @pagy %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

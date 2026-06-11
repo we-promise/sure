@@ -78,6 +78,8 @@ en:
     sso_providers: SSO providers
     subscriptions: Subscription
     tags: Tags
+    tax_records: Tax Records
+    tax_workbook_imports: Tax Calculations
     trades: Trades
     transactions: Transactions
     transfer_matches: Transfer matches
