@@ -9,9 +9,19 @@ module TaxWorkbook
     PAN_PATTERN = /\A[A-Z]{5}\d{4}[A-Z]\z/
 
     def decimal(value)
-      return BigDecimal("0") if value.blank?
+      case value
+      when nil
+        BigDecimal("0")
+      when String
+        normalized = value.strip
+        return BigDecimal("0") if normalized.empty?
 
-      BigDecimal(value.to_s.delete(","))
+        BigDecimal(normalized.delete(","))
+      when Numeric
+        BigDecimal(value.to_s)
+      else
+        raise ArgumentError
+      end
     rescue ArgumentError, TypeError
       raise ArgumentError, "must be a decimal number"
     end

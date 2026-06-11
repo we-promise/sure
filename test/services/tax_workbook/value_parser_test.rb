@@ -13,6 +13,12 @@ module TaxWorkbook
       assert_equal BigDecimal("0"), @parser.decimal("")
     end
 
+    test "rejects boolean values for decimals" do
+      error = assert_raises(ArgumentError) { @parser.decimal(false) }
+
+      assert_equal "must be a decimal number", error.message
+    end
+
     test "parses booleans from common workbook values" do
       assert_equal true, @parser.boolean("yes")
       assert_equal true, @parser.boolean("1")
