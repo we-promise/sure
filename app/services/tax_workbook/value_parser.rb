@@ -40,7 +40,7 @@ module TaxWorkbook
     end
 
     def month(value)
-      return value.beginning_of_month if value.is_a?(Date) || value.is_a?(Time) || value.is_a?(DateTime)
+      return value.to_date.beginning_of_month if value.is_a?(Date) || value.is_a?(Time) || value.is_a?(DateTime)
 
       normalized = value.to_s.strip
       if normalized.match?(/\A\d{4}-\d{2}\z/)

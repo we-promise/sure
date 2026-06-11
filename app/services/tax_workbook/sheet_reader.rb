@@ -37,7 +37,7 @@ module TaxWorkbook
       end
 
       def blank_row?(values)
-        values.all?(&:blank?)
+        values.all? { |value| value.nil? || value.to_s.strip.empty? }
       end
 
       def find_sheet(sheet_name)

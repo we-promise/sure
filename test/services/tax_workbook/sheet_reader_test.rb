@@ -40,6 +40,15 @@ module TaxWorkbook
       end
     end
 
+    test "keeps rows populated only by false boolean values" do
+      with_false_only_row_workbook do |tempfile|
+        row = SheetReader.new(tempfile.path).rows("gst-outward-lines").first
+
+        assert_equal false, row.fetch("is_reverse_charge")
+        assert_equal 2, row.fetch("source_row_number")
+      end
+    end
+
     private
       def with_template_file
         xlsx = TaxWorkbook::TemplateGenerator.new.call
@@ -79,6 +88,23 @@ module TaxWorkbook
         end
 
         tempfile = Tempfile.new([ "tax-template-empty-data", ".xlsx" ])
+        tempfile.binmode
+        tempfile.write(package.to_stream.read)
+        tempfile.rewind
+
+        yield tempfile
+      ensure
+        tempfile&.close!
+      end
+
+      def with_false_only_row_workbook
+        package = Axlsx::Package.new(author: "Sure")
+        package.workbook.add_worksheet(name: "gst outward lines") do |sheet|
+          sheet.add_row [ "Invoice No", "Is Reverse Charge" ]
+          sheet.add_row [ nil, false ]
+        end
+
+        tempfile = Tempfile.new([ "tax-template-false-only-row", ".xlsx" ])
         tempfile.binmode
         tempfile.write(package.to_stream.read)
         tempfile.rewind
