@@ -34,6 +34,22 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes line.errors[:igst], "must be greater than or equal to 0"
   end
 
+  test "gst outward lines validate known gstr1 table codes" do
+    line = GstOutwardLine.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      gstin: "27ABCDE1234F1Z5",
+      gstr1_table_code: "NOPE",
+      invoice_no: "INV-001",
+      invoice_date: Date.new(2026, 4, 10)
+    )
+
+    assert_not line.valid?
+    assert_includes line.errors[:gstr1_table_code], "is not included in the list"
+  end
+
   test "gst3b summaries require section codes and valid gstin length" do
     summary = Gst3bSummary.new(
       family: @family,
@@ -49,6 +65,20 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes summary.errors[:tax_period_month], "can't be blank"
     assert_includes summary.errors[:gstin], "is too long (maximum is 15 characters)"
     assert_includes summary.errors[:section_code], "can't be blank"
+  end
+
+  test "gst3b summaries validate known section codes" do
+    summary = Gst3bSummary.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      gstin: "27ABCDE1234F1Z5",
+      section_code: "NOPE"
+    )
+
+    assert_not summary.valid?
+    assert_includes summary.errors[:section_code], "is not included in the list"
   end
 
   test "gst hsn summaries require bucket and valid gstin length" do
@@ -68,6 +98,21 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes summary.errors[:gstin], "is too long (maximum is 15 characters)"
     assert_includes summary.errors[:hsn_code], "can't be blank"
     assert_includes summary.errors[:bucket], "can't be blank"
+  end
+
+  test "gst hsn summaries validate known buckets" do
+    summary = GstHsnSummary.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      gstin: "27ABCDE1234F1Z5",
+      hsn_code: "9983",
+      bucket: "NOPE"
+    )
+
+    assert_not summary.valid?
+    assert_includes summary.errors[:bucket], "is not included in the list"
   end
 
   test "tds challans require quarter identifiers and nonnegative totals" do
@@ -112,5 +157,21 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes deduction.errors[:section_code], "can't be blank"
     assert_includes deduction.errors[:amount_paid], "must be greater than or equal to 0"
     assert_includes deduction.errors[:tds_amount], "must be greater than or equal to 0"
+  end
+
+  test "tds deductions validate known section codes" do
+    deduction = TdsDeduction.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "NOPE"
+    )
+
+    assert_not deduction.valid?
+    assert_includes deduction.errors[:section_code], "is not included in the list"
   end
 end

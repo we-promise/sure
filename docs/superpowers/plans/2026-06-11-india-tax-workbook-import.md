@@ -186,7 +186,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
   def change
     create_table :tax_workbook_imports, id: :uuid do |t|
       t.references :family, null: false, foreign_key: true, type: :uuid
-      t.references :uploaded_by, null: false, foreign_key: { to_table: :users }, type: :uuid
+      t.references :uploaded_by, foreign_key: { to_table: :users, on_delete: :nullify }, type: :uuid
       t.string :status, null: false, default: "pending"
       t.string :filename, null: false
       t.string :content_type, null: false
@@ -345,7 +345,7 @@ class TaxWorkbookImport < ApplicationRecord
   MAX_FILE_SIZE = 10.megabytes
 
   belongs_to :family
-  belongs_to :uploaded_by, class_name: "User"
+  belongs_to :uploaded_by, class_name: "User", optional: true
 
   has_one_attached :source_file, dependent: :purge_later
   has_many :gst_outward_lines, dependent: :destroy

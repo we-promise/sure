@@ -1,7 +1,7 @@
 april_2026:
   family: dylan_family
   uploaded_by: family_admin
-  status: completed
+  status: complete
   filename: india_tax_april_2026.xlsx
   content_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
   byte_size: 1024

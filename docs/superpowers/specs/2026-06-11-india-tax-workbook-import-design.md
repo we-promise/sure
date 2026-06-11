@@ -206,7 +206,7 @@ One row per challan or book-adjustment record:
 Create a `TaxWorkbookImport` model:
 
 - `family_id`
-- `uploaded_by_id`
+- `uploaded_by_id`: nullable on user deletion so historical family tax imports do not block account purge flows.
 - `status`: `pending`, `validated`, `importing`, `complete`, `failed`
 - `filename`
 - `content_type`
@@ -378,4 +378,3 @@ Use these references for implementation-time validation details:
 The workbook schema should be reviewed by a CA before production filing decisions depend on it. India GST/TDS forms, HSN validation rules, section applicability, and filing utilities can change.
 
 If users later need statutory output, design separate exporters for GST portal JSON/offline utility flows and e-TDS `.txt`/FVU flows. Those should be explicit filing features, not hidden inside the internal workbook parser.
-

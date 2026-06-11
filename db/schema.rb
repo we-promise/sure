@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_11_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -53,6 +53,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
     t.string "checksum", limit: 64, null: false
+    t.string "content_sha256"
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
     t.string "institution_name_hint", limit: 200
@@ -69,7 +70,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
     t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
@@ -118,7 +118,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.text "notes"
     t.uuid "owner_id"
     t.datetime "disabled_at"
-    t.integer "account_providers_count", default: 0, null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -301,9 +300,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.boolean "pending_account_setup", default: false, null: false
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "api_key"
@@ -853,6 +852,105 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
   end
 
+  create_table "gst3b_summaries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "tax_workbook_import_id", null: false
+    t.integer "source_row_number", null: false
+    t.date "tax_period_month", null: false
+    t.string "gstin", limit: 15, null: false
+    t.string "section_code", null: false
+    t.decimal "taxable_value", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "igst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cgst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "sgst_ugst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cess", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "interest", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "late_fee", precision: 19, scale: 4, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "tax_period_month"], name: "index_gst3b_summaries_on_family_id_and_tax_period_month"
+    t.index ["family_id"], name: "index_gst3b_summaries_on_family_id"
+    t.index ["tax_workbook_import_id"], name: "index_gst3b_summaries_on_tax_workbook_import_id"
+    t.check_constraint "cess IS NULL OR cess >= 0::numeric", name: "chk_gst3b_summaries_cess_non_negative"
+    t.check_constraint "cgst IS NULL OR cgst >= 0::numeric", name: "chk_gst3b_summaries_cgst_non_negative"
+    t.check_constraint "igst IS NULL OR igst >= 0::numeric", name: "chk_gst3b_summaries_igst_non_negative"
+    t.check_constraint "interest IS NULL OR interest >= 0::numeric", name: "chk_gst3b_summaries_interest_non_negative"
+    t.check_constraint "late_fee IS NULL OR late_fee >= 0::numeric", name: "chk_gst3b_summaries_late_fee_non_negative"
+    t.check_constraint "sgst_ugst IS NULL OR sgst_ugst >= 0::numeric", name: "chk_gst3b_summaries_sgst_ugst_non_negative"
+    t.check_constraint "source_row_number > 0", name: "chk_gst3b_summaries_source_row_number_positive"
+    t.check_constraint "taxable_value IS NULL OR taxable_value >= 0::numeric", name: "chk_gst3b_summaries_taxable_value_non_negative"
+  end
+
+  create_table "gst_hsn_summaries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "tax_workbook_import_id", null: false
+    t.integer "source_row_number", null: false
+    t.date "tax_period_month", null: false
+    t.string "gstin", limit: 15, null: false
+    t.string "hsn_code", null: false
+    t.string "description"
+    t.string "uqc"
+    t.decimal "quantity", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "taxable_value", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "igst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cgst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "sgst_ugst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cess", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "bucket", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "hsn_code"], name: "index_gst_hsn_summaries_on_family_id_and_hsn_code"
+    t.index ["family_id", "tax_period_month"], name: "index_gst_hsn_summaries_on_family_id_and_tax_period_month"
+    t.index ["family_id"], name: "index_gst_hsn_summaries_on_family_id"
+    t.index ["tax_workbook_import_id"], name: "index_gst_hsn_summaries_on_tax_workbook_import_id"
+    t.check_constraint "cess IS NULL OR cess >= 0::numeric", name: "chk_gst_hsn_summaries_cess_non_negative"
+    t.check_constraint "cgst IS NULL OR cgst >= 0::numeric", name: "chk_gst_hsn_summaries_cgst_non_negative"
+    t.check_constraint "igst IS NULL OR igst >= 0::numeric", name: "chk_gst_hsn_summaries_igst_non_negative"
+    t.check_constraint "quantity IS NULL OR quantity >= 0::numeric", name: "chk_gst_hsn_summaries_quantity_non_negative"
+    t.check_constraint "sgst_ugst IS NULL OR sgst_ugst >= 0::numeric", name: "chk_gst_hsn_summaries_sgst_ugst_non_negative"
+    t.check_constraint "source_row_number > 0", name: "chk_gst_hsn_summaries_source_row_number_positive"
+    t.check_constraint "taxable_value IS NULL OR taxable_value >= 0::numeric", name: "chk_gst_hsn_summaries_taxable_value_non_negative"
+  end
+
+  create_table "gst_outward_lines", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "tax_workbook_import_id", null: false
+    t.integer "source_row_number", null: false
+    t.date "tax_period_month", null: false
+    t.string "gstin", limit: 15, null: false
+    t.string "gstr1_table_code", null: false
+    t.string "invoice_no", null: false
+    t.date "invoice_date", null: false
+    t.string "recipient_gstin_or_uin", limit: 15
+    t.string "place_of_supply_state"
+    t.string "hsn_code"
+    t.decimal "rate_pct", precision: 8, scale: 4
+    t.decimal "taxable_value", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "igst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cgst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "sgst_ugst", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cess", precision: 19, scale: 4, default: "0.0", null: false
+    t.boolean "is_reverse_charge", default: false, null: false
+    t.boolean "is_export", default: false, null: false
+    t.boolean "is_ecommerce_tcs", default: false, null: false
+    t.boolean "is_credit_note", default: false, null: false
+    t.boolean "is_debit_note", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "gstin"], name: "index_gst_outward_lines_on_family_id_and_gstin"
+    t.index ["family_id", "invoice_no"], name: "index_gst_outward_lines_on_family_id_and_invoice_no"
+    t.index ["family_id", "tax_period_month"], name: "index_gst_outward_lines_on_family_id_and_tax_period_month"
+    t.index ["family_id"], name: "index_gst_outward_lines_on_family_id"
+    t.index ["tax_workbook_import_id"], name: "index_gst_outward_lines_on_tax_workbook_import_id"
+    t.check_constraint "cess IS NULL OR cess >= 0::numeric", name: "chk_gst_outward_lines_cess_non_negative"
+    t.check_constraint "cgst IS NULL OR cgst >= 0::numeric", name: "chk_gst_outward_lines_cgst_non_negative"
+    t.check_constraint "igst IS NULL OR igst >= 0::numeric", name: "chk_gst_outward_lines_igst_non_negative"
+    t.check_constraint "rate_pct IS NULL OR rate_pct >= 0::numeric", name: "chk_gst_outward_lines_rate_pct_non_negative"
+    t.check_constraint "sgst_ugst IS NULL OR sgst_ugst >= 0::numeric", name: "chk_gst_outward_lines_sgst_ugst_non_negative"
+    t.check_constraint "source_row_number > 0", name: "chk_gst_outward_lines_source_row_number_positive"
+    t.check_constraint "taxable_value IS NULL OR taxable_value >= 0::numeric", name: "chk_gst_outward_lines_taxable_value_non_negative"
+  end
+
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "security_id", null: false
@@ -886,9 +984,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4
     t.jsonb "institution_metadata"
-    t.jsonb "raw_holdings_payload", default: []
-    t.jsonb "raw_activities_payload", default: {}
-    t.jsonb "raw_cash_report_payload", default: []
+    t.jsonb "raw_holdings_payload", default: [], null: false
+    t.jsonb "raw_activities_payload", default: {}, null: false
+    t.jsonb "raw_cash_report_payload", default: [], null: false
     t.date "report_date"
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
@@ -902,8 +1000,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
   create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
     t.boolean "pending_account_setup", default: false, null: false
     t.jsonb "raw_payload"
     t.string "query_id"
@@ -1001,10 +1099,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.index ["id", "family_id"], name: "idx_import_sessions_on_id_family", unique: true
     t.check_constraint "client_session_id IS NULL OR btrim(client_session_id::text) <> ''::text", name: "chk_import_sessions_client_session_id_present"
     t.check_constraint "expected_chunks IS NULL OR expected_chunks > 0", name: "chk_import_sessions_expected_chunks_positive"
-    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_import_sessions_error_details_object"
     t.check_constraint "import_type::text = 'SureImport'::text", name: "chk_import_sessions_import_type"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'importing'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_import_sessions_status"
+    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_import_sessions_error_details_object"
     t.check_constraint "jsonb_typeof(summary) = 'object'::text", name: "chk_import_sessions_summary_object"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'importing'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_import_sessions_status"
   end
 
   create_table "import_source_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1022,10 +1120,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.index ["import_session_id"], name: "index_import_source_mappings_on_import_session_id"
     t.index ["target_type", "target_id"], name: "idx_import_source_mappings_on_target"
     t.check_constraint "btrim(source_id::text) <> ''::text", name: "chk_import_source_mappings_source_id_present"
-    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
     t.check_constraint "btrim(source_type::text) <> ''::text", name: "chk_import_source_mappings_source_type_present"
-    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
     t.check_constraint "btrim(target_type::text) <> ''::text", name: "chk_import_source_mappings_target_type_present"
+    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
+    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
   end
 
   create_table "imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1064,15 +1162,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
-    t.uuid "account_statement_id"
-    t.jsonb "expected_record_counts", default: {}, null: false
-    t.jsonb "readback_verification", default: {}, null: false
     t.uuid "import_session_id"
     t.integer "sequence"
     t.string "client_chunk_id", limit: 255
     t.string "checksum", limit: 64
     t.jsonb "summary", default: {}, null: false
     t.jsonb "error_details", default: {}, null: false
+    t.uuid "account_statement_id"
+    t.jsonb "expected_record_counts", default: {}, null: false
+    t.jsonb "readback_verification", default: {}, null: false
     t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
@@ -1080,9 +1178,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.index ["import_session_id"], name: "index_imports_on_import_session_id"
     t.check_constraint "checksum IS NULL OR length(checksum::text) = 64", name: "chk_imports_checksum_sha256_length"
     t.check_constraint "client_chunk_id IS NULL OR btrim(client_chunk_id::text) <> ''::text", name: "chk_imports_client_chunk_id_present"
-    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_imports_error_details_object"
     t.check_constraint "import_session_id IS NULL OR checksum IS NOT NULL", name: "chk_imports_session_checksum_present"
     t.check_constraint "import_session_id IS NULL OR sequence IS NOT NULL", name: "chk_imports_session_sequence_present"
+    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_imports_error_details_object"
     t.check_constraint "jsonb_typeof(summary) = 'object'::text", name: "chk_imports_summary_object"
     t.check_constraint "sequence IS NULL OR sequence > 0", name: "chk_imports_session_sequence_positive"
   end
@@ -1905,6 +2003,111 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.index ["family_id"], name: "index_tags_on_family_id"
   end
 
+  create_table "tax_workbook_imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "uploaded_by_id"
+    t.string "status", default: "pending", null: false
+    t.string "filename", limit: 255, null: false
+    t.string "content_type", limit: 100, null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum", limit: 64, null: false
+    t.string "template_version", limit: 100, null: false
+    t.string "entity_name"
+    t.string "gstin", limit: 15
+    t.string "tan", limit: 10
+    t.string "fy"
+    t.date "tax_period_month"
+    t.string "tax_period_quarter"
+    t.jsonb "row_counts", default: {}, null: false
+    t.jsonb "validation_errors", default: [], null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "checksum"], name: "index_tax_workbook_imports_on_family_id_and_checksum", unique: true
+    t.index ["family_id", "tax_period_month"], name: "index_tax_workbook_imports_on_family_id_and_tax_period_month"
+    t.index ["family_id", "tax_period_quarter"], name: "index_tax_workbook_imports_on_family_id_and_tax_period_quarter"
+    t.index ["family_id"], name: "index_tax_workbook_imports_on_family_id"
+    t.index ["uploaded_by_id"], name: "index_tax_workbook_imports_on_uploaded_by_id"
+    t.check_constraint "byte_size <= 10485760", name: "chk_tax_workbook_imports_byte_size_max"
+    t.check_constraint "byte_size > 0", name: "chk_tax_workbook_imports_byte_size_positive"
+    t.check_constraint "char_length(checksum::text) = 64", name: "chk_tax_workbook_imports_checksum_length"
+    t.check_constraint "content_type::text = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'::text", name: "chk_tax_workbook_imports_content_type"
+    t.check_constraint "jsonb_typeof(metadata) = 'object'::text", name: "chk_tax_workbook_imports_metadata_object"
+    t.check_constraint "jsonb_typeof(row_counts) = 'object'::text", name: "chk_tax_workbook_imports_row_counts_object"
+    t.check_constraint "jsonb_typeof(validation_errors) = 'array'::text", name: "chk_tax_workbook_imports_validation_errors_array"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'validated'::character varying, 'importing'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_tax_workbook_imports_status"
+  end
+
+  create_table "tds_challans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "tax_workbook_import_id", null: false
+    t.integer "source_row_number", null: false
+    t.string "tax_period_quarter", null: false
+    t.string "tan", limit: 10, null: false
+    t.string "challan_ref", null: false
+    t.string "mode_of_deposit"
+    t.string "bsr_code_or_receipt_no"
+    t.string "challan_serial_no_or_ddo_serial_no"
+    t.date "deposit_date"
+    t.string "minor_head"
+    t.decimal "tax", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "interest", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "penalty", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "others", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "total_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "challan_ref"], name: "index_tds_challans_on_family_id_and_challan_ref"
+    t.index ["family_id", "tax_period_quarter"], name: "index_tds_challans_on_family_id_and_tax_period_quarter"
+    t.index ["family_id"], name: "index_tds_challans_on_family_id"
+    t.index ["tax_workbook_import_id"], name: "index_tds_challans_on_tax_workbook_import_id"
+    t.check_constraint "fee IS NULL OR fee >= 0::numeric", name: "chk_tds_challans_fee_non_negative"
+    t.check_constraint "interest IS NULL OR interest >= 0::numeric", name: "chk_tds_challans_interest_non_negative"
+    t.check_constraint "others IS NULL OR others >= 0::numeric", name: "chk_tds_challans_others_non_negative"
+    t.check_constraint "penalty IS NULL OR penalty >= 0::numeric", name: "chk_tds_challans_penalty_non_negative"
+    t.check_constraint "source_row_number > 0", name: "chk_tds_challans_source_row_number_positive"
+    t.check_constraint "tax IS NULL OR tax >= 0::numeric", name: "chk_tds_challans_tax_non_negative"
+    t.check_constraint "total_amount IS NULL OR total_amount >= 0::numeric", name: "chk_tds_challans_total_amount_non_negative"
+  end
+
+  create_table "tds_deductions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "tax_workbook_import_id", null: false
+    t.uuid "tds_challan_id"
+    t.integer "source_row_number", null: false
+    t.date "tax_period_month", null: false
+    t.string "tax_period_quarter", null: false
+    t.string "deductor_tan", limit: 10, null: false
+    t.string "deductee_pan_or_aadhaar", null: false
+    t.string "deductee_name"
+    t.string "section_code", null: false
+    t.date "booking_date"
+    t.date "payment_date"
+    t.decimal "amount_paid", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "tds_rate_pct", precision: 8, scale: 4
+    t.decimal "tds_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "surcharge", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "cess", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "challan_ref"
+    t.string "resident_status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "deductee_pan_or_aadhaar"], name: "index_tds_deductions_on_family_id_and_deductee_pan_or_aadhaar"
+    t.index ["family_id", "section_code"], name: "index_tds_deductions_on_family_id_and_section_code"
+    t.index ["family_id", "tax_period_month"], name: "index_tds_deductions_on_family_id_and_tax_period_month"
+    t.index ["family_id", "tax_period_quarter"], name: "index_tds_deductions_on_family_id_and_tax_period_quarter"
+    t.index ["family_id"], name: "index_tds_deductions_on_family_id"
+    t.index ["tax_workbook_import_id"], name: "index_tds_deductions_on_tax_workbook_import_id"
+    t.index ["tds_challan_id"], name: "index_tds_deductions_on_tds_challan_id"
+    t.check_constraint "amount_paid IS NULL OR amount_paid >= 0::numeric", name: "chk_tds_deductions_amount_paid_non_negative"
+    t.check_constraint "cess IS NULL OR cess >= 0::numeric", name: "chk_tds_deductions_cess_non_negative"
+    t.check_constraint "source_row_number > 0", name: "chk_tds_deductions_source_row_number_positive"
+    t.check_constraint "surcharge IS NULL OR surcharge >= 0::numeric", name: "chk_tds_deductions_surcharge_non_negative"
+    t.check_constraint "tds_amount IS NULL OR tds_amount >= 0::numeric", name: "chk_tds_deductions_tds_amount_non_negative"
+    t.check_constraint "tds_rate_pct IS NULL OR tds_rate_pct >= 0::numeric", name: "chk_tds_deductions_tds_rate_pct_non_negative"
+  end
+
   create_table "tool_calls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "message_id", null: false
     t.string "provider_id", null: false
@@ -2095,6 +2298,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "gst3b_summaries", "families", on_delete: :cascade
+  add_foreign_key "gst3b_summaries", "tax_workbook_imports", on_delete: :cascade
+  add_foreign_key "gst_hsn_summaries", "families", on_delete: :cascade
+  add_foreign_key "gst_hsn_summaries", "tax_workbook_imports", on_delete: :cascade
+  add_foreign_key "gst_outward_lines", "families", on_delete: :cascade
+  add_foreign_key "gst_outward_lines", "tax_workbook_imports", on_delete: :cascade
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
@@ -2155,6 +2364,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
   add_foreign_key "syncs", "syncs", column: "parent_id"
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
+  add_foreign_key "tax_workbook_imports", "families", on_delete: :cascade
+  add_foreign_key "tax_workbook_imports", "users", column: "uploaded_by_id", on_delete: :nullify
+  add_foreign_key "tds_challans", "families", on_delete: :cascade
+  add_foreign_key "tds_challans", "tax_workbook_imports", on_delete: :cascade
+  add_foreign_key "tds_deductions", "families", on_delete: :cascade
+  add_foreign_key "tds_deductions", "tax_workbook_imports", on_delete: :cascade
+  add_foreign_key "tds_deductions", "tds_challans", on_delete: :nullify
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify

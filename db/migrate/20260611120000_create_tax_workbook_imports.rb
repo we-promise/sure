@@ -6,7 +6,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
   def change
     create_table :tax_workbook_imports, id: :uuid do |t|
       t.references :family, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
-      t.references :uploaded_by, null: false, foreign_key: { to_table: :users }, type: :uuid
+      t.references :uploaded_by, foreign_key: { to_table: :users, on_delete: :nullify }, type: :uuid
 
       t.string :status, null: false, default: "pending"
       t.string :filename, null: false, limit: 255
@@ -32,7 +32,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
     end
 
     add_check_constraint :tax_workbook_imports,
-                         "status IN ('pending', 'processing', 'completed', 'failed')",
+                         "status IN ('pending', 'validated', 'importing', 'complete', 'failed')",
                          name: "chk_tax_workbook_imports_status"
     add_check_constraint :tax_workbook_imports,
                          "byte_size > 0",

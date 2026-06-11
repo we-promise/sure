@@ -12,7 +12,7 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
       filename: "india-tax-april-2026.xlsx",
       content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
       byte_size: 1024,
-      checksum: "a" * 64,
+      checksum: "b" * 64,
       template_version: "2026-06-11",
       status: "pending"
     )
@@ -28,14 +28,14 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
   test "allows attaching a source workbook" do
     import = tax_workbook_imports(:april_2026)
 
-    import.source_workbook.attach(
+    import.source_file.attach(
       io: StringIO.new("xlsx-bytes"),
       filename: "india-tax-april-2026.xlsx",
       content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE
     )
 
-    assert import.source_workbook.attached?
-    assert_equal "india-tax-april-2026.xlsx", import.source_workbook.filename.to_s
+    assert import.source_file.attached?
+    assert_equal "india-tax-april-2026.xlsx", import.source_file.filename.to_s
   end
 
   test "orders newest imports first" do
@@ -47,7 +47,7 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
       byte_size: 2048,
       checksum: "b" * 64,
       template_version: "2026-06-11",
-      status: "processing"
+      status: "importing"
     )
 
     older.update_column(:created_at, 2.days.ago)
@@ -74,6 +74,36 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
     assert_includes import.errors[:checksum], "is the wrong length (should be 64 characters)"
     assert_includes import.errors[:template_version], "can't be blank"
     assert_includes import.errors[:status], "is not included in the list"
+  end
+
+  test "validates checksum uniqueness within family" do
+    duplicate = @family.tax_workbook_imports.build(
+      uploaded_by: @user,
+      filename: "duplicate-tax-workbook.xlsx",
+      content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+      byte_size: 1024,
+      checksum: "a" * 64,
+      template_version: "2026-06-11",
+      status: "pending"
+    )
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:checksum], "has already been taken"
+  end
+
+  test "requires uploader to belong to import family when present" do
+    import = @family.tax_workbook_imports.build(
+      uploaded_by: users(:empty),
+      filename: "cross-family-tax-workbook.xlsx",
+      content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+      byte_size: 1024,
+      checksum: "c" * 64,
+      template_version: "2026-06-11",
+      status: "pending"
+    )
+
+    assert_not import.valid?
+    assert_includes import.errors[:uploaded_by], "must belong to the same family"
   end
 
   test "aggregates parsed record totals" do
