@@ -266,7 +266,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '500', 'import uploaded but publish enqueue failed' do
+      response '500', 'import uploaded but preparation or publish enqueue failed' do
         schema '$ref' => '#/components/schemas/ErrorResponseWithImportId'
 
         before do
