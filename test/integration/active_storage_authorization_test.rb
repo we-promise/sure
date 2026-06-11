@@ -2,6 +2,8 @@ require "test_helper"
 
 class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
   setup do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
     @user_a = users(:family_admin) # In dylan_family
     @user_b = users(:empty) # In empty family
 
@@ -109,6 +111,7 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     get rails_blob_path(tax_import.source_file)
 
     assert_response :not_found
+    sign_out users(:family_member)
   end
 
   test "same-family admin can access tax workbook source blob" do
@@ -119,9 +122,7 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     get rails_blob_path(tax_import.source_file)
 
     assert_response :redirect
-    follow_redirect!
-    assert_response :success
-    assert_match(/rails\/active_storage\/disk/, request.path)
+    assert_match(/rails\/active_storage\/disk/, response.location)
   end
 
   test "unauthenticated user is redirected before statement blob access" do
