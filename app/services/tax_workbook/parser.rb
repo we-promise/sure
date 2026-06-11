@@ -52,7 +52,7 @@ module TaxWorkbook
       meta_attributes = parse_meta!(reader.rows("meta"))
       import.update!(meta_attributes.merge(status: "validated", validation_errors: [], row_counts: {}))
 
-      ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction(requires_new: true) do
         import.update!(status: "importing")
 
         create_gst_outward_lines!(import, reader.rows("gst_outward_lines"))
@@ -71,6 +71,10 @@ module TaxWorkbook
       failure_result(import, [ error_payload(message: "Workbook could not be read as XLSX", value: error.message) ])
     rescue ActiveRecord::RecordNotUnique => error
       failure_result(import, [ error_payload(sheet: "import", column: "checksum", message: "Workbook has already been imported for this family", value: error.message) ])
+    rescue StandardError => error
+      raise unless import&.persisted?
+
+      failure_result(import, [ error_payload(sheet: "import", message: "Import failed unexpectedly", value: "#{error.class}: #{error.message}") ])
     ensure
       tempfile&.close!
     end
@@ -403,6 +407,7 @@ module TaxWorkbook
 
       def failure_result(import, errors)
         if import&.persisted?
+          import.reload
           import.update!(status: "failed", validation_errors: errors, row_counts: {})
           import.reload
         elsif import

@@ -110,6 +110,63 @@ class TaxWorkbook::ParserTest < ActiveSupport::TestCase
     end
   end
 
+  test "marks import failed when source attachment raises after import save" do
+    upload = workbook_upload(
+      filename: "india_tax_storage_failure.xlsx",
+      content: TaxWorkbook::TemplateGenerator.new.call
+    )
+    parser = TaxWorkbook::Parser.new(family: @family, uploaded_by: @user, file: upload)
+
+    parser.stub(:attach_source_file!, ->(*) { raise IOError, "storage unavailable" }) do
+      assert_difference "TaxWorkbookImport.count", 1 do
+        result = parser.call
+
+        assert_not result.success?
+
+        import = result.import
+        assert_predicate import, :persisted?
+        assert_equal "failed", import.status
+        assert_empty import.gst_outward_lines.reload
+        assert_empty import.gst3b_summaries.reload
+        assert_empty import.gst_hsn_summaries.reload
+        assert_empty import.tds_challans.reload
+        assert_empty import.tds_deductions.reload
+        assert_includes import.validation_errors.map { |error| error["message"] }, "Import failed unexpectedly"
+      end
+    end
+  end
+
+  test "rolls back parsed rows when a later row is invalid" do
+    upload = workbook_upload(
+      filename: "india_tax_invalid_tds_row.xlsx",
+      content: workbook_with_invalid_tds_deduction_identifier
+    )
+
+    assert_difference "TaxWorkbookImport.count", 1 do
+      assert_no_difference [
+        "GstOutwardLine.count",
+        "Gst3bSummary.count",
+        "GstHsnSummary.count",
+        "TdsChallan.count",
+        "TdsDeduction.count"
+      ] do
+        result = TaxWorkbook::Parser.new(family: @family, uploaded_by: @user, file: upload).call
+        assert_not result.success?
+
+        import = result.import
+        assert_predicate import, :persisted?
+        assert_equal "failed", import.status
+        assert_empty import.gst_outward_lines.reload
+        assert_empty import.gst3b_summaries.reload
+        assert_empty import.gst_hsn_summaries.reload
+        assert_empty import.tds_challans.reload
+        assert_empty import.tds_deductions.reload
+        assert_includes import.validation_errors.map { |error| error["sheet"] }, "tds_deductions"
+        assert_includes import.validation_errors.map { |error| error["message"] }, "must be a 10-character PAN or 12-digit Aadhaar"
+      end
+    end
+  end
+
   private
     def workbook_upload(filename:, content:)
       uploaded_file(
@@ -133,17 +190,25 @@ class TaxWorkbook::ParserTest < ActiveSupport::TestCase
       workbook_with_sheets(except: omitted_sheet_name)
     end
 
-    def workbook_with_sheets(except: nil)
+    def workbook_with_invalid_tds_deduction_identifier
+      invalid_row = TaxWorkbook::Template.sample_for("tds_deductions").dup
+      invalid_row[TaxWorkbook::Template.headers_for("tds_deductions").index("deductee_pan_or_aadhaar")] = "BADPAN"
+
+      workbook_with_sheets(rows: { "tds_deductions" => invalid_row })
+    end
+
+    def workbook_with_sheets(except: nil, rows: {})
       package = Axlsx::Package.new(author: "Sure")
 
       TaxWorkbook::Template::SHEET_NAMES.each do |sheet_name|
         next if sheet_name == except
 
         headers = block_given? ? yield(sheet_name) : TaxWorkbook::Template.headers_for(sheet_name)
+        sample = rows.fetch(sheet_name) { TaxWorkbook::Template.sample_for(sheet_name) }
 
         package.workbook.add_worksheet(name: sheet_name) do |sheet|
           sheet.add_row headers
-          sheet.add_row TaxWorkbook::Template.sample_for(sheet_name)
+          sheet.add_row sample
         end
       end
 
