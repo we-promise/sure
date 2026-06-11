@@ -34,9 +34,9 @@ zh-CN:
       note_placeholder: 为此转账添加备注
       overview: 概览
       settings: 设置
-      mark_recurring: 标记为周期
-      mark_recurring_subtitle: 在后续流水和周期页面中按周期模式跟踪此转账。
-      mark_recurring_title: 标记为周期转账
+      mark_recurring: 标记为循环
+      mark_recurring_subtitle: 在后续流水和循环页面中按循环模式跟踪此转账。
+      mark_recurring_title: 标记为循环转账
       from: 从
       to: 到
       date: 日期
