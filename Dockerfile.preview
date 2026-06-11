@@ -63,9 +63,14 @@ RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
 # kills the container before it can serve a port. mmap keeps DSM in the data
 # directory ($PGDATA/pg_dynshmem), removing the /dev/shm dependency. Local
 # Docker hides this because its default /dev/shm is 64MB.
-RUN PG_CONF=$(find /etc/postgresql -name postgresql.conf 2>/dev/null | head -1) && \
-    if [ -z "$PG_CONF" ]; then \
-      echo "ERROR: postgresql.conf not found; cannot disable /dev/shm DSM dependency" >&2; \
+#
+# Select the highest-version cluster's config -- the same one the entrypoint
+# starts (ls /etc/postgresql | sort -V | tail -1) -- so the override always
+# lands on the cluster that actually runs, even if multiple majors are present.
+RUN PG_VERSION="$(ls /etc/postgresql 2>/dev/null | sort -V | tail -1)" && \
+    PG_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf" && \
+    if [ -z "$PG_VERSION" ] || [ ! -f "$PG_CONF" ]; then \
+      echo "ERROR: postgresql.conf not found for cluster '${PG_VERSION:-none}'; cannot disable /dev/shm DSM dependency" >&2; \
       exit 1; \
     fi && \
     sed -i 's/^[[:space:]]*dynamic_shared_memory_type[[:space:]]*=/# &/' "$PG_CONF" && \
