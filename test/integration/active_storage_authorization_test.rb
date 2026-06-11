@@ -101,6 +101,29 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "same-family non-admin cannot access tax workbook source blob" do
+    tax_import = attach_tax_workbook_source_file
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(tax_import.source_file)
+
+    assert_response :not_found
+  end
+
+  test "same-family admin can access tax workbook source blob" do
+    tax_import = attach_tax_workbook_source_file
+
+    sign_in users(:family_admin)
+
+    get rails_blob_path(tax_import.source_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+    assert_match(/rails\/active_storage\/disk/, request.path)
+  end
+
   test "unauthenticated user is redirected before statement blob access" do
     get rails_blob_path(@statement_a.original_file)
 
@@ -286,6 +309,18 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def attach_tax_workbook_source_file
+      tax_import = tax_workbook_imports(:april_2026)
+      tax_import.source_file.attach(
+        uploaded_file(
+          filename: "india_tax_april_2026.xlsx",
+          content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+          content: "tax workbook source"
+        )
+      )
+      tax_import
+    end
 
     def sign_out(user)
       user.sessions.each { |session| delete session_path(session) }
