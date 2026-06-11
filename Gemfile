@@ -78,6 +78,9 @@ gem "rails-i18n"
 gem "rails-settings-cached"
 gem "tzinfo-data", platforms: %i[windows jruby]
 gem "csv"
+# Spreadsheet parsing and template generation for tax workbook imports.
+gem "roo", "~> 3.0"
+gem "caxlsx", "~> 4.5"
 gem "rchardet" # Character encoding detection
 gem "redcarpet"
 gem "stripe"
@@ -88,7 +91,7 @@ gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
 gem "webauthn", "~> 3.4"
 gem "activerecord-import"
-gem "rubyzip", "~> 2.3"
+gem "rubyzip", "~> 3.0"
 gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
