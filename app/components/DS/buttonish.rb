@@ -92,7 +92,7 @@ class DS::Buttonish < DesignSystemComponent
       # `aria-disabled` to stay clickable/focusable (e.g. submit buttons whose
       # click handler surfaces validation errors — a truly disabled default
       # submit would also swallow Enter-key implicit submission).
-      "font-medium whitespace-nowrap disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
+      "font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,
