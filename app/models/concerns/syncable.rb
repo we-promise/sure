@@ -12,8 +12,7 @@ module Syncable
     end
 
     if association(:syncs).loaded?
-      visible_after = Sync::VISIBLE_FOR.ago
-      syncs.any? { |sync| sync.in_progress? && sync.created_at > visible_after }
+      syncs.any?(&:visible?)
     else
       syncs.visible.any?
     end

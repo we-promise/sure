@@ -257,6 +257,20 @@ class SyncTest < ActiveSupport::TestCase
     assert Sync.any_incomplete_for?(family)
   end
 
+  test "visible? matches visible scope for in-progress syncs" do
+    sync = Sync.create!(syncable: accounts(:depository), status: :syncing)
+
+    assert sync.visible?
+    assert_includes Sync.visible, sync
+  end
+
+  test "visible? excludes stale in-progress syncs outside VISIBLE_FOR window" do
+    sync = Sync.create!(syncable: accounts(:depository), status: :syncing, created_at: Sync::VISIBLE_FOR.ago - 1.minute)
+
+    refute sync.visible?
+    refute_includes Sync.visible, sync
+  end
+
   test "api error payload is present for failed syncs without raw error text" do
     sync = Sync.create!(syncable: accounts(:depository), status: :failed)
 

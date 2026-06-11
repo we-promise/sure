@@ -23,6 +23,40 @@ class SyncableTest < ActiveSupport::TestCase
     Current.reset
   end
 
+  def test_syncing_without_current_maps_queries_database
+    account = Account.find(accounts(:depository).id)
+    Current.reset
+
+    sync = Sync.create!(syncable: account)
+    sync.start!
+
+    queries = capture_sql_queries do
+      assert account.syncing?
+    end
+
+    assert queries.grep(/FROM "syncs"/).any?,
+      "Expected syncing? to query syncs when Current maps are absent"
+  ensure
+    Current.reset
+  end
+
+  def test_latest_completed_sync_without_current_maps_queries_database
+    account = Account.find(accounts(:depository).id)
+    Current.reset
+
+    sync = Sync.create!(syncable: account, status: :completed)
+    sync.update_column(:completed_at, Time.current)
+
+    queries = capture_sql_queries do
+      account.last_synced_at
+    end
+
+    assert queries.grep(/FROM "syncs"/).any?,
+      "Expected latest_completed_sync_record to query syncs when Current maps are absent"
+  ensure
+    Current.reset
+  end
+
   private
     def capture_sql_queries
       queries = []
