@@ -42,7 +42,58 @@
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
   <% end %>
+
+  <%= summary_card title: t(".total_interest") do %>
+    <% if account.loan.total_interest.present? %>
+      <%= format_money(account.loan.total_interest) %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".payoff_date") do %>
+    <% if account.loan.payoff_date.present? %>
+      <%= I18n.l(account.loan.payoff_date, format: :long) %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
 </div>
+
+<%# Show only upcoming rows so a 5-year-old mortgage doesn't open with a table dating back to origination. %>
+<% upcoming_schedule = account.loan.amortization_schedule.select { |row| row[:payment_date] >= Date.current } %>
+<% if upcoming_schedule.any? %>
+  <div class="mt-6">
+    <%= render DS::Disclosure.new(title: t(".amortization_schedule")) do %>
+      <div class="overflow-x-auto rounded-lg border border-primary">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface">
+            <tr class="text-left text-secondary">
+              <th scope="col" class="px-4 py-2 font-medium"><%= t(".schedule.period") %></th>
+              <th scope="col" class="px-4 py-2 font-medium"><%= t(".schedule.payment_date") %></th>
+              <th scope="col" class="px-4 py-2 font-medium text-right"><%= t(".schedule.payment") %></th>
+              <th scope="col" class="px-4 py-2 font-medium text-right"><%= t(".schedule.principal") %></th>
+              <th scope="col" class="px-4 py-2 font-medium text-right"><%= t(".schedule.interest") %></th>
+              <th scope="col" class="px-4 py-2 font-medium text-right"><%= t(".schedule.ending_balance") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% upcoming_schedule.each do |row| %>
+              <tr class="border-t border-primary text-primary">
+                <td class="px-4 py-2"><%= row[:period] %></td>
+                <td class="px-4 py-2"><%= I18n.l(row[:payment_date], format: :short) %></td>
+                <td class="px-4 py-2 text-right"><%= format_money(row[:payment]) %></td>
+                <td class="px-4 py-2 text-right"><%= format_money(row[:principal]) %></td>
+                <td class="px-4 py-2 text-right"><%= format_money(row[:interest]) %></td>
+                <td class="px-4 py-2 text-right"><%= format_money(row[:ending_balance]) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </div>
+<% end %>
 
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
