@@ -26,6 +26,7 @@ require "webmock/minitest"
 require "rack/test"
 require "tempfile"
 require "uri"
+require_relative "support/tax_workbook_mock_data"
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
@@ -61,6 +62,8 @@ OmniAuth.config.allowed_request_methods = [ :get, :post ]
 
 module ActiveSupport
   class TestCase
+    include TaxWorkbookMockData
+
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors) unless ENV["DISABLE_PARALLELIZATION"] == "true"
 

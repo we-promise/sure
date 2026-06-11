@@ -58,6 +58,43 @@ class TaxWorkbook::ParserTest < ActiveSupport::TestCase
     end
   end
 
+  test "imports realistic multi row GST and TDS workbook" do
+    upload = workbook_upload(
+      filename: "risingstone_april_2026_gst_tds.xlsx",
+      content: realistic_tax_workbook_content
+    )
+
+    result = TaxWorkbook::Parser.new(family: @family, uploaded_by: @user, file: upload).call
+
+    assert result.success?, result.errors.inspect
+
+    import = result.import
+    assert_equal "Risingstone Infra Pvt Ltd", import.entity_name
+    assert_equal "Zoho Books", import.metadata["source_system"]
+    assert_equal(
+      {
+        "gst_outward_lines" => 3,
+        "gst_3b_summary" => 2,
+        "gst_hsn_summary" => 2,
+        "tds_challans" => 2,
+        "tds_deductions" => 3
+      },
+      import.row_counts
+    )
+    assert_equal 3, import.gst_outward_lines.count
+    assert_equal BigDecimal("160000.0"), import.gst_taxable_total
+    assert_equal BigDecimal("28800.0"), import.gst_tax_total
+    assert_equal BigDecimal("8500.0"), import.tds_total
+
+    credit_note = import.gst_outward_lines.find_by!(invoice_no: "CN-APR-001")
+    assert_predicate credit_note, :is_credit_note?
+    assert_equal BigDecimal("-10000.0"), credit_note.taxable_value
+
+    aadhaar_deduction = import.tds_deductions.find_by!(deductee_name: "Freelance Designer")
+    assert_equal "123456789012", aadhaar_deduction.deductee_pan_or_aadhaar
+    assert_equal import.tds_challans.find_by!(challan_ref: "CH-APR-002"), aadhaar_deduction.tds_challan
+  end
+
   test "stores validation errors for invalid sheet headers without parsed rows" do
     upload = workbook_upload(
       filename: "india_tax_invalid_headers.xlsx",

@@ -7,7 +7,7 @@ class TaxWorkbookImportsTest < ApplicationSystemTestCase
     sign_in users(:family_admin)
 
     @fixture_path = Rails.root.join("tmp", "tax_workbook_system_test.xlsx")
-    File.binwrite(@fixture_path, TaxWorkbook::TemplateGenerator.new.call)
+    File.binwrite(@fixture_path, realistic_tax_workbook_content)
   end
 
   teardown do
@@ -21,12 +21,13 @@ class TaxWorkbookImportsTest < ApplicationSystemTestCase
     click_button I18n.t("tax_workbook_imports.index.upload_button")
 
     assert_text I18n.t("tax_workbook_imports.create.success")
-    assert_text "Risingstone infra pvt ltd"
+    assert_text "Risingstone Infra Pvt Ltd"
 
     visit tax_records_path
-    fill_in I18n.t("tax_records.index.search_label"), with: "INV-001"
+    fill_in I18n.t("tax_records.index.search_label"), with: "RS-APR-002"
     find("input[name='q[search]']").send_keys(:enter)
 
-    assert_text "INV-001"
+    assert_text "RS-APR-002"
+    assert_text "29ABCDE1234F1Z7"
   end
 end
