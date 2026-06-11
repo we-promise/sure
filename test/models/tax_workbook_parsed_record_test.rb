@@ -280,6 +280,22 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes deduction.errors[:challan_ref], "must match a challan in the same import"
   end
 
+  test "tds deductions normalize blank challan ref" do
+    deduction = TdsDeduction.create!(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "194C",
+      challan_ref: " "
+    )
+
+    assert_nil deduction.challan_ref
+  end
+
   test "tds deductions require attached challan to match challan ref" do
     challan = TdsChallan.create!(
       family: @family,
@@ -305,5 +321,31 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
 
     assert_not deduction.valid?
     assert_includes deduction.errors[:tds_challan], "must match challan_ref"
+  end
+
+  test "tds challans cannot be destroyed while deductions reference them" do
+    challan = TdsChallan.create!(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_quarter: "Q1",
+      tan: "MUMR12345A",
+      challan_ref: "CH-RESTRICT"
+    )
+    TdsDeduction.create!(
+      family: @family,
+      tax_workbook_import: @import,
+      tds_challan: challan,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "194C",
+      challan_ref: "CH-RESTRICT"
+    )
+
+    assert_not challan.destroy
+    assert_includes challan.errors[:base], "Cannot delete record because dependent tds deductions exist"
   end
 end

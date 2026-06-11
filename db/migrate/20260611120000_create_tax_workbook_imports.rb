@@ -214,6 +214,9 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
                     column: [ :tax_workbook_import_id, :family_id, :challan_ref ],
                     primary_key: [ :tax_workbook_import_id, :family_id, :challan_ref ],
                     name: "fk_tds_deductions_challan_ref"
+    add_check_constraint :tds_deductions,
+                         "challan_ref IS NULL OR btrim(challan_ref) <> ''",
+                         name: "chk_tds_deductions_challan_ref_present"
     add_positive_row_constraint :tds_deductions
     add_non_negative_constraints :tds_deductions, %i[amount_paid tds_rate_pct tds_amount surcharge cess]
   end

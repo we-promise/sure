@@ -9,6 +9,8 @@ class TdsDeduction < ApplicationRecord
   belongs_to :tax_workbook_import
   belongs_to :tds_challan, optional: true
 
+  normalizes :challan_ref, with: ->(value) { value.to_s.strip.presence }
+
   validates :source_row_number, numericality: { only_integer: true, greater_than: 0 }
   validates :tax_period_month, :tax_period_quarter, :deductor_tan, :deductee_pan_or_aadhaar, :section_code, presence: true
   validates :section_code, inclusion: { in: SECTION_CODES }, allow_blank: true

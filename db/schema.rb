@@ -2106,6 +2106,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_11_120000) do
     t.index ["tds_challan_id"], name: "index_tds_deductions_on_tds_challan_id"
     t.check_constraint "amount_paid IS NULL OR amount_paid >= 0::numeric", name: "chk_tds_deductions_amount_paid_non_negative"
     t.check_constraint "cess IS NULL OR cess >= 0::numeric", name: "chk_tds_deductions_cess_non_negative"
+    t.check_constraint "challan_ref IS NULL OR btrim(challan_ref::text) <> ''::text", name: "chk_tds_deductions_challan_ref_present"
     t.check_constraint "source_row_number > 0", name: "chk_tds_deductions_source_row_number_positive"
     t.check_constraint "surcharge IS NULL OR surcharge >= 0::numeric", name: "chk_tds_deductions_surcharge_non_negative"
     t.check_constraint "tds_amount IS NULL OR tds_amount >= 0::numeric", name: "chk_tds_deductions_tds_amount_non_negative"
