@@ -307,6 +307,27 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "-10.00", import.rows.first.amount # Normalized
   end
 
+  test "should return error and clean up import when CSV row generation fails" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    TransactionImport.any_instance.stubs(:generate_rows_from_csv).raises(StandardError, "row generation exploded")
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :internal_server_error
+    json_response = JSON.parse(response.body)
+    assert_equal "import_row_generation_failed", json_response["error"]
+  end
+
   test "should instantiate RuleImport before generating rows" do
     @family.categories.create!(
       name: "Groceries",
