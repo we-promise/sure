@@ -10,7 +10,7 @@ module Admin
 
       # Load runtime providers (from YAML/env) that might not be in the database
       # This helps show users that legacy providers are active but not manageable via UI
-      @runtime_providers = Rails.configuration.x.auth.sso_providers || []
+      @runtime_providers = AuthConfig.sso_providers
       db_provider_names = @sso_providers.pluck(:name)
       @legacy_providers = @runtime_providers.reject { |p| db_provider_names.include?(p[:name].to_s) }
     end
@@ -157,7 +157,7 @@ module Admin
       end
 
       def clear_provider_cache
-        ProviderLoader.clear_cache
+        AuthConfig.clear_sso_provider_cache
         Rails.logger.info("[Admin::SsoProviders] Provider cache cleared by user_id=#{Current.user.id}")
       end
   end

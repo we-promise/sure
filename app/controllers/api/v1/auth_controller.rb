@@ -209,7 +209,7 @@ module Api
         else
           user.family = Family.new
 
-          provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+          provider_config = AuthConfig.find_sso_provider(cached[:provider])
           provider_default_role = provider_config&.dig(:settings, :default_role)
           user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
         end
