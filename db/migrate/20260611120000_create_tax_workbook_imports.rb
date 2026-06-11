@@ -29,6 +29,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
       t.index [ :family_id, :tax_period_month ]
       t.index [ :family_id, :tax_period_quarter ]
       t.index [ :family_id, :checksum ], unique: true
+      t.index [ :id, :family_id ], unique: true
     end
 
     add_check_constraint :tax_workbook_imports,
@@ -87,6 +88,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
     add_index :gst_outward_lines, [ :family_id, :tax_period_month ]
     add_index :gst_outward_lines, [ :family_id, :gstin ]
     add_index :gst_outward_lines, [ :family_id, :invoice_no ]
+    add_import_family_foreign_key :gst_outward_lines
     add_positive_row_constraint :gst_outward_lines
     add_non_negative_constraints :gst_outward_lines, %i[rate_pct taxable_value igst cgst sgst_ugst cess]
 
@@ -110,6 +112,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
     end
 
     add_index :gst3b_summaries, [ :family_id, :tax_period_month ]
+    add_import_family_foreign_key :gst3b_summaries
     add_positive_row_constraint :gst3b_summaries
     add_non_negative_constraints :gst3b_summaries, %i[taxable_value igst cgst sgst_ugst cess interest late_fee]
 
@@ -136,6 +139,7 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
 
     add_index :gst_hsn_summaries, [ :family_id, :tax_period_month ]
     add_index :gst_hsn_summaries, [ :family_id, :hsn_code ]
+    add_import_family_foreign_key :gst_hsn_summaries
     add_positive_row_constraint :gst_hsn_summaries
     add_non_negative_constraints :gst_hsn_summaries, %i[quantity taxable_value igst cgst sgst_ugst cess]
 
@@ -164,6 +168,9 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
 
     add_index :tds_challans, [ :family_id, :tax_period_quarter ]
     add_index :tds_challans, [ :family_id, :challan_ref ]
+    add_index :tds_challans, [ :id, :family_id, :tax_workbook_import_id ], unique: true, name: "index_tds_challans_on_id_family_import"
+    add_index :tds_challans, [ :tax_workbook_import_id, :family_id, :challan_ref ], unique: true, name: "index_tds_challans_on_import_family_ref"
+    add_import_family_foreign_key :tds_challans
     add_positive_row_constraint :tds_challans
     add_non_negative_constraints :tds_challans, %i[tax interest fee penalty others total_amount]
 
@@ -196,11 +203,30 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
     add_index :tds_deductions, [ :family_id, :tax_period_quarter ]
     add_index :tds_deductions, [ :family_id, :deductee_pan_or_aadhaar ]
     add_index :tds_deductions, [ :family_id, :section_code ]
+    add_import_family_foreign_key :tds_deductions
+    add_foreign_key :tds_deductions,
+                    :tds_challans,
+                    column: [ :tds_challan_id, :family_id, :tax_workbook_import_id ],
+                    primary_key: [ :id, :family_id, :tax_workbook_import_id ],
+                    name: "fk_tds_deductions_challan_family_import"
+    add_foreign_key :tds_deductions,
+                    :tds_challans,
+                    column: [ :tax_workbook_import_id, :family_id, :challan_ref ],
+                    primary_key: [ :tax_workbook_import_id, :family_id, :challan_ref ],
+                    name: "fk_tds_deductions_challan_ref"
     add_positive_row_constraint :tds_deductions
     add_non_negative_constraints :tds_deductions, %i[amount_paid tds_rate_pct tds_amount surcharge cess]
   end
 
   private
+    def add_import_family_foreign_key(table_name)
+      add_foreign_key table_name,
+                      :tax_workbook_imports,
+                      column: [ :tax_workbook_import_id, :family_id ],
+                      primary_key: [ :id, :family_id ],
+                      name: "fk_#{table_name}_import_family"
+    end
+
     def add_positive_row_constraint(table_name)
       add_check_constraint table_name, "source_row_number > 0", name: "chk_#{table_name}_source_row_number_positive"
     end

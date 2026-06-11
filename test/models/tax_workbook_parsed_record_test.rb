@@ -225,4 +225,85 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_not deduction.valid?
     assert_includes deduction.errors[:tds_challan], "must belong to the same tax workbook import"
   end
+
+  test "tds deductions require challan to match family" do
+    other_family = families(:empty)
+    other_import = TaxWorkbookImport.create!(
+      family: other_family,
+      uploaded_by: users(:empty),
+      filename: "other-family-tax-workbook.xlsx",
+      content_type: TaxWorkbookImport::XLSX_CONTENT_TYPE,
+      byte_size: 1024,
+      checksum: "e" * 64,
+      template_version: "2026-06-11",
+      status: "pending"
+    )
+    other_challan = TdsChallan.create!(
+      family: other_family,
+      tax_workbook_import: other_import,
+      source_row_number: 2,
+      tax_period_quarter: "Q1",
+      tan: "MUMR12345A",
+      challan_ref: "CH-OTHER-FAMILY"
+    )
+
+    deduction = TdsDeduction.new(
+      family: @family,
+      tax_workbook_import: @import,
+      tds_challan: other_challan,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "194C"
+    )
+
+    assert_not deduction.valid?
+    assert_includes deduction.errors[:tds_challan], "must belong to the same family"
+  end
+
+  test "tds deductions require challan ref to resolve within import" do
+    deduction = TdsDeduction.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "194C",
+      challan_ref: "MISSING"
+    )
+
+    assert_not deduction.valid?
+    assert_includes deduction.errors[:challan_ref], "must match a challan in the same import"
+  end
+
+  test "tds deductions require attached challan to match challan ref" do
+    challan = TdsChallan.create!(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_quarter: "Q1",
+      tan: "MUMR12345A",
+      challan_ref: "CH-MATCH"
+    )
+
+    deduction = TdsDeduction.new(
+      family: @family,
+      tax_workbook_import: @import,
+      tds_challan: challan,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      tax_period_quarter: "Q1",
+      deductor_tan: "MUMR12345A",
+      deductee_pan_or_aadhaar: "ABCDE1234F",
+      section_code: "194C",
+      challan_ref: "CH-DIFFERENT"
+    )
+
+    assert_not deduction.valid?
+    assert_includes deduction.errors[:tds_challan], "must match challan_ref"
+  end
 end

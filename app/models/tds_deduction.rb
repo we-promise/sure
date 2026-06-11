@@ -17,6 +17,7 @@ class TdsDeduction < ApplicationRecord
             numericality: { greater_than_or_equal_to: 0 }
   validates :tds_rate_pct, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :tax_workbook_import_belongs_to_family
+  validate :challan_ref_resolves_within_import
   validate :tds_challan_matches_import
 
   private
@@ -36,5 +37,20 @@ class TdsDeduction < ApplicationRecord
       if tax_workbook_import.present? && tds_challan.tax_workbook_import_id != tax_workbook_import_id
         errors.add(:tds_challan, "must belong to the same tax workbook import")
       end
+
+      if challan_ref.present? && tds_challan.challan_ref != challan_ref
+        errors.add(:tds_challan, "must match challan_ref")
+      end
+    end
+
+    def challan_ref_resolves_within_import
+      return if challan_ref.blank? || tax_workbook_import.blank? || family.blank?
+
+      matching_challan = TdsChallan.exists?(
+        tax_workbook_import_id: tax_workbook_import_id,
+        family_id: family_id,
+        challan_ref: challan_ref
+      )
+      errors.add(:challan_ref, "must match a challan in the same import") unless matching_challan
     end
 end
