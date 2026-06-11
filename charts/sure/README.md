@@ -645,7 +645,7 @@ hpa:
 - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based AI clients. Auto-injected via `HTTPS_PROXY` env vars when enabled.
 - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
 
-Recent pipelock releases add enhanced tool poisoning detection (full JSON schema scanning), per-read kill switch preemption, trusted domain allowlisting, MCP tool redirect profiles, signed action receipts, per-pattern DLP warn mode, and the `pipelock posture verify` / `pipelock session` CLIs. Process sandboxing and attack simulation are also available via `extraConfig` and CLI. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
+Recent pipelock releases add the Audit Packet v0 schema and language-portable verifiers (Go, TypeScript, Rust), request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, enhanced tool poisoning detection, per-read kill switch preemption, trusted domain allowlisting, MCP tool redirect profiles, signed action receipts, per-pattern DLP warn mode, learn-and-lock behavioural contracts, the wedge-detection health watchdog, and the `pipelock posture verify` / `pipelock session` / `pipelock doctor` CLIs. Browser Shield, process sandboxing, and attack simulation are available via `extraConfig` and CLI. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
 
 ### Enabling Pipelock
 
@@ -653,7 +653,7 @@ Recent pipelock releases add enhanced tool poisoning detection (full JSON schema
 pipelock:
   enabled: true
   image:
-    tag: "2.2.0"
+    tag: "2.5.0"
   mode: balanced   # strict, balanced, or audit
 ```
 
@@ -677,10 +677,43 @@ pipelock:
   mcpToolPolicy:
     enabled: true
     action: redirect      # or use per-rule action overrides
+    rules:
+      - name: redirect-fetch
+        toolPattern: "^(fetch|web_fetch)$"
+        action: redirect
+        redirectProfile: safe-fetch
     redirectProfiles:
       safe-fetch:
         exec: ["/pipelock", "internal-redirect", "fetch-proxy"]
         reason: "Route fetch calls through audited proxy"
+```
+
+### Request body scanning (pipelock 2.5+)
+
+Pipelock 2.5 added prompt-injection detection on outbound request bodies (JSON, form-encoded, raw text, WebSocket frames). When enabled, findings hard-block non-provider destinations even when `action: warn`; trusted provider hosts (OpenAI, Anthropic, etc.) remain exempt through the response-scanning exemption list.
+
+```yaml
+pipelock:
+  requestBodyScanning:
+    enabled: true
+    action: warn          # warn or block
+    maxBodyBytes: 5242880 # 5 MB; fail-closed above this
+    scanHeaders: true
+    headerMode: sensitive # "sensitive" or "all"
+```
+
+Disabled by default. Roll out with `action: warn` first to observe findings in logs without blocking, then flip to `action: block` once the false-positive rate is acceptable.
+
+### Health watchdog
+
+The wedge-detection watchdog returns 503 on `/health` when a subsystem heartbeat (proxy hot path, MCP listener, rules-engine reload watcher) goes stale. Enabled by default in pipelock; the chart exposes the controls so operators can opt into per-subsystem detail in the health payload:
+
+```yaml
+pipelock:
+  healthWatchdog:
+    enabled: true
+    intervalSeconds: 2
+    exposeSubsystems: true  # adds per-subsystem boolean map to /health
 ```
 
 ### Validating your config
@@ -693,6 +726,9 @@ pipelock simulate --config pipelock.yaml
 
 # Score your config's security posture (0-100)
 pipelock audit score --config pipelock.yaml
+
+# Report whether configured protections are actually enforceable
+pipelock doctor
 ```
 
 ### Exposing MCP to external AI assistants
@@ -811,7 +847,7 @@ See `values.yaml` for the complete configuration surface, including:
 - `migrations.*`: strategy job or initContainer
 - `simplefin.encryption.*`: enable + backfill options
 - `cronjobs.*`: custom CronJobs
-- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, trusted domains, tool redirect profiles, logging, serviceMonitor, ingress, PDB, extraConfig)
+- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, request-body scanning, health watchdog, trusted domains, tool redirect profiles, logging, serviceMonitor, ingress, PDB, extraConfig)
 - `service.*`, `ingress.*`, `serviceMonitor.*`, `hpa.*`
 
 ## Helm tests

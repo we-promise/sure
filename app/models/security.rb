@@ -49,11 +49,16 @@ class Security < ApplicationRecord
   end
 
   # Lazily finds or creates a synthetic cash security for an account.
-  # Used as fallback when creating an interest Trade without a user-selected security.
-  def self.cash_for(account)
-    ticker = "CASH-#{account.id}".upcase
+  # Used as fallback when creating an interest Trade without a user-selected
+  # security, and to represent non-primary-currency cash positions as holdings
+  # (issue #1809). When a currency that differs from the account's primary
+  # currency is given, a distinct per-currency security is created so balances
+  # in different currencies don't collide.
+  def self.cash_for(account, currency: nil)
+    distinct = currency.present? && currency.to_s.upcase != account.currency.to_s.upcase
+    ticker = (distinct ? "CASH-#{account.id}-#{currency}" : "CASH-#{account.id}").upcase
     find_or_create_by!(ticker: ticker, kind: "cash") do |s|
-      s.name = "Cash"
+      s.name = distinct ? "Cash (#{currency.to_s.upcase})" : "Cash"
       s.offline = true
     end
   end

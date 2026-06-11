@@ -1,0 +1,21 @@
+---
+vi:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Vui lòng chọn một giao dịch đã đăng để hợp nhất
+      invalid_transaction: Giao dịch được chọn để hợp nhất không hợp lệ
+      merge_success: Giao dịch chờ xử lý đã được hợp nhất với giao dịch đã đăng
+      merge_failed: Không thể hợp nhất giao dịch
+    set_transaction:
+      pending_only: Tính năng này chỉ khả dụng cho các giao dịch đang chờ xử lý
+    new:
+      title: Hợp nhất với giao dịch đã đăng
+      warning_title: Hợp nhất thủ công trùng lặp
+      warning_description: Sử dụng tính năng này để hợp nhất thủ công giao dịch đang chờ xử lý với phiên bản đã đăng của nó. Thao tác này sẽ xóa giao dịch đang chờ xử lý và chỉ giữ lại giao dịch đã đăng.
+      pending_transaction: Giao dịch đang chờ xử lý
+      select_posted: Chọn giao dịch đã đăng để hợp nhất
+      showing_range: "Đang hiển thị %{start} - %{end}"
+      previous: "← 10 trước"
+      next: "10 tiếp theo →"
+      no_candidates: Không tìm thấy giao dịch đã đăng nào trong tài khoản này.
+      submit_button: Hợp nhất giao dịch

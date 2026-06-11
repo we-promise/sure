@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'log_service.dart';
+import 'telemetry_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -38,12 +41,18 @@ class DatabaseHelper {
       throw StateError('sqflite database is not available on web.');
     }
     if (_database != null) return _database!;
-    
+
     try {
       _database = await _initDB('sure_offline.db');
       return _database!;
     } catch (e, stackTrace) {
-      _log.error('DatabaseHelper', 'Error initializing local database sure_offline.db: $e');
+      _log.error('DatabaseHelper',
+          'Error initializing local database sure_offline.db: ${e.runtimeType}');
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'database.open',
+      ));
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: e,
@@ -63,12 +72,20 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 2,
+        version: 3,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
     } catch (e, stackTrace) {
-      _log.error('DatabaseHelper', 'Error opening database file "$filePath": $e');
+      _log.error(
+        'DatabaseHelper',
+        'Error opening database file "$filePath": ${e.runtimeType}',
+      );
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'database.initialize',
+      ));
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: e,
@@ -97,6 +114,10 @@ class DatabaseHelper {
           notes TEXT,
           category_id TEXT,
           category_name TEXT,
+          merchant_id TEXT,
+          merchant_name TEXT,
+          tag_ids TEXT DEFAULT '[]',
+          tag_names TEXT DEFAULT '[]',
           sync_status TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
@@ -138,7 +159,15 @@ class DatabaseHelper {
         ON transactions(server_id)
       ''');
     } catch (e, stackTrace) {
-      _log.error('DatabaseHelper', 'Error creating local database schema: $e');
+      _log.error(
+        'DatabaseHelper',
+        'Error creating local database schema: ${e.runtimeType}',
+      );
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'database.create_schema',
+      ));
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: e,
@@ -156,10 +185,32 @@ class DatabaseHelper {
       final columns = await db.rawQuery('PRAGMA table_info(transactions)');
       final columnNames = columns.map((c) => c['name'] as String).toSet();
       if (!columnNames.contains('category_id')) {
-        await db.execute('ALTER TABLE transactions ADD COLUMN category_id TEXT');
+        await db
+            .execute('ALTER TABLE transactions ADD COLUMN category_id TEXT');
       }
       if (!columnNames.contains('category_name')) {
-        await db.execute('ALTER TABLE transactions ADD COLUMN category_name TEXT');
+        await db
+            .execute('ALTER TABLE transactions ADD COLUMN category_name TEXT');
+      }
+    }
+    if (oldVersion < 3) {
+      final columns = await db.rawQuery('PRAGMA table_info(transactions)');
+      final columnNames = columns.map((c) => c['name'] as String).toSet();
+      if (!columnNames.contains('merchant_id')) {
+        await db
+            .execute('ALTER TABLE transactions ADD COLUMN merchant_id TEXT');
+      }
+      if (!columnNames.contains('merchant_name')) {
+        await db
+            .execute('ALTER TABLE transactions ADD COLUMN merchant_name TEXT');
+      }
+      if (!columnNames.contains('tag_ids')) {
+        await db.execute(
+            "ALTER TABLE transactions ADD COLUMN tag_ids TEXT DEFAULT '[]'");
+      }
+      if (!columnNames.contains('tag_names')) {
+        await db.execute(
+            "ALTER TABLE transactions ADD COLUMN tag_names TEXT DEFAULT '[]'");
       }
     }
   }
@@ -173,7 +224,7 @@ class DatabaseHelper {
       return localId;
     }
     final db = await database;
-    _log.debug('DatabaseHelper', 'Inserting transaction: local_id=${transaction['local_id']}, account_id="${transaction['account_id']}", server_id=${transaction['server_id']}');
+    _log.debug('DatabaseHelper', 'Inserting transaction into local database');
     await db.insert(
       'transactions',
       transaction,
@@ -183,7 +234,8 @@ class DatabaseHelper {
     return transaction['local_id'] as String;
   }
 
-  Future<List<Map<String, dynamic>>> getTransactions({String? accountId}) async {
+  Future<List<Map<String, dynamic>>> getTransactions(
+      {String? accountId}) async {
     if (_useInMemoryStore) {
       _ensureWebStoreReady();
       final results = _memoryTransactions.values
@@ -194,16 +246,18 @@ class DatabaseHelper {
           .map((transaction) => Map<String, dynamic>.from(transaction))
           .toList();
       results.sort((a, b) {
-        final dateCompare = _compareDesc(a['date'] as String?, b['date'] as String?);
+        final dateCompare =
+            _compareDesc(a['date'] as String?, b['date'] as String?);
         if (dateCompare != 0) return dateCompare;
-        return _compareDesc(a['created_at'] as String?, b['created_at'] as String?);
+        return _compareDesc(
+            a['created_at'] as String?, b['created_at'] as String?);
       });
       return results;
     }
     final db = await database;
 
     if (accountId != null) {
-      _log.debug('DatabaseHelper', 'Querying transactions WHERE account_id = "$accountId"');
+      _log.debug('DatabaseHelper', 'Querying scoped transactions');
       final results = await db.query(
         'transactions',
         where: 'account_id = ?',
@@ -227,7 +281,9 @@ class DatabaseHelper {
     if (_useInMemoryStore) {
       _ensureWebStoreReady();
       final transaction = _memoryTransactions[localId];
-      return transaction != null ? Map<String, dynamic>.from(transaction) : null;
+      return transaction != null
+          ? Map<String, dynamic>.from(transaction)
+          : null;
     }
     final db = await database;
     final results = await db.query(
@@ -240,7 +296,8 @@ class DatabaseHelper {
     return results.isNotEmpty ? results.first : null;
   }
 
-  Future<Map<String, dynamic>?> getTransactionByServerId(String serverId) async {
+  Future<Map<String, dynamic>?> getTransactionByServerId(
+      String serverId) async {
     if (_useInMemoryStore) {
       _ensureWebStoreReady();
       for (final transaction in _memoryTransactions.values) {
@@ -269,7 +326,8 @@ class DatabaseHelper {
           .map((transaction) => Map<String, dynamic>.from(transaction))
           .toList();
       results.sort(
-        (a, b) => _compareAsc(a['created_at'] as String?, b['created_at'] as String?),
+        (a, b) =>
+            _compareAsc(a['created_at'] as String?, b['created_at'] as String?),
       );
       return results;
     }
@@ -286,11 +344,13 @@ class DatabaseHelper {
     if (_useInMemoryStore) {
       _ensureWebStoreReady();
       final results = _memoryTransactions.values
-          .where((transaction) => transaction['sync_status'] == 'pending_delete')
+          .where(
+              (transaction) => transaction['sync_status'] == 'pending_delete')
           .map((transaction) => Map<String, dynamic>.from(transaction))
           .toList();
       results.sort(
-        (a, b) => _compareAsc(a['updated_at'] as String?, b['updated_at'] as String?),
+        (a, b) =>
+            _compareAsc(a['updated_at'] as String?, b['updated_at'] as String?),
       );
       return results;
     }
@@ -303,7 +363,8 @@ class DatabaseHelper {
     );
   }
 
-  Future<int> updateTransaction(String localId, Map<String, dynamic> transaction) async {
+  Future<int> updateTransaction(
+      String localId, Map<String, dynamic> transaction) async {
     if (_useInMemoryStore) {
       _ensureWebStoreReady();
       if (!_memoryTransactions.containsKey(localId)) {
@@ -381,7 +442,8 @@ class DatabaseHelper {
       return;
     }
     final db = await database;
-    _log.debug('DatabaseHelper', 'Clearing only synced transactions, keeping pending/failed');
+    _log.debug('DatabaseHelper',
+        'Clearing only synced transactions, keeping pending/failed');
     await db.delete(
       'transactions',
       where: 'sync_status = ?',

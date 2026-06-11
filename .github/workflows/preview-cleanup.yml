@@ -30,10 +30,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "24"
 
@@ -52,7 +54,7 @@ jobs:
           wrangler delete --name "$WORKER_NAME" --force || echo "Worker may not exist"
 
       - name: Delete GitHub Deployment
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const environment = `preview-pr-${{ github.event.pull_request.number }}`;
@@ -92,10 +94,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "24"
 
@@ -191,7 +195,7 @@ jobs:
               echo "Worker $WORKER is older than 24 hours, deleting..."
               if wrangler delete --name "$WORKER" --force; then
                 # Extract PR number and cleanup GitHub deployment
-                PR_NUM=$(echo "$WORKER" | sed 's/sure-preview-//')
+                PR_NUM="${WORKER#sure-preview-}"
                 if [[ "$PR_NUM" =~ ^[1-9][0-9]*$ ]]; then
                   echo "Cleaning up GitHub deployment for PR #$PR_NUM"
                   gh api \
