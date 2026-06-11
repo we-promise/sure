@@ -48,13 +48,19 @@ RUN groupadd --system --gid 1000 rails && \
     echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" > /etc/sudoers.d/rails && \
     chmod 0440 /etc/sudoers.d/rails
 
-# Configure PostgreSQL to allow local connections
-RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
-    if [ -n "$PG_HBA" ]; then \
-      echo "local all all trust" > "$PG_HBA" && \
-      echo "host all all 127.0.0.1/32 trust" >> "$PG_HBA" && \
-      echo "host all all ::1/128 trust" >> "$PG_HBA"; \
-    fi
+# Configure PostgreSQL to allow local connections. Target the highest-version
+# cluster's pg_hba.conf -- the same one the entrypoint starts (ls
+# /etc/postgresql | sort -V | tail -1) -- so the trust rules always land on the
+# cluster that actually runs, even if multiple majors are present.
+RUN PG_VERSION="$(ls /etc/postgresql 2>/dev/null | sort -V | tail -1)" && \
+    PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf" && \
+    if [ -z "$PG_VERSION" ] || [ ! -f "$PG_HBA" ]; then \
+      echo "ERROR: pg_hba.conf not found for cluster '${PG_VERSION:-none}'; cannot configure local trust" >&2; \
+      exit 1; \
+    fi && \
+    echo "local all all trust" > "$PG_HBA" && \
+    echo "host all all 127.0.0.1/32 trust" >> "$PG_HBA" && \
+    echo "host all all ::1/128 trust" >> "$PG_HBA"
 
 # Use file-backed dynamic shared memory instead of POSIX /dev/shm.
 # Cloudflare Containers provide only a tiny /dev/shm, and PostgreSQL's default
