@@ -33,7 +33,7 @@ class SureTokens {
     containerInsetHover: Color(0xFFF0F0F0),
     success: Color(0xFF078C52),
     warning: Color(0xFFDC6803),
-    destructive: Color(0xFFEC2222),
+    destructive: Color(0xFFF13636),
     destructiveSubtle: Color(0xFFFEB9B3),
     info: Color(0xFF1570EF),
     link: Color(0xFF1570EF),
