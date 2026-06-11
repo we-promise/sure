@@ -98,7 +98,7 @@ class TaxWorkbook::ParserTest < ActiveSupport::TestCase
 
       TaxWorkbook::Template::SHEET_NAMES.each do |sheet_name|
         headers = if sheet_name == "gst_outward_lines"
-          TaxWorkbook::Template.headers_for(sheet_name).dup.tap { |value| value[0] = "wrong_header" }
+          TaxWorkbook::Template.headers_for(sheet_name).dup.tap { |value| value[1] = "Invoice No" }
         else
           TaxWorkbook::Template.headers_for(sheet_name)
         end

@@ -48,7 +48,7 @@ module TaxWorkbook
       tempfile = write_tempfile(content)
       reader = SheetReader.new(tempfile.path)
 
-      validate_template!(reader)
+      validate_template!(reader, raw_headers_by_sheet(tempfile.path))
       meta_attributes = parse_meta!(reader.rows("meta"))
       import.update!(meta_attributes.merge(status: "validated", validation_errors: [], row_counts: {}))
 
@@ -121,27 +121,43 @@ module TaxWorkbook
         tempfile
       end
 
-      def validate_template!(reader)
+      def validate_template!(reader, raw_headers)
         missing_sheets = Template::SHEET_NAMES - reader.sheet_names
         missing_sheets.each do |sheet_name|
           add_error(sheet: sheet_name, row: 1, message: "Missing required sheet")
         end
 
         (Template::SHEET_NAMES - missing_sheets).each do |sheet_name|
-          next if reader.headers(sheet_name) == Template.headers_for(sheet_name)
+          next if raw_headers.fetch(normalize_sheet_name(sheet_name), []) == Template.headers_for(sheet_name)
 
           add_error(
             sheet: sheet_name,
             row: 1,
             value: {
               "expected" => Template.headers_for(sheet_name),
-              "actual" => reader.headers(sheet_name)
+              "actual" => raw_headers.fetch(normalize_sheet_name(sheet_name), [])
             },
             message: "Headers do not match template"
           )
         end
 
         raise UserDataError.new(@errors) if @errors.any?
+      end
+
+      def raw_headers_by_sheet(path)
+        SimpleXlsxReader.open(path).sheets.each_with_object({}) do |sheet, headers|
+          sheet.rows.each do |raw_values|
+            values = Array(raw_values)
+            next if values.all? { |value| value.nil? || value.to_s.strip.empty? }
+
+            headers[normalize_sheet_name(sheet.name)] = values.map { |value| value.to_s.strip }
+            break
+          end
+        end
+      end
+
+      def normalize_sheet_name(value)
+        value.to_s.strip.downcase.tr(" -", "__").gsub(/_+/, "_").delete_prefix("_").delete_suffix("_")
       end
 
       def parse_meta!(rows)
