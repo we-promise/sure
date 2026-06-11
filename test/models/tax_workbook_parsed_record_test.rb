@@ -6,7 +6,7 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     @import = tax_workbook_imports(:april_2026)
   end
 
-  test "gst outward lines validate required fields, identifier lengths, and nonnegative amounts" do
+  test "gst outward lines reject negative amounts for regular invoices" do
     line = GstOutwardLine.new(
       family: @family,
       tax_workbook_import: @import,
@@ -16,6 +16,8 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
       gstr1_table_code: nil,
       invoice_no: nil,
       invoice_date: nil,
+      is_credit_note: false,
+      is_debit_note: false,
       taxable_value: -1,
       igst: -1,
       cgst: 0,
@@ -30,8 +32,29 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes line.errors[:gstr1_table_code], "can't be blank"
     assert_includes line.errors[:invoice_no], "can't be blank"
     assert_includes line.errors[:invoice_date], "can't be blank"
-    assert_includes line.errors[:taxable_value], "must be greater than or equal to 0"
-    assert_includes line.errors[:igst], "must be greater than or equal to 0"
+    assert_includes line.errors[:taxable_value], "must be greater than or equal to 0 for regular invoices"
+    assert_includes line.errors[:igst], "must be greater than or equal to 0 for regular invoices"
+  end
+
+  test "gst outward lines allow negative amounts for credit notes" do
+    line = GstOutwardLine.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_month: Date.new(2026, 4, 1),
+      gstin: "27ABCDE1234F1Z5",
+      gstr1_table_code: "9B",
+      invoice_no: "CN-001",
+      invoice_date: Date.new(2026, 4, 10),
+      is_credit_note: true,
+      taxable_value: -1000,
+      igst: -180,
+      cgst: 0,
+      sgst_ugst: 0,
+      cess: -10
+    )
+
+    assert_predicate line, :valid?
   end
 
   test "gst outward lines validate known gstr1 table codes" do
@@ -147,6 +170,26 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_not challan.valid?
     assert_nil challan.challan_ref
     assert_includes challan.errors[:challan_ref], "can't be blank"
+  end
+
+  test "tds challans require total amount to equal the component sum" do
+    challan = TdsChallan.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_quarter: "Q1",
+      tan: "MUMR12345A",
+      challan_ref: "CH-001",
+      tax: 100,
+      interest: 10,
+      fee: 5,
+      penalty: 2,
+      others: 3,
+      total_amount: 119
+    )
+
+    assert_not challan.valid?
+    assert_includes challan.errors[:total_amount], "must equal tax + interest + fee + penalty + others"
   end
 
   test "tds deductions require tax identifiers and nonnegative amounts" do

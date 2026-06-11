@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_11_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_11_141117) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -943,13 +943,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_11_120000) do
     t.index ["family_id", "tax_period_month"], name: "index_gst_outward_lines_on_family_id_and_tax_period_month"
     t.index ["family_id"], name: "index_gst_outward_lines_on_family_id"
     t.index ["tax_workbook_import_id"], name: "index_gst_outward_lines_on_tax_workbook_import_id"
-    t.check_constraint "cess IS NULL OR cess >= 0::numeric", name: "chk_gst_outward_lines_cess_non_negative"
-    t.check_constraint "cgst IS NULL OR cgst >= 0::numeric", name: "chk_gst_outward_lines_cgst_non_negative"
-    t.check_constraint "igst IS NULL OR igst >= 0::numeric", name: "chk_gst_outward_lines_igst_non_negative"
+    t.check_constraint "cess IS NULL OR cess >= 0::numeric OR is_credit_note OR is_debit_note", name: "chk_gst_outward_lines_cess_non_negative"
+    t.check_constraint "cgst IS NULL OR cgst >= 0::numeric OR is_credit_note OR is_debit_note", name: "chk_gst_outward_lines_cgst_non_negative"
+    t.check_constraint "igst IS NULL OR igst >= 0::numeric OR is_credit_note OR is_debit_note", name: "chk_gst_outward_lines_igst_non_negative"
     t.check_constraint "rate_pct IS NULL OR rate_pct >= 0::numeric", name: "chk_gst_outward_lines_rate_pct_non_negative"
-    t.check_constraint "sgst_ugst IS NULL OR sgst_ugst >= 0::numeric", name: "chk_gst_outward_lines_sgst_ugst_non_negative"
+    t.check_constraint "sgst_ugst IS NULL OR sgst_ugst >= 0::numeric OR is_credit_note OR is_debit_note", name: "chk_gst_outward_lines_sgst_ugst_non_negative"
     t.check_constraint "source_row_number > 0", name: "chk_gst_outward_lines_source_row_number_positive"
-    t.check_constraint "taxable_value IS NULL OR taxable_value >= 0::numeric", name: "chk_gst_outward_lines_taxable_value_non_negative"
+    t.check_constraint "taxable_value IS NULL OR taxable_value >= 0::numeric OR is_credit_note OR is_debit_note", name: "chk_gst_outward_lines_taxable_value_non_negative"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2073,6 +2073,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_11_120000) do
     t.check_constraint "penalty IS NULL OR penalty >= 0::numeric", name: "chk_tds_challans_penalty_non_negative"
     t.check_constraint "source_row_number > 0", name: "chk_tds_challans_source_row_number_positive"
     t.check_constraint "tax IS NULL OR tax >= 0::numeric", name: "chk_tds_challans_tax_non_negative"
+    t.check_constraint "total_amount = (tax + interest + fee + penalty + others)", name: "chk_tds_challans_total_amount_matches_components"
     t.check_constraint "total_amount IS NULL OR total_amount >= 0::numeric", name: "chk_tds_challans_total_amount_non_negative"
   end
 

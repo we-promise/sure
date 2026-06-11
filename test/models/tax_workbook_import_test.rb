@@ -130,6 +130,7 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
       tax_period_quarter: "Q1",
       tan: "MUMR12345A",
       challan_ref: "CH-001",
+      tax: 150,
       total_amount: 150
     )
 
@@ -151,6 +152,29 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
     assert_equal BigDecimal("190"), import.gst_tax_total
     assert_equal BigDecimal("1000"), import.gst_taxable_total
     assert_equal BigDecimal("100"), import.tds_total
+  end
+
+  test "allows negative gst outward credit note rows" do
+    import = tax_workbook_imports(:april_2026)
+
+    line = import.gst_outward_lines.create!(
+      family: @family,
+      source_row_number: 9,
+      tax_period_month: Date.new(2026, 4, 1),
+      gstin: "27ABCDE1234F1Z5",
+      gstr1_table_code: "9B",
+      invoice_no: "CN-002",
+      invoice_date: Date.new(2026, 4, 15),
+      is_credit_note: true,
+      taxable_value: -500,
+      igst: 0,
+      cgst: -45,
+      sgst_ugst: -45,
+      cess: -5
+    )
+
+    assert_predicate line, :persisted?
+    assert_equal BigDecimal("-500"), line.taxable_value
   end
 
   test "preserves import when uploader is deleted" do
@@ -211,6 +235,7 @@ class TaxWorkbookImportTest < ActiveSupport::TestCase
       tax_period_quarter: "Q1",
       tan: "MUMR12345A",
       challan_ref: "CH-002",
+      tax: 75,
       total_amount: 75
     )
 
