@@ -199,6 +199,7 @@ jobs:
         env:
           TAGS: ${{ needs.build.outputs.tags }}
           DIGESTS_DIR: ${{ runner.temp }}/digests
+          REF_NAME: ${{ github.ref_name }}
         shell: bash -xeuo pipefail {0}
         run: |
           tag_args=()
@@ -216,7 +217,7 @@ jobs:
             "index:org.opencontainers.image.created=$(date -Iseconds)"
             'index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}'
             'index:org.opencontainers.image.revision=${{ github.sha }}'
-            'index:org.opencontainers.image.ref.name=${{ github.ref_name }}'
+            "index:org.opencontainers.image.ref.name=${REF_NAME}"
             'index:org.opencontainers.image.vendor=we-promise'
             'index:org.opencontainers.image.licenses=AGPL-3.0'
             'index:org.opencontainers.image.title=Sure'
@@ -294,6 +295,8 @@ jobs:
           path: ${{ runner.temp }}/helm-artifacts
 
       - name: Prepare release assets
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           mkdir -p ${{ runner.temp }}/release-assets
 
@@ -306,13 +309,13 @@ jobs:
 
           # Copy debug APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
-            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-debug.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${REF_NAME}-debug.apk"
             echo "✓ Debug APK prepared"
           fi
 
           # Copy release APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
-            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${REF_NAME}.apk"
             echo "✓ Release APK prepared"
           fi
 
@@ -320,7 +323,7 @@ jobs:
           # Path preserves directory structure from artifact upload
           if [ -d "${{ runner.temp }}/ios-build/ios/iphoneos/Runner.app" ]; then
             cd "${{ runner.temp }}/ios-build/ios/iphoneos"
-            zip -r "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-ios-unsigned.zip" Runner.app
+            zip -r "${{ runner.temp }}/release-assets/sure-${REF_NAME}-ios-unsigned.zip" Runner.app
             echo "✓ iOS build archive prepared"
           fi
 
@@ -491,6 +494,7 @@ jobs:
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
           GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
@@ -506,7 +510,7 @@ jobs:
             exit 0
           fi
 
-          COMMIT_MESSAGE="Bump version to next iteration after ${{ github.ref_name }} release"
+          COMMIT_MESSAGE="Bump version to next iteration after ${REF_NAME} release"
           git commit -m "$COMMIT_MESSAGE"
 
           echo "Pushing to branch: $SOURCE_BRANCH"
@@ -554,12 +558,12 @@ jobs:
             exit 0
           fi
 
-          SAFE_TAG=$(printf '%s' "${{ github.ref_name }}" | tr -c '[:alnum:]._-' '-')
+          SAFE_TAG=$(printf '%s' "${REF_NAME}" | tr -c '[:alnum:]._-' '-')
           BUMP_BRANCH="automation/bump-version-after-${SAFE_TAG}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
           git push --force-with-lease origin HEAD:"refs/heads/${BUMP_BRANCH}"
 
-          PR_BODY="This automated PR bumps .sure-version and charts/sure/Chart.yaml after the ${{ github.ref_name }} pre-release. It was opened because the workflow could not push directly to ${SOURCE_BRANCH}."
+          PR_BODY="This automated PR bumps .sure-version and charts/sure/Chart.yaml after the ${REF_NAME} pre-release. It was opened because the workflow could not push directly to ${SOURCE_BRANCH}."
 
           PR_URL=$(gh pr create \
             --repo "$GITHUB_REPOSITORY" \
