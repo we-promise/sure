@@ -1,0 +1,8 @@
+[tools]
+ruby = "3.4.7"
+node = "20"
+postgres = "16"
+redis = "7"
+
+[hooks]
+postinstall = "mise run install"
