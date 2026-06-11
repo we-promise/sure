@@ -101,7 +101,7 @@
           ) %>
 
           <% if @nav[:at_latest] %>
-            <button disabled aria-label="<%= t('reports.index.next_period') %>" class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-not-allowed">
+            <button disabled aria-label="<%= t("reports.index.next_period") %>" class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-not-allowed">
               <%= icon("chevron-right", color: "current") %>
             </button>
           <% else %>
@@ -116,7 +116,7 @@
 
         <% if [:monthly, :quarterly, :ytd].include?(@period_type) %>
           <%= render DS::Popover.new(variant: "button") do |popover| %>
-            <% popover.with_button class: "flex items-center gap-1 hover:bg-alpha-black-25 cursor-pointer rounded-md p-2" do %>
+            <% popover.with_button class: "flex items-center gap-1 hover:bg-surface-hover cursor-pointer rounded-md p-2" do %>
               <span class="text-primary font-medium text-lg lg:text-base"><%= @nav[:label] %></span>
               <%= icon("chevron-down") %>
             <% end %>
