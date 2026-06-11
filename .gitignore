@@ -79,6 +79,7 @@ plaid_test_accounts/
 # Added by Claude
 .claude/settings.local.json
 docs/superpowers/
+.firecrawl/
 
 # Added by Claude Task Master
 # Logs
