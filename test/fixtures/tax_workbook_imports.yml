@@ -1,0 +1,18 @@
+april_2026:
+  family: dylan_family
+  uploaded_by: family_admin
+  status: completed
+  filename: india_tax_april_2026.xlsx
+  content_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  byte_size: 1024
+  checksum: <%= "a" * 64 %>
+  template_version: "2026-06-11"
+  entity_name: Risingstone Infra Pvt Ltd
+  gstin: 27ABCDE1234F1Z5
+  tan: MUMR12345A
+  fy: 2026-27
+  tax_period_month: 2026-04-01
+  tax_period_quarter: Q1
+  row_counts: {}
+  validation_errors: []
+  metadata: {}

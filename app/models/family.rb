@@ -31,6 +31,12 @@ class Family < ApplicationRecord
   has_many :import_source_mappings, dependent: :destroy
   has_many :family_exports, dependent: :destroy
   has_many :account_statements, dependent: :destroy
+  has_many :tax_workbook_imports, dependent: :destroy
+  has_many :gst_outward_lines, dependent: :destroy
+  has_many :gst3b_summaries, dependent: :destroy
+  has_many :gst_hsn_summaries, dependent: :destroy
+  has_many :tds_deductions, dependent: :destroy
+  has_many :tds_challans, dependent: :destroy
 
   has_many :entries, through: :accounts
   has_many :transactions, through: :accounts
