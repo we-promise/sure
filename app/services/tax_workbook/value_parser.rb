@@ -26,10 +26,10 @@ module TaxWorkbook
 
     def date(value)
       case value
-      when Date
-        value
       when Time, DateTime
         value.to_date
+      when Date
+        value
       else
         raise ArgumentError if value.blank?
 

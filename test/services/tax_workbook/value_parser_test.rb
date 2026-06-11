@@ -22,6 +22,7 @@ module TaxWorkbook
 
     test "parses dates months and quarters" do
       assert_equal Date.new(2026, 4, 10), @parser.date("2026-04-10")
+      assert_equal Date.new(2026, 4, 18), @parser.date(DateTime.new(2026, 4, 18, 9, 30, 0))
       assert_equal Date.new(2026, 4, 1), @parser.month("2026-04")
       assert_equal Date.new(2026, 4, 1), @parser.month(Date.new(2026, 4, 18))
       assert_equal Date.new(2026, 4, 1), @parser.month(Time.zone.local(2026, 4, 18, 9, 30))
