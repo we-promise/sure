@@ -51,6 +51,16 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Exporting...", response.body
   end
 
+  test "admin can view export list as turbo_stream" do
+    export1 = @family.family_exports.create!(status: "completed")
+    export2 = @family.family_exports.create!(status: "processing")
+
+    get family_exports_path, as: :turbo_stream
+    assert_response :success
+    assert_match "turbo-stream", response.body
+    assert_match export1.filename, response.body
+  end
+
   test "admin can download completed export" do
     export = @family.family_exports.create!(status: "completed")
     export.export_file.attach(
