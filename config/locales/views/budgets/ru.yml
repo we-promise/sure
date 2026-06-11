@@ -2,7 +2,7 @@
 ru:
   budget_categories:
     allocation_progress:
-      budget_exceeded_html: Бюджет превышен на <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      budget_exceeded_html: Бюджет превышен на <span class="text-destructive privacy-sensitive">%{amount}</span>
       left_to_allocate: осталось распределить
       over_set: "> 100% установлено"
       percent_set: "%{percent} установлено"

@@ -12,10 +12,10 @@ ru:
         mfa_disabled_description: Включите 2FA, чтобы добавить дополнительный уровень
           безопасности вашему счёту.
         mfa_disabled_status_html: Двухфакторная аутентификация <span class="font-medium
-          text-red-600">отключена</span>
+          text-destructive">отключена</span>
         mfa_enabled_description: Ваш счёт защищён дополнительным уровнем безопасности.
         mfa_enabled_status_html: Двухфакторная аутентификация <span class="font-medium
-          text-green-600">включена</span>
+          text-success">включена</span>
         mfa_title: Двухфакторная аутентификация
         webauthn_add: Добавить ключ доступа или ключ безопасности
         webauthn_added: Добавлено %{date}
