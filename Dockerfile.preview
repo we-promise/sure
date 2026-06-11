@@ -56,6 +56,23 @@ RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
       echo "host all all ::1/128 trust" >> "$PG_HBA"; \
     fi
 
+# Use file-backed dynamic shared memory instead of POSIX /dev/shm.
+# Cloudflare Containers provide only a tiny /dev/shm, and PostgreSQL's default
+# dynamic_shared_memory_type = posix FATALs on startup there with
+# "could not resize shared memory segment ... No space left on device", which
+# kills the container before it can serve a port. mmap keeps DSM in the data
+# directory ($PGDATA/pg_dynshmem), removing the /dev/shm dependency. Local
+# Docker hides this because its default /dev/shm is 64MB.
+RUN PG_CONF=$(find /etc/postgresql -name postgresql.conf 2>/dev/null | head -1) && \
+    if [ -z "$PG_CONF" ]; then \
+      echo "ERROR: postgresql.conf not found; cannot disable /dev/shm DSM dependency" >&2; \
+      exit 1; \
+    fi && \
+    sed -i 's/^[[:space:]]*dynamic_shared_memory_type[[:space:]]*=/# &/' "$PG_CONF" && \
+    printf '\n# Preview: avoid /dev/shm dependency (small in Cloudflare Containers)\ndynamic_shared_memory_type = mmap\n' >> "$PG_CONF" && \
+    grep -qx 'dynamic_shared_memory_type = mmap' "$PG_CONF" && \
+    echo "Configured dynamic_shared_memory_type=mmap in $PG_CONF"
+
 # Create database directory with correct permissions
 RUN mkdir -p /var/run/postgresql && \
     chown -R postgres:postgres /var/run/postgresql && \
@@ -111,6 +128,11 @@ summarize_log_tail() {
 fail_preview() {
   local detail="$1"
   trap - ERR
+  # Always log to stderr too: the HTTP diagnostics channel can be unreachable
+  # while the worker's Durable Object is still waiting for this container's
+  # port, but stderr is captured by Cloudflare container observability, so the
+  # real reason survives even when the event POST does not.
+  echo "PREVIEW FAILED: ${detail}" >&2
   emit_status_sync failed "$detail"
   exit 1
 }
