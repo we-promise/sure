@@ -172,6 +172,9 @@ class CreateTaxWorkbookImports < ActiveRecord::Migration[7.2]
     add_index :tds_challans, [ :tax_workbook_import_id, :family_id, :challan_ref ], unique: true, name: "index_tds_challans_on_import_family_ref"
     add_import_family_foreign_key :tds_challans
     add_positive_row_constraint :tds_challans
+    add_check_constraint :tds_challans,
+                         "btrim(challan_ref) <> ''",
+                         name: "chk_tds_challans_challan_ref_present"
     add_non_negative_constraints :tds_challans, %i[tax interest fee penalty others total_amount]
 
     create_table :tds_deductions, id: :uuid do |t|

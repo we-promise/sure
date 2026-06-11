@@ -134,6 +134,21 @@ class TaxWorkbookParsedRecordTest < ActiveSupport::TestCase
     assert_includes challan.errors[:total_amount], "must be greater than or equal to 0"
   end
 
+  test "tds challans normalize blank challan ref" do
+    challan = TdsChallan.new(
+      family: @family,
+      tax_workbook_import: @import,
+      source_row_number: 2,
+      tax_period_quarter: "Q1",
+      tan: "MUMR12345A",
+      challan_ref: " "
+    )
+
+    assert_not challan.valid?
+    assert_nil challan.challan_ref
+    assert_includes challan.errors[:challan_ref], "can't be blank"
+  end
+
   test "tds deductions require tax identifiers and nonnegative amounts" do
     deduction = TdsDeduction.new(
       family: @family,

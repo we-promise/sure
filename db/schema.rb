@@ -2066,6 +2066,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_11_120000) do
     t.index ["id", "family_id", "tax_workbook_import_id"], name: "index_tds_challans_on_id_family_import", unique: true
     t.index ["tax_workbook_import_id", "family_id", "challan_ref"], name: "index_tds_challans_on_import_family_ref", unique: true
     t.index ["tax_workbook_import_id"], name: "index_tds_challans_on_tax_workbook_import_id"
+    t.check_constraint "btrim(challan_ref::text) <> ''::text", name: "chk_tds_challans_challan_ref_present"
     t.check_constraint "fee IS NULL OR fee >= 0::numeric", name: "chk_tds_challans_fee_non_negative"
     t.check_constraint "interest IS NULL OR interest >= 0::numeric", name: "chk_tds_challans_interest_non_negative"
     t.check_constraint "others IS NULL OR others >= 0::numeric", name: "chk_tds_challans_others_non_negative"

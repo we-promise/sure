@@ -4,6 +4,8 @@ class TdsChallan < ApplicationRecord
 
   has_many :tds_deductions, dependent: :restrict_with_error
 
+  normalizes :challan_ref, with: ->(value) { value.to_s.strip.presence }
+
   validates :source_row_number, numericality: { only_integer: true, greater_than: 0 }
   validates :tax_period_quarter, :tan, :challan_ref, presence: true
   validates :tan, length: { maximum: 10 }
