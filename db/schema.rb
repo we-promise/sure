@@ -10,6 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
+ActiveRecord::Schema[7.2].define(version: 2026_06_01_000000) do
 ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -870,12 +871,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.boolean "cost_basis_locked", default: false, null: false
     t.uuid "provider_security_id"
     t.boolean "security_locked", default: false, null: false
+    t.string "source", default: "calculated", null: false
     t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true
     t.index ["account_id"], name: "index_holdings_on_account_id"
     t.index ["account_provider_id"], name: "index_holdings_on_account_provider_id"
     t.index ["provider_security_id"], name: "index_holdings_on_provider_security_id"
     t.index ["security_id"], name: "index_holdings_on_security_id"
+    t.index ["source"], name: "index_holdings_on_source"
   end
 
   create_table "ibkr_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

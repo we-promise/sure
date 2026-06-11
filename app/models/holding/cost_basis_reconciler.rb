@@ -28,6 +28,15 @@ class Holding::CostBasisReconciler
       }
     end
 
+    # Manual holdings are owned by the user — never overwrite their cost basis
+    if existing_holding.manual?
+      return {
+        cost_basis: existing_holding.cost_basis,
+        cost_basis_source: existing_holding.cost_basis_source,
+        should_update: false
+      }
+    end
+
     # Locked - never overwrite
     if existing_holding.cost_basis_locked?
       return {

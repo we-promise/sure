@@ -446,14 +446,13 @@ class Account::ProviderImportAdapter
           security: security,
           date: date,
           currency: currency,
-          account_provider_id: account_provider_id
+          account_provider_id: account_provider_id,
+          source: "provider"
         )
       else
-        holding = account.holdings.find_or_initialize_by(
-          security: security,
-          date: date,
-          currency: currency
-        )
+        holding = account.holdings
+          .where.not(source: "manual")
+          .find_or_initialize_by(security: security, date: date, currency: currency)
       end
 
       # Early cross-provider composite-key conflict guard: avoid attempting a write
@@ -465,14 +464,22 @@ class Account::ProviderImportAdapter
           currency: currency
         )
 
-        if existing_composite &&
-           account_provider_id.present? &&
-           existing_composite.account_provider_id.present? &&
-           existing_composite.account_provider_id != account_provider_id
-          Rails.logger.warn(
-            "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing_composite.id}"
-          )
-          return existing_composite
+        if existing_composite
+          if existing_composite.manual?
+            Rails.logger.warn(
+              "ProviderImportAdapter: skipping manual holding id=#{existing_composite.id} for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}"
+            )
+            return existing_composite
+          end
+
+          if account_provider_id.present? &&
+             existing_composite.account_provider_id.present? &&
+             existing_composite.account_provider_id != account_provider_id
+            Rails.logger.warn(
+              "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing_composite.id}"
+            )
+            return existing_composite
+          end
         end
       end
 
@@ -491,7 +498,8 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        source: "provider"
       }
 
       # Only update security if not locked by user
@@ -526,19 +534,26 @@ class Account::ProviderImportAdapter
         )
 
         if existing
-          # If an existing row belongs to a different provider, do NOT claim it.
-          # Keep cross-provider isolation symmetrical with deletion logic.
-          if account_provider_id.present? && existing.account_provider_id.present? && existing.account_provider_id != account_provider_id
+          if existing.manual?
+            # Never claim or overwrite a user-created manual holding.
+            Rails.logger.warn(
+              "ProviderImportAdapter: collision on manual holding id=#{existing.id} for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; skipping"
+            )
+            holding = existing
+          elsif account_provider_id.present? && existing.account_provider_id.present? && existing.account_provider_id != account_provider_id
+            # If an existing row belongs to a different provider, do NOT claim it.
+            # Keep cross-provider isolation symmetrical with deletion logic.
             Rails.logger.warn(
               "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing.id}"
             )
             holding = existing
           else
-            # Same provider (or unowned). Apply latest snapshot and attach external_id for idempotency.
+            # Same provider (or unowned calculated holding). Apply latest snapshot and attach external_id for idempotency.
             updates = {
               qty: quantity,
               price: price,
-              amount: amount
+              amount: amount,
+              source: "provider"
             }
 
             # Reconcile cost_basis to respect priority hierarchy
@@ -564,10 +579,10 @@ class Account::ProviderImportAdapter
             end
 
             begin
-              # Use update_columns to avoid validations and keep this collision handler best-effort.
               existing.update_columns(updates.compact)
-            rescue => _
-              # Best-effort only; avoid raising in collision handler
+            rescue ActiveRecord::ActiveRecordError => err
+              Rails.logger.error("ProviderImportAdapter: collision update failed id=#{existing.id}: #{err.message}")
+              raise
             end
 
             holding = existing

@@ -59,10 +59,11 @@ class Holding::Materializer
         existing = existing_holdings_map[key]
 
         # Skip provider-sourced holdings - they have authoritative data from the provider
-        # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings
-        if existing&.account_provider_id.present?
+        # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings.
+        # Also skip manual holdings — they are user-owned and must never be overwritten.
+        if existing&.account_provider_id.present? || existing&.manual?
           Rails.logger.debug(
-            "Holding::Materializer - Skipping provider-sourced holding id=#{existing.id} " \
+            "Holding::Materializer - Skipping #{existing.manual? ? "manual" : "provider-sourced"} holding id=#{existing.id} " \
             "security_id=#{existing.security_id} date=#{existing.date}"
           )
           next
@@ -76,7 +77,7 @@ class Holding::Materializer
 
         base_attrs = holding.attributes
           .slice("date", "currency", "qty", "price", "amount", "security_id")
-          .merge("account_id" => account.id, "updated_at" => current_time)
+          .merge("account_id" => account.id, "updated_at" => current_time, "source" => "calculated")
 
         if existing&.cost_basis_locked?
           # For locked holdings, preserve ALL cost_basis fields
@@ -132,12 +133,14 @@ class Holding::Materializer
     def load_existing_holdings_map
       # Load holdings that might affect reconciliation:
       # - Locked holdings (must preserve their cost_basis)
-      # - Holdings with a source (need to check priority)
+      # - Holdings with a cost_basis source (need to check priority)
       # - Provider-sourced holdings (must not be overwritten)
+      # - Manual holdings (user-owned; must never be overwritten)
       account.holdings
         .where(cost_basis_locked: true)
         .or(account.holdings.where.not(cost_basis_source: nil))
         .or(account.holdings.where.not(account_provider_id: nil))
+        .or(account.holdings.where(source: "manual"))
         .index_by { |h| holding_key(h) }
     end
 
@@ -146,6 +149,7 @@ class Holding::Materializer
     def cleanup_shadowed_calculated_holdings
       deleted_count = account.holdings
         .where(account_provider_id: nil)
+        .where.not(source: "manual")
         .where(<<~SQL)
           EXISTS (
             SELECT 1
@@ -175,6 +179,7 @@ class Holding::Materializer
 
       deleted_count = account.holdings
         .where(account_provider_id: nil, date: provider_snapshot_date, security_id: provider_security_ids)
+        .where.not(source: "manual")
         .delete_all
 
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings on latest provider snapshot date") if deleted_count > 0
@@ -231,15 +236,16 @@ class Holding::Materializer
     def purge_stale_holdings
       portfolio_security_ids = account.trades.distinct.pluck(:security_id)
 
-      # Never delete provider-sourced holdings - they're authoritative from the provider
-      # If there are no securities in the portfolio, only delete non-provider holdings
+      # Never delete provider-sourced or manual holdings. Manual holdings are user-owned.
+      # If there are no securities in the portfolio, only delete non-provider, non-manual holdings.
       if portfolio_security_ids.empty?
         Rails.logger.info("Clearing non-provider holdings (no securities from trades)")
-        account.holdings.where(account_provider_id: nil).delete_all
+        account.holdings.where(account_provider_id: nil).where.not(source: "manual").delete_all
       else
-        # Keep provider holdings and holdings for known securities within date range
+        # Keep provider holdings, manual holdings, and holdings for known securities within date range
         deleted_count = account.holdings
           .where(account_provider_id: nil)
+          .where.not(source: "manual")
           .delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
         Rails.logger.info("Purged #{deleted_count} stale holdings") if deleted_count > 0
       end
