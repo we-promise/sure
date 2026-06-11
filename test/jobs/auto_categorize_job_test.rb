@@ -29,6 +29,6 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal 0, @rule_run.pending_jobs_count
     assert_includes @rule_run.error_message, "Auto-categorization failed"
     assert_includes @rule_run.error_message, "LLM provider returned HTTP 503"
-    assert_includes @rule_run.error_message, @transaction.id
+    assert_includes @rule_run.error_message, @transaction.id.to_s
   end
 end

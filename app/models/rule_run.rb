@@ -37,9 +37,9 @@ class RuleRun < ApplicationRecord
       increment!(:transactions_modified, modified_count)
       decrement!(:pending_jobs_count)
 
-      # If all jobs are done, mark as success
+      # Preserve a previously recorded failure while still draining pending jobs.
       if pending_jobs_count <= 0
-        update!(status: "success")
+        update!(status: "success") unless failed?
       end
     end
   end
