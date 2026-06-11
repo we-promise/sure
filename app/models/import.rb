@@ -45,6 +45,11 @@ class Import < ApplicationRecord
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
+  # Also runs on before_save so encoding normalization still applies when a CSV
+  # upload is persisted with save!(validate: false) (Import::UploadsController),
+  # which skips before_validation callbacks. Idempotent — no-ops on valid UTF-8.
+  # See #2294.
+  before_save :ensure_utf8_encoding
   normalizes :client_chunk_id, with: ->(value) { value.strip.presence }
 
   scope :ordered, -> { order(created_at: :desc) }
