@@ -207,7 +207,9 @@ en:
         profile_title: Personal
         remove_invitation: Remove Invitation
         remove_member: Remove Member
+        resend_confirmation_link: request a new confirmation email
         save: Save
+        unconfirmed_email_notice_html: You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{resend_link}.
     securities:
       show:
         page_title: Security
@@ -228,6 +230,25 @@ en:
         sso_confirm_body: Are you sure you want to disconnect your %{provider} account? You can reconnect it later by signing in with that provider again.
         sso_confirm_button: Disconnect
         sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
+    mcp:
+      show:
+        page_title: MCP Server
+        connect_title: Connect an AI assistant
+        connect_subtitle: Paste this URL into Claude.ai (or any MCP-compatible client) to connect it to your Sure account.
+        copy_url: Copy
+        how_to_connect_title: How to connect Claude
+        step_1: "Open Claude.ai and go to Settings → Integrations."
+        step_2: Click "Add integration" and paste the MCP server URL above.
+        step_3: Click Connect — you'll be redirected to Sure to sign in and authorize access.
+        step_4: Once authorized, Claude can read your accounts, transactions, and balance data.
+        connected_title: Connected clients
+        connected_subtitle: These apps currently have access to your Sure data. Revoke any you no longer use.
+        unknown_client: Unknown client
+        connected_ago: "Connected %{time} ago"
+        revoke: Revoke
+        revoke_confirm: Revoke access for this client?
+      revoke:
+        revoked: Connection revoked.
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Advanced
@@ -249,6 +270,7 @@ en:
       profile_label: Profile Info
       recurring_transactions_label: Recurring
       rules_label: Rules
+      mcp_label: MCP
       security_label: Security
       self_hosting_label: Self-Hosting
       sso_providers_label: SSO Providers
