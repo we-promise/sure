@@ -8,6 +8,7 @@ nb:
         assistant: Assistent
         budgets: Budsjett
         home: Hjem
+        intro: Intro
         reports: Rapporter
         transactions: Transaksjoner
     auth:

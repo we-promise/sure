@@ -8,6 +8,7 @@ fr:
         assistant: Assistant
         budgets: Budgets
         home: Accueil
+        intro: Introduction
         reports: Rapports
         transactions: Transactions
     auth:

@@ -234,4 +234,23 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal({ "type" => "financial_document" }, document.metadata)
     assert_equal "vs_test123", family.reload.vector_store_id
   end
+
+  test "module_enabled? defaults to true and toggles via disabled_modules" do
+    family = families(:dylan_family)
+
+    assert family.module_enabled?(:investments)
+    assert family.module_enabled?("investments")
+
+    family.update!(disabled_modules: [ "investments" ])
+    assert_not family.module_enabled?(:investments)
+    assert_not family.module_enabled?("investments")
+
+    family.update!(disabled_modules: [])
+    assert family.module_enabled?(:investments)
+  end
+
+  test "module_enabled? returns true for unknown modules (default-enabled)" do
+    family = families(:dylan_family)
+    assert family.module_enabled?(:nonexistent_module)
+  end
 end

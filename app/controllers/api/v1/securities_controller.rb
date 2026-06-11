@@ -4,6 +4,7 @@ class Api::V1::SecuritiesController < Api::V1::BaseController
   include Pagy::Backend
   include Api::V1::SecurityResourceFiltering
 
+  before_action -> { require_module!(:investments) }
   before_action :ensure_read_scope
   before_action :set_security, only: :show
 

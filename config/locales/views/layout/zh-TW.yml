@@ -8,6 +8,7 @@ zh-TW:
         assistant: 助手
         budgets: 預算
         home: 首頁
+        intro: 介紹
         reports: 報表
         transactions: 交易紀錄
     auth:

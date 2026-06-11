@@ -21,6 +21,7 @@ class Family < ApplicationRecord
   MONIKERS = [ "Family", "Group" ].freeze
   ASSISTANT_TYPES = %w[builtin external].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
+  AVAILABLE_MODULES = %w[investments].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -118,6 +119,10 @@ class Family < ApplicationRecord
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
 
   before_validation :normalize_enabled_currencies!
+
+  def module_enabled?(name)
+    Array(disabled_modules).exclude?(name.to_s)
+  end
 
   def primary_currency_code
     normalize_currency_code(currency) || "USD"

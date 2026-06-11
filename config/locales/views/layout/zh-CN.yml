@@ -8,6 +8,7 @@ zh-CN:
         assistant: 助手
         budgets: 预算
         home: 主页
+        intro: 介绍
         reports: 报表
         transactions: 交易
     auth:

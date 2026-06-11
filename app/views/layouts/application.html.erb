@@ -1,22 +1,7 @@
 <% intro_mode = Current.user&.ui_layout_intro? %>
 <% home_path = intro_mode ? chats_path : root_path %>
-<% mobile_nav_items = if intro_mode
-  [
-    { name: t(".nav.home"), path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
-    { name: "Intro", path: intro_path, icon: "sparkles", icon_custom: false, active: page_active?(intro_path) }
-  ]
-else
-  [
-    { name: t(".nav.home"), path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
-    { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
-    { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
-    { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
-    preview_gated_nav_item({ name: t(".nav.goals"), path: goals_path, icon: "piggy-bank", icon_custom: false, active: page_active?(goals_path) }),
-    { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
-  ].compact
-end %>
-
-<% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>
+<% mobile_nav_items = mobile_nav_items(intro_mode: intro_mode) %>
+<% desktop_nav_items = desktop_nav_items(intro_mode: intro_mode) %>
 <% expanded_sidebar_class = "w-full" %>
 <% collapsed_sidebar_class = "w-0 overflow-hidden" %>
 

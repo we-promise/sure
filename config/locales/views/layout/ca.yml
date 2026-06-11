@@ -6,6 +6,7 @@ ca:
         assistant: Assistent
         budgets: Pressupostos
         home: Inici
+        intro: Intro
         reports: Informes
         transactions: Transaccions
       privacy_mode: Commuta el mode de privadesa
