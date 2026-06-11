@@ -1,6 +1,7 @@
 {
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.3"
+		"@biomejs/biome": "^1.9.3",
+		"playwright": "^1.60.0"
 	},
 	"name": "sure",
 	"version": "1.0.0",

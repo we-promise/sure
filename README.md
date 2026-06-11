@@ -44,6 +44,44 @@ Join us!
 
 Sure is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
 
+## Deployment and Bootstrap Notes
+
+This repository includes an operator-run bootstrap path for setting up the current multi-company owner deployment. The implementation creates the configured company workspaces, provisions the two platform super-admin users, and keeps the path idempotent for reruns.
+
+> [!WARNING]
+> Do not commit or print bootstrap passwords. Use one-shot environment variables or hidden prompts, and verify dry-runs before making production changes.
+
+| Need | Start here |
+| --- | --- |
+| Railway deployment shape | [`docs/superpowers/plans/2026-06-10-sure-railway-deployment.md`](docs/superpowers/plans/2026-06-10-sure-railway-deployment.md) |
+| Multi-company bootstrap runbook | [`docs/superpowers/plans/2026-06-10-multi-company-bootstrap.md`](docs/superpowers/plans/2026-06-10-multi-company-bootstrap.md) |
+| Bootstrap implementation | [`app/services/platform_bootstrap/multi_company_owners.rb`](app/services/platform_bootstrap/multi_company_owners.rb) |
+| Bootstrap task | [`lib/tasks/platform_bootstrap.rake`](lib/tasks/platform_bootstrap.rake) |
+| Bootstrap test coverage | [`test/services/platform_bootstrap/multi_company_owners_test.rb`](test/services/platform_bootstrap/multi_company_owners_test.rb) |
+
+The production bootstrap task is:
+
+```sh
+bin/rails platform_bootstrap:multi_company_owners
+```
+
+Set `DRY_RUN=1` to validate the write path without persisting changes.
+
+## Browser UAT
+
+Playwright is available as a development dependency for focused browser checks against local or deployed environments.
+
+```sh
+npx playwright --version
+```
+
+For production UAT, cover at minimum:
+
+- sign-in and sign-out for both platform super-admin users
+- dashboard, transactions, reports, budgets, chats, profile, and admin users/SSO pages
+- unauthenticated redirects for admin routes
+- desktop and mobile viewport checks, with screenshots saved under `tmp/uat-screenshots/`
+
 ## Forking and Attribution
 
 This repo is a community fork of the archived Maybe Finance repo.
