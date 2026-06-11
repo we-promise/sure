@@ -4,8 +4,8 @@ zh-CN:
     attributes:
       user:
         email: 邮箱
-        family: "%{moniker}"
-        family_id: "%{moniker}"
+        family: 家庭
+        family_id: 家庭
         first_name: 名字
         last_name: 姓氏
         password: 密码
