@@ -90,6 +90,28 @@ en:
         title: Brand Fetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
+      llm_provider_selector:
+        title: AI Provider
+        description: Choose which LLM powers AI chat. Batch operations (transaction categorization, merchant detection, and PDF processing) currently always use OpenAI.
+        env_configured_message: Successfully configured through the LLM_PROVIDER environment variable.
+        provider_label: Active LLM provider
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Switching providers takes effect on the next chat. Configure the active provider's credentials below.
+        not_configured_hint: "Add a %{provider} API key below to activate it."
+        data_retention_heading: Data handling
+        data_retention: API inputs are not used to train models by default; the providers' hosted APIs retain data for ~30 days for trust & safety. Custom or self-hosted endpoints follow your own policy.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
+        env_configured_message: Successfully configured through environment variables.
+        access_token_label: API Key
+        access_token_placeholder: Enter your Anthropic API key
+        base_url_label: Base URL (Optional)
+        base_url_placeholder: "https://api.anthropic.com (default)"
+        model_label: Default Model (Optional)
+        model_placeholder: "claude-sonnet-4-6 (default)"
+        model_help: Used for chat and PDF processing. Batch operations (categorize, merchant detection) default to Haiku for cost.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -106,7 +128,7 @@ en:
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
         budget_heading: Token Budget
-        budget_description: Applies to every LLM call — chat history, auto-categorization, merchant detection, and PDF processing. Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
+        budget_description: Applies to OpenAI-compatible calls (chat, auto-categorization, merchant detection, and PDF processing). Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
         context_window_label: Context Window (Optional)
         context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
         max_response_tokens_label: Max Response Tokens (Optional)
@@ -175,6 +197,8 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
+        invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
+        anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected
