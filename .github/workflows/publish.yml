@@ -398,6 +398,7 @@ jobs:
     timeout-minutes: 10
 
     permissions:
+      actions: write
       contents: write
       pull-requests: write
 
@@ -560,9 +561,14 @@ jobs:
 
           PR_BODY="This automated PR bumps .sure-version and charts/sure/Chart.yaml after the ${{ github.ref_name }} pre-release. It was opened because the workflow could not push directly to ${SOURCE_BRANCH}."
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --repo "$GITHUB_REPOSITORY" \
             --head "$BUMP_BRANCH" \
             --base "$SOURCE_BRANCH" \
             --title "$COMMIT_MESSAGE" \
-            --body "$PR_BODY"
+            --body "$PR_BODY")
+
+          echo "Created version bump PR: $PR_URL"
+          echo "Dispatching PR checks for $BUMP_BRANCH"
+          gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"
+          gh workflow run chart-ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"
