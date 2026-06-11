@@ -183,7 +183,17 @@ jobs:
           bin/rails db:seed
 
       - name: System tests
-        run: DISABLE_PARALLELIZATION=true bin/rails test:system
+        run: DISABLE_PARALLELIZATION=true CI_SYSTEM_TEST_TIMING=true bin/rails test:system
+
+      - name: Upload system test timing artifacts
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: system-test-timing
+          path: |
+            ${{ github.workspace }}/tmp/ci/system_test_timing.json
+            ${{ github.workspace }}/tmp/ci/system_test_timing.md
+          if-no-files-found: ignore
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
