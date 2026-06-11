@@ -7,6 +7,7 @@ module TaxWorkbook
         reader = SheetReader.new(tempfile.path)
 
         assert_equal TaxWorkbook::Template::SHEET_NAMES, reader.sheet_names
+        assert_equal TaxWorkbook::Template.headers_for("meta"), reader.headers("meta")
 
         meta_row = reader.rows("Meta").first
         assert_equal "Risingstone infra pvt ltd", meta_row.fetch("entity_name")
@@ -15,6 +16,15 @@ module TaxWorkbook
         outward_row = reader.rows("gst outward lines").first
         assert_equal "INV-001", outward_row.fetch("invoice_no")
         assert_equal false, outward_row.fetch("is_reverse_charge")
+      end
+    end
+
+    test "reads headers from sheets without data rows" do
+      with_empty_data_workbook do |tempfile|
+        reader = SheetReader.new(tempfile.path)
+
+        assert_equal [ "invoice_no", "taxable_value" ], reader.headers("gst-outward-lines")
+        assert_empty reader.rows("gst-outward-lines")
       end
     end
 
@@ -53,6 +63,22 @@ module TaxWorkbook
         end
 
         tempfile = Tempfile.new([ "tax-template-with-blanks", ".xlsx" ])
+        tempfile.binmode
+        tempfile.write(package.to_stream.read)
+        tempfile.rewind
+
+        yield tempfile
+      ensure
+        tempfile&.close!
+      end
+
+      def with_empty_data_workbook
+        package = Axlsx::Package.new(author: "Sure")
+        package.workbook.add_worksheet(name: "gst outward lines") do |sheet|
+          sheet.add_row [ "Invoice No", "Taxable Value" ]
+        end
+
+        tempfile = Tempfile.new([ "tax-template-empty-data", ".xlsx" ])
         tempfile.binmode
         tempfile.write(package.to_stream.read)
         tempfile.rewind

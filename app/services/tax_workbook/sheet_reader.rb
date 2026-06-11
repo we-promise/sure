@@ -8,23 +8,22 @@ module TaxWorkbook
       @workbook.sheets.map { |sheet| normalize_name(sheet.name) }
     end
 
+    def headers(sheet_name)
+      header_row(sheet_name).fetch(:columns).map(&:first)
+    end
+
     def rows(sheet_name)
-      headers = nil
+      headers = header_row(sheet_name)
       normalized_rows = []
 
       find_sheet(sheet_name).rows.each.with_index(1) do |raw_values, source_row_number|
         values = Array(raw_values)
 
-        if headers.nil?
-          next if blank_row?(values)
-
-          headers = normalized_headers(values)
-          next
-        end
+        next if source_row_number <= headers.fetch(:source_row_number)
 
         next if blank_row?(values)
 
-        normalized_rows << build_row(headers, values).merge("source_row_number" => source_row_number)
+        normalized_rows << build_row(headers.fetch(:columns), values).merge("source_row_number" => source_row_number)
       end
 
       normalized_rows
@@ -46,6 +45,16 @@ module TaxWorkbook
 
         @workbook.sheets.find { |sheet| normalize_name(sheet.name) == normalized_sheet_name } ||
           raise(KeyError, "Missing sheet #{sheet_name}")
+      end
+
+      def header_row(sheet_name)
+        find_sheet(sheet_name).rows.each.with_index(1) do |values, source_row_number|
+          next if blank_row?(Array(values))
+
+          return { columns: normalized_headers(Array(values)), source_row_number: source_row_number }
+        end
+
+        { columns: [], source_row_number: 0 }
       end
 
       def normalized_headers(values)
