@@ -60,7 +60,7 @@ class Assistant::Builtin < Assistant::Base
       if assistant_message.content.blank?
         assistant_message.destroy
       else
-        # Demote partially-streamed turns to `failed` so `Responder#conversation_history` excludes them.
+        # Demote partially-streamed turns to `failed` so the responder's history builders (`#openai_messages_payload`, `#chat_message_records`) exclude them.
         assistant_message.update_columns(status: "failed")
       end
     end

@@ -22,6 +22,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     ))
   end
 
+  teardown do
+    # These tests persist global Setting.* values; reset them so state can't
+    # leak into later (order-dependent) tests.
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider].each do |key|
+      Setting.public_send("#{key}=", nil)
+    end
+  end
+
   test "cannot edit when self hosting is disabled" do
     @provider.stubs(:usage).returns(@usage_response)
 
@@ -74,6 +82,101 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update anthropic access token when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "fake-anthropic-key-for-tests" } }
+
+      assert_equal "fake-anthropic-key-for-tests", Setting.anthropic_access_token
+    end
+  end
+
+  test "ignores redacted anthropic token placeholder" do
+    with_self_hosting do
+      Setting.anthropic_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "********" } }
+
+      assert_equal "previous-token", Setting.anthropic_access_token
+    end
+  end
+
+  test "can update anthropic base_url and model" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "https://bedrock.example.com", anthropic_model: "claude-opus-4-7" } }
+
+      assert_equal "https://bedrock.example.com", Setting.anthropic_base_url
+      assert_equal "claude-opus-4-7", Setting.anthropic_model
+    end
+  end
+
+  test "rejects non-URL anthropic base_url" do
+    with_self_hosting do
+      Setting.anthropic_base_url = nil
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "not-a-url" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Anthropic Base URL must be an http/, flash[:alert])
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "clears anthropic base_url when blank value submitted" do
+    with_self_hosting do
+      Setting.anthropic_base_url = "https://bedrock.example.com"
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "" } }
+
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "requires anthropic model when a custom base_url is set" do
+    with_self_hosting do
+      Setting.anthropic_base_url = nil
+      Setting.anthropic_model = nil
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "https://bedrock.example.com" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Anthropic Model is required/, flash[:alert])
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "can update llm_provider to anthropic" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { llm_provider: "anthropic" } }
+
+      assert_equal "anthropic", Setting.llm_provider
+    end
+  end
+
+  test "falls back to openai when stored llm_provider is invalid" do
+    with_self_hosting do
+      Setting.llm_provider = "bogus"
+      Provider::Openai.stubs(:configured?).returns(false)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "select[name=?] option[selected][value=?]", "setting[llm_provider]", "openai"
+      assert_no_match(/translation missing/i, @response.body)
+    end
+  ensure
+    Setting.llm_provider = nil
+  end
+
+  test "rejects unknown llm_provider values" do
+    with_self_hosting do
+      Setting.llm_provider = "openai"
+
+      patch settings_hosting_url, params: { setting: { llm_provider: "bogus" } }
+
+      assert_equal "openai", Setting.llm_provider
+    end
+  end
+
   test "can update openai uri base and model together when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1", openai_model: "gpt-4" } }
@@ -93,6 +196,55 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_match(/OpenAI model is required/, flash[:alert])
       assert Setting.openai_uri_base.blank?, "Expected openai_uri_base to remain blank after failed validation"
     end
+  end
+
+  # Regression: issue #1824. The OpenAI form auto-submits on blur, so entering
+  # the URI base before the model fires a partial submit that fails validation.
+  # The re-rendered form must show the user's submitted URI base — not the
+  # still-blank saved value — so they can finish typing the model.
+  test "preserves submitted openai uri base in form when validation fails" do
+    with_self_hosting do
+      Setting.openai_uri_base = nil
+      Setting.openai_model = ""
+
+      patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name=?]", "setting[openai_uri_base]" do |inputs|
+        assert_equal "https://api.example.com/v1", inputs.first["value"]
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  # PR #1862 review (jjmata): symmetric coverage for the model field. When the
+  # user changes the URI base and clears the model in the same auto-submit, the
+  # cross-field validation fails — the re-rendered model input must reflect the
+  # user's submitted (cleared) value, not silently revert to the saved model.
+  test "preserves submitted openai model in form when validation fails" do
+    with_self_hosting do
+      Setting.openai_uri_base = "https://saved.example.com/v1"
+      Setting.openai_model = "saved-model"
+
+      patch settings_hosting_url, params: { setting: {
+        openai_uri_base: "https://new.example.com/v1",
+        openai_model: ""
+      } }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name=?]", "setting[openai_uri_base]" do |inputs|
+        assert_equal "https://new.example.com/v1", inputs.first["value"]
+      end
+      assert_select "input[name=?]", "setting[openai_model]" do |inputs|
+        assert_not_equal "saved-model", inputs.first["value"].to_s,
+          "model field must reflect the submitted (cleared) value, not the saved model"
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
   end
 
   test "can update openai model alone when self hosting is enabled" do

@@ -1,0 +1,24 @@
+---
+vi:
+  subscriptions:
+    self_hosted_alert: "%{product_name} không khả dụng ở chế độ tự lưu trữ."
+    upgrade:
+      already_contributing: Bạn đã đang đóng góp. Cảm ơn bạn!
+      page_title: "Nâng cấp"
+      account_settings: "Cài đặt tài khoản"
+      sign_out: "Đăng xuất"
+      contribute_and_support_sure: "Đóng góp và hỗ trợ Sure"
+      cta: "Tiếp tục hỗ trợ sự phát triển của codebase này!"
+      header:
+        support: "Hỗ trợ"
+        sure: "Sure"
+        today: "hôm nay"
+      redirect_to_stripe: "Ở bước tiếp theo, bạn sẽ được chuyển hướng đến Stripe để xử lý thẻ tín dụng."
+      trialing: "Dữ liệu của bạn sẽ bị xóa trong %{days} ngày"
+      trial_over: "Thời gian dùng thử của bạn đã kết thúc"
+    create:
+      welcome: "Chào mừng đến với Sure!"
+      trial_already_used: "Bạn đã bắt đầu hoặc hoàn thành một lần dùng thử. Vui lòng nâng cấp để tiếp tục."
+    success:
+      welcome_with_contribution: "Chào mừng đến với Sure! Sự đóng góp của bạn được đánh giá cao."
+      contribution_failed: "Đã xảy ra sự cố khi xử lý đóng góp của bạn. Vui lòng thử lại."

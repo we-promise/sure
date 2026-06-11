@@ -20,7 +20,9 @@
       data: { turbo_frame: "category_dropdown" },
       class: "flex w-full items-center gap-1.5 cursor-pointer focus:outline-none" do %>
 
-    <%= icon("check") if is_selected %>
+    <span class="flex items-center justify-center w-5 h-5 shrink-0">
+      <% if is_selected %><%= icon("check") %><% end %>
+    </span>
 
     <% if category.subcategory? %>
       <%= icon("corner-down-right", size: "sm") %>
@@ -29,7 +31,7 @@
     <%= render partial: "categories/badge", locals: { category: category } %>
   <% end %>
 
-  <%= render DS::Menu.new do |menu| %>
+  <%= render DS::Menu.new(variant: :icon_sm) do |menu| %>
     <% menu.with_item(variant: "link", text: t(".edit"), icon: "pencil-line", href: edit_category_path(category), data: { turbo_frame: :modal }) %>
     <% menu.with_item(variant: "link", text: t(".delete"), icon: "trash-2", href: new_category_deletion_path(category), data: { turbo_frame: :modal }, destructive: true) %>
   <% end %>

@@ -61,13 +61,13 @@ es:
         rows_label: Filas
         unassigned_account: ¿Necesitas crear una nueva cuenta para las filas sin asignar?
       show:
-        account_mapping_description: Asigna todas las cuentas de tu archivo importado a las cuentas existentes de Sure. También puedes añadir nuevas cuentas o dejarlas sin categorizar.
+        account_mapping_description: Asigna todas las cuentas de tu archivo importado a las cuentas existentes de %{product_name}. También puedes añadir nuevas cuentas o dejarlas sin categorizar.
         account_mapping_title: Asigna tus cuentas
-        account_type_mapping_description: Asigna todos los tipos de cuenta de tu archivo importado a los de Sure.
+        account_type_mapping_description: Asigna todos los tipos de cuenta de tu archivo importado a los de %{product_name}.
         account_type_mapping_title: Asigna tus tipos de cuenta
-        category_mapping_description: Asigna todas las categorías de tu archivo importado a las categorías existentes de Sure. También puedes añadir nuevas categorías o dejarlas sin categorizar.
+        category_mapping_description: Asigna todas las categorías de tu archivo importado a las categorías existentes de %{product_name}. También puedes añadir nuevas categorías o dejarlas sin categorizar.
         category_mapping_title: Asigna tus categorías
-        tag_mapping_description: Asigna todas las etiquetas de tu archivo importado a las etiquetas existentes de Sure. También puedes añadir nuevas etiquetas o dejarlas sin categorizar.
+        tag_mapping_description: Asigna todas las etiquetas de tu archivo importado a las etiquetas existentes de %{product_name}. También puedes añadir nuevas etiquetas o dejarlas sin categorizar.
         tag_mapping_title: Asigna tus etiquetas
     uploads:
       show:

@@ -8,23 +8,24 @@ zh-CN:
       user:
         create: 继续
   registrations:
-    closed: 当前注册功能已关闭。
+    closed: 当前已关闭注册。
     create:
-      failure: 注册过程中出现问题。
+      failure: 注册时出现问题。
       invalid_invite_code: 邀请码无效，请重试。
       success: 您已成功注册。
     new:
-      invitation_message: "%{inviter} 已邀请您以 %{role} 身份加入"
-      join_family_title: 加入 %{family}
-      password_placeholder: 请输入密码
+      invitation_message: "%{inviter} 邀请您以 %{role} 身份加入"
+      join_family_title: 加入 %{family} %{moniker}
       role_admin: 管理员
+      role_guest: 访客
       role_member: 成员
       submit: 创建账户
       title: 创建您的账户
-      welcome_body: 开始使用前，您需要注册一个新账户。注册后即可在应用内配置其他设置。
-      welcome_title: 欢迎使用自托管版 %{product_name}！
+      welcome_body: 要开始使用，您必须先注册一个新账户。之后您可以在应用内配置更多设置。
+      welcome_title: 欢迎使用自托管 %{product_name}！
+      password_placeholder: 输入您的密码
       password_requirements:
-        length: 至少8个字符
-        case: 大写和小写字母
-        number: 一个数字 (0-9)
-        special: "一个特殊字符 (!, @, #, $, %, etc)"
+        length: 至少 8 个字符
+        case: 包含大写和小写字母
+        number: 包含一个数字（0-9）
+        special: 包含一个特殊字符（!、@、#、$、%、等）

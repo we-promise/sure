@@ -16,6 +16,7 @@ class AccountsController < ApplicationController
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
+    @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
@@ -25,6 +26,7 @@ class AccountsController < ApplicationController
     @ibkr_items = visible_provider_items(family.ibkr_items.ordered.with_attached_logo.includes(:ibkr_accounts))
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
+    @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
 
     preload_latest_sync_metadata_for_index!
 
@@ -249,6 +251,7 @@ class AccountsController < ApplicationController
         @plaid_items,
         @simplefin_items,
         @lunchflow_items,
+        @akahu_items,
         @enable_banking_items,
         @coinstats_items,
         @mercury_items,
@@ -257,7 +260,8 @@ class AccountsController < ApplicationController
         @snaptrade_items,
         @ibkr_items,
         @indexa_capital_items,
-        @sophtron_items
+        @sophtron_items,
+        @binance_items
       ].flatten.compact
 
       accounts = @manual_accounts.to_a
@@ -375,6 +379,13 @@ class AccountsController < ApplicationController
         @lunchflow_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
+      # Akahu sync stats
+      @akahu_sync_stats_map = {}
+      @akahu_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @akahu_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
       # Enable Banking sync stats
       @enable_banking_sync_stats_map = {}
       @enable_banking_latest_sync_error_map = {}
@@ -455,6 +466,21 @@ class AccountsController < ApplicationController
       @indexa_capital_items.each do |item|
         latest_sync = item.latest_sync_record
         @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Binance sync stats
+      @binance_sync_stats_map = {}
+      @binance_unlinked_count_map = {}
+      @binance_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @binance_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+
+        # Count unlinked accounts
+        count = item.binance_accounts
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
+          .count
+        @binance_unlinked_count_map[item.id] = count
       end
     end
 end
