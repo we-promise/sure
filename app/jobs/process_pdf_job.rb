@@ -15,7 +15,16 @@ class ProcessPdfJob < ApplicationJob
       upload_to_vector_store(pdf_import, document_type: document_type)
 
       # For statements with transactions (bank/credit card), extract and generate import rows
-      if statement_with_transactions?(document_type)
+      # unless reconciliation already confirmed balances match
+      if pdf_import.reconciliation_matched?
+        Rails.logger.info("ProcessPdfJob: Reconciliation matched for import #{pdf_import.id}, skipping transaction extraction")
+      elsif statement_with_transactions?(document_type)
+        if pdf_import.reconciliation_reportable? && pdf_import.account.nil?
+          recon_account = pdf_import.reconciliation_account
+          pdf_import.update!(account: recon_account) if recon_account
+          Rails.logger.info("ProcessPdfJob: Auto-assigned account #{recon_account&.name} from reconciliation for import #{pdf_import.id}")
+        end
+
         Rails.logger.info("ProcessPdfJob: Extracting transactions for #{document_type} import #{pdf_import.id}")
         pdf_import.extract_transactions
         Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
@@ -32,9 +41,14 @@ class ProcessPdfJob < ApplicationJob
         pdf_import.send_next_steps_email(user)
       end
 
-      # Statements with extracted rows go to pending for user review/publish
-      # Other document types are marked complete (no further action needed)
-      final_status = statement_with_transactions?(document_type) && pdf_import.rows_count > 0 ? :pending : :complete
+      final_status = if pdf_import.reconciliation_matched?
+        :complete
+      elsif statement_with_transactions?(document_type) && pdf_import.rows_count > 0
+        :pending
+      else
+        :complete
+      end
+
       pdf_import.update!(status: final_status)
     rescue StandardError => e
       sanitized_error = sanitize_error_message(e)

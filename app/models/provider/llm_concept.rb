@@ -19,7 +19,7 @@ module Provider::LlmConcept
     raise NotImplementedError, "Subclasses must implement #enhance_provider_merchants"
   end
 
-  PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data)
+  PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data, :reconciliation)
 
   def supports_pdf_processing?
     false
