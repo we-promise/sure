@@ -28,7 +28,7 @@
   </div>
 
   <%= render DS::Popover.new(variant: "button") do |popover| %>
-    <% popover.with_button class: "flex items-center gap-1 hover:bg-alpha-black-25 cursor-pointer rounded-md p-2"  do %>
+    <% popover.with_button class: "flex items-center gap-1 hover:bg-surface-hover cursor-pointer rounded-md p-2"  do %>
       <span class="text-primary font-medium text-lg lg:text-base"><%= @budget.name %></span>
       <%= icon("chevron-down") %>
     <% end %>
