@@ -118,13 +118,13 @@
     {
       "warning_type": "Dangerous Eval",
       "warning_code": 13,
-      "fingerprint": "c154514a0f86341473e4abf35e77721495b326c7855e4967d284b4942371819c",
+      "fingerprint": "ad8e31fe9321feba741d551654a6fb0c0c7cfe8abee81822e6143404817bff5b",
       "check_name": "Evaluation",
       "message": "Dynamic string evaluated as code",
       "file": "app/helpers/styled_form_builder.rb",
-      "line": 5,
+      "line": 10,
       "link": "https://brakemanscanner.org/docs/warning_types/dangerous_eval/",
-      "code": "class_eval(\"      def #{selector}(method, options = {})\\n        form_options = options.slice(:label, :label_tooltip, :inline, :container_class, :required)\\n        html_options = options.except(:label, :label_tooltip, :inline, :container_class)\\n\\n        build_field(method, form_options, html_options) do |merged_options|\\n          super(method, merged_options)\\n        end\\n      end\\n\", \"app/helpers/styled_form_builder.rb\", (5 + 1))",
+      "code": "class_eval(\"      def #{selector}(method, options = {})\\n        form_options = options.slice(:label, :label_tooltip, :inline, :container_class, :required)\\n        html_options = options.except(:label, :label_tooltip, :inline, :container_class)\\n\\n        build_field(method, form_options, html_options) do |merged_options|\\n          super(method, merged_options)\\n        end\\n      end\\n\", \"app/helpers/styled_form_builder.rb\", (10 + 1))",
       "render_path": null,
       "location": {
         "type": "method",
