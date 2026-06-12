@@ -66,7 +66,7 @@ class Holding::ReverseCalculator
           next
         end
 
-        Holding.new(
+        Holding::HoldingData.new(
           account_id: account.id,
           security_id: security_id,
           date: date,

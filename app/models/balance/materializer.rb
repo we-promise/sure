@@ -1,4 +1,9 @@
 class Balance::Materializer
+  # Upsert in chunks so that the intermediate attribute-hash array doesn't sit
+  # in memory alongside the full @balances array. Reduces peak RSS during sync
+  # for accounts with multi-year history.
+  PERSIST_BATCH_SIZE = 2_000
+
   attr_reader :account, :strategy, :security_ids
 
   def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
@@ -59,18 +64,12 @@ class Balance::Materializer
 
     def persist_balances
       current_time = Time.now
-      account.balances.upsert_all(
-        @balances.map { |b| b.attributes
-               .slice("date", "balance", "cash_balance", "currency",
-                      "start_cash_balance", "start_non_cash_balance",
-                      "cash_inflows", "cash_outflows",
-                      "non_cash_inflows", "non_cash_outflows",
-                      "net_market_flows",
-                      "cash_adjustments", "non_cash_adjustments",
-                      "flows_factor")
-               .merge("updated_at" => current_time) },
-        unique_by: %i[account_id date currency]
-      )
+      @balances.each_slice(PERSIST_BATCH_SIZE) do |slice|
+        account.balances.upsert_all(
+          slice.map { |b| b.to_h.except(:account).transform_keys(&:to_s).merge("updated_at" => current_time) },
+          unique_by: %i[account_id date currency]
+        )
+      end
     end
 
     def purge_stale_balances
