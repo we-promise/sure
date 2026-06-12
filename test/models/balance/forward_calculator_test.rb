@@ -8,6 +8,29 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
   # General tests for all account types
   # ------------------------------------------------------------------------------------------------
 
+  # Future-dated entries (#1080) must not extend balance materialization
+  # past today. The displayed "current balance" reads from the latest
+  # row in `balances`, and that row needs to mean "today's actual
+  # state", not "what the balance will be once the scheduled entry
+  # posts". Cap is enforced in ForwardCalculator#calc_end_date.
+  test "future-dated entry does not extend balance series past today" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "transaction", date: 1.day.ago.to_date, amount: -100 },
+        { type: "transaction", date: 10.days.from_now.to_date, amount: -500 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    latest_calculated_date = calculated.map(&:date).max
+    assert latest_calculated_date <= Date.current,
+      "Balance series should not extend past today, got #{latest_calculated_date}"
+    assert_not calculated.any? { |b| b.date > Date.current },
+      "No balance row should have a future date even when a future-dated entry exists"
+  end
+
   # When syncing forwards, we don't care about the account balance.  We generate everything based on entries, starting from 0.
   test "no entries sync" do
     account = create_account_with_ledger(

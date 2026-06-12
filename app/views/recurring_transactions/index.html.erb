@@ -167,6 +167,24 @@
                 </td>
                 <td class="py-3 px-2 text-sm text-right">
                   <div class="flex items-center justify-end gap-2">
+                    <%# Auto-post toggle — when enabled, the daily PostDueRecurringTransactionsJob materializes a real Entry on next_expected_date (#1080) %>
+                    <% auto_post_aria_label = recurring_transaction.auto_post? ? t("recurring_transactions.auto_post_on_tooltip") : t("recurring_transactions.auto_post_off_tooltip") %>
+                    <%= link_to toggle_auto_post_recurring_transaction_path(recurring_transaction),
+                        data: { turbo_method: :post },
+                        class: "#{recurring_transaction.auto_post? ? 'text-success' : 'text-secondary'} hover:text-primary",
+                        aria: { label: auto_post_aria_label } do %>
+                      <%# DS::Tooltip replaces the bare title= attribute so the
+                          hint is keyboard-accessible, touch-reachable, and
+                          consistently styled. `as: :span` keeps the trigger
+                          non-interactive so it nests cleanly inside the link. %>
+                      <%= render DS::Tooltip.new(
+                            text: auto_post_aria_label,
+                            icon: recurring_transaction.auto_post? ? "calendar-check" : "calendar-clock",
+                            size: "sm",
+                            color: "current",
+                            as: :span
+                          ) %>
+                    <% end %>
                     <%= link_to toggle_status_recurring_transaction_path(recurring_transaction),
                         data: { turbo_method: :post },
                         class: "text-secondary hover:text-primary" do %>
