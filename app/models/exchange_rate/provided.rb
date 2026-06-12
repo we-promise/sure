@@ -9,6 +9,11 @@ module ExchangeRate::Provided
     end
 
     # Maximum number of days to look back for a cached rate before calling the provider.
+    #
+    # Also consumed by `IncomeStatement::Totals#nearest_exchange_rate_lateral_sql`
+    # as a SQL bind, so the per-budget-row LATERAL fallback uses the same
+    # backward window as this Ruby method. Changing this constant changes
+    # budget-total FX behavior; keep the two paths in sync.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
