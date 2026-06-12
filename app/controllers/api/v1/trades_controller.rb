@@ -8,8 +8,7 @@ class Api::V1::TradesController < Api::V1::BaseController
   before_action :set_trade, only: [ :show, :update, :destroy ]
 
   def index
-    family = current_resource_owner.family
-    trades_query = family.trades.visible
+    trades_query = read_trades_scope
 
     trades_query = apply_filters(trades_query)
     trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
@@ -39,7 +38,9 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts.visible
+      .writable_by(current_resource_owner)
+      .find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -107,9 +108,29 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
+    def read_trades_scope
+      accessible_account_ids = current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .where.not(status: "pending_deletion")
+        .select(:id)
+      current_resource_owner.family.trades.visible
+        .joins(:entry)
+        .where(entries: { account_id: accessible_account_ids })
+    end
+
+    def write_trades_scope
+      writable_account_ids = current_resource_owner.family.accounts
+        .writable_by(current_resource_owner)
+        .select(:id)
+      read_trades_scope.where(entries: { account_id: writable_account_ids })
+    end
+
     def set_trade
-      family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+      @trade = if action_name == "show"
+        read_trades_scope.find(params[:id])
+      else
+        write_trades_scope.find(params[:id])
+      end
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
