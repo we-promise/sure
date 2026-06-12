@@ -486,6 +486,59 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_not expense_filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
 
+  test "SUPPORTED_CONDITION_TYPES matches the registry's filter keys" do
+    # Guards against drift: if a new condition filter is added to a Rule::Registry,
+    # SUPPORTED_CONDITION_TYPES must be updated too, otherwise the inclusion
+    # validation in Rule::Condition will reject types the registry can handle.
+    registry_keys = @transaction_rule.registry.condition_filters.map(&:key)
+    # "compound" is handled directly in Rule::Condition#apply rather than via a filter.
+    expected = (registry_keys + [ "compound" ]).sort
+
+    assert_equal expected, Rule::Condition::SUPPORTED_CONDITION_TYPES.sort
+  end
+
+  test "validates condition_type against supported registry" do
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "definitely_not_a_real_type",
+      operator: "like",
+      value: "x"
+    )
+
+    assert_not condition.valid?
+    assert_includes condition.errors[:condition_type], "is not included in the list"
+  end
+
+  test "normalizes legacy 'name' condition_type to 'transaction_name' on save" do
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "name",
+      operator: "like",
+      value: "starbucks"
+    )
+
+    assert condition.valid?, condition.errors.full_messages.to_sentence
+    assert_equal "transaction_name", condition.condition_type
+  end
+
+  test "filter falls back gracefully when persisted condition_type is unsupported" do
+    # Bypass validations to simulate legacy rows that already exist in the database.
+    condition = Rule::Condition.new(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "x"
+    )
+    condition.rule = @transaction_rule
+    condition.save!
+    condition.update_columns(condition_type: "name")
+    condition.reload
+
+    assert_nothing_raised do
+      assert_equal "Unsupported (name)", condition.filter.label
+      assert_equal "name", condition.filter.key
+    end
+  end
+
   test "transaction_type income excludes investment_contribution" do
     scope = @rule_scope
 
