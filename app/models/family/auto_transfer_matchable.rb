@@ -4,6 +4,7 @@ module Family::AutoTransferMatchable
     exchange_rate_tolerance: 0.1,
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
+    account_id: nil,
     include_rejected: true
   )
     date_window = coerce_transfer_match_date_window!(date_window)
@@ -16,6 +17,7 @@ module Family::AutoTransferMatchable
         family_id: id,
         inflow_transaction_id:,
         outflow_transaction_id:,
+        account_id:,
         include_rejected:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
@@ -23,9 +25,9 @@ module Family::AutoTransferMatchable
     ])
   end
 
-  def auto_match_transfers!
+  def auto_match_transfers!(account: nil)
     # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(include_rejected: false)
+    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
@@ -110,6 +112,7 @@ module Family::AutoTransferMatchable
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
+            outflow_candidates.excluded = FALSE AND
             outflow_candidates.amount > 0 AND
             outflow_candidates.account_id <> inflow_candidates.account_id AND
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
@@ -127,12 +130,14 @@ module Family::AutoTransferMatchable
           )
           WHERE
             inflow_candidates.entryable_type = 'Transaction' AND
+            inflow_candidates.excluded = FALSE AND
             inflow_candidates.amount < 0 AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
             inflow_accounts.status IN ('draft', 'active') AND
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
+            (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
@@ -146,6 +151,7 @@ module Family::AutoTransferMatchable
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
+            outflow_candidates.excluded = FALSE AND
             outflow_candidates.amount > 0 AND
             outflow_candidates.account_id <> inflow_candidates.account_id AND
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
@@ -167,12 +173,14 @@ module Family::AutoTransferMatchable
           )
           WHERE
             inflow_candidates.entryable_type = 'Transaction' AND
+            inflow_candidates.excluded = FALSE AND
             inflow_candidates.amount < 0 AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
             inflow_accounts.status IN ('draft', 'active') AND
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
+            (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND

@@ -252,7 +252,12 @@ class EnableBankingItem::Importer
 
       pending_transactions = []
       if include_pending
-        # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
+        # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
+        # The BOOK fetch above used the same date_from/date_to and succeeded, so any 422 raised here is
+        # necessarily about the transaction_status param. Different ASPSPs reject it with different bodies
+        # (e.g. ImaginV2 returns WRONG_REQUEST_PARAMETERS; others mention "transactionStatus" verbatim),
+        # so we treat every validation_error on PDNG as "ASPSP doesn't support pending" and continue with
+        # the booked transactions only. (Issue #1805)
         begin
           pending_transactions = fetch_paginated_transactions(
             enable_banking_account,
@@ -261,8 +266,9 @@ class EnableBankingItem::Importer
             psu_headers: enable_banking_item.build_psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
-          raise unless e.error_type == :validation_error && e.message.include?("transactionStatus")
-          Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{e.message}"
+          raise unless e.error_type == :validation_error
+          api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
+          Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
         end
       end
 
