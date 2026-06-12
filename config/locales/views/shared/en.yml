@@ -40,3 +40,12 @@ en:
       expense: Expense
       income: Income
       transfer: Transfer
+    sidekiq_health_banner:
+      title: Some data may be out of date
+      body: "Background jobs aren't being processed, so balances, net worth, and account syncs may be stale or missing."
+      cta: View system health
+      reasons:
+        redis_unreachable: "The app can't reach Redis. Check your REDIS_URL and that Redis is running."
+        no_worker_processes: "No Sidekiq worker process is connected. Start the worker container or systemd unit."
+        stale_heartbeat: "The Sidekiq worker hasn't reported a heartbeat recently. It may be stuck or crashed."
+        queue_backed_up: "The oldest enqueued job has been waiting beyond the latency budget. The worker is alive but falling behind."
