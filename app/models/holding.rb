@@ -276,27 +276,47 @@ class Holding < ApplicationRecord
     end
 
     # Calculates weighted average cost from buy trades.
-    # Returns nil if no trades exist (cost basis is unknown).
+    # Returns nil if no trades exist or if any foreign-currency trade is missing an
+    # exchange rate within the 5-day lookback window (avoids a silent 1:1 substitution
+    # that would produce a wrong value rather than an honest nil).
     def calculate_avg_cost
-      trades = account.trades
+      buy_trades = account.trades
         .with_entry
-        .joins(ActiveRecord::Base.sanitize_sql_array([
-          "LEFT JOIN exchange_rates ON (
-            exchange_rates.date = entries.date AND
-            exchange_rates.from_currency = trades.currency AND
-            exchange_rates.to_currency = ?
-          )", account.currency
-        ]))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)
 
-      total_cost, total_qty = trades.pick(
-        Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
-        Arel.sql("SUM(trades.qty)")
-      )
+      # Use the same nearest-rate-within-5-days semantics as ExchangeRate.find_or_fetch_rate
+      # and Money#exchange_to so weekend/holiday trades resolve consistently.
+      nearest_rate_sql = ActiveRecord::Base.sanitize_sql_array([
+        "LEFT JOIN LATERAL (
+          SELECT er.rate FROM exchange_rates er
+          WHERE er.from_currency = trades.currency
+            AND er.to_currency = ?
+            AND er.date BETWEEN entries.date - ? AND entries.date
+          ORDER BY er.date DESC
+          LIMIT 1
+        ) nearest_fx ON true", account.currency, ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS
+      ])
 
-      # Return nil when no trades exist - cost basis is genuinely unknown
-      # Previously this fell back to current market price, which was misleading
+      # If any foreign-currency buy trade has no rate within the lookback window,
+      # cost basis is unknowable — return nil to match ForwardCalculator / ReverseCalculator.
+      missing_rate = buy_trades
+        .where("trades.currency != ?", account.currency)
+        .joins(nearest_rate_sql)
+        .where("nearest_fx.rate IS NULL")
+        .exists?
+
+      return nil if missing_rate
+
+      # All foreign rates are confirmed present; COALESCE fallback only applies
+      # to domestic (same-currency) trades where treating rate = 1 is correct.
+      total_cost, total_qty = buy_trades
+        .joins(nearest_rate_sql)
+        .pick(
+          Arel.sql("SUM(trades.price * trades.qty * COALESCE(nearest_fx.rate, 1))"),
+          Arel.sql("SUM(trades.qty)")
+        )
+
       return nil unless total_qty && total_qty > 0
 
       Money.new(total_cost / total_qty, currency)
