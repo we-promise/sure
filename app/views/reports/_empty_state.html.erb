@@ -1,4 +1,4 @@
-<div class="bg-container rounded-xl shadow-border-xs p-12 text-center">
+<%= render DS::Card.new(level: :outer, padding: :xl, class: "text-center") do %>
   <%= icon("chart-bar", class: "w-16 h-16 text-subdued mx-auto mb-6") %>
 
   <h3 class="text-xl font-medium text-primary mb-3">
@@ -24,4 +24,4 @@
       frame: :modal
     ) %>
   </div>
-</div>
+<% end %>
