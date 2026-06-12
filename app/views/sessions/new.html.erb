@@ -79,7 +79,7 @@
     <% end %>
   </div>
 <% elsif !AuthConfig.local_login_form_visible? %>
-  <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-    <%= t(".no_auth_methods_enabled") %>
+  <div class="mt-6">
+    <%= render DS::Alert.new(message: t(".no_auth_methods_enabled"), variant: :warning) %>
   </div>
 <% end %>

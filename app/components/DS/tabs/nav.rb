@@ -22,7 +22,7 @@ class DS::Tabs::Nav < DesignSystemComponent
     content_tag(
       :button, label, id: "#{dom_prefix}-tab-#{id}",
       type: "button",
-      class: class_names(btn_classes, is_active ? active_btn_classes : inactive_btn_classes, classes),
+      class: class_names("focus-ring", btn_classes, is_active ? active_btn_classes : inactive_btn_classes, classes),
       role: "tab",
       "aria-selected": is_active.to_s,
       "aria-controls": "#{dom_prefix}-panel-#{id}",
