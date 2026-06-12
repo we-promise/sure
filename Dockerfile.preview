@@ -285,8 +285,8 @@ psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'"
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
   psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
 
-# Set DATABASE_URL if not already set
-export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
+# Set DATABASE_URL if not already set (ephemeral preview-only credentials)
+export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}" # pipelock:ignore
 
 # Set REDIS_URL if not already set
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
@@ -309,12 +309,12 @@ DEMO_SEED="${DEMO_DATA_SEED:-880}"
 DEMO_HAS_USER=0
 DEMO_HAS_DATA=0
 
-if psql "$DATABASE_URL" -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
+if psql -h localhost -U rails -d sure_development -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   DEMO_HAS_USER=1
   emit_status demo-data-user-present "default demo user already exists"
 fi
 
-if psql "$DATABASE_URL" -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_id = a.family_id WHERE u.email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
+if psql -h localhost -U rails -d sure_development -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_id = a.family_id WHERE u.email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   DEMO_HAS_DATA=1
   emit_status demo-data-skip "demo financial data already exists"
 else
