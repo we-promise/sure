@@ -275,7 +275,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ],
                       const SizedBox(height: 12),
                       Text(
-                        'Disable anytime. All data sent to our AI providers is anonymized.',
+                        'Disable anytime. All data sent to our LLM providers is anonymized.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),

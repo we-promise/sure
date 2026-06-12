@@ -43,6 +43,29 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "feature_disabled", response_body["error"]
   end
 
+  test "feature_disabled response includes ai_available true when AI is available but not enabled" do
+    @user.update!(ai_enabled: false)
+
+    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    assert_response :forbidden
+
+    response_body = JSON.parse(response.body)
+    assert_equal "feature_disabled", response_body["error"]
+    assert_equal true, response_body["ai_available"]
+  end
+
+  test "feature_disabled response includes ai_available false when AI is not configured" do
+    @user.update!(ai_enabled: false)
+    @user.stubs(:ai_available?).returns(false)
+
+    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    assert_response :forbidden
+
+    response_body = JSON.parse(response.body)
+    assert_equal "feature_disabled", response_body["error"]
+    assert_equal false, response_body["ai_available"]
+  end
+
   test "should list chats with read scope" do
     get "/api/v1/chats", headers: bearer_auth_header(@read_token)
     assert_response :success

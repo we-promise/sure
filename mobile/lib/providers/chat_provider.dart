@@ -83,6 +83,7 @@ class ChatProvider with ChangeNotifier {
   /// Enable AI for the current user, then refresh the chat list.
   Future<bool> enableAi({required String accessToken}) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
