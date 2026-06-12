@@ -66,7 +66,7 @@ COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
 # Create preview entrypoint script inline
-RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
+COPY --chmod=755 --chown=rails:rails <<'ENTRYPOINT_EOF' /rails/bin/preview-entrypoint
 #!/bin/bash
 set -e
 
@@ -279,7 +279,6 @@ fi
 
 wait "$RAILS_PID"
 ENTRYPOINT_EOF
-RUN chmod 755 /rails/bin/preview-entrypoint && chown rails:rails /rails/bin/preview-entrypoint
 
 USER 1000:1000
 
