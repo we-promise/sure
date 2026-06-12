@@ -56,7 +56,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
   test "feature_disabled response includes ai_available false when AI is not configured" do
     @user.update!(ai_enabled: false)
-    @user.stubs(:ai_available?).returns(false)
+    User.any_instance.stubs(:ai_available?).returns(false)
 
     get "/api/v1/chats", headers: bearer_auth_header(@read_token)
     assert_response :forbidden
