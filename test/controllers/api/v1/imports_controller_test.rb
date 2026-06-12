@@ -1106,6 +1106,45 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal true, JSON.parse(response.body)["data"]["valid"]
   end
 
+  test "should preflight read only shared account for family member" do
+    member_api_key = api_key_for(users(:family_member), scopes: [ "read" ])
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:credit_card).id
+           },
+           headers: api_headers(member_api_key)
+    end
+
+    assert_response :success
+    assert_equal true, JSON.parse(response.body)["data"]["valid"]
+  end
+
+  test "should return not found for inaccessible same-family preflight account" do
+    member_api_key = api_key_for(users(:family_member), scopes: [ "read" ])
+
+    assert_no_difference("Import.count") do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction",
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:other_asset).id
+           },
+           headers: api_headers(member_api_key)
+    end
+
+    assert_response :not_found
+    assert_equal "not_found", JSON.parse(response.body)["error"]
+  end
+
   test "should require authentication for preflight" do
     post preflight_api_v1_imports_url, params: {
       raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction"
@@ -1139,7 +1178,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :not_found
-    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    assert_equal "not_found", JSON.parse(response.body)["error"]
   end
 
   test "should return not found for malformed preflight account id" do
@@ -1156,7 +1195,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :not_found
-    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    assert_equal "not_found", JSON.parse(response.body)["error"]
   end
 
   test "should apply Mint defaults before preflight header validation" do
@@ -1281,6 +1320,77 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
+  test "should create import for full control shared account" do
+    member_api_key = api_key_for(users(:family_member))
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    assert_difference([ "Import.count", "Import::Row.count" ], 1) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:depository).id
+           },
+           headers: api_headers(member_api_key)
+    end
+
+    assert_response :created
+    import = Import.find(JSON.parse(response.body).dig("data", "id"))
+    assert_equal accounts(:depository), import.account
+  end
+
+  test "should not create or publish import for read only shared account" do
+    member_api_key = api_key_for(users(:family_member))
+    read_only_account = accounts(:credit_card)
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    assert_no_enqueued_jobs only: ImportJob do
+      assert_no_difference([ "Import.count", "Import::Row.count", "Entry.count" ]) do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: read_only_account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(member_api_key)
+      end
+    end
+
+    assert_response :not_found
+    assert_equal "not_found", JSON.parse(response.body)["error"]
+  end
+
+  test "should not create import for inaccessible same family account" do
+    member_api_key = api_key_for(users(:family_member))
+    inaccessible_account = accounts(:other_asset)
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    assert_no_enqueued_jobs only: ImportJob do
+      assert_no_difference([ "Import.count", "Import::Row.count", "Entry.count" ]) do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: inaccessible_account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(member_api_key)
+      end
+    end
+
+    assert_response :not_found
+    assert_equal "not_found", JSON.parse(response.body)["error"]
+  end
+
   test "should not create import for account in another family" do
     other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
     other_depository = Depository.create!(subtype: "checking")
@@ -1288,16 +1398,18 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
 
-    post api_v1_imports_url,
-          params: {
-            raw_file_content: csv_content,
-            account_id: other_account.id
-          },
-          headers: api_headers(@api_key)
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+            params: {
+              raw_file_content: csv_content,
+              account_id: other_account.id
+            },
+            headers: api_headers(@api_key)
+    end
 
-    assert_response :unprocessable_entity
+    assert_response :not_found
     json_response = JSON.parse(response.body)
-    assert_includes json_response["errors"], "Account must belong to your family"
+    assert_equal "not_found", json_response["error"]
   end
 
   test "should reject file upload exceeding max size" do
@@ -1381,6 +1493,16 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def api_key_for(user, scopes: [ "read_write" ])
+      ApiKey.create!(
+        user: user,
+        name: "Test API Key #{SecureRandom.hex(4)}",
+        scopes: scopes,
+        source: "web",
+        display_key: "test_key_#{SecureRandom.hex(8)}"
+      )
     end
 
     def api_headers(api_key)
