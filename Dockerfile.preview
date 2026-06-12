@@ -285,8 +285,12 @@ psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'"
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
   psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
 
-# Set DATABASE_URL if not already set (ephemeral preview-only credentials)
-export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}" # pipelock:ignore
+# Set database env if not already set (ephemeral preview-only credentials)
+export POSTGRES_USER="${POSTGRES_USER:-rails}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-rails}"
+export POSTGRES_DB="${POSTGRES_DB:-sure_development}"
+export DB_HOST="${DB_HOST:-localhost}"
+export DB_PORT="${DB_PORT:-5432}"
 
 # Set REDIS_URL if not already set
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
