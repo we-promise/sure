@@ -99,6 +99,60 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Regression for #1430: pure SSO-only mode must block local account creation.
+  test "new is blocked when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+
+    get new_registration_url
+
+    assert_redirected_to new_session_url
+  end
+
+  test "create is blocked when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "sso-only@example.com",
+        password: "Password1!" } }
+    end
+
+    assert_redirected_to new_session_url
+  end
+
+  test "create with a pending invitation is also blocked when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    invitation = invitations(:one)
+    invitation.update!(email: "invited-sso@example.com")
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { invitation: invitation.token, user: {
+        email: invitation.email,
+        password: "Password1!" } }
+    end
+
+    assert_redirected_to new_session_url
+  end
+
+  test "stashes a pending invitation in the session so SSO can claim it" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    invitation = invitations(:one)
+
+    get new_registration_url(invitation: invitation.token)
+
+    assert_redirected_to new_session_url
+    assert_equal invitation.token, session[:pending_invitation_token]
+  end
+
+  test "login page hides the create account link when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+
+    get new_session_url
+
+    assert_response :success
+    assert_select "a[href=?]", new_registration_path, count: 0
+  end
+
   test "creating account from guest invitation assigns guest role and intro layout" do
     invitation = invitations(:one)
     invitation.update!(role: "guest", email: "guest-signup@example.com")
