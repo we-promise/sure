@@ -120,11 +120,35 @@ class Provider::IndexaCapitalTest < ActiveSupport::TestCase
     provider = Provider::IndexaCapital.new(api_token: "bad_token")
 
     stub_response = OpenStruct.new(code: 401, body: "Unauthorized")
-    Provider::IndexaCapital.stubs(:get).returns(stub_response)
+    Provider::IndexaCapital.expects(:post).never
+    Provider::IndexaCapital.expects(:get).once.returns(stub_response)
 
     assert_raises Provider::IndexaCapital::AuthenticationError do
       provider.list_accounts
     end
+  end
+
+  test "credential auth refreshes a stale token once after unauthorized response" do
+    provider = Provider::IndexaCapital.new(
+      username: "user@example.com",
+      document: "12345678A",
+      password: "secret"
+    )
+
+    first_auth_response = OpenStruct.new(code: 200, body: { token: "expired_token" }.to_json)
+    second_auth_response = OpenStruct.new(code: 200, body: { token: "fresh_token" }.to_json)
+    unauthorized_response = OpenStruct.new(code: 401, body: "Unauthorized")
+    accounts_response = OpenStruct.new(code: 200, body: { accounts: [] }.to_json)
+    request_tokens = []
+
+    Provider::IndexaCapital.expects(:post).twice.returns(first_auth_response, second_auth_response)
+    Provider::IndexaCapital.expects(:get).twice.with do |_url, options|
+      request_tokens << options.fetch(:headers).fetch("X-AUTH-TOKEN")
+      true
+    end.returns(unauthorized_response, accounts_response)
+
+    assert_equal [], provider.list_accounts
+    assert_equal [ "expired_token", "fresh_token" ], request_tokens
   end
 
   test "rejects invalid account_number with path traversal" do

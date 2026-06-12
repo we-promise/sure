@@ -4,7 +4,7 @@ class IndexaCapitalActivitiesFetchJob < ApplicationJob
   queue_as :default
 
   sidekiq_options lock: :until_executed,
-                  lock_args_method: ->(args) { args.first },
+                  lock_args_method: ->(args) { [ args.first.id ] },
                   on_conflict: :log
 
   # Indexa Capital API does not provide an activities/transactions endpoint.

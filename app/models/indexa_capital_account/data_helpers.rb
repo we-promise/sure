@@ -82,7 +82,8 @@ module IndexaCapitalAccount::DataHelpers
       ticker = symbol.to_s.upcase.strip
       return nil if ticker.blank?
 
-      security = Security.find_by(ticker: ticker)
+      exchange = extract_exchange(symbol_data)&.upcase
+      security = Security.find_by(ticker: ticker, exchange_operating_mic: exchange)
 
       # If security exists but has a bad name (looks like a hash), update it
       if security && security.name&.start_with?("{")
@@ -101,13 +102,14 @@ module IndexaCapitalAccount::DataHelpers
       Security.create!(
         ticker: ticker,
         name: security_name,
-        exchange_mic: extract_exchange(symbol_data),
+        exchange_mic: exchange,
+        exchange_operating_mic: exchange,
         country_code: extract_country_code(symbol_data)
       )
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
       # Handle race condition - another process may have created it
       Rails.logger.error "IndexaCapitalAccount::DataHelpers - Failed to create security #{ticker}: #{e.message}"
-      Security.find_by(ticker: ticker)
+      Security.find_by(ticker: ticker, exchange_operating_mic: exchange)
     end
 
     def extract_security_name(symbol_data, fallback_ticker)
