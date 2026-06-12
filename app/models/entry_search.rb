@@ -5,12 +5,15 @@ class EntrySearch
   attribute :search, :string
   attribute :amount, :string
   attribute :amount_operator, :string
-  attribute :types, :string
+  attribute :types, array: true
   attribute :status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
   attribute :end_date, :string
+  attribute :categories, array: true
+  attribute :merchants, array: true
+  attribute :tags, array: true
 
   class << self
     def apply_search_filter(scope, search)
@@ -92,6 +95,88 @@ class EntrySearch
         scope
       end
     end
+
+    def apply_category_filter(scope, categories)
+      return scope unless categories.present?
+
+      all_uncategorized_names = Category.all_uncategorized_names
+      include_uncategorized = (categories & all_uncategorized_names).any?
+      real_categories = categories - all_uncategorized_names
+      parent_category_ids = Category.where(name: real_categories).pluck(:id)
+
+      query = scope.joins("LEFT JOIN categories ON categories.id = transactions.category_id")
+      uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
+
+      if parent_category_ids.empty?
+        if include_uncategorized
+          query.where(
+            "categories.name IN (?) OR (#{uncategorized_condition})",
+            real_categories.presence || [], Transaction::TRANSFER_KINDS
+          )
+        else
+          query.where(categories: { name: real_categories })
+        end
+      elsif include_uncategorized
+        query.where(
+          "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
+          real_categories, parent_category_ids, Transaction::TRANSFER_KINDS
+        )
+      else
+        query.where(
+          "categories.name IN (?) OR categories.parent_id IN (?)",
+          real_categories, parent_category_ids
+        )
+      end
+    end
+
+    def apply_type_filter(scope, types)
+      return scope unless types.present?
+      return scope if types.sort == %w[expense income transfer]
+
+      case types.sort
+      when [ "transfer" ]
+        scope.where(transactions: { kind: Transaction::TRANSFER_KINDS })
+      when [ "expense" ]
+        scope.where("entries.amount >= 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      when [ "income" ]
+        scope.where("entries.amount < 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      when [ "expense", "transfer" ]
+        scope.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "income", "transfer" ]
+        scope.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "expense", "income" ]
+        scope.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      else
+        scope
+      end
+    end
+
+    def apply_merchant_filter(scope, merchants)
+      return scope unless merchants.present?
+
+      scope
+        .joins("INNER JOIN merchants ON merchants.id = transactions.merchant_id")
+        .where(merchants: { name: merchants })
+    end
+
+    def apply_tag_filter(scope, tags)
+      return scope unless tags.present?
+
+      scope.where(<<~SQL.squish, tags)
+        EXISTS (
+          SELECT 1
+          FROM taggings
+          INNER JOIN tags ON tags.id = taggings.tag_id
+          WHERE taggings.taggable_id = transactions.id
+            AND taggings.taggable_type = 'Transaction'
+            AND tags.name IN (?)
+        )
+      SQL
+    end
+
+    def apply_transaction_join(scope)
+      scope.joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+    end
   end
 
   def build_query(scope)
@@ -100,7 +185,25 @@ class EntrySearch
     query = self.class.apply_date_filters(query, start_date, end_date)
     query = self.class.apply_amount_filter(query, amount, amount_operator)
     query = self.class.apply_accounts_filter(query, accounts, account_ids)
+
+    if transaction_filters_present?
+      query = self.class.apply_transaction_join(query)
+      query = self.class.apply_category_filter(query, categories)
+      query = self.class.apply_type_filter(query, types)
+      query = self.class.apply_merchant_filter(query, merchants)
+      query = self.class.apply_tag_filter(query, tags)
+    end
+
     query = self.class.apply_status_filter(query, status)
     query
   end
+
+  private
+    def transaction_filters_present?
+      categories.present? || effective_type_filter_present? || merchants.present? || tags.present?
+    end
+
+    def effective_type_filter_present?
+      types.present? && types.sort != %w[expense income transfer]
+    end
 end
