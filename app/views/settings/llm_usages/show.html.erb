@@ -103,10 +103,10 @@
   <!-- Recent Usage Table -->
   <div>
     <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".recent_usage") %></h2>
-    <div class="bg-container-inset rounded-lg overflow-hidden">
+    <div class="table-scroll rounded-lg" tabindex="0" role="region" aria-label="<%= t(".recent_usage") %>">
       <% if @llm_usages.any? %>
         <table class="w-full">
-          <thead class="bg-surface-default border-b border-primary">
+          <thead class="bg-surface border-b border-primary">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".col_date") %></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".col_operation") %></th>

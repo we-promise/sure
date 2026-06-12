@@ -160,11 +160,8 @@
         <% end %>
       </div>
       <% if @oidc_identities.count == 1 && Current.user.password_digest.blank? %>
-        <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <div class="flex items-start gap-2">
-            <%= icon "alert-triangle", class: "w-5 h-5 text-amber-600 shrink-0 mt-0.5" %>
-            <p class="text-sm text-amber-800"><%= t(".sso_warning_message") %></p>
-          </div>
+        <div class="mt-4">
+          <%= render DS::Alert.new(message: t(".sso_warning_message"), variant: :warning) %>
         </div>
       <% end %>
     <% else %>
