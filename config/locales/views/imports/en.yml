@@ -27,6 +27,26 @@ en:
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
         submit: Continue to review
+    sheet_selections:
+      show:
+        title: Select accounts to import
+        description: "Tick the sheets you want to import and map each one to an account. Already-known accounts are matched automatically; uncheck anything you don't want (e.g. a card account you already sync)."
+        finalize_upload: Please finalize your file upload.
+        invalid_file: "We couldn't read this spreadsheet: %{message}"
+        none_title: No importable accounts found
+        none_description: We couldn't detect any account sheets in this spreadsheet. Make sure it's a bank export with one sheet per account.
+        back_to_imports: Back to imports
+        known_account: Known account
+        account_number: Account no.
+        transactions_count:
+          one: "1 transaction"
+          other: "%{count} transactions"
+        create_new_account: Create new account
+        new_account_name_placeholder: New account name
+        import_selected: Import selected accounts
+      update:
+        no_sheets_selected: Please select at least one sheet to import.
+        sheets_imported: Sheets imported. Review your data below.
     cleans:
       show:
         not_configured: "Please configure your import before proceeding."
@@ -315,6 +335,7 @@ en:
       pdf_import: "PDF import"
       document_import: "Document import"
       sure_import: "Sure import"
+      xlsx_import: "Excel import"
     steps:
       upload: Upload
       configure: Configure
@@ -349,6 +370,7 @@ en:
           pdf_import: "PDF"
           document_import: "Document"
           sure_import: "Sure"
+          xlsx_import: "Excel"
         status:
           in_progress: In progress
           uploading: Processing rows
@@ -379,6 +401,8 @@ en:
       import_qif: Import from Quicken (QIF)
       import_sure: Import from Sure
       import_sure_description: Full-export .ndjson file
+      import_xlsx: Import Excel spreadsheet
+      import_xlsx_description: Multi-account bank export (.xlsx), one sheet per account
       import_file: Import document
       import_file_description: AI-powered analysis for PDFs and searchable file upload
       requires_account: Import accounts first to unlock this option.
@@ -401,6 +425,8 @@ en:
       invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
       ndjson_uploaded: NDJSON file uploaded successfully.
       document_provider_not_configured: No vector store is configured for document uploads.
+      xlsx_uploaded: Spreadsheet uploaded. Select which accounts to import.
+      invalid_xlsx_file_type: Invalid file type. Please upload an .xlsx spreadsheet.
     show:
       finalize_upload: Please finalize your file upload.
       finalize_mappings: Please finalize your mappings before proceeding.

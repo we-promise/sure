@@ -2,7 +2,14 @@
   <%= render "imports/nav", import: @import %>
 <% end %>
 
-<%= content_for :previous_path, @import.is_a?(PdfImport) ? import_path(@import) : import_configuration_path(@import) %>
+<% clean_previous_path = if @import.is_a?(PdfImport)
+     import_path(@import)
+   elsif @import.is_a?(XlsxImport)
+     import_sheet_selection_path(@import)
+   else
+     import_configuration_path(@import)
+   end %>
+<%= content_for :previous_path, clean_previous_path %>
 
 <div class="space-y-4 mx-auto max-w-5xl">
   <div class="text-center space-y-2 max-w-[400px] mx-auto mb-4">

@@ -59,6 +59,11 @@ class ImportsController < ApplicationController
       return
     end
 
+    if file.present? && xlsx_import_request?
+      create_xlsx_import(file)
+      return
+    end
+
     # Handle PDF file uploads - process with AI
     if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
       unless valid_pdf_file?(file)
@@ -104,7 +109,13 @@ class ImportsController < ApplicationController
 
   def show
     unless @import.requires_csv_workflow?
-      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload") unless @import.uploaded?
+      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload") and return unless @import.uploaded?
+
+      # Xlsx imports must pass through the sheet-selection step before they have
+      # any rows to clean/publish.
+      if @import.is_a?(XlsxImport) && @import.rows_count.zero?
+        redirect_to import_sheet_selection_path(@import)
+      end
       return
     end
 
@@ -222,6 +233,25 @@ class ImportsController < ApplicationController
 
     def sure_import_request?
       params.dig(:import, :type) == "SureImport"
+    end
+
+    def xlsx_import_request?
+      params.dig(:import, :type) == "XlsxImport"
+    end
+
+    def create_xlsx_import(file)
+      if file.size > XlsxImport::MAX_XLSX_SIZE
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: XlsxImport::MAX_XLSX_SIZE / 1.megabyte)
+        return
+      end
+
+      unless XlsxImport.valid_upload?(file)
+        redirect_to new_import_path, alert: t("imports.create.invalid_xlsx_file_type")
+        return
+      end
+
+      import = XlsxImport.create_from_upload!(family: Current.family, file: file)
+      redirect_to import_sheet_selection_path(import), notice: t("imports.create.xlsx_uploaded")
     end
 
     def create_sure_import(file)

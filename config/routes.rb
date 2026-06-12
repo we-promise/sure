@@ -353,6 +353,7 @@ Rails.application.routes.draw do
     resource :clean, only: :show, module: :import
     resource :confirm, only: :show, module: :import
     resource :qif_category_selection, only: %i[show update], module: :import
+    resource :sheet_selection, only: %i[show update], module: :import
 
     resources :rows, only: %i[show update], module: :import
     resources :mappings, only: :update, module: :import
