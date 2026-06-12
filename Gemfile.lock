@@ -923,7 +923,7 @@ DEPENDENCIES
   rack-attack (~> 6.6)
   rack-cors
   rack-mini-profiler
-  rails (~> 8.0)
+  rails (~> 8.1.0)
   rails-i18n
   rails-settings-cached
   rchardet
