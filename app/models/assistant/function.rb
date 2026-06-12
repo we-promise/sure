@@ -43,8 +43,58 @@ class Assistant::Function
     }
   end
 
+  # Normalizes raw tool-call arguments so they match the declared params_schema
+  # before the function runs.
+  #
+  # Some LLM / tool clients (notably local models served through Ollama) serialize
+  # array arguments as JSON-encoded strings (e.g. "[\"Travel\"]") instead of real
+  # JSON arrays. Without coercion these strings reach Array operations downstream
+  # and blow up (e.g. `String#&`). See https://github.com/we-promise/sure/issues/1611.
+  def coerce_arguments(raw_args)
+    return raw_args unless raw_args.is_a?(Hash)
+
+    keys = array_param_keys
+    return raw_args if keys.empty?
+
+    raw_args.each_with_object({}) do |(key, value), coerced|
+      coerced[key] = keys.include?(key.to_s) ? coerce_to_array(value) : value
+    end
+  end
+
   private
     attr_reader :user
+
+    # Names (as strings) of the params_schema properties declared as `type: "array"`.
+    def array_param_keys
+      properties = params_schema[:properties]
+      return [] unless properties.is_a?(Hash)
+
+      properties.filter_map do |key, definition|
+        next unless definition.is_a?(Hash)
+
+        type = definition[:type] || definition["type"]
+        key.to_s if type.to_s == "array"
+      end
+    rescue StandardError => e
+      Rails.logger.warn("#{self.class.name}#array_param_keys failed; skipping argument coercion: #{e.class} - #{e.message}")
+      []
+    end
+
+    # Coerces a single value into an Array. Already-array and non-string values are
+    # returned untouched; a JSON-array string is decoded; any other string is wrapped.
+    def coerce_to_array(value)
+      return value if value.is_a?(Array)
+      return value unless value.is_a?(String)
+
+      decoded =
+        begin
+          JSON.parse(value)
+        rescue JSON::ParserError
+          nil
+        end
+
+      decoded.is_a?(Array) ? decoded : [ value ]
+    end
 
     def build_schema(properties: {}, required: [])
       {
