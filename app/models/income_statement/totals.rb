@@ -1,10 +1,12 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil,
+                 excluded_kinds: Transaction::REPORT_EXCLUDED_KINDS)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @excluded_kinds = excluded_kinds
 
     validate_date_range!
   end
@@ -73,7 +75,7 @@ class IncomeStatement::Totals
           er.from_currency = ae.currency AND
           er.to_currency = :target_currency
         )
-        WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+        WHERE at.kind NOT IN (#{excluded_kinds_sql})
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
@@ -101,7 +103,7 @@ class IncomeStatement::Totals
           er.from_currency = ae.currency AND
           er.to_currency = :target_currency
         )
-        WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+        WHERE at.kind NOT IN (#{excluded_kinds_sql})
           AND (
             at.investment_activity_label IS NULL
             OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
@@ -159,8 +161,8 @@ class IncomeStatement::Totals
       "AND a.id IN (:included_account_ids)"
     end
 
-    def budget_excluded_kinds_sql
-      @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    def excluded_kinds_sql
+      @excluded_kinds_sql ||= @excluded_kinds.map { |k| ActiveRecord::Base.connection.quote(k.to_s) }.join(", ")
     end
 
     def validate_date_range!
