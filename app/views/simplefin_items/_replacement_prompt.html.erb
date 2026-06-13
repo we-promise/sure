@@ -20,7 +20,7 @@
     <% dismissal_key = "#{old_sfa.id}:#{new_sfa.id}" %>
     <% next if dismissed_ids.include?(dismissal_key) %>
 
-    <div class="bg-yellow-50 theme-dark:bg-yellow-900/20 border border-yellow-200 theme-dark:border-yellow-800 rounded-lg p-4">
+    <div class="bg-warning/10 border border-warning/20 rounded-lg p-4">
       <div class="flex items-start gap-3">
         <%= icon "credit-card", size: "sm", color: "warning", class: "shrink-0 mt-0.5" %>
         <div class="flex-1 space-y-2">
@@ -33,7 +33,7 @@
                          params: { dormant_sfa_id: old_sfa.id, active_sfa_id: new_sfa.id },
                          method: :post,
                          form: { class: "inline shrink-0" },
-                         class: "-mt-1 -mr-1 p-1 rounded hover:bg-yellow-100 theme-dark:hover:bg-yellow-900/40 text-secondary",
+                         class: "-mt-1 -mr-1 p-1 rounded hover:bg-warning/20 text-secondary",
                          aria: { label: t("simplefin_items.replacement_prompt.dismiss_aria") } do %>
               <%= icon "x", size: "sm" %>
             <% end %>

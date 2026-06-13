@@ -20,6 +20,7 @@ import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
 import 'services/preferences_service.dart';
 import 'services/telemetry_service.dart';
+import 'theme/sure_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,93 +77,21 @@ class SureApp extends StatelessWidget {
         ),
       ],
       child: Consumer<ThemeProvider>(
-          builder: (context, themeProvider, _) => MaterialApp(
-                title: 'Sure Finances',
-                debugShowCheckedModeBanner: false,
-                navigatorObservers:
-                    TelemetryService.instance.navigatorObservers,
-                theme: ThemeData(
-                  fontFamily: 'Geist',
-                  fontFamilyFallback: const [
-                    'Inter',
-                    'Arial',
-                    'sans-serif',
-                  ],
-                  colorScheme: ColorScheme.fromSeed(
-                    seedColor: const Color(0xFF6366F1),
-                    brightness: Brightness.light,
-                  ),
-                  useMaterial3: true,
-                  appBarTheme: const AppBarTheme(
-                    centerTitle: true,
-                    elevation: 0,
-                  ),
-                  cardTheme: CardThemeData(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  inputDecorationTheme: InputDecorationTheme(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                  ),
-                  elevatedButtonTheme: ElevatedButtonThemeData(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                darkTheme: ThemeData(
-                  fontFamily: 'Geist',
-                  fontFamilyFallback: const [
-                    'Inter',
-                    'Arial',
-                    'sans-serif',
-                  ],
-                  colorScheme: ColorScheme.fromSeed(
-                    seedColor: const Color(0xFF6366F1),
-                    brightness: Brightness.dark,
-                  ),
-                  useMaterial3: true,
-                  appBarTheme: const AppBarTheme(
-                    centerTitle: true,
-                    elevation: 0,
-                  ),
-                  cardTheme: CardThemeData(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  inputDecorationTheme: InputDecorationTheme(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                  ),
-                  elevatedButtonTheme: ElevatedButtonThemeData(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                themeMode: themeProvider.themeMode,
-                routes: {
-                  '/config': (context) => const BackendConfigScreen(),
-                  '/login': (context) => const LoginScreen(),
-                  '/home': (context) => const MainNavigationScreen(),
-                },
-                home: const AppWrapper(),
-              )),
+        builder: (context, themeProvider, _) => MaterialApp(
+          title: 'Sure Finances',
+          debugShowCheckedModeBanner: false,
+          navigatorObservers: TelemetryService.instance.navigatorObservers,
+          theme: SureTheme.light,
+          darkTheme: SureTheme.dark,
+          themeMode: themeProvider.themeMode,
+          routes: {
+            '/config': (context) => const BackendConfigScreen(),
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const MainNavigationScreen(),
+          },
+          home: const AppWrapper(),
+        ),
+      ),
     );
   }
 }
