@@ -85,6 +85,7 @@ en:
       pending_duplicate_merger_title: Duplicate of Posted Transaction?
       pending_duplicate_merger_description: Manually merge this pending transaction with its posted version.
       pending_duplicate_merger_button: Open merger
+      merge_split_parent_blocked: Unsplit this transaction before merging with the posted version.
       merchant_label: Merchant
       name_label: Name
       nature: Type
