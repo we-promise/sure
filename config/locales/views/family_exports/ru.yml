@@ -1,0 +1,47 @@
+---
+ru:
+  family_exports:
+    access_denied: Доступ запрещён
+    create:
+      success: Экспорт начат. Вы сможете скачать его в ближайшее время.
+    delete_confirmation: Вы уверены, что хотите удалить этот экспорт? Это действие
+      нельзя отменить.
+    delete_failed_confirmation: Вы уверены, что хотите удалить этот неудавшийся экспорт?
+    destroy:
+      success: Экспорт успешно удалён
+    export_not_ready: Экспорт не готов для загрузки
+    exporting: Экспортирование...
+    index:
+      new: Новый экспорт
+      title: Экспорты
+    new:
+      accounts_and_balances: Все счета и балансы
+      cancel: Отмена
+      categories_tags_rules: Категории, теги и правила
+      dialog_subtitle: Скачайте все ваши финансовые данные
+      dialog_title: Экспорт ваших данных
+      export_data: Экспортировать данные
+      investment_trades: Инвестиционные сделки
+      note_description: Этот экспорт включает все ваши данные, но только часть из
+        них может быть импортирована обратно через функцию импорта CSV. Мы поддерживаем
+        импорт счетов, операций (с категориями и тегами) и сделок. Другие данные счетов
+        не могут быть импортированы и предназначены только для вашего ознакомления.
+      note_label: Примечание
+      transaction_history: История операций
+      whats_included: 'Что включено:'
+    table:
+      empty: Экспортов пока нет.
+      header:
+        actions: Действия
+        date: Дата
+        filename: Имя файла
+        status: Статус
+      row:
+        actions:
+          delete: Удалить
+          download: Скачать
+        status:
+          complete: Завершено
+          failed: Неудача
+          in_progress: В процессе
+      title: Экспорты

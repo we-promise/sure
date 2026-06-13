@@ -1,0 +1,5 @@
+---
+ru:
+  pdf_import_mailer:
+    next_steps:
+      subject: Ваш PDF-документ был проанализирован - %{product_name}

@@ -1,0 +1,206 @@
+---
+ru:
+  account:
+    entries:
+      destroy:
+        success: Запись успешно удалена.
+  accounts:
+    account:
+      change_simplefin_account: Изменить счёт SimpleFIN
+      complete_setup: Завершить настройку
+      default_label: По умолчанию
+      delete: Удалить счёт
+      disable: Отключить счёт
+      edit: Редактировать
+      enable: Включить счёт
+      link_lunchflow: Связать с Lunch Flow
+      link_provider: Связать с провайдером
+      remove_default: Снять с умолчания
+      set_default: Установить по умолчанию
+      sharing: Совместное использование
+      troubleshoot: Устранение неполадок
+      unlink_provider: Отвязать от провайдера
+    chart:
+      data_not_available: Данные недоступны за выбранный период
+    confirm_unlink:
+      confirm_button: Подтвердить и отвязать
+      description_html: Вы собираетесь отвязать <strong>%{account_name}</strong> от
+        <strong>%{provider_name}</strong>. Это превратит его в ручной счёт.
+      title: Отвязать счёт от провайдера?
+      warning_can_delete: После отвязки вы сможете удалить счёт, если это необходимо
+      warning_manual_updates: Вам нужно будет добавлять операции и обновлять балансы
+        вручную
+      warning_no_sync: Счёт больше не будет автоматически синхронизироваться с вашим
+        провайдером
+      warning_title: Что это значит
+      warning_transactions_kept: Все существующие операции и балансы будут сохранены
+    create:
+      success: Счёт %{type} создан
+    destroy:
+      cannot_delete_linked: Невозможно удалить связанный счёт. Пожалуйста, сначала
+        отвяжите его.
+      failed: Не удалось удалить ресурс. Попробуйте позже.
+      success: Счёт %{type} запланирован на удаление
+    empty:
+      empty_message: Добавьте счёт через подключение, импорт или ввод вручную.
+      new_account: Новый счёт
+      no_accounts: Пока нет счетов
+    form:
+      additional_details: Дополнительные детали
+      balance: 'Баланс на дату:'
+      institution_domain_label: Домен учреждения
+      institution_domain_placeholder: например, sberbank.ru
+      institution_name_label: Название учреждения
+      institution_name_placeholder: например, Сбербанк
+      name_label: Название счёта
+      name_placeholder: Пример названия счёта
+      notes_label: Заметки
+      notes_placeholder: Сохраните дополнительную информацию, такую как номера счетов,
+        коды сортировки, IBAN, маршрутизационные номера и т.д.
+      opening_balance_date_label: Дата начального баланса
+    index:
+      accounts: Счета
+      manual_accounts:
+        other_accounts: Другие счета
+      new_account: Новый счёт
+      sync: Синхронизировать все
+    new:
+      container:
+        close: Закрыть
+        navigate: Перейти
+        select: Выбрать
+      import_accounts: Импортировать счета
+      method_selector:
+        connected_entry: Связать счёт
+        connected_entry_eu: Связать счёт ЕС
+        link_with_provider: Связать с %{provider}
+        lunchflow_entry: Связать счёт Lunch Flow
+        manual_entry: Ввести баланс счёта
+        title: Как вы хотите добавить это?
+      title: Что вы хотите добавить?
+    not_authorized: У вас нет прав для управления этим счётом
+    select_provider:
+      already_linked: Счёт уже связан с провайдером
+      description: Выберите, какого провайдера вы хотите использовать для связи %{account_name}
+      no_providers: В настоящее время провайдеры не настроены
+      title: Выберите провайдера для связи
+    set_default:
+      depository_only: Только наличные и кредитные счета могут быть установлены по
+        умолчанию.
+    show:
+      activity:
+        amount: Сумма
+        balance: Баланс
+        confirmed: Подтверждено
+        date: Дата
+        entries: записи
+        entry: запись
+        filter: Фильтр
+        new: Новая
+        new_activity: Новая активность
+        new_balance: Новый баланс
+        new_trade: Новая сделка
+        new_transaction: Новая операция
+        new_transfer: Новый перевод
+        no_entries: Записи не найдены
+        pending: В ожидании
+        search:
+          placeholder: Поиск записей по названию
+        search_placeholder: Поиск записей по названию
+        status: Статус
+        title: Активность
+      chart:
+        balance: Баланс
+        owed: Сумма задолженности
+      header:
+        complete_setup: Завершить настройку
+      limited_fx_history_warning: История обменных курсов доступна только с %{date}.
+        Операции до этой даты используют приблизительные валютные конверсии — это
+        может произойти, когда провайдер FX предлагает ограниченное историческое окно.
+      menu:
+        confirm_accept: Удалить "%{name}"
+        confirm_body_html: "<p>Удаляя этот счёт, вы стираете его историю значений,
+          что повлияет на различные аспекты вашего общего счёта. Это действие напрямую
+          повлияет на расчёты вашего собственного капитала и графики счёта.</p><br
+          /> <p>После удаления вы не сможете восстановить информацию о счёте, так
+          как вам нужно будет добавить его как новый счёт.</p>"
+        confirm_title: Удалить счёт?
+        delete_account: Удалить счёт
+        edit: Редактировать
+        import: Импортировать операции
+        import_trades: Импортировать сделки
+        import_transactions: Импортировать операции
+        manage: Управление счетами
+        sharing: Совместное использование
+        statements: Выписки
+      tabs:
+        activity: Активность
+        holdings: Активы
+        overview: Обзор
+        statements: Выписки
+    sidebar:
+      configure_providers: Настройте ваших провайдеров здесь.
+      missing_data: Отсутствуют исторические данные
+      missing_data_description: "%{product} использует сторонних провайдеров для получения
+        исторических обменных курсов, цен на ценные бумаги и прочего. Эти данные необходимы
+        для точного расчёта исторических балансов счетов."
+      new_account: Новый счёт
+      new_account_group: Новая %{account_group}
+      new_asset: Новый актив
+      new_debt: Новый долг
+      tabs:
+        all: Все
+        assets: Активы
+        debts: Долги
+    subtype_regions:
+      au: Австралия
+      ca: Канада
+      eu: Европа
+      generic: Общий
+      in: Индия
+      uk: Великобритания
+      us: Соединённые Штаты
+    sync_all:
+      syncing: Синхронизация счетов...
+    tax_treatment_descriptions:
+      tax_advantaged: Специальные налоговые льготы с условиями
+      tax_deferred: Взносы вычитаются, облагаются налогом при снятии
+      tax_exempt: Взносы после налогообложения, доходы не облагаются налогом
+      taxable: Доходы облагаются налогом при реализации
+    tax_treatments:
+      tax_advantaged: Налоговые льготы
+      tax_deferred: Отложенный налог
+      tax_exempt: Не облагаемый налогом
+      taxable: Облагаемый налогом
+    types:
+      credit_card: Кредитная карта
+      crypto: Крипто
+      depository: Наличность
+      investment: Инвестиция
+      loan: Кредит
+      other_asset: Другой актив
+      other_liability: Другое обязательство
+      property: Недвижимость
+      vehicle: Транспорт
+    types_plural:
+      credit_card: Кредитные карты
+      crypto: Крипто
+      depository: Наличные
+      investment: Инвестиции
+      loan: Кредиты
+      other_asset: Другие активы
+      other_liability: Другие обязательства
+      property: Недвижимость
+      vehicle: Транспорт
+    unlink:
+      error: 'Не удалось отвязать счёт: %{error}'
+      generic_error: Произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.
+      not_linked: Счёт не связан с провайдером
+      success: Счёт успешно отвязан. Теперь это ручной счёт.
+    update:
+      success: Счёт %{type} обновлён
+  email_confirmations:
+    new:
+      invalid_token: Неверная или истекшая ссылка подтверждения.
+      success_login: Ваш email подтверждён. Пожалуйста, войдите с вашим новым адресом
+        электронной почты.

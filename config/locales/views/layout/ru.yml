@@ -1,0 +1,29 @@
+---
+ru:
+  layouts:
+    application:
+      nav:
+        assistant: Ассистент
+        budgets: Бюджеты
+        home: Главная
+        reports: Отчёты
+        transactions: Операции
+      privacy_mode: Переключить режим конфиденциальности
+      skip_to_main: Перейти к основному содержимому
+    auth:
+      existing_account: Уже есть аккаунт?
+      no_account: Впервые в %{product_name}?
+      sign_in: Войти
+      sign_up: Создать аккаунт
+    shared:
+      confirm_dialog:
+        are_you_sure: Вы уверены?
+        cannot_be_undone: Это действие нельзя отменить.
+        confirm: Подтвердить
+      footer:
+        privacy_policy: Политика конфиденциальности
+        terms_of_service: Условия использования
+    trial:
+      contribute: Внести вклад
+      data_deleted_in_days: Данные будут удалены через %{days} дней
+      open_demo: Открыть демо

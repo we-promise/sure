@@ -1,0 +1,265 @@
+---
+ru:
+  settings:
+    hostings:
+      alpha_vantage_settings:
+        description: Введите API ключ от Alpha Vantage. Поддерживает ETF ЕС на Лондонской
+          фондовой бирже, XETRA и других биржах.
+        env_configured_message: Успешно настроено через переменную окружения ALPHA_VANTAGE_API_KEY.
+        label: API ключ
+        no_health_check_note: Проверка состояния подключения недоступна для этого
+          поставщика из-за строгого ограничения скорости.
+        placeholder: Введите ваш Alpha Vantage API ключ здесь
+        rate_limit_warning: Бесплатный тариф Alpha Vantage ограничен 25 API вызовами
+          в день. Лучше всего использовать как дополнительного поставщика для ETF
+          ЕС, недоступных у других поставщиков.
+        show_details: "(показать детали)"
+        step_1_html: Посетите <a href="https://www.alphavantage.co/support/#api-key"
+          target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a>
+          и получите ваш бесплатный API ключ.
+        step_2: Скопируйте API ключ и вставьте его ниже.
+        title: Alpha Vantage
+      assistant_settings:
+        agent_id_help: Направляет к конкретному агенту, когда поставщик размещает
+          несколько. Оставьте пустым для использования по умолчанию.
+        agent_id_label: ID агента (необязательно)
+        agent_id_placeholder: main (по умолчанию)
+        confirm_disconnect:
+          body: Это удалит сохраненные URL, токен и ID агента и переключит на встроенного
+            ассистента. Вы можете подключиться снова, введя новые учетные данные.
+          title: Отключить внешнего ассистента?
+        description: Выберите, как чат-ассистент будет отвечать. Встроенный использует
+          вашего настроенного LLM-поставщика напрямую. Внешний делегирует удаленному
+          AI-агенту, который может обращаться к финансовым инструментам Sure через
+          MCP.
+        disconnect_button: Отключить
+        disconnect_description: Удалите подключение внешнего ассистента и переключитесь
+          обратно на встроенного ассистента.
+        disconnect_title: Внешнее подключение
+        env_configured_external: Успешно настроено через переменные окружения.
+        env_notice: Тип ассистента заблокирован на '%{type}' через переменную окружения
+          ASSISTANT_TYPE.
+        external_configured: Настроен
+        external_not_configured: Не настроен. Введите URL и токен ниже или установите
+          переменные окружения EXTERNAL_ASSISTANT_URL и EXTERNAL_ASSISTANT_TOKEN.
+        external_status: Статус внешнего ассистента
+        title: AI Ассистент
+        token_help: Токен аутентификации, предоставленный вашим внешним агентом. Отправляется
+          как Bearer токен с каждым запросом.
+        token_label: API токен
+        token_placeholder: Введите токен от вашего поставщика агента
+        type_builtin: Встроенный (прямой LLM)
+        type_external: Внешний (удаленный агент)
+        type_label: Тип ассистента
+        url_help: Полный URL API конечной точки вашего агента. Ваш поставщик агента
+          предоставит вам это.
+        url_label: URL конечной точки
+        url_placeholder: https://your-agent-host/v1/chat
+      brand_fetch_settings:
+        description: Введите Client ID, предоставленный Brand Fetch
+        env_configured_message: Вы успешно настроили ваш Brand Fetch Client ID через
+          переменную окружения BRAND_FETCH_CLIENT_ID.
+        high_res_description: Если включено, логотипы будут получены в разрешении
+          120x120 вместо 40x40. Это обеспечивает более четкие изображения на дисплеях
+          с высоким разрешением.
+        high_res_label: Включить логотипы высокого разрешения
+        label: Client ID
+        placeholder: Введите ваш Client ID здесь
+        setup_step_1_html: Посетите <a href="https://brandfetch.com/developers" target="_blank"
+          rel="noopener noreferrer" class="underline">brandfetch.com</a> и создайте
+          бесплатный аккаунт разработчика Brand Fetch.
+        setup_step_2_html: Перейдите на страницу <a href="https://developers.brandfetch.com/dashboard/logo-api"
+          target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        setup_step_3: Нажмите на значок глаза в разделе "Ваш Client ID", чтобы показать
+          ваш Client ID и вставьте его ниже.
+        show_details: "(показать детали)"
+        title: Настройки Brand Fetch
+      clear_cache:
+        cache_cleared: Кэш данных очищен. Это может занять несколько минут.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Внешний ассистент отключен
+      ensure_super_admin_for_onboarding:
+        not_authorized: У вас нет прав для выполнения этого действия
+      eodhd_settings:
+        description: Введите API токен, предоставленный EODHD. Поддерживает ETF ЕС
+          на LSE, XETRA и других международных биржах.
+        env_configured_message: Успешно настроено через переменную окружения EODHD_API_KEY.
+        label: API токен
+        placeholder: Введите ваш EODHD API токен здесь
+        rate_limit_warning: Бесплатный тариф EODHD ограничен 20 API вызовами в день.
+          Лучше всего использовать как дополнительного поставщика для ETF ЕС, недоступных
+          у других поставщиков.
+        show_details: "(показать детали)"
+        step_1_html: Посетите <a href="https://eodhd.com/register" target="_blank"
+          rel="noopener noreferrer" class="underline">eodhd.com</a> и создайте бесплатный
+          аккаунт.
+        step_2_html: Перейдите на вашу <a href="https://eodhd.com/cp/dashboard" target="_blank"
+          rel="noopener noreferrer" class="underline">Панель управления</a>, чтобы
+          найти ваш API токен.
+        step_3: Скопируйте ваш API токен и вставьте его ниже.
+        title: EODHD
+      invite_code_settings:
+        default_family_description: Добавляйте новых пользователей в эту семью/группу
+          только если у них нет приглашения.
+        default_family_none: Нет (создать новую семью)
+        default_family_title: Семья по умолчанию для новых пользователей
+        description: Управляйте тем, как новые пользователи регистрируются в вашей
+          версии %{product}.
+        email_confirmation_description: Если включено, пользователи должны подтвердить
+          свой адрес электронной почты при его изменении.
+        email_confirmation_title: Требовать подтверждение электронной почты
+        generate_tokens: Создать новый код
+        generated_tokens: Созданные коды
+        states:
+          closed: Закрыто
+          invite_only: Только по приглашению
+          open: Открыто
+        title: Регистрация
+      not_authorized: У вас нет прав для выполнения этого действия
+      openai_settings:
+        access_token_label: Токен доступа
+        access_token_placeholder: Введите ваш токен доступа здесь
+        budget_description: Применяется к каждому вызову LLM — история чата, автоматическая
+          категоризация, обнаружение продавцов и обработка PDF. По умолчанию консервативные
+          настройки для локальных моделей с малым контекстом. Увеличьте для облачных
+          моделей с большими контекстными окнами.
+        budget_heading: Бюджет токенов
+        context_window_help: 'Общее количество токенов, которые модель примет. По
+          умолчанию: 2048 — увеличьте до 8192+ для облачных OpenAI или локальных моделей
+          с большим контекстом.'
+        context_window_label: Контекстное окно (необязательно)
+        description: Введите токен доступа и, при необходимости, настройте собственного
+          поставщика, совместимого с OpenAI
+        env_configured_message: Успешно настроено через переменные окружения.
+        json_mode_auto: Авто (рекомендуется)
+        json_mode_help: Строгий режим лучше всего работает с моделями мышления (qwen-thinking,
+          deepseek-reasoner). Режим 'Нет' лучше всего работает со стандартными моделями
+          (llama, mistral, gpt-oss).
+        json_mode_json_object: JSON объект
+        json_mode_label: JSON режим
+        json_mode_none: Нет (лучше для стандартных моделей)
+        json_mode_strict: Строгий (лучше для моделей мышления)
+        max_items_per_call_help: 'Верхний предел для автоматической категоризации
+          / обнаружения продавцов. По умолчанию: 25. Большие партии автоматически
+          разбиваются, чтобы соответствовать контекстному окну.'
+        max_items_per_call_label: Максимум элементов за вызов (необязательно)
+        max_response_tokens_help: 'Токены, зарезервированные для ответа модели. По
+          умолчанию: 512. Уменьшите, чтобы освободить место для более длинной истории.'
+        max_response_tokens_label: Максимум токенов ответа (необязательно)
+        model_label: Модель (необязательно)
+        model_placeholder: gpt-4.1 (по умолчанию)
+        title: OpenAI
+        uri_base_label: Базовый URL API (необязательно)
+        uri_base_placeholder: https://api.openai.com/v1 (по умолчанию)
+      provider_selection:
+        binance_public_hint: бесплатно, API ключ не требуется — только криптовалюта
+          (BTC, ETH и т.д.)
+        env_configured_message: Выбор поставщика отключен, так как установлены переменные
+          окружения. Чтобы включить выбор здесь, удалите эти переменные из вашей конфигурации.
+        exchange_rate_description: Выберите одного поставщика для получения курсов
+          валют.
+        exchange_rate_provider_label: Поставщик курсов валют
+        exchange_rate_title: Поставщик курсов валют
+        mfapi_hint: бесплатно, API ключ не требуется — только индийские паевые фонды
+        providers:
+          alpha_vantage: Alpha Vantage
+          binance_public: Binance
+          eodhd: EODHD
+          mfapi: MFAPI.in
+          tiingo: Tiingo
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        requires_api_key: требуется API ключ
+        requires_api_key_alpha_vantage: требуется API ключ, лимит 25 запросов/день
+        requires_api_key_eodhd: требуется API ключ, лимит 20 запросов/день
+        securities_description: Включите одного или нескольких поставщиков для получения
+          цен на акции, ETF и паевые инвестиционные фонды. При поиске все включенные
+          поставщики запрашиваются, и результаты объединяются.
+        securities_title: Поставщики ценных бумаг
+        twelve_data_hint: требуется API ключ, 800 запросов/день
+        yahoo_finance_hint: бесплатно, API ключ не требуется
+      show:
+        ai_assistant: AI Ассистент
+        clear_cache: Очистить кэш данных
+        clear_cache_warning: Очистка кэша данных удалит все курсы валют, цены на ценные
+          бумаги, балансы счетов и другие данные. Это не удалит счета, операции, категории
+          или другие данные, принадлежащие пользователю.
+        confirm_clear_cache:
+          body: Вы уверены, что хотите очистить кэш данных? Это удалит все курсы валют,
+            цены на ценные бумаги, балансы счетов и другие данные. Это действие нельзя
+            отменить.
+          title: Очистить кэш данных?
+        danger_zone: Опасная зона
+        financial_data_providers: Поставщики финансовых данных
+        general: Общие настройки
+        invites: Коды приглашений
+        sync_settings: Настройки синхронизации
+        title: Самостоятельный хостинг
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Настройки сохранены, но не удалось обновить расписание
+          синхронизации. Пожалуйста, попробуйте снова или проверьте журналы сервера.
+      sync_settings:
+        auto_sync_description: Если включено, все счета будут автоматически синхронизироваться
+          ежедневно в указанное время.
+        auto_sync_label: Включить автоматическую синхронизацию
+        auto_sync_time_description: Укажите время дня, когда должна происходить автоматическая
+          синхронизация.
+        auto_sync_time_label: Время синхронизации (ЧЧ:ММ)
+        env_configured_message: Эта настройка отключена, так как установлена переменная
+          окружения поставщика (SIMPLEFIN_INCLUDE_PENDING или PLAID_INCLUDE_PENDING).
+          Удалите её, чтобы включить эту настройку.
+        include_pending_description: Если включено, ожидающие (непроведенные) операции
+          будут импортированы и автоматически сверены при их проведении. Отключите,
+          если ваш банк предоставляет ненадежные данные по ожидающим операциям.
+        include_pending_label: Включить ожидающие операции
+      tiingo_settings:
+        description: Введите API токен, предоставленный Tiingo. Бесплатный тариф поддерживает
+          50 уникальных символов в час с более чем 30-летней историей данных.
+        env_configured_message: Успешно настроено через переменную окружения TIINGO_API_KEY.
+        label: API токен
+        placeholder: Введите ваш Tiingo API токен здесь
+        show_details: "(показать детали)"
+        step_1_html: Посетите <a href="https://www.tiingo.com" target="_blank" rel="noopener
+          noreferrer" class="underline">tiingo.com</a> и создайте бесплатный аккаунт.
+        step_2_html: Перейдите на страницу <a href="https://www.tiingo.com/account/api/token"
+          target="_blank" rel="noopener noreferrer" class="underline">API токен</a>.
+        step_3: Скопируйте ваш API токен и вставьте его ниже.
+        title: Tiingo
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} API вызовов в день использовано (%{percentage})"
+        description: Введите API ключ, предоставленный Twelve Data
+        env_configured_message: Успешно настроено через переменную окружения TWELVE_DATA_API_KEY.
+        label: API ключ
+        placeholder: Введите ваш API ключ здесь
+        plan: Тариф %{plan}
+        plan_upgrade_warning_description: Следующие тикеры в вашем портфеле не могут
+          синхронизировать цены с вашим текущим тарифом Twelve Data.
+        plan_upgrade_warning_title: Некоторые тикеры требуют платного тарифа
+        requires_plan: требуется тариф %{plan}
+        show_details: "(показать детали)"
+        step_1_html: Посетите <a href="https://twelvedata.com/register" target="_blank"
+          rel="noopener noreferrer" class="underline">twelvedata.com</a> и создайте
+          бесплатный аккаунт разработчика Twelve Data.
+        step_2_html: Перейдите на страницу <a href="https://twelvedata.com/account/api-keys"
+          target="_blank" rel="noopener noreferrer" class="underline">API ключи</a>.
+        step_3: Покажите ваш секретный ключ и вставьте его ниже.
+        title: Twelve Data
+        view_pricing: Посмотреть цены Twelve Data
+      update:
+        failure: Неверное значение настройки
+        invalid_llm_budget: "%{field} должно быть целым числом ≥ %{minimum}."
+        invalid_onboarding_state: Неверное состояние регистрации
+        invalid_sync_time: Неверный формат времени синхронизации. Пожалуйста, используйте
+          формат ЧЧ:ММ (например, 02:30).
+        scheduler_sync_failed: Настройки сохранены, но не удалось обновить расписание
+          синхронизации. Пожалуйста, попробуйте снова или проверьте журналы сервера.
+        success: Настройки обновлены
+      yahoo_finance_settings:
+        connection_failed: Не удалось подключиться к Yahoo Finance
+        description: Yahoo Finance предоставляет бесплатный доступ к ценам на акции,
+          курсам валют и финансовым данным без необходимости в API ключе.
+        status_active: Yahoo Finance активен и работает
+        status_inactive: Подключение к Yahoo Finance не удалось
+        title: Yahoo Finance
+        troubleshooting: Проверьте ваше интернет-соединение и настройки брандмауэра.
+          Yahoo Finance может быть временно недоступен.

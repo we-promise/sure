@@ -1,0 +1,27 @@
+---
+ru:
+  transfer_matches:
+    create:
+      success: Перевод создан
+    matching_fields:
+      create_new_transaction: Создать новую операцию
+      match_existing_recommended: Соответствие существующей операции (рекомендуется)
+      matching_method: Метод сопоставления
+      matching_transaction: Соответствующая операция
+      no_matching_transactions: Мы не смогли найти операции для сопоставления с ваших
+        других счетов. Пожалуйста, выберите счёт, и мы создадим для вас новую операцию
+        зачисления.
+      select_method: Выберите метод для сопоставления ваших операций.
+      target_account: Целевой счёт
+    new:
+      create_transfer_match: Создать соответствие перевода
+      from_account: Со счёта
+      from_account_named: 'Со счёта: %{name}'
+      header:
+        subtitle: Найдите соответствующую операцию в другом счёте или создайте её,
+          если она не существует.
+        title: Соответствие перевода или платежа
+      inflow_transaction: Операция зачисления
+      outflow_transaction: Операция списания
+      to_account: На счёт
+      to_account_named: 'На счёт: %{name}'

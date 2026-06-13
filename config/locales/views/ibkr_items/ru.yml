@@ -1,0 +1,102 @@
+---
+ru:
+  ibkr_items:
+    complete_account_setup:
+      none_created: Счета не были созданы.
+      none_selected: Счета не были выбраны.
+      success:
+        one: "Успешно создан %{count} счёт Interactive Brokers."
+        few: "Успешно созданы %{count} счёта Interactive Brokers."
+        many: "Успешно создано %{count} счетов Interactive Brokers."
+        other: "Успешно созданы %{count} счёта Interactive Brokers."
+    create:
+      success: Успешно настроен Interactive Brokers.
+    defaults:
+      name: Interactive Brokers
+    destroy:
+      success: Подключение Interactive Brokers запланировано на удаление.
+    ibkr_item:
+      accounts_need_setup: Требуется настройка счетов
+      accounts_need_setup_description: Некоторые счета из IBKR нужно связать с счетами
+        в Sure.
+      delete: Удалить
+      deletion_in_progress: Удаление в процессе
+      error: Ошибка
+      flex_web_service: Flex Web Service
+      never_synced: Никогда не синхронизировалось.
+      no_accounts_discovered: Счета IBKR ещё не обнаружены.
+      no_accounts_discovered_description: Запустите синхронизацию после настройки
+        вашего Flex-запроса для обнаружения счетов.
+      requires_update: Требуется внимание к учетным данным
+      setup_accounts: Настроить счета
+      synced: Синхронизировано %{time} назад. %{summary}.
+      syncing: Синхронизация
+    link_existing_account:
+      already_linked: Этот счёт Interactive Brokers уже связан.
+      failed: Не удалось связать счёт Interactive Brokers.
+      not_found: Счёт или конфигурация Interactive Brokers не найдены.
+      only_manual_investment: Только ручные инвестиционные счета могут быть связаны
+        с Interactive Brokers.
+      success: Успешно связан с счётом Interactive Brokers.
+    select_accounts:
+      not_configured: Interactive Brokers не настроен.
+    select_existing_account:
+      balance: Баланс
+      cancel: Отмена
+      link: Связать
+      no_accounts_available: Нет доступных несвязанных счетов Interactive Brokers.
+      run_sync_hint: Запустите синхронизацию из Настройки > Провайдеры после обновления
+        вашего Flex-запроса.
+      title: Связать счёт Interactive Brokers
+      wait_for_sync: Подождите завершения синхронизации обнаружения счетов.
+    setup_accounts:
+      available_accounts:
+        account_id: 'ID счёта: %{account_id}'
+        account_summary: "%{account_type} • Баланс: %{balance}"
+        account_type_investment: Инвестиционный
+        title: Доступные счета
+      buttons:
+        back_to_settings: Назад к настройкам
+        cancel: Отмена
+        create_selected_accounts: Создать выбранные счета
+        done: Готово
+        link: Связать
+        refresh: Обновить
+      dialog_title: Настройте свои счета Interactive Brokers
+      info_box:
+        items:
+          item_1: Активы с текущими ценами и количествами
+          item_2: Стоимость по каждой позиции
+          item_3: Сделки, дивиденды, комиссии и денежные вклады или снятия
+        title: Импорт Flex Query IBKR
+        warning: Историческая активность ограничена окном отчёта Flex Query
+      link_existing:
+        description: Или свяжите обнаруженный счёт IBKR с существующим ручным инвестиционным
+          счётом.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Выберите счёт...
+      linked_accounts:
+        linked_to_html: 'Связан с: %{account}'
+        title: Уже связаны
+      page_title: Настройка счетов Interactive Brokers
+      status:
+        fetching_accounts: Получение счетов из Interactive Brokers...
+        no_accounts_found_description: Sure не удалось найти счета IBKR в последнем
+          отчёте Flex.
+        no_accounts_found_title: Счета не найдены.
+      subtitle: Выберите, какие брокерские счета IBKR связать.
+    sync_status:
+      all_linked:
+        one: "%{count} счёт связан"
+        few: "%{count} счёта связаны"
+        many: "%{count} счетов связано"
+        other: "%{count} счёта связаны"
+      no_accounts: Счета IBKR ещё не обнаружены
+      partial: "%{linked} связаны, %{unlinked} требуют настройки"
+    update:
+      success: Конфигурация Interactive Brokers успешно обновлена.
+  providers:
+    ibkr:
+      connection_description: Подключите отчёт Flex Web Service от Interactive Brokers
+      institution_name: Interactive Brokers
+      name: Interactive Brokers

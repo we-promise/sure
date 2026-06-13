@@ -1,0 +1,8 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: 'Требуется либо переменная окружения INDEXA_API_TOKEN,
+            либо учетные данные: имя пользователя/документ/пароль'

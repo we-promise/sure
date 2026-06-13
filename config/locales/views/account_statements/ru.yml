@@ -1,0 +1,124 @@
+---
+ru:
+  account_statements:
+    account_tab:
+      coverage_description: Исторические месяцы, подтвержденные загруженными выписками
+        и проверками баланса.
+      coverage_range: "%{start} - %{end}"
+      coverage_title: Покрытие выписок
+      empty: Пока нет выписок, связанных с этим счётом.
+      open_inbox: Входящие
+      statements_title: Выписки
+      year_label: Год покрытия
+    balance:
+      unknown: Неизвестно
+    coverage:
+      status:
+        ambiguous: Неоднозначно
+        covered: Покрыто
+        duplicate: Дубликат
+        mismatched: Несоответствие
+        missing: Отсутствует
+        not_expected: Не ожидается
+    create:
+      duplicates:
+        one: "1 дубликат выписки был пропущен."
+        few: "%{count} дубликата выписки были пропущены."
+        many: "%{count} дубликатов выписок были пропущены."
+        other: "%{count} дубликата выписки были пропущены."
+      invalid_file_type: Загрузите выписку в формате PDF, CSV или XLSX, не превышающую
+        допустимый размер.
+      no_files: Выберите хотя бы один файл выписки.
+      success:
+        one: "1 выписка загружена."
+        few: "%{count} выписки загружены."
+        many: "%{count} выписок загружено."
+        other: "%{count} выписки загружены."
+    destroy:
+      failure: Не удалось удалить выписку.
+      success: Выписка удалена.
+    form:
+      account_upload: Загрузить выписку
+      files_hint: PDF, CSV или XLSX. Максимум %{max_size}МБ на файл.
+      files_label: Файлы выписок
+      inbox_upload: Загрузить
+    index:
+      account_label: Счёт
+      confidence: "%{confidence} совпадение"
+      empty_linked: Пока нет связанных выписок.
+      empty_unmatched: Входящие выписки пусты.
+      leave_unmatched: Оставить несоответствующие
+      linked_title: Связанные выписки
+      no_suggestion: Нет предложений
+      storage_used: Использовано места
+      title: Хранилище выписок
+      unmatched_title: Несоответствующие входящие
+      upload_description: Загрузите выписки во входящие или выберите счёт для немедленной
+        привязки.
+      upload_title: Загрузить выписки
+    link:
+      no_account: Выберите счёт перед привязкой этой выписки.
+      success: Выписка привязана к %{account}.
+    period:
+      unknown: Период неизвестен
+    reconciliation:
+      checks:
+        closing_balance: Закрывающий баланс
+        opening_balance: Начальный баланс
+        period_movement: Движение за период
+        unknown_check: Неизвестная проверка
+      matched: Совпадает
+      mismatched: Несоответствие
+      unavailable: Не проверено
+    reject:
+      success: Совпадение выписки отклонено.
+    show:
+      account_label: Счёт
+      account_last4_hint: Последние четыре цифры счёта
+      account_name_hint: Подсказка имени счёта
+      closing_balance: Закрывающий баланс
+      currency: Валюта
+      delete: Удалить
+      difference: Разница
+      download: Скачать
+      institution_name_hint: Подсказка учреждения
+      ledger_amount: Книга Sure
+      link_suggestion: Предложение привязки
+      linked_to: Привязано к %{account}.
+      linking_title: Привязка счёта
+      metadata_title: Метаданные выписки
+      no_suggestion: Пока нет предложений счёта.
+      opening_balance: Начальный баланс
+      period_end_on: Конец периода
+      period_start_on: Начало периода
+      reconciliation_title: Сверка
+      reconciliation_unavailable: Добавьте период выписки и начальный или закрывающий
+        баланс, затем убедитесь, что Sure имеет историю баланса за эти даты.
+      reject: Отклонить
+      save: Сохранить выписку
+      statement_amount: Выписка
+      suggested_account: Предлагаемый счёт — %{account} (%{confidence} уверенность).
+      title: Выписка
+      unknown_value: Неизвестно
+      unlink: Отвязать
+      unmatched_account: Несоответствующие входящие
+    status:
+      linked: Привязано
+      rejected: Отклонено
+      unmatched: Несоответствующее
+    table:
+      account: Счёт
+      actions: Действия
+      download: Скачать
+      file: Файл
+      link_suggestion: Предложение привязки
+      period: Период
+      reconciliation: Сверка
+      reject: Отклонить предложение
+      suggestion: Предложение
+      unlink: Отвязать
+      view: Просмотр
+    unlink:
+      success: Выписка перемещена обратно в несоответствующие входящие.
+    update:
+      success: Выписка обновлена.
