@@ -172,7 +172,22 @@
         22
       ],
       "note": ""
+    },
+    {
+      "warning_type": "Unmaintained Dependency",
+      "warning_code": 122,
+      "fingerprint": "21ab0fe00fdd5899ffc405cff75aadb91b805ee996a614f7e27b08a287e9062d",
+      "check_name": "EOLRails",
+      "message": "Support for Rails 7.2.3.1 ends on 2026-08-09",
+      "file": "Gemfile.lock",
+      "line": 564,
+      "link": "https://brakemanscanner.org/docs/warning_types/unmaintained_dependency/",
+      "confidence": "Weak",
+      "cwe_id": [
+        1104
+      ],
+      "note": "Tracked framework lifecycle warning; Rails upgrade is handled separately from this PR-scoped fix."
     }
   ],
-  "brakeman_version": "7.1.0"
+  "brakeman_version": "7.1.2"
 }
