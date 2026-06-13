@@ -119,6 +119,8 @@ de:
       ca: Kanada
       au: Australien
       eu: Europa
+      fr: Frankreich
+      in: Indien
       generic: Generisch
     tax_treatments:
       taxable: Versteuerbar
