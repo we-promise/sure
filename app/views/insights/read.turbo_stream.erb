@@ -1,0 +1,3 @@
+<%= turbo_stream.replace dom_id(@insight) do %>
+  <%= render partial: "insights/insight_card", locals: { insight: @insight } %>
+<% end %>

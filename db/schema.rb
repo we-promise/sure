@@ -1138,6 +1138,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.index ["status"], name: "index_indexa_capital_items_on_status"
   end
 
+  create_table "insights", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "insight_type", null: false
+    t.string "priority", default: "medium", null: false
+    t.string "status", default: "active", null: false
+    t.string "title", null: false
+    t.text "body", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "currency", limit: 3, default: "USD", null: false
+    t.date "period_start"
+    t.date "period_end"
+    t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "read_at"
+    t.datetime "dismissed_at"
+    t.string "dedup_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "generated_at"], name: "index_insights_on_family_id_and_generated_at"
+    t.index ["family_id", "insight_type", "dedup_key"], name: "index_insights_on_family_type_dedup_key", unique: true
+    t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
+    t.index ["family_id"], name: "index_insights_on_family_id"
+    t.check_constraint "period_start IS NULL OR period_end IS NULL OR period_start <= period_end", name: "chk_insights_period_order"
+    t.check_constraint "priority::text = ANY (ARRAY['high'::character varying::text, 'medium'::character varying::text, 'low'::character varying::text])", name: "chk_insights_priority"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'read'::character varying::text, 'dismissed'::character varying::text])", name: "chk_insights_status"
+  end
+
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -2113,6 +2139,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
+  add_foreign_key "insights", "families", on_delete: :cascade
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "kraken_accounts", "kraken_items"

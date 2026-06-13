@@ -1,0 +1,10 @@
+<%= t("insight_digest_mailer.weekly.greeting", name: @user.first_name.presence || @user.email) %>
+
+<%= t("insight_digest_mailer.weekly.intro", count: @insights.size) %>
+
+<% @insights.each do |insight| %>
+- <%= insight.title %>
+  <%= insight.body %>
+<% end %>
+
+<%= t("insight_digest_mailer.weekly.footer") %>
