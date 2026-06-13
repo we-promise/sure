@@ -1,11 +1,14 @@
 class Holding::ForwardCalculator
+  include Holding::TradeCalculatorHelpers
+
   attr_reader :account
 
   def initialize(account, security_ids: nil)
     @account = account
     @security_ids = security_ids
-    # Track cost basis per security: { security_id => { total_cost: BigDecimal, total_qty: BigDecimal } }
-    @cost_basis_tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+    # Track weighted-average cost basis per security, relieving sells so the
+    # figure stays correct after a position is fully sold and repurchased.
+    @cost_basis_trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
   end
 
   def calculate
@@ -77,34 +80,18 @@ class Holding::ForwardCalculator
       end.compact
     end
 
-    # Updates cost basis tracker with buy trades (qty > 0)
-    # Uses weighted average cost method
+    # Applies each trade to its security's weighted-average cost basis tracker.
+    # Buys raise the basis; sells relieve quantity at the running average and a
+    # full liquidation resets it, so a later repurchase starts from a clean basis.
     def update_cost_basis_tracker(trade_entries)
       trade_entries.each do |trade_entry|
         trade = trade_entry.entryable
-        next unless trade.qty > 0 # Only track buys
-
-        security_id = trade.security_id
-        tracker = @cost_basis_tracker[security_id]
-
-        # Convert trade price to account currency if needed
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
-
-        tracker[:total_cost] += converted_price * trade.qty
-        tracker[:total_qty] += trade.qty
+        @cost_basis_trackers[trade.security_id].apply(converted_trade_price(trade), trade.qty)
       end
     end
 
-    # Returns the current cost basis for a security, or nil if no buys recorded
+    # Returns the current cost basis for a security, or nil if nothing is held.
     def cost_basis_for(security_id, currency)
-      tracker = @cost_basis_tracker[security_id]
-      return nil if tracker[:total_qty].zero?
-
-      tracker[:total_cost] / tracker[:total_qty]
+      @cost_basis_trackers[security_id].average_cost
     end
 end
