@@ -93,6 +93,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
   test "can update rule" do
     rule = rules(:one)
+    original_action_id = rule.actions.first.id
+    original_condition_id = rule.conditions.first.id
 
     assert_difference -> { Rule.count } => 0,
       -> { Rule::Condition.count } => 1,
@@ -128,10 +130,10 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     rule.reload
 
     assert_not rule.active
-    assert_equal "new_value", rule.conditions.order("created_at ASC").first.value
-    assert_equal "new_value", rule.actions.order("created_at ASC").first.value
-    assert_equal tags(:one).id, rule.actions.order("created_at ASC").last.value
-    assert_equal "100", rule.conditions.order("created_at ASC").last.value
+    assert_equal "new_value", rule.conditions.find(original_condition_id).value
+    assert_equal "new_value", rule.actions.find(original_action_id).value
+    assert_equal tags(:one).id, rule.actions.find_by!(action_type: "set_transaction_tags").value
+    assert_equal "100", rule.conditions.find_by!(condition_type: "transaction_amount").value
 
     assert_redirected_to rules_url
   end
@@ -178,6 +180,21 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to rules_url
+  end
+
+  test "index eager loads rule actions" do
+    3.times do |idx|
+      rule = @user.family.rules.build(resource_type: "transaction", name: "Performance rule #{idx}")
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "perf-#{idx}")
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.save!
+    end
+
+    queries = capture_sql_queries { get rules_url }
+
+    assert_response :success
+    assert_empty queries.grep(/FROM "rule_actions" WHERE "rule_actions"\."rule_id" =/),
+                 "Expected no per-rule rule_actions queries, got: #{queries.grep(/FROM "rule_actions"/).inspect}"
   end
 
   test "index renders when rule has empty compound condition" do
@@ -242,4 +259,21 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to rules_url
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
