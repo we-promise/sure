@@ -71,6 +71,10 @@ hu:
         theme_dark: Sötét
         theme_light: Világos
         theme_system: Rendszer
+        modals_title: Modális ablakok
+        modals_subtitle: Modális ablakok viselkedésének testreszabása
+        disable_modal_click_outside_title: Modális ablakok nyitva tartása külső kattintáskor
+        disable_modal_click_outside_description: Megakadályozza, hogy a modális ablakok bezáródjanak külső kattintáskor. Hasznos a nem mentett változtatások véletlen elvesztésének elkerülésére.
         transactions_title: Tranzakciók
         transactions_subtitle: Szabd testre a tranzakciók megjelenítését
         dashboard_title: Irányítópult
