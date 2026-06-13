@@ -119,6 +119,9 @@ pl:
         enable_mfa: Włącz 2FA
         disable_mfa: Wyłącz 2FA
         disable_mfa_confirm: Czy na pewno chcesz wyłączyć uwierzytelnianie dwuskładnikowe?
+        disable_mfa_password_label: Potwierdź hasłem
+        disable_mfa_password_placeholder: Wpisz hasło
+        mfa_sso_only: Uwierzytelnianie dwuskładnikowe jest zarządzane przez dostawcę tożsamości.
         sso_title: Połączone konta
         sso_subtitle: Zarządzaj połączeniami kont jednokrotnego logowania
         sso_disconnect: Odłącz
