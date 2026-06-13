@@ -6,13 +6,16 @@ export default class extends Controller {
 
   copy(event) {
     event.preventDefault();
+    // Capture the button now: `event.currentTarget` is reset to null once the
+    // event finishes dispatching, so it can't be read inside the async `.then`.
+    const button = event.currentTarget;
     const text = this.sourceTarget?.textContent;
     if (!text) return;
 
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        this.showSuccess(event.currentTarget);
+        this.showSuccess(button);
       })
       .catch((error) => {
         console.error("Failed to copy text: ", error);
