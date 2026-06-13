@@ -1,0 +1,5 @@
+<%# locals: (frame_id:, partial_path:, account:) %>
+
+<%= turbo_frame_tag frame_id do %>
+  <%= render partial: partial_path, locals: { account: account } %>
+<% end %>
