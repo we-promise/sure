@@ -27,6 +27,13 @@ class Chat < ApplicationRecord
     /access token/i
   ].freeze
 
+  # ToolCallLimitError raised by Assistant::Responder when the LLM keeps
+  # requesting tools past the per-turn cap (#2241). Matches the technical
+  # message's "tool-call limit of N" shape and captures N so we can
+  # re-resolve the localized user-facing string with the correct cap
+  # interpolated — instead of returning the raw exception text to the view.
+  TOOL_CALL_LIMIT_CAP_PATTERN = /tool[-_ ]call limit of (\d+)/i
+
   belongs_to :user
 
   has_one :viewer, class_name: "User", foreign_key: :last_viewed_chat_id, dependent: :nullify # "Last chat user has viewed"
@@ -154,6 +161,13 @@ class Chat < ApplicationRecord
         I18n.t("chat.errors.temporarily_unavailable")
       elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
         I18n.t("chat.errors.misconfigured")
+      elsif (cap_match = normalized_message.match(TOOL_CALL_LIMIT_CAP_PATTERN))
+        # Re-resolve through I18n so the user-facing payload stays
+        # locale-controlled (Brakeman flagged returning normalized_message
+        # verbatim — even with `<%= %>` escaping it broadens the taint
+        # surface to arbitrary exception text). The extracted digits are
+        # safe to interpolate.
+        I18n.t("chat.errors.tool_call_limit_exceeded", max: cap_match[1])
       else
         I18n.t("chat.errors.default")
       end
