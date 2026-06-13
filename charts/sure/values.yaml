@@ -433,11 +433,6 @@ simplefin:
       # Optional overrides for the backfill job
       command: ["bash", "-lc"]
       args: |
-        # Inline DB_PASSWORD into DATABASE_URL for this job only (DATABASE_URL comes from the chart)
-        if [ -n "$DB_PASSWORD" ]; then
-          export DATABASE_URL="${DATABASE_URL//\$(DB_PASSWORD)/$DB_PASSWORD}"
-        fi
-
         DB_HOST=$(echo "$DATABASE_URL" | sed 's/.*@//; s/:.*//')
         until pg_isready -h "$DB_HOST" -p 5432; do echo "Waiting for DB..."; sleep 5; done
 

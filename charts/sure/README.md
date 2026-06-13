@@ -67,7 +67,8 @@ redisSimple:
 
 rails:
   extraEnv:
-    DATABASE_URL: postgresql://user:pass@db.example.com:5432/sure
+    DATABASE_URL: postgresql://user@db.example.com:5432/sure
+    PGPASSWORD: pass
     REDIS_URL: redis://:pass@redis.example.com:6379/0
 ```
 
@@ -469,9 +470,9 @@ cnpg:
       enabled: false               # do not generate a second Secret when using existingSecret
 ```
 
-Environment variable ordering for shells:
+Database password handling:
 
-- The chart declares `DB_PASSWORD` before `DATABASE_URL` and `REDIS_PASSWORD` before `REDIS_URL` in all workloads so that shell expansion with `$(...)` works reliably.
+- The chart declares `PGPASSWORD` from the database secret and keeps generated `DATABASE_URL` values free of embedded passwords.
 
 ## Migrations
 

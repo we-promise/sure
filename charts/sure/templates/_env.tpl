@@ -9,7 +9,7 @@ The helper always injects:
 - RAILS_ENV
 - SECRET_KEY_BASE
 - optional Active Record Encryption keys (controlled by rails.encryptionEnv.enabled)
-- optional DATABASE_URL + DB_PASSWORD (includeDatabase=true and helper can compute a DB URL)
+- optional DATABASE_URL + DB_PASSWORD/PGPASSWORD (includeDatabase=true and helper can compute a DB URL)
 - optional REDIS_URL + REDIS_PASSWORD (includeRedis=true and helper can compute a Redis URL)
 - optional HTTPS_PROXY / HTTP_PROXY / NO_PROXY (pipelock.enabled=true)
 - rails.settings / rails.extraEnv / rails.extraEnvVars
@@ -53,6 +53,11 @@ The helper always injects:
 {{- $dburl := include "sure.databaseUrl" $ctx -}}
 {{- if and $dburl (not $explicitDb) }}
 - name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "sure.dbSecretName" $ctx }}
+      key: {{ include "sure.dbPasswordKey" $ctx }}
+- name: PGPASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "sure.dbSecretName" $ctx }}

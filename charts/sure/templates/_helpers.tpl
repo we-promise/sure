@@ -50,7 +50,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $cluster := .Values.cnpg.cluster.name | default (printf "%s-db" (include "sure.fullname" .)) -}}
 {{- $user := .Values.cnpg.cluster.appUser | default "sure" -}}
 {{- $db := .Values.cnpg.cluster.appDatabase | default "sure" -}}
-{{- printf "postgresql://%s:$(DB_PASSWORD)@%s-rw.%s.svc.cluster.local:5432/%s?sslmode=prefer" $user $cluster .Release.Namespace $db -}}
+{{- printf "postgresql://%s@%s-rw.%s.svc.cluster.local:5432/%s?sslmode=prefer" $user $cluster .Release.Namespace $db -}}
 {{- else -}}
 {{- "" -}}
 {{- end -}}
