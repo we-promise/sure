@@ -60,8 +60,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          #{classification_sql} as classification,
+          ABS(SUM(#{signed_amount_sql})) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -79,7 +79,7 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+        GROUP BY c.id, c.parent_id, #{classification_sql};
       SQL
     end
 
@@ -88,8 +88,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          #{classification_sql} as classification,
+          ABS(SUM(#{signed_amount_sql})) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -111,7 +111,7 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY c.id, c.parent_id, #{classification_sql}
       SQL
     end
 
@@ -161,6 +161,42 @@ class IncomeStatement::Totals
 
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
+
+    # SQL CASE expression for classifying a transaction row as 'income' or 'expense'.
+    #
+    # Refunds are always 'expense' — they offset a prior spend, not real income.
+    # investment_contribution and loan_payment are always 'expense' regardless of sign.
+    # Everything else follows the sign of ae.amount (negative = inflow = income).
+    #
+    # Must be kept in sync with Entry#classification (Ruby path used by the API).
+    def classification_sql
+      <<~SQL.squish
+        CASE
+          WHEN at.kind = 'refund'                                    THEN 'expense'
+          WHEN at.kind IN ('investment_contribution','loan_payment')  THEN 'expense'
+          WHEN ae.amount < 0                                         THEN 'income'
+          ELSE 'expense'
+        END
+      SQL
+    end
+
+    # SQL CASE expression for the signed amount used inside ABS(SUM(...)).
+    #
+    # Refunds arrive as negative amounts (money back to the user) but must
+    # *reduce* the expense total, not add to it.  We keep their sign intact
+    # inside the SUM so the outer ABS sees a smaller positive number after
+    # netting.  All other kinds use the raw signed amount; investment_contribution
+    # and loan_payment are forced positive because they are always an outflow.
+    def signed_amount_sql
+      <<~SQL.squish
+        CASE
+          WHEN at.kind = 'refund'                                    THEN ae.amount * COALESCE(er.rate, 1)
+          WHEN at.kind IN ('investment_contribution','loan_payment')  THEN ABS(ae.amount * COALESCE(er.rate, 1))
+          ELSE ae.amount * COALESCE(er.rate, 1)
+        END
+      SQL
     end
 
     def validate_date_range!

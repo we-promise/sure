@@ -53,6 +53,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
     t.string "checksum", limit: 64, null: false
+    t.string "content_sha256"
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
     t.string "institution_name_hint", limit: 200
@@ -69,7 +70,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
     t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
@@ -301,9 +301,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.boolean "pending_account_setup", default: false, null: false
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "api_key"
@@ -886,9 +886,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4
     t.jsonb "institution_metadata"
-    t.jsonb "raw_holdings_payload", default: []
-    t.jsonb "raw_activities_payload", default: {}
-    t.jsonb "raw_cash_report_payload", default: []
+    t.jsonb "raw_holdings_payload", default: [], null: false
+    t.jsonb "raw_activities_payload", default: {}, null: false
+    t.jsonb "raw_cash_report_payload", default: [], null: false
     t.date "report_date"
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
@@ -902,8 +902,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
   create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
     t.boolean "pending_account_setup", default: false, null: false
     t.jsonb "raw_payload"
     t.string "query_id"
@@ -1944,6 +1944,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
+    t.uuid "refund_of_transaction_id"
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
@@ -1951,6 +1952,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
+    t.index ["refund_of_transaction_id"], name: "index_transactions_on_refund_of_transaction_id"
   end
 
   create_table "transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2159,6 +2161,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "transactions", column: "refund_of_transaction_id", on_delete: :nullify
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify

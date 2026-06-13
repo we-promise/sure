@@ -62,11 +62,11 @@ class Transaction::Search
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                      "COALESCE(ABS(SUM(CASE WHEN transactions.kind = 'refund' THEN -ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END)), 0) as expense_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND transactions.kind != 'refund' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
@@ -168,13 +168,15 @@ class Transaction::Search
       when [ "transfer" ]
         query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]
-        query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS)
+        # Refunds have a negative amount but are semantically expense-side (they offset spend).
+        query.where("entries.amount >= 0 OR transactions.kind = 'refund'").where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "income" ]
-        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS)
+        # Exclude refunds from income — they are not real income.
+        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS).where.not(kind: "refund")
       when [ "expense", "transfer" ]
-        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+        query.where("entries.amount >= 0 OR transactions.kind = 'refund' OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       when [ "income", "transfer" ]
-        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS).where.not(kind: "refund")
       when [ "expense", "income" ]
         query.where.not(kind: Transaction::TRANSFER_KINDS)
       else
