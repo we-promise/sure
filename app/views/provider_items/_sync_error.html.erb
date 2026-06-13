@@ -1,0 +1,9 @@
+<%# locals: (provider_item:, error_text:) %>
+
+<div class="text-secondary flex items-center gap-1">
+  <%= icon "alert-circle", size: "sm", color: "destructive" %>
+  <%= tag.span error_text, class: "text-destructive" %>
+  <% if Current.user&.super_admin? %>
+    <%= link_to provider_sync_debug_log_label, provider_sync_debug_log_path(provider_item), class: "text-xs underline" %>
+  <% end %>
+</div>

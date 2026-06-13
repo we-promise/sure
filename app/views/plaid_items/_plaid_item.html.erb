@@ -35,10 +35,7 @@
                 <%= tag.span t(".requires_update") %>
               </div>
             <% elsif plaid_item.sync_error.present? %>
-              <div class="text-secondary flex items-center gap-1">
-                <%= icon "alert-circle", size: "sm", color: "destructive" %>
-                <%= tag.span t(".error"), class: "text-destructive" %>
-              </div>
+              <%= render "provider_items/sync_error", provider_item: plaid_item, error_text: t(".error") %>
             <% else %>
               <p class="text-secondary">
                 <%= plaid_item.last_synced_at ? t(".status", timestamp: time_ago_in_words(plaid_item.last_synced_at)) : t(".status_never") %>

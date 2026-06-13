@@ -121,16 +121,25 @@
           <% if has_errors? %>
             <span class="text-destructive"><%= t("provider_sync_summary.health.errors", count: total_errors) %></span>
             <% if error_details.any? %>
-              <details class="mt-1">
-                <summary class="text-xs cursor-pointer text-secondary hover:text-primary"><%= t("provider_sync_summary.health.view_error_details") %></summary>
+              <% if debug_log_only_errors? %>
                 <div class="mt-1 pl-2 border-l-2 border-destructive-subtle space-y-1">
-                  <% error_details.each do |detail| %>
-                    <p class="text-xs text-destructive">
-                      <% if detail["name"].present? %><strong><%= detail["name"] %>:</strong> <% end %><%= detail["message"] %>
-                    </p>
+                  <p class="text-xs text-secondary"><%= helpers.provider_sync_debug_log_hint %></p>
+                  <% if Current.user&.super_admin? %>
+                    <%= link_to helpers.provider_sync_debug_log_label, helpers.provider_sync_debug_log_path(provider_item), class: "text-xs underline text-secondary hover:text-primary" %>
                   <% end %>
                 </div>
-              </details>
+              <% else %>
+                <details class="mt-1">
+                  <summary class="text-xs cursor-pointer text-secondary hover:text-primary"><%= t("provider_sync_summary.health.view_error_details") %></summary>
+                  <div class="mt-1 pl-2 border-l-2 border-destructive-subtle space-y-1">
+                    <% error_details.each do |detail| %>
+                      <p class="text-xs text-destructive">
+                        <% if detail["name"].present? %><strong><%= detail["name"] %>:</strong> <% end %><%= detail["message"] %>
+                      </p>
+                    <% end %>
+                  </div>
+                </details>
+              <% end %>
             <% end %>
           <% elsif import_started? %>
             <span class="text-success"><%= t("provider_sync_summary.health.errors", count: 0) %></span>

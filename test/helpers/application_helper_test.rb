@@ -44,6 +44,11 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "Test Header Title", content_for(:header_title)
   end
 
+  test "provider sync debug log labels are localized" do
+    assert_equal I18n.t("provider_sync_summary.health.view_debug_log"), provider_sync_debug_log_label
+    assert_equal I18n.t("provider_sync_summary.health.details_in_debug_log"), provider_sync_debug_log_hint
+  end
+
   def setup
     @account1 = Account.new(currency: "USD", balance: 1)
     @account2 = Account.new(currency: "USD", balance: 2)

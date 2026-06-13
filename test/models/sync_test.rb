@@ -43,6 +43,31 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "test sync error", sync.error
   end
 
+  test "logs provider item sync errors to debug log" do
+    syncable = plaid_items(:one)
+    sync = Sync.create!(syncable: syncable)
+
+    syncable.expects(:perform_sync).with(sync).raises(StandardError.new("test provider sync error"))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      sync.perform
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+
+    assert_equal "provider_sync_error", entry.category
+    assert_equal "error", entry.level
+    assert_equal "Provider sync failed", entry.message
+    assert_equal "PlaidItem", entry.source
+    assert_equal "plaid", entry.provider_key
+    assert_equal syncable.family_id, entry.family_id
+    assert_equal sync.id, entry.metadata["provider_sync_id"]
+    assert_equal sync.id, entry.metadata["failed_sync_id"]
+    assert_equal "PlaidItem", entry.metadata["provider_item_type"]
+    assert_equal syncable.id, entry.metadata["provider_item_id"]
+    assert_equal "test provider sync error", entry.metadata["error_message"]
+  end
+
   test "can run nested syncs that alert the parent when complete" do
     family = families(:dylan_family)
     plaid_item = plaid_items(:one)
@@ -131,6 +156,53 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "failed", plaid_item_sync.reload.status
     assert_equal "failed", account_sync.reload.status
     assert_equal "failed", family_sync.reload.status
+  end
+
+  test "logs nested provider sync errors against the provider item" do
+    family = families(:dylan_family)
+    plaid_item = plaid_items(:one)
+    account = accounts(:connected)
+
+    family_sync = Sync.create!(syncable: family)
+    plaid_item_sync = Sync.create!(syncable: plaid_item, parent: family_sync)
+    account_sync = Sync.create!(syncable: account, parent: plaid_item_sync)
+
+    family.expects(:perform_sync).with(family_sync).once
+    plaid_item.expects(:perform_sync).with(plaid_item_sync).once
+    account.expects(:perform_sync).with(account_sync).raises(StandardError.new("test account sync error"))
+
+    family_sync.perform
+    plaid_item_sync.perform
+
+    assert_difference "DebugLogEntry.count", 1 do
+      account_sync.perform
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+
+    assert_equal "provider_sync_error", entry.category
+    assert_equal "plaid", entry.provider_key
+    assert_equal plaid_item.id, entry.metadata["provider_item_id"]
+    assert_equal plaid_item_sync.id, entry.metadata["provider_sync_id"]
+    assert_equal account_sync.id, entry.metadata["failed_sync_id"]
+    assert_equal "Account", entry.metadata["failed_syncable_type"]
+    assert_equal account.id, entry.metadata["failed_syncable_id"]
+    assert_equal "test account sync error", entry.metadata["error_message"]
+  end
+
+  test "provider sync logging failures do not suppress error reporting" do
+    syncable = plaid_items(:one)
+    sync = Sync.create!(syncable: syncable)
+    error = StandardError.new("test provider sync error")
+
+    syncable.expects(:perform_sync).with(sync).raises(error)
+    sync.expects(:log_provider_sync_error).with(error).raises(StandardError.new("debug log failed"))
+    sync.expects(:report_error).with(error).once
+
+    sync.perform
+
+    assert_equal "failed", sync.reload.status
+    assert_equal "test provider sync error", sync.error
   end
 
   test "parent failure should not change status if child succeeds" do

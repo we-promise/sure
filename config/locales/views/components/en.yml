@@ -134,6 +134,8 @@ en:
     health:
       title: Health
       view_error_details: View error details
+      view_debug_log: View debug log
+      details_in_debug_log: Details in debug log
       rate_limited: "Rate limited %{time_ago}"
       recently: recently
       errors: "Errors: %{count}"

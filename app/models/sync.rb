@@ -146,6 +146,11 @@ class Sync < ApplicationRecord
       rescue => e
         fail!
         update(error: e.message)
+        begin
+          log_provider_sync_error(e)
+        rescue => log_error
+          Rails.logger.error("Failed to log provider sync error for Sync #{id}: #{log_error.class}: #{log_error.message}")
+        end
         report_error(e)
       ensure
         finalize_if_all_children_finalized
@@ -226,6 +231,53 @@ class Sync < ApplicationRecord
       Sentry.capture_exception(error) do |scope|
         scope.set_tags(sync_id: id)
       end
+    end
+
+    def log_provider_sync_error(error)
+      provider_sync, provider_item = provider_sync_context
+      return unless provider_sync && provider_item
+
+      family = provider_item.family
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Provider sync failed",
+        source: provider_item.class.name,
+        provider_key: provider_sync_provider_key(provider_item),
+        family: family,
+        metadata: {
+          provider_item_type: provider_item.class.name,
+          provider_item_id: provider_item.id,
+          provider_sync_id: provider_sync.id,
+          failed_sync_id: id,
+          failed_syncable_type: syncable_type,
+          failed_syncable_id: syncable_id,
+          error_class: error.class.name,
+          error_message: error.message
+        }
+      )
+    end
+
+    def provider_sync_context
+      current_sync = self
+
+      while current_sync
+        current_syncable = current_sync.syncable
+        return [ current_sync, current_syncable ] if provider_syncable?(current_syncable)
+
+        current_sync = current_sync.parent
+      end
+
+      nil
+    end
+
+    def provider_syncable?(record)
+      record.present? && record.class.name.demodulize.end_with?("Item") && record.respond_to?(:family)
+    end
+
+    def provider_sync_provider_key(provider_item)
+      provider_item.class.name.demodulize.delete_suffix("Item").underscore
     end
 
     def report_warnings
