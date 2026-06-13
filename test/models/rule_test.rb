@@ -172,6 +172,42 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal 1, rule.additional_displayable_conditions_count
   end
 
+  test "transaction rules expose ai actions when anthropic is the only configured llm provider" do
+    anthropic = Provider::Anthropic.new("fake-anthropic-key")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(anthropic)
+    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
+
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    assert_includes rule.action_executors.map(&:key), "auto_categorize"
+    assert_includes rule.action_executors.map(&:key), "auto_detect_merchants"
+  end
+
+  test "auto categorize label uses the preferred anthropic provider for self hosters" do
+    anthropic = Provider::Anthropic.new("fake-anthropic-key")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(anthropic)
+    Setting.stubs(:anthropic_model).returns("claude-sonnet-4-5")
+
+    ClimateControl.modify("ANTHROPIC_MODEL" => nil) do
+      rule = Rule.new(
+        family: @family,
+        resource_type: "transaction",
+        actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+      )
+      rule.family.stubs(:self_hoster?).returns(true)
+
+      label = Rule::ActionExecutor::AutoCategorize.new(rule).label
+
+      assert_includes label, "Auto-categorize transactions with AI"
+      assert_includes label, "~$"
+      assert_not_includes label, "no LLM provider configured"
+    end
+  end
+
   test "rule matching on transaction details" do
     # Create PayPal transaction with underlying merchant in details
     paypal_entry = create_transaction(

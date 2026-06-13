@@ -242,4 +242,25 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to rules_url
   end
+
+  test "confirm uses the preferred anthropic provider for ai cost estimation" do
+    rule = @user.family.rules.create!(
+      name: "AI categorization",
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "coffee") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Provider::Anthropic.new("fake-anthropic-key"))
+    Setting.stubs(:anthropic_model).returns("claude-sonnet-4-5")
+
+    ClimateControl.modify("ANTHROPIC_MODEL" => nil) do
+      get confirm_rule_url(rule)
+    end
+
+    assert_response :success
+    assert_includes response.body, I18n.t("rules.confirm.ai_cost_title")
+    assert_not_includes response.body, I18n.t("rules.confirm.cost_unavailable_no_provider")
+  end
 end
