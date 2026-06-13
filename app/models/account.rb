@@ -93,12 +93,28 @@ class Account < ApplicationRecord
   has_many :account_statements
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
-  delegate :subtype, to: :accountable, allow_nil: true
 
-  # Writer for subtype that delegates to the accountable
-  # This allows forms to set subtype directly on the account
+  def subtype
+    if association(:accountable).loaded?
+      return association(:accountable).target&.subtype
+    end
+
+    return self[:subtype] if self[:subtype].present?
+
+    return @subtype_from_accountable if defined?(@subtype_from_accountable)
+
+    @subtype_from_accountable = accountable&.subtype
+  end
+
   def subtype=(value)
-    accountable&.subtype = value
+    self[:subtype] = value
+    remove_instance_variable(:@subtype_from_accountable) if defined?(@subtype_from_accountable)
+
+    if association(:accountable).loaded? && (target = association(:accountable).target)
+      if target.respond_to?(:subtype=) && (value.present? || target.subtype.blank?)
+        target.subtype = value
+      end
+    end
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -355,14 +371,6 @@ class Account < ApplicationRecord
     accountable_type == "Crypto" &&
       accountable&.subtype == "exchange" &&
       manual?
-  end
-
-  # True when the account has no live sync provider attached. Mirrors the
-  # `Account.manual` scope so per-instance checks don't drift from the query.
-  def manual?
-    account_providers.none? &&
-      plaid_account_id.blank? &&
-      simplefin_account_id.blank?
   end
 
   # Default GoalPledge kind for this account. Manual accounts get

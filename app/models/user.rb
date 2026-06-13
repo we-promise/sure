@@ -122,11 +122,19 @@ class User < ApplicationRecord
   end
 
   def accessible_accounts
-    family.accounts.accessible_by(self)
+    @accessible_accounts ||= family.accounts.accessible_by(self)
+  end
+
+  def accessible_account_ids
+    @accessible_account_ids ||= accessible_accounts.pluck(:id)
   end
 
   def finance_accounts
-    family.accounts.included_in_finances_for(self)
+    @finance_accounts ||= family.accounts.included_in_finances_for(self)
+  end
+
+  def finance_account_ids
+    @finance_account_ids ||= finance_accounts.pluck(:id)
   end
 
   def display_name

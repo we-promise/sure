@@ -2,6 +2,8 @@
 
 <% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours do %>
 <div id="account-sidebar-tabs">
+  <% balance_sheet = family.balance_sheet(user: Current.user) %>
+
   <% if family.missing_data_provider? %>
     <div class="mb-3">
       <%= render DS::Alert.new(title: t("accounts.sidebar.missing_data"), variant: :warning) do %>
@@ -31,7 +33,7 @@
         ) %>
 
         <div>
-          <% family.balance_sheet.assets.account_groups.each do |group| %>
+          <% balance_sheet.assets.account_groups.each do |group| %>
             <%= render "accounts/accountable_group", account_group: group, mobile: mobile %>
           <% end %>
         </div>
@@ -51,7 +53,7 @@
           ) %>
 
         <div>
-          <% family.balance_sheet.liabilities.account_groups.each do |group| %>
+          <% balance_sheet.liabilities.account_groups.each do |group| %>
             <%= render "accounts/accountable_group", account_group: group, mobile: mobile %>
           <% end %>
         </div>
@@ -71,7 +73,7 @@
           ) %>
 
         <div>
-          <% family.balance_sheet.account_groups.each do |group| %>
+          <% balance_sheet.account_groups.each do |group| %>
             <%= render "accounts/accountable_group", account_group: group, mobile: mobile, all_tab: true %>
           <% end %>
         </div>

@@ -497,7 +497,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     Security::Price.delete_all
 
     # Skip if today is a weekend
-    return if Date.current.saturday? || Date.current.sunday?
+    skip "requires a weekday so provider fetch is expected" if Date.current.saturday? || Date.current.sunday?
 
     # Pre-populate with provisional price for today
     Security::Price.create!(

@@ -125,7 +125,24 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "Investments", account.long_subtype_label
   end
 
-  # Tax treatment tests (TaxTreatable concern)
+  test "subtype falls back to accountable when account subtype is blank" do
+    credit_card = CreditCard.create!(subtype: "visa")
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Test Card",
+      balance: 100,
+      currency: "USD",
+      accountable: credit_card,
+      subtype: nil
+    )
+
+    # Simulate older data where subtype lived only on the accountable
+    account.update_column(:subtype, nil)
+    assert_equal "visa", credit_card.reload.subtype
+
+    reloaded = Account.find(account.id)
+    assert_equal "visa", reloaded.subtype
+  end
 
   test "tax_treatment delegates to accountable for Investment" do
     investment = Investment.new(subtype: "401k")

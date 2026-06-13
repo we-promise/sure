@@ -49,6 +49,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     )
   end
 
+  def count_sql_queries
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      sql = payload[:sql]
+      next if payload[:name] == "SCHEMA"
+      next if sql.match?(/\A(?:BEGIN|COMMIT|SAVEPOINT|RELEASE|ROLLBACK)\b/i)
+
+      count += 1
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+    count
+  end
+
   test "subcategory with zero budget inherits from parent" do
     assert @subcategory_inheriting_bc.inherits_parent_budget?
     refute @subcategory_with_limit_bc.inherits_parent_budget?
@@ -126,6 +140,45 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     # Before the fix, this would return all top-level categories because
     # category.id is nil, causing WHERE parent_id IS NULL to match all roots
     assert_empty uncategorized_bc.subcategories
+  end
+
+  test "subcategories loads budget categories once when not preloaded" do
+    budget = Budget.find(@budget.id)
+    budget.association(:budget_categories).reset
+    assert_not budget.association(:budget_categories).loaded?
+
+    parent_budget_category = BudgetCategory
+      .joins(:category)
+      .where(budget_id: budget.id, categories: { parent_id: nil })
+      .where.not(category_id: nil)
+      .includes(:budget, :category)
+      .first
+    assert parent_budget_category, "expected a top-level budget category in fixtures"
+
+    parent_budget_category.budget.association(:budget_categories).reset
+    assert_not parent_budget_category.budget.association(:budget_categories).loaded?
+
+    queries = count_sql_queries { parent_budget_category.subcategories.to_a }
+    assert_operator queries, :<=, 1
+  end
+
+  test "subcategories does not query when budget categories are preloaded" do
+    @budget.budget_categories.load
+
+    queries = count_sql_queries { @parent_budget_category.subcategories.to_a }
+    assert_equal 0, queries
+  end
+
+  test "subcategories does not query when budget is loaded via association inverse" do
+    budget = Budget.find(@budget.id)
+    budget.budget_categories.load
+
+    parent_budget_category = budget.budget_categories.find { |bc| bc.category.parent_id.nil? && bc.category_id.present? }
+    assert parent_budget_category, "expected a top-level budget category in fixtures"
+    assert_same budget, parent_budget_category.budget
+
+    queries = count_sql_queries { parent_budget_category.subcategories.to_a }
+    assert_equal 0, queries
   end
 
   test "parent with only inheriting subcategories shares entire budget" do
