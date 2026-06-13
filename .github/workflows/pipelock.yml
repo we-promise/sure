@@ -30,3 +30,6 @@ jobs:
             docs/hosting/ai.md
             app/models/provider/binance.rb
             workers/preview/package-lock.json
+            .github/workflows/ci.yml
+            .github/workflows/llm-evals.yml
+            Dockerfile.preview

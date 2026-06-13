@@ -7,6 +7,9 @@ en:
       success: Transfer removed
     form:
       amount: Amount
+      bank_charges: Bank Charges
+      outgoing_fee: Outgoing transfer fee
+      incoming_fee: Incoming transfer fee
       calculate_rate_tab: Calculate FX rate
       convert_tab: Convert with FX rate
       date: Date
@@ -43,6 +46,9 @@ en:
       to: To
       date: Date
       amount: Amount
+      bank_charges: Bank Charges
+      source_fee: Source fee
+      destination_fee: Destination fee
       category: Category
       uncategorized: Uncategorized
     update:

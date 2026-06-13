@@ -8,9 +8,10 @@ class Transfer < ApplicationRecord
   validates :outflow_transaction_id, uniqueness: true
 
   validate :transfer_has_different_accounts
-  validate :transfer_has_opposite_amounts
+  validate :transfer_has_opposite_amounts_or_fees
   validate :transfer_within_date_range
   validate :transfer_has_same_family
+  validate :fees_must_be_non_negative
 
   class << self
     def kind_for_account(account)
@@ -26,6 +27,22 @@ class Transfer < ApplicationRecord
         "funds_movement"
       end
     end
+  end
+
+  def has_source_fee?
+    source_fee_amount.to_d > 0
+  end
+
+  def has_destination_fee?
+    destination_fee_amount.to_d > 0
+  end
+
+  def has_fees?
+    has_source_fee? || has_destination_fee?
+  end
+
+  def total_fee
+    source_fee_amount.to_d + destination_fee_amount.to_d
   end
 
   def reject!
@@ -123,7 +140,7 @@ class Transfer < ApplicationRecord
       errors.add(:base, :same_family) unless to_account&.family == from_account&.family
     end
 
-    def transfer_has_opposite_amounts
+    def transfer_has_opposite_amounts_or_fees
       return unless inflow_transaction&.entry && outflow_transaction&.entry
 
       inflow_entry = inflow_transaction.entry
@@ -132,13 +149,20 @@ class Transfer < ApplicationRecord
       inflow_amount = inflow_entry.amount
       outflow_amount = outflow_entry.amount
 
+      errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
+
       if inflow_entry.currency == outflow_entry.currency
-        # For same currency, amounts must be exactly opposite
-        errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != 0
-      else
-        # For different currencies, just check the signs are opposite
-        errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
+        total_fee = source_fee_amount.to_d + destination_fee_amount.to_d
+        errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != total_fee
       end
+      # Cross-currency transfers: only sign-direction is validated above; the
+      # fee-adjusted balance is not checked because exchange rates make exact
+      # balancing impractical. This matches the original pre-fee behavior.
+    end
+
+    def fees_must_be_non_negative
+      errors.add(:source_fee_amount, :greater_than_or_equal_to, count: 0) if source_fee_amount.to_d.negative?
+      errors.add(:destination_fee_amount, :greater_than_or_equal_to, count: 0) if destination_fee_amount.to_d.negative?
     end
 
     def transfer_within_date_range

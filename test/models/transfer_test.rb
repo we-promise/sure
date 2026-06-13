@@ -124,4 +124,126 @@ class TransferTest < ActiveSupport::TestCase
   test "kind_for_account returns funds_movement for depository accounts" do
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
   end
+
+  test "transfer with source fee adjusts validation" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -97)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      source_fee_amount: 3
+    )
+
+    assert transfer.valid?
+  end
+
+  test "transfer with destination fee adjusts validation" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -97)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      destination_fee_amount: 3
+    )
+
+    assert transfer.valid?
+  end
+
+  test "transfer with both source and destination fees adjusts validation" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 103)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -94)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      source_fee_amount: 3,
+      destination_fee_amount: 6
+    )
+
+    assert transfer.valid?
+  end
+
+  test "transfer with wrong fee amount fails validation" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -95)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      source_fee_amount: 3
+    )
+
+    assert transfer.invalid?
+    assert_equal "Must have opposite amounts", transfer.errors.full_messages.first
+  end
+
+  test "has_source_fee? returns true when source fee present" do
+    transfer = transfers(:one)
+    transfer.update_column(:source_fee_amount, 5)
+    assert transfer.has_source_fee?
+    assert transfer.has_fees?
+  end
+
+  test "has_destination_fee? returns true when destination fee present" do
+    transfer = transfers(:one)
+    transfer.update_column(:destination_fee_amount, 5)
+    assert transfer.has_destination_fee?
+    assert transfer.has_fees?
+  end
+
+  test "has_fees? returns false when no fees" do
+    transfer = transfers(:one)
+    refute transfer.has_fees?
+  end
+
+  test "total_fee sums source and destination fees" do
+    transfer = transfers(:one)
+    transfer.update_columns(source_fee_amount: 3, destination_fee_amount: 2)
+    assert_equal 5, transfer.total_fee
+  end
+
+  test "destination fee larger than amount inverts inflow sign and fails validation" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: 50)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      destination_fee_amount: 150
+    )
+
+    # inflow amount (50) is positive, which means destination is also outflowing
+    assert transfer.invalid?
+    assert_equal "Must have opposite amounts", transfer.errors.full_messages.first
+  end
+
+  test "negative source fee is rejected" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      source_fee_amount: -5
+    )
+
+    assert transfer.invalid?
+    assert_includes transfer.errors.full_messages, "Source fee amount must be greater than or equal to 0"
+  end
+
+  test "negative destination fee is rejected" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      destination_fee_amount: -5
+    )
+
+    assert transfer.invalid?
+    assert_includes transfer.errors.full_messages, "Destination fee amount must be greater than or equal to 0"
+  end
 end
