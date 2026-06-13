@@ -41,7 +41,9 @@ class SessionsController < ApplicationController
     user = nil
 
     if AuthConfig.local_login_enabled?
-      user = User.authenticate_by(email: params[:email], password: params[:password])
+      user = skylight_instrument("User.authenticate_by") do
+        User.authenticate_by(email: params[:email], password: params[:password])
+      end
     else
       # Local login is disabled. Only allow attempts when an emergency super-admin
       # override is enabled and the email belongs to a super-admin.
@@ -52,7 +54,9 @@ class SessionsController < ApplicationController
           return
         end
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = skylight_instrument("User.authenticate (admin override)") do
+          candidate.authenticate(params[:password]) ? candidate : nil
+        end
       else
         redirect_to new_session_path, alert: t("sessions.create.local_login_disabled")
         return
@@ -66,8 +70,8 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
-        @session = create_session_for(user)
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+        @session = skylight_instrument("create_session_for") { create_session_for(user) }
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for_instrumented(user)
         redirect_to root_path
       end
     else
@@ -324,6 +328,16 @@ class SessionsController < ApplicationController
       return unless user&.super_admin?
 
       Rails.logger.info("[AUTH] Super admin override login: user_id=#{user.id} email=#{user.email}")
+    end
+
+    def skylight_instrument(title, &block)
+      return yield unless defined?(Skylight)
+
+      Skylight.instrument(category: "app.sessions", title:, &block)
+    end
+
+    def accept_pending_invitation_for_instrumented(user)
+      skylight_instrument("accept_pending_invitation_for") { accept_pending_invitation_for(user) }
     end
 
     def demo_host_match?(demo)
