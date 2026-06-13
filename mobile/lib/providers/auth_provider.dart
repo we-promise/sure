@@ -661,27 +661,6 @@ class AuthProvider with ChangeNotifier {
     return _tokens?.accessToken;
   }
 
-  Future<bool> enableAi() async {
-    final accessToken = await getValidAccessToken();
-    if (accessToken == null) {
-      _errorMessage = 'Session expired. Please login again.';
-      notifyListeners();
-      return false;
-    }
-
-    final result = await _authService.enableAi(accessToken: accessToken);
-    if (result['success'] == true) {
-      _user = result['user'] as User?;
-      _errorMessage = null;
-      notifyListeners();
-      return true;
-    }
-
-    _errorMessage = result['error'] as String?;
-    notifyListeners();
-    return false;
-  }
-
   void clearError() {
     _errorMessage = null;
     notifyListeners();

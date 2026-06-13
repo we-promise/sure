@@ -834,7 +834,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :forbidden
     response_data = JSON.parse(response.body)
-    assert_equal "AI is not available for your account", response_data["error"]
+    assert_equal "ai_unavailable", response_data["error"]
+    assert_equal "AI is not available for your account", response_data["message"]
     assert_not user.reload.ai_enabled
   end
 end

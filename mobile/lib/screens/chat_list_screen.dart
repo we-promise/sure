@@ -202,6 +202,92 @@ class _ChatListScreenState extends State<ChatListScreen> {
             );
           }
 
+          if (chatProvider.aiConsentRequired || chatProvider.aiUnavailable) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        size: 28,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Enable AI Chats',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      chatProvider.aiUnavailable
+                          ? 'AI is not configured for this instance. An administrator needs to set up an AI provider in the server settings.'
+                          : 'AI chat can answer financial questions and provide insights based on your data. Enable it to get started.',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (!chatProvider.aiUnavailable) ...[
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: chatProvider.isLoading
+                              ? null
+                              : () async {
+                                  final authProvider = Provider.of<AuthProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final chatProv = Provider.of<ChatProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final accessToken =
+                                      await authProvider.getValidAccessToken();
+                                  if (!mounted) return;
+                                  if (accessToken == null) {
+                                    await authProvider.logout();
+                                    return;
+                                  }
+                                  await chatProv.enableAi(accessToken: accessToken);
+                                },
+                          child: const Text('Enable AI Chats'),
+                        ),
+                      ),
+                      if (chatProvider.errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          chatProvider.errorMessage!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: colorScheme.error,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Disable anytime. All data sent to our LLM providers is anonymized.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (chatProvider.errorMessage != null && chatProvider.chats.isEmpty) {
             return Center(
               child: Padding(
@@ -383,10 +469,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openNewChat,
-        tooltip: 'New Chat',
-        child: const Icon(Icons.add),
+      floatingActionButton: Consumer<ChatProvider>(
+        builder: (context, chatProvider, _) {
+          if (chatProvider.aiConsentRequired || chatProvider.aiUnavailable) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton(
+            onPressed: _openNewChat,
+            tooltip: 'New Chat',
+            child: const Icon(Icons.add),
+          );
+        },
       ),
     );
   }
