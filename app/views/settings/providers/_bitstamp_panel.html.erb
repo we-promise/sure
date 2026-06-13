@@ -1,0 +1,157 @@
+<div id="bitstamp-providers-panel" class="space-y-4">
+  <% items = local_assigns[:bitstamp_items] || @bitstamp_items || Current.family.bitstamp_items.active.ordered %>
+
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: safe_join([
+          content_tag(:p, t("settings.providers.bitstamp_panel.read_only_title"), class: "font-medium"),
+          content_tag(:p, t("settings.providers.bitstamp_panel.read_only_body"), class: "mt-1")
+        ])
+      ) %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.bitstamp_panel.step1_html").html_safe,
+               t("settings.providers.bitstamp_panel.step2"),
+               t("settings.providers.bitstamp_panel.step3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if items.any? %>
+    <div class="space-y-3">
+      <% items.each do |item| %>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-3 w-full">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
+                  <%= icon "coins", size: "sm", class: "text-primary" %>
+                </div>
+                <div class="min-w-0">
+                  <p class="font-medium text-primary truncate"><%= item.name %></p>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <% if item.syncing? %>
+                      <span class="w-2 h-2 bg-inverse rounded-full animate-pulse flex-shrink-0"></span>
+                      <p class="text-xs text-secondary"><%= t("settings.providers.bitstamp_panel.syncing") %></p>
+                    <% elsif item.requires_update? %>
+                      <span class="w-2 h-2 bg-destructive rounded-full flex-shrink-0"></span>
+                      <div class="flex items-center gap-1">
+                        <p class="text-xs text-destructive">
+                          <%= item.sync_error.present? ? item.sync_error.truncate(60) : t("bitstamp_items.bitstamp_item.reconnect") %>
+                        </p>
+                        <% if item.sync_error.present? %>
+                          <%= render DS::Tooltip.new(text: item.sync_error, icon: "info", size: "sm", color: "destructive", as: :span) %>
+                        <% end %>
+                      </div>
+                    <% else %>
+                      <span class="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
+                      <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <%= render DS::Button.new(
+                    variant: :ghost,
+                    size: :sm,
+                    icon: "refresh-cw",
+                    text: t("settings.providers.bitstamp_panel.sync"),
+                    href: sync_bitstamp_item_path(item),
+                    method: :post,
+                    disabled: item.syncing?
+                  ) %>
+
+              <%= render DS::Link.new(
+                text: t("settings.providers.bitstamp_panel.setup_accounts"),
+                icon: "settings",
+                variant: "secondary",
+                href: setup_accounts_bitstamp_item_path(item),
+                frame: :modal
+              ) %>
+
+              <%= render DS::Button.new(
+                    variant: :destructive,
+                    size: :sm,
+                    icon: "trash-2",
+                    text: t("settings.providers.bitstamp_panel.disconnect"),
+                    href: bitstamp_item_path(item),
+                    method: :delete,
+                    data: { turbo_confirm: t("settings.providers.bitstamp_panel.disconnect_confirm", name: item.name) }
+                  ) %>
+            </div>
+
+            <%= styled_form_with model: item,
+                                 url: bitstamp_item_path(item),
+                                 scope: :bitstamp_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t("settings.providers.bitstamp_panel.connection_name_label"),
+                                  placeholder: t("settings.providers.bitstamp_panel.connection_name_placeholder") %>
+
+              <%= form.text_field :api_key,
+                                  label: t("settings.providers.bitstamp_panel.api_key_label"),
+                                  placeholder: t("settings.providers.bitstamp_panel.keep_api_key_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <%= form.text_field :api_secret,
+                                  label: t("settings.providers.bitstamp_panel.api_secret_label"),
+                                  placeholder: t("settings.providers.bitstamp_panel.keep_api_secret_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <div class="flex justify-end">
+                <%= form.submit t("settings.providers.bitstamp_panel.update_connection") %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% bitstamp_item = Current.family.bitstamp_items.build(name: t("settings.providers.bitstamp_panel.default_connection_name")) %>
+  <% if items.any? %>
+    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+      <%= icon "plus", size: "sm" %>
+      <%= t("settings.providers.bitstamp_panel.add_connection") %>
+    </h3>
+  <% end %>
+
+  <%= styled_form_with model: bitstamp_item,
+                       url: bitstamp_items_path,
+                       scope: :bitstamp_item,
+                       method: :post,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :name,
+                        label: t("settings.providers.bitstamp_panel.connection_name_label"),
+                        placeholder: t("settings.providers.bitstamp_panel.connection_name_placeholder") %>
+
+    <%= form.text_field :api_key,
+                        label: t("settings.providers.bitstamp_panel.api_key_label"),
+                        placeholder: t("settings.providers.bitstamp_panel.api_key_placeholder"),
+                        type: :password,
+                        value: nil %>
+
+    <%= form.text_field :api_secret,
+                        label: t("settings.providers.bitstamp_panel.api_secret_label"),
+                        placeholder: t("settings.providers.bitstamp_panel.api_secret_placeholder"),
+                        type: :password,
+                        value: nil %>
+
+    <div class="flex justify-end">
+      <%= form.submit t("settings.providers.bitstamp_panel.add_connection") %>
+    </div>
+  <% end %>
+</div>
