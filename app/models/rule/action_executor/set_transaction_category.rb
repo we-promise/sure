@@ -22,7 +22,8 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
       txn.enrich_attribute(
         :category_id,
         category.id,
-        source: "rule"
+        source: "rule",
+        ignore_locks: ignore_attribute_locks
       )
     end
   end
