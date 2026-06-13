@@ -27,6 +27,8 @@ require "rack/test"
 require "tempfile"
 require "uri"
 
+require_relative "support/sql_query_capture"
+
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
   config.hook_into :webmock
@@ -61,6 +63,8 @@ OmniAuth.config.allowed_request_methods = [ :get, :post ]
 
 module ActiveSupport
   class TestCase
+    include SqlQueryCapture
+
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors) unless ENV["DISABLE_PARALLELIZATION"] == "true"
 

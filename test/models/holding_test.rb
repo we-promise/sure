@@ -89,7 +89,7 @@ class HoldingTest < ActiveSupport::TestCase
 
     # Lost $60, or -1.59%
     assert_equal Money.new(-60), @nvda.trend.value
-    assert_in_delta -1.6, @nvda.trend.percent, 0.001
+    assert_in_delta(-1.6, @nvda.trend.percent, 0.001)
   end
 
   test "avg_cost returns nil when no trades exist and no stored cost_basis" do
@@ -134,6 +134,25 @@ class HoldingTest < ActiveSupport::TestCase
     # Qty is 15, so gain = 15 * (216 - 214) = $30
     assert_not_nil @amzn.trend
     assert_equal Money.new(30), @amzn.trend.value
+  end
+
+  test "CalculatedAvgCosts preloads average cost for multiple holdings in one query" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
+    create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date)
+    create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current)
+
+    expected_amzn = @amzn.avg_cost
+    expected_nvda = @nvda.avg_cost
+
+    queries = capture_sql_queries do
+      Holding::CalculatedAvgCosts.new([ @amzn, @nvda ]).apply!
+    end
+
+    assert_equal expected_amzn, @amzn.avg_cost
+    assert_equal expected_nvda, @nvda.avg_cost
+    assert_equal 1, queries.grep(/WITH holding_specs/).size
+    assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
   end
 
   # Cost basis source tracking tests

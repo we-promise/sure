@@ -56,8 +56,22 @@ class Holding < ApplicationRecord
       end
     end
 
+    return @preloaded_calculated_avg_cost if instance_variable_defined?(:@preloaded_calculated_avg_cost)
+
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
+  end
+
+  def needs_calculated_avg_cost?
+    return false if cost_basis.present? && (cost_basis_locked? || cost_basis.positive?)
+
+    true
+  end
+
+  def preload_calculated_avg_cost!(average)
+    @preloaded_calculated_avg_cost = if average
+      Money.new(average[:total_cost] / average[:total_qty], average[:currency])
+    end
   end
 
   def trend
