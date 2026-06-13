@@ -1,7 +1,7 @@
 class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
-  before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :ensure_admin, only: [ :update, :sync_all, :sync, :connect_form ]
 
   def show
     @breadcrumbs = [
