@@ -389,7 +389,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "parent_id"
-    t.string "classification_unused", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
@@ -969,7 +968,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.datetime "updated_at", null: false
     t.string "category_parent"
     t.string "category_color"
-    t.string "category_classification"
     t.string "category_icon"
     t.string "exchange_operating_mic"
     t.string "resource_type"

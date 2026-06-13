@@ -321,6 +321,19 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports categories without legacy income expense classification fields" do
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      category_record = records.find { |record| record["type"] == "Category" && record.dig("data", "id") == @category.id }
+
+      assert category_record
+      refute category_record["data"].key?("classification")
+      refute category_record["data"].key?("classification_unused")
+    end
+  end
+
   test "only exports data from the specified family" do
     # Create data for another family that should NOT be exported
     other_account = @other_family.accounts.create!(

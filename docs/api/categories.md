@@ -1,6 +1,6 @@
 # Categories API Documentation
 
-The Categories API allows external applications to retrieve financial categories within Sure. Categories are used to classify transactions and can be organized in a hierarchical structure with parent categories and subcategories. The OpenAPI description is generated directly from executable request specs, ensuring it always reflects the behaviour of the running Rails application.
+The Categories API allows external applications to retrieve financial categories within Sure. Categories are used to organize transactions and can be arranged in a hierarchical structure with parent categories and subcategories. The OpenAPI description is generated directly from executable request specs, ensuring it always reflects the behaviour of the running Rails application.
 
 ## Generated OpenAPI specification
 
@@ -40,7 +40,6 @@ The `GET /api/v1/categories` endpoint supports the following query parameters fo
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
 | `per_page` | integer | Items per page (default: 25, max: 100) |
-| `classification` | string | Filter by classification: `income` or `expense` |
 | `roots_only` | boolean | Return only root categories (categories without a parent) |
 | `parent_id` | uuid | Filter subcategories by parent category ID |
 
@@ -52,7 +51,6 @@ A category response includes:
 {
   "id": "uuid",
   "name": "Food & Drink",
-  "classification": "expense",
   "color": "#f97316",
   "icon": "utensils",
   "parent": null,
@@ -75,7 +73,6 @@ Example subcategory response:
 {
   "id": "uuid",
   "name": "Restaurants",
-  "classification": "expense",
   "color": "#f97316",
   "icon": "utensils",
   "parent": {
@@ -88,24 +85,7 @@ Example subcategory response:
 }
 ```
 
-## Classification types
-
-Categories are classified into two types:
-
-| Classification | Description |
-| --- | --- |
-| `income` | Categories for income transactions (salary, investments, etc.) |
-| `expense` | Categories for expense transactions (food, utilities, etc.) |
-
-Subcategories inherit the classification of their parent category.
-
 ## Filtering examples
-
-### Get all expense categories
-
-```
-GET /api/v1/categories?classification=expense
-```
 
 ### Get only root categories (no subcategories)
 
@@ -122,7 +102,7 @@ GET /api/v1/categories?parent_id=<parent-category-uuid>
 ### Combine filters with pagination
 
 ```
-GET /api/v1/categories?classification=expense&roots_only=true&page=1&per_page=10
+GET /api/v1/categories?roots_only=true&page=1&per_page=10
 ```
 
 ## Error responses

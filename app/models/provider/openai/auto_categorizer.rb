@@ -76,8 +76,8 @@ class Provider::Openai::AutoCategorizer
       CRITICAL RULES:
       1. Match transaction_id exactly from input
       2. Use EXACT category_name from the provided list, or "null" if unsure
-      3. Match expense transactions to expense categories only
-      4. Match income transactions to income categories only
+      3. Any category can be used for any transaction regardless of whether the transaction is income or expense
+      4. Prefer the category that best describes the real-world transaction
       5. Return "null" if the description is generic/ambiguous (e.g., "POS DEBIT", "ACH WITHDRAWAL", "CHECK #1234")
       6. Prefer MORE SPECIFIC subcategories over general parent categories when available
 
@@ -522,8 +522,8 @@ class Provider::Openai::AutoCategorizer
         IMPORTANT:
         - Use EXACT category names from the list above
         - Return "null" (as a string) if you cannot confidently match a category
-        - Match expense transactions only to expense categories
-        - Match income transactions only to income categories
+        - Any category can be used for income or expense transactions
+        - Prefer the category that best describes the real-world transaction
         - Do NOT include any explanation or reasoning - only output JSON
 
         Respond with ONLY this JSON (no markdown code blocks, no other text):

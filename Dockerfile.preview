@@ -286,7 +286,8 @@ psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure
   psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
 
 # Set DATABASE_URL if not already set
-export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
+export DATABASE_URL="${DATABASE_URL:-postgres://rails@localhost:5432/sure_development}"
+export PGPASSWORD="${PGPASSWORD:-rails}"
 
 # Set REDIS_URL if not already set
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"

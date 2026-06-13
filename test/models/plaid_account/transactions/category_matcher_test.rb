@@ -4,12 +4,12 @@ class PlaidAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCase
   setup do
     @family = families(:empty)
 
-    # User income categories
+    # User categories that match Plaid income taxonomy values
     @income = @family.categories.create!(name: "Income")
     @dividend_income = @family.categories.create!(name: "Dividend Income", parent: @income)
     @interest_income = @family.categories.create!(name: "Interest Income", parent: @income)
 
-    # User expense categories
+    # User categories that match Plaid expense taxonomy values
     @loan_payments = @family.categories.create!(name: "Loan Payments")
     @fees = @family.categories.create!(name: "Fees")
     @entertainment = @family.categories.create!(name: "Entertainment")
@@ -35,7 +35,7 @@ class PlaidAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCase
     @matcher = PlaidAccount::Transactions::CategoryMatcher.new(@family.categories)
   end
 
-  test "matches expense categories" do
+  test "matches Plaid expense taxonomy categories" do
     assert_equal @loan_payments, @matcher.match("loan_payments_car_payment")
     assert_equal @loan_payments, @matcher.match("loan_payments_credit_card_payment")
     assert_equal @loan_payments, @matcher.match("loan_payments_personal_loan_payment")
@@ -124,7 +124,7 @@ class PlaidAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCase
     assert_equal @home, @matcher.match("rent_and_utilities_other_utilities")
   end
 
-  test "matches income categories" do
+  test "matches Plaid income taxonomy categories" do
     assert_equal @dividend_income, @matcher.match("income_dividends")
     assert_equal @interest_income, @matcher.match("income_interest_earned")
     assert_equal @income, @matcher.match("income_tax_refund")

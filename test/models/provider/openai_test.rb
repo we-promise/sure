@@ -31,11 +31,11 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       response = @subject.auto_categorize(
         transactions: input_transactions,
         user_categories: [
-          { id: "shopping_id", name: "Shopping", is_subcategory: false, parent_id: nil, classification: "expense" },
-          { id: "subscriptions_id", name: "Subscriptions", is_subcategory: true, parent_id: nil, classification: "expense" },
-          { id: "restaurants_id", name: "Restaurants", is_subcategory: false, parent_id: nil, classification: "expense" },
-          { id: "fast_food_id", name: "Fast Food", is_subcategory: true, parent_id: "restaurants_id", classification: "expense" },
-          { id: "income_id", name: "Income", is_subcategory: false, parent_id: nil, classification: "income" }
+          { id: "shopping_id", name: "Shopping", is_subcategory: false, parent_id: nil },
+          { id: "subscriptions_id", name: "Subscriptions", is_subcategory: true, parent_id: nil },
+          { id: "restaurants_id", name: "Restaurants", is_subcategory: false, parent_id: nil },
+          { id: "fast_food_id", name: "Fast Food", is_subcategory: true, parent_id: "restaurants_id" },
+          { id: "income_id", name: "Income", is_subcategory: false, parent_id: nil }
         ]
       )
 
@@ -426,7 +426,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10") do
       subject = Provider::Openai.new("test-token")
       transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
-      user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
+      user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil } ]
 
       # Capture the batch size passed to each AutoCategorizer. `.new` is called
       # once per sub-batch; we record each invocation's transactions count.
