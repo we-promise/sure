@@ -10,6 +10,7 @@ en:
         home: Home
         reports: Reports
         goals: Goals
+        retirement: Retirement
         transactions: Transactions
     auth:
       existing_account: Already have an account?

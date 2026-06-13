@@ -91,4 +91,15 @@ class GoalPledgesControllerTest < ActionDispatch::IntegrationTest
     get new_goal_pledge_url(other_goal)
     assert_redirected_to goals_path
   end
+
+  test "pledge routes are not reachable for retirement goals" do
+    retirement = Goal::Retirement.create!(
+      family: @user.family, owner: @user,
+      name: "Retire", target_amount: 1_000_000, currency: "USD"
+    )
+
+    get new_goal_pledge_url(retirement), headers: { "Turbo-Frame" => "modal" }
+
+    assert_redirected_to goals_path
+  end
 end

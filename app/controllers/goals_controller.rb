@@ -7,12 +7,12 @@ class GoalsController < ApplicationController
   ACTIVE_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
 
   def index
-    state_counts = Current.family.goals.group(:state).count
+    state_counts = Current.family.goals.savings.group(:state).count
     @counts = STATE_FILTERS.each_with_object({}) do |state, h|
       h[state] = state == "all" ? state_counts.values.sum : (state_counts[state] || 0)
     end
 
-    all_goals = Current.family.goals
+    all_goals = Current.family.goals.savings
                        .alphabetically
                        .includes(:open_pledges, linked_accounts: :account_providers)
                        .to_a
@@ -46,7 +46,7 @@ class GoalsController < ApplicationController
   end
 
   def new
-    @goal = Current.family.goals.new(
+    @goal = Current.family.goals.savings.new(
       color: Goal::COLORS.sample,
       currency: Current.family.primary_currency_code
     )
@@ -59,7 +59,7 @@ class GoalsController < ApplicationController
   end
 
   def create
-    @goal = Current.family.goals.new(goal_params)
+    @goal = Current.family.goals.savings.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
     @goal.currency = (accounts.first&.currency || Current.family.primary_currency_code) if @goal.currency.blank?
 
@@ -148,7 +148,7 @@ class GoalsController < ApplicationController
 
   private
     def set_goal
-      @goal = Current.family.goals
+      @goal = Current.family.goals.savings
                              .includes(:open_pledges, linked_accounts: :account_providers)
                              .find(params[:id])
     end
