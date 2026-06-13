@@ -64,6 +64,15 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal Money.new(1000) * 2, 2 * Money.new(1000)
   end
 
+  test "reversed subtraction with numeric respects operand order" do
+    # `numeric - money` is coerced into `money.coerce(numeric)`; subtraction is
+    # not commutative, so the result must be `numeric - money.amount`, not its
+    # negation. The symmetric `1000 - Money.new(1000)` case above can't catch
+    # this because both operands are equal (0 == 0).
+    assert_equal Money.new(1000), 2000 - Money.new(1000)
+    assert_equal Money.new(-1000), 1000 - Money.new(2000)
+  end
+
   test "can get absolute value" do
     assert_equal Money.new(1000).abs, Money.new(1000)
     assert_equal Money.new(-1000).abs, Money.new(1000)
