@@ -3,9 +3,11 @@
 class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
+  MAX_BATCH_SIZE = 100
+
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
-  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy, :batch_create, :batch_update ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
 
   def index
@@ -141,7 +143,7 @@ end
     end
 
     Entry.transaction do
-      if @entry.update(entry_params_for_update)
+      if @entry.update(entry_params_for_update(transaction_params, @entry))
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
         if tags_provided?
@@ -198,22 +200,63 @@ end
     }, status: :internal_server_error
   end
 
+  def batch_create
+    items = batch_items_param
+    return if items.nil?
+    return render_batch_too_large if items.size > MAX_BATCH_SIZE
+    return render_empty_batch if items.empty?
+
+    results = items.each_with_index.map { |raw, idx| process_create_item(raw, idx) }
+    log_batch_summary(:batch_create, results)
+    @batch_response = build_batch_response(results)
+    render :batch, status: batch_response_status(results)
+
+  rescue => e
+    Rails.logger.error "TransactionsController#batch_create error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
+
+  def batch_update
+    items = batch_items_param
+    return if items.nil?
+    return render_batch_too_large if items.size > MAX_BATCH_SIZE
+    return render_empty_batch if items.empty?
+
+    results = items.each_with_index.map { |raw, idx| process_update_item(raw, idx) }
+    log_batch_summary(:batch_update, results)
+    @batch_response = build_batch_response(results)
+    render :batch, status: batch_response_status(results)
+
+  rescue => e
+    Rails.logger.error "TransactionsController#batch_update error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
+
   private
 
     def set_transaction
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
-      family = current_resource_owner.family
-      @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .find(params[:id])
+      writable = %w[update destroy].include?(action_name)
+      @transaction = find_owner_transaction(params[:id], writable: writable) or raise ActiveRecord::RecordNotFound
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
       render json: {
         error: "not_found",
         message: "Transaction not found"
       }, status: :not_found
+    end
+
+    def find_owner_transaction(id, writable: false)
+      return nil unless valid_uuid?(id)
+
+      account_scope = writable ? Account.writable_by(current_resource_owner) : Account.accessible_by(current_resource_owner)
+      current_resource_owner.family.transactions
+        .joins(entry: :account)
+        .merge(account_scope)
+        .find_by(id: id)
     end
 
     def ensure_read_scope
@@ -312,24 +355,21 @@ end
       )
     end
 
-    def account_id_param
-      params.dig(:transaction, :account_id).presence
-    end
-
-    def entry_params_for_create
+    def entry_params_for_create(attrs = transaction_params)
       entry_params = {
-        name: transaction_params[:name] || transaction_params[:description],
-        date: transaction_params[:date],
-        amount: calculate_signed_amount,
-        currency: transaction_params[:currency] || current_resource_owner.family.currency,
-        notes: transaction_params[:notes],
+        name: attrs[:name] || attrs[:description],
+        date: attrs[:date],
+        amount: signed_amount_for(attrs[:amount], attrs[:nature]),
+        currency: attrs[:currency] || current_resource_owner.family.currency,
+        notes: attrs[:notes],
         entryable_type: "Transaction",
         entryable_attributes: {
-          category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id],
-          tag_ids: transaction_params[:tag_ids] || []
+          category_id: attrs[:category_id],
+          merchant_id: attrs[:merchant_id],
+          tag_ids: attrs[:tag_ids] || []
         }
       }
+
       if idempotency_key_requested?
         entry_params[:external_id] = idempotency_external_id
         entry_params[:source] = idempotency_source
@@ -338,23 +378,32 @@ end
       entry_params.compact
     end
 
-    def entry_params_for_update
+    def account_id_param
+      params.dig(:transaction, :account_id).presence
+    end
+
+    def entry_params_for_update(attrs = transaction_params, entry = @entry)
       entry_params = {
-        name: transaction_params[:name] || transaction_params[:description],
-        date: transaction_params[:date],
-        notes: transaction_params[:notes],
+        name: attrs[:name] || attrs[:description],
+        date: attrs[:date],
+        notes: attrs[:notes],
         entryable_attributes: {
-          id: @entry.entryable_id,
-          category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id]
+          id: entry.entryable_id,
+          category_id: attrs[:category_id],
+          merchant_id: attrs[:merchant_id]
           # Note: tag_ids handled separately in update action to distinguish
           # "not provided" from "explicitly set to empty"
         }.compact_blank
       }
 
       # Only update amount if provided
-      if transaction_params[:amount].present?
-        entry_params[:amount] = calculate_signed_amount
+      if attrs[:amount].present?
+        entry_params[:amount] = signed_amount_for(attrs[:amount], attrs[:nature])
+      end
+
+      # Only update currency if provided
+      if attrs[:currency].present?
+        entry_params[:currency] = attrs[:currency]
       end
 
       entry_params.compact
@@ -370,6 +419,18 @@ end
       params.dig(:transaction, :amount).present? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
+    end
+
+    def signed_amount_for(amount, nature)
+      amt = amount.to_f
+      case nature.to_s.downcase
+      when "income", "inflow"
+        -amt.abs
+      when "expense", "outflow"
+        amt.abs
+      else
+        amt
+      end
     end
 
     def idempotency_key_requested?
@@ -415,20 +476,6 @@ end
       render :show, status: :ok
     end
 
-    def calculate_signed_amount
-      amount = transaction_params[:amount].to_f
-      nature = transaction_params[:nature]
-
-      case nature&.downcase
-      when "income", "inflow"
-        -amount.abs  # Income is negative
-      when "expense", "outflow"
-        amount.abs   # Expense is positive
-      else
-        amount       # Use as provided
-      end
-    end
-
     def safe_page_param
       page = params[:page].to_i
       page > 0 ? page : 1
@@ -442,5 +489,179 @@ end
       else
         25  # Default
       end
+    end
+
+    def batch_items_param
+      raw = params[:transactions]
+      unless raw.is_a?(Array)
+        render json: { error: "validation_failed", message: "transactions is required and must be an array" },
+               status: :unprocessable_entity
+        return nil
+      end
+      raw
+    end
+
+    def render_batch_too_large
+      render json: { error: "batch_too_large", message: "max #{MAX_BATCH_SIZE} items per request" },
+             status: :bad_request
+    end
+
+    def render_empty_batch
+      render json: { error: "validation_failed", message: "batch must not be empty" },
+             status: :unprocessable_entity
+    end
+
+    def process_create_item(raw, idx)
+      result = { index: idx }
+      family = current_resource_owner.family
+      return invalid_batch_item_result(result) unless batch_item_params_object?(raw)
+
+      raw_params = batch_item_params(raw)
+      attrs = raw_params.permit(
+        :account_id, :date, :amount, :name, :description, :notes, :currency,
+        :category_id, :merchant_id, :nature, :client_ref, tag_ids: []
+      ).to_h.with_indifferent_access
+
+      result[:client_ref] = attrs[:client_ref] if attrs[:client_ref].present?
+
+      unless attrs[:account_id].present?
+        return result.merge(status: "error", error: "validation_failed", errors: [ "Account ID is required" ])
+      end
+
+      account = family.accounts.writable_by(current_resource_owner).find_by(id: attrs[:account_id])
+      unless account
+        return result.merge(status: "error", error: "not_found", errors: [ "Account not found or not writable" ])
+      end
+
+      entry = nil
+      Entry.transaction do
+        entry = account.entries.new(entry_params_for_create(attrs))
+        entry.save!
+        entry.lock_saved_attributes!
+        lock_transaction_tags!(entry.transaction, attrs[:tag_ids])
+      end
+
+      sync_account_later_after_batch(entry, :batch_create, idx)
+
+      result.merge(status: "created", transaction: entry.transaction)
+
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn "batch_create item #{idx} invalid: #{e.message}"
+      result.merge(status: "error", error: "validation_failed", errors: e.record.errors.full_messages)
+    rescue => e
+      Rails.logger.error "batch_create item #{idx} error: #{e.message}"
+      result.merge(status: "error", error: "internal_server_error", errors: [ e.message ])
+    end
+
+    def process_update_item(raw, idx)
+      result = { index: idx }
+      return invalid_batch_item_result(result) unless batch_item_params_object?(raw)
+
+      raw_params = batch_item_params(raw)
+      attrs = raw_params.permit(
+        :id, :date, :amount, :name, :description, :notes, :currency,
+        :category_id, :merchant_id, :nature, :client_ref, tag_ids: []
+      ).to_h.with_indifferent_access
+
+      result[:client_ref] = attrs[:client_ref] if attrs[:client_ref].present?
+
+      unless attrs[:id].present?
+        return result.merge(status: "error", error: "validation_failed", errors: [ "Transaction id is required" ])
+      end
+
+      transaction = find_owner_transaction(attrs[:id], writable: true)
+      unless transaction
+        return result.merge(status: "error", error: "not_found", errors: [ "Transaction not found" ])
+      end
+
+      entry = transaction.entry
+
+      if entry.split_child?
+        return result.merge(status: "error", error: "validation_failed",
+          errors: [ "Split child transactions cannot be edited directly. Use the split editor." ])
+      end
+
+      financial_changed = attrs[:amount].present? || attrs[:date].present? || attrs[:nature].present?
+      if entry.split_parent? && financial_changed
+        return result.merge(status: "error", error: "validation_failed",
+          errors: [ "Split parent amount, date, and type cannot be changed directly. Use the split editor." ])
+      end
+
+      tags_provided = raw_params.key?(:tag_ids)
+
+      Entry.transaction do
+        entry.update!(entry_params_for_update(attrs, entry))
+
+        if tags_provided
+          entry.transaction.tag_ids = attrs[:tag_ids] || []
+          entry.transaction.save!
+          lock_transaction_tags!(entry.transaction, attrs[:tag_ids])
+        end
+
+        entry.lock_saved_attributes!
+      end
+
+      sync_account_later_after_batch(entry, :batch_update, idx)
+
+      result.merge(status: "updated", transaction: entry.transaction)
+
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn "batch_update item #{idx} invalid: #{e.message}"
+      result.merge(status: "error", error: "validation_failed", errors: e.record.errors.full_messages)
+    rescue => e
+      Rails.logger.error "batch_update item #{idx} error: #{e.message}"
+      result.merge(status: "error", error: "internal_server_error", errors: [ e.message ])
+    end
+
+    def batch_item_params_object?(raw)
+      raw.is_a?(Hash) || raw.is_a?(ActionController::Parameters) || raw.respond_to?(:to_hash)
+    end
+
+    def batch_item_params(raw)
+      return raw if raw.is_a?(ActionController::Parameters)
+
+      ActionController::Parameters.new(raw.respond_to?(:to_hash) ? raw.to_hash : raw || {})
+    end
+
+    def invalid_batch_item_result(result)
+      result.merge(status: "error", error: "validation_failed", errors: [ "Transaction item must be an object" ])
+    end
+
+    def sync_account_later_after_batch(entry, action, idx)
+      entry.sync_account_later
+    rescue => e
+      Rails.logger.error "#{action} item #{idx} sync enqueue failed: #{e.message}"
+    end
+
+    def build_batch_response(results)
+      succeeded = results.count { |r| %w[created updated].include?(r[:status]) }
+      failed = results.size - succeeded
+      {
+        results: results,
+        summary: { total: results.size, succeeded: succeeded, failed: failed }
+      }
+    end
+
+    def batch_response_status(results)
+      return :unprocessable_entity if date_validation_batch_error?(results)
+
+      :multi_status
+    end
+
+    def date_validation_batch_error?(results)
+      results.none? { |r| %w[created updated].include?(r[:status]) } &&
+        results.any? { |r| r[:error] == "validation_failed" && Array(r[:errors]).any? { |error| error.match?(/Date/) } }
+    end
+
+    def log_batch_summary(action, results)
+      succeeded = results.count { |r| %w[created updated].include?(r[:status]) }
+      failed = results.size - succeeded
+      Rails.logger.info "#{action}: #{results.size} items, #{succeeded} succeeded, #{failed} failed"
+    end
+
+    def lock_transaction_tags!(transaction, tag_ids)
+      return if Array.wrap(tag_ids).reject(&:blank?).empty?
+
+      transaction.lock_attr!(:tag_ids)
     end
 end

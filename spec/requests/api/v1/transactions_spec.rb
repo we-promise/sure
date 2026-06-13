@@ -33,6 +33,17 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
+  let(:read_only_api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'Read Only Docs Key',
+      key: key,
+      scopes: %w[read],
+      source: 'mobile'
+    )
+  end
+
   let(:account) do
     Account.create!(
       family: family,
@@ -368,6 +379,68 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         let(:id) { SecureRandom.uuid }
 
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/transactions/batch' do
+    post 'Batch create transactions' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, schema: { '$ref' => '#/components/schemas/BatchTransactionCreateRequest' }
+
+      response '207', 'batch processed (per-item statuses in body)' do
+        schema '$ref' => '#/components/schemas/BatchTransactionResponse'
+        let(:body) { { transactions: [ { account_id: SecureRandom.uuid, date: '2026-05-09', amount: 1.0, nature: 'expense', name: 'x' } ] } }
+        run_test!
+      end
+
+      response '400', 'batch too large (> 100 items)' do
+        let(:body) { { transactions: Array.new(101) { { account_id: SecureRandom.uuid, date: '2026-05-09', amount: 1.0, nature: 'expense', name: 'x' } } } }
+        run_test!
+      end
+
+      response '422', 'empty or missing transactions array' do
+        let(:body) { { transactions: [] } }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        let(:body) { { transactions: [ { account_id: SecureRandom.uuid, date: '2026-05-09', amount: 1.0, nature: 'expense', name: 'x' } ] } }
+        run_test!
+      end
+    end
+
+    patch 'Batch update transactions' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, schema: { '$ref' => '#/components/schemas/BatchTransactionUpdateRequest' }
+
+      response '207', 'batch processed (per-item statuses in body)' do
+        schema '$ref' => '#/components/schemas/BatchTransactionResponse'
+        let(:body) { { transactions: [ { id: SecureRandom.uuid, notes: 'x' } ] } }
+        run_test!
+      end
+
+      response '400', 'batch too large (> 100 items)' do
+        let(:body) { { transactions: Array.new(101) { { id: SecureRandom.uuid, notes: 'x' } } } }
+        run_test!
+      end
+
+      response '422', 'empty or missing transactions array' do
+        let(:body) { { transactions: [] } }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        let(:body) { { transactions: [ { id: SecureRandom.uuid, notes: 'x' } ] } }
         run_test!
       end
     end
