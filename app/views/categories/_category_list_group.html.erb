@@ -1,5 +1,12 @@
-<%# locals: (title:, categories:, category_groups: nil, category_ids_with_transactions: nil) %>
+<%# locals: (title:, categories:, family: nil, category_groups: nil, category_ids_with_transactions: nil) %>
 <% category_groups ||= Category::Group.for(categories) %>
+<% if category_ids_with_transactions.nil? %>
+  <% category_ids_with_transactions = if categories.any? && family
+    Category.ids_with_transactions(family: family, category_ids: categories.map(&:id))
+  else
+    {}
+  end %>
+<% end %>
 
 <div class="rounded-xl bg-container-inset space-y-1 p-1">
   <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
@@ -14,13 +21,13 @@
         <%= render "categories/category",
                    category: group.category,
                    subcategories: group.subcategories,
-                   has_transactions: category_ids_with_transactions&.key?(group.category.id) %>
+                   has_transactions: category_ids_with_transactions.key?(group.category.id) %>
 
         <% group.subcategories.each do |subcategory| %>
           <%= render "categories/category",
                      category: subcategory,
                      subcategories: [],
-                     has_transactions: category_ids_with_transactions&.key?(subcategory.id) %>
+                     has_transactions: category_ids_with_transactions.key?(subcategory.id) %>
         <% end %>
 
         <% unless idx == category_groups.count - 1 %>

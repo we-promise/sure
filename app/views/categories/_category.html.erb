@@ -1,10 +1,8 @@
-<%# locals: (category:, subcategories: nil, has_transactions: nil) %>
-<% subcategories ||= category.subcategories.to_a %>
-<% has_transactions = category.transactions.exists? if has_transactions.nil? %>
+<%# locals: (category:, subcategories: [], has_transactions: false) %>
 
-<div id="<%= dom_id(category) %>" class="flex items-center gap-3 px-4 pb-4 <%= "pt-4" unless category.subcategory? %> <%= "pb-4" unless subcategories.any? %> bg-container">
+<div id="<%= dom_id(category) %>" class="flex items-center gap-3 px-4 pb-4 <%= "pt-4" unless category.parent_id.present? %> bg-container">
   <div class="flex min-w-0 flex-1 items-center gap-2.5" data-testid="category-content">
-    <% if category.subcategory? %>
+    <% if category.parent_id.present? %>
       <span style="color: <%= category.color %>">
         <%= icon "corner-down-right", size: "sm", color: "current", class: "ml-2" %>
       </span>
