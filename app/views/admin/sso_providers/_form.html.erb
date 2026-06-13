@@ -93,7 +93,7 @@
     <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
       <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.redirect_uri_label") %></label>
       <div class="flex items-center gap-2">
-        <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
+        <code class="flex-1 min-w-0 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
               data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
                 data-action="click->admin-sso-form#copyCallback"
@@ -176,7 +176,7 @@
     <div>
       <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.saml_sp_callback_url_label") %></label>
       <div class="flex items-center gap-2">
-        <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
+        <code class="flex-1 min-w-0 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
               data-admin-sso-form-target="samlCallbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
                 data-action="click->admin-sso-form#copySamlCallback"

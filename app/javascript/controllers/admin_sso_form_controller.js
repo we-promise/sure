@@ -70,22 +70,7 @@ export default class extends Controller {
 
     if (!this.hasSamlCallbackUrlTarget) return
 
-    const callbackUrl = this.samlCallbackUrlTarget.textContent
-
-    navigator.clipboard.writeText(callbackUrl).then(() => {
-      const button = event.currentTarget
-      const originalText = button.innerHTML
-      button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
-      button.classList.add('text-green-600')
-
-      setTimeout(() => {
-        button.innerHTML = originalText
-        button.classList.remove('text-green-600')
-      }, 2000)
-    }).catch(err => {
-      console.error('Failed to copy:', err)
-      alert('Failed to copy to clipboard')
-    })
+    this.copyToClipboard(this.samlCallbackUrlTarget.textContent, event.currentTarget)
   }
 
   async validateIssuer(event) {
@@ -143,27 +128,68 @@ export default class extends Controller {
   copyCallback(event) {
     event.preventDefault()
 
-    const callbackDisplay = this.callbackUrlTarget
-    if (!callbackDisplay) return
+    if (!this.hasCallbackUrlTarget) return
 
-    const callbackUrl = callbackDisplay.textContent
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(callbackUrl).then(() => {
-      // Show success feedback
-      const button = event.currentTarget
-      const originalText = button.innerHTML
-      button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
-      button.classList.add('text-green-600')
-      
-      setTimeout(() => {
-        button.innerHTML = originalText
-        button.classList.remove('text-green-600')
-      }, 2000)
-    }).catch(err => {
-      console.error('Failed to copy:', err)
+    this.copyToClipboard(this.callbackUrlTarget.textContent, event.currentTarget)
+  }
+
+  // Copies text to the clipboard with a fallback for non-secure contexts.
+  // navigator.clipboard is only available over HTTPS or on localhost, so
+  // self-hosted installs accessed by IP over plain HTTP need the execCommand path.
+  async copyToClipboard(text, button) {
+    let copied = false
+
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text)
+        copied = true
+      } catch (err) {
+        console.error('Failed to copy via clipboard API:', err)
+      }
+    }
+
+    if (!copied) {
+      copied = this.legacyCopy(text)
+    }
+
+    if (copied) {
+      this.showCopyFeedback(button)
+    } else {
       alert('Failed to copy to clipboard')
-    })
+    }
+  }
+
+  legacyCopy(text) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    // Keep it out of view and prevent scrolling/zoom jumps on focus.
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.top = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+
+    let copied = false
+    try {
+      copied = document.execCommand('copy')
+    } catch (err) {
+      console.error('Failed to copy via execCommand:', err)
+    } finally {
+      document.body.removeChild(textarea)
+    }
+
+    return copied
+  }
+
+  showCopyFeedback(button) {
+    const originalText = button.innerHTML
+    button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
+    button.classList.add('text-success')
+
+    setTimeout(() => {
+      button.innerHTML = originalText
+      button.classList.remove('text-success')
+    }, 2000)
   }
 
   showValidationMessage(input, message, type) {
