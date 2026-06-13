@@ -29,8 +29,7 @@ class PlaidItem < ApplicationRecord
 
   # Get accounts from both new and legacy systems
   def accounts
-    # Preload associations to avoid N+1 queries
-    plaid_accounts
+    @accounts ||= plaid_accounts
       .includes(:account, account_provider: :account)
       .map(&:current_account)
       .compact
