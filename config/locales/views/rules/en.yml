@@ -52,6 +52,11 @@ en:
       confirm_changes: Confirm changes
     actions:
       value_placeholder: Enter a value
+      auto_categorize:
+        label: Auto-categorize transactions with AI
+        cost_na: "cost: N/A"
+        cost_estimate: "~$%{cost} per %{count} transactions"
+        no_provider: no LLM provider configured
     update:
       success: Rule updated
     destroy:

@@ -22,6 +22,7 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     # Mock a configured OpenAI provider
     mock_provider = mock("openai_provider")
     Provider::Registry.stubs(:openai).returns(mock_provider)
+    Provider::Registry.stubs(:anthropic).returns(nil)
 
     registry = Provider::Registry.for_concept(:llm)
 

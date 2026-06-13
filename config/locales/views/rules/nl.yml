@@ -5,6 +5,11 @@ nl:
     no_condition: Geen voorwaarde
     actions:
       value_placeholder: Voer een waarde in
+      auto_categorize:
+        label: Transacties automatisch categoriseren met AI
+        cost_na: "kosten: n.v.t."
+        cost_estimate: "~$%{cost} per %{count} transacties"
+        no_provider: geen LLM-provider geconfigureerd
     apply_all:
       button: Alles toepassen
       confirm_title: Alle regels toepassen

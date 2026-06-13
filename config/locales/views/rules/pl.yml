@@ -5,6 +5,11 @@ pl:
     no_condition: Brak warunku
     actions:
       value_placeholder: Wprowadź wartość
+      auto_categorize:
+        label: Automatycznie kategoryzuj transakcje za pomocą AI
+        cost_na: "koszt: niedostępny"
+        cost_estimate: "~$%{cost} za %{count} transakcji"
+        no_provider: brak skonfigurowanego dostawcy LLM
     apply_all:
       button: Zastosuj wszystkie
       confirm_title: Zastosować wszystkie reguły
