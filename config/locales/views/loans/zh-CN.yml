@@ -10,6 +10,9 @@ zh-CN:
       rate_type: 利率类型
       term_months: 期限（月）
       term_months_placeholder: '360'
+      none: 无
+      subtype_prompt: 选择贷款类型
+      subtype_none: 无
     new:
       title: 请输入贷款详情
     overview:
@@ -31,3 +34,4 @@ zh-CN:
         term: 期限
         type: 类型
         unknown: 未知
+        edit_loan_details: 编辑贷款详情
