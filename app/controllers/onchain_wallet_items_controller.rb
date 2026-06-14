@@ -86,6 +86,7 @@ class OnchainWalletItemsController < ApplicationController
       importer.import_wallet!(chain: chain, address: address)
     end
     item.process_accounts
+    item.schedule_account_syncs
 
     render_success_response("Wallet linked.")
   rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, ArgumentError => e
@@ -169,6 +170,7 @@ class OnchainWalletItemsController < ApplicationController
       importer.import_wallet!(chain: chain, address: new_address)
     end
     @onchain_wallet_item.process_accounts
+    @onchain_wallet_item.schedule_account_syncs
 
     render_success_response("Wallet address updated.")
   rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, ArgumentError => e
