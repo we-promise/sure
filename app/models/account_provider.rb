@@ -11,6 +11,7 @@ class AccountProvider < ApplicationRecord
   # so it doesn't remain orphaned and count as "needs setup".
   # Other providers may legitimately enter a "needs setup" state.
   after_destroy :destroy_coinstats_provider_account, if: :coinstats_provider?
+  after_destroy :destroy_onchain_wallet_provider_account, if: :onchain_wallet_provider?
 
   # Returns the provider adapter for this connection
   def adapter
@@ -30,6 +31,14 @@ class AccountProvider < ApplicationRecord
     end
 
     def destroy_coinstats_provider_account
+      provider&.destroy
+    end
+
+    def onchain_wallet_provider?
+      provider_type == "OnchainWalletAccount"
+    end
+
+    def destroy_onchain_wallet_provider_account
       provider&.destroy
     end
 end
