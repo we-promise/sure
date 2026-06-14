@@ -17,6 +17,7 @@ class Family::Syncer
     indexa_capital_items
     coinbase_items
     coinstats_items
+    onchain_wallet_items
     mercury_items
     brex_items
     binance_items

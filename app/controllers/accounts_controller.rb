@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[toggle_active destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[destroy unlink confirm_unlink select_provider toggle_active]
   include Periodable
 
   def index
@@ -26,6 +26,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
+    @onchain_wallet_items = visible_provider_items(family.onchain_wallet_items.active.ordered.includes(:syncs, :accounts, onchain_wallet_accounts: :account_provider))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -243,6 +244,7 @@ class AccountsController < ApplicationController
       end
     end
 
+
     def build_statement_tab_data
       return unless statement_tab_active?
 
@@ -420,6 +422,13 @@ class AccountsController < ApplicationController
           .where(account_providers: { id: nil })
           .count
         @binance_unlinked_count_map[item.id] = count
+      end
+
+      # On-chain Wallets sync stats
+      @onchain_wallet_sync_stats_map = {}
+      @onchain_wallet_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @onchain_wallet_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end
