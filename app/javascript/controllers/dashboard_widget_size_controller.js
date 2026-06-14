@@ -1,0 +1,98 @@
+import { Controller } from "@hotwired/stimulus";
+
+// Per-widget layout picker (mounted on the <details> menu). Optimistically applies
+// the choice for instant feedback, then persists it fire-and-forget — mirroring how
+// collapse / reorder already save dashboard preferences:
+//
+//   - Height: sets the `--dash-widget-h` CSS var; the chart redraws via its own
+//     ResizeObserver and dashboard-masonry re-packs from the height change.
+//   - Width: toggles the `2xl:col-span-2` class; the CSS grid re-flows and a
+//     synthetic resize nudges dashboard-masonry to re-pack.
+export default class extends Controller {
+  static values = { sectionKey: String };
+
+  connect() {
+    this._closeOnOutsideClick = this._closeOnOutsideClick.bind(this);
+    document.addEventListener("click", this._closeOnOutsideClick);
+  }
+
+  disconnect() {
+    document.removeEventListener("click", this._closeOnOutsideClick);
+  }
+
+  selectHeight(event) {
+    const { preset, height } = event.currentTarget.dataset;
+    const section = this._section();
+    if (section && height) {
+      section.style.setProperty("--dash-widget-h", `${height}px`);
+    }
+    this._markSelected(event.currentTarget, "data-preset");
+    this.element.open = false;
+    this._save({ height: preset });
+  }
+
+  selectWidth(event) {
+    const { colSpan } = event.currentTarget.dataset;
+    const section = this._section();
+    if (section) {
+      section.classList.toggle("2xl:col-span-2", colSpan === "full");
+    }
+    this._markSelected(event.currentTarget, "data-col-span");
+    this.element.open = false;
+    this._save({ col_span: colSpan });
+    // Width change re-flows the grid; nudge dashboard-masonry to re-pack.
+    window.dispatchEvent(new Event("resize"));
+  }
+
+  _section() {
+    return this.element.closest("[data-section-key]");
+  }
+
+  // Update aria-checked across the radios that share this dimension (same attr).
+  _markSelected(button, attr) {
+    this.element.querySelectorAll(`[${attr}]`).forEach((el) => {
+      el.setAttribute("aria-checked", el === button);
+    });
+  }
+
+  _closeOnOutsideClick(event) {
+    if (this.element.open && !this.element.contains(event.target)) {
+      this.element.open = false;
+    }
+  }
+
+  async _save(payload) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+      console.error("[Dashboard Widget Size] CSRF token not found.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/dashboard/preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken.content,
+        },
+        body: JSON.stringify({
+          preferences: {
+            dashboard_section_layout: { [this.sectionKeyValue]: payload },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          "[Dashboard Widget Size] Failed to save layout:",
+          response.status,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[Dashboard Widget Size] Network error saving layout:",
+        error,
+      );
+    }
+  }
+}
