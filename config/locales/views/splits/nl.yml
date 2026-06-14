@@ -1,0 +1,47 @@
+---
+nl:
+  splits:
+    new:
+      title: Transactie splitsen
+      description: Splits deze transactie in meerdere boekingen met verschillende categorieën en bedragen.
+      submit: Transactie splitsen
+      cancel: Annuleren
+      add_row: Splitsing toevoegen
+      remove_row: Verwijderen
+      remaining: Resterend
+      amounts_must_match: De splitsbedragen moeten gelijk zijn aan het oorspronkelijke transactiebedrag.
+      name_label: Naam
+      name_placeholder: Naam van splitsing
+      amount_label: Bedrag
+      category_label: Categorie
+      uncategorized: "(geen categorie)"
+      original_name: "Naam:"
+      original_date: "Datum:"
+      original_amount: "Bedrag"
+      split_number: "Splitsing #%{number}"
+    create:
+      success: Transactie succesvol gesplitst
+      not_splittable: Deze transactie kan niet worden gesplitst.
+    destroy:
+      success: Splitsing van transactie succesvol ongedaan gemaakt
+    show:
+      title: Gesplitste boekingen
+      description: Deze transactie is gesplitst in de volgende boekingen.
+      button_title: Transactie splitsen
+      button_description: Splits deze transactie in meerdere boekingen met verschillende categorieën en bedragen.
+      button: Splitsen
+      unsplit_title: Splitsing ongedaan maken
+      unsplit_button: Splitsing ongedaan maken
+      unsplit_confirm: Hiermee worden alle gesplitste boekingen verwijderd en wordt de oorspronkelijke transactie hersteld.
+    edit:
+      title: Splitsing bewerken
+      description: Pas de gesplitste boekingen voor deze transactie aan.
+      submit: Splitsing bijwerken
+      not_split: Deze transactie is niet gesplitst.
+    update:
+      success: Splitsing succesvol bijgewerkt
+    child:
+      title: Onderdeel van splitsing
+      description: Deze boeking maakt deel uit van een gesplitste transactie.
+      edit_split: Splitsing bewerken
+      unsplit: Splitsing ongedaan maken

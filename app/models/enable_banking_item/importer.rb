@@ -124,14 +124,20 @@ class EnableBankingItem::Importer
 
   private
 
-    def handle_sync_error(exception)
+    # @param session_level [Boolean] true only for the top-level GET /sessions call.
+    #   A session-level 401/404 means the consent is genuinely dead and the user
+    #   must re-authorize. Per-account 401/404 (a stale account UID, a transient
+    #   hiccup on one account) must NOT mark the whole connection requires_update —
+    #   doing so is what made every sync report "session expired". Those are recorded
+    #   as ordinary sync errors and retried on the next sync.
+    def handle_sync_error(exception, session_level: false)
       # Check the underlying cause first, then the exception itself
       exceptions = [ exception.cause, exception ].compact
 
       provider_error = exceptions.find { |ex| ex.is_a?(Provider::EnableBanking::EnableBankingError) }
 
-      # Handle session expiration status update
-      if provider_error && [ :unauthorized, :not_found ].include?(provider_error.error_type)
+      # Handle session expiration status update (session-level failures only)
+      if session_level && provider_error && [ :unauthorized, :not_found ].include?(provider_error.error_type)
         enable_banking_item.update!(status: :requires_update)
         return I18n.t("enable_banking_items.errors.session_invalid")
       end
@@ -151,14 +157,18 @@ class EnableBankingItem::Importer
     end
 
     def fetch_session_data
-      enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
+      session_data = enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
+      # Keep the local expiry in sync with the authoritative value from the API so
+      # session_valid? doesn't drift (premature "expired" or stale "still valid").
+      enable_banking_item.reconcile_session_expiry!(session_data)
+      session_data
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Enable Banking API error: #{e.message}"
-      @session_error = handle_sync_error(e)
+      @session_error = handle_sync_error(e, session_level: true)
       nil
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching session: #{e.class} - #{e.message}"
-      @session_error = handle_sync_error(e)
+      @session_error = handle_sync_error(e, session_level: true)
       nil
     end
 
@@ -242,7 +252,12 @@ class EnableBankingItem::Importer
 
       pending_transactions = []
       if include_pending
-        # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
+        # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
+        # The BOOK fetch above used the same date_from/date_to and succeeded, so any 422 raised here is
+        # necessarily about the transaction_status param. Different ASPSPs reject it with different bodies
+        # (e.g. ImaginV2 returns WRONG_REQUEST_PARAMETERS; others mention "transactionStatus" verbatim),
+        # so we treat every validation_error on PDNG as "ASPSP doesn't support pending" and continue with
+        # the booked transactions only. (Issue #1805)
         begin
           pending_transactions = fetch_paginated_transactions(
             enable_banking_account,
@@ -251,8 +266,9 @@ class EnableBankingItem::Importer
             psu_headers: enable_banking_item.build_psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
-          raise unless e.error_type == :validation_error && e.message.include?("transactionStatus")
-          Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{e.message}"
+          raise unless e.error_type == :validation_error
+          api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
+          Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
         end
       end
 

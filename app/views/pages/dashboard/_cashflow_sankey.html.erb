@@ -1,31 +1,14 @@
 <%# locals: (sankey_data:, period:) %>
 <div id="cashflow-sankey-chart">
-  <div class="flex justify-end items-center gap-4 px-4 mb-4">
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
-      <%= form.select :period,
-                Period.as_options,
-                { selected: period.key },
-                data: { "auto-submit-form-target": "auto" },
-                class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-    <% end %>
-  </div>
   <% if sankey_data[:links].present? %>
     <div class="w-full h-96">
-      <div
-        data-controller="sankey-chart"
-        data-sankey-chart-data-value="<%= sankey_data.to_json %>"
-        data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-        class="w-full h-full privacy-sensitive"></div>
+      <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data, period: period %>
     </div>
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
       <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
       <% dialog.with_body do %>
         <div class="w-full h-[85dvh] max-h-[90dvh] overflow-y-auto overscroll-contain">
-          <div
-            data-controller="sankey-chart"
-            data-sankey-chart-data-value="<%= sankey_data.to_json %>"
-            data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-            class="w-full h-full privacy-sensitive"></div>
+          <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data, period: period %>
         </div>
       <% end %>
     <% end %>

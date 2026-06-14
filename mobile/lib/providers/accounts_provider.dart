@@ -54,7 +54,8 @@ class AccountsProvider with ChangeNotifier {
   Map<String, double> get assetTotalsByCurrency {
     final totals = <String, double>{};
     for (var account in _accounts.where((a) => a.isAsset)) {
-      totals[account.currency] = (totals[account.currency] ?? 0.0) + account.balanceAsDouble;
+      totals[account.currency] =
+          (totals[account.currency] ?? 0.0) + account.balanceAsDouble;
     }
     return totals;
   }
@@ -62,7 +63,8 @@ class AccountsProvider with ChangeNotifier {
   Map<String, double> get liabilityTotalsByCurrency {
     final totals = <String, double>{};
     for (var account in _accounts.where((a) => a.isLiability)) {
-      totals[account.currency] = (totals[account.currency] ?? 0.0) + account.balanceAsDouble;
+      totals[account.currency] =
+          (totals[account.currency] ?? 0.0) + account.balanceAsDouble;
     }
     return totals;
   }
@@ -120,7 +122,8 @@ class AccountsProvider with ChangeNotifier {
         );
 
         if (result['success'] == true && result.containsKey('accounts')) {
-          final serverAccounts = (result['accounts'] as List<dynamic>?)?.cast<Account>() ?? [];
+          final serverAccounts =
+              (result['accounts'] as List<dynamic>?)?.cast<Account>() ?? [];
           _pagination = result['pagination'] as Map<String, dynamic>?;
 
           // Save to local cache
@@ -133,11 +136,13 @@ class AccountsProvider with ChangeNotifier {
         } else {
           // If server fetch failed but we have cached data, that's OK
           if (_accounts.isEmpty) {
-            _errorMessage = result['error'] as String? ?? 'Failed to fetch accounts';
+            _errorMessage =
+                result['error'] as String? ?? 'Failed to fetch accounts';
           }
         }
       } else if (!isOnline && _accounts.isEmpty) {
-        _errorMessage = 'You are offline. Please connect to the internet to load accounts.';
+        _errorMessage =
+            'You are offline. Please connect to the internet to load accounts.';
       }
 
       // Fetch balance sheet independently — works even with cached accounts
@@ -150,30 +155,31 @@ class AccountsProvider with ChangeNotifier {
       notifyListeners();
       return _accounts.isNotEmpty;
     } catch (e) {
-      _log.error('AccountsProvider', 'Error in fetchAccounts: $e');
+      _log.error(
+        'AccountsProvider',
+        'fetchAccounts failed with ${e.runtimeType}',
+      );
       // If we have cached accounts, show them even if sync fails
       if (_accounts.isEmpty) {
         // Provide more specific error messages based on exception type
         if (e is SocketException) {
-          _errorMessage = 'Network error. Please check your internet connection and try again.';
-          _log.error('AccountsProvider', 'SocketException: $e');
+          _errorMessage =
+              'Network error. Please check your internet connection and try again.';
         } else if (e is TimeoutException) {
-          _errorMessage = 'Request timed out. Please check your connection and try again.';
-          _log.error('AccountsProvider', 'TimeoutException: $e');
+          _errorMessage =
+              'Request timed out. Please check your connection and try again.';
         } else if (e is FormatException) {
           _errorMessage = 'Server response error. Please try again later.';
-          _log.error('AccountsProvider', 'FormatException: $e');
-        } else if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
+        } else if (e.toString().contains('401') ||
+            e.toString().contains('unauthorized')) {
           _errorMessage = 'unauthorized';
-          _log.error('AccountsProvider', 'Unauthorized error: $e');
         } else if (e.toString().contains('HandshakeException') ||
-                   e.toString().contains('certificate') ||
-                   e.toString().contains('SSL')) {
-          _errorMessage = 'Secure connection error. Please check your internet connection and try again.';
-          _log.error('AccountsProvider', 'SSL/Certificate error: $e');
+            e.toString().contains('certificate') ||
+            e.toString().contains('SSL')) {
+          _errorMessage =
+              'Secure connection error. Please check your internet connection and try again.';
         } else {
           _errorMessage = 'Something went wrong. Please try again.';
-          _log.error('AccountsProvider', 'Unhandled exception: $e');
         }
       }
       _isLoading = false;
@@ -188,7 +194,8 @@ class AccountsProvider with ChangeNotifier {
   /// values as stale rather than clearing them.
   Future<void> _fetchBalanceSheet(String accessToken) async {
     try {
-      final result = await _balanceSheetService.getBalanceSheet(accessToken: accessToken);
+      final result =
+          await _balanceSheetService.getBalanceSheet(accessToken: accessToken);
       if (result['success'] == true) {
         _familyCurrency = result['currency'] as String?;
         final netWorth = result['net_worth'] as Map<String, dynamic>?;
@@ -205,7 +212,10 @@ class AccountsProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      _log.error('AccountsProvider', 'Error fetching balance sheet: $e');
+      _log.error(
+        'AccountsProvider',
+        'Balance sheet fetch failed with ${e.runtimeType}',
+      );
       // Keep existing values but mark as stale
       if (_netWorthFormatted != null) {
         _isBalanceSheetStale = true;

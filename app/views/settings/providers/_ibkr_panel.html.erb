@@ -13,17 +13,17 @@
                t(".steps.step_5")
              ] %>
 
-  <details class="group bg-surface-inset rounded-xl p-4">
-    <summary class="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+  <%= render DS::Disclosure.new(variant: :card_inset) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
       <div class="flex items-start justify-between gap-3">
         <div>
           <p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2"><%= t(".flex_query_details.eyebrow") %></p>
           <p class="text-sm font-medium text-primary"><%= t(".flex_query_details.title") %></p>
           <p class="text-xs text-secondary mt-1"><%= t(".flex_query_details.summary") %></p>
         </div>
-        <%= icon "chevron-down", class: "mt-0.5 text-secondary transition-transform group-open:rotate-180" %>
+        <%= icon "chevron-down", class: "mt-0.5 text-secondary group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
       </div>
-    </summary>
+    <% end %>
 
     <div class="mt-4 space-y-4 text-sm text-secondary">
       <div class="space-y-2">
@@ -89,7 +89,7 @@
 
       <p class="text-xs text-secondary"><%= t(".report_window_note") %></p>
     </div>
-  </details>
+  <% end %>
 
   <%
     ibkr_item = Current.family.ibkr_items.first_or_initialize(name: "Interactive Brokers")
@@ -145,7 +145,7 @@
         <%= t(".status_configured_suffix") %>
       </p>
     <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
       <p class="text-sm text-secondary"><%= t(".not_configured") %></p>
     <% end %>
   </div>

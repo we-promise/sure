@@ -45,24 +45,9 @@ module SettingsHelper
     }
   end
 
-  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil, &block)
+  def settings_section(title: nil, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil, &block)
     content = capture(&block)
     render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta, actions: actions, badge: badge }
-  end
-
-  def status_pill_classes(status)
-    pill = "bg-surface-inset text-primary"
-
-    case status.to_s.to_sym
-    when :ok
-      { dot: "bg-success", pill: pill }
-    when :warn
-      { dot: "bg-warning", pill: pill }
-    when :err
-      { dot: "bg-destructive", pill: pill }
-    else
-      { dot: "bg-gray-400", pill: pill }
-    end
   end
 
   def provider_summary(provider_key)
@@ -72,6 +57,9 @@ module SettingsHelper
     when "plaid", "plaid_eu"
       configured = @provider_configurations&.find { |c| c.provider_key.to_s.casecmp(key).zero? }&.configured?
       configured ? { status: :ok } : { status: :off }
+    when "akahu"
+      return { status: :off } unless @akahu_items&.any?
+      sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
       sync_based_summary(key)

@@ -71,7 +71,10 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       return {
         success: false,
         error: "provider_not_configured",
-        message: "No vector store is configured. Set VECTOR_STORE_PROVIDER or configure OpenAI."
+        message: "No vector store is configured. Set VECTOR_STORE_PROVIDER " \
+                 "(openai | pgvector | qdrant), configure OpenAI, or — for " \
+                 "Anthropic-only installs — enable the pgvector adapter and " \
+                 "point EMBEDDING_URI_BASE at an embeddings endpoint."
       }
     end
 

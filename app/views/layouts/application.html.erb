@@ -11,8 +11,9 @@ else
     { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
     { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
     { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
+    preview_gated_nav_item({ name: t(".nav.goals"), path: goals_path, icon: "piggy-bank", icon_custom: false, active: page_active?(goals_path) }),
     { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
-  ]
+  ].compact
 end %>
 
 <% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>
@@ -59,7 +60,7 @@ end %>
 
       <div class="flex items-center gap-1">
         <button type="button"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-secondary hover:text-primary transition-colors"
+                class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
                 data-action="click->privacy-mode#toggle"
                 data-privacy-mode-target="toggle"
                 title="<%= t("layouts.application.privacy_mode") %>"
@@ -157,7 +158,7 @@ end %>
 
           <div class="flex items-center gap-2">
             <button type="button"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+                    class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
                     data-action="click->privacy-mode#toggle"
                     data-privacy-mode-target="toggle"
                     title="<%= t("layouts.application.privacy_mode") %>"

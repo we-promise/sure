@@ -79,7 +79,8 @@ class Assistant::Responder
         instructions: instructions,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
-        messages: conversation_history,
+        messages: openai_messages_payload,
+        conversation_history: chat_message_records,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
@@ -116,15 +117,37 @@ class Assistant::Responder
       @chat ||= message.chat
     end
 
-    def conversation_history
-      messages = []
-      return messages unless chat&.messages
+    # Memoized fetch — both `chat_message_records` and `openai_messages_payload`
+    # derive their shape from this one in-memory array so a single chat turn
+    # fires one history query instead of two.
+    def complete_chat_messages
+      return @complete_chat_messages if defined?(@complete_chat_messages)
 
-      chat.messages
-          .where(type: [ "UserMessage", "AssistantMessage" ], status: "complete")
-          .includes(:tool_calls)
-          .ordered
-          .each do |chat_message|
+      @complete_chat_messages =
+        if chat&.messages
+          chat.messages
+              .where(type: [ "UserMessage", "AssistantMessage" ], status: "complete")
+              .includes(:tool_calls)
+              .ordered
+              .to_a
+        else
+          []
+        end
+    end
+
+    # Raw Message records preceding the current turn — providers that build
+    # their own native message shape (Anthropic) consume this directly so they
+    # do not have to round-trip through the OpenAI-shaped payload below.
+    def chat_message_records
+      complete_chat_messages.reject { |m| m.id == message.id }
+    end
+
+    # Builds the OpenAI-shaped messages payload (role: "user" | "assistant" |
+    # "tool"; tool_call_id pairing) consumed by Provider::Openai's generic
+    # chat path. Anthropic uses chat_message_records instead.
+    def openai_messages_payload
+      messages = []
+      complete_chat_messages.each do |chat_message|
         if chat_message.tool_calls.any?
           messages << {
             role: chat_message.role,

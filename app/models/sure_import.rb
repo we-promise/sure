@@ -1,17 +1,28 @@
 class SureImport < Import
-  MAX_NDJSON_SIZE = 10.megabytes
+  NotPublishableError = Class.new(StandardError)
+  PreflightError = Class.new(StandardError)
+
+  DEFAULT_MAX_NDJSON_SIZE_MB = 10
+  DEFAULT_MAX_ROW_COUNT = 100_000
+  MAX_NDJSON_SIZE = DEFAULT_MAX_NDJSON_SIZE_MB.megabytes
   IMPORTABLE_NDJSON_TYPES = {
     "Account" => :accounts,
+    "Balance" => :balances,
     "Category" => :categories,
     "Tag" => :tags,
     "Merchant" => :merchants,
+    "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
+    "Transfer" => :transfers,
+    "RejectedTransfer" => :rejected_transfers,
     "Trade" => :trades,
+    "Holding" => :holdings,
     "Valuation" => :valuations,
     "Budget" => :budgets,
     "BudgetCategory" => :budget_categories,
     "Rule" => :rules
   }.freeze
+  VERIFICATION_STATUSES = %w[not_verified matched mismatch failed reverted].freeze
   ALLOWED_NDJSON_CONTENT_TYPES = %w[
     application/x-ndjson
     application/ndjson
@@ -24,11 +35,11 @@ class SureImport < Import
 
   class << self
     def max_row_count
-      100_000
+      positive_integer_env("SURE_IMPORT_MAX_ROWS", DEFAULT_MAX_ROW_COUNT)
     end
 
     def max_ndjson_size
-      MAX_NDJSON_SIZE
+      positive_integer_env("SURE_IMPORT_MAX_NDJSON_SIZE_MB", DEFAULT_MAX_NDJSON_SIZE_MB).megabytes
     end
 
     # Counts JSON lines by top-level "type" (used for dry-run summaries and row limits).
@@ -59,6 +70,14 @@ class SureImport < Import
       end
     end
 
+    def expected_record_counts_from_ndjson(content)
+      expected_record_counts_from_line_type_counts(ndjson_line_type_counts(content))
+    end
+
+    def expected_record_counts_from_line_type_counts(counts)
+      dry_run_totals_from_line_type_counts(counts).transform_keys(&:to_s)
+    end
+
     def importable_ndjson_types
       IMPORTABLE_NDJSON_TYPES.keys
     end
@@ -76,6 +95,12 @@ class SureImport < Import
         false
       end
     end
+
+    private
+      def positive_integer_env(name, default)
+        value = ENV[name].to_i
+        value.positive? ? value : default
+      end
   end
 
   def requires_csv_workflow?
@@ -104,12 +129,62 @@ class SureImport < Import
     self.class.dry_run_totals_from_ndjson(ndjson_blob_string)
   end
 
-  def import!
-    importer = Family::DataImporter.new(family, ndjson_blob_string)
+  def import!(import_session: nil)
+    sync_ndjson_counts!
+    before_counts = readback_count_snapshot
+    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self)
     result = importer.import!
 
-    result[:accounts].each { |account| accounts << account }
-    result[:entries].each { |entry| entries << entry }
+    Import.transaction do
+      result[:accounts].each { |account| account.save! if account.new_record? }
+      result[:entries].each { |entry| entry.save! if entry.new_record? }
+
+      account_ids = result[:accounts].filter_map(&:id)
+      entry_ids = result[:entries].filter_map(&:id)
+      existing_account_ids = accounts.where(id: account_ids).pluck(:id)
+      existing_entry_ids = entries.where(id: entry_ids).pluck(:id)
+
+      accounts.concat(result[:accounts].reject { |account| existing_account_ids.include?(account.id) })
+      entries.concat(result[:entries].reject { |entry| existing_entry_ids.include?(entry.id) })
+      update!(summary: result[:summary]) if has_attribute?(:summary)
+    end
+
+    record_readback_verification!(before_counts:)
+    result
+  rescue => error
+    record_failed_readback_verification!(before_counts:, error:)
+    raise
+  end
+
+  def publish_later
+    raise MaxRowCountExceededError if row_count_exceeded?
+
+    validate_sure_preflight!
+    raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
+
+    previous_status = status
+    update! status: :importing
+
+    begin
+      ImportJob.perform_later(self)
+    rescue StandardError
+      update! status: previous_status
+      raise
+    end
+  end
+
+  def publish
+    raise MaxRowCountExceededError if row_count_exceeded?
+
+    validate_sure_preflight!
+
+    import!
+
+    family.sync_later
+
+    update! status: :complete
+  rescue StandardError => error
+    update! status: :failed, error: error.message
   end
 
   def uploaded?
@@ -142,15 +217,143 @@ class SureImport < Import
     self.class.max_row_count
   end
 
+  def sure_preflight
+    SureImport::Preflight.new(
+      family: family,
+      content: ndjson_blob_string
+    ).call
+  end
+
   # Row total for max-row enforcement (counts every parsed line with a "type", including unsupported types).
   def sync_ndjson_rows_count!
     return unless ndjson_file.attached?
 
-    total = self.class.ndjson_line_type_counts(ndjson_blob_string).values.sum
-    update_column(:rows_count, total)
+    sync_ndjson_counts!
+  end
+
+  def verification_payload
+    {
+      expected_record_counts: normalized_expected_record_counts,
+      readback: normalized_readback_verification
+    }
+  end
+
+  def verification_status
+    status = normalized_readback_verification["status"]
+    status.in?(VERIFICATION_STATUSES) ? status : "not_verified"
+  end
+
+  def reset_readback_verification!
+    update_columns(
+      readback_verification: {
+        "status" => "reverted",
+        "checked_at" => Time.current.iso8601
+      },
+      updated_at: Time.current
+    )
+  end
+
+  def revert
+    super
+    reset_readback_verification! if pending?
   end
 
   private
+
+    def sync_ndjson_counts!
+      line_counts = self.class.ndjson_line_type_counts(ndjson_blob_string)
+
+      update_columns(
+        rows_count: line_counts.values.sum,
+        expected_record_counts: self.class.expected_record_counts_from_line_type_counts(line_counts),
+        readback_verification: {},
+        updated_at: Time.current
+      )
+    end
+
+    def record_readback_verification!(before_counts:)
+      update_columns(
+        readback_verification: build_readback_verification(before_counts:, status_for_mismatch: "mismatch"),
+        updated_at: Time.current
+      )
+    end
+
+    def record_failed_readback_verification!(before_counts:, error:)
+      return unless before_counts
+
+      update_columns(
+        readback_verification: build_readback_verification(before_counts:, status_for_mismatch: "failed").merge(
+          "status" => "failed",
+          "error" => error.message
+        ),
+        updated_at: Time.current
+      )
+    rescue => verification_error
+      Rails.logger.warn("Failed to record Sure import readback verification for import #{id}: #{verification_error.message}")
+    end
+
+    def build_readback_verification(before_counts:, status_for_mismatch:)
+      after_counts = readback_count_snapshot
+      actual_delta_counts = delta_counts(before_counts, after_counts)
+      expected_counts = normalized_expected_record_counts
+      checked_counts = (actual_delta_counts.keys | expected_counts.keys).index_with do |key|
+        expected_counts.fetch(key, 0).to_i
+      end
+      mismatches = checked_counts.each_with_object({}) do |(key, expected_count), result|
+        actual_count = actual_delta_counts.fetch(key, 0)
+        next if actual_count == expected_count.to_i
+
+        result[key] = {
+          "expected" => expected_count.to_i,
+          "actual" => actual_count
+        }
+      end
+
+      {
+        "status" => mismatches.empty? ? "matched" : status_for_mismatch,
+        "checked_at" => Time.current.iso8601,
+        "expected_record_counts" => expected_counts,
+        "before_counts" => before_counts,
+        "after_counts" => after_counts,
+        "actual_delta_counts" => actual_delta_counts,
+        "checked_counts" => checked_counts,
+        "mismatches" => mismatches
+      }
+    end
+
+    def readback_count_snapshot
+      {
+        accounts: family.accounts.count,
+        balances: Balance.joins(:account).where(accounts: { family_id: family.id }).count,
+        categories: family.categories.count,
+        tags: family.tags.count,
+        merchants: family.merchants.count,
+        recurring_transactions: family.recurring_transactions.count,
+        transactions: family.entries.where(entryable_type: "Transaction").count,
+        transfers: Transfer.joins(inflow_transaction: { entry: :account }).where(accounts: { family_id: family.id }).count,
+        rejected_transfers: RejectedTransfer.joins(inflow_transaction: { entry: :account }).where(accounts: { family_id: family.id }).count,
+        trades: family.entries.where(entryable_type: "Trade").count,
+        holdings: family.holdings.count,
+        valuations: family.entries.where(entryable_type: "Valuation").count,
+        budgets: family.budgets.count,
+        budget_categories: family.budget_categories.count,
+        rules: family.rules.count
+      }.transform_keys(&:to_s).transform_values(&:to_i)
+    end
+
+    def delta_counts(before_counts, after_counts)
+      after_counts.each_with_object({}) do |(key, after_count), result|
+        result[key] = after_count.to_i - before_counts.fetch(key, 0).to_i
+      end
+    end
+
+    def normalized_expected_record_counts
+      (expected_record_counts || {}).to_h.transform_keys(&:to_s).transform_values(&:to_i)
+    end
+
+    def normalized_readback_verification
+      (readback_verification || {}).to_h.deep_stringify_keys
+    end
 
     def ndjson_blob_string
       blob_id = ndjson_file.blob&.id
@@ -159,5 +362,13 @@ class SureImport < Import
 
       @ndjson_blob_id = blob_id
       @ndjson_blob_string = ndjson_file.download.force_encoding(Encoding::UTF_8)
+    end
+
+    def validate_sure_preflight!
+      result = sure_preflight
+      return if result.valid?
+
+      update! status: :failed, error: result.error_message
+      raise PreflightError, result.error_message
     end
 end

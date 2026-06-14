@@ -103,10 +103,10 @@
   <!-- Recent Usage Table -->
   <div>
     <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".recent_usage") %></h2>
-    <div class="bg-container-inset rounded-lg overflow-hidden">
+    <div class="table-scroll rounded-lg" tabindex="0" role="region" aria-label="<%= t(".recent_usage") %>">
       <% if @llm_usages.any? %>
         <table class="w-full">
-          <thead class="bg-surface-default border-b border-primary">
+          <thead class="bg-surface border-b border-primary">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".col_date") %></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".col_operation") %></th>
@@ -165,16 +165,11 @@
     </div>
   </div>
 
-  <!-- Pricing Information -->
-  <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-    <div class="flex items-start gap-2">
-      <%= icon "info", class: "w-5 h-5 text-blue-600 mt-0.5" %>
-      <div>
-        <p class="text-sm font-medium text-blue-900"><%= t(".cost_estimates_title") %></p>
-        <p class="text-xs text-blue-700 mt-1">
-          <%= t(".cost_estimates_description") %>
-        </p>
-      </div>
-    </div>
+  <div class="mt-6">
+    <%= render DS::Alert.new(
+      title: t(".cost_estimates_title"),
+      message: t(".cost_estimates_description"),
+      variant: :info
+    ) %>
   </div>
 </div>
