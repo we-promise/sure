@@ -59,7 +59,7 @@ class Provider::MempoolSpaceTest < ActiveSupport::TestCase
   test "paginates transaction fetching" do
     address = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080"
     page1 = Array.new(25) { |i| { "txid" => "tx_#{i}" } }
-    page2 = [{ "txid" => "tx_25" }]
+    page2 = [ { "txid" => "tx_25" } ]
 
     stub_request(:get, "https://mempool.space/api/address/#{address}/txs")
       .to_return(status: 200, body: page1.to_json, headers: { "Content-Type" => "application/json" })
