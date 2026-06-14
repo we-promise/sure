@@ -16,12 +16,10 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='wallet_address']"
   end
 
-  test "new wallet shows Ethereum credential guidance when Etherscan key is missing" do
+  test "new wallet renders the link form" do
     get new_wallet_onchain_wallet_items_path, headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
-    assert_match "Ethereum wallets require an Etherscan API key", response.body
-    assert_includes response.body, settings_providers_path
   end
 
   test "link wallet from modal imports Bitcoin wallet and redirects to accounts" do
@@ -73,28 +71,30 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "unsupported chain from modal re-renders modal error" do
     post link_wallet_onchain_wallet_items_path,
-         params: { source: "account_modal", chain: "solana", wallet_address: "wallet" },
+         params: { source: "account_modal", chain: "dogecoin", wallet_address: "wallet" },
          as: :turbo_stream,
          headers: { "Turbo-Frame" => "modal" }
 
     assert_response :unprocessable_entity
     assert_match %r{<turbo-stream action="replace" target="modal">}, response.body
-    assert_match "Choose Bitcoin or Ethereum.", response.body
+    assert_match "Choose a supported blockchain.", response.body
   end
 
-  test "Ethereum without Etherscan key from modal re-renders clear error" do
-    post link_wallet_onchain_wallet_items_path,
-         params: {
-           source: "account_modal",
-           chain: "ethereum",
-           wallet_address: "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
-         },
-         as: :turbo_stream,
-         headers: { "Turbo-Frame" => "modal" }
+  test "link Ethereum wallet works without an API key (keyless via Blockscout)" do
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
 
-    assert_response :unprocessable_entity
-    assert_match %r{<turbo-stream action="replace" target="modal">}, response.body
-    assert_match "Add an Etherscan API key before linking an Ethereum wallet.", response.body
+    Provider::Blockscout.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    assert_difference -> { OnchainWalletAccount.where(chain: "ethereum").count }, 1 do
+      post link_wallet_onchain_wallet_items_path,
+           params: { source: "account_modal", chain: "ethereum", wallet_address: address },
+           as: :turbo_stream,
+           headers: { "Turbo-Frame" => "modal" }
+    end
   end
 
   test "Ethereum first submit renders token review with priced tokens preselected" do
@@ -109,10 +109,10 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     )
     security.prices.create!(date: Date.current, price: 1, currency: "USD")
 
-    Provider::Etherscan.any_instance.stubs(:valid_address?).returns(true)
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: address, contract: usdc_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
       erc20_transfer(address: address, contract: scam_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
     ])
@@ -140,10 +140,10 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     usdc_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     scam_contract = "0x1111111111111111111111111111111111111111"
 
-    Provider::Etherscan.any_instance.stubs(:valid_address?).returns(true)
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: address, contract: usdc_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
       erc20_transfer(address: address, contract: scam_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
     ])
@@ -171,13 +171,13 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "settings panel requests still replace onchain provider panel" do
     post link_wallet_onchain_wallet_items_path,
-         params: { chain: "solana", wallet_address: "wallet" },
+         params: { chain: "dogecoin", wallet_address: "wallet" },
          as: :turbo_stream,
          headers: { "Turbo-Frame" => "onchain_wallet-connect-form" }
 
     assert_response :unprocessable_entity
     assert_match %r{<turbo-stream action="replace" target="onchain-wallet-providers-panel">}, response.body
-    assert_match "Choose Bitcoin or Ethereum.", response.body
+    assert_match "Choose a supported blockchain.", response.body
   end
 
   test "manage renders connected wallet addresses in modal" do
@@ -303,10 +303,10 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
       token_contract: usdc_contract, symbol: "USDC", name: "USD Coin", currency: "USD"
     )
 
-    Provider::Etherscan.any_instance.stubs(:valid_address?).returns(true)
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: new_address, contract: dai_contract, symbol: "DAI", name: "Dai", decimals: "18", value: "5000000000000000000")
     ])
     OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
@@ -340,10 +340,10 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
       token_contract: usdc_contract, symbol: "USDC", name: "USD Coin", currency: "USD"
     )
 
-    Provider::Etherscan.any_instance.stubs(:valid_address?).returns(true)
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: new_address, contract: dai_contract, symbol: "DAI", name: "Dai", decimals: "18", value: "5000000000000000000")
     ])
     OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)

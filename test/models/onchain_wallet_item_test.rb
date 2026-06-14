@@ -58,9 +58,9 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
     selected_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     skipped_contract = "0x1111111111111111111111111111111111111111"
 
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: address, contract: selected_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
       erc20_transfer(address: address, contract: skipped_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
     ])
@@ -95,9 +95,9 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
     )
 
     # Simulate transfers that net to zero (received then sent same amount)
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: address, contract: tracked_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
       {
         "contractAddress" => tracked_contract,
@@ -135,9 +135,9 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("0")
-    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
-    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("0")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
       erc20_transfer(address: address, contract: existing_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
       erc20_transfer(address: address, contract: new_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
     ])

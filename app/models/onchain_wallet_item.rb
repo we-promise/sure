@@ -33,8 +33,11 @@ class OnchainWalletItem < ApplicationRecord
     raise
   end
 
-  def process_accounts
-    onchain_wallet_accounts.joins(:account).merge(Account.visible).map do |wallet_account|
+  def process_accounts(only_account_ids: nil)
+    scope = onchain_wallet_accounts.joins(:account).merge(Account.visible)
+    scope = scope.where(id: only_account_ids) if only_account_ids
+
+    scope.map do |wallet_account|
       OnchainWalletAccount::Processor.new(wallet_account).process
       { onchain_wallet_account_id: wallet_account.id, success: true }
     rescue StandardError => e
@@ -43,8 +46,11 @@ class OnchainWalletItem < ApplicationRecord
     end
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.visible.map do |account|
+  def schedule_account_syncs(only_account_ids: nil, parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    scope = accounts.visible
+    scope = scope.where(onchain_wallet_accounts: { id: only_account_ids }) if only_account_ids
+
+    scope.map do |account|
       account.sync_later(
         parent_sync: parent_sync,
         window_start_date: window_start_date,

@@ -3,12 +3,41 @@
 class OnchainWalletItem::Importer
   SATS_PER_BTC = 100_000_000.to_d
   WEI_PER_ETH = 1_000_000_000_000_000_000.to_d
+  LAMPORTS_PER_SOL = 1_000_000_000.to_d
+
+  # Native coin metadata per EVM chain. All EVM natives use 18 decimals, so the
+  # WEI_PER_ETH divisor applies across chains. Pricing flows through Sure's
+  # securities provider (e.g. Binance Public) via the symbol, same as ETH.
+  EVM_NATIVE = {
+    "ethereum" => { symbol: "ETH",  name: "Ethereum" },
+    "polygon"  => { symbol: "POL",  name: "Polygon" },
+    "arbitrum" => { symbol: "ETH",  name: "Ethereum (Arbitrum)" },
+    "optimism" => { symbol: "ETH",  name: "Ethereum (Optimism)" },
+    "base"     => { symbol: "ETH",  name: "Ethereum (Base)" },
+    "gnosis"   => { symbol: "XDAI", name: "xDai" }
+  }.freeze
+  EVM_CHAINS = EVM_NATIVE.keys.freeze
+
+  # Bridged / wrapped stablecoin symbols normalized to their canonical asset so
+  # Sure's price provider recognizes them (e.g. USDT0, a LayerZero-bridged USDT,
+  # prices the same as USDT).
+  STABLECOIN_ALIASES = {
+    "USDT0"  => "USDT",
+    "USDT.E" => "USDT",
+    "USDC.E" => "USDC",
+    "USDBC"  => "USDC"
+  }.freeze
 
   attr_reader :onchain_wallet_item
 
   def initialize(onchain_wallet_item)
     @onchain_wallet_item = onchain_wallet_item
+    # Ids of accounts whose on-chain state actually changed this run, so the
+    # syncer can skip re-processing/re-materializing unchanged accounts.
+    @changed_account_ids = []
   end
+
+  attr_reader :changed_account_ids
 
   def import
     imported = 0
@@ -17,8 +46,10 @@ class OnchainWalletItem::Importer
     wallet_keys.each do |chain, address|
       if chain == "bitcoin"
         snapshots[address] = import_bitcoin_wallet(address)
-      elsif chain == "ethereum"
-        snapshots[address] = import_ethereum_wallet(address)
+      elsif EVM_CHAINS.include?(chain)
+        snapshots[address] = import_evm_wallet(chain, address)
+      elsif chain == "solana"
+        snapshots[address] = import_solana_wallet(address)
       end
       imported += 1
     end
@@ -28,26 +59,43 @@ class OnchainWalletItem::Importer
       "imported_at" => Time.current.iso8601
     })
 
-    { success: true, wallets_imported: imported, accounts_imported: onchain_wallet_item.onchain_wallet_accounts.count }
+    {
+      success: true,
+      wallets_imported: imported,
+      accounts_imported: onchain_wallet_item.onchain_wallet_accounts.count,
+      changed_account_ids: changed_account_ids.uniq
+    }
   end
 
   def import_wallet!(chain:, address:)
-    case chain.to_s
-    when "bitcoin"
+    chain = chain.to_s
+    if chain == "bitcoin"
       import_bitcoin_wallet(address)
-    when "ethereum"
-      import_ethereum_wallet(address)
+    elsif EVM_CHAINS.include?(chain)
+      import_evm_wallet(chain, address)
+    elsif chain == "solana"
+      import_solana_wallet(address)
     else
       raise ArgumentError, "Unsupported chain"
     end
   end
 
+  # Preview tokens before import (EVM chains only). Defaults to Ethereum for
+  # backwards compatibility with existing callers.
+  def preview_evm_wallet(chain, address)
+    evm_wallet_snapshot(chain, address)
+  end
+
   def preview_ethereum_wallet(address)
-    ethereum_wallet_snapshot(address)
+    preview_evm_wallet("ethereum", address)
+  end
+
+  def import_evm_wallet!(chain:, address:, selected_token_contracts:)
+    import_evm_wallet(chain, address, selected_token_contracts: selected_token_contracts)
   end
 
   def import_ethereum_wallet!(address:, selected_token_contracts:)
-    import_ethereum_wallet(address, selected_token_contracts: selected_token_contracts)
+    import_evm_wallet!(chain: "ethereum", address: address, selected_token_contracts: selected_token_contracts)
   end
 
   private
@@ -95,42 +143,44 @@ class OnchainWalletItem::Importer
       { "address" => address_payload, "transactions_count" => confirmed_txs.size, "mempool_transactions_count" => mempool_txs.size }
     end
 
-    def import_ethereum_wallet(address, selected_token_contracts: existing_ethereum_token_contracts(address))
-      snapshot = ethereum_wallet_snapshot(address)
+    def import_evm_wallet(chain, address, selected_token_contracts: nil)
+      selected_token_contracts ||= existing_evm_token_contracts(chain, address)
+      native = EVM_NATIVE.fetch(chain)
+      snapshot = evm_wallet_snapshot(chain, address)
       balance_wei = snapshot[:balance_wei]
       normal_transactions = snapshot[:normal_transactions]
       token_transfers = snapshot[:token_transfers]
       token_holdings = snapshot[:token_holdings]
 
       if balance_wei.zero? && normal_transactions.blank? && token_holdings.none? { |holding| holding[:quantity].positive? }
-        raise Provider::Etherscan::InvalidAddressError, "No Ethereum balance, token holdings, or transactions found for this address."
+        raise Provider::Blockscout::InvalidAddressError, "No #{native[:name]} balance, token holdings, or transactions found for this address."
       end
 
       selected_contracts = Array(selected_token_contracts).map { |contract| contract.to_s.downcase }
 
-      eth_quantity = balance_wei / WEI_PER_ETH
-      eth_account = upsert_wallet_account(
-        chain: "ethereum",
+      native_quantity = balance_wei / WEI_PER_ETH
+      native_account = upsert_wallet_account(
+        chain: chain,
         wallet_address: address,
         asset_kind: "native",
         token_contract: nil,
-        symbol: "ETH",
-        name: "Ethereum",
+        symbol: native[:symbol],
+        name: native[:name],
         decimals: 18,
-        quantity: eth_quantity,
+        quantity: native_quantity,
         raw_payload: { "balance_wei" => balance_wei.to_s },
         raw_transactions_payload: {
           "normal_transactions" => normal_transactions.map { |tx| tx.merge("onchain_amount" => ethereum_native_amount(tx, address).to_s) },
           "fetched_at" => Time.current.iso8601
         }
       )
-      ensure_sure_account!(eth_account)
+      ensure_sure_account!(native_account)
 
       token_holdings.each do |holding|
         next unless selected_contracts.include?(holding[:contract])
 
         token_account = upsert_wallet_account(
-          chain: "ethereum",
+          chain: chain,
           wallet_address: address,
           asset_kind: "erc20",
           token_contract: holding[:contract],
@@ -154,9 +204,11 @@ class OnchainWalletItem::Importer
       }
     end
 
-    def ethereum_wallet_snapshot(address)
-      provider = onchain_wallet_item.etherscan_provider
-      raise Provider::Etherscan::AuthenticationError, "Etherscan API key is required for Ethereum wallets" unless provider
+    # Reads balances + transactions from a keyless Blockscout instance for the
+    # given EVM chain.
+    def evm_wallet_snapshot(chain, address)
+      native = EVM_NATIVE.fetch(chain)
+      provider = onchain_wallet_item.blockscout_provider(chain)
 
       balance_wei = provider.get_native_balance(address).to_d
       normal_transactions = provider.get_normal_transactions(address)
@@ -164,13 +216,13 @@ class OnchainWalletItem::Importer
       token_holdings = token_holdings_from_transfers(token_transfers, address)
 
       if balance_wei.zero? && normal_transactions.blank? && token_holdings.none? { |holding| holding[:quantity].positive? }
-        raise Provider::Etherscan::InvalidAddressError, "No Ethereum balance, token holdings, or transactions found for this address."
+        raise Provider::Blockscout::InvalidAddressError, "No #{native[:name]} balance, token holdings, or transactions found for this address."
       end
 
       {
         balance_wei: balance_wei,
-        eth_quantity: balance_wei / WEI_PER_ETH,
-        eth_current_balance: estimate_current_balance("ETH", balance_wei / WEI_PER_ETH),
+        native_quantity: balance_wei / WEI_PER_ETH,
+        native_current_balance: estimate_current_balance(native[:symbol], balance_wei / WEI_PER_ETH),
         normal_transactions: normal_transactions,
         token_transfers: token_transfers,
         token_holdings: token_holdings
@@ -179,28 +231,55 @@ class OnchainWalletItem::Importer
 
     def upsert_wallet_account(attrs)
       current_balance = estimate_current_balance(attrs[:symbol], attrs[:quantity])
+      signature = content_signature(attrs)
 
-      onchain_wallet_item.onchain_wallet_accounts
-        .find_or_initialize_by(
-          chain: attrs[:chain],
-          wallet_address: attrs[:wallet_address],
-          asset_kind: attrs[:asset_kind],
-          token_contract: attrs[:token_contract],
-          symbol: attrs[:symbol]
-        )
-        .tap do |account|
-          account.assign_attributes(
-            name: attrs[:name],
-            decimals: attrs[:decimals],
-            quantity: attrs[:quantity],
-            currency: onchain_wallet_item.family.currency,
-            current_balance: current_balance,
-            raw_payload: attrs[:raw_payload],
-            raw_transactions_payload: attrs[:raw_transactions_payload],
-            institution_metadata: institution_metadata(attrs)
-          )
-          account.save!
-        end
+      account = onchain_wallet_item.onchain_wallet_accounts.find_or_initialize_by(
+        chain: attrs[:chain],
+        wallet_address: attrs[:wallet_address],
+        asset_kind: attrs[:asset_kind],
+        token_contract: attrs[:token_contract],
+        symbol: attrs[:symbol]
+      )
+
+      # Idempotent sync: when the on-chain state (quantity + transaction set) is
+      # unchanged, only refresh the price-derived balance and skip re-writing the
+      # heavy on-chain fields — and crucially, don't mark the account changed, so
+      # the syncer won't re-process/re-materialize it (no value-graph churn).
+      if account.persisted? && account.content_hash == signature
+        account.update_column(:current_balance, current_balance) if account.current_balance != current_balance
+        return account
+      end
+
+      account.assign_attributes(
+        name: attrs[:name],
+        decimals: attrs[:decimals],
+        quantity: attrs[:quantity],
+        currency: onchain_wallet_item.family.currency,
+        current_balance: current_balance,
+        raw_payload: attrs[:raw_payload],
+        raw_transactions_payload: attrs[:raw_transactions_payload],
+        institution_metadata: institution_metadata(attrs),
+        content_hash: signature
+      )
+      account.save!
+      @changed_account_ids << account.id
+      account
+    end
+
+    # Signature of the on-chain state we care about for change detection:
+    # the token quantity plus the set of transaction ids. Price is intentionally
+    # excluded — value tracks price via the daily security-price job, not this
+    # 30-minute on-chain sync.
+    def content_signature(attrs)
+      tx_ids = transaction_ids_from(attrs[:raw_transactions_payload])
+      payload = [ attrs[:quantity].to_s, tx_ids.sort ].to_json
+      Digest::SHA256.hexdigest(payload)
+    end
+
+    def transaction_ids_from(raw_transactions_payload)
+      payload = raw_transactions_payload || {}
+      Array(payload["transactions"] || payload["normal_transactions"] || payload["token_transfers"])
+        .filter_map { |tx| tx["hash"] || tx["txid"] }
     end
 
     def ensure_sure_account!(wallet_account)
@@ -243,7 +322,7 @@ class OnchainWalletItem::Importer
         data = grouped[contract]
         decimals = transfer["tokenDecimal"].to_i
         decimals = 18 if decimals.zero?
-        data[:symbol] = transfer["tokenSymbol"].to_s.upcase.presence || contract.first(8).upcase
+        data[:symbol] = canonical_symbol(transfer["tokenSymbol"].to_s.upcase.presence || contract.first(8).upcase)
         data[:name] = transfer["tokenName"].presence || data[:symbol]
         data[:decimals] = decimals
         data[:transfers] << transfer.merge("onchain_amount" => token_transfer_amount(transfer, address_down).to_s)
@@ -263,9 +342,63 @@ class OnchainWalletItem::Importer
       end
     end
 
-    def existing_ethereum_token_contracts(address)
+    # Imports native SOL + SPL token balances (and best-effort tx history) from
+    # a keyless Solana RPC. Unlike EVM, balances are read directly.
+    def import_solana_wallet(address)
+      provider = onchain_wallet_item.solana_provider
+      lamports = provider.get_native_balance(address).to_d
+      sol_quantity = lamports / LAMPORTS_PER_SOL
+      token_balances = provider.get_token_balances(address)
+      transactions = provider.get_transactions(address)
+
+      if sol_quantity.zero? && token_balances.none? { |t| t[:ui_amount].positive? } && transactions.blank?
+        raise Provider::SolanaRpc::InvalidAddressError, "No Solana balance or transactions found for this address."
+      end
+
+      native_txs = transactions.select { |tx| tx["symbol"] == "SOL" }
+      sol_account = upsert_wallet_account(
+        chain: "solana",
+        wallet_address: address,
+        asset_kind: "native",
+        token_contract: nil,
+        symbol: "SOL",
+        name: "Solana",
+        decimals: 9,
+        quantity: sol_quantity,
+        raw_payload: { "lamports" => lamports.to_s },
+        raw_transactions_payload: { "transactions" => native_txs, "fetched_at" => Time.current.iso8601 }
+      )
+      ensure_sure_account!(sol_account)
+
+      token_balances.each do |token|
+        next unless token[:ui_amount].positive?
+
+        mint_txs = transactions.select { |tx| tx["mint"] == token[:mint] }
+        token_account = upsert_wallet_account(
+          chain: "solana",
+          wallet_address: address,
+          asset_kind: "spl",
+          token_contract: token[:mint],
+          symbol: canonical_symbol(token[:symbol]),
+          name: token[:name],
+          decimals: token[:decimals],
+          quantity: token[:ui_amount],
+          raw_payload: { "mint" => token[:mint] },
+          raw_transactions_payload: { "transactions" => mint_txs, "fetched_at" => Time.current.iso8601 }
+        )
+        ensure_sure_account!(token_account)
+      end
+
+      {
+        "sol_quantity" => sol_quantity.to_s,
+        "tokens_imported_count" => token_balances.count { |t| t[:ui_amount].positive? },
+        "transactions_count" => transactions.size
+      }
+    end
+
+    def existing_evm_token_contracts(chain, address)
       onchain_wallet_item.onchain_wallet_accounts
-        .where(chain: "ethereum", wallet_address: address.to_s.downcase, asset_kind: "erc20")
+        .where(chain: chain, wallet_address: address.to_s.downcase, asset_kind: "erc20")
         .pluck(:token_contract)
     end
 
@@ -290,6 +423,11 @@ class OnchainWalletItem::Importer
     def token_transfer_raw_delta(transfer, address_down)
       value = transfer["value"].to_d
       transfer["from"].to_s.downcase == address_down ? -value : value
+    end
+
+    def canonical_symbol(symbol)
+      up = symbol.to_s.upcase
+      STABLECOIN_ALIASES.fetch(up, up)
     end
 
     def institution_metadata(attrs)

@@ -50,26 +50,35 @@ class OnchainWalletItemsController < ApplicationController
     chain = params[:chain].to_s
     address = params[:wallet_address].to_s.strip
 
-    return render_error_response("Choose Bitcoin or Ethereum.") unless chain.in?(OnchainWalletAccount::CHAINS)
     return render_error_response("Wallet address is required.") if address.blank?
 
-    item = Current.family.onchain_wallet_items.active.first
-    if chain == "ethereum" && !item&.credentials_configured?
-      return render_error_response("Add an Etherscan API key before linking an Ethereum wallet.")
+    # "auto" (or blank) → detect the chain from the address format; for EVM
+    # addresses, pick the first supported chain the address is active on.
+    if chain.blank? || chain == "auto"
+      chain = resolve_auto_chain(address)
+      return render_error_response("Could not detect the blockchain from this address.") if chain.blank?
     end
+
+    return render_error_response("Choose a supported blockchain.") unless chain.in?(OnchainWalletAccount::CHAINS)
+
+    # EVM chains are read keyless via Blockscout, so no API key gate is needed.
+    item = Current.family.onchain_wallet_items.active.first
     item ||= Current.family.onchain_wallet_item!
 
     validate_wallet_address!(item, chain, address)
     importer = OnchainWalletItem::Importer.new(item)
 
-    if chain == "ethereum" && !ethereum_token_review_confirmed?
-      preview = importer.preview_ethereum_wallet(address)
+    evm = OnchainWalletAccount.evm_chain?(chain)
+
+    if evm && !ethereum_token_review_confirmed?
+      preview = importer.preview_evm_wallet(chain, address)
       token_candidates = preview[:token_holdings].select { |holding| holding[:quantity].positive? }
       return render_token_review_response(preview, address) if token_candidates.any?
     end
 
-    if chain == "ethereum"
-      importer.import_ethereum_wallet!(
+    if evm
+      importer.import_evm_wallet!(
+        chain: chain,
         address: address,
         selected_token_contracts: params[:selected_token_contracts]
       )
@@ -79,7 +88,7 @@ class OnchainWalletItemsController < ApplicationController
     item.process_accounts
 
     render_success_response("Wallet linked.")
-  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, ArgumentError => e
+  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, ArgumentError => e
     render_error_response(e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet link failed: #{e.class} - #{e.message}")
@@ -100,7 +109,7 @@ class OnchainWalletItemsController < ApplicationController
     chain = params[:chain].to_s.downcase
     old_address = normalized_wallet_address(chain, params[:old_wallet_address])
     new_address = params[:wallet_address].to_s.strip
-    new_address = new_address.downcase if chain == "ethereum"
+    new_address = new_address.downcase if OnchainWalletAccount.evm_chain?(chain)
 
     return render_edit_error(chain, old_address, new_address, "Wallet address is required.") if new_address.blank?
     return render_edit_error(chain, old_address, new_address, "New address is the same as the current address.") if new_address == old_address
@@ -207,12 +216,22 @@ class OnchainWalletItemsController < ApplicationController
       params.require(:onchain_wallet_item).permit(:name, :etherscan_api_key, :sync_start_date)
     end
 
+    def resolve_auto_chain(address)
+      case OnchainWalletAccount.detect_chain_type(address)
+      when :bitcoin then "bitcoin"
+      when :solana  then "solana"
+      when :evm
+        OnchainWalletAccount::EVM_CHAINS.find { |c| Provider::Blockscout.new(chain: c).has_activity?(address) } || "ethereum"
+      end
+    end
+
     def validate_wallet_address!(item, chain, address)
-      case chain
-      when "bitcoin"
+      if chain == "bitcoin"
         raise Provider::MempoolSpace::InvalidAddressError, "Invalid Bitcoin address" unless item.mempool_space_provider.valid_address?(address)
-      when "ethereum"
-        raise Provider::Etherscan::InvalidAddressError, "Invalid Ethereum address" unless item.etherscan_provider&.valid_address?(address)
+      elsif OnchainWalletAccount.evm_chain?(chain)
+        raise Provider::Blockscout::InvalidAddressError, "Invalid EVM wallet address" unless item.blockscout_provider(chain).valid_address?(address)
+      elsif chain == "solana"
+        raise Provider::SolanaRpc::InvalidAddressError, "Invalid Solana address" unless item.solana_provider.valid_address?(address)
       end
     end
 
@@ -298,7 +317,7 @@ class OnchainWalletItemsController < ApplicationController
     end
 
     def normalized_wallet_address(chain, address)
-      return address.to_s.strip.downcase if chain.to_s.downcase == "ethereum"
+      return address.to_s.strip.downcase if OnchainWalletAccount.evm_chain?(chain)
 
       address.to_s.strip
     end
