@@ -20,6 +20,13 @@ export default class extends Controller {
     document.removeEventListener("click", this._closeOnOutsideClick);
   }
 
+  // Keep Enter/Space/arrow keydowns inside the menu from bubbling to the
+  // section-level dashboard-sortable handler, which would otherwise hijack them
+  // to toggle keyboard reorder mode.
+  stopKeydown(event) {
+    event.stopPropagation();
+  }
+
   selectHeight(event) {
     const { preset, height } = event.currentTarget.dataset;
     const section = this._section();

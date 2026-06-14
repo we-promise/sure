@@ -96,9 +96,9 @@ class PagesController < ApplicationController
     def preferences_params
       prefs = params.require(:preferences)
       {}.tap do |permitted|
-        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections]
-        permitted["section_order"] = prefs[:section_order] if prefs[:section_order]
-        permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout]
+        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections].respond_to?(:to_unsafe_h)
+        permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
+        permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
       end
     end
 
