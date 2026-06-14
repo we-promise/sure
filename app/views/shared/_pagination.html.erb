@@ -1,56 +1,59 @@
 <%# locals: (pagy:) %>
 
 <nav class="flex w-full items-center justify-between">
-  <div class="flex items-center gap-1 mr-3">
-    <div>
-      <% if pagy.prev %>
-        <%= link_to pagy_url_for(pagy, pagy.prev),
-              data: { turbo_frame: :_top },
-              class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
-          <%= icon("chevron-left") %>
-        <% end %>
-      <% else %>
-        <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
-          <%= icon("chevron-left") %>
-        </div>
-      <% end %>
-    </div>
-    <div class="rounded-xl p-1 bg-container-inset">
-      <% pagy.series.each do |series_item| %>
-        <% if series_item.is_a?(Integer) %>
-          <%= link_to pagy_url_for(pagy, series_item),
+  <% unless pagy.pages <= 1 %>
+    <div class="flex items-center gap-1 mr-3">
+      <div>
+        <% if pagy.prev %>
+          <%= link_to pagy_url_for(pagy, pagy.prev),
                 data: { turbo_frame: :_top },
-                class: "rounded-md px-2 py-1 inline-flex items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
-            <%= series_item %>
+                class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
+            <%= icon("chevron-left") %>
           <% end %>
-        <% elsif series_item.is_a?(String) %>
-          <%= link_to pagy_url_for(pagy, series_item),
+        <% else %>
+          <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
+            <%= icon("chevron-left") %>
+          </div>
+        <% end %>
+      </div>
+      <div class="rounded-xl p-1 bg-container-inset">
+        <% pagy.series.each do |series_item| %>
+          <% if series_item.is_a?(Integer) %>
+            <%= link_to pagy_url_for(pagy, series_item),
+                  data: { turbo_frame: :_top },
+                  class: "rounded-md px-2 py-1 inline-flex items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
+              <%= series_item %>
+            <% end %>
+          <% elsif series_item.is_a?(String) %>
+            <%= link_to pagy_url_for(pagy, series_item),
+                  data: { turbo_frame: :_top },
+                  class: "rounded-md px-2 py-1 bg-container border border-secondary shadow-xs inline-flex items-center text-sm font-medium text-primary" do %>
+              <%= series_item %>
+            <% end %>
+          <% elsif series_item == :gap %>
+            <span class="inline-flex items-center px-2 py-1 text-sm font-medium text-secondary">...</span>
+          <% end %>
+        <% end %>
+      </div>
+      <div>
+        <% if pagy.next %>
+          <%= link_to pagy_url_for(pagy, pagy.next),
                 data: { turbo_frame: :_top },
-                class: "rounded-md px-2 py-1 bg-container border border-secondary shadow-xs inline-flex items-center text-sm font-medium text-primary" do %>
-            <%= series_item %>
+                class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
+            <%= icon("chevron-right") %>
           <% end %>
-        <% elsif series_item == :gap %>
-          <span class="inline-flex items-center px-2 py-1 text-sm font-medium text-secondary">...</span>
+        <% else %>
+          <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
+            <%= icon("chevron-right") %>
+          </div>
         <% end %>
-      <% end %>
+      </div>
     </div>
-    <div>
-      <% if pagy.next %>
-        <%= link_to pagy_url_for(pagy, pagy.next),
-              data: { turbo_frame: :_top },
-              class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
-          <%= icon("chevron-right") %>
-        <% end %>
-      <% else %>
-        <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
-          <%= icon("chevron-right") %>
-        </div>
-      <% end %>
-    </div>
-  </div>
+  <% end %>
   <div class="flex items-center gap-4">
+    <% per_page_selected = pagy.limit > 100 ? "all" : pagy.limit.to_s %>
     <%= select_tag :per_page,
-                   options_for_select(["10", "20", "30", "50", "100"], pagy.limit),
+                   options_for_select([["10", "10"], ["20", "20"], ["30", "30"], ["50", "50"], ["100", "100"], [t(".all"), "all"]], per_page_selected),
                    data: { controller: "selectable-link" },
                    class: "py-1.5 pr-8 text-sm text-primary font-medium bg-container-inset border border-secondary rounded-lg focus:border-secondary focus:ring-secondary focus-visible:ring-secondary" %>
   </div>

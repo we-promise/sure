@@ -5,6 +5,8 @@ module SafePagination
 
   private
     def safe_per_page(default = 10)
+      return 10_000 if params[:per_page] == "all"
+
       allowed_values = [ 10, 20, 30, 50, 100 ]
       per_page = params[:per_page].to_i
 
