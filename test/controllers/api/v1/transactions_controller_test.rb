@@ -187,6 +187,13 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "index preloads activity securities for transactions" do
+    Transaction::ActivitySecurityPreloader.any_instance.expects(:preload).once
+
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    assert_response :success
+  end
+
   test "should reject index request with invalid API key" do
     get api_v1_transactions_url, headers: { "X-Api-Key" => "invalid-key" }
     assert_response :unauthorized
