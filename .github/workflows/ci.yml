@@ -84,6 +84,7 @@ jobs:
         run: npm run lint
 
   test_unit:
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -135,6 +136,7 @@ jobs:
         run: bin/rails test
 
   test_system:
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

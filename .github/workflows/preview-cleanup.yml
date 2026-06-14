@@ -24,7 +24,7 @@ permissions:
 jobs:
   cleanup-on-close:
     name: Cleanup closed PR preview
-    if: github.event_name == 'pull_request' && (github.event.action == 'closed' || (github.event.action == 'unlabeled' && github.event.label.name == 'preview-cf'))
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -88,7 +88,7 @@ jobs:
 
   cleanup-expired:
     name: Cleanup expired previews
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
