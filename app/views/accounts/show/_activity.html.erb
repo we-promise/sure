@@ -4,18 +4,18 @@
   <div class="bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl">
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t(".title"), class: "font-medium text-lg" %>
-      <% unless @account.linked? %>
-        <% if @account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
-          <%= render DS::Menu.new(variant: "button") do |menu| %>
-            <% menu.with_button(text: t(".new"), variant: "secondary", icon: "plus") %>
+      <% if @account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+        <%= render DS::Menu.new(variant: "button") do |menu| %>
+          <% menu.with_button(text: t(".new"), variant: "secondary", icon: "plus") %>
 
-            <% menu.with_item(
-                variant: "link",
-                text: t(".new_balance"),
-                icon: "circle-dollar-sign",
-                href: new_valuation_path(account_id: @account.id),
-                data: { turbo_frame: :modal }) %>
+          <% menu.with_item(
+              variant: "link",
+              text: t(".new_balance"),
+              icon: "circle-dollar-sign",
+              href: new_valuation_path(account_id: @account.id),
+              data: { turbo_frame: :modal }) %>
 
+          <% unless @account.linked? %>
             <% if @account.supports_trades? %>
               <% menu.with_item(
                   variant: "link",
