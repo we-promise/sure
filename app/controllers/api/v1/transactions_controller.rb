@@ -207,6 +207,12 @@ end
       @transaction = family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(current_resource_owner))
+        .includes(
+          { entry: :account },
+          :category, :merchant, :tags,
+          transfer_as_outflow: { inflow_transaction: { entry: :account } },
+          transfer_as_inflow: { outflow_transaction: { entry: :account } }
+        )
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound

@@ -206,6 +206,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert response_data.key?("account")
   end
 
+  test "show preloads transaction associations without extra category queries" do
+    category = @family.categories.create!(name: "Food", color: "#000000", lucide_icon: "shapes")
+    @transaction.update!(category: category)
+
+    queries = capture_sql_queries do
+      get api_v1_transaction_url(@transaction), headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+    category_queries = queries.grep(/FROM "categories"/i)
+    assert_equal 1, category_queries.size
+  end
+
   test "should show transaction with read-only API key" do
     get api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
     assert_response :success
@@ -803,5 +816,21 @@ end
       )
 
       entry.transaction
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
     end
 end
