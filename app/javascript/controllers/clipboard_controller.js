@@ -1,5 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 
+// Single source of truth so the icon-swap and label-flash feedback last the
+// same time when both copy buttons appear on one page.
+const RESET_DELAY_MS = 2000;
+
 export default class extends Controller {
   static targets = ["source", "iconDefault", "iconSuccess"];
   static values = { copiedText: String };
@@ -31,7 +35,7 @@ export default class extends Controller {
       setTimeout(() => {
         this.iconDefaultTarget.classList.remove("hidden");
         this.iconSuccessTarget.classList.add("hidden");
-      }, 3000);
+      }, RESET_DELAY_MS);
       return;
     }
 
@@ -41,7 +45,10 @@ export default class extends Controller {
   }
 
   flashLabel(button) {
-    const label = button?.querySelector("span");
+    // DS::Button renders its icon as an <svg> and its text in `span.truncate`,
+    // so scope to that class rather than the first <span> in case an icon ever
+    // ships wrapped in a span.
+    const label = button?.querySelector("span.truncate") ?? button?.querySelector("span");
     if (!label || !this.hasCopiedTextValue) return;
 
     clearTimeout(this.labelResetTimer);
@@ -53,7 +60,7 @@ export default class extends Controller {
     this.labelResetTimer = setTimeout(() => {
       label.textContent = this.originalLabel;
       this.originalLabel = null;
-    }, 2000);
+    }, RESET_DELAY_MS);
   }
 
   disconnect() {
