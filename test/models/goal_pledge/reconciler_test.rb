@@ -52,7 +52,7 @@ class GoalPledge::ReconcilerTest < ActiveSupport::TestCase
     assert_not @pledge.reload.status_matched?
   end
 
-  test "manual_save kind matches on Valuation entries" do
+  test "manual_save kind matches a Valuation by its contribution delta, not the full balance" do
     manual_pledge = @pledge.goal.goal_pledges.create!(
       account: @account,
       amount: 150,
@@ -60,11 +60,46 @@ class GoalPledge::ReconcilerTest < ActiveSupport::TestCase
       kind: "manual_save"
     )
 
-    entry = create_valuation_entry(amount: 150, date: manual_pledge.created_at.to_date)
+    # Realistic reconciliation: the account already held $2,000 and the user
+    # bumps it to $2,150. The valuation records the full $2,150 total; the
+    # $150 contribution is the delta the manager passes in.
+    entry = create_valuation_entry(amount: 2150, date: manual_pledge.created_at.to_date)
 
-    GoalPledge::Reconciler.new(entry).run
+    GoalPledge::Reconciler.new(entry, valuation_delta: 150).run
 
     assert manual_pledge.reload.status_matched?
+  end
+
+  test "manual_save kind does not match when the full balance (not the delta) is unrelated to the pledge" do
+    manual_pledge = @pledge.goal.goal_pledges.create!(
+      account: @account,
+      amount: 150,
+      currency: "USD",
+      kind: "manual_save"
+    )
+
+    entry = create_valuation_entry(amount: 2150, date: manual_pledge.created_at.to_date)
+
+    # The full $2,150 balance must never be mistaken for the $150 contribution.
+    GoalPledge::Reconciler.new(entry, valuation_delta: 2150).run
+
+    assert_not manual_pledge.reload.status_matched?
+  end
+
+  test "manual_save kind does not match a balance decrease" do
+    manual_pledge = @pledge.goal.goal_pledges.create!(
+      account: @account,
+      amount: 150,
+      currency: "USD",
+      kind: "manual_save"
+    )
+
+    entry = create_valuation_entry(amount: 1850, date: manual_pledge.created_at.to_date)
+
+    # Balance dropped by $150 — a drawdown must not resolve a save pledge.
+    GoalPledge::Reconciler.new(entry, valuation_delta: -150).run
+
+    assert_not manual_pledge.reload.status_matched?
   end
 
   private

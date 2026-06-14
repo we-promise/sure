@@ -175,6 +175,9 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
+  get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
+  get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
+  post "register", to: "oauth_registration#create"
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -265,6 +268,9 @@ Rails.application.routes.draw do
     end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resource :mcp, controller: "mcp", only: :show do
+      delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
+    end
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show

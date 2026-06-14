@@ -931,6 +931,27 @@ RSpec.configure do |config|
               message: { type: :string }
             }
           },
+          TransactionResponse: {
+            type: :object,
+            required: %w[id date amount currency name entryable_type account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              name: { type: :string },
+              entryable_type: { type: :string },
+              account: {
+                type: :object,
+                required: %w[id name account_type],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  account_type: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
           ImportConfiguration: {
             type: :object,
             properties: {
