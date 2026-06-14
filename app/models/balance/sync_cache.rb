@@ -34,7 +34,7 @@ class Balance::SyncCache
     end
 
     def converted_entries
-      @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
+      @converted_entries ||= account.entries.where(excluded: false).excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
 
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)

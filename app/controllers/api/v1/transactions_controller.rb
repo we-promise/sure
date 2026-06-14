@@ -96,6 +96,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    if funding_account_id.present?
+      return create_channel_payment(account, family)
+    end
+
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -127,7 +131,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       error: "internal_server_error",
       message: "An unexpected error occurred"
     }, status: :internal_server_error
-end
+  end
 
   def update
     if @entry.split_child?
@@ -303,17 +307,21 @@ end
              "entries.name ILIKE ? OR entries.notes ILIKE ? OR merchants.name ILIKE ?",
              search_term, search_term, search_term
            )
-end
+    end
 
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :funding_account_id, tag_ids: []
       )
     end
 
     def account_id_param
       params.dig(:transaction, :account_id).presence
+    end
+
+    def funding_account_id
+      transaction_params[:funding_account_id].presence
     end
 
     def entry_params_for_create
@@ -442,5 +450,67 @@ end
       else
         25  # Default
       end
+    end
+
+    def create_channel_payment(channel_account, family)
+      funding_account = family.accounts.writable_by(current_resource_owner).find(funding_account_id)
+
+      channel_entry = nil
+      funding_entry = nil
+
+      ApplicationRecord.transaction do
+        # Record A — channel side (e.g. Alipay, excluded from balance)
+        channel_name = transaction_params[:name] || transaction_params[:description] || "Untitled"
+        channel_entry = channel_account.entries.create!(
+          name: channel_name,
+          date: transaction_params[:date],
+          amount: calculate_signed_amount,
+          currency: transaction_params[:currency] || family.currency,
+          notes: transaction_params[:notes],
+          excluded: true,
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: transaction_params[:category_id],
+            merchant_id: transaction_params[:merchant_id],
+            tag_ids: transaction_params[:tag_ids] || [],
+            extra: (transaction_params[:extra] || {}).merge(
+              "channel_payment" => true,
+              "funding_account_id" => funding_account.id
+            )
+          }
+        )
+
+        # Record B — funding account side (e.g. bank card)
+        funding_entry = funding_account.entries.create!(
+          name: "#{channel_account.name} - #{channel_name}",
+          date: transaction_params[:date],
+          amount: calculate_signed_amount,
+          currency: transaction_params[:currency] || family.currency,
+          notes: transaction_params[:notes],
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: transaction_params[:category_id],
+            merchant_id: transaction_params[:merchant_id],
+            tag_ids: transaction_params[:tag_ids] || [],
+            channel_record_parent_id: channel_entry.transaction.id,
+            extra: (transaction_params[:extra] || {}).merge(
+              "channel_auto_record" => true
+            )
+          }
+        )
+      end
+
+      channel_entry.sync_account_later
+      funding_entry.sync_account_later
+
+      @entry = channel_entry
+      @transaction = channel_entry.transaction
+      render :show, status: :created
+    rescue ActiveRecord::RecordNotFound
+      render json: {
+        error: "validation_failed",
+        message: "Funding account not found",
+        errors: [ "Funding account not found" ]
+      }, status: :unprocessable_entity
     end
 end
