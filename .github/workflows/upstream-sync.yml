@@ -1,0 +1,63 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC daily — 90 min after upstream's nightly build
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    name: Sync with upstream (we-promise/sure)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+          # PAT required: GITHUB_TOKEN pushes don't trigger downstream workflows
+          token: ${{ secrets.SYNC_PAT }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/we-promise/sure.git
+
+      - name: Fetch upstream
+        run: git fetch upstream main
+
+      - name: Attempt merge
+        id: merge
+        run: |
+          if git merge upstream/main --no-edit; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+          else
+            git merge --abort
+            echo "merged=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push merged changes
+        if: steps.merge.outputs.merged == 'true'
+        run: git push origin main
+
+      - name: Open conflict issue (once — skip if already open)
+        if: steps.merge.outputs.merged == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Upstream sync conflict — manual resolution required"
+          EXISTING=$(gh issue list --state open --search "$TITLE" --json number --jq '.[0].number')
+          if [ -z "$EXISTING" ]; then
+            BODY=$'The daily upstream sync with [we-promise/sure](https://github.com/we-promise/sure) failed due to merge conflicts. Please resolve manually:\n\n```bash\ngit remote add upstream https://github.com/we-promise/sure.git\ngit fetch upstream\ngit merge upstream/main\n# resolve conflicts, commit, then:\ngit push origin main\n```\n\nClose this issue once resolved — the next sync attempt will re-open it if conflicts persist.'
+            gh issue create --title "$TITLE" --body "$BODY"
+          else
+            echo "Conflict issue #$EXISTING already open — skipping."
+          fi

@@ -106,6 +106,8 @@ jobs:
                 BASE_CONFIG+=$'\n'"type=raw,value=stable"
               fi
             fi
+          else
+            BASE_CONFIG+=$'\n'"type=raw,value=latest"
           fi
           {
             echo 'TAGS_SPEC<<EOF'
@@ -251,7 +253,7 @@ jobs:
 
   helm:
     name: Package Helm chart
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'we-promise/sure'
     uses: ./.github/workflows/helm-publish.yml
     with:
       chart_version: ${{ github.ref_name }}
@@ -261,13 +263,13 @@ jobs:
 
   mobile:
     name: Build Mobile Apps
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'we-promise/sure'
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
   release:
     name: Create GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'we-promise/sure'
     needs: [merge, mobile, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -364,7 +366,7 @@ jobs:
 
   create_release_branch:
     name: Create or update release branch
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && github.repository == 'we-promise/sure'
     needs: [release]
     runs-on: ubuntu-latest
 
@@ -395,7 +397,7 @@ jobs:
 
   bump-pre_release-version:
     name: Bump Pre-release Version
-    if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc'))
+    if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc')) && github.repository == 'we-promise/sure'
     needs: [merge]
     runs-on: ubuntu-latest
     timeout-minutes: 10
