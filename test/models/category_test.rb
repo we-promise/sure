@@ -43,6 +43,17 @@ class CategoryTest < ActiveSupport::TestCase
     assert_equal subcategory, transaction.reload.category
   end
 
+  test "subcategory? checks parent_id without loading parent" do
+    category = categories(:subcategory)
+    category.update_column(:parent_id, categories(:food_and_drink).id)
+
+    queries = capture_sql_queries do
+      assert category.subcategory?
+    end
+
+    assert_empty queries.grep(/FROM "categories"/i)
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 
@@ -77,4 +88,21 @@ class CategoryTest < ActiveSupport::TestCase
       assert_includes category.errors[:color], "is invalid"
     end
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
