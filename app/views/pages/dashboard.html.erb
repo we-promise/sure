@@ -95,43 +95,42 @@
                 <summary
                   class="list-none cursor-pointer text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100 [&::-webkit-details-marker]:hidden"
                   aria-label="<%= t("pages.dashboard.widget_size.label") %>">
-                  <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
+                  <%= icon("sliders-horizontal", size: "sm", class: "!w-3.5 !h-3.5") %>
                 </summary>
-                <div
-                  class="absolute right-0 top-full mt-1 z-10 w-40 p-1 bg-surface rounded-lg shadow-border-xs border border-primary"
-                  role="menu">
+                <div class="absolute right-0 top-full mt-1.5 z-10 w-48 p-2.5 space-y-2.5 bg-surface rounded-xl shadow-border-xs border border-primary">
                   <% if layout[:width_toggle] %>
-                    <p class="text-xs font-medium text-secondary px-2 pt-1 pb-0.5">
-                      <%= t("pages.dashboard.widget_size.width_label") %>
-                    </p>
-                    <% { "single" => "half", "full" => "full" }.each do |value, i18n_key| %>
-                      <button
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked="<%= layout[:col_span] == value %>"
-                        class="block w-full text-left text-sm text-primary px-2 py-1.5 rounded-md hover:bg-surface-hover aria-checked:bg-surface-inset aria-checked:font-medium"
-                        data-action="dashboard-widget-size#selectWidth"
-                        data-col-span="<%= value %>">
-                        <%= t("pages.dashboard.widget_size.#{i18n_key}") %>
-                      </button>
-                    <% end %>
+                    <div class="space-y-1.5">
+                      <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
+                        <%= icon("move-horizontal", size: "xs") %>
+                        <%= t("pages.dashboard.widget_size.width_label") %>
+                      </p>
+                      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t("pages.dashboard.widget_size.width_label")) do |sc| %>
+                        <% { "single" => "half", "full" => "full" }.each do |value, i18n_key| %>
+                          <% sc.with_segment(
+                               t("pages.dashboard.widget_size.#{i18n_key}"),
+                               active: layout[:col_span] == value,
+                               data: { action: "dashboard-widget-size#selectWidth", col_span: value }
+                             ) %>
+                        <% end %>
+                      <% end %>
+                    </div>
                   <% end %>
                   <% if layout[:grow] %>
-                    <p class="text-xs font-medium text-secondary px-2 pt-1 pb-0.5 <%= "mt-1 border-t border-primary" if layout[:width_toggle] %>">
-                      <%= t("pages.dashboard.widget_size.height_label") %>
-                    </p>
-                    <% PagesController::DASHBOARD_HEIGHT_PRESETS.each do |preset, px| %>
-                      <button
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked="<%= layout[:height_preset] == preset %>"
-                        class="block w-full text-left text-sm text-primary px-2 py-1.5 rounded-md hover:bg-surface-hover aria-checked:bg-surface-inset aria-checked:font-medium"
-                        data-action="dashboard-widget-size#selectHeight"
-                        data-preset="<%= preset %>"
-                        data-height="<%= px %>">
-                        <%= t("pages.dashboard.widget_size.#{preset}") %>
-                      </button>
-                    <% end %>
+                    <div class="space-y-1.5">
+                      <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
+                        <%= icon("move-vertical", size: "xs") %>
+                        <%= t("pages.dashboard.widget_size.height_label") %>
+                      </p>
+                      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t("pages.dashboard.widget_size.height_label")) do |sc| %>
+                        <% PagesController::DASHBOARD_HEIGHT_PRESETS.each do |preset, px| %>
+                          <% sc.with_segment(
+                               t("pages.dashboard.widget_size.#{preset}"),
+                               active: layout[:height_preset] == preset,
+                               data: { action: "dashboard-widget-size#selectHeight", preset: preset, height: px }
+                             ) %>
+                        <% end %>
+                      <% end %>
+                    </div>
                   <% end %>
                 </div>
               </details>

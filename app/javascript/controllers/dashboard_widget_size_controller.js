@@ -26,7 +26,7 @@ export default class extends Controller {
     if (section && height) {
       section.style.setProperty("--dash-widget-h", `${height}px`);
     }
-    this._markSelected(event.currentTarget, "data-preset");
+    this._markSelected(event.currentTarget);
     this.element.open = false;
     this._save({ height: preset });
   }
@@ -37,7 +37,7 @@ export default class extends Controller {
     if (section) {
       section.classList.toggle("2xl:col-span-2", colSpan === "full");
     }
-    this._markSelected(event.currentTarget, "data-col-span");
+    this._markSelected(event.currentTarget);
     this.element.open = false;
     this._save({ col_span: colSpan });
     // Width change re-flows the grid; nudge dashboard-masonry to re-pack.
@@ -48,10 +48,15 @@ export default class extends Controller {
     return this.element.closest("[data-section-key]");
   }
 
-  // Update aria-checked across the radios that share this dimension (same attr).
-  _markSelected(button, attr) {
-    this.element.querySelectorAll(`[${attr}]`).forEach((el) => {
-      el.setAttribute("aria-checked", el === button);
+  // Move the active state to the clicked segment within its segmented control,
+  // mirroring DS::SegmentedControl's class + aria-pressed contract.
+  _markSelected(button) {
+    const group = button.closest(".segmented-control");
+    if (!group) return;
+    group.querySelectorAll(".segmented-control__segment").forEach((el) => {
+      const on = el === button;
+      el.classList.toggle("segmented-control__segment--active", on);
+      el.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
 
