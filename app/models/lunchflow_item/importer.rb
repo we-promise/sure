@@ -158,8 +158,12 @@ class LunchflowItem::Importer
 
         begin
           Rails.logger.info "LunchflowItem::Importer - Pruning orphaned LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (no longer exists upstream)"
-          lunchflow_account.destroy
-          pruned += 1
+          if lunchflow_account.destroy
+            pruned += 1
+          else
+            # A before_destroy callback halted deletion — don't inflate the count.
+            Rails.logger.warn "LunchflowItem::Importer - Destroy halted for LunchflowAccount id=#{lunchflow_account.id}; not counting as pruned"
+          end
         rescue => e
           # Don't let one failed destroy abort the whole import (transactions are
           # fetched in a later step). Mirrors the importer's continue-on-error style.
