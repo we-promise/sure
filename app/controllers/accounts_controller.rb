@@ -51,7 +51,9 @@ class AccountsController < ApplicationController
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(
+      entryable: [ :category, :merchant, :tags, :transfer_as_inflow, :transfer_as_outflow ]
+    )
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?

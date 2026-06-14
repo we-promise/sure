@@ -19,6 +19,22 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show eager-loads transaction associations for activity feed" do
+    category = @user.family.categories.create!(name: "Food", color: "#000000", lucide_icon: "shapes")
+    entry = @account.entries.where(entryable_type: "Transaction").first
+    skip "No transaction entries in fixture account" unless entry
+
+    entry.entryable.update!(category: category)
+
+    queries = capture_sql_queries do
+      get account_url(@account, tab: "activity")
+    end
+
+    assert_response :success
+    category_queries = queries.grep(/FROM "categories"/i)
+    assert_operator category_queries.size, :<=, 2
+  end
+
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
     AccountStatement.expects(:reconciliation_statuses_for).never
@@ -373,6 +389,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
@@ -423,4 +456,21 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     refute_includes @response.body, setup_accounts_simplefin_item_path(item)
     refute_includes @response.body, "Link existing accounts"
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
