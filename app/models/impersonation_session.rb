@@ -2,7 +2,7 @@ class ImpersonationSession < ApplicationRecord
   belongs_to :impersonator, class_name: "User"
   belongs_to :impersonated, class_name: "User"
 
-  has_many :logs, class_name: "ImpersonationSessionLog"
+  has_many :logs, class_name: "ImpersonationSessionLog", dependent: :destroy
 
   enum :status, { pending: "pending", in_progress: "in_progress", complete: "complete", rejected: "rejected" }
 
