@@ -1,4 +1,4 @@
-class AddChannelRecordParentIdToTransactions < ActiveRecord::Migration[8.0]
+class AddChannelRecordParentIdToTransactions < ActiveRecord::Migration[7.2]
   def change
     add_column :transactions, :channel_record_parent_id, :uuid
 
