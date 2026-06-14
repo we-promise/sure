@@ -7,6 +7,7 @@ import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/amount_parser.dart';
+import '../widgets/money_text.dart';
 
 class RecentTransactionsScreen extends StatefulWidget {
   const RecentTransactionsScreen({super.key});
@@ -136,6 +137,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
                     itemBuilder: (context, index) {
                       final transaction = recentTransactions[index];
                       return _buildTransactionItem(
+                        context,
                         transaction,
                         colorScheme,
                       );
@@ -173,7 +175,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     );
   }
 
-  Widget _buildTransactionItem(Transaction transaction, ColorScheme colorScheme) {
+  Widget _buildTransactionItem(
+      BuildContext context, Transaction transaction, ColorScheme colorScheme) {
     final account = _getAccount(transaction.accountId);
     final accountName = account?.name ?? 'Unknown Account';
 
@@ -190,21 +193,17 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       amount = -amount;
     }
 
-    // Determine display properties based on final amount
+    // Determine display properties based on final amount. The semantic color
+    // comes from the Sure design-system tokens (success/destructive/subdued)
+    // via MoneyTrend, instead of raw Colors.green/red.
     final isPositive = amount == null || amount >= 0;
-    Color amountColor;
-    String sign;
-
-    if (amount == null) {
-      amountColor = Colors.grey;
-      sign = '';
-    } else if (isPositive) {
-      amountColor = Colors.green.shade700;
-      sign = '+';
-    } else {
-      amountColor = Colors.red.shade700;
-      sign = '-';
-    }
+    final moneyTrend = SureMoney.trendForAmount(amount);
+    final amountColor = SureMoney.color(context, moneyTrend);
+    final sign = amount == null
+        ? ''
+        : isPositive
+            ? '+'
+            : '-';
 
     String formattedDate;
     try {
@@ -219,11 +218,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: amount == null
-              ? Colors.grey.withValues(alpha: 0.1)
-              : isPositive
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.red.withValues(alpha: 0.1),
+          color: amountColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -273,14 +268,14 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
           ],
         ],
       ),
-      trailing: Text(
+      trailing: MoneyText(
         amount == null
             ? transaction.amount
             : '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
-        style: TextStyle(
+        trend: moneyTrend,
+        style: const TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 16,
-          color: amountColor,
         ),
       ),
     );
