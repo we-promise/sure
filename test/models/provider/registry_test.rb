@@ -22,6 +22,7 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     # Mock a configured OpenAI provider
     mock_provider = mock("openai_provider")
     Provider::Registry.stubs(:openai).returns(mock_provider)
+    Provider::Registry.stubs(:anthropic).returns(nil)
 
     registry = Provider::Registry.for_concept(:llm)
 
@@ -141,5 +142,21 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     Setting.stubs(:llm_provider).returns("openai")
 
     assert_nil Provider::Registry.preferred_llm_provider
+  end
+
+  test "preferred_llm_model returns the selected anthropic model" do
+    anthropic = Provider::Anthropic.new("fake-anthropic-key")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(anthropic)
+    Setting.stubs(:anthropic_model).returns("claude-sonnet-4-5")
+
+    ClimateControl.modify("ANTHROPIC_MODEL" => nil) do
+      assert_equal "claude-sonnet-4-5", Provider::Registry.preferred_llm_model
+    end
+  end
+
+  test "preferred_llm_model returns nil when no llm provider is configured" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    assert_nil Provider::Registry.preferred_llm_model
   end
 end

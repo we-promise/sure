@@ -11,6 +11,11 @@ ca:
         of_the_following_conditions: de les condicions següents
   rules:
     actions:
+      auto_categorize:
+        cost_estimate: "~$%{cost} per %{count} transaccions"
+        cost_na: cost no disponible
+        label: Categoritza automàticament les transaccions amb IA
+        no_provider: no hi ha proveïdor d'LLM configurat
       value_placeholder: Introdueix un valor
     apply_all:
       ai_cost_message: Això utilitzarà IA per categoritzar fins a %{transactions}

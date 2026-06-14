@@ -52,6 +52,11 @@ zh-CN:
       confirm_changes: 确认更改
     actions:
       value_placeholder: 输入值
+      auto_categorize:
+        label: 使用 AI 自动分类交易
+        cost_na: 费用：不可用
+        cost_estimate: "%{count} 笔交易约 ~$%{cost}"
+        no_provider: 未配置 LLM 提供商
     update:
       success: 规则已更新
     destroy:

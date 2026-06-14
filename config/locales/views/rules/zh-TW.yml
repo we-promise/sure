@@ -1,6 +1,13 @@
 ---
 zh-TW:
   rules:
+    actions:
+      auto_categorize:
+        label: 使用 AI 自動分類交易
+        cost_na: 費用：無法取得
+        cost_estimate: "%{count} 筆交易約 ~$%{cost}"
+        no_provider: 尚未設定 LLM 提供商
+      value_placeholder: 輸入值
     no_action: 無動作
     no_condition: 無條件
     recent_runs:
