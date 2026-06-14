@@ -57,7 +57,7 @@
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
-              data: { controller: "auto-submit-form" } do |f| %>
+              data: { controller: "auto-submit-form", turbo_frame: "_top" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
           <%= f.text_field :name,
                 label: t(".name_label"),
@@ -100,7 +100,7 @@
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
-              data: { controller: "auto-submit-form" } do |f| %>
+              data: { controller: "auto-submit-form", turbo_frame: "_top" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
           <% unless @entry.transaction.transfer? %>
             <%= f.select :account,
