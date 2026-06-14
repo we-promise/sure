@@ -156,9 +156,15 @@ class LunchflowItem::Importer
           next
         end
 
-        Rails.logger.info "LunchflowItem::Importer - Pruning orphaned LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (no longer exists upstream)"
-        lunchflow_account.destroy
-        pruned += 1
+        begin
+          Rails.logger.info "LunchflowItem::Importer - Pruning orphaned LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (no longer exists upstream)"
+          lunchflow_account.destroy
+          pruned += 1
+        rescue => e
+          # Don't let one failed destroy abort the whole import (transactions are
+          # fetched in a later step). Mirrors the importer's continue-on-error style.
+          Rails.logger.error "LunchflowItem::Importer - Failed to prune LunchflowAccount id=#{lunchflow_account.id}: #{e.message}"
+        end
       end
 
       pruned
