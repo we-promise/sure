@@ -10,9 +10,9 @@ class PagesController < ApplicationController
   DASHBOARD_SECTION_LAYOUTS = {
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
-    "investment_summary" => { col_span: "single", grow: false, min_height: 0 },
+    "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
-    "balance_sheet"      => { col_span: "single", grow: false, min_height: 0 }
+    "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
   }.freeze
 
   # Selectable height presets (px) for grow widgets.
