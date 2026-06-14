@@ -722,6 +722,10 @@ class TransactionsController < ApplicationController
 
       channel_entry.sync_account_later
       funding_entry.sync_account_later
+      channel_entry.lock_saved_attributes!
+      channel_entry.mark_user_modified!
+      funding_entry.lock_saved_attributes!
+      funding_entry.mark_user_modified!
 
       flash[:notice] = t(".created")
 

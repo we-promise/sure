@@ -97,6 +97,14 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     if funding_account_id.present?
+      if funding_account_id == account_id_param
+        render json: {
+          error: "validation_failed",
+          message: "Funding account cannot be the same as transaction account",
+          errors: [ "Funding account cannot be the same as transaction account" ]
+        }, status: :unprocessable_entity
+        return
+      end
       return create_channel_payment(account, family)
     end
 
@@ -312,7 +320,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, :funding_account_id, tag_ids: []
+        :category_id, :merchant_id, :nature, :funding_account_id, extra: {}, tag_ids: []
       )
     end
 
@@ -502,6 +510,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
       channel_entry.sync_account_later
       funding_entry.sync_account_later
+      channel_entry.lock_saved_attributes!
+      channel_entry.mark_user_modified!
+      funding_entry.lock_saved_attributes!
+      funding_entry.mark_user_modified!
 
       @entry = channel_entry
       @transaction = channel_entry.transaction
