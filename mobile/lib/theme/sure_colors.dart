@@ -15,11 +15,17 @@ class SureColors extends ThemeExtension<SureColors> {
 
   final SureTokenPalette palette;
 
-  /// The active palette for [context], falling back to the light palette if the
-  /// extension is missing (e.g. a widget built outside [SureTheme] in a test).
+  /// The active palette for [context]. Falls back to the palette matching the
+  /// active brightness if the extension is missing (e.g. a widget built outside
+  /// [SureTheme] in a test), so dark surfaces don't get light-palette colors.
   static SureColors of(BuildContext context) {
-    return Theme.of(context).extension<SureColors>() ??
-        const SureColors(SureTokens.light);
+    final theme = Theme.of(context);
+    return theme.extension<SureColors>() ??
+        SureColors(
+          theme.brightness == Brightness.dark
+              ? SureTokens.dark
+              : SureTokens.light,
+        );
   }
 
   @override
