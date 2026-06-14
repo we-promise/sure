@@ -36,6 +36,7 @@ en:
       description: Description
       description_placeholder: Describe transaction
       expense: Expense
+      funding_account_label: Funding source
       income: Income
       merchant_label: Merchant
       none: (none)
