@@ -43,6 +43,13 @@
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
             rows: 4 %>
+
+        <% if account.linked? %>
+          <%= form.money_field :balance_adjustment,
+              label: t(".balance_adjustment_label"),
+              default_currency: Current.family.currency %>
+          <p class="text-xs text-secondary"><%= t(".balance_adjustment_description") %></p>
+        <% end %>
       </div>
     </details>
   </div>

@@ -79,6 +79,12 @@ module AccountableResource
       return
     end
 
+    if @account.linked? && @account.saved_change_to_balance_adjustment?
+      old_adj, new_adj = @account.saved_change_to_balance_adjustment
+      raw_anchor = @account.current_anchor_balance.to_d - old_adj.to_d
+      @account.set_current_balance(raw_anchor + new_adj.to_d)
+    end
+
     @account.lock_saved_attributes!
     redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
   end
@@ -112,6 +118,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes,
+        :balance_adjustment,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

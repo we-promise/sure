@@ -47,6 +47,8 @@ en:
       institution_domain_placeholder: e.g., chase.com
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
+      balance_adjustment_label: Balance Adjustment
+      balance_adjustment_description: Correct for items your bank provider omits from the reported balance (e.g. a Buy Now Pay Later balance not reflected in your cash balance). Use a negative value for liabilities.
     index:
       accounts: Accounts
       manual_accounts:

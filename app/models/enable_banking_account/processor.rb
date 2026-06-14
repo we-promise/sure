@@ -69,17 +69,21 @@ class EnableBankingAccount::Processor
 
       currency = parse_currency(enable_banking_account.currency) || account.currency || "EUR"
 
+      # Apply any user-configured balance correction (e.g. BNPL liabilities that the
+      # provider does not include in its reported cash balance).
+      effective_balance = balance + account.balance_adjustment
+
       # Wrap both writes in a transaction so a failure on either rolls back both.
       ActiveRecord::Base.transaction do
         if account.accountable.present? && account.accountable.respond_to?(:available_credit=)
           account.accountable.update!(available_credit: available_credit)
         end
-        account.update!(currency: currency, cash_balance: balance)
+        account.update!(currency: currency, cash_balance: effective_balance)
 
         # Use set_current_balance to create a current_anchor valuation entry.
         # This enables Balance::ReverseCalculator, which works backward from the
         # bank-reported balance — eliminating spurious cash adjustment spikes.
-        result = account.set_current_balance(balance)
+        result = account.set_current_balance(effective_balance)
         raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
       end
 
