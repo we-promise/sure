@@ -1,0 +1,47 @@
+---
+vi:
+  splits:
+    new:
+      title: Chia nhỏ giao dịch
+      description: Chia giao dịch này thành nhiều mục với các danh mục và số tiền khác nhau.
+      submit: Chia nhỏ giao dịch
+      cancel: Hủy
+      add_row: Thêm phần chia
+      remove_row: Xóa
+      remaining: Còn lại
+      amounts_must_match: Tổng số tiền chia phải bằng số tiền giao dịch ban đầu.
+      name_label: Tên
+      name_placeholder: Tên phần chia
+      amount_label: Số tiền
+      category_label: Danh mục
+      uncategorized: "(chưa phân loại)"
+      original_name: "Tên:"
+      original_date: "Ngày:"
+      original_amount: "Số tiền"
+      split_number: "Phần #%{number}"
+    create:
+      success: Giao dịch đã được chia nhỏ thành công
+      not_splittable: Giao dịch này không thể chia nhỏ.
+    destroy:
+      success: Giao dịch đã được khôi phục thành công
+    show:
+      title: Các mục đã chia
+      description: Giao dịch này đã được chia thành các mục sau.
+      button_title: Chia nhỏ giao dịch
+      button_description: Chia giao dịch này thành nhiều mục với các danh mục và số tiền khác nhau.
+      button: Chia nhỏ
+      unsplit_title: Hủy chia nhỏ giao dịch
+      unsplit_button: Hủy chia nhỏ
+      unsplit_confirm: Thao tác này sẽ xóa tất cả các mục đã chia và khôi phục giao dịch ban đầu.
+    edit:
+      title: Chỉnh sửa phần chia
+      description: Chỉnh sửa các mục đã chia cho giao dịch này.
+      submit: Cập nhật phần chia
+      not_split: Giao dịch này chưa được chia nhỏ.
+    update:
+      success: Phần chia đã được cập nhật thành công
+    child:
+      title: Một phần của giao dịch chia nhỏ
+      description: Mục này là một phần của giao dịch đã chia nhỏ.
+      edit_split: Chỉnh sửa phần chia
+      unsplit: Hủy chia nhỏ

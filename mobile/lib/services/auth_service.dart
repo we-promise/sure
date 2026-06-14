@@ -15,6 +15,75 @@ class AuthService {
   static const String _apiKeyKey = 'api_key';
   static const String _authModeKey = 'auth_mode';
 
+  String _responseErrorMessage(dynamic responseData, String fallback) {
+    if (responseData is! Map) return fallback;
+
+    return _messageFromErrorValue(responseData['error']) ??
+        _messageFromErrorValue(responseData['errors']) ??
+        fallback;
+  }
+
+  String? _messageFromErrorValue(Object? value) {
+    if (value == null) return null;
+
+    if (value is String) {
+      final message = value.trim();
+      return message.isEmpty ? null : message;
+    }
+
+    if (value is Iterable) {
+      final message = value
+          .map(_messageFromErrorValue)
+          .whereType<String>()
+          .where((part) => part.isNotEmpty)
+          .join(', ');
+      return message.isEmpty ? null : message;
+    }
+
+    if (value is Map) {
+      final message = value.values
+          .map(_messageFromErrorValue)
+          .whereType<String>()
+          .where((part) => part.isNotEmpty)
+          .join(', ');
+      if (message.isNotEmpty) return message;
+
+      final encoded = jsonEncode(value);
+      return encoded.isEmpty ? null : encoded;
+    }
+
+    final message = value.toString().trim();
+    return message.isEmpty ? null : message;
+  }
+
+  void _logAuthException(String operation, Object error) {
+    LogService.instance.error(
+      'AuthService',
+      '$operation failed with ${error.runtimeType}',
+    );
+  }
+
+  User? _parseResponseUser(Map<String, dynamic> responseData, String source) {
+    final rawUser = responseData['user'];
+    if (rawUser == null) return null;
+
+    _logUserPayloadShape(source, rawUser);
+    return User.fromJson(rawUser);
+  }
+
+  Future<void> _saveSession(AuthTokens tokens, User? user) async {
+    try {
+      await _saveTokens(tokens);
+      if (user != null) {
+        await _saveUser(user);
+      }
+    } catch (_) {
+      await _storage.delete(key: _tokenKey);
+      await _storage.delete(key: _userKey);
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -34,37 +103,34 @@ class AuthService {
         body['otp_code'] = otpCode;
       }
 
-      final response = await http.post(
-        url,
-        headers: ApiConfig.jsonHeaders(),
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
 
-      LogService.instance.debug('AuthService', 'Login response status: ${response.statusCode}');
-      LogService.instance.debug('AuthService', 'Login response body: ${response.body}');
+      LogService.instance.debug(
+        'AuthService',
+        'Login response received with status ${response.statusCode}',
+      );
 
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Store tokens
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'login');
 
-        // Store user data - parse once and reuse
-        User? user;
-        if (responseData['user'] != null) {
-          final rawUser = responseData['user'];
-          _logRawUserPayload('login', rawUser);
-          user = User.fromJson(rawUser);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
           'tokens': tokens,
           'user': user,
         };
-      } else if (response.statusCode == 401 && responseData['mfa_required'] == true) {
+      } else if (response.statusCode == 401 &&
+          responseData['mfa_required'] == true) {
         return {
           'success': false,
           'mfa_required': true,
@@ -73,41 +139,41 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Login failed',
+          'error': _responseErrorMessage(responseData, 'Login failed'),
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Login SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Login TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } on HttpException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Login HttpException: $e\n$stackTrace');
+    } on HttpException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on FormatException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Login FormatException: $e\n$stackTrace');
+    } on FormatException catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on TypeError catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Login TypeError: $e\n$stackTrace');
+    } on TypeError catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Login unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('Login', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -140,27 +206,21 @@ class AuthService {
         body['invite_code'] = inviteCode;
       }
 
-      final response = await http.post(
-        url,
-        headers: ApiConfig.jsonHeaders(),
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
-        // Store tokens
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'signup');
 
-        // Store user data - parse once and reuse
-        User? user;
-        if (responseData['user'] != null) {
-          final rawUser = responseData['user'];
-          _logRawUserPayload('signup', rawUser);
-          user = User.fromJson(rawUser);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
@@ -170,41 +230,41 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Signup failed',
+          'error': _responseErrorMessage(responseData, 'Signup failed'),
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Signup SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Signup TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } on HttpException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Signup HttpException: $e\n$stackTrace');
+    } on HttpException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on FormatException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Signup FormatException: $e\n$stackTrace');
+    } on FormatException catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on TypeError catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Signup TypeError: $e\n$stackTrace');
+    } on TypeError catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'Signup unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('Signup', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -219,14 +279,16 @@ class AuthService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/refresh');
 
-      final response = await http.post(
-        url,
-        headers: ApiConfig.jsonHeaders(),
-        body: jsonEncode({
-          'refresh_token': refreshToken,
-          'device': deviceInfo,
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode({
+              'refresh_token': refreshToken,
+              'device': deviceInfo,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final responseData = jsonDecode(response.body);
 
@@ -244,38 +306,38 @@ class AuthService {
           'error': responseData['error'] ?? 'Token refresh failed',
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'RefreshToken SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'RefreshToken TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } on HttpException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'RefreshToken HttpException: $e\n$stackTrace');
+    } on HttpException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on FormatException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'RefreshToken FormatException: $e\n$stackTrace');
+    } on FormatException catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } on TypeError catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'RefreshToken TypeError: $e\n$stackTrace');
+    } on TypeError catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'Invalid response from server',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'RefreshToken unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('RefreshToken', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -298,7 +360,8 @@ class AuthService {
         },
       ).timeout(const Duration(seconds: 30));
 
-      LogService.instance.debug('AuthService', 'API key login response status: ${response.statusCode}');
+      LogService.instance.debug('AuthService',
+          'API key login response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         await _saveApiKey(apiKey);
@@ -316,20 +379,20 @@ class AuthService {
           'error': 'Login failed (status ${response.statusCode})',
         };
       }
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'API key login SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('API key login', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'API key login TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('API key login', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'API key login unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('API key login', e);
       return {
         'success': false,
         'error': 'An unexpected error occurred',
@@ -388,11 +451,13 @@ class AuthService {
     // Exchange authorization code for tokens via secure POST
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_exchange');
-      final response = await http.post(
-        url,
-        headers: ApiConfig.jsonHeaders(),
-        body: jsonEncode({'code': code}),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode({'code': code}),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) {
         final errorData = jsonDecode(response.body);
@@ -411,31 +476,33 @@ class AuthService {
         'expires_in': data['expires_in'] ?? 0,
         'created_at': data['created_at'] ?? 0,
       });
-      await _saveTokens(tokens);
 
-      _logRawUserPayload('sso_exchange', data['user']);
-      final user = User.fromJson(data['user']);
-      await _saveUser(user);
+      final user = _parseResponseUser(data, 'sso_exchange');
+      if (user == null) {
+        throw const FormatException('Missing user payload');
+      }
+
+      await _saveSession(tokens, user);
 
       return {
         'success': true,
         'tokens': tokens,
         'user': user,
       };
-    } on SocketException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'SSO exchange SocketException: $e\n$stackTrace');
+    } on SocketException catch (e) {
+      _logAuthException('SSO exchange', e);
       return {
         'success': false,
         'error': 'Network unavailable',
       };
-    } on TimeoutException catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'SSO exchange TimeoutException: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      _logAuthException('SSO exchange', e);
       return {
         'success': false,
         'error': 'Request timed out',
       };
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'SSO exchange unexpected error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO exchange', e);
       return {
         'success': false,
         'error': 'Failed to exchange authorization code',
@@ -450,28 +517,25 @@ class AuthService {
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_link');
-      final response = await http.post(
-        url,
-        headers: ApiConfig.jsonHeaders(),
-        body: jsonEncode({
-          'linking_code': linkingCode,
-          'email': email,
-          'password': password,
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode({
+              'linking_code': linkingCode,
+              'email': email,
+              'password': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'sso_link');
 
-        User? user;
-        if (responseData['user'] != null) {
-          _logRawUserPayload('sso_link', responseData['user']);
-          user = User.fromJson(responseData['user']);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
@@ -481,15 +545,18 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Account linking failed',
+          'error':
+              _responseErrorMessage(responseData, 'Account linking failed'),
         };
       }
-    } on SocketException {
+    } on SocketException catch (e) {
+      _logAuthException('SSO link', e);
       return {'success': false, 'error': 'Network unavailable'};
-    } on TimeoutException {
+    } on TimeoutException catch (e) {
+      _logAuthException('SSO link', e);
       return {'success': false, 'error': 'Request timed out'};
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'SSO link error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO link', e);
       return {'success': false, 'error': 'Failed to link account'};
     }
   }
@@ -500,31 +567,29 @@ class AuthService {
     String? lastName,
   }) async {
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_create_account');
+      final url =
+          Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_create_account');
       final body = <String, dynamic>{
         'linking_code': linkingCode,
       };
       if (firstName != null) body['first_name'] = firstName;
       if (lastName != null) body['last_name'] = lastName;
 
-      final response = await http.post(
-        url,
-        headers: ApiConfig.jsonHeaders(),
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
         final tokens = AuthTokens.fromJson(responseData);
-        await _saveTokens(tokens);
+        final user = _parseResponseUser(responseData, 'sso_create_account');
 
-        User? user;
-        if (responseData['user'] != null) {
-          _logRawUserPayload('sso_create_account', responseData['user']);
-          user = User.fromJson(responseData['user']);
-          await _saveUser(user);
-        }
+        await _saveSession(tokens, user);
 
         return {
           'success': true,
@@ -534,15 +599,18 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Account creation failed',
+          'error':
+              _responseErrorMessage(responseData, 'Account creation failed'),
         };
       }
-    } on SocketException {
+    } on SocketException catch (e) {
+      _logAuthException('SSO create account', e);
       return {'success': false, 'error': 'Network unavailable'};
-    } on TimeoutException {
+    } on TimeoutException catch (e) {
+      _logAuthException('SSO create account', e);
       return {'success': false, 'error': 'Request timed out'};
-    } catch (e, stackTrace) {
-      LogService.instance.error('AuthService', 'SSO create account error: $e\n$stackTrace');
+    } catch (e) {
+      _logAuthException('SSO create account', e);
       return {'success': false, 'error': 'Failed to create account'};
     }
   }
@@ -563,7 +631,7 @@ class AuthService {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        _logRawUserPayload('enable_ai', responseData['user']);
+        _logUserPayloadShape('enable_ai', responseData['user']);
         final user = User.fromJson(responseData['user']);
         await _saveUser(user);
         return {
@@ -574,12 +642,13 @@ class AuthService {
 
       return {
         'success': false,
-        'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Failed to enable AI',
+        'error': _responseErrorMessage(responseData, 'Failed to enable AI'),
       };
     } catch (e) {
+      _logAuthException('Enable AI', e);
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': 'Network error',
       };
     }
   }
@@ -594,7 +663,7 @@ class AuthService {
   Future<AuthTokens?> getStoredTokens() async {
     final tokensJson = await _storage.read(key: _tokenKey);
     if (tokensJson == null) return null;
-    
+
     try {
       return AuthTokens.fromJson(jsonDecode(tokensJson));
     } catch (e) {
@@ -605,7 +674,7 @@ class AuthService {
   Future<User?> getStoredUser() async {
     final userJson = await _storage.read(key: _userKey);
     if (userJson == null) return null;
-    
+
     try {
       return User.fromJson(jsonDecode(userJson));
     } catch (e) {
@@ -627,20 +696,25 @@ class AuthService {
     );
   }
 
-  void _logRawUserPayload(String source, dynamic userPayload) {
+  void _logUserPayloadShape(String source, dynamic userPayload) {
     if (userPayload == null) {
-      LogService.instance.debug('AuthService', '$source user payload: <missing>');
+      LogService.instance.debug(
+        'AuthService',
+        '$source user payload missing',
+      );
       return;
     }
 
     if (userPayload is Map<String, dynamic>) {
-      try {
-        LogService.instance.debug('AuthService', '$source user payload: ${jsonEncode(userPayload)}');
-      } catch (_) {
-        LogService.instance.debug('AuthService', '$source user payload: $userPayload');
-      }
+      LogService.instance.debug(
+        'AuthService',
+        '$source user payload received with ${userPayload.length} fields',
+      );
     } else {
-      LogService.instance.debug('AuthService', '$source user payload type: ${userPayload.runtimeType}');
+      LogService.instance.debug(
+        'AuthService',
+        '$source user payload type: ${userPayload.runtimeType}',
+      );
     }
   }
 

@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
+  reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
 
   config.openapi_specs = {
     'openapi.yaml' => {
@@ -570,6 +571,15 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          MerchantImportResult: {
+            type: :object,
+            required: %w[imported skipped merchants],
+            properties: {
+              imported: { type: :integer, description: 'Number of merchants successfully created' },
+              skipped: { type: :integer, description: 'Number of rows skipped (duplicates or invalid)' },
+              merchants: { type: :array, items: { '$ref' => '#/components/schemas/MerchantDetail' } }
+            }
+          },
           Tag: {
             type: :object,
             required: %w[id name color],
@@ -921,6 +931,27 @@ RSpec.configure do |config|
               message: { type: :string }
             }
           },
+          TransactionResponse: {
+            type: :object,
+            required: %w[id date amount currency name entryable_type account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              name: { type: :string },
+              entryable_type: { type: :string },
+              account: {
+                type: :object,
+                required: %w[id name account_type],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  account_type: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
           ImportConfiguration: {
             type: :object,
             properties: {
@@ -1169,6 +1200,68 @@ RSpec.configure do |config|
             required: %w[data],
             properties: {
               data: { '$ref' => '#/components/schemas/ImportDetail' }
+            }
+          },
+          ImportSessionChunk: {
+            type: :object,
+            required: %w[id sequence status rows_count summary created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              sequence: { type: :integer, minimum: 1 },
+              client_chunk_id: { type: :string, nullable: true },
+              status: { type: :string, enum: %w[pending importing complete failed] },
+              rows_count: { type: :integer, minimum: 0 },
+              summary: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  additionalProperties: { type: :integer }
+                }
+              },
+              error: {
+                type: :object,
+                nullable: true,
+                additionalProperties: true
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ImportSession: {
+            type: :object,
+            required: %w[id type status chunks_count summary chunks created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string, enum: %w[SureImport] },
+              status: { type: :string, enum: %w[pending importing complete failed] },
+              client_session_id: { type: :string, nullable: true },
+              expected_chunks: { type: :integer, nullable: true, minimum: 1 },
+              chunks_count: { type: :integer, minimum: 0 },
+              summary: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  additionalProperties: { type: :integer }
+                }
+              },
+              error: {
+                type: :object,
+                nullable: true,
+                additionalProperties: true
+              },
+              chunks: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ImportSessionChunk' }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ImportSessionResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/ImportSession' }
             }
           },
           ProviderConnectionInstitution: {
@@ -1607,16 +1700,9 @@ RSpec.configure do |config|
               },
               counts: {
                 type: :object,
-                required: %w[accounts categories tags merchants plaid_items imports budgets],
-                properties: {
-                  accounts: { type: :integer, minimum: 0 },
-                  categories: { type: :integer, minimum: 0 },
-                  tags: { type: :integer, minimum: 0 },
-                  merchants: { type: :integer, minimum: 0 },
-                  plaid_items: { type: :integer, minimum: 0 },
-                  imports: { type: :integer, minimum: 0 },
-                  budgets: { type: :integer, minimum: 0 }
-                }
+                required: reset_count_keys,
+                additionalProperties: { type: :integer, minimum: 0 },
+                properties: reset_count_keys.index_with { { type: :integer, minimum: 0 } }
               }
             }
           }

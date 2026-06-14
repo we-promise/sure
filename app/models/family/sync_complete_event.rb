@@ -6,11 +6,20 @@ class Family::SyncCompleteEvent
   end
 
   def broadcast
-    # Broadcast a refresh signal instead of rendered HTML. Each user's browser
-    # re-fetches via their own authenticated request, so the balance sheet and
-    # net worth chart are correctly scoped to the current user (Current.user is
-    # nil in background jobs, which would produce an unscoped family-wide view).
-    family.broadcast_refresh
+    # Replace the #sync-toast slot with a lightweight toast instead of a full
+    # page refresh.  The sync-toast Stimulus controller handles three cases:
+    #   - User is idle         → morph-refreshes after a short delay
+    #   - User is mid-form     → toast stays visible; user clicks "Refresh"
+    #   - A modal is open      → toast defers until the dialog closes
+    #
+    # This avoids wiping in-progress form state when a background sync fires.
+    # The partial contains no user-scoped data (Current.user is nil here), so
+    # each browser re-fetches the page on its own authenticated request.
+    family.broadcast_replace_to(
+      family,
+      target: "sync-toast",
+      partial: "shared/notifications/sync_toast"
+    )
 
     # Schedule recurring transaction pattern identification (debounced to run after all syncs complete)
     begin

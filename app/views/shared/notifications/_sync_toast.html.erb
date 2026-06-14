@@ -1,0 +1,34 @@
+<div id="sync-toast"
+     role="status"
+     aria-live="polite"
+     data-controller="sync-toast element-removal"
+     class="relative flex gap-3 rounded-lg bg-container p-4 w-full md:max-w-80 shadow-border-xs">
+  <div class="h-5 w-5 shrink-0 p-px text-primary">
+    <div class="flex h-full items-center justify-center rounded-full bg-info">
+      <%= icon "refresh-cw", size: "xs", color: "white" %>
+    </div>
+  </div>
+
+  <div class="space-y-2 flex-1 min-w-0">
+    <p class="text-primary text-sm font-medium"><%= t("shared.sync_toast.message") %></p>
+    <%= render DS::Button.new(
+      text: t("shared.sync_toast.refresh"),
+      variant: "secondary",
+      size: "sm",
+      icon: "refresh-cw",
+      type: "button",
+      data: { action: "sync-toast#refresh" }
+    ) %>
+  </div>
+
+  <div class="absolute top-1 right-1">
+    <%= render DS::Button.new(
+      variant: "icon",
+      size: "sm",
+      icon: "x",
+      type: "button",
+      "aria-label": t("defaults.common.close"),
+      data: { action: "click->element-removal#remove" }
+    ) %>
+  </div>
+</div>

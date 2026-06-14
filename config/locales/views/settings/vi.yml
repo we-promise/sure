@@ -1,0 +1,512 @@
+---
+vi:
+  views:
+    settings:
+      payments:
+        renewal: "Đóng góp của bạn tiếp tục vào ngày %{date}."
+        cancellation: "Đóng góp của bạn kết thúc vào ngày %{date}."
+  settings:
+    debugs:
+      show:
+        page_title: "Gỡ lỗi"
+        title: "Nhật ký sự kiện gỡ lỗi"
+        subtitle: "Các sự kiện vận hành quan trọng dành cho siêu quản trị viên. Mới nhất trước."
+        empty: "Không tìm thấy sự kiện gỡ lỗi."
+        missing_value: "-"
+        filters:
+          all: "Tất cả"
+          category: "Danh mục"
+          level: "Cấp độ"
+          source: "Nguồn"
+          provider: "Nhà cung cấp"
+          start_date: "Từ"
+          end_date: "Đến"
+          family_id: "ID hộ gia đình"
+          account_id: "ID tài khoản"
+          user_id: "ID người dùng"
+          account_provider_id: "ID nhà cung cấp tài khoản"
+          submit: "Lọc"
+          reset: "Đặt lại"
+        table:
+          time: "Thời gian"
+          level: "Cấp độ"
+          category: "Danh mục"
+          source: "Nguồn"
+          message: "Thông báo"
+          context: "Bối cảnh"
+          metadata: "Siêu dữ liệu"
+          view_metadata: "Xem"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
+    llm_usages:
+      show:
+        page_title: "Sử dụng & Chi phí LLM"
+        subtitle: "Theo dõi lượng sử dụng AI và chi phí ước tính"
+        start_date: "Ngày bắt đầu"
+        end_date: "Ngày kết thúc"
+        filter: "Lọc"
+        total_requests: "Tổng yêu cầu"
+        total_tokens: "Tổng token"
+        prompt: "lệnh"
+        completion: "hoàn thành"
+        total_cost: "Tổng chi phí"
+        avg_cost_per_request: "Chi phí tb/yêu cầu"
+        based_on_requests: "Dựa trên %{with_cost} trong %{total} yêu cầu có dữ liệu chi phí"
+        cost_by_operation: "Chi phí theo thao tác"
+        cost_by_model: "Chi phí theo mô hình"
+        recent_usage: "Sử dụng gần đây"
+        col_date: "Ngày"
+        col_operation: "Thao tác"
+        col_model: "Mô hình"
+        col_tokens: "Token"
+        col_cost: "Chi phí"
+        failed: "Thất bại"
+        no_usage_data: "Không tìm thấy dữ liệu sử dụng cho kỳ đã chọn"
+        cost_estimates_title: "Về ước tính chi phí"
+        cost_estimates_description: "Chi phí được ước tính dựa trên bảng giá của OpenAI từ năm 2025. Chi phí thực tế có thể khác nhau. Giá tính trên 1 triệu token và thay đổi theo mô hình. Mô hình tùy chỉnh hoặc tự lưu trữ sẽ hiển thị \"N/A\" và không được tính vào tổng chi phí."
+    ai_prompts:
+      show:
+        page_title: Câu lệnh AI
+        openai_label: OpenAI
+        disable_ai: Tắt trợ lý AI
+        prompt_instructions: Hướng dẫn câu lệnh
+        main_system_prompt:
+          title: Câu lệnh hệ thống chính
+          subtitle: Hướng dẫn cốt lõi xác định cách trợ lý AI hoạt động trong tất cả cuộc trò chuyện
+        transaction_categorizer:
+          title: Phân loại giao dịch
+          subtitle: AI tự động phân loại giao dịch dựa trên các danh mục bạn định nghĩa
+        merchant_detector:
+          title: Phát hiện nhà cung cấp
+          subtitle: AI xác định và làm phong phú dữ liệu giao dịch với thông tin nhà cung cấp
+    payments:
+      show:
+        page_title: Thanh toán
+        subscription_subtitle: Cập nhật thông tin thẻ tín dụng
+        subscription_title: Quản lý đóng góp
+        currently_on_plan: "Hiện đang dùng"
+        trialing: "Hiện đang dùng bản demo mở của %{product_name}"
+        trial_days_left:
+          one: "Dữ liệu sẽ bị xóa sau %{count} ngày"
+          other: "Dữ liệu sẽ bị xóa sau %{count} ngày"
+        not_contributing_prefix: "Bạn hiện"
+        not_contributing_emphasis: "chưa đóng góp"
+        contributions_note: "Đóng góp cho %{product_name} sẽ hiển thị ở đây."
+        manage: "Quản lý"
+        choose_level: "Chọn mức"
+        payment_via_stripe: "Thanh toán qua Stripe"
+    appearances:
+      show:
+        page_title: Giao diện
+        theme_title: Giao diện
+        theme_subtitle: Chọn giao diện ưa thích cho ứng dụng
+        theme_dark: Tối
+        theme_light: Sáng
+        theme_system: Hệ thống
+        transactions_title: Giao dịch
+        transactions_subtitle: Tùy chỉnh cách hiển thị giao dịch
+        dashboard_title: Bảng điều khiển
+        dashboard_subtitle: Tùy chỉnh cách hiển thị bảng điều khiển
+        dashboard_two_column_title: Bố cục hai cột
+        dashboard_two_column_description: Hiển thị các widget bảng điều khiển thành hai cột trên màn hình lớn. Khi tắt, các widget xếp chồng thành một cột.
+        split_grouped_title: Nhóm giao dịch phân chia
+        split_grouped_description: Hiển thị giao dịch phân chia được nhóm dưới giao dịch cha trong danh sách. Khi tắt, các mục con phân chia xuất hiện như các hàng riêng biệt.
+    preferences:
+      show:
+        country: Quốc gia
+        currency: Tiền tệ
+        date_format: Định dạng ngày
+        general_subtitle: Cấu hình tùy chọn của bạn
+        general_title: Chung
+        default_period: Kỳ mặc định
+        default_account_order: Thứ tự tài khoản mặc định
+        language: Ngôn ngữ
+        language_auto: Ngôn ngữ trình duyệt
+        page_title: Tùy chọn
+        timezone: Múi giờ
+        month_start_day: Ngân sách tháng bắt đầu vào
+        month_start_day_hint: "Đặt ngày bắt đầu tháng ngân sách (ví dụ: ngày nhận lương)"
+        month_start_day_warning: Ngân sách và tính toán MTD của bạn sẽ dùng ngày bắt đầu tùy chỉnh này thay vì ngày 1 mỗi tháng.
+        translations_notice: Lưu ý, chúng tôi vẫn đang tiếp tục dịch cho các ngôn ngữ khác nhau.
+        currencies_title: "Tiền tệ %{moniker}"
+        currencies_subtitle: Chọn tiền tệ xuất hiện trong các trường tiền tệ cho %{moniker} của bạn
+        base_currency_label: Tiền tệ cơ sở
+        base_currency_badge: Tiền tệ cơ sở
+        additional_currencies_label: Tiền tệ bổ sung
+        no_additional_currencies: Chưa chọn
+        currencies_more: "+%{count} khác"
+        manage_currencies: Quản lý tiền tệ
+        manage_currencies_subtitle: Bỏ chọn các tiền tệ bạn không dùng, hoặc thu gọn danh sách xuống một vài loại.
+        select_all_currencies: Chọn tất cả
+        select_base_only: Chỉ tiền tệ cơ sở
+        currency_search_placeholder: Tìm kiếm tiền tệ
+        no_matching_currencies: Không tìm thấy tiền tệ
+        selected_currencies_count:
+          one: "%{count} đã chọn"
+          other: "%{count} đã chọn"
+        save_currencies: Lưu tiền tệ
+        sharing_title: "Chia sẻ %{moniker}"
+        sharing_subtitle: "Kiểm soát cách chia sẻ tài khoản trong %{moniker} của bạn"
+        sharing_default_label: Chia sẻ mặc định cho tài khoản mới
+        sharing_shared: Chia sẻ với tất cả thành viên
+        sharing_private: Giữ riêng tư mặc định
+        preview:
+          title: Bật tính năng xem trước
+          description: Chọn tham gia các tính năng đang phát triển được gắn thẻ xem trước hoặc canary.
+    profiles:
+      destroy:
+        cannot_remove_self: Bạn không thể tự xóa mình khỏi tài khoản.
+        member_owns_other_family_data: Thành viên này vẫn sở hữu tài khoản trong hộ gia đình khác và không thể xóa. Hãy chuyển hoặc xóa các tài khoản đó trước.
+        member_removal_failed: Đã xảy ra sự cố khi xóa thành viên.
+        member_removed: Thành viên đã được xóa thành công.
+        not_authorized: Bạn không có quyền xóa thành viên.
+      show:
+        confirm_delete:
+          body: Bạn có chắc muốn xóa vĩnh viễn tài khoản của mình? Hành động này không thể hoàn tác.
+          title: Xóa tài khoản?
+        confirm_reset:
+          body: Bạn có chắc muốn đặt lại tài khoản? Thao tác này sẽ xóa tất cả tài khoản, danh mục, nhà cung cấp, nhãn và dữ liệu khác. Không thể hoàn tác.
+          title: Đặt lại tài khoản?
+        confirm_reset_with_sample_data:
+          body: Bạn có chắc muốn đặt lại tài khoản và tải dữ liệu mẫu? Thao tác này sẽ xóa dữ liệu hiện tại và thay thế bằng dữ liệu demo để bạn khám phá Sure an toàn.
+          title: Đặt lại tài khoản và tải dữ liệu mẫu?
+        confirm_remove_invitation:
+          body: Bạn có chắc muốn xóa lời mời cho %{email}?
+          title: Xóa lời mời
+        confirm_remove_member:
+          body: Bạn có chắc muốn xóa %{name} khỏi tài khoản?
+          title: Xóa thành viên
+        danger_zone_title: Khu vực nguy hiểm
+        delete_account: Xóa tài khoản
+        delete_account_warning: Xóa tài khoản sẽ xóa vĩnh viễn tất cả dữ liệu và không thể hoàn tác.
+        reset_account: Đặt lại tài khoản
+        reset_account_warning: Đặt lại tài khoản sẽ xóa tất cả tài khoản, danh mục, nhà cung cấp, nhãn và dữ liệu khác, nhưng giữ lại tài khoản người dùng.
+        reset_account_with_sample_data: Đặt lại và tải trước
+        reset_account_with_sample_data_warning: Xóa tất cả dữ liệu hiện tại rồi tải dữ liệu mẫu mới để khám phá với môi trường được điền sẵn.
+        email: Email
+        first_name: Tên
+        group_form_input_placeholder: Nhập tên nhóm
+        group_form_label: Tên nhóm
+        group_title: Thành viên nhóm
+        household_form_input_placeholder: Nhập tên hộ gia đình
+        household_form_label: Tên hộ gia đình
+        household_subtitle: Người được mời có thể đăng nhập vào %{moniker} của bạn và truy cập tài nguyên chia sẻ.
+        household_title: Hộ gia đình
+        invitation_link: Liên kết mời
+        invite_member: Thêm thành viên
+        last_name: Họ
+        page_title: Thông tin hồ sơ
+        pending: Đang chờ
+        profile_subtitle: Tùy chỉnh cách bạn hiển thị trên %{product_name}
+        profile_title: Cá nhân
+        remove_invitation: Xóa lời mời
+        remove_member: Xóa thành viên
+        save: Lưu
+    securities:
+      show:
+        page_title: Bảo mật
+        mfa_title: Xác thực hai yếu tố
+        mfa_description: Thêm lớp bảo mật cho tài khoản bằng cách yêu cầu mã từ ứng dụng xác thực khi đăng nhập
+        enable_mfa: Bật 2FA
+        disable_mfa: Tắt 2FA
+        disable_mfa_confirm: Bạn có chắc muốn tắt xác thực hai yếu tố?
+        sso_title: Tài khoản đã kết nối
+        sso_subtitle: Quản lý các kết nối tài khoản đăng nhập một lần
+        sso_disconnect: Ngắt kết nối
+        sso_last_used: Sử dụng lần cuối
+        sso_never: Chưa bao giờ
+        sso_no_email: Không có email
+        sso_no_identities: Chưa kết nối tài khoản SSO
+        sso_connect_hint: Đăng xuất và đăng nhập bằng nhà cung cấp SSO để kết nối tài khoản.
+        sso_confirm_title: Ngắt kết nối tài khoản?
+        sso_confirm_body: Bạn có chắc muốn ngắt kết nối tài khoản %{provider}? Bạn có thể kết nối lại sau bằng cách đăng nhập với nhà cung cấp đó.
+        sso_confirm_button: Ngắt kết nối
+        sso_warning_message: Đây là phương thức đăng nhập duy nhất của bạn. Hãy đặt mật khẩu trong cài đặt bảo mật trước khi ngắt kết nối, nếu không bạn có thể bị khóa khỏi tài khoản.
+    settings_nav:
+      accounts_label: Tài khoản
+      advanced_section_title: Nâng cao
+      ai_prompts_label: Câu lệnh AI
+      api_key_label: Khóa API
+      payment_label: Thanh toán
+      categories_label: Danh mục
+      feedback_label: Phản hồi
+      general_section_title: Chung
+      imports_label: Nhập dữ liệu
+      exports_label: Xuất dữ liệu
+      llm_usage_label: Sử dụng LLM
+      logout: Đăng xuất
+      merchants_label: Nhà cung cấp
+      providers_label: Nhà cung cấp dịch vụ
+      guides_label: Hướng dẫn
+      other_section_title: Thêm
+      preferences_label: Tùy chọn
+      profile_label: Thông tin hồ sơ
+      recurring_transactions_label: Định kỳ
+      rules_label: Quy tắc
+      security_label: Bảo mật
+      self_hosting_label: Tự lưu trữ
+      sso_providers_label: Nhà cung cấp SSO
+      statement_vault_label: Kho sao kê
+      tags_label: Nhãn
+      transactions_section_title: Giao dịch
+      users_label: Người dùng
+      whats_new_label: Có gì mới
+      api_keys_label: Khóa API
+      appearance_label: Giao diện
+      bank_sync_label: Đồng bộ ngân hàng
+      debug_label: Gỡ lỗi
+    settings_nav_link_large:
+      next: Tiếp theo
+      previous: Quay lại
+    user_avatar_field:
+      accepted_formats: JPG hoặc PNG. Tối đa 5MB.
+      choose: Tải ảnh lên
+      choose_label: (tùy chọn)
+      change: Thay đổi ảnh
+    providers:
+      update:
+        updated_successfully: Đã cập nhật cài đặt nhà cung cấp thành công
+        no_changes: Không có thay đổi nào được thực hiện
+      not_authorized: Không được phép
+      bank_sync:
+        page_title: Đồng bộ ngân hàng
+        lede: Kết nối tài khoản bên ngoài để giao dịch, số dư và danh mục nắm giữ tự động đồng bộ vào Sure.
+      status:
+        ok: Đã kết nối
+        warn: Cần hành động
+        err: Lỗi
+        off: Chưa cấu hình
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Chỉ đọc. Sure không bao giờ có thể chuyển tiền, và thông tin đăng nhập của bạn được lưu trữ mã hóa."
+      setup_steps:
+        eyebrow: Thiết lập
+        need_help: "Cần trợ giúp?"
+      connect: Kết nối
+      groups:
+        your_connections: Kết nối của bạn
+        available: Khả dụng
+        empty_available: Tất cả nhà cung cấp khả dụng đã được kết nối.
+      health_strip:
+        connected: đã kết nối
+        needs_attention: cần chú ý
+        accounts_syncing: tài khoản đang đồng bộ
+        last_synced: Đồng bộ lần cuối %{time} trước
+      meta:
+        sync_error: Lỗi đồng bộ
+        no_recent_sync: Đồng bộ quá hạn
+        registration_needed: Cần đăng ký
+        reconsent_required: Cần đồng ý lại
+        reconsent_needed:
+          one: Cần đồng ý lại sau 1 ngày
+          other: Cần đồng ý lại sau %{count} ngày
+        last_synced: Đồng bộ %{time} trước
+      sync_all: Đồng bộ tất cả
+      sync_all_in_progress: Đang đồng bộ tất cả nhà cung cấp đã kết nối…
+      sync_all_recently: Đồng bộ đang được thực hiện. Thử lại sau một chút.
+      sync_provider: Đồng bộ ngay
+      sync_provider_in_progress: Đã bắt đầu đồng bộ.
+      recently_synced: Đã đồng bộ gần đây. Thử lại sau một chút.
+      taglines:
+        simplefin: Kết nối tài khoản ngân hàng Mỹ qua giao thức mở SimpleFIN.
+        lunchflow: Kết nối 20.000+ ngân hàng từ 40+ quốc gia (Anh, EU, Mỹ và nhiều hơn!)
+        enable_banking: Đồng bộ tài khoản ngân hàng châu Âu qua ngân hàng mở PSD2.
+        coinstats: Theo dõi toàn bộ danh mục tiền mã hóa trên ví và sàn giao dịch.
+        mercury: Tự động đồng bộ tài khoản ngân hàng doanh nghiệp Mercury.
+        brex: Đồng bộ tiền mặt và hoạt động thẻ doanh nghiệp Brex với quyền chỉ đọc.
+        coinbase: Nhập danh mục tiền mã hóa Coinbase và theo dõi hiệu suất.
+        binance: Đồng bộ số dư giao ngay Binance bằng khóa API chỉ đọc.
+        kraken: Đồng bộ số dư Kraken và giao dịch giao ngay bằng khóa API chỉ đọc.
+        snaptrade: Kết nối tài khoản môi giới qua mạng tổng hợp SnapTrade.
+        ibkr: Đồng bộ tài khoản đầu tư Interactive Brokers qua nhập Flex Query.
+        indexa_capital: Theo dõi danh mục đầu tư tự động Indexa Capital.
+        sophtron: Kết nối ngân hàng và tiện ích tại Mỹ & Canada.
+        plaid: Kết nối hàng ngàn tổ chức tài chính Mỹ qua Plaid.
+        plaid_eu: Kết nối tổ chức tài chính châu Âu qua Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Tìm kiếm nhà cung cấp
+        placeholder: Tìm kiếm nhà cung cấp
+        chips:
+          all: Tất cả
+          bank: Ngân hàng
+          crypto: Tiền mã hóa
+          investment: Đầu tư
+      empty_filter: Không có nhà cung cấp phù hợp với bộ lọc.
+      clear_filter: Xóa bộ lọc
+      encryption_error:
+        title: Thiếu khóa mã hóa
+        message: "Đồng bộ ngân hàng cần cấu hình mã hóa Active Record. Đặt primary_key, deterministic_key và key_derivation_salt trong thông tin đăng nhập Rails hoặc biến môi trường."
+      provider_form:
+        save_and_connect: "Lưu và kết nối"
+      coinbase_panel:
+        setup_instructions: "Để kết nối Coinbase:"
+        step1_html: Vào <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Cài đặt API Coinbase</a>
+        step2: Tạo khóa API mới với quyền chỉ đọc (xem tài khoản, xem giao dịch)
+        step3: Sao chép khóa API và bí mật API, dán vào bên dưới
+        api_key_label: Khóa API
+        api_key_placeholder: Nhập khóa API Coinbase
+        api_secret_label: Bí mật API
+        api_secret_placeholder: Nhập bí mật API Coinbase
+        connect_button: Kết nối Coinbase
+        syncing: Đang đồng bộ...
+        sync: Đồng bộ
+        disconnect_confirm: Bạn có chắc muốn ngắt kết nối Coinbase? Các tài khoản đã đồng bộ sẽ trở thành tài khoản thủ công.
+      binance_panel:
+        setup_instructions: "Để kết nối Binance, tạo khóa API chỉ đọc:"
+        step1_html: 'Vào <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Quản lý API Binance</a>'
+        step2: "Tạo khóa API mới chỉ với quyền Bật Đọc"
+        step3: "Dán Khóa API và Bí mật vào bên dưới"
+        no_withdraw_title: "Chỉ khóa chỉ đọc"
+        no_withdraw_body: "Không bật quyền rút tiền khi tạo khóa API Binance. Sure chỉ cần quyền đọc."
+        ip_hint_title: "Yêu cầu danh sách trắng IP"
+        ip_hint_body: "Thêm IP đầu ra của máy chủ ứng dụng vào danh sách trắng Khóa API Binance:"
+        ip_hint_contact_admin: "Liên hệ quản trị viên để lấy địa chỉ IP đầu ra của máy chủ ứng dụng."
+        api_key_label: Khóa API
+        api_key_placeholder: Dán Khóa API Binance
+        api_secret_label: Bí mật API
+        api_secret_placeholder: Dán Bí mật API Binance
+        connect_button: Kết nối Binance
+        syncing: Đang đồng bộ...
+        sync: Đồng bộ
+        historical_import: "Cài đặt nhập dữ liệu lịch sử"
+        sync_start_date_label: "Nhập dữ liệu từ"
+        sync_start_date_help: "Chọn khoảng thời gian lịch sử cần tải."
+        disconnect_confirm: "Bạn có chắc muốn ngắt kết nối Binance?"
+      kraken_panel:
+        step1_html: 'Vào <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Cài đặt API Kraken</a>'
+        step2: "Tạo khóa API chỉ với Truy vấn Quỹ và Truy vấn Lệnh & Giao dịch Đã Đóng."
+        step3: "Dán khóa API và khóa riêng vào bên dưới."
+        read_only_title: "Chỉ đồng bộ sàn giao dịch chỉ đọc"
+        read_only_body: "Không cấp quyền giao dịch, hủy, rút tiền, xuất, sổ cái, Earn, đặt cược hoặc chuyển. Sure chỉ nhập số dư, danh mục nắm giữ và giao dịch giao ngay."
+        default_connection_name: Kraken
+        add_connection: Thêm kết nối Kraken
+        update_connection: Cập nhật kết nối
+        connection_name_label: Tên kết nối
+        connection_name_placeholder: Kraken chính
+        api_key_label: Khóa API
+        api_key_placeholder: Dán khóa API Kraken
+        keep_api_key_placeholder: Để trống để giữ khóa API hiện tại
+        api_secret_label: Khóa riêng
+        api_secret_placeholder: Dán khóa riêng Kraken
+        keep_api_secret_placeholder: Để trống để giữ khóa riêng hiện tại
+        setup_accounts: Thiết lập tài khoản
+        syncing: Đang đồng bộ...
+        sync: Đồng bộ
+        disconnect: Ngắt kết nối
+        disconnect_confirm: "Bạn có chắc muốn ngắt kết nối %{name}?"
+      enable_banking_panel:
+        callback_url_instruction: "Đối với URL callback, sử dụng %{callback_url}."
+        connection_error: Lỗi kết nối
+        step_1_html: "Vào %{link} và lấy thông tin xác thực nhà phát triển."
+        step_2: "Chọn quốc gia và dán ID ứng dụng + Chứng chỉ khách hàng vào bên dưới."
+        step_3: "Lưu, rồi dùng Thêm kết nối để liên kết ngân hàng."
+        config_locked_title: "Cấu hình đã bị khóa"
+        config_locked_message: "Ngắt kết nối tất cả ngân hàng đã liên kết trước khi thay đổi thông tin xác thực này."
+        application_id_label: "ID ứng dụng"
+        application_id_placeholder_new: "Nhập ID ứng dụng"
+        application_id_placeholder_update: "Nhập ID mới để cập nhật"
+        client_certificate_label: "Chứng chỉ khách hàng (kèm khóa riêng)"
+        save_and_connect: "Lưu và kết nối"
+        update_connection: "Cập nhật kết nối"
+        connected_bank: "Ngân hàng đã kết nối"
+        session_expires: "Phiên hết hạn: %{date}"
+        unknown: "Không xác định"
+        connection: "Kết nối"
+        session_expired_reconnect: "Phiên hết hạn - kết nối lại"
+        configured: "Đã cấu hình"
+        ready_to_link: "Sẵn sàng liên kết tài khoản"
+        sync: "Đồng bộ"
+        reconnect: "Kết nối lại"
+        connect_bank: "Kết nối ngân hàng"
+        remove: "Xóa"
+        remove_confirm: "Bạn có chắc muốn xóa kết nối này?"
+        add_connection: "Thêm kết nối"
+        syncing: "Đang đồng bộ"
+        select_country: "Chọn quốc gia..."
+        country_label: "Quốc gia"
+      lunchflow_panel:
+        step_1_html: "Vào %{link} và tạo khóa API."
+        step_2: "Dán khóa vào bên dưới và kết nối."
+        step_3: "Sau đó vào Tài khoản để liên kết các tài khoản đã đồng bộ."
+        api_key_label: "Khóa API"
+        api_key_placeholder_new: "Dán khóa API tại đây"
+        api_key_placeholder_update: "Nhập khóa API mới để cập nhật"
+        base_url_label: "URL cơ sở (Tùy chọn)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (mặc định)"
+        save_and_connect: "Lưu và kết nối"
+        update_connection: "Cập nhật kết nối"
+      simplefin_panel:
+        step_1_html: "Vào %{link} để lấy token thiết lập một lần."
+        step_2: "Dán token vào bên dưới và kết nối."
+        step_3: "Sau đó vào Tài khoản để liên kết các tài khoản đã đồng bộ."
+        setup_token_label: "Token thiết lập"
+        setup_token_placeholder: "Dán token thiết lập SimpleFIN"
+        save_and_connect: "Lưu và kết nối"
+      plaid_panel:
+        step_1_html: "Mở %{link} và sao chép ID khách hàng và Khóa bí mật."
+        step_2: "Chọn môi trường. Dùng sandbox để kiểm tra và production cho tài khoản thực."
+        step_3: "Dán thông tin xác thực vào bên dưới và kết nối."
+      plaid_eu_panel:
+        step_1_html: "Mở %{link} và sao chép ID khách hàng EU và Khóa bí mật."
+      not_found: Không tìm thấy nhà cung cấp.
+      sync_provider_no_items: Không có kết nối nào để đồng bộ.
+      ibkr_panel:
+        steps:
+          step_1: 'Trong Client Portal IBKR, điều hướng đến "Hiệu suất & Báo cáo" > "Flex Queries".'
+          step_2: 'Nhấn biểu tượng "+" trong phần "Activity Flex Query" để tạo truy vấn mới.'
+          step_3: 'Đặt tên truy vấn (ví dụ: "Sure Sync"), sau đó xem chi tiết Flex Query bên dưới và bật các phần, trường và tùy chọn cấu hình được liệt kê.'
+          step_4: 'Lưu truy vấn, ghi chú "Query ID", rồi dùng biểu tượng bánh răng trong phần "Flex Web Service Configuration" để tạo Token truy cập.'
+          step_5: "Dán Query ID và Token vào bên dưới, lưu cấu hình, rồi vào Tài khoản để liên kết các tài khoản IBKR đã phát hiện."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Phần, trường và cấu hình
+          summary: Mở rộng để xem các phần, trường và cài đặt chính xác mà IBKR Activity Flex Query của bạn phải bao gồm.
+          sections_heading: Bật các phần và trường này
+          configuration_heading: Đặt các tùy chọn truy vấn này
+        sections:
+          account_information: "Thông tin tài khoản: ID tài khoản, Tiền tệ"
+          cash_report: "Báo cáo tiền mặt:"
+          cash_report_options: "Tùy chọn: Không"
+          cash_report_fields: "Trường: Tiền tệ, Tiền mặt cuối kỳ"
+          cash_transactions: "Giao dịch tiền mặt:"
+          cash_transactions_options: "Tùy chọn: Cổ tức, Nạp/Rút, Chi tiết"
+          cash_transactions_fields: "Trường: Số tiền, Conid, Tiền tệ, Tỷ giá FX sang Cơ sở, Ngày báo cáo, ID giao dịch, Loại"
+          change_in_position_value_summary: "Tóm tắt thay đổi giá trị vị thế: Tiền tệ, Giá trị cuối kỳ"
+          net_asset_value: "Giá trị tài sản ròng (NAV) theo Cơ sở:"
+          net_asset_value_options: "Tùy chọn: Không"
+          net_asset_value_fields: "Trường: Tiền tệ, Ngày báo cáo, Tổng"
+          open_positions: "Vị thế mở:"
+          open_positions_options: "Tùy chọn: Tóm tắt"
+          open_positions_fields: "Trường: Loại tài sản, Conid, Giá vốn, Tiền tệ, Tỷ giá FX, Giá đánh dấu, Số lượng, Ngày báo cáo, ID chứng khoán, Loại ID, Phía, Ký hiệu"
+          trades: "Giao dịch:"
+          trades_options: "Tùy chọn: Thực hiện"
+          trades_fields: "Trường: Loại tài sản, Mua/Bán, Conid, Tiền tệ, Tỷ giá FX, Hoa hồng IB, Tiền tệ hoa hồng, Số lượng, Ký hiệu, Ngày giao dịch, ID giao dịch, Giá giao dịch, ID giao dịch"
+        configuration:
+          models: "Mô hình: Tùy chọn"
+          format: "Định dạng: XML"
+          period: "Kỳ: 365 ngày lịch gần nhất"
+          date_format: "Định dạng ngày: yyyy-MM-dd"
+          time_format: "Định dạng giờ: HH:mm:ss"
+          date_time_separator: "Dấu phân cách ngày/giờ: ; (chấm phẩy)"
+          profit_and_loss: "Lãi và lỗ: Mặc định"
+          all_other_options: 'Tất cả tùy chọn cấu hình khác: "Không"'
+        report_window_note: "Báo cáo IBKR Flex bị giới hạn trong cửa sổ truy vấn bạn cấu hình trong IBKR. Sure sẽ nhập toàn bộ danh mục nắm giữ hiện tại cộng với tối đa 365 ngày hoạt động gần nhất từ báo cáo này."
+        sync: Đồng bộ
+        disconnect_confirm: Ngắt kết nối Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Nhập Query ID IBKR Flex của bạn
+        query_id_placeholder_existing: Để trống để giữ Query ID hiện tại
+        token_label: Token
+        token_placeholder_new: Nhập Token dịch vụ web IBKR Flex của bạn
+        token_placeholder_existing: Để trống để giữ Token hiện tại
+        save_configuration: Lưu cấu hình
+        update_configuration: Cập nhật cấu hình
+        status_configured_prefix: "%{summary}. Vào tab"
+        accounts_tab: Tài khoản
+        status_configured_suffix: để quản lý các tài khoản đã phát hiện.
+        not_configured: Chưa cấu hình.

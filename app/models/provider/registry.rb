@@ -18,6 +18,20 @@ class Provider::Registry
       raise Error.new("Provider '#{name}' not found in registry")
     end
 
+    # Resolves the LLM provider for batch/PDF flows, honoring Setting.llm_provider
+    # the way chat does: prefer the configured provider, but fall back to whichever
+    # one actually has credentials so an install that swaps providers (or has only
+    # one configured) keeps working. Returns nil when neither is configured —
+    # callers guard on that.
+    def preferred_llm_provider
+      order = Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
+      order.each do |name|
+        provider = get_provider(name)
+        return provider if provider
+      end
+      nil
+    end
+
     def plaid_provider_for_region(region)
       region.to_sym == :us ? plaid_us : plaid_eu
     end
@@ -76,6 +90,19 @@ class Provider::Registry
         end
 
         Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      end
+
+      def anthropic
+        access_token = ENV["ANTHROPIC_ACCESS_TOKEN"].presence ||
+                       ENV["ANTHROPIC_API_KEY"].presence ||
+                       Setting.anthropic_access_token
+
+        return nil unless access_token.present?
+
+        base_url = ENV["ANTHROPIC_BASE_URL"].presence || Setting.anthropic_base_url
+        model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
+
+        Provider::Anthropic.new(access_token, base_url: base_url, model: model)
       end
 
       def yahoo_finance
@@ -147,9 +174,9 @@ class Provider::Registry
       when :securities
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public]
       when :llm
-        %i[openai]
+        %i[openai anthropic]
       else
-        %i[plaid_us plaid_eu github openai]
+        %i[plaid_us plaid_eu github openai anthropic]
       end
     end
 end
