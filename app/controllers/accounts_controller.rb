@@ -285,17 +285,25 @@ class AccountsController < ApplicationController
       @simplefin_show_relink_map = {}
       @simplefin_duplicate_only_map = {}
 
+      simplefin_item_ids = @simplefin_items.map(&:id)
+      unlinked_counts_by_item_id = if simplefin_item_ids.empty?
+        {}
+      else
+        SimplefinAccount
+          .where(simplefin_item_id: simplefin_item_ids)
+          .left_joins(:account, :account_provider)
+          .where(accounts: { id: nil }, account_providers: { id: nil })
+          .group(:simplefin_item_id)
+          .count
+      end
+
       @simplefin_items.each do |item|
         latest_sync = item.syncs.ordered.first
         stats = latest_sync&.sync_stats || {}
         @simplefin_sync_stats_map[item.id] = stats
         @simplefin_has_unlinked_map[item.id] = item.family.accounts.listable_manual.exists?
 
-        # Count unlinked accounts
-        count = item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
-          .count
+        count = unlinked_counts_by_item_id[item.id].to_i
         @simplefin_unlinked_count_map[item.id] = count
 
         # CTA visibility
