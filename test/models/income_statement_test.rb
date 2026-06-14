@@ -20,6 +20,14 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: @credit_card_account, amount: 400, category: @groceries_category)
   end
 
+  test "categories preload parent associations" do
+    income_statement = IncomeStatement.new(@family)
+
+    categories = income_statement.send(:categories)
+
+    assert categories.all? { |category| category.association(:parent).loaded? || category.parent_id.nil? }
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
