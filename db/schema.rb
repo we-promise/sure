@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -53,6 +53,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
     t.string "checksum", limit: 64, null: false
+    t.string "content_sha256"
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
     t.string "institution_name_hint", limit: 200
@@ -69,7 +70,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
     t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
@@ -118,7 +118,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.text "notes"
     t.uuid "owner_id"
     t.datetime "disabled_at"
-    t.integer "account_providers_count", default: 0, null: false
+    t.decimal "balance_adjustment", precision: 19, scale: 4, default: "0.0", null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -301,9 +301,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.boolean "pending_account_setup", default: false, null: false
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "api_key"
@@ -886,9 +886,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4
     t.jsonb "institution_metadata"
-    t.jsonb "raw_holdings_payload", default: []
-    t.jsonb "raw_activities_payload", default: {}
-    t.jsonb "raw_cash_report_payload", default: []
+    t.jsonb "raw_holdings_payload", default: [], null: false
+    t.jsonb "raw_activities_payload", default: {}, null: false
+    t.jsonb "raw_cash_report_payload", default: [], null: false
     t.date "report_date"
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
@@ -902,8 +902,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
   create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
     t.boolean "pending_account_setup", default: false, null: false
     t.jsonb "raw_payload"
     t.string "query_id"
@@ -1001,10 +1001,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.index ["id", "family_id"], name: "idx_import_sessions_on_id_family", unique: true
     t.check_constraint "client_session_id IS NULL OR btrim(client_session_id::text) <> ''::text", name: "chk_import_sessions_client_session_id_present"
     t.check_constraint "expected_chunks IS NULL OR expected_chunks > 0", name: "chk_import_sessions_expected_chunks_positive"
-    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_import_sessions_error_details_object"
     t.check_constraint "import_type::text = 'SureImport'::text", name: "chk_import_sessions_import_type"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'importing'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_import_sessions_status"
+    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_import_sessions_error_details_object"
     t.check_constraint "jsonb_typeof(summary) = 'object'::text", name: "chk_import_sessions_summary_object"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'importing'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_import_sessions_status"
   end
 
   create_table "import_source_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1022,10 +1022,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.index ["import_session_id"], name: "index_import_source_mappings_on_import_session_id"
     t.index ["target_type", "target_id"], name: "idx_import_source_mappings_on_target"
     t.check_constraint "btrim(source_id::text) <> ''::text", name: "chk_import_source_mappings_source_id_present"
-    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
     t.check_constraint "btrim(source_type::text) <> ''::text", name: "chk_import_source_mappings_source_type_present"
-    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
     t.check_constraint "btrim(target_type::text) <> ''::text", name: "chk_import_source_mappings_target_type_present"
+    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
+    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
   end
 
   create_table "imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1064,15 +1064,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
-    t.uuid "account_statement_id"
-    t.jsonb "expected_record_counts", default: {}, null: false
-    t.jsonb "readback_verification", default: {}, null: false
     t.uuid "import_session_id"
     t.integer "sequence"
     t.string "client_chunk_id", limit: 255
     t.string "checksum", limit: 64
     t.jsonb "summary", default: {}, null: false
     t.jsonb "error_details", default: {}, null: false
+    t.uuid "account_statement_id"
+    t.jsonb "expected_record_counts", default: {}, null: false
+    t.jsonb "readback_verification", default: {}, null: false
     t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
@@ -1080,9 +1080,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.index ["import_session_id"], name: "index_imports_on_import_session_id"
     t.check_constraint "checksum IS NULL OR length(checksum::text) = 64", name: "chk_imports_checksum_sha256_length"
     t.check_constraint "client_chunk_id IS NULL OR btrim(client_chunk_id::text) <> ''::text", name: "chk_imports_client_chunk_id_present"
-    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_imports_error_details_object"
     t.check_constraint "import_session_id IS NULL OR checksum IS NOT NULL", name: "chk_imports_session_checksum_present"
     t.check_constraint "import_session_id IS NULL OR sequence IS NOT NULL", name: "chk_imports_session_sequence_present"
+    t.check_constraint "jsonb_typeof(error_details) = 'object'::text", name: "chk_imports_error_details_object"
     t.check_constraint "jsonb_typeof(summary) = 'object'::text", name: "chk_imports_summary_object"
     t.check_constraint "sequence IS NULL OR sequence > 0", name: "chk_imports_session_sequence_positive"
   end
