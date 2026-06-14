@@ -108,6 +108,10 @@ jobs:
             fi
           else
             BASE_CONFIG+=$'\n'"type=raw,value=latest"
+            if [ -f ".sure-version" ]; then
+              VERSION=$(tr -d '[:space:]' < ".sure-version")
+              [ -n "$VERSION" ] && BASE_CONFIG+=$'\n'"type=raw,value=${VERSION}"
+            fi
           fi
           {
             echo 'TAGS_SPEC<<EOF'
@@ -250,6 +254,54 @@ jobs:
             sleep ${delay}
           done
 
+
+  bump-version:
+    name: Bump version for next build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    needs: [merge]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump pre-release version
+        run: |
+          set -euo pipefail
+          VERSION_FILE=".sure-version"
+          CURRENT_VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
+          echo "Current version: $CURRENT_VERSION"
+
+          if [[ "$CURRENT_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)\.([0-9]+)$ ]]; then
+            NEW_VERSION="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}.$((${BASH_REMATCH[3]} + 1))"
+          elif [[ "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            NEW_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((${BASH_REMATCH[3]} + 1))"
+          else
+            echo "Cannot parse version '$CURRENT_VERSION' — skipping bump"
+            exit 0
+          fi
+
+          echo "$NEW_VERSION" > "$VERSION_FILE"
+          echo "Bumped: $CURRENT_VERSION -> $NEW_VERSION"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .sure-version
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore: bump version to $(cat .sure-version) [skip ci]"
+          git push
 
   helm:
     name: Package Helm chart
