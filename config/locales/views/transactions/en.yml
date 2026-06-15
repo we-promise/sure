@@ -49,6 +49,8 @@ en:
       transfer: Transfer
     create:
       created: Transaction created
+      funding_account_not_found: Funding account not found
+      funding_account_same_as_account: Funding account cannot be the same as the transaction account
     update:
       updated: Transaction updated
     new:

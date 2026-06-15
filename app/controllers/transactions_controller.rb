@@ -100,9 +100,13 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(account)
 
-    if params.dig(:entry, :funding_account_id).present?
-      funding_account = Current.user.accessible_accounts.find(params.dig(:entry, :funding_account_id))
-      return create_channel_payment(account, funding_account)
+    if funding_account_id_param.present?
+      if funding_account_id_param == params.dig(:entry, :account_id)
+        flash[:alert] = t(".funding_account_same_as_account")
+        return redirect_back_or_to new_transaction_path
+      end
+
+      return create_channel_payment(account, Current.family)
     end
 
     @entry = account.entries.new(entry_params)
@@ -492,6 +496,10 @@ class TransactionsController < ApplicationController
       Array(params[:tag_ids]).reject(&:blank?)
     end
 
+    def funding_account_id_param
+      params.dig(:entry, :funding_account_id).presence
+    end
+
     def set_entry_for_tags
       set_entry
     end
@@ -673,7 +681,9 @@ class TransactionsController < ApplicationController
       [ qty, price ]
     end
 
-    def create_channel_payment(channel_account, funding_account)
+    def create_channel_payment(channel_account, family)
+      funding_account = family.accounts.writable_by(Current.user).find(funding_account_id_param)
+
       amount = entry_params[:amount]
       date = entry_params[:date] || Date.current
       currency = entry_params[:currency] || Current.family.currency
@@ -737,7 +747,7 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(channel_entry.account)) }
       end
     rescue ActiveRecord::RecordNotFound
-      flash[:alert] = "Funding account not found"
-      redirect_back_or_to root_path
+      flash[:alert] = t(".funding_account_not_found")
+      redirect_back_or_to new_transaction_path
     end
 end

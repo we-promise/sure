@@ -685,6 +685,78 @@ end
     assert_nil created_entry.transaction.extra["exchange_rate"]
   end
 
+  test "creates channel payment with funding account" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Channel payment",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_redirected_to account_url(channel_account)
+    assert_equal "Transaction created", flash[:notice]
+  end
+
+  test "rejects channel payment when funding account is the same as the transaction account" do
+    account = accounts(:depository)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          funding_account_id: account.id,
+          name: "Self funding",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "Funding account cannot be the same as the transaction account", flash[:alert]
+  end
+
+  test "rejects channel payment when funding account is not writable by the user" do
+    sign_in users(:family_member)
+
+    # family_member has full_control on :depository but only read_only on :credit_card
+    channel_account = accounts(:depository)
+    funding_account = accounts(:credit_card)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Unwritable funding",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "Funding account not found", flash[:alert]
+  end
+
   private
     def capture_sql_queries
       queries = []

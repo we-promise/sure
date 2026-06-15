@@ -49,6 +49,8 @@ zh-CN:
       transfer: 转账
     create:
       created: 交易已创建
+      funding_account_not_found: 未找到资金账户
+      funding_account_same_as_account: 资金账户不能与交易账户相同
     update:
       updated: 交易已更新
     new:
