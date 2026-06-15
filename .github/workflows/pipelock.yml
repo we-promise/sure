@@ -30,6 +30,6 @@ jobs:
             docs/hosting/ai.md
             app/models/provider/binance.rb
             workers/preview/package-lock.json
-            .github/workflows/ci.yml
-            .github/workflows/llm-evals.yml
+            # Preview Dockerfile uses local dev credentials (rails/rails) that are
+            # not real secrets; Dockerfile format does not support inline # pipelock:ignore
             Dockerfile.preview
