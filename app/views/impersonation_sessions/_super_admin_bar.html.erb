@@ -33,12 +33,12 @@
       </div>
     <% else %>
       <% if bootstrap_workspace_operator %>
-        <%= form_with model: ImpersonationSession.new, class: "flex items-center space-x-2 mr-4" do |f| %>
+        <%= form_with model: ImpersonationSession.new, class: "flex items-center space-x-2 mr-4", data: { controller: "auto-submit-form", turbo: false } do |f| %>
           <%= f.label :impersonated_id, t(".company_label"), class: "text-sm text-white" %>
           <%= f.select :impersonated_id,
             options_for_select(workspace_options),
             { prompt: t(".company_prompt") },
-            { class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono min-w-72", disabled: workspace_options.empty? } %>
+            { class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono min-w-72", disabled: workspace_options.empty?, data: { auto_submit_form_target: "auto" } } %>
           <%= f.submit t(".switch_company"), class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500", disabled: workspace_options.empty? %>
         <% end %>
       <% else %>
