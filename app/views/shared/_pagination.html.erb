@@ -1,8 +1,8 @@
 <%# locals: (pagy:) %>
 
-<nav class="flex w-full items-center justify-between">
+<nav class="flex w-full items-center gap-3">
   <% unless pagy.pages <= 1 %>
-    <div class="flex items-center gap-1 mr-3">
+    <div class="flex grow items-center gap-1">
       <div>
         <% if pagy.prev %>
           <%= link_to pagy_url_for(pagy, pagy.prev),
@@ -16,7 +16,7 @@
           </div>
         <% end %>
       </div>
-      <div class="rounded-xl p-1 bg-container-inset">
+      <div class="grow rounded-xl p-1 bg-container-inset flex items-center justify-between">
         <% pagy.series.each do |series_item| %>
           <% if series_item.is_a?(Integer) %>
             <%= link_to pagy_url_for(pagy, series_item),
@@ -50,7 +50,7 @@
       </div>
     </div>
   <% end %>
-  <div class="flex items-center gap-4">
+  <div class="flex items-center gap-4 shrink-0">
     <% per_page_selected = pagy.limit > 100 ? "all" : pagy.limit.to_s %>
     <%= select_tag :per_page,
                    options_for_select([["10", "10"], ["20", "20"], ["30", "30"], ["50", "50"], ["100", "100"], [t(".all"), "all"]], per_page_selected),
