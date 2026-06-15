@@ -297,6 +297,29 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal "USD", top.first.amount.currency.iso_code  # Family currency
   end
 
+  test "allocation aggregates same security across multiple accounts" do
+    account1 = create_investment_account(balance: 1500, currency: "USD")
+    account2 = create_investment_account(balance: 1000, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    # Same security in two accounts
+    Holding.create!(
+      account: account1, security: security, date: Date.current,
+      qty: 10, price: 150, amount: 1500, currency: "USD"
+    )
+    Holding.create!(
+      account: account2, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    allocation = @statement.allocation
+    assert_equal 1, allocation.size
+    assert_equal "AAPL", allocation.first.ticker
+    assert_equal 2500, allocation.first.amount.amount  # Combined value
+    assert_equal 100.0, allocation.first.weight
+    assert_in_delta 100.0, allocation.sum(&:weight), 0.01
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(

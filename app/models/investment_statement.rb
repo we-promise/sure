@@ -291,28 +291,31 @@ class InvestmentStatement
     end
 
     def aggregated_holdings
-      grouped = current_holdings.to_a.group_by(&:security_id)
+      @aggregated_holdings ||= begin
+        grouped = current_holdings.to_a.group_by(&:security_id)
 
-      per_security = grouped.map do |_sid, holdings|
-        converted = holdings.map { |h| [ h, convert_to_family_currency(h.amount, h.currency) ] }
-        total_value = converted.sum { |_, v| v }
-        best = converted.max_by { |_, v| v }.first
-        [ best.security, total_value, best.trend ]
-      end
-
-      total = per_security.sum { |_, v, _| v }
-      return [] if total.zero?
-
-      per_security
-        .sort_by { |_, v, _| -v }
-        .map do |security, value, trend|
-          HoldingAllocation.new(
-            security: security,
-            amount:   Money.new(value, family.currency),
-            weight:   (value / total * 100).round(2),
-            trend:    trend
-          )
+        per_security = grouped.map do |_sid, holdings|
+          converted = holdings.map { |h| [ h, convert_to_family_currency(h.amount, h.currency) ] }
+          total_value = converted.sum { |_, v| v }
+          # Use trend from the largest holding as a reasonable proxy for the aggregated position's performance
+          best = converted.max_by { |_, v| v }.first
+          [ best.security, total_value, best.trend ]
         end
+
+        total = per_security.sum { |_, v, _| v }
+        return [] if total.zero?
+
+        per_security
+          .sort_by { |_, v, _| -v }
+          .map do |security, value, trend|
+            HoldingAllocation.new(
+              security: security,
+              amount:   Money.new(value, family.currency),
+              weight:   (value / total * 100).round(2),
+              trend:    trend
+            )
+          end
+      end
     end
 
     def totals_query(trades_scope:)
