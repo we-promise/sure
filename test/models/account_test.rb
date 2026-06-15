@@ -99,6 +99,39 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal opening_date, opening_anchor.entry.date
   end
 
+  test "recording activity before the opening anchor backdates it and preserves the old balance as a reconciliation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Backdate Test",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.set_opening_anchor_balance(balance: 1000, date: 3.months.ago.to_date)
+
+    activity_date = 5.months.ago.to_date
+    account.entries.create!(
+      date: activity_date,
+      name: "Older transaction",
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    account.reload
+
+    # Previously-stated opening balance is preserved as a manual value update
+    assert_equal 1, account.valuations.reconciliation.count
+    reconciliation = account.valuations.reconciliation.first
+    assert_equal 3.months.ago.to_date, reconciliation.entry.date
+    assert_equal 1000, reconciliation.entry.amount
+
+    # Opening anchor is backdated before the activity at a zero balance
+    opening_anchor = account.valuations.opening_anchor.first
+    assert_equal activity_date - 1.day, opening_anchor.entry.date
+    assert_equal 0, opening_anchor.entry.amount
+  end
+
   test "accountable display names expose singular and group contexts" do
     assert_equal "Investment", Investment.singular_display_name
     assert_equal "Investments", Investment.display_name

@@ -28,6 +28,13 @@ class Entry < ApplicationRecord
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
+  # When activity is recorded on or before the account's opening anchor, slide
+  # the anchor earlier so the entry is included in the balance curve (the engine
+  # only calculates forward from the opening anchor). Valuations are skipped:
+  # anchors/reconciliations are not "activity" and skipping them also prevents
+  # the replacement-anchor creation below from re-triggering this callback.
+  after_create_commit :backdate_account_opening_anchor, unless: :valuation?
+
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }
@@ -509,6 +516,10 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def backdate_account_opening_anchor
+      account.backdate_opening_anchor_for_activity(date)
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

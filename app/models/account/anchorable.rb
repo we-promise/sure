@@ -19,6 +19,15 @@ module Account::Anchorable
     opening_balance_manager.opening_date
   end
 
+  # Called when activity (a transaction/trade) is recorded on or before the
+  # opening anchor. Backdates the anchor so the activity is included in the
+  # balance curve, preserving the prior opening balance as a manual value update.
+  def backdate_opening_anchor_for_activity(date)
+    result = opening_balance_manager.backdate_for_activity(date)
+    sync_later if result.changes_made?
+    result
+  end
+
   def opening_anchor_balance
     opening_balance_manager.opening_balance
   end

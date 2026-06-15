@@ -298,6 +298,73 @@ class Account::OpeningBalanceManagerTest < ActiveSupport::TestCase
     assert_nil @depository_account.valuations.opening_anchor.first
   end
 
+  test "backdate_for_activity preserves a non-zero opening balance as a reconciliation and starts a zero anchor earlier" do
+    manager = Account::OpeningBalanceManager.new(@depository_account)
+    original_date = 4.months.ago.to_date
+    manager.set_opening_balance(balance: 1000, date: original_date)
+
+    activity_date = original_date - 10.days
+
+    assert_difference -> { @depository_account.valuations.opening_anchor.count } => 0,
+                      -> { @depository_account.valuations.reconciliation.count } => 1,
+                      -> { @depository_account.valuations.count } => 1 do
+      result = manager.backdate_for_activity(activity_date)
+      assert result.success?
+      assert result.changes_made?
+    end
+
+    # Original opening balance is preserved as a manual value update on its date
+    reconciliation = @depository_account.valuations.reconciliation.first
+    assert_equal original_date, reconciliation.entry.date
+    assert_equal 1000, reconciliation.entry.amount
+
+    # New opening anchor sits before the activity at a zero ("unknown") balance
+    opening_anchor = @depository_account.valuations.opening_anchor.first
+    assert_equal activity_date - 1.day, opening_anchor.entry.date
+    assert_equal 0, opening_anchor.entry.amount
+  end
+
+  test "backdate_for_activity slides a zero opening anchor earlier without adding a reconciliation" do
+    manager = Account::OpeningBalanceManager.new(@depository_account)
+    original_date = 2.months.ago.to_date
+    manager.set_opening_balance(balance: 0, date: original_date)
+    original_anchor_id = @depository_account.valuations.opening_anchor.first.id
+
+    activity_date = original_date - 5.days
+
+    assert_no_difference -> { @depository_account.valuations.count } do
+      result = manager.backdate_for_activity(activity_date)
+      assert result.success?
+      assert result.changes_made?
+    end
+
+    opening_anchor = @depository_account.valuations.opening_anchor.first
+    assert_equal original_anchor_id, opening_anchor.id # same record, just moved
+    assert_equal activity_date - 1.day, opening_anchor.entry.date
+    assert_equal 0, @depository_account.valuations.reconciliation.count
+  end
+
+  test "backdate_for_activity is a no-op when activity is after the opening anchor" do
+    manager = Account::OpeningBalanceManager.new(@depository_account)
+    manager.set_opening_balance(balance: 1000, date: 4.months.ago.to_date)
+
+    assert_no_difference -> { @depository_account.valuations.count } do
+      result = manager.backdate_for_activity(1.month.ago.to_date)
+      assert result.success?
+      assert_not result.changes_made?
+    end
+  end
+
+  test "backdate_for_activity is a no-op when there is no opening anchor" do
+    manager = Account::OpeningBalanceManager.new(@depository_account)
+
+    assert_no_difference -> { @depository_account.valuations.count } do
+      result = manager.backdate_for_activity(1.year.ago.to_date)
+      assert result.success?
+      assert_not result.changes_made?
+    end
+  end
+
   test "when no changes made, returns success with no changes made" do
     # First create an opening anchor
     manager = Account::OpeningBalanceManager.new(@depository_account)
