@@ -39,6 +39,7 @@ flutter:
   assets:
     - assets/icon/
     - assets/images/
+    - assets/icons/lucide/
 
 flutter_launcher_icons:
   android: true

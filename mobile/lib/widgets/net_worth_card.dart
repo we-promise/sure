@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
 import 'money_text.dart';
+import 'sure_icon.dart';
 
 enum AccountFilter { all, assets, liabilities }
 
@@ -200,10 +201,12 @@ class NetWorthCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    title == 'Assets' ? Icons.trending_up : Icons.trending_down,
+                  SureIcon(
+                    title == 'Assets'
+                        ? SureIcons.trendingUp
+                        : SureIcons.trendingDown,
                     color: color,
-                    size: 20,
+                    size: SureIconSize.md,
                   ),
                   const SizedBox(width: 8),
                   Text(
