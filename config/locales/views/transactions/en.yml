@@ -51,6 +51,9 @@ en:
       created: Transaction created
       funding_account_not_found: Funding account not found
       funding_account_same_as_account: Funding account cannot be the same as the transaction account
+      refund_missing_original: A refund must reference the original channel payment
+      refund_original_not_found: Original transaction not found
+      refund_original_not_channel_payment: Original transaction must be a channel payment
     update:
       updated: Transaction updated
     new:

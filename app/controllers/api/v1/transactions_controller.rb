@@ -460,7 +460,54 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
     end
 
+    # Extract channel_kind from the extra payload (defaults to "payment").
+    # Old channel payments without channel_kind are treated as payments.
+    def channel_kind_param
+      extra = transaction_params[:extra]
+      return "payment" unless extra.respond_to?(:[])
+      (extra[:channel_kind] || extra["channel_kind"]).presence || "payment"
+    end
+
+    def refund_of_transaction_id_param
+      extra = transaction_params[:extra]
+      return nil unless extra.respond_to?(:[])
+      (extra[:refund_of_transaction_id] || extra["refund_of_transaction_id"]).presence
+    end
+
+    def channel_refund_requested?
+      channel_kind_param == "refund"
+    end
+
+    # Enforces the refund linkage contract. Returns an error message string when
+    # the request is invalid, or nil when it is valid.
+    #   1. refund must carry refund_of_transaction_id
+    #   2. the referenced transaction must exist within the current family
+    #   3. the referenced transaction must itself be a channel payment (not a refund)
+    def channel_refund_error(family)
+      refund_id = refund_of_transaction_id_param
+      return "refund_of_transaction_id is required for refunds" if refund_id.blank?
+
+      original = family.transactions.find_by(id: refund_id)
+      return "Original transaction not found" if original.nil?
+
+      original_extra = original.extra.is_a?(Hash) ? original.extra : {}
+      is_channel_payment = original_extra["channel_payment"].to_s == "true" &&
+                           original_extra["channel_kind"].to_s != "refund"
+      return "Original transaction must be a channel payment" unless is_channel_payment
+
+      nil
+    end
+
     def create_channel_payment(channel_account, family)
+      if channel_refund_requested? && (refund_error = channel_refund_error(family))
+        render json: {
+          error: "validation_failed",
+          message: refund_error,
+          errors: [ refund_error ]
+        }, status: :unprocessable_entity
+        return
+      end
+
       funding_account = family.accounts.writable_by(current_resource_owner).find(funding_account_id)
 
       channel_entry = nil
@@ -483,7 +530,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
             tag_ids: transaction_params[:tag_ids] || [],
             extra: (transaction_params[:extra] || {}).merge(
               "channel_payment" => true,
-              "funding_account_id" => funding_account.id
+              "funding_account_id" => funding_account.id,
+              "channel_kind" => channel_kind_param
             )
           }
         )

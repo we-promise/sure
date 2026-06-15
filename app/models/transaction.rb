@@ -124,6 +124,8 @@ class Transaction < ApplicationRecord
 
   scope :channel_payment, -> { where("transactions.extra ->> 'channel_payment' = 'true'") }
 
+  scope :channel_refund, -> { where("transactions.extra ->> 'channel_kind' = 'refund'") }
+
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
   def self.pending_providers_sql(table_alias = "t")

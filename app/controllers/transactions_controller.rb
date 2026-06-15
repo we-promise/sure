@@ -106,6 +106,11 @@ class TransactionsController < ApplicationController
         return redirect_back_or_to new_transaction_path
       end
 
+      if channel_refund_requested? && (refund_error = channel_refund_error)
+        flash[:alert] = refund_error
+        return redirect_back_or_to new_transaction_path
+      end
+
       return create_channel_payment(account, Current.family)
     end
 
@@ -500,6 +505,38 @@ class TransactionsController < ApplicationController
       params.dig(:entry, :funding_account_id).presence
     end
 
+    def channel_kind_param
+      params.dig(:entry, :channel_kind).presence || "payment"
+    end
+
+    def refund_of_transaction_id_param
+      params.dig(:entry, :refund_of_transaction_id).presence
+    end
+
+    def channel_refund_requested?
+      channel_kind_param == "refund"
+    end
+
+    # Enforces the refund linkage contract for the HTML path. Returns an i18n'd
+    # error message when invalid, or nil when valid. Mirrors the API contract:
+    #   1. refund must carry refund_of_transaction_id
+    #   2. the referenced transaction must exist within the current family
+    #   3. the referenced transaction must itself be a channel payment (not a refund)
+    def channel_refund_error
+      refund_id = refund_of_transaction_id_param
+      return t(".refund_missing_original") if refund_id.blank?
+
+      original = Current.family.transactions.find_by(id: refund_id)
+      return t(".refund_original_not_found") if original.nil?
+
+      original_extra = original.extra.is_a?(Hash) ? original.extra : {}
+      is_channel_payment = original_extra["channel_payment"].to_s == "true" &&
+                           original_extra["channel_kind"].to_s != "refund"
+      return t(".refund_original_not_channel_payment") unless is_channel_payment
+
+      nil
+    end
+
     def set_entry_for_tags
       set_entry
     end
@@ -691,6 +728,13 @@ class TransactionsController < ApplicationController
       notes = entry_params[:notes]
       ea = entry_params[:entryable_attributes] || {}
 
+      channel_extra = (ea[:extra] || {}).merge(
+        "channel_payment" => true,
+        "funding_account_id" => funding_account.id,
+        "channel_kind" => channel_kind_param
+      )
+      channel_extra["refund_of_transaction_id"] = refund_of_transaction_id_param if channel_refund_requested?
+
       channel_entry = nil
       funding_entry = nil
 
@@ -707,10 +751,7 @@ class TransactionsController < ApplicationController
             category_id: ea[:category_id],
             merchant_id: ea[:merchant_id],
             tag_ids: ea[:tag_ids] || [],
-            extra: (ea[:extra] || {}).merge(
-              "channel_payment" => true,
-              "funding_account_id" => funding_account.id
-            )
+            extra: channel_extra
           }
         )
 

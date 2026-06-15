@@ -757,6 +757,111 @@ end
     assert_equal "Funding account not found", flash[:alert]
   end
 
+  test "creates channel refund linked to an original channel payment" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    # Create an original channel payment first
+    post transactions_url, params: {
+      entry: {
+        account_id: channel_account.id,
+        funding_account_id: funding_account.id,
+        name: "Original payment",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: "Transaction",
+        entryable_attributes: {}
+      }
+    }
+    original = channel_account.transactions.order(:created_at).last
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 40,
+          nature: "inflow",
+          channel_kind: "refund",
+          refund_of_transaction_id: original.id,
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_redirected_to account_url(channel_account)
+    refund = channel_account.transactions.order(:created_at).last
+
+    # Channel-side: inflow, excluded, refund metadata
+    assert refund.entry.amount.negative?, "refund channel entry should be inflow"
+    assert refund.entry.excluded?, "refund channel entry should be excluded"
+    assert_equal "true", refund.extra["channel_payment"].to_s
+    assert_equal "refund", refund.extra["channel_kind"]
+    assert_equal original.id, refund.extra["refund_of_transaction_id"]
+
+    # Funding-side: matching inflow auto record
+    funding_tx = Transaction.find_by(channel_record_parent_id: refund.id)
+    assert_not_nil funding_tx, "funding-side auto record should exist"
+    assert funding_tx.entry.amount.negative?, "funding entry should be inflow"
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+  end
+
+  test "rejects channel refund without original transaction id" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Bad refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 40,
+          nature: "inflow",
+          channel_kind: "refund",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "A refund must reference the original channel payment", flash[:alert]
+  end
+
+  test "rejects channel refund when original is not a channel payment" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+    plain_transaction = transactions(:one)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Bad refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 40,
+          nature: "inflow",
+          channel_kind: "refund",
+          refund_of_transaction_id: plain_transaction.id,
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "Original transaction must be a channel payment", flash[:alert]
+  end
+
   private
     def capture_sql_queries
       queries = []
