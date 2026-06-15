@@ -150,13 +150,23 @@
 
                     <%# Channel payment indicators %>
                     <% if transaction.extra&.dig("channel_payment") %>
-                      <%= render DS::Pill.new(
-                        label: t("transactions.transaction.channel"),
-                        tone: :accent,
-                        marker: false,
-                        icon: "link",
-                        title: t("transactions.transaction.channel_tooltip")
-                      ) %>
+                      <% if transaction.extra&.dig("channel_kind") == "refund" %>
+                        <%= render DS::Pill.new(
+                          label: t("transactions.transaction.refund"),
+                          tone: :success,
+                          marker: false,
+                          icon: "rotate-ccw",
+                          title: t("transactions.transaction.refund_tooltip")
+                        ) %>
+                      <% else %>
+                        <%= render DS::Pill.new(
+                          label: t("transactions.transaction.channel"),
+                          tone: :accent,
+                          marker: false,
+                          icon: "link",
+                          title: t("transactions.transaction.channel_tooltip")
+                        ) %>
+                      <% end %>
                     <% end %>
                     <% if transaction.channel_record_parent_id.present? %>
                       <%= render DS::Pill.new(

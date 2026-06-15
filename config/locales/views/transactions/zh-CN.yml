@@ -37,6 +37,8 @@ zh-CN:
       description_placeholder: 描述交易
       expense: 支出
       funding_account_label: 资金来源
+      funding_account_help: 选择资金账户后，系统会自动在该账户生成一条配对交易，当前渠道交易将不计入余额。
+      funding_account_refund_label: 退款到账账户
       income: 收入
       merchant_label: 商户
       none: （无）
@@ -74,6 +76,9 @@ zh-CN:
       date_label: 日期
       delete: 删除
       delete_subtitle: 这将永久删除该交易，影响您的历史余额，并且无法撤销。
+      delete_channel_cascade_body:
+        one: 此交易关联了 1 条自动生成的资金记录，删除将一并移除它。此操作无法撤销。
+        other: 此交易关联了 %{count} 条自动生成的资金记录，删除将一并移除它们。此操作无法撤销。
       delete_title: 删除交易
       details: 详情
       attachments: 附件
@@ -151,6 +156,8 @@ zh-CN:
       split_child_tooltip: 属于某条拆分交易的一部分
       channel: 渠道
       channel_tooltip: 该交易记录在支付渠道中，不参与余额计算
+      refund: 退款
+      refund_tooltip: 渠道退款——不计入余额，并关联原支付交易
       auto_generated: 自动
       auto_generated_tooltip: 自动生成的资金来源侧交易
     transfer_match:

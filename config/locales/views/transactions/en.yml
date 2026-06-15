@@ -37,6 +37,8 @@ en:
       description_placeholder: Describe transaction
       expense: Expense
       funding_account_label: Funding source
+      funding_account_help: After you choose a funding account, the system automatically creates a matching transaction in that account, and this channel transaction is excluded from its balance.
+      funding_account_refund_label: Refund destination account
       income: Income
       merchant_label: Merchant
       none: (none)
@@ -75,6 +77,11 @@ en:
       delete: Delete
       delete_subtitle: This permanently deletes the transaction, affects your historical
         balances, and cannot be undone.
+      delete_channel_cascade_body:
+        one: This transaction is linked to 1 automatically generated funding record;
+          deleting it will remove that record as well. This is not reversible.
+        other: This transaction is linked to %{count} automatically generated funding
+          records; deleting it will remove them as well. This is not reversible.
       delete_title: Delete transaction
       details: Details
       attachments: Attachments
@@ -161,6 +168,8 @@ en:
       split_child_tooltip: Part of a split transaction
       channel: Channel
       channel_tooltip: Transaction created in a payment channel and excluded from balance
+      refund: Refund
+      refund_tooltip: Channel refund — excluded from balance, linked to the original payment
       auto_generated: Auto
       auto_generated_tooltip: Automatically generated funding-side transaction
     merge_duplicate:
