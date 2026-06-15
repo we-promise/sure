@@ -10,11 +10,12 @@
          <% end %>
        <% end %>>
     <%# Manual entry option %>
-    <%= link_to path, class: "flex items-center gap-4 w-full text-center text-primary focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-secondary px-2 hover:bg-surface rounded-lg p-2" do %>
+    <%= link_to path, class: "group flex items-center gap-4 w-full text-center text-primary focus:outline-hidden focus:bg-surface-hover border border-transparent focus:border focus:border-secondary px-2 hover:bg-surface-hover rounded-lg p-2" do %>
       <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
         <%= icon("keyboard") %>
       </span>
       <%= t("accounts.new.method_selector.manual_entry") %>
+      <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
     <% end %>
 
     <%# Dynamic provider links - only admins can create provider connections %>
@@ -24,7 +25,7 @@
       <% is_lunchflow = config[:key] == "lunchflow" %>
 
       <%= link_to link_path,
-                  class: "text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface border border-transparent focus:border focus:border-primary px-2 hover:bg-surface rounded-lg p-2",
+                  class: "group text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface-hover border border-transparent focus:border focus:border-primary px-2 hover:bg-surface-hover rounded-lg p-2",
                   data: is_lunchflow ? {
                     turbo_frame: "modal",
                     turbo_action: "advance",
@@ -43,6 +44,8 @@
         <% else %>
           <%= t("accounts.new.method_selector.link_with_provider", provider: config[:name]) %>
         <% end %>
+
+        <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
       <% end %>
     <% end %>
     <% end %>

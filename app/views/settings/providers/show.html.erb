@@ -12,15 +12,14 @@
       <p class="text-secondary"><%= t("settings.providers.bank_sync.lede") %></p>
       <% if Current.user.admin? && (@connected.any? || @needs_attention.any?) %>
         <% sync_all_disabled = Current.family.last_sync_all_attempted_at.present? && Current.family.last_sync_all_attempted_at > 30.seconds.ago %>
-        <%= render DS::Link.new(
+        <%= render DS::Button.new(
               text: t("settings.providers.sync_all"),
               icon: "refresh-cw",
               variant: "outline",
               href: sync_all_settings_providers_path,
               method: :post,
               title: sync_all_disabled ? t("settings.providers.sync_all_recently") : nil,
-              aria: { disabled: sync_all_disabled.to_s },
-              class: sync_all_disabled ? "opacity-50 pointer-events-none" : nil
+              disabled: sync_all_disabled
             ) %>
       <% end %>
     </div>
@@ -80,7 +79,7 @@
                   name:         entry[:title],
                   tagline:      t("settings.providers.taglines.#{entry[:provider_key]}", default: nil),
                   region:       meta[:region],
-                  kind:         meta[:kind],
+                  kinds:        meta[:kinds],
                   tier:         meta[:tier],
                   maturity:     meta[:maturity] || :stable,
                   logo_bg:      meta[:logo_bg],

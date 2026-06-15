@@ -571,6 +571,15 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          MerchantImportResult: {
+            type: :object,
+            required: %w[imported skipped merchants],
+            properties: {
+              imported: { type: :integer, description: 'Number of merchants successfully created' },
+              skipped: { type: :integer, description: 'Number of rows skipped (duplicates or invalid)' },
+              merchants: { type: :array, items: { '$ref' => '#/components/schemas/MerchantDetail' } }
+            }
+          },
           Tag: {
             type: :object,
             required: %w[id name color],
@@ -922,6 +931,27 @@ RSpec.configure do |config|
               message: { type: :string }
             }
           },
+          TransactionResponse: {
+            type: :object,
+            required: %w[id date amount currency name entryable_type account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              name: { type: :string },
+              entryable_type: { type: :string },
+              account: {
+                type: :object,
+                required: %w[id name account_type],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  account_type: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
           ImportConfiguration: {
             type: :object,
             properties: {
@@ -1170,6 +1200,68 @@ RSpec.configure do |config|
             required: %w[data],
             properties: {
               data: { '$ref' => '#/components/schemas/ImportDetail' }
+            }
+          },
+          ImportSessionChunk: {
+            type: :object,
+            required: %w[id sequence status rows_count summary created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              sequence: { type: :integer, minimum: 1 },
+              client_chunk_id: { type: :string, nullable: true },
+              status: { type: :string, enum: %w[pending importing complete failed] },
+              rows_count: { type: :integer, minimum: 0 },
+              summary: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  additionalProperties: { type: :integer }
+                }
+              },
+              error: {
+                type: :object,
+                nullable: true,
+                additionalProperties: true
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ImportSession: {
+            type: :object,
+            required: %w[id type status chunks_count summary chunks created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string, enum: %w[SureImport] },
+              status: { type: :string, enum: %w[pending importing complete failed] },
+              client_session_id: { type: :string, nullable: true },
+              expected_chunks: { type: :integer, nullable: true, minimum: 1 },
+              chunks_count: { type: :integer, minimum: 0 },
+              summary: {
+                type: :object,
+                additionalProperties: {
+                  type: :object,
+                  additionalProperties: { type: :integer }
+                }
+              },
+              error: {
+                type: :object,
+                nullable: true,
+                additionalProperties: true
+              },
+              chunks: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ImportSessionChunk' }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ImportSessionResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/ImportSession' }
             }
           },
           ProviderConnectionInstitution: {

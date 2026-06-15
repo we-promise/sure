@@ -38,7 +38,8 @@ class Provider::Eodhd < Provider
     "XSTO" => "ST",
     "XKRX" => "KS",
     "XBOM" => "BSE",
-    "XNSE" => "NSE"
+    "XNSE" => "NSE",
+    "EUFUND" => "EUFUND"
   }.freeze
 
   EODHD_EXCHANGE_TO_MIC = {
@@ -66,7 +67,8 @@ class Provider::Eodhd < Provider
     "AU" => "AUD", "TSE" => "JPY", "MI" => "EUR", "MC" => "EUR",
     "OL" => "NOK", "HE" => "EUR", "CO" => "DKK",
     "ST" => "SEK", "KS" => "KRW", "BSE" => "INR",
-    "NSE" => "INR"
+    "NSE" => "INR",
+    "EUFUND" => "EUR"
   }.freeze
 
   def initialize(api_key)
@@ -131,7 +133,7 @@ class Provider::Eodhd < Provider
 
       parsed.first(25).map do |security|
         eodhd_exchange = security.dig("Exchange")
-        mic = EODHD_EXCHANGE_TO_MIC[eodhd_exchange]
+        mic = EODHD_EXCHANGE_TO_MIC[eodhd_exchange] || eodhd_exchange
         country = EODHD_COUNTRY_TO_CODE[security.dig("Country")]
         code = security.dig("Code")
         currency = security.dig("Currency")

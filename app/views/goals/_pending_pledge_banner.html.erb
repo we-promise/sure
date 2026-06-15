@@ -1,0 +1,41 @@
+<%
+  account = pledge.account
+  amount_money = pledge.amount_money
+  days_left = pledge.days_left
+  body_key = pledge.kind_transfer? ? "goals.show.pending_pledge.body_transfer" : "goals.show.pending_pledge.body_manual"
+  title = t("goals.show.pending_pledge.title", amount: amount_money.format(precision: 0), account: account.name, count: days_left)
+%>
+<div class="rounded-lg bg-surface-inset px-3 py-2.5 text-sm" role="status" aria-live="polite">
+  <div class="flex items-start gap-2.5">
+    <span class="text-secondary shrink-0 mt-0.5"><%= icon("info", size: "sm") %></span>
+    <div class="flex-1 min-w-0">
+      <p class="text-primary">
+        <span class="font-medium privacy-sensitive"><%= title %></span>
+        <span class="text-secondary">· <%= t("goals.show.pending_pledge.pledged_at", time_ago: time_ago_in_words(pledge.created_at)) %></span>
+      </p>
+      <p class="text-xs text-subdued mt-0.5"><%= t(body_key) %></p>
+      <div class="mt-2 flex items-center gap-2 flex-wrap">
+        <%= render DS::Button.new(
+          text: t("goals.show.pending_pledge.extend"),
+          href: renew_goal_pledge_path(pledge.goal, pledge),
+          method: :patch,
+          variant: "outline",
+          size: "sm"
+        ) %>
+        <%= render DS::Button.new(
+          text: t("goals.show.pending_pledge.cancel"),
+          href: goal_pledge_path(pledge.goal, pledge),
+          method: :delete,
+          variant: "ghost",
+          size: "sm",
+          confirm: CustomConfirm.new(
+            destructive: true,
+            title: t("goals.show.pending_pledge.confirm_cancel_title"),
+            body: t("goals.show.pending_pledge.confirm_cancel_body", amount: amount_money.format(precision: 0)),
+            btn_text: t("goals.show.pending_pledge.confirm_cancel_cta")
+          )
+        ) %>
+      </div>
+    </div>
+  </div>
+</div>

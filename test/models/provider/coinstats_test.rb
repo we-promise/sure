@@ -5,6 +5,75 @@ class Provider::CoinstatsTest < ActiveSupport::TestCase
     @provider = Provider::Coinstats.new("test_api_key")
   end
 
+  test "retries wallet requests on rate limit with retry after" do
+    response = Struct.new(:code, :body, :headers)
+    rate_limited_response = response.new(
+      429,
+      { message: "Too Many Requests" }.to_json,
+      { "Retry-After" => "3" }
+    )
+    success_response = response.new(
+      200,
+      [ { blockchain: "ethereum", address: "0x123abc", balances: [] } ].to_json,
+      {}
+    )
+
+    @provider.stubs(:min_request_interval).returns(0)
+    @provider.expects(:sleep).with(3).once
+
+    Provider::Coinstats.expects(:get)
+      .with(
+        "#{Provider::Coinstats::BASE_URL}/wallet/balances",
+        headers: {
+          "X-API-KEY" => "test_api_key",
+          "Accept" => "application/json"
+        },
+        query: { wallets: "ethereum:0x123abc" }
+      )
+      .twice
+      .returns(rate_limited_response, success_response)
+
+    result = @provider.get_wallet_balances("ethereum:0x123abc")
+
+    assert result.success?
+    assert_equal "ethereum", result.data.first[:blockchain]
+  end
+
+  test "maps CoinStats credit limit responses without retrying" do
+    response = Struct.new(:code, :body, :headers)
+    credit_limited_response = response.new(
+      406,
+      {
+        statusCode: 406,
+        message: "Credits limit reached. Please upgrade your plan or wait for renewal.",
+        requestId: "test-request-id",
+        path: "/wallet/defi"
+      }.to_json,
+      {}
+    )
+
+    @provider.stubs(:min_request_interval).returns(0)
+    @provider.expects(:sleep).never
+
+    Provider::Coinstats.expects(:get)
+      .with(
+        "#{Provider::Coinstats::BASE_URL}/wallet/defi",
+        headers: {
+          "X-API-KEY" => "test_api_key",
+          "Accept" => "application/json"
+        },
+        query: { address: "0x123abc", connectionId: "ethereum" }
+      )
+      .once
+      .returns(credit_limited_response)
+
+    result = @provider.get_wallet_defi(address: "0x123abc", connection_id: "ethereum")
+
+    refute result.success?
+    assert_match "Credits limit reached", result.error.message
+    assert_equal 406, result.error.details[:status_code]
+  end
+
   test "extract_wallet_balance finds matching wallet by address and connectionId" do
     bulk_data = [
       {
