@@ -99,6 +99,23 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "Risingstone infra pvt ltd"
   end
 
+  test "bootstrap super admin with no workspace options still does not see support controls" do
+    bootstrap_workspace_access!
+    PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS.each do |admin|
+      User.find_by!(email: admin.fetch(:email)).update!(role: :member)
+    end
+
+    post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
+
+    get root_path
+
+    assert_response :ok
+    assert_includes @response.body, "Company"
+    refute_includes @response.body, "Join a session"
+    refute_includes @response.body, "UUID"
+    refute_includes @response.body, "Request Impersonation"
+  end
+
   test "bootstrap super admin active workspace state is company focused" do
     bootstrap_workspace_access!
 
@@ -117,6 +134,29 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     refute_includes @response.body, "Terminate"
     refute_includes @response.body, "UUID"
     refute_includes @response.body, "Request Impersonation"
+  end
+
+  test "bootstrap super admin active support session is not rendered as a company workspace" do
+    bootstrap_workspace_access!
+
+    post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
+
+    bootstrap_super_admin = User.find_by!(email: "adminf0@bookeepz.net")
+    current_session = bootstrap_super_admin.sessions.order(created_at: :desc).first
+    support_session = ImpersonationSession.create!(
+      impersonator: bootstrap_super_admin,
+      impersonated: users(:family_member)
+    )
+    support_session.approve!
+    current_session.update!(active_impersonator_session: support_session)
+
+    get root_path
+
+    assert_response :ok
+    assert_includes @response.body, "Impersonating"
+    assert_includes @response.body, "Terminate"
+    refute_includes @response.body, "Current company"
+    refute_includes @response.body, "Exit workspace"
   end
 
   test "dashboard memoizes income statement period totals while rendering" do

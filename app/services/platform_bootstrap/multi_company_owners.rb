@@ -98,6 +98,15 @@ module PlatformBootstrap
         end
       end
 
+      def bootstrap_workspace_shortcut_session?(impersonation_session)
+        return false unless impersonation_session
+
+        bootstrap_workspace_shortcut_allowed?(
+          impersonator: impersonation_session.impersonator,
+          impersonated: impersonation_session.impersonated
+        )
+      end
+
       def workspace_picker_options_for(operator)
         return [] unless bootstrap_workspace_operator?(operator)
 
