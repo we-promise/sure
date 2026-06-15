@@ -216,9 +216,13 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
 
   Future<void> _checkForUpdates() async {
     if (!mounted) return;
-    final svc = UpdateNotificationService();
-    await svc.initialize(context);
-    await svc.checkAndNotify();
+    try {
+      final svc = UpdateNotificationService();
+      await svc.initialize(context);
+      await svc.checkAndNotify();
+    } catch (_) {
+      // Best-effort — platform channels unavailable in test environments
+    }
   }
 
   Future<void> _checkBackendConfig() async {
