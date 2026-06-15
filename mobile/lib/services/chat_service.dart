@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants/ai_messages.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import 'api_config.dart';
@@ -44,7 +45,8 @@ class ChatService {
         return {
           'success': false,
           'error': 'feature_disabled',
-          'message': responseData['message'] ?? 'AI features not enabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
         };
       } else {
         final responseData = jsonDecode(response.body);
@@ -91,6 +93,14 @@ class ChatService {
           'success': false,
           'error': 'unauthorized',
           'message': 'Session expired. Please login again.',
+        };
+      } else if (response.statusCode == 403) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': 'feature_disabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -160,7 +170,8 @@ class ChatService {
         return {
           'success': false,
           'error': 'feature_disabled',
-          'message': responseData['message'] ?? 'AI features not enabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
         };
       } else {
         final responseData = jsonDecode(response.body);
@@ -210,6 +221,14 @@ class ChatService {
           'success': false,
           'error': 'unauthorized',
           'message': 'Session expired. Please login again.',
+        };
+      } else if (response.statusCode == 403) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': 'feature_disabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -266,6 +285,14 @@ class ChatService {
           'error': 'unauthorized',
           'message': 'Session expired. Please login again.',
         };
+      } else if (response.statusCode == 403) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': 'feature_disabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
+        };
       } else if (response.statusCode == 404) {
         return {
           'success': false,
@@ -309,6 +336,14 @@ class ChatService {
           'success': false,
           'error': 'unauthorized',
           'message': 'Session expired. Please login again.',
+        };
+      } else if (response.statusCode == 403) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': 'feature_disabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -381,6 +416,14 @@ class ChatService {
           'success': false,
           'error': 'unauthorized',
           'message': 'Session expired. Please login again.',
+        };
+      } else if (response.statusCode == 403) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': 'feature_disabled',
+          'message': responseData['message'] ??
+              aiDisabledAccountShortMessage,
         };
       } else if (response.statusCode == 404) {
         return {

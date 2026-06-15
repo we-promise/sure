@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
+import '../constants/ai_messages.dart';
 import '../providers/auth_provider.dart';
 import 'chat_list_screen.dart';
 import 'dashboard_screen.dart';
@@ -50,10 +51,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const chatIndex = 1;
 
     if (index == chatIndex && !authProvider.aiEnabled) {
-      final enabled = await _showEnableAiPrompt();
-      if (!enabled) {
-        return;
-      }
+      _showAiDisabledMessage();
+      return;
     }
 
     if (mounted) {
@@ -67,7 +66,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  Future<void> _handleSelectSettings(AuthProvider authProvider, bool introLayout) async {
+  Future<void> _handleSelectSettings(
+    AuthProvider authProvider,
+    bool introLayout,
+  ) async {
     final settingsIndex = introLayout ? 2 : 3;
     await _handleDestinationSelected(settingsIndex, authProvider, introLayout);
   }
@@ -157,43 +159,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  Future<bool> _showEnableAiPrompt() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  void _showAiDisabledMessage() {
+    if (!mounted) return;
 
-    final shouldEnable = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Turn on AI Chat?'),
-        content: const Text('AI Chat is currently disabled in your account settings. Would you like to turn it on now?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Turn on AI'),
-          ),
-        ],
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          aiDisabledAccountMessage,
+        ),
       ),
     );
-
-    if (shouldEnable != true) {
-      return false;
-    }
-
-    final enabled = await authProvider.enableAi();
-
-    if (!enabled && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Unable to enable AI right now.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-
-    return enabled;
   }
 
   int _resolveBottomSelectedIndex(List<NavigationDestination> destinations) {
@@ -223,11 +198,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           () => _handleDestinationSelected(chatIndex, authProvider, introLayout),
         );
         final destinations = _buildDestinations(introLayout);
-        final bottomNavIndex = _resolveBottomSelectedIndex(destinations);
+
+        if (_currentIndex == chatIndex && !authProvider.aiEnabled) {
+          _currentIndex = 0;
+        }
 
         if (_currentIndex >= screens.length) {
           _currentIndex = 0;
         }
+
+        final bottomNavIndex = _resolveBottomSelectedIndex(destinations);
 
         return Scaffold(
           appBar: _buildTopBar(authProvider, introLayout),
