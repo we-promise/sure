@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class DestroyJobTest < ActiveJob::TestCase
   test "destroys the model" do
@@ -9,9 +10,8 @@ class DestroyJobTest < ActiveJob::TestCase
   end
 
   test "resets scheduled_for_deletion when the destroy fails" do
-    model = mock
-    model.expects(:destroy).raises(ActiveRecord::RecordNotDestroyed.new("nope"))
-    model.expects(:respond_to?).with(:scheduled_for_deletion).returns(true)
+    model = OpenStruct.new(scheduled_for_deletion: true)
+    model.stubs(:destroy).raises(ActiveRecord::RecordNotDestroyed.new("nope"))
     model.expects(:update!).with(scheduled_for_deletion: false).once
 
     DestroyJob.perform_now(model)
