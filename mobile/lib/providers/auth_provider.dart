@@ -33,7 +33,9 @@ class AuthProvider with ChangeNotifier {
 
   User? get user => _user;
   bool get isIntroLayout => _user?.isIntroLayout ?? false;
-  bool get aiEnabled => _user?.aiEnabled ?? false;
+  // API-key auth does not hydrate `_user`, so allow chat screens to defer
+  // feature authorization to the API when requests use X-Api-Key.
+  bool get aiEnabled => _isApiKeyAuth || (_user?.aiEnabled ?? false);
   AuthTokens? get tokens => _tokens;
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing; // Expose initialization state
