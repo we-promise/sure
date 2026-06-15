@@ -46,4 +46,13 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/No subscription/, response.body, "Page should show 'No subscription' for families without one")
   end
+
+  test "index shows families with no users" do
+    family = Family.create!(name: "Empty Bootstrap Company", currency: "USD", locale: "en")
+
+    get admin_users_url
+    assert_response :success
+    assert_includes response.body, family.name
+    assert_includes response.body, "0 members"
+  end
 end

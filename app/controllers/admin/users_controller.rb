@@ -23,7 +23,8 @@ module Admin
         )
       )
 
-      family_ids = users.map(&:family_id).uniq
+      families = Family.includes(:subscription).to_a
+      family_ids = families.map(&:id)
       @accounts_count_by_family = Account.where(family_id: family_ids).group(:family_id).count
       @entries_count_by_family = Entry.joins(:account).where(accounts: { family_id: family_ids }).group("accounts.family_id").count
 
@@ -31,9 +32,10 @@ module Admin
       @last_login_by_user = Session.where(user_id: user_ids).group(:user_id).maximum(:created_at)
       @sessions_count_by_user = Session.where(user_id: user_ids).group(:user_id).count
 
-      @families_with_users = users.group_by(&:family).sort_by do |family, _users|
-        -(@entries_count_by_family[family.id] || 0)
-      end
+      users_by_family_id = users.group_by(&:family_id)
+      @families_with_users = families
+        .sort_by { |family| [ -(@entries_count_by_family[family.id] || 0), family.name.to_s.downcase ] }
+        .map { |family| [ family, users_by_family_id[family.id] || [] ] }
 
       @invitations_by_family = Invitation.pending
         .where(family_id: family_ids)

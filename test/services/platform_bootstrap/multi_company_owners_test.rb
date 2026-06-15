@@ -19,7 +19,9 @@ module PlatformBootstrap
 
       assert_difference -> { Family.count }, 4 do
         assert_difference -> { User.count }, 2 do
+          assert_difference -> { Account.count }, 4 do
           result = MultiCompanyOwners.new(passwords: PASSWORDS).call
+          end
         end
       end
 
@@ -41,6 +43,16 @@ module PlatformBootstrap
       assert_equal "F0-SU-2", admin_f1.first_name
       assert admin_f0.authenticate("OwnerF0Pass!2026")
       assert admin_f1.authenticate("OwnerF1Pass!2026")
+      assert_not admin_f0.show_sidebar
+      assert_not admin_f0.show_ai_sidebar
+      assert_not admin_f1.show_sidebar
+      assert_not admin_f1.show_ai_sidebar
+
+      COMPANY_NAMES.each do |name|
+        family = Family.find_by!(name: name)
+        account = family.accounts.find_by!(name: "Expenditure", accountable_type: "Depository")
+        assert_equal 0, account.balance
+      end
     end
 
     test "rerun updates existing records without duplicating families or users" do

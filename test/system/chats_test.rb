@@ -7,12 +7,25 @@ class ChatsTest < ApplicationSystemTestCase
   end
 
   test "sidebar shows consent if ai is disabled for user" do
-    @user.update!(ai_enabled: false)
+    with_env_overrides OPENAI_ACCESS_TOKEN: "test-token" do
+      @user.update!(ai_enabled: false, show_ai_sidebar: true)
 
-    visit root_path
+      visit root_path
 
-    within "#chat-container" do
-      assert_selector "h3", text: "Enable AI Chats"
+      within "#chat-container" do
+        assert_selector "h3", text: "Enable AI Chats"
+      end
+    end
+  end
+
+  test "sidebar stays collapsed on launch when ai is unavailable" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, ANTHROPIC_ACCESS_TOKEN: nil, ASSISTANT_TYPE: nil do
+      @user.update!(ai_enabled: true, show_ai_sidebar: true)
+
+      visit root_path
+
+      assert_selector "[data-app-layout-target='rightSidebar'].w-0", visible: :all
+      assert_no_selector "h3", text: "Enable AI Chats"
     end
   end
 

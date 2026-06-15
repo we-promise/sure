@@ -18,13 +18,23 @@ class AccountsTest < ApplicationSystemTestCase
     assert_account_created("Investment")
   end
 
-  test "can create crypto account" do
-    assert_account_created("Crypto")
+  test "shows only the supported manual account types" do
+    assert_link "Expenditure"
+    assert_link "Investment"
+    assert_link "Debt/Settlement"
+    assert_link "Other Asset"
+
+    assert_no_link "Crypto"
+    assert_no_link "Vehicle"
+    assert_no_link "Credit Card"
+    assert_no_link "Loan"
+    assert_no_link "Other Liability"
+    assert_no_button "Import accounts"
   end
 
   test "can create property account" do
     # Step 1: Select property type and enter basic details
-    click_link "Property"
+    click_link Accountable.from_type("Property").singular_display_name
 
     account_name = "[system test] Property Account"
     fill_in "Name*", with: account_name
@@ -59,40 +69,8 @@ class AccountsTest < ApplicationSystemTestCase
     assert_equal "San Francisco", created_account.property.address.locality
   end
 
-  test "can create vehicle account" do
-    assert_account_created "Vehicle" do
-      fill_in "Make", with: "Toyota"
-      fill_in "Model", with: "Camry"
-      fill_in "Year", with: "2020"
-      fill_in "Mileage", with: "30000"
-    end
-  end
-
   test "can create other asset account" do
     assert_account_created("OtherAsset")
-  end
-
-  test "can create credit card account" do
-    assert_account_created "CreditCard" do
-      fill_in "Available credit", with: 1000
-      fill_in "account[accountable_attributes][minimum_payment]", with: 25.51
-      fill_in "APR", with: 15.25
-      fill_in "Expiration date", with: 1.year.from_now.to_date
-      fill_in "Annual fee", with: 100
-    end
-  end
-
-  test "can create loan account" do
-    assert_account_created "Loan" do
-      fill_in "account[accountable_attributes][initial_balance]", with: 1000
-      fill_in "Interest rate", with: 5.25
-      select "Fixed", from: "Rate type"
-      fill_in "Term (months)", with: 360
-    end
-  end
-
-  test "can create other liability account" do
-    assert_account_created("OtherLiability")
   end
 
   private

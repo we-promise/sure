@@ -19,6 +19,7 @@ end %>
 <% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>
 <% expanded_sidebar_class = "w-full" %>
 <% collapsed_sidebar_class = "w-0 overflow-hidden" %>
+<% ai_sidebar_launch_open = Current.user.show_ai_sidebar? && Current.user.ai_available? %>
 
 <%= render "layouts/shared/htmldoc" do %>
   <div
@@ -183,9 +184,9 @@ end %>
     <%# DESKTOP - Right sidebar %>
     <%= tag.div class: class_names(
           "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-divider",
-          Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
+          ai_sidebar_launch_open ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
         ),
-        inert: !Current.user.show_ai_sidebar?,
+        inert: !ai_sidebar_launch_open,
         data: { app_layout_target: "rightSidebar" } do %>
       <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
         <div class="flex flex-col h-full justify-between shrink-0">

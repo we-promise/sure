@@ -3,38 +3,8 @@
        <% if @provider_configs.any? { |c| c[:key] == "lunchflow" } %>
          data-controller="lunchflow-preload"
        <% end %>>
-    <% unless params[:classification] == "liability" %>
-      <%= render "account_type", accountable: Depository.new %>
-      <%= render "account_type", accountable: Investment.new %>
-      <%= render "account_type", accountable: Crypto.new %>
-      <%= render "account_type", accountable: Property.new %>
-      <%= render "account_type", accountable: Vehicle.new %>
-    <% end %>
-
-    <% unless params[:classification] == "asset" %>
-      <%= render "account_type", accountable: CreditCard.new %>
-      <%= render "account_type", accountable: Loan.new %>
-    <% end %>
-
-    <% unless params[:classification] == "liability" %>
-      <%= render "account_type", accountable: OtherAsset.new %>
-    <% end %>
-
-    <% unless params[:classification] == "asset" %>
-      <%= render "account_type", accountable: OtherLiability.new %>
-    <% end %>
-
-    <% unless params[:return_to].present? %>
-      <%= button_to imports_path(import: { type: "AccountImport" }),
-              data: { turbo_frame: :_top },
-            class: "flex items-center gap-4 w-full text-center focus:outline-hidden hover:bg-surface-hover focus:bg-surface-hover text-primary border border-transparent block px-2 rounded-lg p-2" do %>
-        <%= render DS::FilledIcon.new(
-          icon: "download",
-          hex_color: "#F79009",
-        ) %>
-
-        <%= t("accounts.new.import_accounts") %>
-      <% end %>
+    <% ManualAccountPolicy.visible_accountables(classification: params[:classification]).each do |accountable| %>
+      <%= render "account_type", accountable: accountable %>
     <% end %>
   </div>
 <% end %>

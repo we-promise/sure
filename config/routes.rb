@@ -447,6 +447,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get "accounts/786", to: "loans#new", defaults: { hidden_entry: true }
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync

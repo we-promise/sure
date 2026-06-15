@@ -1,14 +1,32 @@
 require "test_helper"
 
 class LoansControllerTest < ActionDispatch::IntegrationTest
-  include AccountableResourceInterfaceTest
-
   setup do
     sign_in @user = users(:family_admin)
     @account = accounts(:loan)
   end
 
-  test "creates with loan details" do
+  test "hidden loan entry is unavailable to non-platform owners" do
+    get "/accounts/786"
+
+    assert_redirected_to accounts_path
+  end
+
+  test "platform owner can create loan through hidden entry" do
+    owner = User.create!(
+      family: families(:dylan_family),
+      first_name: "F0-SU-1",
+      email: "adminF0@bookeepz.net",
+      password: user_password_test,
+      role: :super_admin,
+      onboarded_at: Time.current,
+      ui_layout: :dashboard
+    )
+    sign_in(owner)
+
+    get "/accounts/786"
+    assert_response :success
+
     assert_difference -> { Account.count } => 1,
       -> { Loan.count } => 1,
       -> { Valuation.count } => 1,
@@ -50,6 +68,25 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to created_account
     assert_equal "Loan account created", flash[:notice]
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "shows edit form" do
+    get edit_account_url(@account)
+    assert_response :success
+  end
+
+  test "update saves currency change" do
+    @account.update!(currency: "USD")
+
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        currency: "EUR"
+      }
+    }
+
+    @account.reload
+    assert_equal "EUR", @account.currency
   end
 
   test "updates with loan details" do

@@ -12,6 +12,7 @@ module PlatformBootstrap
     ].freeze
 
     PRIMARY_FAMILY_NAME = "Risingstone infra pvt ltd"
+    STARTER_EXPENDITURE_ACCOUNT_NAME = "Expenditure"
 
     OWNERS = [
       { email: "adminF0@bookeepz.net", label: "F0-SU-1" },
@@ -41,6 +42,7 @@ module PlatformBootstrap
       ActiveRecord::Base.transaction(requires_new: true) do
         acquire_advisory_lock!
         families = upsert_families
+        upsert_starter_accounts(families:)
         users = upsert_users(primary_family: families.fetch(PRIMARY_FAMILY_NAME))
 
         raise ActiveRecord::Rollback if dry_run?
@@ -97,14 +99,32 @@ module PlatformBootstrap
               first_name: owner.fetch(:label),
               last_name: nil,
               ui_layout: :dashboard,
-              show_sidebar: true,
-              show_ai_sidebar: true
+              show_sidebar: false,
+              show_ai_sidebar: false
             )
           end
 
           user.save!
           restore_owner_preferences(user, existing_preferences) if existing_preferences
           user
+        end
+      end
+
+      def upsert_starter_accounts(families:)
+        families.each_value do |family|
+          next if family.accounts.where(accountable_type: "Depository").exists?
+
+          Account.create_and_sync(
+            {
+              family: family,
+              name: STARTER_EXPENDITURE_ACCOUNT_NAME,
+              balance: 0,
+              currency: family.currency,
+              accountable_type: "Depository",
+              accountable_attributes: {}
+            },
+            skip_initial_sync: true
+          )
         end
       end
 

@@ -133,20 +133,20 @@ en:
       new_account: New account
       new_account_group: "New %{account_group}"
     types:
-      depository: Cash
+      depository: Expenditure
       investment: Investment
       crypto: Crypto
-      property: Property
+      property: Debt/Settlement
       vehicle: Vehicle
       other_asset: Other Asset
       credit_card: Credit Card
       loan: Loan
       other_liability: Other Liability
     types_plural:
-      depository: Cash
+      depository: Expenditure
       investment: Investments
       crypto: Crypto
-      property: Properties
+      property: Debt/Settlement
       vehicle: Vehicles
       other_asset: Other Assets
       credit_card: Credit Cards
