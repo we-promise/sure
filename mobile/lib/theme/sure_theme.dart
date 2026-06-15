@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'sure_colors.dart';
 import 'sure_tokens.dart';
 
 class SureTheme {
@@ -38,6 +39,7 @@ class SureTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: tokens.surface,
       useMaterial3: true,
+      extensions: <ThemeExtension<dynamic>>[SureColors(tokens)],
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,

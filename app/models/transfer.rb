@@ -74,7 +74,7 @@ class Transfer < ApplicationRecord
   end
 
   def date
-    inflow_transaction.entry.date
+    inflow_transaction&.entry&.date
   end
 
   def sync_account_later
