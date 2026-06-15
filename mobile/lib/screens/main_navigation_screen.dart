@@ -171,20 +171,48 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  int _resolveBottomSelectedIndex(List<NavigationDestination> destinations) {
-    if (destinations.isEmpty) {
+  int _resolveCurrentIndex({
+    required int screenCount,
+    required bool aiEnabled,
+  }) {
+    if (screenCount == 0) {
       return 0;
     }
 
-    if (_currentIndex < 0) {
+    var index = _currentIndex;
+
+    if (index == 1 && !aiEnabled) {
+      index = 0;
+    }
+
+    if (index < 0) {
       return 0;
     }
 
-    if (_currentIndex >= destinations.length) {
-      return destinations.length - 1;
+    if (index >= screenCount) {
+      return screenCount - 1;
     }
 
-    return _currentIndex;
+    return index;
+  }
+
+  int _resolveBottomSelectedIndex({
+    required int currentIndex,
+    required int destinationCount,
+  }) {
+    if (destinationCount == 0) {
+      return 0;
+    }
+
+    if (currentIndex < 0) {
+      return 0;
+    }
+
+    if (currentIndex >= destinationCount) {
+      return destinationCount - 1;
+    }
+
+    return currentIndex;
   }
 
   @override
@@ -198,21 +226,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           () => _handleDestinationSelected(chatIndex, authProvider, introLayout),
         );
         final destinations = _buildDestinations(introLayout);
-
-        if (_currentIndex == chatIndex && !authProvider.aiEnabled) {
-          _currentIndex = 0;
-        }
-
-        if (_currentIndex >= screens.length) {
-          _currentIndex = 0;
-        }
-
-        final bottomNavIndex = _resolveBottomSelectedIndex(destinations);
+        final currentIndex = _resolveCurrentIndex(
+          screenCount: screens.length,
+          aiEnabled: authProvider.aiEnabled,
+        );
+        final bottomNavIndex = _resolveBottomSelectedIndex(
+          currentIndex: currentIndex,
+          destinationCount: destinations.length,
+        );
 
         return Scaffold(
           appBar: _buildTopBar(authProvider, introLayout),
           body: IndexedStack(
-            index: _currentIndex,
+            index: currentIndex,
             children: screens,
           ),
           bottomNavigationBar: NavigationBar(

@@ -281,11 +281,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     if (!authProvider.aiEnabled) {
-      return const Scaffold(
+      return Scaffold(
         appBar: AppBar(
-          title: Text('Chats'),
+          title: const Text('Chats'),
         ),
-        body: AiDisabledEmptyState(),
+        body: const AiDisabledEmptyState(),
       );
     }
 
