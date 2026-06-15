@@ -9,6 +9,7 @@ en:
         budgets: Budgets
         home: Home
         reports: Reports
+        tax: Tax
         goals: Goals
         transactions: Transactions
     auth:

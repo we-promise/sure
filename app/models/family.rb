@@ -123,10 +123,29 @@ class Family < ApplicationRecord
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
 
+  before_validation :apply_creation_defaults, on: :create
   before_validation :normalize_enabled_currencies!
+
+  def initialize(attributes = nil)
+    super
+
+    return unless new_record?
+
+    provided_attributes = attributes.to_h.stringify_keys
+
+    self.currency = "INR" if provided_attributes["currency"].blank?
+    self.country = "IN" if provided_attributes["country"].blank?
+    self.date_format = "%d-%m-%Y" if provided_attributes["date_format"].blank?
+  end
 
   def primary_currency_code
     normalize_currency_code(currency) || "USD"
+  end
+
+  def apply_creation_defaults
+    self.currency = "INR" if currency.blank?
+    self.country = "IN" if country.blank?
+    self.date_format = "%d-%m-%Y" if date_format.blank?
   end
 
   def custom_enabled_currencies?

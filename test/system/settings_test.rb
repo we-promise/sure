@@ -99,6 +99,13 @@ class SettingsTest < ApplicationSystemTestCase
     end
   end
 
+  test "does not show imports or exports in settings navigation for admin users" do
+    open_settings_from_sidebar
+
+    assert_no_selector "li", text: "Imports"
+    assert_no_selector "li", text: "Exports"
+  end
+
   private
 
     def open_settings_from_sidebar

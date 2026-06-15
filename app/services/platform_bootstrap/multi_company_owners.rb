@@ -19,6 +19,33 @@ module PlatformBootstrap
       { email: "adminF1@bookeepz.net", label: "F0-SU-2" }
     ].freeze
 
+    FAMILY_ADMINS = [
+      {
+        email: "admin+rsinfra@bookeepz.net",
+        label: "RS-INFRA-ADMIN",
+        family_name: "Risingstone infra pvt ltd",
+        password_env_key: "ADMIN_RSINFRA_PASSWORD"
+      },
+      {
+        email: "admin+rsventures@bookeepz.net",
+        label: "RS-VENTURES-ADMIN",
+        family_name: "Risingstone ventures pvt ltd",
+        password_env_key: "ADMIN_RSVENTURES_PASSWORD"
+      },
+      {
+        email: "admin+rsprojects@bookeepz.net",
+        label: "RS-PROJECTS-ADMIN",
+        family_name: "Risingstone projects pvt Ltd",
+        password_env_key: "ADMIN_RSPROJECTS_PASSWORD"
+      },
+      {
+        email: "admin+mahetel@bookeepz.net",
+        label: "MAHETEL-ADMIN",
+        family_name: "Mahetel pvt ltd",
+        password_env_key: "ADMIN_MAHETEL_PASSWORD"
+      }
+    ].freeze
+
     SPECIAL_CHARACTER_PATTERN = /[!@#$%^&*(),.?":{}|<>]/
     ADVISORY_LOCK_KEY = Zlib.crc32("platform_bootstrap:multi_company_owners")
 
@@ -43,7 +70,8 @@ module PlatformBootstrap
         acquire_advisory_lock!
         families = upsert_families
         upsert_starter_accounts(families:)
-        users = upsert_users(primary_family: families.fetch(PRIMARY_FAMILY_NAME))
+        users = upsert_super_admin_users(primary_family: families.fetch(PRIMARY_FAMILY_NAME))
+        users.concat(upsert_family_admin_users(families:))
 
         raise ActiveRecord::Rollback if dry_run?
       end
@@ -72,42 +100,64 @@ module PlatformBootstrap
       def upsert_families
         COMPANY_NAMES.index_with do |name|
           family = Family.find_or_initialize_by(name: name)
-          family.currency = "USD" if family.currency.blank?
+          family.currency = "INR" if family.currency.blank?
+          family.country = "IN" if family.country.blank?
+          family.date_format = "%d-%m-%Y" if family.date_format.blank?
           family.locale = I18n.default_locale.to_s if family.locale.blank?
           family.save!
           family
         end
       end
 
-      def upsert_users(primary_family:)
+      def upsert_super_admin_users(primary_family:)
         OWNERS.map do |owner|
-          email = normalize_email(owner.fetch(:email))
-          password = passwords.fetch(email)
-          user = User.find_or_initialize_by(email: email)
-          existing_preferences = user.persisted? ? owner_preferences(user) : nil
-
-          user.assign_attributes(
+          upsert_user(
+            email: owner.fetch(:email),
+            label: owner.fetch(:label),
             family: primary_family,
-            role: :super_admin,
-            password: password,
-            password_confirmation: password,
-            onboarded_at: user.onboarded_at || Time.current
+            role: :super_admin
           )
-
-          if user.new_record?
-            user.assign_attributes(
-              first_name: owner.fetch(:label),
-              last_name: nil,
-              ui_layout: :dashboard,
-              show_sidebar: false,
-              show_ai_sidebar: false
-            )
-          end
-
-          user.save!
-          restore_owner_preferences(user, existing_preferences) if existing_preferences
-          user
         end
+      end
+
+      def upsert_family_admin_users(families:)
+        FAMILY_ADMINS.map do |admin|
+          upsert_user(
+            email: admin.fetch(:email),
+            label: admin.fetch(:label),
+            family: families.fetch(admin.fetch(:family_name)),
+            role: :admin
+          )
+        end
+      end
+
+      def upsert_user(email:, label:, family:, role:)
+        normalized_email = normalize_email(email)
+        password = passwords.fetch(normalized_email)
+        user = User.find_or_initialize_by(email: normalized_email)
+        existing_preferences = user.persisted? ? owner_preferences(user) : nil
+
+        user.assign_attributes(
+          family: family,
+          role: role,
+          password: password,
+          password_confirmation: password,
+          onboarded_at: user.onboarded_at || Time.current
+        )
+
+        if user.new_record?
+          user.assign_attributes(
+            first_name: label,
+            last_name: nil,
+            ui_layout: :dashboard,
+            show_sidebar: false,
+            show_ai_sidebar: false
+          )
+        end
+
+        user.save!
+        restore_owner_preferences(user, existing_preferences) if existing_preferences
+        user
       end
 
       def upsert_starter_accounts(families:)
@@ -150,6 +200,8 @@ module PlatformBootstrap
           Family.new(
             name: family.name,
             currency: family.currency,
+            country: family.country,
+            date_format: family.date_format,
             locale: family.locale
           )
         end
@@ -172,7 +224,7 @@ module PlatformBootstrap
       end
 
       def validate_passwords!
-        OWNERS.each do |owner|
+        bootstrap_users.each do |owner|
           raw_email = owner.fetch(:email)
           email = normalize_email(raw_email)
           password = passwords[email]
@@ -182,6 +234,10 @@ module PlatformBootstrap
           errors = password_errors(password)
           raise ArgumentError, "Password for #{raw_email} #{errors.join("; ")}" if errors.any?
         end
+      end
+
+      def bootstrap_users
+        OWNERS + FAMILY_ADMINS
       end
 
       def password_errors(password)

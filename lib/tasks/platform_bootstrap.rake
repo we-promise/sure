@@ -7,7 +7,10 @@ namespace :platform_bootstrap do
   task multi_company_owners: :environment do
     dry_run = ActiveModel::Type::Boolean.new.cast(ENV["DRY_RUN"])
 
-    passwords = PlatformBootstrap::MultiCompanyOwners::OWNERS.to_h do |owner|
+    passwords = (
+      PlatformBootstrap::MultiCompanyOwners::OWNERS +
+      PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS
+    ).to_h do |owner|
       email = owner.fetch(:email)
       [ email, secret_value(env_key_for(owner), "Password for #{email}") ]
     end
@@ -48,6 +51,8 @@ namespace :platform_bootstrap do
   end
 
   def env_key_for(owner)
+    return owner.fetch(:password_env_key) if owner.key?(:password_env_key)
+
     email = owner.fetch(:email)
     match = email.match(/\Aadmin(F\d+)@bookeepz\.net\z/i)
     raise ArgumentError, "No password environment variable configured for #{email}" unless match

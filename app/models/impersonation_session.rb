@@ -8,6 +8,8 @@ class ImpersonationSession < ApplicationRecord
 
   scope :initiated, -> { where(status: [ :pending, :in_progress ]) }
 
+  before_validation :apply_auto_approval_status, on: :create
+
   validate :impersonator_is_super_admin
   validate :impersonated_is_not_super_admin
   validate :impersonator_different_from_impersonated
@@ -25,6 +27,15 @@ class ImpersonationSession < ApplicationRecord
   end
 
   private
+    def apply_auto_approval_status
+      self.status = :in_progress if auto_approvable?
+      self.status ||= :pending
+    end
+
+    def auto_approvable?
+      impersonator&.bootstrap_workspace_operator? && impersonated&.bootstrap_workspace_admin?
+    end
+
     def impersonator_is_super_admin
       errors.add(:impersonator, "must be a super admin to impersonate") unless impersonator.super_admin?
     end

@@ -168,6 +168,26 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert new_user.family.present?
   end
 
+  test "should create family with India defaults on signup" do
+    post "/api/v1/auth/signup", params: {
+      user: {
+        email: "india-api@example.com",
+        password: "SecurePass123!",
+        first_name: "India",
+        last_name: "Default"
+      },
+      device: @device_info
+    }
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    new_user = User.find(response_data["user"]["id"])
+
+    assert_equal "INR", new_user.family.currency
+    assert_equal "IN", new_user.family.country
+    assert_equal "%d-%m-%Y", new_user.family.date_format
+  end
+
   test "should require invite code when enabled" do
     # Mock invite code requirement
     Api::V1::AuthController.any_instance.stubs(:invite_code_required?).returns(true)

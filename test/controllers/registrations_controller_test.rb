@@ -14,6 +14,18 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
   end
 
+  test "create assigns India defaults to a new family" do
+    post registration_url, params: { user: {
+      email: "india-defaults@example.com",
+      password: "Password1!" } }
+
+    created_user = User.find_by!(email: "india-defaults@example.com")
+
+    assert_equal "INR", created_user.family.currency
+    assert_equal "IN", created_user.family.country
+    assert_equal "%d-%m-%Y", created_user.family.date_format
+  end
+
   test "first user of instance becomes super_admin" do
     # Clear all users to simulate fresh instance
     User.destroy_all

@@ -206,6 +206,28 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal Money::Currency.as_options.map(&:iso_code), family.reload.enabled_currency_codes
   end
 
+  test "new family defaults to India settings when values are blank" do
+    family = Family.create!(name: "India Default Family")
+
+    assert_equal "INR", family.currency
+    assert_equal "IN", family.country
+    assert_equal "%d-%m-%Y", family.date_format
+    assert_equal I18n.default_locale.to_s, family.locale
+  end
+
+  test "new family preserves explicit settings" do
+    family = Family.create!(
+      name: "Explicit Family",
+      currency: "USD",
+      country: "US",
+      date_format: "%Y-%m-%d"
+    )
+
+    assert_equal "USD", family.currency
+    assert_equal "US", family.country
+    assert_equal "%Y-%m-%d", family.date_format
+  end
+
   test "upload_document stores provided metadata on family document" do
     family = families(:dylan_family)
     family.update!(vector_store_id: nil)

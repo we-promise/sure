@@ -46,7 +46,7 @@ Sure is a fully working personal finance app that can be [self hosted with Docke
 
 ## Deployment and Bootstrap Notes
 
-This repository includes an operator-run bootstrap path for setting up the current multi-company owner deployment. The implementation creates the configured company workspaces, provisions the two platform super-admin users, and keeps the path idempotent for reruns.
+This repository includes an operator-run bootstrap path for setting up the current multi-company owner deployment. The implementation creates the configured company workspaces, provisions the two platform super-admin users plus four family-scoped admin users, and keeps the path idempotent for reruns.
 
 > [!WARNING]
 > Do not commit or print bootstrap passwords. Use one-shot environment variables or hidden prompts, and verify dry-runs before making production changes.
@@ -66,6 +66,8 @@ bin/rails platform_bootstrap:multi_company_owners
 ```
 
 Set `DRY_RUN=1` to validate the write path without persisting changes.
+
+For day-to-day operations, `adminF0@bookeepz.net` and `adminF1@bookeepz.net` use the super-admin bar company picker to enter one of the four family workspaces through an auto-approved impersonation shortcut. The app still uses single-family users under the hood.
 
 ## Browser UAT
 

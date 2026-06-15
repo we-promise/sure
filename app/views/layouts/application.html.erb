@@ -11,6 +11,15 @@ else
     { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
     { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
     { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
+    (if Current.user.admin?
+      { name: t(".nav.tax"), path: tax_workbook_imports_path, icon: "receipt", icon_custom: false, active: page_active?(tax_workbook_imports_path) }
+    end),
+    (if Current.user.admin?
+      { name: t("settings.settings_nav.imports_label"), path: imports_path, icon: "upload", icon_custom: false, active: page_active?(imports_path) }
+    end),
+    (if Current.user.admin?
+      { name: t("settings.settings_nav.exports_label"), path: family_exports_path, icon: "download", icon_custom: false, active: page_active?(family_exports_path) }
+    end),
     preview_gated_nav_item({ name: t(".nav.goals"), path: goals_path, icon: "piggy-bank", icon_custom: false, active: page_active?(goals_path) }),
     { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
   ].compact

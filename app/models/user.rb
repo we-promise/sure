@@ -117,6 +117,14 @@ class User < ApplicationRecord
     impersonator_support_sessions.create!(impersonated: impersonated)
   end
 
+  def bootstrap_workspace_operator?
+    email.in?(PlatformBootstrap::MultiCompanyOwners::OWNERS.map { |owner| owner.fetch(:email).downcase })
+  end
+
+  def bootstrap_workspace_admin?
+    email.in?(PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS.map { |admin| admin.fetch(:email).downcase })
+  end
+
   def admin?
     super_admin? || role == "admin"
   end

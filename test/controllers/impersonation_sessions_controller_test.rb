@@ -1,6 +1,28 @@
 require "test_helper"
 
 class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @bootstrap_super_admin = User.create!(
+      family: families(:empty),
+      first_name: "F0-SU-1",
+      email: "adminf0@bookeepz.net",
+      password: user_password_test,
+      password_confirmation: user_password_test,
+      role: :super_admin,
+      onboarded_at: Time.current
+    )
+
+    @bootstrap_family_admin = User.create!(
+      family: families(:dylan_family),
+      first_name: "RS-VENTURES-ADMIN",
+      email: "admin+rsventures@bookeepz.net",
+      password: user_password_test,
+      password_confirmation: user_password_test,
+      role: :admin,
+      onboarded_at: Time.current
+    )
+  end
+
   test "impersonation session logs all activity for auditing" do
     sign_in impersonator = users(:sure_support_staff)
     impersonated = users(:family_member)
@@ -107,6 +129,19 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "Request rejected", flash[:notice]
     assert_equal "rejected", impersonator_session.reload.status
+    assert_redirected_to root_path
+  end
+
+  test "bootstrap super admin auto-activates bootstrap family admin impersonation" do
+    sign_in @bootstrap_super_admin
+
+    current_session = @bootstrap_super_admin.sessions.order(created_at: :desc).first
+
+    post impersonation_sessions_path, params: { impersonation_session: { impersonated_id: @bootstrap_family_admin.id } }
+
+    session_record = ImpersonationSession.order(created_at: :desc).first
+    assert_equal "in_progress", session_record.status
+    assert_equal session_record, current_session.reload.active_impersonator_session
     assert_redirected_to root_path
   end
 end

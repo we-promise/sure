@@ -20,8 +20,6 @@ module SettingsHelper
     { name: -> { t("settings.settings_nav.llm_usage_label") }, path: :settings_llm_usage_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.api_key_label") }, path: :settings_api_key_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.self_hosting_label") }, path: :settings_hosting_path, condition: :self_hosted_and_admin? },
-    { name: -> { t("settings.settings_nav.imports_label") }, path: :imports_path, condition: :admin_user? },
-    { name: -> { t("settings.settings_nav.exports_label") }, path: :family_exports_path, condition: :admin_user? },
     # More section
     { name: -> { t("settings.settings_nav.guides_label") }, path: :settings_guides_path },
     { name: -> { t("settings.settings_nav.whats_new_label") }, path: :changelog_path },

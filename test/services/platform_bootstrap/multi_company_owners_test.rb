@@ -4,7 +4,11 @@ module PlatformBootstrap
   class MultiCompanyOwnersTest < ActiveSupport::TestCase
     PASSWORDS = {
       "adminF0@bookeepz.net" => "OwnerF0Pass!2026",
-      "adminF1@bookeepz.net" => "OwnerF1Pass!2026"
+      "adminF1@bookeepz.net" => "OwnerF1Pass!2026",
+      "admin+rsinfra@bookeepz.net" => "RsInfraAdmin!2026",
+      "admin+rsventures@bookeepz.net" => "RsVenturesAdmin!2026",
+      "admin+rsprojects@bookeepz.net" => "RsProjectsAdmin!2026",
+      "admin+mahetel@bookeepz.net" => "MahetelAdmin!2026"
     }.freeze
 
     COMPANY_NAMES = [
@@ -14,11 +18,18 @@ module PlatformBootstrap
       "Mahetel pvt ltd"
     ].freeze
 
+    FAMILY_ADMIN_EMAILS = {
+      "Risingstone infra pvt ltd" => "admin+rsinfra@bookeepz.net",
+      "Risingstone ventures pvt ltd" => "admin+rsventures@bookeepz.net",
+      "Risingstone projects pvt Ltd" => "admin+rsprojects@bookeepz.net",
+      "Mahetel pvt ltd" => "admin+mahetel@bookeepz.net"
+    }.freeze
+
     test "creates four company families and two super admin owners" do
       result = nil
 
       assert_difference -> { Family.count }, 4 do
-        assert_difference -> { User.count }, 2 do
+        assert_difference -> { User.count }, 6 do
           assert_difference -> { Account.count }, 4 do
           result = MultiCompanyOwners.new(passwords: PASSWORDS).call
           end
@@ -50,7 +61,16 @@ module PlatformBootstrap
 
       COMPANY_NAMES.each do |name|
         family = Family.find_by!(name: name)
+        family_admin = User.find_by!(email: FAMILY_ADMIN_EMAILS.fetch(name))
         account = family.accounts.find_by!(name: "Expenditure", accountable_type: "Depository")
+
+        assert_equal "INR", family.currency
+        assert_equal "IN", family.country
+        assert_equal "%d-%m-%Y", family.date_format
+        assert_equal "admin", family_admin.role
+        assert_equal family, family_admin.family
+        assert_not family_admin.show_sidebar
+        assert_not family_admin.show_ai_sidebar
         assert_equal 0, account.balance
       end
     end
@@ -73,7 +93,11 @@ module PlatformBootstrap
 
       updated_passwords = {
         "adminF0@bookeepz.net" => "OwnerF0New!2026",
-        "adminF1@bookeepz.net" => "OwnerF1New!2026"
+        "adminF1@bookeepz.net" => "OwnerF1New!2026",
+        "admin+rsinfra@bookeepz.net" => "RsInfraAdminNew!2026",
+        "admin+rsventures@bookeepz.net" => "RsVenturesAdminNew!2026",
+        "admin+rsprojects@bookeepz.net" => "RsProjectsAdminNew!2026",
+        "admin+mahetel@bookeepz.net" => "MahetelAdminNew!2026"
       }
 
       result = nil
@@ -87,6 +111,9 @@ module PlatformBootstrap
       assert result.success?
       assert_equal 1, User.where(email: "adminf0@bookeepz.net").count
       assert_equal 1, User.where(email: "adminf1@bookeepz.net").count
+      FAMILY_ADMIN_EMAILS.each_value do |email|
+        assert_equal 1, User.where(email: email).count
+      end
 
       COMPANY_NAMES.each do |name|
         assert_equal 1, Family.where(name: name).count, "expected no duplicate family named #{name}"
@@ -107,21 +134,33 @@ module PlatformBootstrap
       assert_equal "intro", admin_f0.ui_layout
       assert_not admin_f0.show_sidebar
       assert_not admin_f0.show_ai_sidebar
+
+      COMPANY_NAMES.each do |name|
+        family = Family.find_by!(name: name)
+        family_admin = User.find_by!(email: FAMILY_ADMIN_EMAILS.fetch(name))
+
+        assert_equal "INR", family.currency
+        assert_equal "IN", family.country
+        assert_equal "%d-%m-%Y", family.date_format
+        assert_equal "admin", family_admin.role
+        assert_equal family, family_admin.family
+      end
     end
 
     test "requests advisory lock before bootstrap writes" do
       service = MultiCompanyOwners.new(passwords: PASSWORDS)
-      primary_family = Family.new(name: "Risingstone infra pvt ltd")
-      families = { "Risingstone infra pvt ltd" => primary_family }
+      families = COMPANY_NAMES.index_with { |name| Family.new(name: name) }
+      primary_family = families.fetch("Risingstone infra pvt ltd")
       sequence = sequence("multi-company bootstrap lock")
 
       service.expects(:acquire_advisory_lock!).once.in_sequence(sequence)
       service.expects(:upsert_families).once.in_sequence(sequence).returns(families)
-      service.expects(:upsert_users).with(primary_family: primary_family).once.in_sequence(sequence).returns([])
+      service.expects(:upsert_super_admin_users).with(primary_family: primary_family).once.in_sequence(sequence).returns([])
+      service.expects(:upsert_family_admin_users).with(families: families).once.in_sequence(sequence).returns([])
 
       result = service.call
 
-      assert_equal [ primary_family ], result.families
+      assert_equal COMPANY_NAMES.sort, result.families.map(&:name).sort
       assert_empty result.users
     end
 
@@ -183,10 +222,10 @@ module PlatformBootstrap
     end
 
     test "accepts double quote as a special password character" do
-      quoted_passwords = {
+      quoted_passwords = PASSWORDS.merge(
         "adminF0@bookeepz.net" => "OwnerF0Pass\"2026",
         "adminF1@bookeepz.net" => "OwnerF1Pass\"2026"
-      }
+      )
 
       result = nil
 
@@ -202,11 +241,14 @@ module PlatformBootstrap
 
     test "rejects missing password for required owner" do
       error = nil
+      incomplete_passwords = PASSWORDS.except(
+        "adminF1@bookeepz.net"
+      )
 
       assert_no_difference -> { Family.count } do
         assert_no_difference -> { User.count } do
           error = assert_raises(ArgumentError) do
-            MultiCompanyOwners.new(passwords: { "adminF0@bookeepz.net" => "OwnerF0Pass!2026" }).call
+            MultiCompanyOwners.new(passwords: incomplete_passwords).call
           end
         end
       end
@@ -218,10 +260,10 @@ module PlatformBootstrap
     end
 
     test "rejects weak passwords before writing records" do
-      weak_passwords = {
+      weak_passwords = PASSWORDS.merge(
         "adminF0@bookeepz.net" => "weak",
         "adminF1@bookeepz.net" => "OwnerF1Pass!2026"
-      }
+      )
 
       error = nil
 

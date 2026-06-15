@@ -6,6 +6,7 @@ en:
     complete:
       success: Session completed
     create:
+      auto_approved_success: Entered workspace
       success: Request sent to user. Waiting for approval.
     join:
       success: Joined session
@@ -21,5 +22,8 @@ en:
       terminate: Terminate
       join_a_session: Join a session
       join: Join
+      workspace_label: Company workspace
+      workspace_prompt: Select a company
+      enter_workspace: Enter workspace
       uuid_placeholder: UUID
       request_impersonation: Request Impersonation

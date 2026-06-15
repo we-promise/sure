@@ -4,17 +4,61 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
 
   setup do
-    sign_in @user = users(:family_admin)
+    @user = users(:family_admin)
     @intro_user = users(:intro_user)
     @family = @user.family
   end
 
+  def bootstrap_workspace_access!
+    @bootstrap_password = "BootstrapPass1!"
+    passwords = (
+      PlatformBootstrap::MultiCompanyOwners::OWNERS +
+      PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS
+    ).to_h { |operator| [ operator.fetch(:email), @bootstrap_password ] }
+
+    PlatformBootstrap::MultiCompanyOwners.new(passwords: passwords).call
+  end
+
   test "dashboard" do
+    sign_in @user
+
     get root_path
     assert_response :ok
   end
 
+  test "bootstrap super admin dashboard renders company workspace picker and support uuid field" do
+    bootstrap_workspace_access!
+
+    post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
+
+    get root_path, params: { admin: true }
+    get root_path
+
+    assert_response :ok
+    assert_includes @response.body, "Company workspace"
+    assert_includes @response.body, "Risingstone infra pvt ltd"
+    assert_includes @response.body, "Risingstone ventures pvt ltd"
+    assert_includes @response.body, "Risingstone projects pvt Ltd"
+    assert_includes @response.body, "Mahetel pvt ltd"
+    assert_includes @response.body, "name=\"impersonation_session[impersonated_id]\""
+  end
+
+  test "non bootstrap super admin dashboard hides workspace picker and keeps support uuid field" do
+    bootstrap_workspace_access!
+
+    sign_in users(:sure_support_staff)
+
+    get root_path, params: { admin: true }
+    get root_path
+
+    assert_response :ok
+    refute_includes @response.body, "Company workspace"
+    assert_includes @response.body, "name=\"impersonation_session[impersonated_id]\""
+  end
+
   test "dashboard memoizes income statement period totals while rendering" do
+    sign_in @user
+
     income_statement = IncomeStatement.new(@family)
     IncomeStatement.stubs(:new).returns(income_statement)
 
@@ -48,6 +92,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "intro page requires guest role" do
+    sign_in @user
+
     get intro_path
 
     assert_redirected_to root_path
@@ -63,6 +109,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard renders sankey chart with subcategories" do
+    sign_in @user
+
     # Create parent category with subcategory
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
@@ -77,6 +125,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
+    sign_in @user
+
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
 
@@ -96,6 +146,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "changelog" do
+    sign_in @user
+
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
       assert_response :ok
@@ -103,6 +155,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "changelog with nil release notes" do
+    sign_in @user
+
     # Mock the GitHub provider to return nil (simulating API failure or no releases)
     github_provider = mock
     github_provider.expects(:fetch_latest_release_notes).returns(nil)
@@ -115,6 +169,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "changelog with incomplete release notes" do
+    sign_in @user
+
     # Mock the GitHub provider to return incomplete data (missing some fields)
     github_provider = mock
     incomplete_data = {

@@ -3,8 +3,11 @@ class ImpersonationSessionsController < ApplicationController
   before_action :set_impersonation_session, only: [ :approve, :reject, :complete ]
 
   def create
-    Current.true_user.request_impersonation_for(session_params[:impersonated_id])
-    redirect_to root_path, notice: t(".success")
+    impersonation_session = Current.true_user.request_impersonation_for(session_params[:impersonated_id])
+    Current.session.update!(active_impersonator_session: impersonation_session) if impersonation_session.in_progress?
+
+    notice_key = impersonation_session.in_progress? ? ".auto_approved_success" : ".success"
+    redirect_to root_path, notice: t(notice_key)
   end
 
   def join

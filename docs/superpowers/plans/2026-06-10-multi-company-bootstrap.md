@@ -1,60 +1,69 @@
 # Multi-Company Bootstrap Runbook
 
-**Goal:** Create the four Risingstone/Mahetel company workspaces and two platform-wide super-admin users through an idempotent, operator-run bootstrap path.
+**Goal:** Create the four Risingstone/Mahetel family workspaces, the two platform-wide super-admin users, and the four family-scoped admin users that back the super-admin workspace picker.
 
-**Current implementation status:** Implemented and committed. Treat the source files below as authoritative instead of copying implementation snippets into this runbook.
+The app remains single-family-per-user. F0/F1 workspace switching is implemented as a narrow impersonation shortcut, not as true multi-family membership.
 
-**Authoritative files:**
+## Authoritative Files
 
 - `app/services/platform_bootstrap/multi_company_owners.rb`
-  - Owns business logic for family/user creation.
-  - Creates or updates the four configured families.
-  - Creates or updates two owner users.
-  - Assigns both owners to the primary family named `Risingstone infra pvt ltd`.
-  - Uses a `requires_new: true` transaction and a PostgreSQL transaction-level advisory lock to serialize overlapping bootstrap runs.
-  - On rerun, keeps existing owner display/sidebar preferences while still updating family, role, password, and missing onboarding timestamps.
-  - Supports dry-run by validating writes, rolling back, and returning safe preview objects.
-- `test/services/platform_bootstrap/multi_company_owners_test.rb`
-  - Covers create, update/idempotency, dry-run rollback, password validation, and write-count behavior.
 - `lib/tasks/platform_bootstrap.rake`
-  - Provides `platform_bootstrap:multi_company_owners`.
-  - Reads owner passwords from derived environment keys or hidden interactive prompts.
-  - Rejects blank environment values.
-  - Supports boolean `DRY_RUN` values such as `DRY_RUN=1` and `DRY_RUN=true`.
+- `app/models/impersonation_session.rb`
+- `app/controllers/impersonation_sessions_controller.rb`
+- `app/views/impersonation_sessions/_super_admin_bar.html.erb`
+- `test/services/platform_bootstrap/multi_company_owners_test.rb`
+- `test/models/impersonation_session_test.rb`
+- `test/controllers/impersonation_sessions_controller_test.rb`
+- `test/controllers/pages_controller_test.rb`
 
-**Relevant commits:**
+## Bootstrap Accounts
 
-- `2f752725` - `test: cover multi-company owner bootstrap`
-- `b5582371` - `test: assert bootstrap errors avoid partial writes`
-- `83c64b1a` - `test: enforce bootstrap write counts`
-- `1b957569` - `feat: add multi-company owner bootstrap service`
-- `77cec45b` - `fix: match bootstrap password rules to registration`
-- `da290957` - `fix: return safe dry-run bootstrap previews`
-- `5b5cab8a` - `feat: add multi-company owner bootstrap task`
-- `a3bf35aa` - `fix: harden bootstrap task dry-run handling`
-- `6f31c995` - `fix: derive bootstrap password env keys`
+### Super admins
+
+- `adminF0@bookeepz.net` -> label `F0-SU-1`, role `super_admin`, primary family `Risingstone infra pvt ltd`
+- `adminF1@bookeepz.net` -> label `F0-SU-2`, role `super_admin`, primary family `Risingstone infra pvt ltd`
+
+### Family admins
+
+- `admin+rsinfra@bookeepz.net` -> label `RS-INFRA-ADMIN`, role `admin`, family `Risingstone infra pvt ltd`
+- `admin+rsventures@bookeepz.net` -> label `RS-VENTURES-ADMIN`, role `admin`, family `Risingstone ventures pvt ltd`
+- `admin+rsprojects@bookeepz.net` -> label `RS-PROJECTS-ADMIN`, role `admin`, family `Risingstone projects pvt Ltd`
+- `admin+mahetel@bookeepz.net` -> label `MAHETEL-ADMIN`, role `admin`, family `Mahetel pvt ltd`
+
+## One-Shot Password Inputs
+
+Provide passwords through hidden prompts or one-shot environment variables only:
+
+- `ADMIN_F0_PASSWORD`
+- `ADMIN_F1_PASSWORD`
+- `ADMIN_RSINFRA_PASSWORD`
+- `ADMIN_RSVENTURES_PASSWORD`
+- `ADMIN_RSPROJECTS_PASSWORD`
+- `ADMIN_MAHETEL_PASSWORD`
+
+Do not put these values in `.env`, `.env.local`, tracked files, shell history, or long-lived Railway service variables for a one-time bootstrap.
 
 ## Local Verification
 
-Run the focused service and model tests:
+Run the focused tests:
 
 ```bash
-rtk bin/rails test test/services/platform_bootstrap/multi_company_owners_test.rb test/models/user_test.rb test/models/family_test.rb
+bin/rails test \
+  test/services/platform_bootstrap/multi_company_owners_test.rb \
+  test/models/impersonation_session_test.rb \
+  test/controllers/impersonation_sessions_controller_test.rb \
+  test/controllers/pages_controller_test.rb
 ```
 
-Expected: all tests pass.
-
-Run a local dry-run through the rake task from an interactive shell:
+Run a local dry-run:
 
 ```bash
-rtk env DRY_RUN=1 bin/rails platform_bootstrap:multi_company_owners
+env DRY_RUN=1 bin/rails platform_bootstrap:multi_company_owners
 ```
 
-Expected:
+Expected output shape:
 
 ```text
-Password for adminF0@bookeepz.net:
-Password for adminF1@bookeepz.net:
 Multi-company owner bootstrap validated in dry-run mode.
 Families:
   - Risingstone infra pvt ltd
@@ -64,140 +73,73 @@ Families:
 Users:
   - adminf0@bookeepz.net: super_admin, primary_family=Risingstone infra pvt ltd
   - adminf1@bookeepz.net: super_admin, primary_family=Risingstone infra pvt ltd
+  - admin+rsinfra@bookeepz.net: admin, primary_family=Risingstone infra pvt ltd
+  - admin+rsventures@bookeepz.net: admin, primary_family=Risingstone ventures pvt ltd
+  - admin+rsprojects@bookeepz.net: admin, primary_family=Risingstone projects pvt Ltd
+  - admin+mahetel@bookeepz.net: admin, primary_family=Mahetel pvt ltd
 ```
 
-The password input should not echo in the terminal. Password values should be entered through hidden interactive prompts, not written to `.env`, shell history, tracked files, or long-lived service variables for a one-time bootstrap.
-
-Verify dry-run did not write records:
-
-```bash
-rtk bin/rails runner 'puts({ families: Family.where(name: PlatformBootstrap::MultiCompanyOwners::COMPANY_NAMES).count, users: User.where(email: %w[adminf0@bookeepz.net adminf1@bookeepz.net]).count }.inspect)'
-```
-
-Expected in a database with no prior bootstrap records:
-
-```text
-{:families=>0, :users=>0}
-```
-
-If local fixtures or prior manual data already contain these records, expected counts should reflect the pre-existing state exactly and must not increase after dry-run.
+Dry-run must perform no writes.
 
 ## Production Execution
 
 ### Step 1: Confirm the Railway target
 
-Run:
+```bash
+railway status --json
+```
+
+Confirm the selected target is the intended production project, environment, and `sure-web` service before mutation.
+
+### Step 2: Production dry-run
 
 ```bash
-rtk env RAILWAY_CALLER=skill:use-railway@1.2.5 RAILWAY_AGENT_SESSION=railway-skill-sure-bootstrap railway status --json
+railway run --service sure-web --environment production -- env DRY_RUN=1 bin/rails platform_bootstrap:multi_company_owners
 ```
 
-Confirm the JSON shows the intended target before continuing:
-
-```text
-project: stellar-enjoyment
-environment: production
-service: sure-web
-```
-
-If the project, environment, or service differs, stop and switch to the correct Railway target before running any bootstrap command.
-
-### Step 2: Run a production dry-run through the web service
-
-Run:
-
-```bash
-rtk env RAILWAY_CALLER=skill:use-railway@1.2.5 RAILWAY_AGENT_SESSION=railway-skill-sure-bootstrap railway run --service sure-web --environment production -- env DRY_RUN=1 bin/rails platform_bootstrap:multi_company_owners
-```
-
-Expected:
-
-```text
-Password for adminF0@bookeepz.net:
-Password for adminF1@bookeepz.net:
-Multi-company owner bootstrap validated in dry-run mode.
-Families:
-  - Risingstone infra pvt ltd
-  - Risingstone ventures pvt ltd
-  - Risingstone projects pvt Ltd
-  - Mahetel pvt ltd
-Users:
-  - adminf0@bookeepz.net: super_admin, primary_family=Risingstone infra pvt ltd
-  - adminf1@bookeepz.net: super_admin, primary_family=Risingstone infra pvt ltd
-```
-
-Prefer hidden interactive prompts. If `railway run` is non-interactive and cannot accept noecho prompts, set `ADMIN_F0_PASSWORD` and `ADMIN_F1_PASSWORD` in a one-shot shell outside the command transcript/history, run the command immediately, then clear those variables. Do not put bootstrap passwords in `.env`, `.env.local`, `railway.json`, tracked files, shell history, or Railway variables unless the intent is to store long-lived service secrets.
+If `railway run` cannot support hidden prompts, export the six password env vars in a one-shot shell, run the command immediately, then clear them.
 
 ### Step 3: Execute the production bootstrap
 
-Run:
+```bash
+railway run --service sure-web --environment production -- bin/rails platform_bootstrap:multi_company_owners
+```
+
+### Step 4: Verify records without printing secrets
 
 ```bash
-rtk env RAILWAY_CALLER=skill:use-railway@1.2.5 RAILWAY_AGENT_SESSION=railway-skill-sure-bootstrap railway run --service sure-web --environment production -- bin/rails platform_bootstrap:multi_company_owners
+railway run --service sure-web --environment production -- bin/rails runner '
+emails = %w[
+  adminf0@bookeepz.net
+  adminf1@bookeepz.net
+  admin+rsinfra@bookeepz.net
+  admin+rsventures@bookeepz.net
+  admin+rsprojects@bookeepz.net
+  admin+mahetel@bookeepz.net
+]
+rows = User.includes(:family).where(email: emails).order(:email).map { |user|
+  { email: user.email, role: user.role, family_name: user.family&.name }
+}
+puts({ families: Family.where(name: PlatformBootstrap::MultiCompanyOwners::COMPANY_NAMES).order(:name).pluck(:name), users: rows }.inspect)
+'
 ```
 
-Expected:
+Confirm:
 
-```text
-Password for adminF0@bookeepz.net:
-Password for adminF1@bookeepz.net:
-Multi-company owner bootstrap completed.
-Families:
-  - Risingstone infra pvt ltd
-  - Risingstone ventures pvt ltd
-  - Risingstone projects pvt Ltd
-  - Mahetel pvt ltd
-Users:
-  - adminf0@bookeepz.net: super_admin, primary_family=Risingstone infra pvt ltd
-  - adminf1@bookeepz.net: super_admin, primary_family=Risingstone infra pvt ltd
-```
+- exactly four families exist with the expected names
+- F0/F1 are `super_admin`
+- the four family admins are `admin`
+- each family admin is attached to the expected family
 
-Use the same password-handling rule as the dry-run: hidden prompt first; only use one-shot environment variables if the Railway execution path cannot prompt interactively, and clear them immediately afterward.
+## Operator Flow
 
-### Step 4: Verify production records without printing secrets
+After bootstrap:
 
-Run:
+1. Sign in as `adminF0@bookeepz.net` or `adminF1@bookeepz.net`.
+2. Enable the super-admin bar.
+3. Choose a company from the workspace picker.
+4. The app starts an auto-approved impersonation session into the matching family admin.
+5. Work inside that family-scoped workspace.
+6. Use `Leave` or `Terminate` to return to the base super-admin context.
 
-```bash
-rtk env RAILWAY_CALLER=skill:use-railway@1.2.5 RAILWAY_AGENT_SESSION=railway-skill-sure-bootstrap railway run --service sure-web --environment production -- bin/rails runner 'emails = %w[adminf0@bookeepz.net adminf1@bookeepz.net]; rows = User.includes(:family).where(email: emails).order(:email).map { |user| { email: user.email, role: user.role, family_name: user.family&.name } }; puts({ families: Family.where(name: PlatformBootstrap::MultiCompanyOwners::COMPANY_NAMES).order(:name).pluck(:name), users: rows }.inspect)'
-```
-
-Expected:
-
-```text
-Families must include exactly these four company names:
-- Risingstone infra pvt ltd
-- Risingstone ventures pvt ltd
-- Risingstone projects pvt Ltd
-- Mahetel pvt ltd
-
-Users must include exactly these two rows:
-- email: adminf0@bookeepz.net, role: super_admin, family_name: Risingstone infra pvt ltd
-- email: adminf1@bookeepz.net, role: super_admin, family_name: Risingstone infra pvt ltd
-```
-
-Do not print passwords, password digests, reset tokens, session tokens, or other secrets.
-
-### Step 5: Final local verification
-
-Run:
-
-```bash
-rtk git status --short --branch
-```
-
-Expected: only intended source changes plus any already-known untracked files such as `railway.json`.
-
-Run:
-
-```bash
-rtk git log --oneline -n 12
-```
-
-Expected: recent history includes the multi-company bootstrap service, test, task, and runbook commits.
-
-## Self-Review
-
-- Spec coverage: The implementation creates four `Family` records, two `super_admin` users, uses `Risingstone infra pvt ltd` as both owners' primary family, avoids multi-company membership, keeps passwords out of files/output, and includes dry-run plus production verification.
-- Secrets hygiene: The runbook never includes real passwords or password digests.
-- Type consistency: The service is consistently named `PlatformBootstrap::MultiCompanyOwners`; the rake task calls that class; tests use the same constants and emails.
+The existing raw UUID impersonation field remains available for general support impersonation flows. Only the F0/F1 -> bootstrap family-admin path is auto-approved.
