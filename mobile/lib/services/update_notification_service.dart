@@ -73,6 +73,11 @@ class UpdateNotificationService {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getString(_prefKey) == storeVersion) return;
 
+    final plugin = _notifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final granted = plugin == null || (await plugin.areNotificationsEnabled() ?? false);
+    if (!granted) return;
+
     await _fire(storeVersion);
     await prefs.setString(_prefKey, storeVersion);
   }
@@ -83,7 +88,10 @@ class UpdateNotificationService {
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
 
-      final match = RegExp(r'\[\[\["(\d+\.\d+\.\d+)"').firstMatch(response.body);
+      final match = RegExp(r'\[\[\["(\d+[\d.]+)"').firstMatch(response.body);
+      if (match == null) {
+        debugPrint('UpdateNotificationService: version regex found no match in Play Store response');
+      }
       return match?.group(1);
     } catch (_) {
       return null;

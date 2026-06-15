@@ -220,8 +220,16 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
       final svc = UpdateNotificationService();
       await svc.initialize(context);
       await svc.checkAndNotify();
-    } catch (_) {
-      // Best-effort — platform channels unavailable in test environments
+    } catch (e, stackTrace) {
+      LogService.instance.warning(
+        'UpdateNotificationService',
+        'Update check skipped: ${e.runtimeType}',
+      );
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'app.update_check',
+      ));
     }
   }
 
