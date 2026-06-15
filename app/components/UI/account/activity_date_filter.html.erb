@@ -18,6 +18,7 @@
                   "flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-surface-hover text-primary",
                   "bg-surface-inset font-medium" => year_selected?(year)
                 ),
+                data: { turbo_frame: "_top" },
                 aria: { current: year_selected?(year) ? "true" : nil } do %>
             <span><%= year %></span>
             <% if year_selected?(year) %>
@@ -42,6 +43,7 @@
                     "flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-surface-hover text-primary",
                     "bg-surface-inset font-medium" => month_selected?(month_number)
                   ),
+                  data: { turbo_frame: "_top" },
                   aria: { current: month_selected?(month_number) ? "true" : nil } do %>
               <span><%= month_name %></span>
               <% if month_selected?(month_number) %>
@@ -57,6 +59,7 @@
       <div class="border-t border-tertiary p-2">
         <%= link_to t("accounts.show.activity.filter_period.clear"),
               clear_href,
+              data: { turbo_frame: "_top" },
               class: "block w-full text-center px-2 py-1.5 rounded-md text-sm text-secondary hover:bg-surface-hover" %>
       </div>
     <% end %>
