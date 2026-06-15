@@ -1,7 +1,14 @@
 <%= content_for :page_title, t(".title") %>
 
-<%= settings_section title: t(".title") do %>
-  <div class="space-y-4">
+<% content_for :page_header do %>
+  <div class="mb-6 space-y-1">
+    <h1 class="text-xl lg:text-3xl font-medium text-primary"><%= t(".title") %></h1>
+    <p class="text-sm text-secondary"><%= t(".upload_description") %></p>
+  </div>
+<% end %>
+
+<div class="space-y-4">
+  <section class="rounded-xl bg-container shadow-border-xs p-4">
     <div class="rounded-xl bg-container-inset p-4">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="space-y-1">
@@ -38,7 +45,9 @@
         <% end %>
       </div>
     </div>
+  </section>
 
+  <section class="rounded-xl bg-container shadow-border-xs p-4">
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
       <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
         <p><%= t(".table.title") %></p>
@@ -91,12 +100,12 @@
           <p class="py-8 text-center text-sm font-medium text-secondary"><%= t(".empty") %></p>
         <% end %>
       </div>
-
-      <% if @pagy.pages > 1 %>
-        <div class="px-3 py-2">
-          <%= render "shared/pagination", pagy: @pagy %>
-        </div>
-      <% end %>
     </div>
-  </div>
-<% end %>
+  </section>
+
+  <% if @pagy.pages > 1 %>
+    <div class="px-3 py-2">
+      <%= render "shared/pagination", pagy: @pagy %>
+    </div>
+  <% end %>
+</div>

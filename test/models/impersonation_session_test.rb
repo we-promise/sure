@@ -2,6 +2,8 @@ require "test_helper"
 
 class ImpersonationSessionTest < ActiveSupport::TestCase
   setup do
+    workspace_family = Family.create!(name: "Risingstone ventures pvt ltd")
+
     @bootstrap_super_admin = User.create!(
       family: families(:empty),
       first_name: "F0-SU-1",
@@ -13,7 +15,7 @@ class ImpersonationSessionTest < ActiveSupport::TestCase
     )
 
     @bootstrap_family_admin = User.create!(
-      family: families(:dylan_family),
+      family: workspace_family,
       first_name: "RS-VENTURES-ADMIN",
       email: "admin+rsventures@bookeepz.net",
       password: "Password1!",
@@ -72,6 +74,28 @@ class ImpersonationSessionTest < ActiveSupport::TestCase
   test "other super admins do not auto approve bootstrap family admin impersonation" do
     session = ImpersonationSession.create!(
       impersonator: users(:sure_support_staff),
+      impersonated: @bootstrap_family_admin
+    )
+
+    assert_equal "pending", session.status
+  end
+
+  test "bootstrap family admin with wrong family is not auto approved" do
+    @bootstrap_family_admin.update!(family: families(:empty))
+
+    session = ImpersonationSession.create!(
+      impersonator: @bootstrap_super_admin,
+      impersonated: @bootstrap_family_admin
+    )
+
+    assert_equal "pending", session.status
+  end
+
+  test "bootstrap family admin with wrong role is not auto approved" do
+    @bootstrap_family_admin.update!(role: :member)
+
+    session = ImpersonationSession.create!(
+      impersonator: @bootstrap_super_admin,
       impersonated: @bootstrap_family_admin
     )
 

@@ -1,19 +1,33 @@
 <%= content_for :page_title, t(".title") %>
 
-<%= settings_section title: t(".title") do %>
-  <div class="space-y-4">
-    <% has_processing = @exports.any? { |e| e.pending? || e.processing? } %>
-    <%= turbo_frame_tag "family_exports",
-        data: has_processing ? {
-          controller: "polling",
-          polling_url_value: family_exports_path,
-          polling_interval_value: 3000
-        } : {} do %>
+<% content_for :page_header do %>
+  <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="space-y-1">
+      <h1 class="text-xl lg:text-3xl font-medium text-primary"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t("family_exports.table.title") %></p>
+    </div>
+
+    <%= link_to new_family_export_path,
+                class: "inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-inverse hover:bg-primary-hover",
+                data: { turbo_frame: :modal } do %>
+      <%= icon("plus") %>
+      <%= t(".new") %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="space-y-4">
+  <% has_processing = @exports.any? { |e| e.pending? || e.processing? } %>
+  <%= turbo_frame_tag "family_exports",
+      data: has_processing ? {
+        controller: "polling",
+        polling_url_value: family_exports_path,
+        polling_interval_value: 3000
+      } : {} do %>
+    <section class="bg-container shadow-border-xs rounded-xl p-4">
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-          <p>
-            <%= t("family_exports.table.title") %>
-          </p>
+          <p><%= t("family_exports.table.title") %></p>
           <span class="text-subdued">&middot;</span>
           <p><%= @pagy.count %></p>
         </div>
@@ -23,18 +37,10 @@
             <table class="w-full overflow-x-auto">
               <thead>
                 <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-                  <th class="px-2 py-3 text-left min-w-44">
-                    <%= t("family_exports.table.header.date") %>
-                  </th>
-                  <th class="px-2 py-3 text-left min-w-64">
-                    <%= t("family_exports.table.header.filename") %>
-                  </th>
-                  <th class="px-2 py-3 text-left min-w-24">
-                    <%= t("family_exports.table.header.status") %>
-                  </th>
-                  <th class="px-2 py-3 text-right min-w-20">
-                    <%= t("family_exports.table.header.actions") %>
-                  </th>
+                  <th class="px-2 py-3 text-left min-w-44"><%= t("family_exports.table.header.date") %></th>
+                  <th class="px-2 py-3 text-left min-w-64"><%= t("family_exports.table.header.filename") %></th>
+                  <th class="px-2 py-3 text-left min-w-24"><%= t("family_exports.table.header.status") %></th>
+                  <th class="px-2 py-3 text-right min-w-20"><%= t("family_exports.table.header.actions") %></th>
                 </tr>
               </thead>
               <tbody>
@@ -121,19 +127,12 @@
           <% end %>
         </div>
       </div>
+    </section>
 
-      <% if @pagy.pages > 1 %>
-        <div class="mt-4">
-          <%= render "shared/pagination", pagy: @pagy %>
-        </div>
-      <% end %>
+    <% if @pagy.pages > 1 %>
+      <div class="mt-4">
+        <%= render "shared/pagination", pagy: @pagy %>
+      </div>
     <% end %>
-
-    <%= link_to new_family_export_path,
-                class: "bg-container-inset inline-flex items-center justify-center gap-2 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full font-medium text-primary text-sm text-center",
-                data: { turbo_frame: :modal } do %>
-      <%= icon("plus") %>
-      <%= t(".new") %>
-    <% end %>
-  </div>
-<% end %>
+  <% end %>
+</div>

@@ -1,9 +1,5 @@
 <div class="sticky top-0 left-0 w-full bg-black flex items-center justify-between font-mono">
-  <% workspace_admins_by_email = User.where(email: PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS.map { |admin| admin.fetch(:email) }).index_by { |user| user.email.downcase } %>
-  <% workspace_options = PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS.each_with_object([]) do |admin, options| %>
-    <% workspace_user = workspace_admins_by_email[admin.fetch(:email).downcase] %>
-    <% options << [admin.fetch(:family_name), workspace_user.id] if workspace_user %>
-  <% end %>
+  <% workspace_options = PlatformBootstrap::MultiCompanyOwners.workspace_picker_options_for(Current.true_user) %>
 
   <div class="flex items-center bg-red-600 px-6 py-4">
     <%= icon "alert-triangle", size: "lg", color: "current", class: "mr-2" %>

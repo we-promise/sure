@@ -118,11 +118,11 @@ class User < ApplicationRecord
   end
 
   def bootstrap_workspace_operator?
-    email.in?(PlatformBootstrap::MultiCompanyOwners::OWNERS.map { |owner| owner.fetch(:email).downcase })
+    PlatformBootstrap::MultiCompanyOwners.bootstrap_workspace_operator?(self)
   end
 
   def bootstrap_workspace_admin?
-    email.in?(PlatformBootstrap::MultiCompanyOwners::FAMILY_ADMINS.map { |admin| admin.fetch(:email).downcase })
+    PlatformBootstrap::MultiCompanyOwners.bootstrap_workspace_admin?(self)
   end
 
   def admin?

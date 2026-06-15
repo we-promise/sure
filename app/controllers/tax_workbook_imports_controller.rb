@@ -11,8 +11,6 @@ class TaxWorkbookImportsController < ApplicationController
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.tax_workbook_imports"), tax_workbook_imports_path ]
     ]
-
-    render layout: "settings"
   end
 
   def show
@@ -21,8 +19,6 @@ class TaxWorkbookImportsController < ApplicationController
       [ t("breadcrumbs.tax_workbook_imports"), tax_workbook_imports_path ],
       [ @import.filename, nil ]
     ]
-
-    render layout: "settings"
   end
 
   def create

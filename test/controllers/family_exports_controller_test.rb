@@ -140,10 +140,11 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_not ActiveStorage::Attachment.exists?(file_id)
   end
 
-  test "index responds to html with settings layout" do
+  test "index responds to html with application layout" do
     get family_exports_path
     assert_response :success
-    assert_select "title" # rendered with layout
+    assert_select "main#main"
+    assert_select "#mobile-settings-nav", count: 0
   end
 
   test "index responds to turbo_stream without raising MissingTemplate" do

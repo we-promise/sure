@@ -67,7 +67,11 @@ bin/rails platform_bootstrap:multi_company_owners
 
 Set `DRY_RUN=1` to validate the write path without persisting changes.
 
-For day-to-day operations, `adminF0@bookeepz.net` and `adminF1@bookeepz.net` use the super-admin bar company picker to enter one of the four family workspaces through an auto-approved impersonation shortcut. The app still uses single-family users under the hood.
+Bootstrap reruns are intentionally conservative: they do not backfill currency, country, or date-format defaults onto existing families. India defaults (`INR`, `IN`, `%d-%m-%Y`) apply when a family is created for the first time, both through normal signup and through the bootstrap task.
+
+For day-to-day operations, `adminF0@bookeepz.net` and `adminF1@bookeepz.net` use the super-admin bar company picker to enter one of the four family workspaces through an auto-approved impersonation shortcut. The app still uses single-family users under the hood. If a bootstrap family-admin user drifts away from its expected role or family, that picker entry is suppressed and the auto-approved path is disabled until the account is corrected.
+
+Admin-only `Tax`, `Imports`, and `Exports` now live in the main application navigation and render in the primary app shell instead of the Settings shell.
 
 ## Browser UAT
 

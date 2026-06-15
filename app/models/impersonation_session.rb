@@ -33,7 +33,10 @@ class ImpersonationSession < ApplicationRecord
     end
 
     def auto_approvable?
-      impersonator&.bootstrap_workspace_operator? && impersonated&.bootstrap_workspace_admin?
+      PlatformBootstrap::MultiCompanyOwners.bootstrap_workspace_shortcut_allowed?(
+        impersonator: impersonator,
+        impersonated: impersonated
+      )
     end
 
     def impersonator_is_super_admin

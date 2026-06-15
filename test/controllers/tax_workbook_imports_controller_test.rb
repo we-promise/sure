@@ -12,8 +12,18 @@ class TaxWorkbookImportsControllerTest < ActionDispatch::IntegrationTest
     get tax_workbook_imports_url
 
     assert_response :success
+    assert_select "#mobile-settings-nav", count: 0
     assert_select "h1", text: I18n.t("tax_workbook_imports.index.title")
     assert_select "input#tax_workbook_import_file"
+  end
+
+  test "admin can view tax workbook import detail in application shell" do
+    get tax_workbook_import_url(@import)
+
+    assert_response :success
+    assert_select "#mobile-settings-nav", count: 0
+    assert_select "main#main"
+    assert_select "h1", text: @import.filename
   end
 
   test "non admin cannot view tax workbook imports index" do

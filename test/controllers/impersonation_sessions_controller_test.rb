@@ -2,6 +2,8 @@ require "test_helper"
 
 class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    workspace_family = Family.create!(name: "Risingstone ventures pvt ltd")
+
     @bootstrap_super_admin = User.create!(
       family: families(:empty),
       first_name: "F0-SU-1",
@@ -13,7 +15,7 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     )
 
     @bootstrap_family_admin = User.create!(
-      family: families(:dylan_family),
+      family: workspace_family,
       first_name: "RS-VENTURES-ADMIN",
       email: "admin+rsventures@bookeepz.net",
       password: user_password_test,
@@ -142,6 +144,20 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     session_record = ImpersonationSession.order(created_at: :desc).first
     assert_equal "in_progress", session_record.status
     assert_equal session_record, current_session.reload.active_impersonator_session
+    assert_redirected_to root_path
+  end
+
+  test "bootstrap super admin waits for approval when workspace admin mapping drifts" do
+    @bootstrap_family_admin.update!(role: :member)
+    sign_in @bootstrap_super_admin
+
+    current_session = @bootstrap_super_admin.sessions.order(created_at: :desc).first
+
+    post impersonation_sessions_path, params: { impersonation_session: { impersonated_id: @bootstrap_family_admin.id } }
+
+    session_record = ImpersonationSession.order(created_at: :desc).first
+    assert_equal "pending", session_record.status
+    assert_nil current_session.reload.active_impersonator_session
     assert_redirected_to root_path
   end
 end

@@ -81,6 +81,18 @@ Users:
 
 Dry-run must perform no writes.
 
+## Rerun Expectations
+
+Bootstrap reruns are intentionally narrow:
+
+- existing families are found by name and left as-is
+- India defaults (`INR`, `IN`, `%d-%m-%Y`) are applied only when bootstrap creates a family for the first time
+- the starter `Expenditure` account is created only if the family has no depository account yet
+- the six bootstrap users have role, family, password, and missing onboarding timestamp reasserted on each rerun
+- existing non-security profile/sidebar preferences on persisted bootstrap users are preserved
+
+This means rerunning bootstrap does **not** backfill blank or non-India locale/currency/date settings onto already-existing families.
+
 ## Production Execution
 
 ### Step 1: Confirm the Railway target
@@ -131,6 +143,8 @@ Confirm:
 - the four family admins are `admin`
 - each family admin is attached to the expected family
 
+If a family-admin user has drifted to the wrong family or role, the workspace picker and auto-approved impersonation path fail closed until the bootstrap user is corrected.
+
 ## Operator Flow
 
 After bootstrap:
@@ -143,3 +157,11 @@ After bootstrap:
 6. Use `Leave` or `Terminate` to return to the base super-admin context.
 
 The existing raw UUID impersonation field remains available for general support impersonation flows. Only the F0/F1 -> bootstrap family-admin path is auto-approved.
+
+## Related UI Notes
+
+- New families created through normal signup default to:
+  - currency `INR`
+  - country `IN`
+  - date format `%d-%m-%Y`
+- Admin-only `Tax`, `Imports`, and `Exports` now live in the primary application navigation and render in the main app shell instead of the Settings shell.

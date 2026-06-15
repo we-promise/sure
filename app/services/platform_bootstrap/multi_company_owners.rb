@@ -46,6 +46,19 @@ module PlatformBootstrap
       }
     ].freeze
 
+    WORKSPACE_TARGET_ROLE = "admin"
+
+    WORKSPACE_SHORTCUTS = OWNERS.flat_map do |owner|
+      FAMILY_ADMINS.map do |admin|
+        {
+          operator_email: owner.fetch(:email).downcase,
+          workspace_admin_email: admin.fetch(:email).downcase,
+          family_name: admin.fetch(:family_name),
+          target_role: WORKSPACE_TARGET_ROLE
+        }
+      end
+    end.freeze
+
     SPECIAL_CHARACTER_PATTERN = /[!@#$%^&*(),.?":{}|<>]/
     ADVISORY_LOCK_KEY = Zlib.crc32("platform_bootstrap:multi_company_owners")
 
@@ -58,6 +71,74 @@ module PlatformBootstrap
     def initialize(passwords:, dry_run: false)
       @passwords = passwords.to_h.transform_keys { |email| normalize_email(email) }
       @dry_run = dry_run
+    end
+
+    class << self
+      def bootstrap_workspace_operator?(user)
+        return false unless user&.super_admin?
+
+        WORKSPACE_SHORTCUTS.any? { |rule| rule.fetch(:operator_email) == normalized_email(user.email) }
+      end
+
+      def bootstrap_workspace_admin?(user)
+        workspace_admin_rule_for(user).present?
+      end
+
+      def bootstrap_workspace_shortcut_allowed?(impersonator:, impersonated:)
+        return false unless bootstrap_workspace_operator?(impersonator)
+
+        workspace_rule = workspace_admin_rule_for(impersonated)
+        return false unless workspace_rule
+
+        WORKSPACE_SHORTCUTS.any? do |rule|
+          rule.fetch(:operator_email) == normalized_email(impersonator.email) &&
+            rule.fetch(:workspace_admin_email) == workspace_rule.fetch(:workspace_admin_email) &&
+            rule.fetch(:family_name) == workspace_rule.fetch(:family_name) &&
+            rule.fetch(:target_role) == workspace_rule.fetch(:target_role)
+        end
+      end
+
+      def workspace_picker_options_for(operator)
+        return [] unless bootstrap_workspace_operator?(operator)
+
+        workspace_admins_by_email = User.includes(:family)
+          .where(email: bootstrap_workspace_admin_emails)
+          .index_by { |user| normalized_email(user.email) }
+
+        FAMILY_ADMINS.filter_map do |admin|
+          workspace_admin = workspace_admins_by_email[normalized_email(admin.fetch(:email))]
+          next unless workspace_admin_rule_for(workspace_admin)
+
+          [ admin.fetch(:family_name), workspace_admin.id ]
+        end
+      end
+
+      private
+        def workspace_admin_rule_for(user)
+          return if user.blank?
+
+          workspace_admin_email = normalized_email(user.email)
+          definition = FAMILY_ADMINS.find do |admin|
+            normalized_email(admin.fetch(:email)) == workspace_admin_email
+          end
+          return unless definition
+          return unless user.role == WORKSPACE_TARGET_ROLE
+          return unless user.family&.name == definition.fetch(:family_name)
+
+          {
+            workspace_admin_email: workspace_admin_email,
+            family_name: definition.fetch(:family_name),
+            target_role: WORKSPACE_TARGET_ROLE
+          }
+        end
+
+        def bootstrap_workspace_admin_emails
+          FAMILY_ADMINS.map { |admin| normalized_email(admin.fetch(:email)) }
+        end
+
+        def normalized_email(email)
+          email.to_s.strip.downcase
+        end
     end
 
     def call
@@ -100,11 +181,10 @@ module PlatformBootstrap
       def upsert_families
         COMPANY_NAMES.index_with do |name|
           family = Family.find_or_initialize_by(name: name)
-          family.currency = "INR" if family.currency.blank?
-          family.country = "IN" if family.country.blank?
-          family.date_format = "%d-%m-%Y" if family.date_format.blank?
-          family.locale = I18n.default_locale.to_s if family.locale.blank?
-          family.save!
+          if family.new_record?
+            family.locale = I18n.default_locale.to_s if family.locale.blank?
+            family.save!
+          end
           family
         end
       end

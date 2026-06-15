@@ -31,7 +31,7 @@ module PlatformBootstrap
       assert_difference -> { Family.count }, 4 do
         assert_difference -> { User.count }, 6 do
           assert_difference -> { Account.count }, 4 do
-          result = MultiCompanyOwners.new(passwords: PASSWORDS).call
+            result = MultiCompanyOwners.new(passwords: PASSWORDS).call
           end
         end
       end
@@ -79,6 +79,11 @@ module PlatformBootstrap
       MultiCompanyOwners.new(passwords: PASSWORDS).call
       custom_onboarded_at = 2.days.ago.change(usec: 0)
       custom_family = Family.create!(name: "Custom holding company", currency: "INR", locale: I18n.default_locale.to_s)
+      ventures_family = Family.find_by!(name: "Risingstone ventures pvt ltd")
+      projects_family = Family.find_by!(name: "Risingstone projects pvt Ltd")
+
+      ventures_family.update_columns(currency: nil, country: nil, date_format: nil)
+      projects_family.update_columns(currency: "USD", country: "US", date_format: "%Y-%m-%d")
 
       User.find_by!(email: "adminf0@bookeepz.net").update!(
         first_name: "Custom",
@@ -138,13 +143,17 @@ module PlatformBootstrap
       COMPANY_NAMES.each do |name|
         family = Family.find_by!(name: name)
         family_admin = User.find_by!(email: FAMILY_ADMIN_EMAILS.fetch(name))
-
-        assert_equal "INR", family.currency
-        assert_equal "IN", family.country
-        assert_equal "%d-%m-%Y", family.date_format
         assert_equal "admin", family_admin.role
         assert_equal family, family_admin.family
       end
+
+      assert_nil ventures_family.reload.currency
+      assert_nil ventures_family.country
+      assert_nil ventures_family.date_format
+
+      assert_equal "USD", projects_family.reload.currency
+      assert_equal "US", projects_family.country
+      assert_equal "%Y-%m-%d", projects_family.date_format
     end
 
     test "requests advisory lock before bootstrap writes" do

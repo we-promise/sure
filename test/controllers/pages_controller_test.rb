@@ -56,6 +56,21 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "name=\"impersonation_session[impersonated_id]\""
   end
 
+  test "workspace picker excludes bootstrap admin accounts that drift from expected family or role" do
+    bootstrap_workspace_access!
+    drifting_admin = User.find_by!(email: "admin+rsventures@bookeepz.net")
+    drifting_admin.update!(role: :member)
+
+    post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
+
+    get root_path, params: { admin: true }
+    get root_path
+
+    assert_response :ok
+    refute_includes @response.body, "Risingstone ventures pvt ltd"
+    assert_includes @response.body, "Risingstone infra pvt ltd"
+  end
+
   test "dashboard memoizes income statement period totals while rendering" do
     sign_in @user
 

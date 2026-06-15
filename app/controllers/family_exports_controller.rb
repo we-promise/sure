@@ -28,7 +28,7 @@ class FamilyExportsController < ApplicationController
     ]
 
     respond_to do |format|
-      format.html { render layout: "settings" }
+      format.html
       format.turbo_stream { redirect_to family_exports_path }
     end
   end

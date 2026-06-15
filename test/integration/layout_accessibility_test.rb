@@ -63,4 +63,31 @@ class LayoutAccessibilityTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{imports_path}']", count: 0
     assert_select "a[href='#{family_exports_path}']", count: 0
   end
+
+  test "imports index renders in the application shell" do
+    get imports_path
+
+    assert_response :ok
+    assert_select "main#main"
+    assert_select "#mobile-settings-nav", count: 0
+    assert_select "a[href='#{imports_path}']"
+  end
+
+  test "family exports index renders in the application shell" do
+    get family_exports_path
+
+    assert_response :ok
+    assert_select "main#main"
+    assert_select "#mobile-settings-nav", count: 0
+    assert_select "a[href='#{family_exports_path}']"
+  end
+
+  test "tax workbook imports index renders in the application shell" do
+    get tax_workbook_imports_path
+
+    assert_response :ok
+    assert_select "main#main"
+    assert_select "#mobile-settings-nav", count: 0
+    assert_select "a[href='#{tax_workbook_imports_path}']"
+  end
 end

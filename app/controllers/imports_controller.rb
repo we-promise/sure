@@ -1,5 +1,6 @@
 class ImportsController < ApplicationController
   include SettingsHelper
+  layout :layout_for_action
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template]
@@ -36,9 +37,6 @@ class ImportsController < ApplicationController
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
     ]
-    respond_to do |format|
-      format.html { render layout: "settings" }
-    end
   end
 
   def new
@@ -137,6 +135,10 @@ class ImportsController < ApplicationController
   end
 
   private
+    def layout_for_action
+      action_name.in?(%w[index show]) ? "application" : "imports"
+    end
+
     def set_import
       @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
       raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)

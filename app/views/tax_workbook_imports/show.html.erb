@@ -1,121 +1,119 @@
 <%= content_for :page_title, @import.filename %>
 
-<%= settings_section title: t(".title") do %>
-  <div class="space-y-4">
-    <div class="rounded-xl bg-container-inset p-4">
-      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <%= icon("file-spreadsheet", size: "sm") %>
-            <h2 class="truncate text-lg font-medium text-primary"><%= @import.filename %></h2>
-          </div>
-          <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-secondary">
-            <span><%= t(".status_label", status: @import.status.humanize) %></span>
-            <span><%= l(@import.created_at, format: :long) %></span>
-            <% if @import.uploaded_by.present? %>
-              <span><%= t(".uploaded_by", email: @import.uploaded_by.email) %></span>
-            <% end %>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <% if @import.source_file.attached? %>
-            <%= link_to download_tax_workbook_import_path(@import),
-                        class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
-              <%= icon("download", size: "sm") %>
-              <%= t(".download") %>
-            <% end %>
-          <% end %>
-
-          <%= button_to tax_workbook_import_path(@import),
-                        method: :delete,
-                        class: "inline-flex items-center gap-2 text-sm font-medium text-destructive",
-                        data: { turbo_confirm: t(".delete_confirmation") } do %>
-            <%= icon("trash-2", size: "sm", color: "destructive") %>
-            <%= t(".delete") %>
-          <% end %>
-        </div>
+<% content_for :page_header do %>
+  <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div class="min-w-0 space-y-2">
+      <div class="flex items-center gap-2">
+        <%= icon("file-spreadsheet", size: "sm") %>
+        <h1 class="truncate text-xl lg:text-3xl font-medium text-primary"><%= @import.filename %></h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-xs text-secondary">
+        <span><%= t(".status_label", status: @import.status.humanize) %></span>
+        <span><%= l(@import.created_at, format: :long) %></span>
+        <% if @import.uploaded_by.present? %>
+          <span><%= t(".uploaded_by", email: @import.uploaded_by.email) %></span>
+        <% end %>
       </div>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-3">
-      <div class="rounded-xl bg-container-inset p-4">
-        <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.gst_taxable") %></p>
-        <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@import.gst_taxable_total, precision: 2) %></p>
-      </div>
-      <div class="rounded-xl bg-container-inset p-4">
-        <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.gst_tax") %></p>
-        <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@import.gst_tax_total, precision: 2) %></p>
-      </div>
-      <div class="rounded-xl bg-container-inset p-4">
-        <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.tds_total") %></p>
-        <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@import.tds_total, precision: 2) %></p>
-      </div>
-    </div>
+    <div class="flex items-center gap-3">
+      <% if @import.source_file.attached? %>
+        <%= link_to download_tax_workbook_import_path(@import),
+                    class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+          <%= icon("download", size: "sm") %>
+          <%= t(".download") %>
+        <% end %>
+      <% end %>
 
-    <div class="grid gap-4 lg:grid-cols-[20rem_1fr]">
-      <div class="rounded-xl bg-container-inset p-4">
-        <h3 class="text-sm font-medium text-primary"><%= t(".details_title") %></h3>
-        <dl class="mt-3 space-y-2 text-sm">
-          <div>
-            <dt class="text-xs text-secondary"><%= t(".details.entity_name") %></dt>
-            <dd class="text-primary"><%= @import.entity_name.presence || t(".unknown") %></dd>
-          </div>
-          <div>
-            <dt class="text-xs text-secondary"><%= t(".details.gstin") %></dt>
-            <dd class="text-primary"><%= @import.gstin.presence || t(".unknown") %></dd>
-          </div>
-          <div>
-            <dt class="text-xs text-secondary"><%= t(".details.tan") %></dt>
-            <dd class="text-primary"><%= @import.tan.presence || t(".unknown") %></dd>
-          </div>
-          <div>
-            <dt class="text-xs text-secondary"><%= t(".details.period") %></dt>
-            <dd class="text-primary"><%= [@import.fy, @import.tax_period_quarter, @import.tax_period_month].compact.join(" · ") %></dd>
-          </div>
-          <div>
-            <dt class="text-xs text-secondary"><%= t(".details.template_version") %></dt>
-            <dd class="text-primary"><%= @import.template_version %></dd>
-          </div>
-        </dl>
-      </div>
-
-      <div class="space-y-4">
-        <div class="rounded-xl bg-container-inset p-4">
-          <h3 class="text-sm font-medium text-primary"><%= t(".row_counts_title") %></h3>
-          <% if @import.row_counts.present? %>
-            <dl class="mt-3 grid gap-3 md:grid-cols-2">
-              <% @import.row_counts.each do |sheet_name, count| %>
-                <div class="rounded-lg bg-container p-3 shadow-border-xs">
-                  <dt class="text-xs uppercase text-secondary"><%= sheet_name.humanize %></dt>
-                  <dd class="mt-1 text-lg font-semibold text-primary"><%= count %></dd>
-                </div>
-              <% end %>
-            </dl>
-          <% else %>
-            <p class="mt-3 text-sm text-secondary"><%= t(".row_counts_empty") %></p>
-          <% end %>
-        </div>
-
-        <div class="rounded-xl bg-container-inset p-4">
-          <h3 class="text-sm font-medium text-primary"><%= t(".validation_errors_title") %></h3>
-          <% if @import.validation_errors.any? %>
-            <ul class="mt-3 space-y-2 text-sm text-secondary">
-              <% @import.validation_errors.each do |error| %>
-                <li class="rounded-lg bg-container p-3 shadow-border-xs">
-                  <span class="font-medium text-primary"><%= error["message"] %></span>
-                  <% context = [error["sheet"], (t(".row_number", row: error["row"]) if error["row"].present?), error["column"]].compact.join(" · ") %>
-                  <% if context.present? %>
-                    <p class="mt-1 text-xs text-secondary"><%= context %></p>
-                  <% end %>
-                </li>
-              <% end %>
-            </ul>
-          <% else %>
-            <p class="mt-3 text-sm text-secondary"><%= t(".validation_errors_empty") %></p>
-          <% end %>
-        </div>
-      </div>
+      <%= button_to tax_workbook_import_path(@import),
+                    method: :delete,
+                    class: "inline-flex items-center gap-2 text-sm font-medium text-destructive",
+                    data: { turbo_confirm: t(".delete_confirmation") } do %>
+        <%= icon("trash-2", size: "sm", color: "destructive") %>
+        <%= t(".delete") %>
+      <% end %>
     </div>
   </div>
 <% end %>
+
+<div class="space-y-4">
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="rounded-xl bg-container-inset p-4">
+      <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.gst_taxable") %></p>
+      <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@import.gst_taxable_total, precision: 2) %></p>
+    </div>
+    <div class="rounded-xl bg-container-inset p-4">
+      <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.gst_tax") %></p>
+      <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@import.gst_tax_total, precision: 2) %></p>
+    </div>
+    <div class="rounded-xl bg-container-inset p-4">
+      <p class="text-xs font-medium uppercase text-secondary"><%= t(".totals.tds_total") %></p>
+      <p class="mt-2 text-2xl font-semibold text-primary"><%= number_with_precision(@import.tds_total, precision: 2) %></p>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-[20rem_1fr]">
+    <div class="rounded-xl bg-container-inset p-4">
+      <h2 class="text-sm font-medium text-primary"><%= t(".details_title") %></h2>
+      <dl class="mt-3 space-y-2 text-sm">
+        <div>
+          <dt class="text-xs text-secondary"><%= t(".details.entity_name") %></dt>
+          <dd class="text-primary"><%= @import.entity_name.presence || t(".unknown") %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-secondary"><%= t(".details.gstin") %></dt>
+          <dd class="text-primary"><%= @import.gstin.presence || t(".unknown") %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-secondary"><%= t(".details.tan") %></dt>
+          <dd class="text-primary"><%= @import.tan.presence || t(".unknown") %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-secondary"><%= t(".details.period") %></dt>
+          <dd class="text-primary"><%= [@import.fy, @import.tax_period_quarter, @import.tax_period_month].compact.join(" · ") %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-secondary"><%= t(".details.template_version") %></dt>
+          <dd class="text-primary"><%= @import.template_version %></dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="space-y-4">
+      <div class="rounded-xl bg-container-inset p-4">
+        <h2 class="text-sm font-medium text-primary"><%= t(".row_counts_title") %></h2>
+        <% if @import.row_counts.present? %>
+          <dl class="mt-3 grid gap-3 md:grid-cols-2">
+            <% @import.row_counts.each do |sheet_name, count| %>
+              <div class="rounded-lg bg-container p-3 shadow-border-xs">
+                <dt class="text-xs uppercase text-secondary"><%= sheet_name.humanize %></dt>
+                <dd class="mt-1 text-lg font-semibold text-primary"><%= count %></dd>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="mt-3 text-sm text-secondary"><%= t(".row_counts_empty") %></p>
+        <% end %>
+      </div>
+
+      <div class="rounded-xl bg-container-inset p-4">
+        <h2 class="text-sm font-medium text-primary"><%= t(".validation_errors_title") %></h2>
+        <% if @import.validation_errors.any? %>
+          <ul class="mt-3 space-y-2 text-sm text-secondary">
+            <% @import.validation_errors.each do |error| %>
+              <li class="rounded-lg bg-container p-3 shadow-border-xs">
+                <span class="font-medium text-primary"><%= error["message"] %></span>
+                <% context = [error["sheet"], (t(".row_number", row: error["row"]) if error["row"].present?), error["column"]].compact.join(" · ") %>
+                <% if context.present? %>
+                  <p class="mt-1 text-xs text-secondary"><%= context %></p>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="mt-3 text-sm text-secondary"><%= t(".validation_errors_empty") %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

@@ -3,7 +3,7 @@
 require "io/console"
 
 namespace :platform_bootstrap do
-  desc "Create Risingstone/Mahetel company workspaces and platform owner super admins"
+  desc "Provision Risingstone/Mahetel workspaces with platform super admins and family admins"
   task multi_company_owners: :environment do
     dry_run = ActiveModel::Type::Boolean.new.cast(ENV["DRY_RUN"])
 
