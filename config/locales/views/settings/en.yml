@@ -213,6 +213,9 @@ en:
     securities:
       show:
         page_title: Security
+        encryption_warning:
+          title: Encryption keys missing
+          message: "Sensitive data like API keys and provider tokens are being stored unencrypted. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
         enable_mfa: Enable 2FA
