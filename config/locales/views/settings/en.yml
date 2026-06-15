@@ -240,6 +240,7 @@ en:
         connect_title: Connect an AI assistant
         connect_subtitle: Paste this URL into Claude.ai (or any MCP-compatible client) to connect it to your Sure account.
         copy_url: Copy
+        copied: Copied!
         how_to_connect_title: How to connect Claude
         step_1: "Open Claude.ai and go to Settings → Integrations."
         step_2: Click "Add integration" and paste the MCP server URL above.

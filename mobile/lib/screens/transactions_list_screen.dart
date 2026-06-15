@@ -13,6 +13,7 @@ import '../widgets/category_filter.dart';
 import '../widgets/sync_status_badge.dart';
 import '../services/log_service.dart';
 import '../utils/amount_parser.dart';
+import '../widgets/money_text.dart';
 
 class TransactionsListScreen extends StatefulWidget {
   final Account account;
@@ -58,11 +59,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
       // Determine if the final value is positive
       bool isPositive = numericValue >= 0;
+      final trend = isPositive ? MoneyTrend.inflow : MoneyTrend.outflow;
 
       return {
         'isPositive': isPositive,
         'displayAmount': parsed.displayText,
-        'color': isPositive ? Colors.green : Colors.red,
+        'trend': trend,
+        'color': SureMoney.color(context, trend),
         'icon': isPositive ? Icons.arrow_upward : Icons.arrow_downward,
         'prefix': isPositive ? '' : '-',
       };
@@ -71,7 +74,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       return {
         'isPositive': true,
         'displayAmount': amount,
-        'color': Colors.grey,
+        'trend': MoneyTrend.neutral,
+        'color': SureMoney.color(context, MoneyTrend.neutral),
         'icon': Icons.help_outline,
         'prefix': '',
       };
@@ -655,12 +659,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                         ),
                                       ),
                                     Flexible(
-                                      child: Text(
+                                      child: MoneyText(
                                         '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                        trend: displayInfo['trend'] as MoneyTrend,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                               fontWeight: FontWeight.bold,
-                                              color: displayInfo['color'] as Color,
                                             ),
                                       ),
                                     ),
