@@ -26,6 +26,35 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "bootstrap platform owner dashboard breadcrumb has cash vault trigger" do
+    bootstrap_workspace_access!
+
+    post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
+
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='cash-vault-trigger'][data-cash-vault-trigger-url-value='#{cash_vault_auth_path}']", text: "Dashboard"
+  end
+
+  test "non bootstrap super admin dashboard breadcrumb does not have cash vault trigger" do
+    sign_in users(:sure_support_staff)
+
+    get root_path, params: { admin: true }
+
+    assert_response :ok
+    assert_select "[data-controller='cash-vault-trigger']", count: 0
+  end
+
+  test "family admin dashboard breadcrumb does not have cash vault trigger" do
+    sign_in @user
+
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='cash-vault-trigger']", count: 0
+  end
+
   test "bootstrap super admin dashboard renders clean company switcher without support controls" do
     bootstrap_workspace_access!
 

@@ -210,6 +210,12 @@ Rails.application.routes.draw do
   get "feedback", to: "pages#feedback"
   patch "dashboard/preferences", to: "pages#update_preferences"
 
+  namespace :cash_vault, path: "cash-vault" do
+    get "auth", to: "auth#new", as: :auth
+    post "auth", to: "auth#create"
+    get "transactions", to: "transactions#index", as: :transactions
+  end
+
   resource :current_session, only: %i[update]
 
   resource :registration, only: %i[new create]

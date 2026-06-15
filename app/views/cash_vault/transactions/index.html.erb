@@ -1,0 +1,54 @@
+<% title t(".title") %>
+
+<div class="min-h-screen bg-surface px-4 py-8">
+  <main class="mx-auto max-w-7xl space-y-6">
+    <header class="space-y-1">
+      <h1 class="text-2xl font-medium text-primary"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".description", family_name: Current.family.name) %></p>
+    </header>
+
+    <div class="overflow-x-auto rounded-lg border border-secondary bg-container shadow-border-xs">
+      <table class="min-w-full divide-y divide-secondary text-sm">
+        <thead class="bg-surface">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left font-medium text-secondary"><%= t(".date") %></th>
+            <th scope="col" class="px-4 py-3 text-left font-medium text-secondary"><%= t(".account") %></th>
+            <th scope="col" class="px-4 py-3 text-left font-medium text-secondary"><%= t(".transaction") %></th>
+            <th scope="col" class="px-4 py-3 text-left font-medium text-secondary"><%= t(".merchant") %></th>
+            <th scope="col" class="px-4 py-3 text-left font-medium text-secondary"><%= t(".category") %></th>
+            <th scope="col" class="px-4 py-3 text-right font-medium text-secondary"><%= t(".amount") %></th>
+            <th scope="col" class="px-4 py-3 text-left font-medium text-secondary"><%= t(".status") %></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-secondary">
+          <% if @entries.any? %>
+            <% @entries.each do |entry| %>
+              <% transaction = entry.entryable %>
+              <tr>
+                <td class="whitespace-nowrap px-4 py-3 text-secondary"><%= format_date(entry.date) %></td>
+                <td class="whitespace-nowrap px-4 py-3 text-primary"><%= entry.account.name %></td>
+                <td class="min-w-56 px-4 py-3 text-primary"><%= entry.name %></td>
+                <td class="whitespace-nowrap px-4 py-3 text-secondary"><%= transaction.merchant&.name || t(".empty_cell") %></td>
+                <td class="whitespace-nowrap px-4 py-3 text-secondary"><%= transaction.category&.name || t(".uncategorized") %></td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-medium text-primary privacy-sensitive"><%= format_money(entry.amount_money) %></td>
+                <td class="whitespace-nowrap px-4 py-3 text-secondary">
+                  <% if transaction.pending? %>
+                    <%= t(".pending") %>
+                  <% elsif entry.excluded? %>
+                    <%= t(".excluded") %>
+                  <% else %>
+                    <%= t(".confirmed") %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="7" class="px-4 py-8 text-center text-secondary"><%= t(".empty") %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>

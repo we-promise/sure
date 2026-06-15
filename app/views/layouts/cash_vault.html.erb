@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+
+<% theme = Current.user&.theme || "system" %>
+
+<html
+  lang="en"
+  data-theme="<%= theme %>"
+  data-controller="theme viewport"
+  data-theme-user-preference-value="<%= theme %>"
+  class="min-h-[var(--app-height, 100dvh)] text-primary bg-surface font-sans <%= @os %>">
+  <%= render "layouts/shared/head" %>
+
+  <body class="min-h-[var(--app-height)] overflow-auto antialiased bg-surface">
+    <%= yield %>
+  </body>
+</html>

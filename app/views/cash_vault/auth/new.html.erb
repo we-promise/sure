@@ -1,0 +1,25 @@
+<% title t(".title") %>
+
+<div class="min-h-screen bg-surface px-4 py-10">
+  <main class="mx-auto max-w-md rounded-lg border border-secondary bg-container p-6 shadow-border-xs">
+    <div class="space-y-2">
+      <h1 class="text-xl font-medium text-primary"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".description", family_name: Current.family.name) %></p>
+    </div>
+
+    <% if flash[:alert].present? %>
+      <div class="mt-5 rounded-lg border border-destructive bg-surface px-3 py-2 text-sm text-destructive" role="alert">
+        <%= flash[:alert] %>
+      </div>
+    <% end %>
+
+    <%= styled_form_with url: cash_vault_auth_path, class: "mt-6 space-y-4", data: { turbo: false } do |form| %>
+      <%= form.password_field :password,
+                              label: t(".password"),
+                              required: "required",
+                              autocomplete: "current-password" %>
+
+      <%= form.submit t(".submit") %>
+    <% end %>
+  </main>
+</div>

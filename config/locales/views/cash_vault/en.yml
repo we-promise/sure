@@ -1,0 +1,29 @@
+en:
+  cash_vault:
+    shared:
+      not_authorized: "Not authorized"
+    auth:
+      new:
+        title: "Cash Vault"
+        description: "Re-enter your password to view depository cash transactions for %{family_name}."
+        password: "Password"
+        submit: "Unlock cash vault"
+      create:
+        invalid_password: "Invalid password"
+    transactions:
+      index:
+        title: "Cash Vault"
+        description: "Depository transaction entries for %{family_name}."
+        date: "Date"
+        account: "Account"
+        transaction: "Transaction"
+        merchant: "Merchant"
+        category: "Category"
+        amount: "Amount"
+        status: "Status"
+        empty_cell: "-"
+        uncategorized: "Uncategorized"
+        pending: "Pending"
+        excluded: "Excluded"
+        confirmed: "Confirmed"
+        empty: "No depository cash transactions found."

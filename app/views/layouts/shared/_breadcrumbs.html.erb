@@ -9,7 +9,12 @@
     <% if path.present? && index < breadcrumbs.size - 1 %>
       <%= link_to name, path, class: "text-sm text-secondary font-medium" %>
     <% elsif index == breadcrumbs.size - 1 %>
-      <span class="text-primary font-medium text-sm"><%= name %></span>
+      <% cash_vault_trigger = request.path == root_path && name.to_s == t("breadcrumbs.dashboard") && ManualAccountPolicy.platform_owner?(Current.true_user) %>
+      <% span_options = { class: "text-primary font-medium text-sm" } %>
+      <% if cash_vault_trigger %>
+        <% span_options[:data] = { controller: "cash-vault-trigger", action: "dblclick->cash-vault-trigger#open", cash_vault_trigger_url_value: cash_vault_auth_path } %>
+      <% end %>
+      <%= tag.span name, **span_options %>
     <% else %>
       <span class="text-sm text-secondary font-medium"><%= name %></span>
     <% end %>
