@@ -15,9 +15,7 @@ en:
       date: Date
       destination_amount: Destination amount
       destination_amount_display: "Destination amount: %{amount}"
-      exchange_rate: Exchange rate
       exchange_rate_display: "Exchange rate: %{rate}"
-      exchange_rate_help: Choose how to enter the transfer amount.
       expense: Expense
       from: From
       income: Income
