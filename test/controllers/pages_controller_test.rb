@@ -33,12 +33,14 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update_preferences ignores malformed dashboard_section_layout without erroring" do
+    previous_height = @user.reload.dashboard_section_height("net_worth_chart")
+
     patch "/dashboard/preferences", params: {
       preferences: { dashboard_section_layout: "not-a-hash" }
     }, as: :json
 
     assert_response :ok
-    assert_nil @user.reload.dashboard_section_height("net_worth_chart")
+    assert_equal previous_height, @user.reload.dashboard_section_height("net_worth_chart")
   end
 
   test "dashboard memoizes income statement period totals while rendering" do
