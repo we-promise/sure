@@ -45,6 +45,7 @@ class Import < ApplicationRecord
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
+  before_save :ensure_utf8_encoding
   normalizes :client_chunk_id, with: ->(value) { value.strip.presence }
 
   scope :ordered, -> { order(created_at: :desc) }
