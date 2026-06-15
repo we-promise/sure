@@ -152,6 +152,67 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "div.hidden.md\\:flex.min-w-0"
   end
 
+  test "filters activity by year" do
+    in_year = @account.entries.create!(
+      name: "In year",
+      date: Date.new(2024, 6, 15),
+      amount: 50,
+      currency: @account.currency,
+      entryable: Transaction.new
+    )
+    out_of_year = @account.entries.create!(
+      name: "Out of year",
+      date: Date.new(2023, 6, 15),
+      amount: 50,
+      currency: @account.currency,
+      entryable: Transaction.new
+    )
+
+    get account_url(@account, activity_year: 2024)
+
+    assert_response :success
+    chart_period = controller.instance_variable_get(:@chart_period)
+    assert_equal Date.new(2024, 1, 1), chart_period.start_date
+    assert_equal Date.new(2024, 12, 31), chart_period.end_date
+    entries = controller.instance_variable_get(:@entries)
+    assert_includes entries, in_year
+    assert_not_includes entries, out_of_year
+  end
+
+  test "filters activity by year and month" do
+    in_month = @account.entries.create!(
+      name: "March entry",
+      date: Date.new(2024, 3, 10),
+      amount: 50,
+      currency: @account.currency,
+      entryable: Transaction.new
+    )
+    out_of_month = @account.entries.create!(
+      name: "April entry",
+      date: Date.new(2024, 4, 10),
+      amount: 50,
+      currency: @account.currency,
+      entryable: Transaction.new
+    )
+
+    get account_url(@account, activity_year: 2024, activity_month: 3)
+
+    assert_response :success
+    chart_period = controller.instance_variable_get(:@chart_period)
+    assert_equal Date.new(2024, 3, 1), chart_period.start_date
+    assert_equal Date.new(2024, 3, 31), chart_period.end_date
+    entries = controller.instance_variable_get(:@entries)
+    assert_includes entries, in_month
+    assert_not_includes entries, out_of_month
+  end
+
+  test "ignores invalid activity year/month" do
+    get account_url(@account, activity_year: "abc", activity_month: 99)
+    assert_response :success
+    assert_nil controller.instance_variable_get(:@activity_year)
+    assert_nil controller.instance_variable_get(:@activity_month)
+  end
+
   test "should sync account" do
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)

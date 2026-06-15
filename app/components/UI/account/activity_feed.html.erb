@@ -52,6 +52,12 @@
               <%= helpers.icon("search") %>
 
               <%= hidden_field_tag :account_id, account.id %>
+              <% if selected_year %>
+                <%= hidden_field_tag :activity_year, selected_year %>
+                <% if selected_month %>
+                  <%= hidden_field_tag :activity_month, selected_month %>
+                <% end %>
+              <% end %>
 
               <%= form.search_field :search,
                             placeholder: t("accounts.show.activity.search.placeholder"),
@@ -60,6 +66,12 @@
                             "data-auto-submit-form-target": "auto" %>
             </div>
           </div>
+
+          <%= render UI::Account::ActivityDateFilter.new(
+                account: account,
+                selected_year: selected_year,
+                selected_month: selected_month
+              ) %>
 
           <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
             <% popover.with_button(

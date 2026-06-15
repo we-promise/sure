@@ -28,11 +28,18 @@
         <% end %>
       <% end %>
 
-      <%= render UI::PeriodPicker.new(
-        selected: period,
-        url: account_path(account),
-        extra_params: account.supports_trades? ? { chart_view: view } : {}
-      ) %>
+      <% if period.key.present? %>
+        <%= render UI::PeriodPicker.new(
+          selected: period,
+          url: account_path(account),
+          extra_params: account.supports_trades? ? { chart_view: view } : {}
+        ) %>
+      <% else %>
+        <span class="inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm text-secondary">
+          <%= helpers.icon("calendar", size: "sm") %>
+          <%= l(period.start_date, format: :long) %> – <%= l(period.end_date, format: :long) %>
+        </span>
+      <% end %>
     </div>
   </div>
 

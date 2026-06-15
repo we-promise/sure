@@ -86,6 +86,12 @@ en:
         entries: entries
         entry: entry
         filter: Filter
+        filter_period:
+          all_time: All time
+          clear: Clear filter
+          month: Month
+          select_year_first: Select a year first
+          year: Year
         new: New
         new_activity: New activity
         new_balance: New balance

@@ -50,8 +50,17 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    @activity_year, @activity_month = parse_activity_period_params
+    @activity_period = build_activity_period(@activity_year, @activity_month)
+    @chart_period = @activity_period || @period
+
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+    search_params = @q.to_h
+    if @activity_period
+      search_params[:start_date] = @activity_period.start_date.iso8601
+      search_params[:end_date] = @activity_period.end_date.iso8601
+    end
+    entries = @account.entries.where(excluded: false).search(search_params).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -218,6 +227,29 @@ class AccountsController < ApplicationController
   private
     def family
       Current.family
+    end
+
+    def parse_activity_period_params
+      year = Integer(params[:activity_year], 10) rescue nil
+      return [ nil, nil ] unless year && year.between?(1900, Date.current.year)
+
+      month = Integer(params[:activity_month], 10) rescue nil
+      month = nil unless month && month.between?(1, 12)
+      [ year, month ]
+    end
+
+    def build_activity_period(year, month)
+      return nil unless year
+
+      if month
+        start_date = Date.new(year, month, 1)
+        end_date = start_date.end_of_month
+      else
+        start_date = Date.new(year, 1, 1)
+        end_date = Date.new(year, 12, 31)
+      end
+
+      Period.custom(start_date: start_date, end_date: end_date)
     end
 
     def set_account

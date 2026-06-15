@@ -1,0 +1,64 @@
+<%= render DS::Popover.new(variant: "button", no_padding: true, placement: "bottom-start") do |popover| %>
+  <% popover.with_button(
+       type: "button",
+       text: trigger_label,
+       variant: active? ? "primary" : "outline",
+       icon: "calendar"
+     ) %>
+
+  <% popover.with_custom_content do %>
+    <div class="flex divide-x divide-tertiary text-sm">
+      <div class="p-2 min-w-[110px] max-h-72 overflow-y-auto">
+        <p class="px-2 py-1 text-xs font-medium uppercase text-secondary">
+          <%= t("accounts.show.activity.filter_period.year") %>
+        </p>
+        <% years.each do |year| %>
+          <%= link_to href_for(year: year),
+                class: class_names(
+                  "flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-surface-hover text-primary",
+                  "bg-surface-inset font-medium" => year_selected?(year)
+                ),
+                aria: { current: year_selected?(year) ? "true" : nil } do %>
+            <span><%= year %></span>
+            <% if year_selected?(year) %>
+              <%= helpers.icon("check", size: "sm") %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="p-2 min-w-[150px] max-h-72 overflow-y-auto">
+        <p class="px-2 py-1 text-xs font-medium uppercase text-secondary">
+          <%= t("accounts.show.activity.filter_period.month") %>
+        </p>
+        <% if selected_year.blank? %>
+          <p class="px-2 py-1.5 text-xs text-secondary">
+            <%= t("accounts.show.activity.filter_period.select_year_first") %>
+          </p>
+        <% else %>
+          <% months.each do |(month_number, month_name)| %>
+            <%= link_to href_for(year: selected_year, month: month_number),
+                  class: class_names(
+                    "flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-surface-hover text-primary",
+                    "bg-surface-inset font-medium" => month_selected?(month_number)
+                  ),
+                  aria: { current: month_selected?(month_number) ? "true" : nil } do %>
+              <span><%= month_name %></span>
+              <% if month_selected?(month_number) %>
+                <%= helpers.icon("check", size: "sm") %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if active? %>
+      <div class="border-t border-tertiary p-2">
+        <%= link_to t("accounts.show.activity.filter_period.clear"),
+              clear_href,
+              class: "block w-full text-center px-2 py-1.5 rounded-md text-sm text-secondary hover:bg-surface-hover" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
