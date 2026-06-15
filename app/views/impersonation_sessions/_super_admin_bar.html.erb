@@ -1,5 +1,7 @@
 <div class="sticky top-0 left-0 w-full bg-black flex items-center justify-between font-mono">
   <% workspace_options = PlatformBootstrap::MultiCompanyOwners.workspace_picker_options_for(Current.true_user) %>
+  <% bootstrap_workspace_operator = Current.true_user.bootstrap_workspace_operator? %>
+  <% active_workspace_session = bootstrap_workspace_operator && Current.session.active_impersonator_session.present? %>
 
   <div class="flex items-center bg-red-600 px-6 py-4">
     <%= icon "alert-triangle", size: "lg", color: "current", class: "mr-2" %>
@@ -11,9 +13,17 @@
     <% end %>
   </div>
 
-  <div class="flex items-center space-x-2 px-2 py-2 text-white">
-    <% if Current.session.active_impersonator_session.present? %>
-      <div class="flex items-center space-x-3 bg-gray-800 border border-gray-700 rounded-md pl-3">
+  <div class="flex items-center space-x-2 px-2 py-2 text-inverse">
+    <% if active_workspace_session %>
+      <div class="flex items-center space-x-3 rounded-md border border-secondary bg-container-inset pl-3">
+        <div class="text-sm">
+          <span class="text-secondary"><%= t(".current_company") %>:</span>
+          <span class="font-semibold text-red-400"><%= Current.impersonated_user.family.name %></span>
+        </div>
+        <%= button_to t(".exit_workspace"), leave_impersonation_sessions_path, method: :delete, class: "items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
+      </div>
+    <% elsif Current.session.active_impersonator_session.present? %>
+      <div class="flex items-center space-x-3 rounded-md border border-secondary bg-container-inset pl-3">
         <div class="text-sm">
           <%= t(".impersonating") %>: <span class="font-semibold text-red-400"><%= Current.impersonated_user.email %></span>
         </div>
@@ -21,33 +31,32 @@
         <%= button_to t(".terminate"), complete_impersonation_session_path(Current.session.active_impersonator_session), method: :put, class: "items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
       </div>
     <% else %>
-      <% if Current.true_user.impersonator_support_sessions.in_progress.any? %>
-        <%= form_with url: join_impersonation_sessions_path, class: "flex items-center space-x-2 mr-4" do |f| %>
-          <%= f.select :impersonation_session_id,
-            Current.true_user.impersonator_support_sessions.in_progress.map { |session|
-              ["#{session.impersonated.email} (#{session.status})", session.id]
-            },
-            { prompt: t(".join_a_session") },
-            { class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono" } %>
-          <%= f.submit t(".join"),
-            class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
-        <% end %>
-      <% end %>
-
-      <% if Current.true_user.bootstrap_workspace_operator? && workspace_options.any? %>
+      <% if bootstrap_workspace_operator && workspace_options.any? %>
         <%= form_with model: ImpersonationSession.new, class: "flex items-center space-x-2 mr-4" do |f| %>
-          <%= f.label :impersonated_id, t(".workspace_label"), class: "text-sm text-white" %>
+          <%= f.label :impersonated_id, t(".company_label"), class: "text-sm text-white" %>
           <%= f.select :impersonated_id,
             options_for_select(workspace_options),
-            { prompt: t(".workspace_prompt") },
+            { prompt: t(".company_prompt") },
             { class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono min-w-72" } %>
-          <%= f.submit t(".enter_workspace"), class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
+          <%= f.submit t(".switch_company"), class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
         <% end %>
-      <% end %>
-
-      <%= form_with model: ImpersonationSession.new, class: "flex items-center space-x-2" do |f| %>
-        <%= f.text_field :impersonated_id, class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono w-96", placeholder: t(".uuid_placeholder"), autocomplete: "off" %>
-        <%= f.submit t(".request_impersonation"), class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
+      <% else %>
+        <% if Current.true_user.impersonator_support_sessions.in_progress.any? %>
+          <%= form_with url: join_impersonation_sessions_path, class: "flex items-center space-x-2 mr-4" do |f| %>
+            <%= f.select :impersonation_session_id,
+              Current.true_user.impersonator_support_sessions.in_progress.map { |session|
+                ["#{session.impersonated.email} (#{session.status})", session.id]
+              },
+              { prompt: t(".join_a_session") },
+              { class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono" } %>
+            <%= f.submit t(".join"),
+              class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
+          <% end %>
+        <% end %>
+        <%= form_with model: ImpersonationSession.new, class: "flex items-center space-x-2" do |f| %>
+          <%= f.text_field :impersonated_id, class: "rounded-md text-sm border-0 focus:ring-0 ring-0 text-black font-mono w-96", placeholder: t(".uuid_placeholder"), autocomplete: "off" %>
+          <%= f.submit t(".request_impersonation"), class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
+        <% end %>
       <% end %>
     <% end %>
   </div>

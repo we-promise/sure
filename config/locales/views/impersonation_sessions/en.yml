@@ -22,8 +22,10 @@ en:
       terminate: Terminate
       join_a_session: Join a session
       join: Join
-      workspace_label: Company workspace
-      workspace_prompt: Select a company
-      enter_workspace: Enter workspace
+      company_label: Company
+      company_prompt: Select a company
+      switch_company: Switch
+      current_company: Current company
+      exit_workspace: Exit workspace
       uuid_placeholder: UUID
       request_impersonation: Request Impersonation

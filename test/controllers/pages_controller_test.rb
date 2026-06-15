@@ -26,7 +26,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "bootstrap super admin dashboard renders company workspace picker and support uuid field without admin overlay" do
+  test "bootstrap super admin dashboard renders clean company switcher without support controls" do
     bootstrap_workspace_access!
 
     post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
@@ -34,12 +34,16 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :ok
-    assert_includes @response.body, "Company workspace"
+    assert_includes @response.body, "Company"
     assert_includes @response.body, "Risingstone infra pvt ltd"
     assert_includes @response.body, "Risingstone ventures pvt ltd"
     assert_includes @response.body, "Risingstone projects pvt Ltd"
     assert_includes @response.body, "Mahetel pvt ltd"
-    assert_includes @response.body, "name=\"impersonation_session[impersonated_id]\""
+    assert_includes @response.body, "Switch"
+    refute_includes @response.body, "Company workspace"
+    refute_includes @response.body, "Join a session"
+    refute_includes @response.body, "UUID"
+    refute_includes @response.body, "Request Impersonation"
   end
 
   test "non bootstrap super admin dashboard hides workspace picker and keeps support uuid field" do
@@ -51,8 +55,33 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :ok
-    refute_includes @response.body, "Company workspace"
+    refute_includes @response.body, "Company"
     assert_includes @response.body, "name=\"impersonation_session[impersonated_id]\""
+    assert_includes @response.body, "Request Impersonation"
+    assert_includes @response.body, "Join a session"
+  end
+
+  test "non bootstrap super admin without joinable sessions still sees support request controls" do
+    support_super_admin = User.create!(
+      family: families(:empty),
+      first_name: "Support",
+      email: "support-no-sessions@example.com",
+      password: user_password_test,
+      password_confirmation: user_password_test,
+      role: :super_admin,
+      onboarded_at: Time.current
+    )
+
+    sign_in support_super_admin
+
+    get root_path, params: { admin: true }
+    get root_path
+
+    assert_response :ok
+    refute_includes @response.body, "Company"
+    assert_includes @response.body, "UUID"
+    assert_includes @response.body, "Request Impersonation"
+    refute_includes @response.body, "Join a session"
   end
 
   test "workspace picker excludes bootstrap admin accounts that drift from expected family or role" do
@@ -65,8 +94,29 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :ok
+    assert_includes @response.body, "Company"
     refute_includes @response.body, "Risingstone ventures pvt ltd"
     assert_includes @response.body, "Risingstone infra pvt ltd"
+  end
+
+  test "bootstrap super admin active workspace state is company focused" do
+    bootstrap_workspace_access!
+
+    post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
+
+    workspace_admin = User.find_by!(email: "admin+rsventures@bookeepz.net")
+    post impersonation_sessions_path, params: { impersonation_session: { impersonated_id: workspace_admin.id } }
+
+    get root_path
+
+    assert_response :ok
+    assert_includes @response.body, "Current company"
+    assert_includes @response.body, "Risingstone ventures pvt ltd"
+    assert_includes @response.body, "Exit workspace"
+    refute_includes @response.body, "Impersonating"
+    refute_includes @response.body, "Terminate"
+    refute_includes @response.body, "UUID"
+    refute_includes @response.body, "Request Impersonation"
   end
 
   test "dashboard memoizes income statement period totals while rendering" do

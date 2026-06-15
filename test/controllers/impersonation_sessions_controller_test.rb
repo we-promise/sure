@@ -147,6 +147,21 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "bootstrap super admin can leave an active workspace session" do
+    sign_in @bootstrap_super_admin
+
+    current_session = @bootstrap_super_admin.sessions.order(created_at: :desc).first
+
+    post impersonation_sessions_path, params: { impersonation_session: { impersonated_id: @bootstrap_family_admin.id } }
+    assert current_session.reload.active_impersonator_session.present?
+
+    delete leave_impersonation_sessions_path
+
+    assert_nil current_session.reload.active_impersonator_session
+    assert_equal "Left session", flash[:notice]
+    assert_redirected_to root_path
+  end
+
   test "bootstrap super admin waits for approval when workspace admin mapping drifts" do
     @bootstrap_family_admin.update!(role: :member)
     sign_in @bootstrap_super_admin
