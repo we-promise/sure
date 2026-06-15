@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/account.dart';
+import '../theme/sure_colors.dart';
+import 'money_text.dart';
 
 class AccountCard extends StatelessWidget {
   final Account account;
@@ -42,9 +44,9 @@ class AccountCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     
     if (account.isAsset) {
-      return Colors.green;
+      return SureColors.of(context).palette.success;
     } else if (account.isLiability) {
-      return Colors.red;
+      return SureColors.of(context).palette.destructive;
     }
     return colorScheme.primary;
   }
@@ -109,9 +111,13 @@ class AccountCard extends StatelessWidget {
                 children: [
                   Text(
                     account.balance,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: account.isLiability ? Colors.red : null,
+                    style: SureMoney.tabular(
+                      Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: account.isLiability
+                                ? SureColors.of(context).palette.destructive
+                                : null,
+                          ),
                     ),
                   ),
                   const SizedBox(height: 4),
