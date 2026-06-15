@@ -89,7 +89,7 @@ class AccountCard extends StatelessWidget {
                     Text(
                       account.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -113,7 +113,7 @@ class AccountCard extends StatelessWidget {
                     account.balance,
                     style: SureMoney.tabular(
                       Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w500,
                             color: account.isLiability
                                 ? SureColors.of(context).palette.destructive
                                 : null,
