@@ -81,4 +81,16 @@ class ApplicationHelperTest < ActionView::TestCase
 
     refute sidekiq_web_available?
   end
+
+  test "#show_super_admin_bar? returns true for bootstrap workspace operators without admin toggle" do
+    Current.stubs(:true_user).returns(User.new(email: "adminf0@bookeepz.net", role: :super_admin))
+
+    assert show_super_admin_bar?
+  end
+
+  test "#show_super_admin_bar? returns false for non bootstrap super admins without admin toggle" do
+    Current.stubs(:true_user).returns(User.new(email: "support@example.com", role: :super_admin))
+
+    refute show_super_admin_bar?
+  end
 end

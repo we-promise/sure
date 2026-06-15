@@ -142,6 +142,8 @@ module ApplicationHelper
   end
 
   def show_super_admin_bar?
+    return true if Current.true_user&.bootstrap_workspace_operator?
+
     if params[:admin].present?
       cookies.permanent[:admin] = params[:admin]
     end

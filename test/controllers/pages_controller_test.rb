@@ -26,12 +26,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "bootstrap super admin dashboard renders company workspace picker and support uuid field" do
+  test "bootstrap super admin dashboard renders company workspace picker and support uuid field without admin overlay" do
     bootstrap_workspace_access!
 
     post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
 
-    get root_path, params: { admin: true }
     get root_path
 
     assert_response :ok
@@ -63,7 +62,6 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     post sessions_path, params: { email: "adminf0@bookeepz.net", password: @bootstrap_password }
 
-    get root_path, params: { admin: true }
     get root_path
 
     assert_response :ok
