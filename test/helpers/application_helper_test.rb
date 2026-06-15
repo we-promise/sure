@@ -71,4 +71,14 @@ class ApplicationHelperTest < ActionView::TestCase
 
     assert_equal [ "SGD", "USD", "EUR" ], currency_picker_options_for_family(family, extra: "EUR")
   end
+
+  test "#sidekiq_web_available? returns true when the route is mounted" do
+    assert sidekiq_web_available?
+  end
+
+  test "#sidekiq_web_available? returns false when the route helper is unavailable" do
+    Rails.application.routes.named_routes.stubs(:key?).with(:sidekiq_web).returns(false)
+
+    refute sidekiq_web_available?
+  end
 end
