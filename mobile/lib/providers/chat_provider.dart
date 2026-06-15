@@ -60,7 +60,7 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = null;
       } else {
         _errorMessage =
-            result['message'] ?? result['error'] ?? 'Failed to fetch chats';
+            result['message'] ?? 'Failed to fetch chats';
       }
     } catch (e) {
       _log.warning('ChatProvider', 'fetchChats failed: ${e.runtimeType}');
@@ -95,7 +95,7 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = null;
       } else {
         _errorMessage =
-            result['message'] ?? result['error'] ?? 'Failed to fetch chat';
+            result['message'] ?? 'Failed to fetch chat';
       }
     } catch (e) {
       _log.warning('ChatProvider', 'fetchChat failed: ${e.runtimeType}');
@@ -152,7 +152,7 @@ class ChatProvider with ChangeNotifier {
         return _currentChat!;
       } else {
         _errorMessage =
-            result['message'] ?? result['error'] ?? 'Failed to create chat';
+            result['message'] ?? 'Failed to create chat';
         _isLoading = false;
         notifyListeners();
         return null;
