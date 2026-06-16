@@ -56,7 +56,8 @@ void main() {
       tester,
       SureCard(onTap: () => taps++, child: const Text('Tap me')),
     );
-    expect(find.byType(InkWell), findsOneWidget);
+    final inkWell = tester.widget<InkWell>(find.byType(InkWell));
+    expect(inkWell.borderRadius, BorderRadius.circular(SureTokens.radiusLg));
     await tester.tap(find.text('Tap me'));
     expect(taps, 1);
   });
