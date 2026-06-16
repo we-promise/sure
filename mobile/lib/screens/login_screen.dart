@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
 import '../widgets/sure_button.dart';
+import '../widgets/sure_logo.dart';
 import 'backend_config_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -225,11 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 48),
                     // Logo/Title
-                    SvgPicture.asset(
-                      'assets/images/logomark.svg',
-                      width: 80,
-                      height: 80,
-                    ),
+                    const SureLogo(size: 80),
                     const SizedBox(height: 24),
                     Text.rich(
                       TextSpan(
