@@ -52,6 +52,42 @@ void main() {
     expect(SureTokens.radiusMd, _resolveDimension(tokens, 'border.radius.md'));
     expect(SureTokens.radiusLg, _resolveDimension(tokens, 'border.radius.lg'));
   });
+
+  test('generated focus-ring and bg-inverse match canonical tokens', () {
+    expect(
+      SureTokens.light.focusRing.value,
+      _resolveColor(tokens, 'color.focus-ring', dark: false),
+    );
+    expect(
+      SureTokens.dark.focusRing.value,
+      _resolveColor(tokens, 'color.focus-ring', dark: true),
+    );
+    expect(
+      SureTokens.light.bgInverse.value,
+      _resolveColor(tokens, 'utility.bg-inverse', dark: false),
+    );
+    expect(
+      SureTokens.dark.bgInverse.value,
+      _resolveColor(tokens, 'utility.bg-inverse', dark: true),
+    );
+  });
+
+  test('generated shadow scale carries mode-aware color and geometry', () {
+    final lightSm = SureTokens.light.shadowSm.single;
+    expect(lightSm.offset, const Offset(0, 1));
+    expect(lightSm.blurRadius, 6.0);
+    expect(lightSm.spreadRadius, 0.0);
+    expect(
+      lightSm.color.value,
+      _resolveColorValue(tokens, '{color.black|6%}', dark: false),
+    );
+    expect(
+      SureTokens.dark.shadowSm.single.color.value,
+      _resolveColorValue(tokens, '{color.white|8%}', dark: true),
+    );
+    // The xl step keeps the canonical negative spread (0px 20px 24px -4px).
+    expect(SureTokens.light.shadowXl.single.spreadRadius, -4.0);
+  });
 }
 
 int _resolveColor(
