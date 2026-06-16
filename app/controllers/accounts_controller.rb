@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[toggle_active destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[toggle_active toggle_category_matcher destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -103,6 +103,12 @@ class AccountsController < ApplicationController
       @account.enable!
     end
     redirect_to accounts_path
+  end
+
+  def toggle_category_matcher
+    value = ActiveModel::Type::Boolean.new.cast(params.dig(:account, :enable_category_matcher))
+    @account.update!(enable_category_matcher: value)
+    head :no_content
   end
 
   def set_default

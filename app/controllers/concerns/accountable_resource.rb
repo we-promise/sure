@@ -112,6 +112,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes,
+        :enable_category_matcher,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end
