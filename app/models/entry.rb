@@ -36,7 +36,8 @@ class Entry < ApplicationRecord
     order(
       date: :asc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
-      created_at: :asc
+      created_at: :asc,
+      id: :asc
     )
   }
 
@@ -44,7 +45,8 @@ class Entry < ApplicationRecord
     order(
       date: :desc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
-      created_at: :desc
+      created_at: :desc,
+      id: :desc
     )
   }
 
