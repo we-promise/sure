@@ -11,3 +11,5 @@ zh-CN:
     update:
       invalid_token: 验证令牌无效。
       success: 密码已重置成功。
+    disabled: Sure 密码重置已禁用。请通过身份提供商重置密码。
+    sso_only_user: 你的账户使用 SSO 登录。请联系管理员管理凭据。

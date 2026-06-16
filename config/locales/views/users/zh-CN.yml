@@ -16,3 +16,15 @@ zh-CN:
       email_change_failed: 邮箱地址更改失败。
       email_change_initiated: 请查收新邮箱地址的确认邮件以完成更改。
       success: 个人资料已更新成功。
+    user_menu:
+      aria_label: 打开账户菜单
+      version: 版本
+      settings: 设置
+      changelog: 更新日志
+      feedback: 反馈
+      contact: 联系我们
+      log_out: 退出登录
+    roles:
+      admin: 管理员
+      member: 成员
+      super_admin: 超级管理员

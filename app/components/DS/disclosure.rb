@@ -3,7 +3,7 @@ class DS::Disclosure < DesignSystemComponent
 
   VARIANTS = %i[default card card_inset inline].freeze
 
-  attr_reader :title, :align, :open, :variant, :summary_class_override, :opts
+  attr_reader :title, :align, :open, :variant, :summary_class_override, :body_class, :opts
 
   # `:default` — bg-surface summary, no chrome on the `<details>`. Use
   # for inline expanders that sit inside a parent card (the summary
@@ -28,12 +28,18 @@ class DS::Disclosure < DesignSystemComponent
   # In card / inline variants, callers should pass their own
   # `summary_content` slot; the built-in title rendering assumes the
   # `:default` shape.
-  def initialize(title: nil, align: "right", open: false, variant: :default, summary_class: nil, **opts)
+  # `body_class:` styles the wrapper around the disclosure body. Defaults
+  # to `mt-2` (the standard gap below the summary). Pass `nil`/`""` to drop
+  # it — e.g. when the body is an absolutely-positioned popover whose
+  # wrapper would otherwise add ~8px of normal-flow margin and shove
+  # siblings down on open (see `goals/_color_picker`).
+  def initialize(title: nil, align: "right", open: false, variant: :default, summary_class: nil, body_class: "mt-2", **opts)
     @title = title
     @align = align.to_sym
     @open = open
     @variant = variant&.to_sym
     @summary_class_override = summary_class
+    @body_class = body_class
     @opts = opts
 
     raise ArgumentError, "Invalid variant: #{@variant.inspect}. Must be one of #{VARIANTS.inspect}" unless VARIANTS.include?(@variant)

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
+import '../widgets/sure_button.dart';
 import 'backend_config_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -411,17 +412,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Login Button
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, _) {
-                        return ElevatedButton(
-                          onPressed:
-                              authProvider.isLoading ? null : _handleLogin,
-                          child: authProvider.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Sign In'),
+                        return SureButton(
+                          label: 'Sign In',
+                          size: SureButtonSize.lg,
+                          fullWidth: true,
+                          loading: authProvider.isLoading,
+                          onPressed: _handleLogin,
                         );
                       },
                     ),
@@ -451,23 +447,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Google Sign-In button
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, _) {
-                        return OutlinedButton.icon(
-                          onPressed: authProvider.isLoading
-                              ? null
-                              : () =>
-                                  authProvider.startSsoLogin('google_oauth2'),
-                          icon: SvgPicture.asset(
+                        return SureButton(
+                          label: 'Sign in with Google',
+                          variant: SureButtonVariant.outline,
+                          size: SureButtonSize.lg,
+                          fullWidth: true,
+                          leading: SvgPicture.asset(
                             'assets/images/google_g_logo.svg',
                             width: 18,
                             height: 18,
                           ),
-                          label: const Text('Sign in with Google'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : () =>
+                                  authProvider.startSsoLogin('google_oauth2'),
                         );
                       },
                     ),
@@ -513,10 +506,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 12),
 
                     // API Key Login Button
-                    TextButton.icon(
-                      onPressed: _showApiKeyDialog,
-                      icon: const Icon(Icons.vpn_key_outlined, size: 18),
-                      label: const Text('API-Key Login'),
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, _) {
+                        return SureButton(
+                          label: 'API-Key Login',
+                          variant: SureButtonVariant.ghost,
+                          onPressed:
+                              authProvider.isLoading ? null : _showApiKeyDialog,
+                          leading:
+                              const Icon(Icons.vpn_key_outlined, size: 18),
+                        );
+                      },
                     ),
                   ],
                 ),

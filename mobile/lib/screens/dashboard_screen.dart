@@ -715,7 +715,7 @@ class _CollapsibleTypeHeader extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
             ),
             const SizedBox(width: 8),
@@ -729,7 +729,7 @@ class _CollapsibleTypeHeader extends StatelessWidget {
                 count.toString(),
                 style: TextStyle(
                   color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   fontSize: 11,
                 ),
               ),

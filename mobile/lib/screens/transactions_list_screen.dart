@@ -564,7 +564,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                         child: Text(
                                           transaction.name,
                                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.w600,
+                                                fontWeight: FontWeight.w500,
                                               ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -664,7 +664,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                         trend: displayInfo['trend'] as MoneyTrend,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                       ),
                                     ),
