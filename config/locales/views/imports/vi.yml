@@ -344,7 +344,6 @@ vi:
       description: Nhập từ công cụ tài chính hoặc tải lên tệp dữ liệu thô.
       tab_financial_tools: Công cụ tài chính & Tệp
       tab_raw_data: Dữ liệu thô
-      coming_soon: Sắp ra mắt
       import_ynab: Nhập từ YNAB
       import_accounts: Nhập tài khoản
       import_categories: Nhập danh mục

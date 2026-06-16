@@ -99,6 +99,36 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal opening_date, opening_anchor.entry.date
   end
 
+  test "subtype set as a top-level account attribute persists on create" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors the create flow: the form submits `account[subtype]` as a
+    # top-level attribute (not nested under accountable_attributes). The
+    # accountable does not exist yet, so the delegating writer must build it.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      subtype: "savings"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype assigned before accountable is built is not dropped" do
+    account = Account.new
+    account.accountable_type = "Depository"
+    account.subtype = "checking"
+
+    assert_not_nil account.accountable
+    assert_equal "checking", account.subtype
+  end
+
   test "accountable display names expose singular and group contexts" do
     assert_equal "Investment", Investment.singular_display_name
     assert_equal "Investments", Investment.display_name

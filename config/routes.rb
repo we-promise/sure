@@ -160,6 +160,9 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
+  get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
+  get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
+  post "register", to: "oauth_registration#create"
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -250,6 +253,9 @@ Rails.application.routes.draw do
     end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resource :mcp, controller: "mcp", only: :show do
+      delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
+    end
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
@@ -520,7 +526,7 @@ Rails.application.routes.draw do
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
       resources :categories, only: [ :index, :show, :create ]
-      resources :merchants, only: [ :index, :show ]
+      resources :merchants, only: [ :index, :show, :create ]
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
       resources :securities, only: [ :index, :show ]
@@ -540,6 +546,10 @@ Rails.application.routes.draw do
       resources :imports, only: [ :index, :show, :create ] do
         post :preflight, on: :collection
         get :rows, on: :member
+      end
+      resources :import_sessions, only: [ :show, :create ] do
+        post :chunks, on: :member, action: :create_chunk
+        post :publish, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet

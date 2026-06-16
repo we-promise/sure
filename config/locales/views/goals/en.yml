@@ -2,6 +2,7 @@
 en:
   goals:
     color_picker:
+      trigger_label: Choose color and icon
       color_heading: Color
       icon_heading: Icon
       poor_contrast: Poor contrast, choose darker color or
@@ -152,6 +153,7 @@ en:
         today_marker: Today
         tooltip_projected: "Projected: %{amount}"
         tooltip_saved: "Saved: %{amount}"
+        tooltip_target_relation: "%{percent}% of %{target} target"
       catch_up:
         title: "Save %{amount}/mo more to catch up"
         body: "Current pace %{avg}/mo · required %{required}/mo to hit your target."
@@ -222,9 +224,6 @@ en:
       days_left:
         one: 1 day left
         other: "%{count} days left"
-      days_left_by:
-        one: 1 day left · by %{date}
-        other: "%{count} days left · by %{date}"
       pace_with_target: "%{avg}/mo · target %{target}/mo"
       pace_no_target: "%{avg}/mo avg"
       footer_paused: Paused

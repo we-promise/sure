@@ -1676,6 +1676,46 @@ components:
       properties:
         message:
           type: string
+    TransactionResponse:
+      type: object
+      required:
+      - id
+      - date
+      - amount
+      - currency
+      - name
+      - entryable_type
+      - account
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        currency:
+          type: string
+        name:
+          type: string
+        entryable_type:
+          type: string
+        account:
+          type: object
+          required:
+          - id
+          - name
+          - account_type
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            account_type:
+              type: string
+              nullable: true
     ImportConfiguration:
       type: object
       properties:
@@ -1869,8 +1909,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -1957,8 +2001,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -2010,8 +2058,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -2086,6 +2138,115 @@ components:
       properties:
         data:
           "$ref": "#/components/schemas/ImportDetail"
+    ImportSessionChunk:
+      type: object
+      required:
+      - id
+      - sequence
+      - status
+      - rows_count
+      - summary
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 1
+        client_chunk_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - pending
+          - importing
+          - complete
+          - failed
+        rows_count:
+          type: integer
+          minimum: 0
+        summary:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: integer
+        error:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ImportSession:
+      type: object
+      required:
+      - id
+      - type
+      - status
+      - chunks_count
+      - summary
+      - chunks
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - SureImport
+        status:
+          type: string
+          enum:
+          - pending
+          - importing
+          - complete
+          - failed
+        client_session_id:
+          type: string
+          nullable: true
+        expected_chunks:
+          type: integer
+          nullable: true
+          minimum: 1
+        chunks_count:
+          type: integer
+          minimum: 0
+        summary:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: integer
+        error:
+          type: object
+          nullable: true
+          additionalProperties: true
+        chunks:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ImportSessionChunk"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ImportSessionResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/ImportSession"
     ProviderConnectionInstitution:
       type: object
       required:
@@ -2892,6 +3053,8 @@ components:
           - account_statements
           - family_exports
           - imports
+          - import_sessions
+          - import_source_mappings
           - import_rows
           - import_mappings
           - accounts
@@ -2931,6 +3094,12 @@ components:
               type: integer
               minimum: 0
             imports:
+              type: integer
+              minimum: 0
+            import_sessions:
+              type: integer
+              minimum: 0
+            import_source_mappings:
               type: integer
               minimum: 0
             import_rows:
@@ -4607,6 +4776,266 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/import_sessions":
+    post:
+      summary: Create import session
+      description: Create or idempotently retrieve a multi-file SureImport session
+        keyed by client_session_id.
+      tags:
+      - Import Sessions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: import session created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportSessionResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: client session conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - SureImport
+                  description: Import session type. Only SureImport is supported.
+                client_session_id:
+                  type: string
+                  nullable: true
+                  description: Client-provided idempotency key for the full import
+                    session.
+                expected_chunks:
+                  type: integer
+                  minimum: 1
+                  nullable: true
+                  description: Expected number of ordered chunks before publish is
+                    allowed.
+  "/api/v1/import_sessions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Import session ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve import session
+      description: Retrieve import session status, chunk status, per-entity summary
+        counts, and safe error details.
+      tags:
+      - Import Sessions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: import session retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportSessionResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: import session not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/import_sessions/{id}/chunks":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Import session ID
+      schema:
+        type: string
+    post:
+      summary: Upload import session chunk
+      description: Attach an ordered Sure NDJSON chunk to an import session. Chunks
+        are idempotent by sequence and client_chunk_id with content verification.
+      tags:
+      - Import Sessions
+      security:
+      - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - sequence
+              - raw_file_content
+              properties:
+                sequence:
+                  type: integer
+                  minimum: 1
+                  description: One-based chunk sequence. Earlier dependency chunks
+                    must have lower sequence numbers.
+                client_chunk_id:
+                  type: string
+                  nullable: true
+                  description: Client-provided idempotency key for this chunk.
+                raw_file_content:
+                  type: string
+                  description: Raw Sure NDJSON content. Each chunk is limited to 10MB.
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - sequence
+              - file
+              properties:
+                sequence:
+                  type: integer
+                  minimum: 1
+                  description: One-based chunk sequence. Earlier dependency chunks
+                    must have lower sequence numbers.
+                client_chunk_id:
+                  type: string
+                  nullable: true
+                  description: Client-provided idempotency key for this chunk.
+                file:
+                  type: string
+                  format: binary
+                  description: Multipart Sure NDJSON file upload. Each chunk is limited
+                    to 10MB.
+      parameters: []
+      responses:
+        '201':
+          description: chunk uploaded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportSessionResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: chunk conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: import session not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing or invalid content
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/import_sessions/{id}/publish":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Import session ID
+      schema:
+        type: string
+    post:
+      summary: Publish import session
+      description: Queue ordered chunk processing for a SureImport session. Later
+        chunks can reference source IDs mapped by earlier chunks.
+      tags:
+      - Import Sessions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '202':
+          description: import session publish queued
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ImportSessionResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: max_row_count_exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: missing expected chunks
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '503':
+          description: enqueue failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: import session not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/imports":
     get:
       summary: List imports
@@ -4653,8 +5082,12 @@ paths:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
       responses:
         '200':
@@ -4712,8 +5145,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -4819,8 +5256,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5057,8 +5498,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -5168,8 +5613,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -6487,13 +6936,25 @@ paths:
       parameters: []
       responses:
         '201':
-          description: trade created
+          description: interest created
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Trade"
+                "$ref": "#/components/schemas/TransactionResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized - missing api key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - missing security identifier
+          description: deposit without amount returns error
           content:
             application/json:
               schema:
@@ -6523,15 +6984,23 @@ paths:
                       description: Trade date (required)
                     qty:
                       type: number
-                      description: Quantity (required)
+                      description: Quantity (required for buy/sell)
                     price:
                       type: number
-                      description: Price (required)
+                      description: Price (required for buy/sell)
+                    amount:
+                      type: number
+                      description: Amount (required for dividend, deposit, withdrawal,
+                        interest)
                     type:
                       type: string
                       enum:
                       - buy
                       - sell
+                      - dividend
+                      - deposit
+                      - withdrawal
+                      - interest
                       description: Trade type (required)
                     security_id:
                       type: string
@@ -6554,11 +7023,13 @@ paths:
                       type: string
                       format: uuid
                       description: Category ID
+                    transfer_account_id:
+                      type: string
+                      format: uuid
+                      description: Destination/source account ID for linked transfers
                   required:
                   - account_id
                   - date
-                  - qty
-                  - price
                   - type
               required:
               - trade
@@ -6610,6 +7081,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Trade"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
           content:
@@ -6637,6 +7120,10 @@ paths:
                       enum:
                       - buy
                       - sell
+                      - dividend
+                      - deposit
+                      - withdrawal
+                      - interest
                     nature:
                       type: string
                       enum:
@@ -6667,6 +7154,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
           content:

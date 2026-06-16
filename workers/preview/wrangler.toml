@@ -17,7 +17,14 @@ enabled = true
 [[containers]]
 class_name = "RailsContainer"
 image = "../../Dockerfile.preview"
-instance_type = "basic"
+# standard-1 (1/2 vCPU, 4 GiB RAM, 8 GB disk), not basic (1/4 vCPU, 1 GiB,
+# 4 GB): this single container runs postgres + redis + puma AND generates the
+# full demo dataset (Demo::Generator: ~12 years of transactions). That
+# generation peaks just over 1 GiB, so basic OOM-kills it (exit 137) mid-boot
+# and the preview never reaches demo-data-ready. Verified on a real Cloudflare
+# standard-1 deploy: rails ready ~46s, demo data ~149s, previewReady ~195s,
+# peak well under 4 GiB, no OOM.
+instance_type = "standard-1"
 max_instances = 1
 
 # Durable Object binding for the container

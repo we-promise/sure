@@ -26,7 +26,7 @@
             </div>
             <div class="flex items-center gap-2">
               <% if provider.enabled? %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 theme-dark:bg-green-tint-10 theme-dark:text-green-200">
                   <%= t(".enabled") %>
                 </span>
               <% else %>
@@ -64,13 +64,8 @@
 
   <% if @legacy_providers.any? %>
     <%= settings_section title: t("admin.sso_providers.index.legacy_providers_title"), collapsible: true, open: true do %>
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-        <div class="flex gap-2">
-          <%= icon "alert-triangle", class: "w-5 h-5 text-amber-600 shrink-0" %>
-          <p class="text-sm text-amber-800">
-            <%= t("admin.sso_providers.index.legacy_providers_notice") %>
-          </p>
-        </div>
+      <div class="mb-4">
+        <%= render DS::Alert.new(message: t("admin.sso_providers.index.legacy_providers_notice"), variant: :warning) %>
       </div>
 
       <div class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
@@ -90,9 +85,7 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                <%= t("admin.sso_providers.index.env_configured") %>
-              </span>
+              <%= render DS::Pill.new(label: t("admin.sso_providers.index.env_configured"), tone: :warning, marker: false) %>
             </div>
           </div>
         <% end %>

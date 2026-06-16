@@ -26,6 +26,8 @@ dependencies:
   package_info_plus: ^8.0.0
   local_auth: ^2.3.0
   flutter_markdown: ^0.7.2
+  sentry_flutter: ^8.14.2
+  upgrader: ^13.5.0
 
 dev_dependencies:
   flutter_test:
@@ -38,6 +40,24 @@ flutter:
   assets:
     - assets/icon/
     - assets/images/
+    - assets/icons/lucide/
+  # Geist + Geist Mono (SIL OFL-1.1 — see assets/fonts/OFL.txt). The theme
+  # (SureTokens.fontSans/fontMono) already names these families; bundling the
+  # assets here makes them actually render instead of falling back to the
+  # platform system font.
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist-Regular.ttf
+        - asset: assets/fonts/Geist-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Geist-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Geist-Bold.ttf
+          weight: 700
+    - family: Geist Mono
+      fonts:
+        - asset: assets/fonts/GeistMono-Regular.ttf
 
 flutter_launcher_icons:
   android: true

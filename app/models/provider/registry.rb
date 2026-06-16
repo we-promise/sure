@@ -18,6 +18,20 @@ class Provider::Registry
       raise Error.new("Provider '#{name}' not found in registry")
     end
 
+    # Resolves the LLM provider for batch/PDF flows, honoring Setting.llm_provider
+    # the way chat does: prefer the configured provider, but fall back to whichever
+    # one actually has credentials so an install that swaps providers (or has only
+    # one configured) keeps working. Returns nil when neither is configured —
+    # callers guard on that.
+    def preferred_llm_provider
+      order = Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
+      order.each do |name|
+        provider = get_provider(name)
+        return provider if provider
+      end
+      nil
+    end
+
     def plaid_provider_for_region(region)
       region.to_sym == :us ? plaid_us : plaid_eu
     end
