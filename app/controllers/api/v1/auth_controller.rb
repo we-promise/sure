@@ -236,7 +236,7 @@ module Api
         user = current_resource_owner
 
         unless user.ai_available?
-          render json: { error: "AI is not available for your account" }, status: :forbidden
+          render json: { error: "ai_unavailable", message: "AI is not available for your account" }, status: :forbidden
           return
         end
 

@@ -47,15 +47,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     AuthProvider authProvider,
     bool introLayout,
   ) async {
-    const chatIndex = 1;
-
-    if (index == chatIndex && !authProvider.aiEnabled) {
-      final enabled = await _showEnableAiPrompt();
-      if (!enabled) {
-        return;
-      }
-    }
-
     if (mounted) {
       setState(() {
         _currentIndex = index;
@@ -155,45 +146,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ],
     );
-  }
-
-  Future<bool> _showEnableAiPrompt() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    final shouldEnable = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Turn on AI Chat?'),
-        content: const Text('AI Chat is currently disabled in your account settings. Would you like to turn it on now?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Turn on AI'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldEnable != true) {
-      return false;
-    }
-
-    final enabled = await authProvider.enableAi();
-
-    if (!enabled && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Unable to enable AI right now.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-
-    return enabled;
   }
 
   int _resolveBottomSelectedIndex(List<NavigationDestination> destinations) {

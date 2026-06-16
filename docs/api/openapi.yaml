@@ -3802,11 +3802,22 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: ai unavailable — backend has no AI provider configured
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: ai_unavailable
+                  message:
+                    type: string
+                    example: AI is not available for your account
+                required:
+                - error
+                - message
   "/api/v1/balance_sheet":
     get:
       summary: Show balance sheet
@@ -5746,6 +5757,41 @@ paths:
                 "$ref": "#/components/schemas/MerchantDetail"
         '404':
           description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/my_account":
+    get:
+      summary: Get current student ISA account data
+      tags:
+      - My Account
+      security:
+      - apiKeyAuth: []
+      description: Returns the ISA financing and instalment data for the authenticated
+        student, sourced from a Chancen-managed Google Sheet. Returns 503 if the sheet
+        is not configured, 404 if the student email is not found in the sheet.
+      responses:
+        '200':
+          description: account data returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/StudentAccount"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: student not found in sheet
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '503':
+          description: sheet not configured
           content:
             application/json:
               schema:
