@@ -707,6 +707,53 @@ end
 
     assert_redirected_to account_url(channel_account)
     assert_equal "Transaction created", flash[:notice]
+
+    # Channel-side record lives on the transaction account, is excluded from
+    # balances, and carries the channel_payment metadata in extra.
+    channel_tx = channel_account.transactions.order(:created_at).last
+    assert channel_tx.entry.excluded?, "channel-side entry should be excluded"
+    assert_equal "true", channel_tx.extra["channel_payment"].to_s
+    assert_equal funding_account.id, channel_tx.extra["funding_account_id"]
+
+    # Funding-side auto record lives on the funding account, points back at the
+    # channel record via the FK, and is flagged as an auto record.
+    funding_tx = funding_account.transactions.order(:created_at).last
+    assert_equal channel_tx.id, funding_tx.channel_record_parent_id
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+    assert_not funding_tx.entry.excluded?, "funding-side entry should not be excluded"
+  end
+
+  test "deleting a channel payment cascades to the funding-side auto record" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: channel_account.id,
+        funding_account_id: funding_account.id,
+        name: "Channel payment",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: "Transaction",
+        entryable_attributes: {}
+      }
+    }
+
+    channel_tx = channel_account.transactions.order(:created_at).last
+    funding_tx = funding_account.transactions.order(:created_at).last
+    assert_equal channel_tx.id, funding_tx.channel_record_parent_id
+
+    # Deleting the channel-side entry cascades to the funding-side auto record
+    # (Transaction has_many :channel_child_records, dependent: :destroy), so both
+    # entries and both transactions disappear.
+    assert_difference [ "Entry.count", "Transaction.count" ], -2 do
+      delete transaction_url(channel_tx.entry)
+    end
+
+    assert_not Transaction.exists?(channel_tx.id)
+    assert_not Transaction.exists?(funding_tx.id)
   end
 
   test "rejects channel payment when funding account is the same as the transaction account" do

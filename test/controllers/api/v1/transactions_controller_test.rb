@@ -569,6 +569,23 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     response_data = JSON.parse(response.body)
     assert_equal "Starbucks Latte", response_data["name"]
+
+    # Channel-side record (Record A): lives on the channel account, is excluded
+    # from balances, and carries the channel_payment metadata in extra.
+    channel_tx = Transaction.find(response_data["id"])
+    assert_equal channel_account.id, channel_tx.entry.account_id
+    assert channel_tx.entry.excluded?, "channel-side entry should be excluded"
+    assert_equal "true", channel_tx.extra["channel_payment"].to_s
+    assert_equal funding_account.id, channel_tx.extra["funding_account_id"]
+    assert_equal "payment", channel_tx.extra["channel_kind"]
+
+    # Funding-side auto record (Record B): lives on the funding account, points
+    # back at the channel record via the FK, is flagged as an auto record, and is
+    # not excluded from balances.
+    funding_tx = funding_account.transactions.order(:created_at).last
+    assert_equal channel_tx.id, funding_tx.channel_record_parent_id
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+    assert_not funding_tx.entry.excluded?, "funding-side entry should not be excluded"
   end
 
   test "should create channel refund with valid original channel payment" do
