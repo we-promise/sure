@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Banco do Brasil">
+  <rect width="64" height="64" rx="14" fill="#f8df00"/>
+  <rect x="15" y="15" width="34" height="34" rx="6" fill="none" stroke="#21468b" stroke-width="5" transform="rotate(45 32 32)"/>
+  <text x="32" y="37" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#21468b">BB</text>
+</svg>

@@ -15,7 +15,7 @@
   <%= render DS::FilledIcon.new(
         variant: :text,
         hex_color: color || account.accountable&.color,
-        text: account.name,
+        text: account.brazil_bank&.short_name || account.name,
         size: size,
         rounded: true
       ) %>

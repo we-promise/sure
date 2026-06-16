@@ -249,6 +249,34 @@ class AccountTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 
+  test "can associate a Brazilian bank and account kind" do
+    bank = Brazil::Bank.create!(
+      ispb: "18236120",
+      code: "260",
+      name: "NU PAGAMENTOS S.A. - INSTITUICAO DE PAGAMENTO",
+      short_name: "Nu Pagamentos",
+      logo_key: "nubank"
+    )
+
+    @account.update!(
+      currency: "BRL",
+      brazil_bank: bank,
+      brazil_account_kind: "checking"
+    )
+
+    assert_equal bank, @account.brazil_bank
+    assert_equal "checking", @account.brazil_account_kind
+    assert_equal "Nu Pagamentos - 260 - ISPB 18236120", @account.brazil_bank_label
+    assert_match "brazil/banks/nubank.svg", @account.logo_url
+  end
+
+  test "rejects invalid Brazilian account kind" do
+    @account.brazil_account_kind = "wallet_of_wonders"
+
+    assert_not @account.valid?
+    assert_includes @account.errors[:brazil_account_kind], "is not included in the list"
+  end
+
   test "destroying account moves linked statements to inbox after commit" do
     statement = AccountStatement.create_from_upload!(
       family: @family,

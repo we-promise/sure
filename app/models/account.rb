@@ -1,6 +1,8 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
+  BRAZIL_ACCOUNT_KINDS = %w[checking payment savings credit_card investment loan].freeze
+
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
   before_destroy :capture_account_statement_ids_to_move
@@ -9,11 +11,13 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validates :brazil_account_kind, inclusion: { in: BRAZIL_ACCOUNT_KINDS }, allow_blank: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
   belongs_to :import, optional: true
+  belongs_to :brazil_bank, class_name: "Brazil::Bank", optional: true
 
   has_many :account_shares, dependent: :destroy
   has_many :shared_users, through: :account_shares, source: :user
@@ -353,7 +357,11 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
+    brazil_logo = Brazil::BankLogoResolver.new(brazil_bank).asset_path if brazil_bank.present?
+
+    if brazil_logo.present?
+      ActionController::Base.helpers.asset_path(brazil_logo)
+    elsif institution_domain.present? && Setting.brand_fetch_client_id.present?
       logo_size = Setting.brand_fetch_logo_size
 
       "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
@@ -362,6 +370,10 @@ class Account < ApplicationRecord
     elsif logo.attached?
       Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
+  end
+
+  def brazil_bank_label
+    brazil_bank&.selector_label
   end
 
   def destroy_later

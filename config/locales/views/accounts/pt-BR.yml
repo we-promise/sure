@@ -19,8 +19,27 @@ pt-BR:
       no_accounts: Nenhuma conta ainda
     form:
       balance: Saldo atual
+      opening_balance_date_label: Data do saldo inicial
       name_label: Nome da conta
       name_placeholder: Nome da conta exemplo
+      additional_details: Detalhes adicionais
+      institution_name_label: Nome da instituição
+      institution_name_placeholder: ex. Banco do Brasil
+      institution_domain_label: Domínio da instituição
+      institution_domain_placeholder: ex. bb.com.br
+      brazil_bank_label: Banco brasileiro
+      brazil_bank_blank: Selecione um banco
+      brazil_account_kind_label: Tipo de conta no Brasil
+      brazil_account_kind_blank: Selecione um tipo
+      brazil_account_kinds:
+        checking: Conta corrente
+        payment: Conta de pagamento
+        savings: Poupança
+        credit_card: Cartão de crédito
+        investment: Investimento
+        loan: Empréstimo
+      notes_label: Observações
+      notes_placeholder: Guarde informações adicionais como agência, conta, dígito, contrato, carteira ou custódia.
     index:
       accounts: Contas
       manual_accounts:
@@ -110,7 +129,7 @@ pt-BR:
       description: "Escolha qual provedor você deseja usar para vincular %{account_name}"
       already_linked: "A conta já está vinculada a um provedor"
       no_providers: "Nenhum provedor configurado no momento"
-  
+
   email_confirmations:
     new:
       invalid_token: Link de confirmação inválido ou expirado.

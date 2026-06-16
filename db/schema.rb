@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_01_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -115,8 +115,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
     t.string "institution_domain"
     t.text "notes"
     t.uuid "owner_id"
+    t.uuid "brazil_bank_id"
+    t.string "brazil_account_kind"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
+    t.index ["brazil_account_kind"], name: "index_accounts_on_brazil_account_kind"
+    t.index ["brazil_bank_id"], name: "index_accounts_on_brazil_bank_id"
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
@@ -226,6 +230,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
     t.index ["account_id", "date", "currency"], name: "index_account_balances_on_account_id_date_currency_unique", unique: true
     t.index ["account_id", "date"], name: "index_balances_on_account_id_and_date", order: { date: :desc }
     t.index ["account_id"], name: "index_balances_on_account_id"
+  end
+
+  create_table "brazil_banks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "ispb", null: false
+    t.string "code"
+    t.string "name", null: false
+    t.string "short_name", null: false
+    t.boolean "participates_in_compe", default: false, null: false
+    t.string "access_kind"
+    t.date "started_on"
+    t.string "source"
+    t.date "source_updated_on"
+    t.string "logo_key"
+    t.string "logo_path"
+    t.string "logo_source_url"
+    t.boolean "display_in_account_selector", default: true, null: false
+    t.text "searchable_text", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_brazil_banks_on_code", unique: true, where: "((code IS NOT NULL) AND (lower((code)::text) <> 'n/a'::text))"
+    t.index ["display_in_account_selector"], name: "index_brazil_banks_on_display_in_account_selector"
+    t.index ["ispb"], name: "index_brazil_banks_on_ispb", unique: true
   end
 
   create_table "binance_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1884,6 +1910,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_121841) do
   add_foreign_key "account_statements", "accounts", column: "suggested_account_id", on_delete: :nullify
   add_foreign_key "account_statements", "accounts", on_delete: :nullify
   add_foreign_key "account_statements", "families", on_delete: :cascade
+  add_foreign_key "accounts", "brazil_banks"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"

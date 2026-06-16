@@ -45,6 +45,17 @@ en:
       institution_name_placeholder: e.g., Chase Bank
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
+      brazil_bank_label: Brazilian bank
+      brazil_bank_blank: Select a bank
+      brazil_account_kind_label: Brazilian account kind
+      brazil_account_kind_blank: Select a kind
+      brazil_account_kinds:
+        checking: Checking account
+        payment: Payment account
+        savings: Savings account
+        credit_card: Credit card
+        investment: Investment
+        loan: Loan
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
     index:

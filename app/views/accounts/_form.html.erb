@@ -24,6 +24,25 @@
 
     <%= yield form %>
 
+    <% if Current.family&.currency == "BRL" || I18n.locale.to_s == "pt-BR" || account.brazil_bank_id.present? || account.brazil_account_kind.present? %>
+      <div class="space-y-2">
+        <%= form.collection_select :brazil_bank_id,
+            Brazil::Bank.displayable,
+            :id,
+            :selector_label,
+            {
+              include_blank: t(".brazil_bank_blank"),
+              label: t(".brazil_bank_label"),
+              searchable: true,
+              variant: :logo
+            } %>
+
+        <%= form.select :brazil_account_kind,
+            Account::BRAZIL_ACCOUNT_KINDS.map { |kind| [ t(".brazil_account_kinds.#{kind}"), kind ] },
+            { include_blank: t(".brazil_account_kind_blank"), label: t(".brazil_account_kind_label") } %>
+      </div>
+    <% end %>
+
     <details class="group">
       <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
         <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>

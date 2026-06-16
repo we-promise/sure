@@ -105,6 +105,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes,
+        :brazil_bank_id, :brazil_account_kind,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

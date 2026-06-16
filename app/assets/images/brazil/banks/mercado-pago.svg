@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mercado Pago">
+  <rect width="64" height="64" rx="14" fill="#00b1ea"/>
+  <ellipse cx="32" cy="32" rx="19" ry="12" fill="#ffffff"/>
+  <text x="32" y="36" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#00a3dd">MP</text>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sicoob">
+  <rect width="64" height="64" rx="14" fill="#003641"/>
+  <circle cx="25" cy="27" r="10" fill="#00ae9d"/>
+  <circle cx="39" cy="37" r="10" fill="#7db61c"/>
+  <text x="32" y="54" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="700" fill="#ffffff">SICOOB</text>
+</svg>

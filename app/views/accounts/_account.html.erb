@@ -25,17 +25,26 @@
               <%= icon("users", class: "w-3.5 h-3.5 text-secondary", title: account.owned_by?(Current.user) ? nil : account.owner&.display_name) %>
             <% end %>
 
-            <% if account.institution_name.present? %>
+            <% if account.brazil_bank.present? %>
+              <span class="hidden sm:inline text-secondary">• <%= account.brazil_bank.short_name %></span>
+            <% elsif account.institution_name.present? %>
               <span class="hidden sm:inline text-secondary">• <%= account.institution_name %></span>
             <% end %>
           </div>
           <% if account.long_subtype_label %>
-            <p class="text-sm text-secondary truncate"><%= account.long_subtype_label %></p>
+            <p class="text-sm text-secondary truncate">
+              <%= account.long_subtype_label %>
+              <% if account.brazil_bank.present? %>
+                <span class="text-subdued">· <%= account.brazil_bank.code %> · ISPB <%= account.brazil_bank.ispb %></span>
+              <% end %>
+            </p>
           <% end %>
           <% if account.supports_default? && is_default %>
             <p class="text-xs text-secondary opacity-50"><%= t("accounts.account.default_label") %></p>
           <% end %>
-          <% if account.institution_name.present? %>
+          <% if account.brazil_bank.present? %>
+            <p class="sm:hidden text-sm text-secondary truncate"><%= account.brazil_bank.selector_label %></p>
+          <% elsif account.institution_name.present? %>
             <p class="sm:hidden text-sm text-secondary truncate"><%= account.institution_name %></p>
           <% end %>
         <% end %>

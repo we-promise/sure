@@ -124,3 +124,8 @@ scripts/
 .claude_settings.json
 .security-key
 logs/security/
+
+# Claude Code tools
+.graphifyignore
+.impeccable/
+graphify-out/

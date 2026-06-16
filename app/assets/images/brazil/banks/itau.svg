@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Itau">
+  <rect width="64" height="64" rx="14" fill="#ec7000"/>
+  <rect x="12" y="12" width="40" height="40" rx="10" fill="#003399"/>
+  <text x="32" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#ffd200">itau</text>
+</svg>

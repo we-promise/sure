@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sicredi">
+  <rect width="64" height="64" rx="14" fill="#2f7d32"/>
+  <circle cx="32" cy="28" r="13" fill="#a5cd39"/>
+  <path d="M32 16v24M20 28h24" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+  <text x="32" y="53" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" fill="#ffffff">SICREDI</text>
+</svg>

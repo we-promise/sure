@@ -1,0 +1,46 @@
+# Local customization override.
+#
+# This reuses the already-pulled stable image and bind-mounts only the files
+# changed for Finantreta. It avoids Docker build/pull DNS issues.
+#
+#   docker compose -f compose.example.yml -f compose.local.yml up -d
+
+services:
+  web:
+    pull_policy: never
+    volumes:
+      - app-storage:/rails/storage
+      - ./app/assets/images/brazil:/rails/app/assets/images/brazil:ro
+      - ./app/controllers/concerns/accountable_resource.rb:/rails/app/controllers/concerns/accountable_resource.rb:ro
+      - ./app/models/account.rb:/rails/app/models/account.rb:ro
+      - ./app/models/brazil:/rails/app/models/brazil:ro
+      - ./app/services/brazil:/rails/app/services/brazil:ro
+      - ./app/views/accounts/_account.html.erb:/rails/app/views/accounts/_account.html.erb:ro
+      - ./app/views/accounts/_form.html.erb:/rails/app/views/accounts/_form.html.erb:ro
+      - ./app/views/accounts/_logo.html.erb:/rails/app/views/accounts/_logo.html.erb:ro
+      - ./app/views/accounts/index/_account_groups.erb:/rails/app/views/accounts/index/_account_groups.erb:ro
+      - ./config/locales/views/accounts/en.yml:/rails/config/locales/views/accounts/en.yml:ro
+      - ./config/locales/views/accounts/pt-BR.yml:/rails/config/locales/views/accounts/pt-BR.yml:ro
+      - ./db/migrate/20260601120000_create_brazil_banks.rb:/rails/db/migrate/20260601120000_create_brazil_banks.rb:ro
+      - ./db/migrate/20260601120100_add_brazil_fields_to_accounts.rb:/rails/db/migrate/20260601120100_add_brazil_fields_to_accounts.rb:ro
+      - ./db/schema.rb:/rails/db/schema.rb:ro
+      - ./lib/tasks/brazil.rake:/rails/lib/tasks/brazil.rake:ro
+      - ./test/models/account_test.rb:/rails/test/models/account_test.rb:ro
+      - ./test/models/brazil:/rails/test/models/brazil:ro
+      - ./test/services/brazil:/rails/test/services/brazil:ro
+
+  worker:
+    pull_policy: never
+    volumes:
+      - app-storage:/rails/storage
+      - ./app/assets/images/brazil:/rails/app/assets/images/brazil:ro
+      - ./app/controllers/concerns/accountable_resource.rb:/rails/app/controllers/concerns/accountable_resource.rb:ro
+      - ./app/models/account.rb:/rails/app/models/account.rb:ro
+      - ./app/models/brazil:/rails/app/models/brazil:ro
+      - ./app/services/brazil:/rails/app/services/brazil:ro
+      - ./config/locales/views/accounts/en.yml:/rails/config/locales/views/accounts/en.yml:ro
+      - ./config/locales/views/accounts/pt-BR.yml:/rails/config/locales/views/accounts/pt-BR.yml:ro
+      - ./db/migrate/20260601120000_create_brazil_banks.rb:/rails/db/migrate/20260601120000_create_brazil_banks.rb:ro
+      - ./db/migrate/20260601120100_add_brazil_fields_to_accounts.rb:/rails/db/migrate/20260601120100_add_brazil_fields_to_accounts.rb:ro
+      - ./db/schema.rb:/rails/db/schema.rb:ro
+      - ./lib/tasks/brazil.rake:/rails/lib/tasks/brazil.rake:ro

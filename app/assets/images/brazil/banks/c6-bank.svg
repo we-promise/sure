@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="C6 Bank">
+  <rect width="64" height="64" rx="14" fill="#242424"/>
+  <circle cx="46" cy="18" r="7" fill="#c7a76c"/>
+  <text x="29" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#ffffff">C6</text>
+</svg>
