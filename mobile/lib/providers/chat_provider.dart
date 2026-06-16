@@ -342,6 +342,7 @@ class ChatProvider with ChangeNotifier {
 
         if (_currentChat != null && deleted.contains(_currentChat!.id)) {
           _currentChat = null;
+          _stopPolling();
         }
 
         notifyListeners();

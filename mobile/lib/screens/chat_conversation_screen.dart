@@ -336,10 +336,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       _selectedChatIds.clear();
       _chatId = chatProvider.currentChat?.id;
     });
-    // Only stop polling if the provider actually cleared currentChat.
-    if (chatProvider.currentChat == null) {
-      chatProvider.clearCurrentChat();
-    }
   }
 
   String _formatChatDateTime(DateTime dateTime) {
@@ -436,28 +432,25 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
                     return const Center(child: CircularProgressIndicator());
                   }
+                  if (chatProvider.chats.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'No chats yet.\nStart a new conversation!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    );
+                  }
                   return RefreshIndicator(
                     onRefresh: _loadChats,
                     child: ListView.builder(
                       padding: const EdgeInsets.only(top: 4),
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: chatProvider.chats.isEmpty
-                          ? 1
-                          : chatProvider.chats.length,
+                      itemCount: chatProvider.chats.length,
                       itemBuilder: (context, index) {
-                        if (chatProvider.chats.isEmpty) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(
-                                'No chats yet.\nStart a new conversation!',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: colorScheme.onSurfaceVariant),
-                              ),
-                            ),
-                          );
-                        }
                         final chat = chatProvider.chats[index];
                         final isActive =
                             !_drawerSelectionMode && chat.id == _chatId;
@@ -563,11 +556,30 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         title: Consumer<ChatProvider>(
           builder: (context, chatProvider, _) {
             final title = chatProvider.currentChat?.title ?? 'New Conversation';
-            return GestureDetector(
-              onLongPress: _chatId != null ? _editTitle : null,
-              child: Text(
-                title,
-                overflow: TextOverflow.ellipsis,
+            final canRename = _chatId != null;
+            return Tooltip(
+              message: canRename ? 'Long-press to rename' : '',
+              child: GestureDetector(
+                onLongPress: canRename ? _editTitle : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (canRename) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           },
