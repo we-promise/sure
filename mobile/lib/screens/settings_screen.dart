@@ -61,7 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isCheckingForUpdate = true);
     try {
       await _manualUpgrader.initialize();
-      if (!mounted) return;
+      if (!mounted) {
+        _manualUpgrader.dispose();
+        return;
+      }
       await _manualUpgrader.updateVersionInfo();
       if (!mounted) return;
 
