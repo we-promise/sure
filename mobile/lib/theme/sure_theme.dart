@@ -15,8 +15,18 @@ class SureTheme {
       brightness: brightness,
       primary: tokens.link,
       onPrimary: tokens.textInverse,
+      // The container roles were unset, so on screens not yet redesigned with
+      // SureColors (e.g. Chats) Material defaulted them to a blue that read as
+      // off-brand on FAB/badge/avatar surfaces. Pin them to a neutral Sure
+      // surface with primary text on top. `primary`/`secondary` stay link/info so
+      // existing link/accent callers are unchanged; the prominent neutral primary
+      // action color is applied to FABs via floatingActionButtonTheme below.
+      primaryContainer: tokens.surfaceInset,
+      onPrimaryContainer: tokens.textPrimary,
       secondary: tokens.info,
       onSecondary: tokens.textInverse,
+      secondaryContainer: tokens.surfaceInset,
+      onSecondaryContainer: tokens.textPrimary,
       error: tokens.destructive,
       onError: tokens.textInverse,
       errorContainer: tokens.destructiveSubtle,
@@ -76,6 +86,13 @@ class SureTheme {
             borderRadius: BorderRadius.circular(SureTokens.radiusLg),
           ),
         ),
+      ),
+      // The FAB is Sure's primary action surface — use the neutral brand primary
+      // (near-black in light, white in dark) so it reads as the prominent action
+      // instead of the subtle primaryContainer the Material 3 default would use.
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: tokens.buttonPrimary,
+        foregroundColor: tokens.textInverse,
       ),
     );
 
