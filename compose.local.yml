@@ -8,6 +8,12 @@
 services:
   web:
     pull_policy: never
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     volumes:
       - app-storage:/rails/storage
       - ./app/assets/images/brazil:/rails/app/assets/images/brazil:ro
@@ -31,6 +37,12 @@ services:
 
   worker:
     pull_policy: never
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     volumes:
       - app-storage:/rails/storage
       - ./app/assets/images/brazil:/rails/app/assets/images/brazil:ro

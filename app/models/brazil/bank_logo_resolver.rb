@@ -11,8 +11,10 @@ module Brazil
       return if bank.logo_key.blank?
 
       candidate = "brazil/banks/#{bank.logo_key}.svg"
-      return candidate if Rails.root.join("app/assets/images", candidate).exist?
+      return unless Rails.root.join("app/assets/images", candidate).exist?
 
+      ActionController::Base.helpers.asset_path(candidate)
+    rescue
       nil
     end
 
