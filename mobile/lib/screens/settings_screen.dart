@@ -69,8 +69,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final storeVersion = _manualUpgrader.versionInfo?.appStoreVersion?.toString();
       final storeUrl = _manualUpgrader.versionInfo?.appStoreListingURL;
 
-      if (available && storeVersion != null) {
-        _showUpdateDialog(storeVersion, storeUrl);
+      if (available) {
+        await _showUpdateDialog(storeVersion ?? 'a newer version', storeUrl);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("You're up to date!")),
@@ -99,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Later'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: storeUrl == null ? null : () => Navigator.pop(ctx, true),
             child: const Text('Update now'),
           ),
         ],
@@ -109,6 +109,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (launch == true && storeUrl != null && mounted) {
       await launchUrl(Uri.parse(storeUrl), mode: LaunchMode.externalApplication);
     }
+  }
+
+  @override
+  void dispose() {
+    _manualUpgrader.dispose();
+    super.dispose();
   }
 
   Future<void> _loadBiometricState() async {
