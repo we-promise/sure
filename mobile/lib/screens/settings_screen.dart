@@ -107,7 +107,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (launch == true && storeUrl != null && mounted) {
-      await launchUrl(Uri.parse(storeUrl), mode: LaunchMode.externalApplication);
+      final uri = Uri.tryParse(storeUrl);
+      final opened = uri != null
+          ? await launchUrl(uri, mode: LaunchMode.externalApplication)
+          : false;
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open store link')),
+        );
+      }
     }
   }
 
