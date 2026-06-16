@@ -37,12 +37,9 @@ class Provider::Registry
     end
 
     def effective_llm_model_for(provider)
-      case provider
-      when Provider::Openai
-        Provider::Openai.effective_model
-      when Provider::Anthropic
-        Provider::Anthropic.effective_model
-      end
+      return nil unless provider
+
+      provider.class.effective_model
     end
 
     def plaid_provider_for_region(region)
