@@ -252,11 +252,26 @@ export default class extends Controller {
   #handleClick(segment) {
     if (!segment.name || !this.startDateValue || !this.endDateValue) return;
 
-    const segmentName = encodeURIComponent(segment.name);
     const startDate = this.startDateValue;
     const endDate = this.endDateValue;
 
-    const url = `/transactions?q[categories][]=${segmentName}&q[start_date]=${startDate}&q[end_date]=${endDate}`;
+    // Prefer the category id when available so the filter survives renames
+    // and name collisions. Synthetic segments still need the name-based
+    // filter: "Uncategorized" / "Other Investments" segments have no
+    // persisted id, and the reserved budget-donut segments
+    // (unusedSegmentId / overageSegmentId — default "unused" / "overage")
+    // carry sentinel string ids that aren't real category ids. In both
+    // cases fall back to the name-based filter, which already understands
+    // synthetic and locale-translated names.
+    const isReservedSyntheticId =
+      segment.id === this.unusedSegmentIdValue ||
+      segment.id === this.overageSegmentIdValue;
+    const categoryFilter =
+      segment.id && !isReservedSyntheticId
+        ? `q[category_ids][]=${encodeURIComponent(segment.id)}`
+        : `q[categories][]=${encodeURIComponent(segment.name)}`;
+
+    const url = `/transactions?${categoryFilter}&q[start_date]=${startDate}&q[end_date]=${endDate}`;
     window.location.href = url;
   }
 
