@@ -74,6 +74,7 @@ zh-CN:
       create_accounts: 创建账户
       creating_accounts: 正在创建账户...
       cancel: 取消
+      psd2_savings_notice: 根据 PSD2 规则，部分储蓄账户可能需要额外授权。
     new:
       link_enable_banking_title: 连接 Enable Banking
       session_expired: 会话已过期 - 需要重新授权

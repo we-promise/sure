@@ -321,7 +321,6 @@ ca:
       category: Categoria
       tag: Etiqueta
     new:
-      coming_soon: Properament
       description: Importa des d'una eina financera o puja fitxers de dades sense
         processar.
       import_accounts: Importa comptes

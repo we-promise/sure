@@ -11,10 +11,7 @@ permissions:
 env:
   EVAL_MODELS: gpt-4.1
   RAILS_ENV: test
-  DB_HOST: 127.0.0.1
-  DB_PORT: 5432
-  POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: postgres
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
   REDIS_URL: redis://localhost:6379
   PLAID_CLIENT_ID: foo
   PLAID_SECRET: bar

@@ -7,14 +7,10 @@ vi:
       success: Chuyển khoản đã được xóa
     form:
       amount: Số tiền
-      calculate_rate_tab: Tính tỷ giá ngoại hối
-      convert_tab: Chuyển đổi với tỷ giá ngoại hối
       date: Ngày
       destination_amount: Số tiền đích
       destination_amount_display: "Số tiền đích: %{amount}"
-      exchange_rate: Tỷ giá
       exchange_rate_display: "Tỷ giá: %{rate}"
-      exchange_rate_help: Chọn cách nhập số tiền chuyển khoản.
       expense: Chi tiêu
       from: Từ
       income: Thu nhập

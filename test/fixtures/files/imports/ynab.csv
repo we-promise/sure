@@ -1,0 +1,6 @@
+"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"
+"Checking","","01/01/2024","Landlord","Housing: Rent","Housing","Rent","January rent","$1,500.00","$0.00","Cleared"
+"Credit Card","Red","01/02/2024","Coffee Shop","Food: Coffee","Food","Coffee","Morning coffee","$4.25","$0.00","Uncleared"
+"Checking","","01/05/2024","Employer","Income: Paycheck","Income","Paycheck","Monthly salary","$0.00","$2,500.00","Cleared"
+"Checking","","01/06/2024","Transfer : Savings","","","","Move to savings","$250.00","$0.00","Uncleared"
+"Checking","","01/04/2024","","","","","Reconciliation balance adjustment","$0.00","$0.43","Reconciled"
