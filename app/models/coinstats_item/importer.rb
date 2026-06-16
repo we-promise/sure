@@ -28,9 +28,13 @@ class CoinstatsItem::Importer
     sync_exchange_accounts!
 
     # Get all linked coinstats accounts (ones with account_provider associations)
+    # Order deterministically so the bulk wallet params we build below (a
+    # comma-separated "blockchain:address" string) are stable across runs.
+    # The primary key is a random UUID, so we sort by creation order instead.
     linked_accounts = coinstats_item.coinstats_accounts
                                     .joins(:account_provider)
                                     .includes(:account)
+                                    .order(:created_at, :id)
 
     if linked_accounts.empty?
       Rails.logger.info "CoinstatsItem::Importer - No linked accounts to sync for item #{coinstats_item.id}"

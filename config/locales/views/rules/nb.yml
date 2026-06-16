@@ -1,6 +1,13 @@
 ---
 nb:
   rules:
+    actions:
+      auto_categorize:
+        label: Automatisk kategoriser transaksjoner med AI
+        cost_na: "kostnad: ikke tilgjengelig"
+        cost_estimate: "~$%{cost} per %{count} transaksjoner"
+        no_provider: ingen LLM-leverandør konfigurert
+      value_placeholder: Skriv inn en verdi
     no_action: Ingen handling
     no_condition: Ingen betingelse
     recent_runs:
