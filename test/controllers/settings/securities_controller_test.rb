@@ -22,4 +22,13 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
   end
+
+  test "does not show encryption warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+  end
 end

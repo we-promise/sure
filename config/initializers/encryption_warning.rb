@@ -7,8 +7,7 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 
 Rails.application.config.after_initialize do
   app_mode = Rails.application.config.app_mode
-  if app_mode.respond_to?(:self_hosted?) && app_mode.self_hosted? &&
-     !ActiveRecordEncryptionConfig.explicitly_configured?
+  if app_mode.self_hosted? && !ActiveRecordEncryptionConfig.explicitly_configured?
     Rails.logger.warn(<<~WARN)
       [SECURITY] ActiveRecord Encryption is NOT configured. Sensitive data
       (API keys, provider/bank tokens, MFA secrets, and PII) are being stored

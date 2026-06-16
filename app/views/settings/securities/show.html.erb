@@ -2,11 +2,15 @@
 
 <% if @encryption_unconfigured %>
   <div class="mb-4">
-    <%= render DS::Alert.new(
-          variant: :warning,
-          title: t(".encryption_warning.title"),
-          message: t(".encryption_warning.message")
-        ) %>
+    <%= render DS::Alert.new(variant: :warning, title: t(".encryption_warning.title")) do %>
+      <p><%= t(".encryption_warning.intro") %></p>
+      <ul class="list-disc pl-5">
+        <% t(".encryption_warning.keys").each do |key| %>
+          <li><%= key %></li>
+        <% end %>
+      </ul>
+      <p><%= t(".encryption_warning.generate") %></p>
+    <% end %>
   </div>
 <% end %>
 
