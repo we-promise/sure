@@ -1084,7 +1084,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[type valid content stats errors warnings],
             properties: {
-              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] },
+              type: { type: :string, enum: Import::TYPES },
               valid: { type: :boolean },
               content: { '$ref' => '#/components/schemas/ImportPreflightContent' },
               stats: { '$ref' => '#/components/schemas/ImportPreflightStats' },
@@ -1148,7 +1148,7 @@ RSpec.configure do |config|
             required: %w[id type status created_at updated_at status_detail],
             properties: {
               id: { type: :string, format: :uuid },
-              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] },
+              type: { type: :string, enum: Import::TYPES },
               status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },
@@ -1163,7 +1163,7 @@ RSpec.configure do |config|
             required: %w[id type status created_at updated_at status_detail configuration stats],
             properties: {
               id: { type: :string, format: :uuid },
-              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] },
+              type: { type: :string, enum: Import::TYPES },
               status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },

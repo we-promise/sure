@@ -302,7 +302,6 @@ zh-CN:
       title: 新建 CSV 导入
       tab_financial_tools: 财务工具和文件
       tab_raw_data: 原始数据
-      coming_soon: 即将推出
       import_ynab: 从 YNAB 导入
       import_merchants: 导入商户
       import_actual: 从 Actual Budget 导入
