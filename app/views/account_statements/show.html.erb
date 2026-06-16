@@ -1,6 +1,4 @@
-<%= content_for :page_title, @statement.filename %>
-
-<%= settings_section title: t(".title") do %>
+<% detail = capture do %>
   <div class="space-y-4">
     <div class="rounded-xl bg-container-inset p-4">
       <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -19,7 +17,8 @@
         <div class="flex items-center gap-3">
           <% if @statement.original_file.attached? %>
             <%= link_to rails_blob_path(@statement.original_file, disposition: "attachment"),
-                        class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+                        class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover",
+                        data: { turbo_frame: "_top" } do %>
               <%= icon("download", size: "sm") %>
               <%= t(".download") %>
             <% end %>
@@ -177,4 +176,20 @@
       </div>
     </div>
   </div>
+<% end %>
+
+<% if @statement_tab_frame %>
+  <%= turbo_frame_tag dom_id(@statement.account, :statements_tab) do %>
+    <%= link_to account_path(@statement.account, tab: "statements"),
+                class: "inline-flex items-center gap-2 text-sm font-medium text-secondary mb-4" do %>
+      <%= icon("arrow-left", size: "sm") %>
+      <%= t(".back_to_statements") %>
+    <% end %>
+    <%= detail %>
+  <% end %>
+<% else %>
+  <%= content_for :page_title, @statement.filename %>
+  <%= settings_section title: t(".title") do %>
+    <%= detail %>
+  <% end %>
 <% end %>

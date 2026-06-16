@@ -407,6 +407,52 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_nil statement.suggested_account
   end
 
+  test "shows statement inline within the account statements tab frame" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "inline_statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    frame_id = ActionView::RecordIdentifier.dom_id(@account, :statements_tab)
+
+    get account_statement_url(statement), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}"
+    assert_no_match(/<body/, response.body)
+    assert_includes response.body, I18n.t("account_statements.show.back_to_statements")
+  end
+
+  test "shows statement as a full page when not requested within the statements tab frame" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "full_page_statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_match(/<body/, response.body)
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(@account, :statements_tab)}", 0
+  end
+
+  test "unlink from the statements tab frame returns to the account statements list" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "frame_unlink.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    frame_id = ActionView::RecordIdentifier.dom_id(@account, :statements_tab)
+
+    patch unlink_account_statement_url(statement), headers: { "Turbo-Frame" => frame_id }
+
+    assert_redirected_to account_url(@account, tab: "statements")
+    statement.reload
+    assert_nil statement.account
+    assert statement.unmatched?
+  end
+
   test "updates metadata" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,

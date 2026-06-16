@@ -69,6 +69,7 @@ en:
       account_label: Account
       account_last4_hint: Account last four
       account_name_hint: Account name hint
+      back_to_statements: Back to statements
       closing_balance: Closing balance
       currency: Currency
       delete: Delete

@@ -35,7 +35,8 @@ class AccountStatementsController < ApplicationController
       [ t("account_statements.index.title"), account_statements_path ],
       [ @statement.filename, nil ]
     ]
-    render layout: "settings"
+    @statement_tab_frame = statement_tab_frame_request?
+    render layout: @statement_tab_frame ? false : "settings"
   end
 
   def create
@@ -87,7 +88,8 @@ class AccountStatementsController < ApplicationController
       @can_manage_statement = @statement.manageable_by?(Current.user)
       @reconciliation_checks = @statement.reconciliation_checks
       flash.now[:alert] = @statement.errors.full_messages.to_sentence
-      render :show, status: :unprocessable_entity, layout: "settings"
+      @statement_tab_frame = statement_tab_frame_request?
+      render :show, status: :unprocessable_entity, layout: @statement_tab_frame ? false : "settings"
     end
   end
 
@@ -110,8 +112,14 @@ class AccountStatementsController < ApplicationController
   def unlink
     return if @statement.account && !require_account_permission!(@statement.account)
 
+    account = @statement.account
     @statement.unlink!
-    redirect_to account_statement_path(@statement), notice: t("account_statements.unlink.success")
+
+    if account && statement_tab_frame_request?(account)
+      redirect_to account_path(account, tab: "statements"), notice: t("account_statements.unlink.success")
+    else
+      redirect_to account_statement_path(@statement), notice: t("account_statements.unlink.success")
+    end
   end
 
   def reject
@@ -133,6 +141,12 @@ class AccountStatementsController < ApplicationController
   end
 
   private
+
+    def statement_tab_frame_request?(account = @statement&.account)
+      account.present? &&
+        turbo_frame_request? &&
+        request.headers["Turbo-Frame"] == helpers.dom_id(account, :statements_tab)
+    end
 
     def set_statement
       @statement = Current.family.account_statements
