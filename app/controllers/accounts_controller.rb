@@ -60,7 +60,7 @@ class AccountsController < ApplicationController
       search_params[:start_date] = @activity_period.start_date.iso8601
       search_params[:end_date] = @activity_period.end_date.iso8601
     end
-    entries = @account.entries.where(excluded: false).search(search_params).reverse_chronological.includes(:entryable)
+    entries = @account.entries.excluding_split_parents.search(search_params).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?

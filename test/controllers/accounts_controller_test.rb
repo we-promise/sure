@@ -206,6 +206,48 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes entries, out_of_month
   end
 
+  test "shows excluded entries but hides split parents in activity" do
+    normal = @account.entries.create!(
+      name: "Normal entry",
+      date: Date.current,
+      amount: 50,
+      currency: @account.currency,
+      entryable: Transaction.new
+    )
+    excluded = @account.entries.create!(
+      name: "Excluded entry",
+      date: Date.current,
+      amount: 50,
+      currency: @account.currency,
+      excluded: true,
+      entryable: Transaction.new
+    )
+    split_parent = @account.entries.create!(
+      name: "Split parent",
+      date: Date.current,
+      amount: 50,
+      currency: @account.currency,
+      excluded: true,
+      entryable: Transaction.new
+    )
+    @account.entries.create!(
+      name: "Split child",
+      date: Date.current,
+      amount: 50,
+      currency: @account.currency,
+      parent_entry: split_parent,
+      entryable: Transaction.new
+    )
+
+    get account_url(@account)
+
+    assert_response :success
+    entries = controller.instance_variable_get(:@entries)
+    assert_includes entries, normal
+    assert_includes entries, excluded
+    assert_not_includes entries, split_parent
+  end
+
   test "ignores invalid activity year/month" do
     get account_url(@account, activity_year: "abc", activity_month: 99)
     assert_response :success
