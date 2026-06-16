@@ -21,6 +21,7 @@ import 'services/log_service.dart';
 import 'services/preferences_service.dart';
 import 'services/telemetry_service.dart';
 import 'theme/sure_theme.dart';
+import 'package:upgrader/upgrader.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,8 +108,16 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   bool _isCheckingConfig = true;
   bool _hasBackendUrl = false;
   bool _isLocked = false;
+  bool _upgradeCheckReady = false;
+  Timer? _upgradeDelayTimer;
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+
+  final _upgrader = Upgrader(
+    durationUntilAlertAgain: const Duration(days: 7),
+    countryCode: 'us',
+    messages: _SureUpgraderMessages(),
+  );
 
   @override
   void initState() {
@@ -122,6 +131,7 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
+    _upgradeDelayTimer?.cancel();
     super.dispose();
   }
 
@@ -265,9 +275,19 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
         }
 
         if (authProvider.isAuthenticated) {
+          _upgradeDelayTimer ??= Timer(const Duration(minutes: 5), () {
+            if (mounted) setState(() => _upgradeCheckReady = true);
+          });
           return Stack(
             children: [
-              const MainNavigationScreen(),
+              if (_upgradeCheckReady)
+                UpgradeAlert(
+                  upgrader: _upgrader,
+                  showIgnore: false,
+                  child: const MainNavigationScreen(),
+                )
+              else
+                const MainNavigationScreen(),
               if (_isLocked)
                 BiometricLockScreen(
                   onUnlocked: _onUnlocked,
@@ -275,6 +295,15 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
                 ),
             ],
           );
+        }
+
+        // Reset upgrade timer so the delay restarts on next login.
+        if (_upgradeDelayTimer != null || _upgradeCheckReady) {
+          _upgradeDelayTimer?.cancel();
+          _upgradeDelayTimer = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _upgradeCheckReady = false);
+          });
         }
 
         // Clear stale lock state so it doesn't flash on the next login.
@@ -292,4 +321,24 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
       },
     );
   }
+}
+
+class _SureUpgraderMessages extends UpgraderMessages {
+  @override
+  String get title => 'Update available';
+
+  @override
+  String get body =>
+      '{{appName}} {{currentAppStoreVersion}} is now available — '
+      'you have {{currentInstalledVersion}}.\n\n'
+      "What's new? Check the store for release notes.";
+
+  @override
+  String get buttonTitleUpdate => 'Update now';
+
+  @override
+  String get buttonTitleLater => 'Later';
+
+  @override
+  String get releaseNotes => '';
 }
