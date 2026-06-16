@@ -23,6 +23,8 @@ const COLOR_TOKENS = [
   ["info", "color.info"],
   ["link", "color.link"],
   ["shadow", "color.shadow"],
+  ["focusRing", "color.focus-ring"],
+  ["bgInverse", "utility.bg-inverse"],
   ["textPrimary", "utility.text-primary"],
   ["textInverse", "utility.text-inverse"],
   ["textSecondary", "utility.text-secondary"],
@@ -39,6 +41,16 @@ const COLOR_TOKENS = [
 const RADIUS_TOKENS = [
   ["radiusMd", "border.radius.md"],
   ["radiusLg", "border.radius.lg"],
+];
+
+// Single-layer elevation scale (shadow/*). Mode-aware: each token carries a
+// `sure.dark` extension, so light/dark emit different shadow colors.
+const SHADOW_TOKENS = [
+  ["shadowXs", "shadow.xs"],
+  ["shadowSm", "shadow.sm"],
+  ["shadowMd", "shadow.md"],
+  ["shadowLg", "shadow.lg"],
+  ["shadowXl", "shadow.xl"],
 ];
 
 function readTokens() {
@@ -105,6 +117,31 @@ function resolveDimension(tokens, path) {
   return Number(match[1]).toFixed(1);
 }
 
+// Parse a single-layer CSS box-shadow ("<x>px <y>px <blur>px <spread>px {color}")
+// into a Dart `BoxShadow(...)` literal. Offsets and spread may be negative
+// (e.g. -4px); blur must be >= 0. A strict number pattern rejects malformed
+// dimensions (e.g. "1.2.3px") instead of emitting NaN into the generated Dart.
+function resolveShadow(tokens, path, mode) {
+  const node = nodeAt(tokens, path);
+  const value = valueForMode(node, mode);
+  const num = "-?[0-9]+(?:\\.[0-9]+)?";
+  const nonNeg = "[0-9]+(?:\\.[0-9]+)?";
+  const match = String(value).match(
+    new RegExp(`^(${num})px (${num})px (${nonNeg})px (${num})px (\\{[^}]+\\})$`),
+  );
+  if (!match) {
+    throw new Error(`[mobile-tokens] ${path} must be a single-layer box shadow: ${value}`);
+  }
+  const [, offsetX, offsetY, blur, spread, colorRef] = match;
+  const color = resolveColorValue(tokens, colorRef, mode, path);
+  const px = (raw) => Number(raw).toFixed(1);
+  return (
+    `BoxShadow(color: Color(${color}), ` +
+    `offset: Offset(${px(offsetX)}, ${px(offsetY)}), ` +
+    `blurRadius: ${px(blur)}, spreadRadius: ${px(spread)})`
+  );
+}
+
 function firstFontFamily(stack) {
   for (const rawFamily of stack.split(",")) {
     const family = rawFamily.trim();
@@ -117,11 +154,14 @@ function firstFontFamily(stack) {
 }
 
 function emitPalette(tokens, mode) {
-  const lines = COLOR_TOKENS.map(
+  const colorLines = COLOR_TOKENS.map(
     ([name, path]) => `    ${name}: Color(${resolveColor(tokens, path, mode)}),`,
   );
+  const shadowLines = SHADOW_TOKENS.map(
+    ([name, path]) => `    ${name}: [${resolveShadow(tokens, path, mode)}],`,
+  );
 
-  return `  static const ${mode} = SureTokenPalette(\n${lines.join("\n")}\n  );`;
+  return `  static const ${mode} = SureTokenPalette(\n${colorLines.join("\n")}\n${shadowLines.join("\n")}\n  );`;
 }
 
 function buildDart(tokens) {
@@ -135,7 +175,7 @@ function buildDart(tokens) {
 // Source: design/tokens/sure.tokens.json
 // Build: node mobile/tool/generate_sure_tokens.mjs
 
-import 'dart:ui';
+import 'package:flutter/painting.dart';
 
 class SureTokens {
   const SureTokens._();
@@ -162,9 +202,11 @@ ${emitPalette(tokens, "dark")}
 class SureTokenPalette {
   const SureTokenPalette({
 ${COLOR_TOKENS.map(([name]) => `    required this.${name},`).join("\n")}
+${SHADOW_TOKENS.map(([name]) => `    required this.${name},`).join("\n")}
   });
 
 ${COLOR_TOKENS.map(([name]) => `  final Color ${name};`).join("\n")}
+${SHADOW_TOKENS.map(([name]) => `  final List<BoxShadow> ${name};`).join("\n")}
 }
 `;
 }
