@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
 import 'money_text.dart';
+import 'sure_icon.dart';
 
 enum AccountFilter { all, assets, liabilities }
 
@@ -68,7 +69,7 @@ class NetWorthCard extends StatelessWidget {
                           'Outdated',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: colorScheme.secondary,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                               ),
                         ),
                       ),
@@ -80,7 +81,7 @@ class NetWorthCard extends StatelessWidget {
                   netWorthFormatted ?? '--',
                   style: SureMoney.tabular(
                     Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w500,
                           color: isStale
                               ? colorScheme.secondary
                               : colorScheme.onSurface,
@@ -200,16 +201,18 @@ class NetWorthCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    title == 'Assets' ? Icons.trending_up : Icons.trending_down,
+                  SureIcon(
+                    title == 'Assets'
+                        ? SureIcons.trendingUp
+                        : SureIcons.trendingDown,
                     color: color,
-                    size: 20,
+                    size: SureIconSize.md,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w500,
                           color: color,
                         ),
                   ),
@@ -241,7 +244,7 @@ class NetWorthCard extends StatelessWidget {
                         Text(
                           formatAmount(entry.key, entry.value),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w500,
                               ),
                         ),
                       ],
@@ -303,7 +306,7 @@ class _FilterButton extends StatelessWidget {
                     child: Text(
                       '--',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w500,
                             color: colorScheme.onSurface,
                           ),
                     ),
@@ -314,7 +317,7 @@ class _FilterButton extends StatelessWidget {
                           formatAmount(sortedEntries.first.key, sortedEntries.first.value),
                           style: SureMoney.tabular(
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w500,
                                   color: colorScheme.onSurface,
                                 ),
                           ),
@@ -336,7 +339,7 @@ class _FilterButton extends StatelessWidget {
                                   formatAmount(entry.key, entry.value),
                                   style: SureMoney.tabular(
                                     Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w500,
                                           color: colorScheme.onSurface,
                                         ),
                                   ),

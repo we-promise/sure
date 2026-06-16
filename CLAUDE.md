@@ -132,6 +132,12 @@ Sidekiq handles asynchronous tasks:
 - AI chat responses (`AssistantResponseJob`)
 - Scheduled maintenance via sidekiq-cron
 
+### Debug Logging for Provider Syncs
+- Prefer `DebugLogEntry.capture(...)` over `Rails.logger.*` for provider sync/import failures, partial responses, and other support-relevant diagnostics.
+- Record support-relevant incidents in the super-admin `/settings/debug` UI rather than leaving them only in raw application logs.
+- Include `category`, `level`, `message`, `source`, `provider_key`, and structured `metadata`.
+- Attach `family` and `account_provider` whenever possible so support can filter to the affected provider connection.
+
 ### Frontend Architecture
 - **Hotwire Stack**: Turbo + Stimulus for reactive UI without heavy JavaScript
 - **ViewComponents**: Reusable UI components in `app/components/`
