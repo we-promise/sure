@@ -1,0 +1,83 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="space-y-4 flex flex-col">
+  <div class="p-4 bg-container-inset border border-secondary rounded-lg">
+    <div class="flex items-start gap-2">
+      <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
+      <div>
+        <p class="text-sm font-medium text-primary mb-2"><%= t(".info.title") %></p>
+        <p class="text-xs text-secondary"><%= t(".info.description") %></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <% if @candidates.empty? %>
+      <%= render DS::EmptyState.new(
+        icon: "credit-card",
+        title: t(".empty.title"),
+        description: t(".empty.description")
+      ) %>
+    <% else %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+          <p><%= t(".detected") %></p>
+          <span class="text-subdued">&middot;</span>
+          <p><%= @candidates.size %></p>
+        </div>
+
+        <div class="space-y-2">
+          <% @candidates.each do |candidate| %>
+            <% original = @transactions_by_id[candidate.original_transaction_id] %>
+            <% outflow = @transactions_by_id[candidate.outflow_transaction_id] %>
+            <% inflow = @transactions_by_id[candidate.inflow_transaction_id] %>
+            <% next if original.nil? || outflow.nil? || inflow.nil? %>
+
+            <div class="bg-container rounded-lg shadow-border-xs p-4 space-y-3" id="<%= dom_id(inflow, :card_change) %>">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-primary privacy-sensitive">
+                  <%= format_money(inflow.entry.amount_money.abs) %>
+                </p>
+              </div>
+
+              <ul class="space-y-2">
+                <%= render "card_change_reimbursements/leg",
+                  transaction: original,
+                  label: t(".roles.original"),
+                  badge: t(".badges.kept"),
+                  badge_class: "bg-green-50 text-success theme-dark:bg-green-tint-10" %>
+                <%= render "card_change_reimbursements/leg",
+                  transaction: outflow,
+                  label: t(".roles.charge"),
+                  badge: t(".badges.linked"),
+                  badge_class: "bg-surface-inset text-secondary" %>
+                <%= render "card_change_reimbursements/leg",
+                  transaction: inflow,
+                  label: t(".roles.reimbursement"),
+                  badge: t(".badges.linked"),
+                  badge_class: "bg-surface-inset text-secondary" %>
+              </ul>
+
+              <p class="text-xs text-secondary"><%= t(".explanation") %></p>
+
+              <div class="flex items-center justify-end gap-2">
+                <%= render DS::Button.new(
+                  text: t(".dismiss"),
+                  variant: "outline",
+                  size: "sm",
+                  href: dismiss_card_change_reimbursement_path(inflow, outflow_id: outflow.id)
+                ) %>
+                <%= render DS::Button.new(
+                  text: t(".confirm"),
+                  variant: "primary",
+                  size: "sm",
+                  href: confirm_card_change_reimbursement_path(inflow, outflow_id: outflow.id)
+                ) %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

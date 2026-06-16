@@ -1,0 +1,21 @@
+<%# locals: (transaction:, label:, badge:, badge_class:) %>
+<li class="flex items-center justify-between gap-2">
+  <div class="flex items-center gap-2 min-w-0">
+    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= badge_class %>">
+      <%= badge %>
+    </span>
+    <div class="min-w-0">
+      <p class="text-sm text-primary truncate"><%= transaction.entry.name %></p>
+      <p class="text-xs text-secondary">
+        <%= label %>
+        <span class="text-subdued">&middot;</span>
+        <%= transaction.entry.account.name %>
+        <span class="text-subdued">&middot;</span>
+        <%= l(transaction.entry.date, format: :short) %>
+      </p>
+    </div>
+  </div>
+  <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
+    <%= format_money(transaction.entry.amount_money) %>
+  </p>
+</li>

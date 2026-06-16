@@ -1,0 +1,27 @@
+---
+en:
+  card_change_reimbursements:
+    index:
+      title: Card Change Reimbursements
+      detected: Detected
+      confirm: Confirm
+      dismiss: Dismiss
+      explanation: The original purchase is kept as your expense. The new-card charge and the reimbursement are linked as a transfer and removed from spending.
+      info:
+        title: What is this?
+        description: Some services let you switch the card used for a purchase after the fact, charging a different account and reimbursing the original one. This finds those trios so the duplicate charge and reimbursement can be linked as a transfer, leaving one clean expense.
+      empty:
+        title: No card changes found
+        description: We could not find any card-change reimbursement patterns in your transactions.
+      roles:
+        original: Original purchase
+        charge: New-card charge
+        reimbursement: Reimbursement
+      badges:
+        kept: Kept
+        linked: Linked
+    confirm:
+      confirmed: Card change resolved. The charge and reimbursement were linked as a transfer.
+      invalid: Could not link these transactions as a transfer.
+    dismiss:
+      dismissed: Dismissed. This trio will no longer be suggested.

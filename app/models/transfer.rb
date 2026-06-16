@@ -3,6 +3,11 @@ class Transfer < ApplicationRecord
   belongs_to :outflow_transaction, class_name: "Transaction"
 
   enum :status, { pending: "pending", confirmed: "confirmed" }
+  enum :kind, { standard: "standard", card_change: "card_change" }, prefix: true
+
+  # Card-change reimbursements can span the provider's retroactive card-switch
+  # window (up to ~180 days), well beyond the normal transfer date range.
+  CARD_CHANGE_MAX_DAYS = 365
 
   validates :inflow_transaction_id, uniqueness: true
   validates :outflow_transaction_id, uniqueness: true
@@ -145,7 +150,13 @@ class Transfer < ApplicationRecord
       return unless inflow_transaction&.entry && outflow_transaction&.entry
 
       date_diff = (inflow_transaction.entry.date - outflow_transaction.entry.date).abs
-      max_days = status == "confirmed" ? 30 : 4
+      max_days = if kind_card_change?
+        CARD_CHANGE_MAX_DAYS
+      elsif status == "confirmed"
+        30
+      else
+        4
+      end
       errors.add(:base, :within_days, count: max_days) if date_diff > max_days
     end
 end

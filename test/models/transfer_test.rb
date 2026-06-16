@@ -124,4 +124,32 @@ class TransferTest < ActiveSupport::TestCase
   test "kind_for_account returns funds_movement for depository accounts" do
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
   end
+
+  test "card_change transfer allows dates beyond the normal window" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: 90.days.ago.to_date, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      status: "confirmed",
+      kind: "card_change"
+    )
+
+    assert transfer.valid?, transfer.errors.full_messages.to_sentence
+  end
+
+  test "standard confirmed transfer still rejects dates beyond 30 days" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: 90.days.ago.to_date, account: accounts(:credit_card), amount: -500)
+
+    transfer = Transfer.new(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      status: "confirmed",
+      kind: "standard"
+    )
+
+    assert transfer.invalid?
+  end
 end
