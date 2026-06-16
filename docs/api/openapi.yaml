@@ -1909,8 +1909,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -1997,8 +2001,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -2050,8 +2058,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -5070,8 +5082,12 @@ paths:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
       responses:
         '200':
@@ -5129,8 +5145,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5236,8 +5256,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5474,8 +5498,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -5585,8 +5613,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
