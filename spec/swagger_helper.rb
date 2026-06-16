@@ -260,6 +260,11 @@ RSpec.configure do |config|
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
+              brazil_bank_id: { type: :string, format: :uuid, nullable: true, description: 'Brazilian bank catalog ID (brazil_banks table)' },
+              brazil_bank_ispb: { type: :string, nullable: true, description: 'ISPB code of the linked Brazilian bank' },
+              brazil_bank_code: { type: :string, nullable: true, description: 'COMPE code of the linked Brazilian bank' },
+              brazil_bank_name: { type: :string, nullable: true, description: 'Short name of the linked Brazilian bank' },
+              brazil_account_kind: { type: :string, nullable: true, enum: %w[checking payment savings credit_card investment loan], description: 'Brazilian account kind' },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
             }

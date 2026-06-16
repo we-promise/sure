@@ -16,5 +16,10 @@ json.subtype account.subtype
 json.status account.status
 json.institution_name account.institution_name
 json.institution_domain account.institution_domain
+json.brazil_bank_id account.brazil_bank_id
+json.brazil_bank_ispb account.brazil_bank&.ispb
+json.brazil_bank_code account.brazil_bank&.code
+json.brazil_bank_name account.brazil_bank&.short_name
+json.brazil_account_kind account.brazil_account_kind
 json.created_at account.created_at.iso8601
 json.updated_at account.updated_at.iso8601

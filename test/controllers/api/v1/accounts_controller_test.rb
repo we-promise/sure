@@ -128,8 +128,33 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert response_body.key?("institution_domain")
     assert_nullable_equal account.institution_name, response_body["institution_name"]
     assert_nullable_equal account.institution_domain, response_body["institution_domain"]
+    assert response_body.key?("brazil_bank_id")
+    assert response_body.key?("brazil_account_kind")
+    assert_nil response_body["brazil_bank_id"]
+    assert_nil response_body["brazil_account_kind"]
     assert_equal account.created_at.iso8601, response_body["created_at"]
     assert_equal account.updated_at.iso8601, response_body["updated_at"]
+  end
+
+  test "should expose brazil bank fields when account has a linked bank" do
+    bank = Brazil::Bank.create!(
+      ispb: "18236120",
+      code: "260",
+      name: "NU PAGAMENTOS S.A. - INSTITUICAO DE PAGAMENTO",
+      short_name: "Nu Pagamentos"
+    )
+    account = accounts(:depository)
+    account.update!(brazil_bank: bank, brazil_account_kind: "checking")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal bank.id, response_body["brazil_bank_id"]
+    assert_equal "18236120", response_body["brazil_bank_ispb"]
+    assert_equal "260", response_body["brazil_bank_code"]
+    assert_equal "Nu Pagamentos", response_body["brazil_bank_name"]
+    assert_equal "checking", response_body["brazil_account_kind"]
   end
 
   test "should return 404 for unknown account on show" do
