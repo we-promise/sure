@@ -205,6 +205,19 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     assert_equal "USD", row.currency
   end
 
+  test "search_securities keeps a native non-USD stablecoin pair (USDT-EUR) over the USD synthetic" do
+    info = [ info_row("USDT", "EUR"), info_row("BTC", "USDT") ]
+    @provider.stubs(:exchange_info_symbols).returns(info)
+
+    # Only USD-quoted stablecoins synthesize; a real EUR pair must survive.
+    response = @provider.search_securities("USDT-EUR")
+
+    assert response.success?
+    row = response.data.find { |s| s.symbol == "USDTEUR" }
+    assert_not_nil row, "expected native USDT/EUR pair, got #{response.data.map(&:symbol).inspect}"
+    assert_equal "EUR", row.currency
+  end
+
   test "search_securities ranks exact symbol match above base prefix match" do
     info = [
       info_row("BTC", "USDT"),   # base="BTC", symbol="BTCUSDT"

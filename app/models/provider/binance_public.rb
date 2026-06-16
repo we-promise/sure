@@ -41,16 +41,9 @@ class Provider::BinancePublic < Provider
   # enough and avoids surfacing transient depeg ticks from market data.
   USD_STABLECOINS = %w[USDT USDC BUSD DAI FDUSD TUSD USDP PYUSD].freeze
 
-  # Quote tokens that can trail a base asset in a user-facing crypto ticker,
-  # e.g. Yahoo's canonical "BTC-USD" or a pasted "TRX/USDT". Binance's own
-  # pairs are unseparated ("BTCUSDT"), so to recover the base asset we strip a
-  # trailing quote token plus any separator. Sorted longest-first so "USDT" is
-  # matched before "USD" (otherwise "BTC-USDT" would strip to "BTC-T").
-  QUOTE_SUFFIX_TOKENS = (QUOTE_TO_CURRENCY.values + SUPPORTED_QUOTES)
-    .uniq.sort_by { |q| -q.length }.freeze
-
-  # Characters users/providers place between base and quote ("BTC-USD",
-  # "BTC/USD", "BTC_USD").
+  # Trailing separator between base and quote in a stored pair ticker
+  # ("BTC-USD", "BTC/USD", "BTC_USD"), stripped so parse_ticker builds a valid
+  # Binance pair.
   QUOTE_SEPARATOR = /[-\/_ ]\z/
 
   # Symbol prefix applied by holdings processors (CoinStats, Coinbase, Kraken,
@@ -86,11 +79,16 @@ class Provider::BinancePublic < Provider
       query = symbol.to_s.strip.upcase.delete_prefix(CRYPTO_PREFIX).gsub(/[\s\-\/_]/, "")
       next [] if query.empty?
 
-      # Stablecoins have no Binance self-pair, so synthesize a result. Match the
-      # bare coin first (USDT, plus coins that themselves end in USD: PYUSD,
-      # FDUSD, TUSD, BUSD), then the "<coin>USD" form (e.g. "USDTUSD" from a
-      # pasted "USDT-USD") via its suffix-stripped base.
-      stablecoin = [ query, base_asset_query(query) ].find { |s| USD_STABLECOINS.include?(s) }
+      # Stablecoins have no Binance self-pair, so a USD-quoted query gets a
+      # synthetic 1.0 USD result: the bare coin ("USDT", or coins that end in
+      # USD like PYUSD/FDUSD), or the "<coin>USD" form ("USDTUSD", from a pasted
+      # "USDT-USD"). A non-USD quote like "USDTEUR" has a real Binance pair and
+      # must fall through to normal matching, so only the USD case short-circuits.
+      stablecoin = if USD_STABLECOINS.include?(query)
+        query
+      elsif query.end_with?("USD") && USD_STABLECOINS.include?(query.delete_suffix("USD"))
+        query.delete_suffix("USD")
+      end
       next [ stablecoin_search_result(stablecoin) ] if stablecoin
 
       symbols = exchange_info_symbols
@@ -258,22 +256,6 @@ class Provider::BinancePublic < Provider
   end
 
   private
-    # Recovers the base asset from a search query that carries an explicit
-    # quote suffix, with or without a separator:
-    #   "BTC-USD" -> "BTC", "TRX/USDT" -> "TRX", "BTCUSD" -> "BTC"
-    # Returns the query unchanged when no quote suffix is present (a bare base
-    # like "BTC" or "SOL", or a fuzzy fragment like "BIT") or when stripping
-    # would leave nothing (e.g. the bare quote "USD").
-    def base_asset_query(query)
-      QUOTE_SUFFIX_TOKENS.each do |token|
-        next unless query.end_with?(token)
-
-        base = query.delete_suffix(token).sub(QUOTE_SEPARATOR, "")
-        return base unless base.empty?
-      end
-      query
-    end
-
     # Synthetic search hit for a USD-pegged stablecoin. Binance has no self-pair
     # (USDTUSDT etc. don't exist), so we manufacture a result instead of letting
     # the resolver fall back to an offline CRYPTO:* row. The downstream price
