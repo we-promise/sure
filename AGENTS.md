@@ -63,6 +63,15 @@ Reviewers escalate violations of (2)–(3) to close/rewrite; (1) and (4) are req
 
 If you need to add a new securities price provider (Tiingo, EODHD, Binance-style crypto, etc.), see [adding-a-securities-provider.md](./docs/llm-guides/adding-a-securities-provider.md) for the full walkthrough — provider class, registry wiring, MIC handling, settings UI, locales, and tests.
 
+## Debug Logging for Provider Syncs
+
+When a provider sync/import path hits a recoverable error or suspicious partial response that support may need to inspect later, prefer `DebugLogEntry.capture(...)` over `Rails.logger.*`.
+
+- Record support-relevant diagnostics in the debug log so they surface in the super-admin-friendly `/settings/debug` UI.
+- Include `category`, `level`, `message`, `source`, `provider_key`, and useful structured `metadata`.
+- Attach `family` and `account_provider` when available so support can filter and trace the affected connection.
+- Reserve raw Rails logging for low-value local noise; anything operators may need should go to the debug log.
+
 ## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid/Lunchflow)
 
 - Pending detection

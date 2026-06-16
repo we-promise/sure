@@ -8,3 +8,19 @@ zh-CN:
       subtype_prompt: 选择账户类型
     new:
       title: 请输入账户余额
+    subtypes:
+      cd:
+        long: 定期存单
+        short: 定期存单
+      checking:
+        long: 支票账户
+        short: 支票账户
+      hsa:
+        long: 健康储蓄账户
+        short: HSA
+      money_market:
+        long: 货币市场
+        short: 货币市场
+      savings:
+        long: 储蓄账户
+        short: 储蓄账户
