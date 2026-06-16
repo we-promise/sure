@@ -1,6 +1,24 @@
 class PagesController < ApplicationController
   include Periodable
 
+  # Per-widget dashboard layout guardrails. Deterministic defaults the masonry
+  # packer reads; users may override a grow widget's height via presets.
+  #   col_span:   "single" | "full" (full spans both columns in 2-col mode)
+  #   grow:       true for charts that should fill an allotted height,
+  #               false for content-sized widgets (tables, stat grids)
+  #   min_height: floor in px
+  DASHBOARD_SECTION_LAYOUTS = {
+    "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
+    "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
+    "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
+    "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
+    "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
+  }.freeze
+
+  # Selectable height presets (px) for grow widgets.
+  DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
+  DEFAULT_HEIGHT_PRESET = "auto"
+
   skip_authentication only: %i[redis_configuration_error privacy terms]
   before_action :ensure_intro_guest!, only: :intro
 
@@ -78,8 +96,9 @@ class PagesController < ApplicationController
     def preferences_params
       prefs = params.require(:preferences)
       {}.tap do |permitted|
-        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections]
-        permitted["section_order"] = prefs[:section_order] if prefs[:section_order]
+        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections].respond_to?(:to_unsafe_h)
+        permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
+        permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
       end
     end
 
@@ -89,6 +108,7 @@ class PagesController < ApplicationController
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
+          layout: section_layout("cashflow_sankey"),
           locals: { sankey_data: @cashflow_sankey_data, period: @period },
           visible: @accounts.any?,
           collapsible: true
@@ -97,6 +117,7 @@ class PagesController < ApplicationController
           key: "outflows_donut",
           title: "pages.dashboard.outflows_donut.title",
           partial: "pages/dashboard/outflows_donut",
+          layout: section_layout("outflows_donut"),
           locals: { outflows_data: @outflows_data, period: @period },
           visible: @accounts.any? && @outflows_data[:categories].present?,
           collapsible: true
@@ -105,6 +126,7 @@ class PagesController < ApplicationController
           key: "investment_summary",
           title: "pages.dashboard.investment_summary.title",
           partial: "pages/dashboard/investment_summary",
+          layout: section_layout("investment_summary"),
           locals: { investment_statement: @investment_statement, period: @period },
           visible: @accounts.any? && @investment_statement.investment_accounts.any?,
           collapsible: true
@@ -113,6 +135,7 @@ class PagesController < ApplicationController
           key: "net_worth_chart",
           title: "pages.dashboard.net_worth_chart.title",
           partial: "pages/dashboard/net_worth_chart",
+          layout: section_layout("net_worth_chart"),
           locals: { balance_sheet: @balance_sheet, period: @period },
           visible: @accounts.any?,
           collapsible: true
@@ -121,6 +144,7 @@ class PagesController < ApplicationController
           key: "balance_sheet",
           title: "pages.dashboard.balance_sheet.title",
           partial: "pages/dashboard/balance_sheet",
+          layout: section_layout("balance_sheet"),
           locals: { balance_sheet: @balance_sheet },
           visible: @accounts.any?,
           collapsible: true
@@ -139,6 +163,22 @@ class PagesController < ApplicationController
       end
 
       ordered_sections
+    end
+
+    # Resolves a section's layout guardrails, applying the user's height preset
+    # override (falling back to the deterministic default) for grow widgets.
+    def section_layout(key)
+      base = DASHBOARD_SECTION_LAYOUTS.fetch(key, { col_span: "single", grow: false, min_height: 0, width_toggle: false })
+      preset = Current.user.dashboard_section_height(key)
+      preset = DEFAULT_HEIGHT_PRESET unless DASHBOARD_HEIGHT_PRESETS.key?(preset)
+
+      col_span = base[:col_span]
+      if base[:width_toggle]
+        user_span = Current.user.dashboard_section_width(key)
+        col_span = user_span if %w[single full].include?(user_span)
+      end
+
+      base.merge(col_span: col_span, height_preset: preset, height_px: DASHBOARD_HEIGHT_PRESETS.fetch(preset))
     end
 
     def github_provider
