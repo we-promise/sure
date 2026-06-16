@@ -318,11 +318,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken == null) return;
-    await chatProvider.deleteMultipleChats(
+    final success = await chatProvider.deleteMultipleChats(
       accessToken: accessToken,
       chatIds: _selectedChatIds.toList(),
     );
     if (!mounted) return;
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(chatProvider.errorMessage ?? 'Failed to delete chats')),
+      );
+    }
     // Sync _chatId from the provider's actual post-delete state rather than
     // the pre-delete selection; deleteMultipleChats may partially fail so the
     // current chat may still exist even if it was in the selection set.
