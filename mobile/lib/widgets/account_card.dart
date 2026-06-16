@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/account.dart';
 import '../theme/sure_colors.dart';
+import '../theme/sure_tokens.dart';
 import 'money_text.dart';
 import 'sure_card.dart';
 import 'sure_icon.dart';
@@ -147,7 +148,7 @@ class AccountCard extends StatelessWidget {
           padding: const EdgeInsets.only(right: 20),
           decoration: BoxDecoration(
             color: Colors.blue,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(SureTokens.radiusLg),
           ),
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,

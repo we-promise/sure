@@ -5,10 +5,12 @@ import 'package:sure_mobile/theme/sure_tokens.dart';
 import 'package:sure_mobile/widgets/sure_card.dart';
 
 void main() {
-  Future<void> pump(WidgetTester tester, Widget child) {
+  Future<void> pump(WidgetTester tester, Widget child,
+      {Brightness brightness = Brightness.light}) {
     return tester.pumpWidget(
       MaterialApp(
-        theme: SureTheme.light,
+        theme:
+            brightness == Brightness.light ? SureTheme.light : SureTheme.dark,
         home: Scaffold(body: child),
       ),
     );
@@ -22,16 +24,25 @@ void main() {
       )
       .decoration as BoxDecoration;
 
-  testWidgets('paints the Sure card chrome from tokens', (tester) async {
-    await pump(tester, const SureCard(child: Text('Body')));
+  // Brightness-aware by contract — assert the chrome resolves the right palette
+  // in both themes so a token regression in either mode is caught.
+  for (final (brightness, tokens) in [
+    (Brightness.light, SureTokens.light),
+    (Brightness.dark, SureTokens.dark),
+  ]) {
+    testWidgets('paints the Sure card chrome from tokens (${brightness.name})',
+        (tester) async {
+      await pump(tester, const SureCard(child: Text('Body')),
+          brightness: brightness);
 
-    final deco = decorationOf(tester);
-    expect(deco.color, SureTokens.light.container);
-    expect((deco.border as Border).top.color, SureTokens.light.borderSecondary);
-    expect(deco.borderRadius, BorderRadius.circular(SureTokens.radiusLg));
-    expect(deco.boxShadow, SureTokens.light.shadowXs);
-    expect(find.text('Body'), findsOneWidget);
-  });
+      final deco = decorationOf(tester);
+      expect(deco.color, tokens.container);
+      expect((deco.border as Border).top.color, tokens.borderSecondary);
+      expect(deco.borderRadius, BorderRadius.circular(SureTokens.radiusLg));
+      expect(deco.boxShadow, tokens.shadowXs);
+      expect(find.text('Body'), findsOneWidget);
+    });
+  }
 
   testWidgets('elevated: false drops the shadow', (tester) async {
     await pump(tester, const SureCard(elevated: false, child: Text('Body')));
