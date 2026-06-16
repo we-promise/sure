@@ -8,8 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 class UpdateNotificationService {
   static const _notificationId = 42;
   static const _prefKey = 'last_update_notified_version';
-  static const _packageId = 'am.sure.mobile';
-  static const _playStoreUrl = 'https://play.google.com/store/apps/details?id=$_packageId';
 
   final _notifications = FlutterLocalNotificationsPlugin();
 
@@ -24,6 +22,16 @@ class UpdateNotificationService {
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: _onTap,
     );
+
+    // Handle tap from killed state — app relaunched by a notification tap
+    final launchDetails = await _notifications.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      final url = launchDetails?.notificationResponse?.payload;
+      if (url != null) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
 
     final plugin = _notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -43,7 +51,7 @@ class UpdateNotificationService {
       builder: (_) => AlertDialog(
         title: const Text('Stay up to date'),
         content: const Text(
-          'Allow Sure to send you notifications so you know '
+          'Allow this app to send you notifications so you know '
           'when a new version is available.\n\n'
           'If you deny, you won\'t be notified about updates and may miss '
           'important improvements or bug fixes.',
@@ -64,10 +72,10 @@ class UpdateNotificationService {
   }
 
   Future<void> checkAndNotify() async {
-    final storeVersion = await _fetchPlayStoreVersion();
+    final packageInfo = await PackageInfo.fromPlatform();
+    final storeVersion = await _fetchPlayStoreVersion(packageInfo.packageName);
     if (storeVersion == null) return;
 
-    final packageInfo = await PackageInfo.fromPlatform();
     if (!_isNewer(storeVersion, packageInfo.version)) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -78,16 +86,23 @@ class UpdateNotificationService {
     final granted = plugin == null || (await plugin.areNotificationsEnabled() ?? false);
     if (!granted) return;
 
-    await _fire(storeVersion);
+    final playStoreUrl =
+        'https://play.google.com/store/apps/details?id=${packageInfo.packageName}';
+    await _fire(storeVersion, playStoreUrl);
     await prefs.setString(_prefKey, storeVersion);
   }
 
-  Future<String?> _fetchPlayStoreVersion() async {
+  Future<String?> _fetchPlayStoreVersion(String packageName) async {
     try {
-      final url = Uri.parse('$_playStoreUrl&hl=en');
+      final url = Uri.parse(
+        'https://play.google.com/store/apps/details?id=$packageName&hl=en',
+      );
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
 
+      // Scrapes an undocumented Play Store HTML structure — Google can change it silently.
+      // When it breaks, storeVersion returns null and the check becomes a silent no-op.
+      // Consider migrating to the Google Play Developer API for a stable alternative.
       final match = RegExp(r'\[\[\["(\d+[\d.]+)"').firstMatch(response.body);
       if (match == null) {
         debugPrint('UpdateNotificationService: version regex found no match in Play Store response');
@@ -110,7 +125,7 @@ class UpdateNotificationService {
     return false;
   }
 
-  Future<void> _fire(String version) async {
+  Future<void> _fire(String version, String playStoreUrl) async {
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         'app_updates',
@@ -125,12 +140,16 @@ class UpdateNotificationService {
     await _notifications.show(
       _notificationId,
       'New version available',
-      'Sure $version is available on the Play Store.',
+      'Version $version is available on the Play Store.',
       details,
+      payload: playStoreUrl,
     );
   }
 
-  static void _onTap(NotificationResponse _) {
-    launchUrl(Uri.parse(_playStoreUrl), mode: LaunchMode.externalApplication);
+  static void _onTap(NotificationResponse response) {
+    final url = response.payload;
+    if (url != null) {
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
   }
 }
