@@ -173,6 +173,8 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      handle_qif_upload:
+        qif_uploaded: "QIF file uploaded successfully."
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
