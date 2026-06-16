@@ -33,9 +33,9 @@ class UI::AccountPage < ApplicationComponent
   end
 
   def subtitle
-    return nil unless account.property?
+    return account.property.address if account.property?
 
-    account.property.address
+    account.brazil_bank_label
   end
 
   def active_tab

@@ -27,7 +27,14 @@
                 aria-haspopup="listbox"
                 aria-expanded="false"
                 <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>
-          <%= selected_item&.dig(:label) || @placeholder %>
+          <% if variant == :logo && selected_item && (trigger_logo = logo_for(selected_item)) %>
+            <span class="flex items-center gap-2">
+              <%= image_tag trigger_logo, class: "w-5 h-5 rounded-full border border-secondary shrink-0", loading: "lazy" %>
+              <%= selected_item[:label] %>
+            </span>
+          <% else %>
+            <%= selected_item&.dig(:label) || @placeholder %>
+          <% end %>
         </button>
     </div>
   </div>

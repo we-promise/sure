@@ -61,7 +61,18 @@ export default class extends Controller {
     const value = selectedElement.dataset.value
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
-    this.buttonTarget.textContent = label
+    const logoImg = selectedElement.querySelector("img")
+    if (logoImg) {
+      const wrapper = document.createElement("span")
+      wrapper.className = "flex items-center gap-2"
+      const img = logoImg.cloneNode(true)
+      img.className = "w-5 h-5 rounded-full border border-secondary shrink-0"
+      wrapper.appendChild(img)
+      wrapper.appendChild(document.createTextNode(label))
+      this.buttonTarget.replaceChildren(wrapper)
+    } else {
+      this.buttonTarget.textContent = label
+    }
     if (this.hasInputTarget) {
       this.inputTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
