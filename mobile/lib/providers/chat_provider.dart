@@ -99,7 +99,6 @@ class ChatProvider with ChangeNotifier {
       final result = await _chatService.getChat(
         accessToken: accessToken,
         chatId: chatId,
-        page: 9999, // Pagy overflow: :last_page → returns newest messages
       );
 
       if (result['success'] == true) {
@@ -423,14 +422,11 @@ class ChatProvider with ChangeNotifier {
   /// Poll for updates
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
     try {
-      // Request a very high page number. Pagy's `overflow: :last_page` resolves
-      // it to the actual last page, returning the NEWEST messages rather than
-      // the oldest page-1 slice. This ensures messages beyond the page limit
-      // are always visible during active polling.
+      // The backend returns the newest 50 messages without pagination.
+      // The page param is ignored by the server but kept for API compatibility.
       final result = await _chatService.getChat(
         accessToken: accessToken,
         chatId: chatId,
-        page: 9999,
       );
 
       if (result['success'] == true) {
