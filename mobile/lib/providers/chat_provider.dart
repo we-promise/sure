@@ -37,10 +37,10 @@ class ChatProvider with ChangeNotifier {
   /// to avoid prematurely stopping on a brief server-side generation pause.
   int _stablePollingCount = 0;
 
-  /// ID of the last assistant message that existed before the current polling
-  /// session. The stability check must not fire on this pre-existing message —
-  /// only on a genuinely new AI response.
-  String? _sessionPriorAssistantId;
+  /// IDs of all assistant messages that existed before the current polling
+  /// session. The stability check must not fire on any of these — only on a
+  /// genuinely new AI response.
+  Set<String> _sessionPriorAssistantIds = {};
 
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
@@ -383,16 +383,12 @@ class ChatProvider with ChangeNotifier {
     _isWaitingForResponse = true;
     _pollingStartTime = DateTime.now();
 
-    // Record the last known assistant message so the stability check doesn't
-    // fire on it — we need to wait for the NEW response from this exchange.
-    _sessionPriorAssistantId = null;
-    final msgs = _currentChat?.messages ?? [];
-    for (int i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].isAssistant) {
-        _sessionPriorAssistantId = msgs[i].id;
-        break;
-      }
-    }
+    // Record all existing assistant message IDs so the stability check doesn't
+    // fire on any of them — we need to wait for the NEW response from this exchange.
+    _sessionPriorAssistantIds = {
+      for (final m in _currentChat?.messages ?? [])
+        if (m.isAssistant) m.id,
+    };
 
     notifyListeners();
 
@@ -416,7 +412,7 @@ class ChatProvider with ChangeNotifier {
     _isWaitingForResponse = false;
     _lastAssistantContentLength = null;
     _stablePollingCount = 0;
-    _sessionPriorAssistantId = null;
+    _sessionPriorAssistantIds = {};
   }
 
   /// Poll for updates
@@ -461,8 +457,9 @@ class ChatProvider with ChangeNotifier {
 
         if (contentGrew || hasNewMessage) {
           // Rebuild: update existing messages with server versions and append
-          // any new arrivals. Never shrink the local list — messages on earlier
-          // pages stay visible even though this poll only fetches the last page.
+          // any new arrivals. The merge itself never drops local messages —
+          // messages not in this poll response are kept as-is. The merged list
+          // is then trimmed to _kMaxMessages so the local cap stays in force.
           final merged = [
             for (final m in localMessages) serverById[m.id] ?? m,
             for (final m in serverMessages)
@@ -486,12 +483,13 @@ class ChatProvider with ChangeNotifier {
 
         // Find the last NEW assistant message — one that didn't exist before
         // this polling session started. The stability check must not fire on
-        // _sessionPriorAssistantId (the old response from the previous exchange).
+        // any pre-session assistant message (all IDs recorded in
+        // _sessionPriorAssistantIds at poll start).
         final allMessages = _currentChat!.messages;
         Message? newAssistantMsg;
         for (int i = allMessages.length - 1; i >= 0; i--) {
           final m = allMessages[i];
-          if (m.isAssistant && m.id != _sessionPriorAssistantId) {
+          if (m.isAssistant && !_sessionPriorAssistantIds.contains(m.id)) {
             newAssistantMsg = m;
             break;
           }
