@@ -44,9 +44,12 @@ class CurrencyFilter extends StatelessWidget {
     }
 
     final sortedCurrencies = availableCurrencies.toList()..sort();
-    final isAllSelected =
-        selectedCurrencies.isEmpty ||
-        selectedCurrencies.length == availableCurrencies.length;
+    // Ignore stale codes that are no longer available, otherwise a leftover
+    // selection could make length-based "All" detection fire incorrectly.
+    final normalizedSelected =
+        selectedCurrencies.intersection(availableCurrencies);
+    final isAllSelected = normalizedSelected.isEmpty ||
+        normalizedSelected.length == availableCurrencies.length;
 
     return Container(
       height: 44,
@@ -67,7 +70,7 @@ class CurrencyFilter extends StatelessWidget {
           // Currency chips
           ...sortedCurrencies.map((currency) {
             final isSelected =
-                selectedCurrencies.contains(currency) && !isAllSelected;
+                normalizedSelected.contains(currency) && !isAllSelected;
             final symbol = _getCurrencySymbol(currency);
             final displayText = symbol.isNotEmpty
                 ? '$currency ($symbol)'
@@ -79,7 +82,7 @@ class CurrencyFilter extends StatelessWidget {
                 label: displayText,
                 selected: isSelected,
                 onSelected: (_) {
-                  final newSelection = Set<String>.from(selectedCurrencies);
+                  final newSelection = Set<String>.from(normalizedSelected);
                   if (isSelected) {
                     newSelection.remove(currency);
                   } else {
@@ -90,7 +93,8 @@ class CurrencyFilter extends StatelessWidget {
                     newSelection.add(currency);
                   }
                   // If all currencies selected, treat as "All"
-                  if (newSelection.length == availableCurrencies.length) {
+                  if (newSelection.length == availableCurrencies.length &&
+                      newSelection.containsAll(availableCurrencies)) {
                     onSelectionChanged({});
                   } else {
                     onSelectionChanged(newSelection);
