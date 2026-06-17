@@ -40,7 +40,7 @@ class Assistant::Function::UpdateTag < Assistant::Function
   end
 
   def call(params = {})
-    tag = family.tags.find_by(name: params["name"])
+    tag = family.tags.find_by(name: params["name"].to_s.strip)
     return error("not_found", "Tag '#{params["name"]}' not found.") unless tag
 
     attrs = {}

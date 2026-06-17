@@ -47,10 +47,8 @@ class UI::AccountFilter < ApplicationComponent
   end
 
   def clear_url
-    if extra_params.any?
-      "#{url}?#{extra_params.to_query}"
-    else
-      url
-    end
+    return url unless extra_params.any?
+    separator = url.include?("?") ? "&" : "?"
+    "#{url}#{separator}#{extra_params.to_query}"
   end
 end

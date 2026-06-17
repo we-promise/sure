@@ -55,6 +55,7 @@ class Assistant::Function::CreateCategory < Assistant::Function
     attrs = { name: name, color: color, lucide_icon: icon }
 
     if params["parent_id"].present?
+      return error("parent_not_found", "Parent category with id '#{params["parent_id"]}' not found.") unless valid_uuid?(params["parent_id"])
       parent = family.categories.find_by(id: params["parent_id"])
       return error("parent_not_found", "Parent category with id '#{params["parent_id"]}' not found.") unless parent
       attrs[:parent] = parent

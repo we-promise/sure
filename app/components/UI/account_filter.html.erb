@@ -1,6 +1,6 @@
 <%= render DS::Popover.new(variant: :button, placement: "bottom-end") do |popover| %>
   <% popover.with_button(
-       class: "inline-flex items-center gap-1.5 #{ filtered? ? "bg-accent text-white border-accent" : "bg-container border-secondary text-primary" } border font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer hover:opacity-90 focus:outline-hidden focus:ring-0",
+       class: "inline-flex items-center gap-1.5 #{ filtered? ? "bg-inverse text-inverse border-inverse" : "bg-container border-secondary text-primary" } border font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer hover:opacity-90 focus-ring",
        aria: { label: t(".aria_label", default: "Filter by account") }
      ) do %>
     <%= helpers.icon("bar-chart-2", size: "sm") %>

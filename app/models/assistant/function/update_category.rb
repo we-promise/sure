@@ -44,13 +44,14 @@ class Assistant::Function::UpdateCategory < Assistant::Function
   end
 
   def call(params = {})
+    return error("not_found", "Category with id '#{params["id"]}' not found.") unless valid_uuid?(params["id"])
     category = family.categories.find_by(id: params["id"])
     return error("not_found", "Category with id '#{params["id"]}' not found.") unless category
 
     attrs = {}
-    attrs[:name] = params["name"].strip if params["name"].present?
-    attrs[:color] = params["color"].strip if params["color"].present?
-    attrs[:lucide_icon] = params["icon"].strip if params["icon"].present?
+    attrs[:name] = params["name"].to_s.strip if params["name"].present?
+    attrs[:color] = params["color"].to_s.strip if params["color"].present?
+    attrs[:lucide_icon] = params["icon"].to_s.strip if params["icon"].present?
 
     return error("no_changes", "Provide at least one of name, color, or icon to update.") if attrs.empty?
 
