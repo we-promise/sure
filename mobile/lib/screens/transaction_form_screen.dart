@@ -5,10 +5,12 @@ import '../models/account.dart';
 import '../models/category.dart' as models;
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
 import '../services/connectivity_service.dart';
 import '../utils/amount_parser.dart';
+import '../utils/money_masker.dart';
 import '../widgets/sure_segmented_control.dart';
 import '../l10n/app_localizations.dart';
 
@@ -230,6 +232,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     return Container(
       decoration: BoxDecoration(
@@ -322,7 +325,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '${widget.account.balance} ${widget.account.currency}',
+                                        '${MoneyMasker.mask(widget.account.balance, hidden: hideAmounts)} ${widget.account.currency}',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium

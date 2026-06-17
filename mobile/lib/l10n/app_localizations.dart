@@ -658,6 +658,18 @@ abstract class AppLocalizations {
   /// **'Custom Proxy Headers'**
   String get settingsProxyHeadersLabel;
 
+  /// Label for the toggle that masks monetary amounts across the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide amounts'**
+  String get settingsPrivacyHideAmountsLabel;
+
+  /// Subtitle describing the hide-amounts toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mask money values across the app'**
+  String get settingsPrivacyHideAmountsContent;
+
   /// Label for the biometric lock toggle.
   ///
   /// In en, this message translates to:

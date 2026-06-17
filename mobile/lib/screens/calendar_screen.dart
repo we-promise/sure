@@ -6,9 +6,11 @@ import '../models/transaction.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../services/log_service.dart';
 import '../utils/amount_parser.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/money_masker.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -283,7 +285,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             )
           : null,
       trailing: Text(
-        transaction.amount,
+        MoneyMasker.mask(
+          transaction.amount,
+          hidden: context.read<PrivacyProvider>().hidden,
+        ),
         style: TextStyle(
           color: amountColor,
           fontWeight: FontWeight.bold,
@@ -310,6 +315,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final accountsProvider = context.watch<AccountsProvider>();
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     return Scaffold(
       appBar: AppBar(
@@ -472,7 +478,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  _formatCurrency(_getTotalForMonth()),
+                  MoneyMasker.mask(
+                    _formatCurrency(_getTotalForMonth()),
+                    hidden: hideAmounts,
+                  ),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: _getTotalForMonth() >= 0
                             ? Colors.green
@@ -632,7 +641,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      _formatAmount(change),
+                      MoneyMasker.mask(
+                        _formatAmount(change),
+                        hidden: context.read<PrivacyProvider>().hidden,
+                      ),
                       style: TextStyle(
                         fontSize: 10,
                         color: textColor,

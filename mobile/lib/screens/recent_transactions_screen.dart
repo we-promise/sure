@@ -7,7 +7,9 @@ import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/sure_tokens.dart';
+import '../providers/privacy_provider.dart';
 import '../utils/amount_parser.dart';
+import '../utils/money_masker.dart';
 import '../widgets/money_text.dart';
 import '../l10n/app_localizations.dart';
 
@@ -89,6 +91,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final transactionsProvider = context.watch<TransactionsProvider>();
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     final recentTransactions = _getSortedTransactions(
       transactionsProvider.transactions,
@@ -143,6 +146,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
                         context,
                         transaction,
                         colorScheme,
+                        hideAmounts,
                       );
                     },
                   ),
@@ -179,8 +183,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     );
   }
 
-  Widget _buildTransactionItem(
-      BuildContext context, Transaction transaction, ColorScheme colorScheme) {
+  Widget _buildTransactionItem(BuildContext context, Transaction transaction,
+      ColorScheme colorScheme, bool hideAmounts) {
     final account = _getAccount(transaction.accountId);
     final accountName = account?.name ??
         AppLocalizations.of(context).recentTransactionsUnknownAccount;
@@ -276,9 +280,12 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
         ],
       ),
       trailing: MoneyText(
-        amount == null
-            ? transaction.amount
-            : '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
+        MoneyMasker.mask(
+          amount == null
+              ? transaction.amount
+              : '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
+          hidden: hideAmounts,
+        ),
         trend: moneyTrend,
         style: const TextStyle(
           fontWeight: SureTokens.weightMedium,
