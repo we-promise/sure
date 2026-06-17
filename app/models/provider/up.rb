@@ -98,6 +98,9 @@ class Provider::Up
 
     def format_api_time(value)
       return value if value.is_a?(String)
+      # A bare Date has no time/zone, so interpret it as UTC midnight rather than
+      # the server's local zone (which would shift `filter[since]` by the offset).
+      return value.to_time(:utc).iso8601 if value.instance_of?(Date)
 
       value.to_time.utc.iso8601
     end
