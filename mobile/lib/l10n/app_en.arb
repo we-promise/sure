@@ -514,6 +514,9 @@
   "logViewerLogsCopied": "Logs copied to clipboard",
   "@logViewerLogsCopied": { "description": "Snackbar message after logs are copied to the clipboard." },
 
+  "logViewerEmpty": "No logs yet",
+  "@logViewerEmpty": { "description": "Empty-state message shown when there are no log entries to display." },
+
   "connectivityOffline": "You are offline",
   "@connectivityOffline": { "description": "Message shown in the connectivity banner when the device has no network." },
 

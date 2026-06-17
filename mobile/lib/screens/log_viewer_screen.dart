@@ -166,15 +166,15 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
           if (logs.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.text_snippet_outlined, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
+                  const Icon(Icons.text_snippet_outlined, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
                   Text(
-                    'No logs yet',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    AppLocalizations.of(context).logViewerEmpty,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
               ),

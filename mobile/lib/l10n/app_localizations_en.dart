@@ -538,6 +538,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logViewerLogsCopied => 'Logs copied to clipboard';
 
   @override
+  String get logViewerEmpty => 'No logs yet';
+
+  @override
   String get connectivityOffline => 'You are offline';
 
   @override

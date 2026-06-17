@@ -1084,6 +1084,12 @@ abstract class AppLocalizations {
   /// **'Logs copied to clipboard'**
   String get logViewerLogsCopied;
 
+  /// Empty-state message shown when there are no log entries to display.
+  ///
+  /// In en, this message translates to:
+  /// **'No logs yet'**
+  String get logViewerEmpty;
+
   /// Message shown in the connectivity banner when the device has no network.
   ///
   /// In en, this message translates to:
