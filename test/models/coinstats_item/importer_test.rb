@@ -551,7 +551,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_balances)
-      .with("ethereum:0xworking,dogecoin:Ddoge123")
+      .with("dogecoin:Ddoge123,ethereum:0xworking")
       .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
@@ -568,7 +568,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_transactions)
-      .with("ethereum:0xworking,dogecoin:Ddoge123")
+      .with("dogecoin:Ddoge123,ethereum:0xworking")
       .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
