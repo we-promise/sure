@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/custom_proxy_header.dart';
+import 'sure_text_field.dart';
 
 class CustomProxyHeadersEditor extends StatefulWidget {
   final List<CustomProxyHeader> initialHeaders;
@@ -13,7 +14,8 @@ class CustomProxyHeadersEditor extends StatefulWidget {
   });
 
   @override
-  State<CustomProxyHeadersEditor> createState() => _CustomProxyHeadersEditorState();
+  State<CustomProxyHeadersEditor> createState() =>
+      _CustomProxyHeadersEditorState();
 }
 
 class _CustomProxyHeadersEditorState extends State<CustomProxyHeadersEditor> {
@@ -30,7 +32,12 @@ class _CustomProxyHeadersEditorState extends State<CustomProxyHeadersEditor> {
   void _notifyChanged() {
     widget.onChanged(
       _drafts
-          .map((draft) => CustomProxyHeader(name: draft.name.text, value: draft.value.text))
+          .map(
+            (draft) => CustomProxyHeader(
+              name: draft.name.text,
+              value: draft.value.text,
+            ),
+          )
           .where((header) => header.isComplete)
           .toList(),
     );
@@ -97,24 +104,23 @@ class _HeaderRow extends StatelessWidget {
       children: [
         Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
+              SureTextField(
                 controller: draft.name,
-                decoration: const InputDecoration(
-                  labelText: 'Header name',
-                  hintText: 'X-Auth-Token',
-                ),
-                validator: (value) => CustomProxyHeader.validateName(value ?? ''),
+                label: 'Header name',
+                hint: 'X-Auth-Token',
+                validator: (value) =>
+                    CustomProxyHeader.validateName(value ?? ''),
                 onChanged: (_) => onChanged(),
               ),
-              const SizedBox(height: 8),
-              TextFormField(
+              const SizedBox(height: 12),
+              SureTextField(
                 controller: draft.value,
-                decoration: const InputDecoration(
-                  labelText: 'Header value',
-                ),
+                label: 'Header value',
                 obscureText: true,
-                validator: (value) => CustomProxyHeader.validateValue(value ?? ''),
+                validator: (value) =>
+                    CustomProxyHeader.validateValue(value ?? ''),
                 onChanged: (_) => onChanged(),
               ),
             ],
@@ -135,8 +141,8 @@ class _HeaderDraft {
   final TextEditingController value;
 
   _HeaderDraft({String name = '', String value = ''})
-      : name = TextEditingController(text: name),
-        value = TextEditingController(text: value);
+    : name = TextEditingController(text: name),
+      value = TextEditingController(text: value);
 
   void dispose() {
     name.dispose();
