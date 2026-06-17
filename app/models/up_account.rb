@@ -25,6 +25,11 @@ class UpAccount < ApplicationRecord
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :up_item_id, allow_nil: true }
 
+  # Up accounts with no linked Sure account.
+  scope :unlinked, -> { left_joins(:account_provider).where(account_providers: { id: nil }) }
+  # Unlinked accounts that still need a setup decision (i.e. not explicitly skipped).
+  scope :needs_setup, -> { unlinked.where(ignored: false) }
+
   def current_account
     account
   end

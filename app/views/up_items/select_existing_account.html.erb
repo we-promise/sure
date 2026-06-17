@@ -22,7 +22,7 @@
             <div class="space-y-2">
               <% @up_accounts.each do |up_account| %>
                 <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-surface cursor-pointer transition-colors">
-                  <%= radio_button_tag "up_account_id", up_account.id, false, class: "mt-1" %>
+                  <%= radio_button_tag "up_account_id", up_account.id, false, class: "mt-1", required: true %>
                   <div class="flex-1">
                     <div class="font-medium text-sm text-primary"><%= up_account.name %></div>
                     <div class="text-xs text-secondary mt-1">

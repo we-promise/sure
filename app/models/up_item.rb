@@ -30,13 +30,29 @@ class UpItem < ApplicationRecord
   def import_latest_up_data
     provider = up_provider
     unless provider
-      Rails.logger.error "UpItem #{id} - Cannot import: Up provider is not configured"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Cannot import: Up provider is not configured",
+        source: self.class.name,
+        provider_key: "up",
+        family: family,
+        metadata: { up_item_id: id }
+      )
       raise StandardError.new("Up provider is not configured")
     end
 
     UpItem::Importer.new(self, up_provider: provider).import
   rescue => e
-    Rails.logger.error "UpItem #{id} - Failed to import data: #{e.message}"
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Failed to import data",
+      source: self.class.name,
+      provider_key: "up",
+      family: family,
+      metadata: { up_item_id: id, error_class: e.class.name, error_message: e.message }
+    )
     raise
   end
 
@@ -51,7 +67,16 @@ class UpItem < ApplicationRecord
         { up_account_id: up_account.id, success: true, result: result }
       end
     rescue => e
-      Rails.logger.error "UpItem #{id} - Failed to process account #{up_account.id}: #{e.class} - #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process account",
+        source: self.class.name,
+        provider_key: "up",
+        family: family,
+        account_provider: up_account.account_provider,
+        metadata: { up_item_id: id, up_account_id: up_account.id, error_class: e.class.name, error_message: e.message }
+      )
       { up_account_id: up_account.id, success: false, error: I18n.t("up_item.errors.account_processing_failed") }
     end
   end
@@ -67,7 +92,16 @@ class UpItem < ApplicationRecord
       )
       { account_id: account.id, success: true }
     rescue => e
-      Rails.logger.error "UpItem #{id} - Failed to schedule sync for account #{account.id}: #{e.class} - #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to schedule sync for account",
+        source: self.class.name,
+        provider_key: "up",
+        family: family,
+        account: account,
+        metadata: { up_item_id: id, account_id: account.id, error_class: e.class.name, error_message: e.message }
+      )
       { account_id: account.id, success: false, error: I18n.t("up_item.errors.account_sync_schedule_failed") }
     end
   end
@@ -100,7 +134,7 @@ class UpItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    up_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    up_accounts.needs_setup.count
   end
 
   def total_accounts_count

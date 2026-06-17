@@ -1969,14 +1969,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
 
   create_table "up_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "up_item_id", null: false
-    t.string "name"
+    t.string "name", null: false
     t.string "account_id"
-    t.string "currency"
+    t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
     t.string "account_status"
     t.string "account_type"
     t.string "ownership_type"
     t.string "provider"
+    t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"

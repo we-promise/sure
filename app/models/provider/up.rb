@@ -4,6 +4,9 @@ class Provider::Up
 
   DEFAULT_BASE_URL = "https://api.up.com.au/api/v1".freeze
   DEFAULT_PAGE_SIZE = 100
+  # Host that authenticated requests (bearer token) may be sent to. Absolute URLs
+  # taken from API responses (links.next) are validated against this.
+  ALLOWED_HOST = URI.parse(DEFAULT_BASE_URL).host.freeze
 
   headers "User-Agent" => "Sure Finance Up Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
@@ -60,11 +63,14 @@ class Provider::Up
     def fetch_all_resources(path, query: {})
       results = []
       payload = get(path, query: query.presence)
+      seen_urls = Set.new
 
       loop do
         results.concat(Array(payload[:data]))
         next_url = payload.dig(:links, :next)
         break if next_url.blank?
+        # Guard against an API that returns the same cursor repeatedly.
+        break unless seen_urls.add?(next_url)
 
         payload = get(next_url)
       end
@@ -109,10 +115,26 @@ class Provider::Up
     # or an absolute URL (used when following pagination links).
     def get(path_or_url, query: nil)
       with_retries("GET #{path_or_url}") do
-        url = path_or_url.to_s.start_with?("http") ? path_or_url : "#{DEFAULT_BASE_URL}/#{path_or_url}"
+        url = resolve_url(path_or_url)
         response = self.class.get(url, headers: auth_headers, query: query)
         handle_response(response)
       end
+    end
+
+    # Resolves a relative path against the base URL, or validates an absolute URL
+    # so the bearer token is only ever sent to Up's HTTPS host.
+    def resolve_url(path_or_url)
+      value = path_or_url.to_s
+      return "#{DEFAULT_BASE_URL}/#{value}" unless value.start_with?("http")
+
+      uri = URI.parse(value)
+      unless uri.scheme == "https" && uri.host == ALLOWED_HOST
+        raise UpError.new("Refusing to send credentials to untrusted host: #{uri.host.inspect}", :invalid_url)
+      end
+
+      value
+    rescue URI::InvalidURIError
+      raise UpError.new("Invalid Up API URL", :invalid_url)
     end
 
     def auth_headers

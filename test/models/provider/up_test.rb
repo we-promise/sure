@@ -44,11 +44,66 @@ class Provider::UpTest < ActiveSupport::TestCase
     assert_equal 2, requests.size
     assert_match "/accounts/acc_123/transactions", requests.first[:url]
     assert_equal "Bearer up-access-token", requests.first[:headers]["Authorization"]
-    assert_match "2026-01-01", requests.first[:query]["filter[since]"]
+    assert_equal "2026-01-01T00:00:00Z", requests.first[:query]["filter[since]"]
     assert_equal 100, requests.first[:query]["page[size]"]
     # Pagination follows the absolute next URL with no extra query params.
     assert_equal next_url, requests.second[:url]
     assert_nil requests.second[:query]
+  end
+
+  test "stops paginating when the API repeats the same next cursor" do
+    repeating_url = "https://api.up.com.au/api/v1/accounts/acc_123/transactions?page%5Bafter%5D=loop"
+    page = FakeResponse.new(
+      code: 200,
+      message: "OK",
+      body: {
+        data: [ { type: "transactions", id: "tx_1", attributes: { status: "SETTLED" }, relationships: { account: { data: { id: "acc_123" } } } } ],
+        links: { prev: nil, next: repeating_url }
+      }.to_json
+    )
+    request_count = 0
+
+    Provider::Up.stub(:get, ->(url, headers:, query: nil) {
+      request_count += 1
+      raise "infinite pagination loop" if request_count > 5
+
+      page
+    }) do
+      client = Provider::Up.new("up-access-token")
+      transactions = client.get_account_transactions(account_id: "acc_123")
+
+      # First request + one follow of the repeated cursor, then the guard stops.
+      assert_equal 2, request_count
+      assert_equal [ "tx_1", "tx_1" ], transactions.map { |tx| tx[:id] }
+    end
+  end
+
+  test "refuses to follow a pagination link pointing at a non-Up host" do
+    evil_url = "https://evil.example.com/api/v1/accounts/acc_123/transactions?page%5Bafter%5D=x"
+    first_page = FakeResponse.new(
+      code: 200,
+      message: "OK",
+      body: {
+        data: [ { type: "transactions", id: "tx_1", attributes: { status: "SETTLED" }, relationships: { account: { data: { id: "acc_123" } } } } ],
+        links: { prev: nil, next: evil_url }
+      }.to_json
+    )
+    requested_urls = []
+
+    Provider::Up.stub(:get, ->(url, headers:, query: nil) {
+      requested_urls << url
+      first_page
+    }) do
+      client = Provider::Up.new("up-access-token")
+
+      error = assert_raises(Provider::Up::UpError) do
+        client.get_account_transactions(account_id: "acc_123")
+      end
+      assert_equal :invalid_url, error.error_type
+    end
+
+    # The bearer token must never be sent to the foreign host.
+    assert_not_includes requested_urls, evil_url
   end
 
   test "flattens JSON:API account resources" do

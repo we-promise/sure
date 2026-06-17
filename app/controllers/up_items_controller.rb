@@ -42,11 +42,34 @@ class UpItemsController < ApplicationController
   end
 
   def destroy
-    @up_item.unlink_all!(dry_run: false)
+    results = @up_item.unlink_all!(dry_run: false)
+
+    if results.any? { |result| result[:error].present? }
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Up unlink during destroy failed",
+        source: self.class.name,
+        provider_key: "up",
+        family: @up_item.family,
+        metadata: { up_item_id: @up_item.id, failures: results.select { |r| r[:error].present? } }
+      )
+      redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
+      return
+    end
+
     @up_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   rescue => e
-    Rails.logger.warn("Up unlink during destroy failed: #{e.class} - #{e.message}")
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Up unlink during destroy failed",
+      source: self.class.name,
+      provider_key: "up",
+      family: @up_item&.family,
+      metadata: { up_item_id: @up_item&.id, error_class: e.class.name, error_message: e.message }
+    )
     redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
   end
 
@@ -159,7 +182,16 @@ class UpItemsController < ApplicationController
       return
     end
 
-    up_account = up_item.up_accounts.find(params[:up_account_id])
+    if params[:up_account_id].blank?
+      redirect_to accounts_path, alert: t(".no_account_selected")
+      return
+    end
+
+    up_account = up_item.up_accounts.find_by(id: params[:up_account_id])
+    unless up_account
+      redirect_to accounts_path, alert: t(".no_account_selected")
+      return
+    end
 
     if account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
@@ -179,10 +211,7 @@ class UpItemsController < ApplicationController
 
   def setup_accounts
     @api_error = fetch_up_accounts_from_api(@up_item)
-    @up_accounts = @up_item.up_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
-      .order(:name)
+    @up_accounts = @up_item.up_accounts.needs_setup.order(:name)
     @account_type_options = [
       [ t(".account_types.skip"), "skip" ],
       [ t(".account_types.depository"), "Depository" ],
@@ -200,15 +229,17 @@ class UpItemsController < ApplicationController
 
     ActiveRecord::Base.transaction do
       account_types.each do |up_account_id, selected_type|
+        up_account = @up_item.up_accounts.find_by(id: up_account_id)
+        next unless up_account
+
         if selected_type.blank? || selected_type == "skip"
+          # Persist the skip so the account stops resurfacing as "needs setup" on every sync.
+          up_account.update!(ignored: true) unless up_account.account_provider.present?
           skipped_count += 1
           next
         end
 
         next unless Provider::UpAdapter.supported_account_types.include?(selected_type)
-
-        up_account = @up_item.up_accounts.find_by(id: up_account_id)
-        next unless up_account
         next if up_account.account_provider.present?
 
         account = create_account_from_up(up_account, selected_type)
@@ -229,7 +260,15 @@ class UpItemsController < ApplicationController
 
     redirect_to accounts_path, status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error("Up account setup failed: #{e.class} - #{e.message}")
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Up account setup failed",
+      source: self.class.name,
+      provider_key: "up",
+      family: @up_item&.family,
+      metadata: { up_item_id: @up_item&.id, error_class: e.class.name, error_message: e.message }
+    )
     redirect_to accounts_path, alert: t(".creation_failed"), status: :see_other
   end
 
@@ -269,14 +308,33 @@ class UpItemsController < ApplicationController
 
       nil
     rescue Provider::Up::UpError => e
-      Rails.logger.error("Up API error while fetching accounts: #{e.class}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Up API error while fetching accounts",
+        source: self.class.name,
+        provider_key: "up",
+        family: up_item.family,
+        metadata: { up_item_id: up_item.id, error_class: e.class.name, error_message: e.message }
+      )
       t("up_items.setup_accounts.api_error")
     rescue StandardError => e
-      Rails.logger.error("Unexpected error fetching Up accounts: #{e.class}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Unexpected error fetching Up accounts",
+        source: self.class.name,
+        provider_key: "up",
+        family: up_item.family,
+        metadata: { up_item_id: up_item.id, error_class: e.class.name, error_message: e.message }
+      )
       t("up_items.setup_accounts.api_error")
     end
 
     def create_account_from_up(up_account, account_type)
+      # Linking an account clears any prior skip so a future unlink re-prompts for setup.
+      up_account.update!(ignored: false) if up_account.ignored?
+
       balance = up_account.current_balance || 0
       balance = balance.abs if account_type == "Loan"
       subtype = if account_type == "Depository" && up_account.suggested_account_type == account_type
@@ -323,7 +381,7 @@ class UpItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
 

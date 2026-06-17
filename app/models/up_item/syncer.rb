@@ -27,7 +27,7 @@ class UpItem::Syncer
     collect_setup_stats(sync, provider_accounts: up_item.up_accounts)
 
     linked_accounts = up_item.up_accounts.joins(:account_provider)
-    unlinked_accounts = up_item.up_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    unlinked_accounts = up_item.up_accounts.needs_setup
 
     if unlinked_accounts.any?
       up_item.update!(pending_account_setup: true)
@@ -62,7 +62,15 @@ class UpItem::Syncer
     raise
   rescue => e
     safe_message = I18n.t("up_item.errors.sync_failed")
-    Rails.logger.error "UpItem::Syncer - Unexpected sync error: #{e.class}"
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Unexpected sync error",
+      source: self.class.name,
+      provider_key: "up",
+      family: up_item.family,
+      metadata: { up_item_id: up_item.id, error_class: e.class.name, error_message: e.message }
+    )
     collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
     raise SafeSyncError.new(safe_message), cause: nil
   end

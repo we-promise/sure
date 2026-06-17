@@ -72,16 +72,12 @@ class Provider::UpAdapter < Provider::Base
 
   def institution_name
     metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-
-    metadata["name"] || item&.institution_name
+    metadata&.dig("name").presence || item&.institution_name
   end
 
   def institution_url
     metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-
-    metadata["url"] || item&.institution_url
+    metadata&.dig("url").presence || item&.institution_url
   end
 
   def institution_color
