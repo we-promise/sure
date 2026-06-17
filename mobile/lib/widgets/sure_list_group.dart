@@ -42,6 +42,8 @@ class SureListGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+
     final palette = SureColors.of(context).palette;
     final radius = BorderRadius.circular(SureTokens.radiusLg);
 
@@ -166,7 +168,8 @@ class SureListRow extends StatelessWidget {
                 Text(
                   title,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: destructive ? palette.destructive : palette.textPrimary,
+                    color:
+                        destructive ? palette.destructive : palette.textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -197,9 +200,18 @@ class SureListRow extends StatelessWidget {
       // Material(transparency) gives the InkWell a surface to paint on without
       // covering the group's tokenized background. No borderRadius here — the
       // group clips the ripple to its rounded corners via clipBehavior.
-      content = Material(
-        type: MaterialType.transparency,
-        child: InkWell(onTap: onTap, child: content),
+      // MergeSemantics + Semantics(button) restores the button/enabled flags a
+      // Material ListTile exposes, so screen readers still announce the whole
+      // row as a single button (parity with the pre-migration ListTile rows).
+      content = MergeSemantics(
+        child: Semantics(
+          button: true,
+          enabled: true,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(onTap: onTap, child: content),
+          ),
+        ),
       );
     }
 

@@ -64,7 +64,7 @@ class MoreScreen extends StatelessWidget {
         color: palette.surfaceInset,
         borderRadius: BorderRadius.circular(SureTokens.radiusMd),
       ),
-      child: Icon(icon, color: palette.textSecondary),
+      child: Icon(icon, color: palette.textPrimary),
     );
   }
 }

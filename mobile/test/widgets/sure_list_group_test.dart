@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 import 'package:sure_mobile/theme/sure_tokens.dart';
@@ -50,22 +51,30 @@ void main() {
     });
   }
 
-  testWidgets('inserts a subdued divider between rows but not at the edges',
-      (tester) async {
-    await pump(
-      tester,
-      const SureListGroup(children: [
-        SureListRow(title: 'One'),
-        SureListRow(title: 'Two'),
-        SureListRow(title: 'Three'),
-      ]),
-    );
+  for (final (brightness, tokens) in [
+    (Brightness.light, SureTokens.light),
+    (Brightness.dark, SureTokens.dark),
+  ]) {
+    testWidgets(
+        'inserts subdued interior dividers but not at the edges (${brightness.name})',
+        (tester) async {
+      await pump(
+        tester,
+        const SureListGroup(children: [
+          SureListRow(title: 'One'),
+          SureListRow(title: 'Two'),
+          SureListRow(title: 'Three'),
+        ]),
+        brightness: brightness,
+      );
 
-    // Three rows => exactly two interior dividers.
-    final dividers = tester.widgetList<Divider>(find.byType(Divider)).toList();
-    expect(dividers, hasLength(2));
-    expect(dividers.first.color, SureTokens.light.borderSubdued);
-  });
+      // Three rows => exactly two interior dividers.
+      final dividers =
+          tester.widgetList<Divider>(find.byType(Divider)).toList();
+      expect(dividers, hasLength(2));
+      expect(dividers.first.color, tokens.borderSubdued);
+    });
+  }
 
   testWidgets('renders an uppercased header above the group', (tester) async {
     await pump(
@@ -78,37 +87,48 @@ void main() {
     expect(find.text('TOOLS'), findsOneWidget);
   });
 
-  testWidgets('row renders title and subtitle with tokenized colors',
+  for (final (brightness, tokens) in [
+    (Brightness.light, SureTokens.light),
+    (Brightness.dark, SureTokens.dark),
+  ]) {
+    testWidgets(
+        'row renders title and subtitle with tokenized colors (${brightness.name})',
+        (tester) async {
+      await pump(
+        tester,
+        const SureListGroup(
+          children: [SureListRow(title: 'Calendar', subtitle: 'Monthly view')],
+        ),
+        brightness: brightness,
+      );
+      final title = tester.widget<Text>(find.text('Calendar'));
+      final subtitle = tester.widget<Text>(find.text('Monthly view'));
+      expect(title.style?.color, tokens.textPrimary);
+      expect(subtitle.style?.color, tokens.textSecondary);
+    });
+
+    testWidgets(
+        'destructive row paints the title in the destructive token (${brightness.name})',
+        (tester) async {
+      await pump(
+        tester,
+        const SureListGroup(
+          children: [SureListRow(title: 'Delete account', destructive: true)],
+        ),
+        brightness: brightness,
+      );
+      final title = tester.widget<Text>(find.text('Delete account'));
+      expect(title.style?.color, tokens.destructive);
+    });
+  }
+
+  testWidgets(
+      'showChevron renders the DS chevron, suppressed by explicit trailing',
       (tester) async {
     await pump(
       tester,
       const SureListGroup(
-        children: [SureListRow(title: 'Calendar', subtitle: 'Monthly view')],
-      ),
-    );
-    final title = tester.widget<Text>(find.text('Calendar'));
-    final subtitle = tester.widget<Text>(find.text('Monthly view'));
-    expect(title.style?.color, SureTokens.light.textPrimary);
-    expect(subtitle.style?.color, SureTokens.light.textSecondary);
-  });
-
-  testWidgets('destructive row paints the title in the destructive token',
-      (tester) async {
-    await pump(
-      tester,
-      const SureListGroup(
-        children: [SureListRow(title: 'Delete account', destructive: true)],
-      ),
-    );
-    final title = tester.widget<Text>(find.text('Delete account'));
-    expect(title.style?.color, SureTokens.light.destructive);
-  });
-
-  testWidgets('showChevron renders the DS chevron, suppressed by explicit trailing',
-      (tester) async {
-    await pump(
-      tester,
-      const SureListGroup(children: [SureListRow(title: 'Go', showChevron: true)]),
+          children: [SureListRow(title: 'Go', showChevron: true)]),
     );
     final chevron = tester.widget<SureIcon>(find.byType(SureIcon));
     expect(chevron.name, SureIcons.chevronRight);
@@ -127,7 +147,8 @@ void main() {
     expect(find.text('value'), findsOneWidget);
   });
 
-  testWidgets('onTap fires and the tappable row uses an InkWell', (tester) async {
+  testWidgets('onTap fires and the tappable row uses an InkWell',
+      (tester) async {
     var taps = 0;
     await pump(
       tester,
@@ -147,5 +168,32 @@ void main() {
       const SureListGroup(children: [SureListRow(title: 'Static')]),
     );
     expect(find.byType(InkWell), findsNothing);
+  });
+
+  testWidgets('a tappable row exposes button semantics (ListTile parity)',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(
+      tester,
+      SureListGroup(children: [SureListRow(title: 'Go', onTap: () {})]),
+    );
+    final node = tester.getSemantics(find.text('Go'));
+    expect(node.hasFlag(SemanticsFlag.isButton), isTrue);
+    expect(node.hasFlag(SemanticsFlag.isEnabled), isTrue);
+    handle.dispose();
+  });
+
+  testWidgets('an empty group builds no chrome', (tester) async {
+    await pump(tester, const SureListGroup(children: []));
+    // No decorated container and no dividers — it collapses rather than
+    // painting an empty bordered/shadowed box.
+    expect(
+      find.descendant(
+        of: find.byType(SureListGroup),
+        matching: find.byType(Container),
+      ),
+      findsNothing,
+    );
+    expect(find.byType(Divider), findsNothing);
   });
 }
