@@ -135,11 +135,11 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: Text(l.logViewerClearLogs),
-                  content: const Text('Are you sure you want to clear all logs?'),
+                  content: Text(l.logViewerClearConfirm),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(l.commonCancel),
                     ),
                     TextButton(
                       onPressed: () {
@@ -147,7 +147,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                         Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text('Clear'),
+                      child: Text(l.logViewerClear),
                     ),
                   ],
                 ),

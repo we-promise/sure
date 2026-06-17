@@ -671,7 +671,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                         height: 36,
                                         child: IconButton(
                                           icon: const Icon(Icons.edit),
-                                          tooltip: 'Edit transaction',
+                                          tooltip: l.transactionsListEditTooltip,
                                           visualDensity: VisualDensity.compact,
                                           padding: EdgeInsets.zero,
                                           onPressed: () =>

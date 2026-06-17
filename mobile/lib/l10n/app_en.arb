@@ -725,5 +725,320 @@
   "@accountDetailCashChip": {
     "description": "Label for the cash position chip in the account detail header.",
     "placeholders": { "amount": { "type": "String" } }
-  }
+  },
+
+  "biometricLockFailedRetry": "Authentication failed. Tap Unlock to try again.",
+  "@biometricLockFailedRetry": { "description": "Snackbar shown on the biometric lock screen when authentication fails." },
+
+  "settingsBiometricVerifyReason": "Verify biometric to enable app lock",
+  "@settingsBiometricVerifyReason": { "description": "Reason shown in the system biometric prompt when enabling app lock from settings." },
+
+  "settingsBiometricFailed": "Biometric authentication failed.",
+  "@settingsBiometricFailed": { "description": "Snackbar shown when biometric verification fails while enabling app lock." },
+
+  "settingsUpdateOpenStoreError": "Unable to open store link",
+  "@settingsUpdateOpenStoreError": { "description": "Snackbar shown when the app store update link cannot be opened." },
+
+  "settingsClearDataFailed": "Failed to clear local data.",
+  "@settingsClearDataFailed": { "description": "Snackbar shown when clearing local data fails." },
+
+  "settingsClearDataSuccessDetailed": "Local data cleared successfully. Pull to refresh to sync from server.",
+  "@settingsClearDataSuccessDetailed": { "description": "Snackbar shown after local data is cleared, prompting the user to pull to refresh." },
+
+  "settingsContactOpenLinkError": "Unable to open link",
+  "@settingsContactOpenLinkError": { "description": "Snackbar shown when the contact/Discord link cannot be opened." },
+
+  "settingsResetAccountContent": "Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.\n\nThis action cannot be undone. Are you sure?",
+  "@settingsResetAccountContent": { "description": "Body text for the reset-account confirmation dialog." },
+
+  "settingsResetAccount": "Reset Account",
+  "@settingsResetAccount": { "description": "Title and confirm button label for the reset-account action." },
+
+  "settingsResetAccountInitiated": "Account reset has been initiated. This may take a moment.",
+  "@settingsResetAccountInitiated": { "description": "Snackbar shown after an account reset is initiated." },
+
+  "settingsResetAccountFailed": "Failed to reset account",
+  "@settingsResetAccountFailed": { "description": "Snackbar shown when resetting the account fails." },
+
+  "settingsDeleteAccountConfirmContent": "Deleting your account will permanently remove all your data and cannot be undone.\n\nAre you sure you want to delete your account?",
+  "@settingsDeleteAccountConfirmContent": { "description": "Body text for the delete-account confirmation dialog on the settings screen." },
+
+  "settingsDeleteAccountFailed": "Failed to delete account",
+  "@settingsDeleteAccountFailed": { "description": "Snackbar shown when deleting the account fails." },
+
+  "settingsProxyHeadersNote": "Headers are sent by the app with API requests. External browser SSO pages may not receive them.",
+  "@settingsProxyHeadersNote": { "description": "Explanatory note shown in the custom proxy headers dialog." },
+
+  "settingsProxyHeadersSaved": "Custom proxy headers saved",
+  "@settingsProxyHeadersSaved": { "description": "Snackbar shown after custom proxy headers are saved." },
+
+  "settingsProxyHeadersSaveFailed": "Failed to save custom proxy headers.",
+  "@settingsProxyHeadersSaveFailed": { "description": "Snackbar shown when saving custom proxy headers fails." },
+
+  "settingsAppVersion": "App Version: {version}",
+  "@settingsAppVersion": {
+    "description": "App version list tile title on the settings screen.",
+    "placeholders": { "version": { "type": "String" } }
+  },
+
+  "settingsCheckForUpdatesSubtitle": "See if a newer version is available",
+  "@settingsCheckForUpdatesSubtitle": { "description": "Subtitle for the check-for-updates list tile." },
+
+  "settingsContactUs": "Contact us",
+  "@settingsContactUs": { "description": "Title for the contact-us list tile on the settings screen." },
+
+  "settingsDebugLogsSemantics": "Open debug logs",
+  "@settingsDebugLogsSemantics": { "description": "Accessibility label for the debug logs list tile." },
+
+  "settingsDebugLogsSubtitle": "View app diagnostic logs",
+  "@settingsDebugLogsSubtitle": { "description": "Subtitle for the debug logs list tile." },
+
+  "settingsGroupByAccountType": "Group by Account Type",
+  "@settingsGroupByAccountType": { "description": "Title for the group-by-account-type toggle on the settings screen." },
+
+  "settingsGroupByAccountTypeSubtitle": "Group accounts by type (Crypto, Bank, etc.)",
+  "@settingsGroupByAccountTypeSubtitle": { "description": "Subtitle for the group-by-account-type toggle." },
+
+  "settingsProxyHeadersTileTitle": "Custom proxy headers",
+  "@settingsProxyHeadersTileTitle": { "description": "Title for the custom proxy headers list tile on the settings screen." },
+
+  "settingsProxyHeadersTileSubtitleEmpty": "Optional headers for a reverse proxy or auth gateway",
+  "@settingsProxyHeadersTileSubtitleEmpty": { "description": "Subtitle for the custom proxy headers list tile when no headers are configured." },
+
+  "settingsProxyHeadersTileSubtitleCount": "{count} configured",
+  "@settingsProxyHeadersTileSubtitleCount": {
+    "description": "Subtitle for the custom proxy headers list tile when headers are configured.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "settingsClearDataTileSubtitle": "Remove all cached transactions and accounts",
+  "@settingsClearDataTileSubtitle": { "description": "Subtitle for the clear-local-data list tile." },
+
+  "settingsResetAccountTileSubtitle": "Delete all accounts, categories, merchants, and tags but keep your user account",
+  "@settingsResetAccountTileSubtitle": { "description": "Subtitle for the reset-account list tile in the danger zone." },
+
+  "settingsDeleteAccountTileSubtitle": "Permanently remove all your data. This cannot be undone.",
+  "@settingsDeleteAccountTileSubtitle": { "description": "Subtitle for the delete-account list tile in the danger zone." },
+
+  "settingsUserFallback": "User",
+  "@settingsUserFallback": { "description": "Fallback display name when the user has no name set." },
+
+  "chatListDeleteMultiContent": "{count, plural, =1{Delete 1 chat? This cannot be undone.} other{Delete {count} chats? This cannot be undone.}}",
+  "@chatListDeleteMultiContent": {
+    "description": "Body text for the multi-chat delete confirmation dialog.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "chatListDeletedSuccess": "Chats deleted",
+  "@chatListDeletedSuccess": { "description": "Snackbar shown after multiple chats are deleted." },
+
+  "chatListDeleteFailed": "Failed to delete chats",
+  "@chatListDeleteFailed": { "description": "Snackbar shown when deleting multiple chats fails." },
+
+  "chatListError": "Failed to load chats",
+  "@chatListError": { "description": "Error-state heading on the chat list screen." },
+
+  "chatListJustNow": "Just now",
+  "@chatListJustNow": { "description": "Relative time label for very recent chats." },
+
+  "chatListDeleteSingleContent": "Are you sure you want to delete \"{title}\"?",
+  "@chatListDeleteSingleContent": {
+    "description": "Body text for the single-chat delete confirmation dialog.",
+    "placeholders": { "title": { "type": "String" } }
+  },
+
+  "loginSignUpOpenError": "Unable to open sign up page",
+  "@loginSignUpOpenError": { "description": "Snackbar shown when the sign-up page cannot be opened." },
+
+  "loginApiKeyDialogTitle": "API Key Login",
+  "@loginApiKeyDialogTitle": { "description": "Title for the API key login dialog on the login screen." },
+
+  "loginApiKeyDialogBody": "Enter your API key to sign in.",
+  "@loginApiKeyDialogBody": { "description": "Body text for the API key login dialog." },
+
+  "loginApiKeyInvalid": "Invalid API key",
+  "@loginApiKeyInvalid": { "description": "Fallback error shown when an API key login fails." },
+
+  "loginApiKeySignIn": "Sign In",
+  "@loginApiKeySignIn": { "description": "Sign-in button label in the API key login dialog." },
+
+  "loginDemoOrSignUpPrefix": "Demo account or ",
+  "@loginDemoOrSignUpPrefix": { "description": "Leading text before the Sign Up link on the login screen." },
+
+  "loginSignUpLink": "Sign Up",
+  "@loginSignUpLink": { "description": "Tappable Sign Up link text on the login screen." },
+
+  "loginSignUpSuffix": "!",
+  "@loginSignUpSuffix": { "description": "Trailing punctuation after the Sign Up link on the login screen." },
+
+  "loginMfaInfo": "Two-factor authentication is enabled. Enter your code.",
+  "@loginMfaInfo": { "description": "Info banner shown when MFA is required during login." },
+
+  "loginMfaCodeRequired": "Please enter your authentication code",
+  "@loginMfaCodeRequired": { "description": "Validation error when the MFA code field is empty." },
+
+  "loginOrDivider": "or",
+  "@loginOrDivider": { "description": "Divider label between primary and alternate sign-in options." },
+
+  "loginServerUrlHeading": "Sure server URL:",
+  "@loginServerUrlHeading": { "description": "Heading above the displayed server URL on the login screen." },
+
+  "loginApiKeyLoginButton": "API-Key Login",
+  "@loginApiKeyLoginButton": { "description": "Button label to open the API key login dialog." },
+
+  "loginBackendSettingsTooltip": "Backend Settings",
+  "@loginBackendSettingsTooltip": { "description": "Tooltip for the backend settings button on the login screen." },
+
+  "transactionEditSessionExpired": "Session expired. Please login again.",
+  "@transactionEditSessionExpired": { "description": "Snackbar shown when the session expires while editing a transaction." },
+
+  "transactionEditUpdated": "Transaction updated",
+  "@transactionEditUpdated": { "description": "Snackbar shown after a transaction is updated successfully." },
+
+  "transactionEditUpdateFailed": "Failed to update transaction",
+  "@transactionEditUpdateFailed": { "description": "Fallback snackbar shown when updating a transaction fails." },
+
+  "transactionEditNameMaxLength": "Name must be {max} characters or fewer",
+  "@transactionEditNameMaxLength": {
+    "description": "Validation error when the transaction name exceeds the maximum length.",
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "transactionEditNameInvalidChars": "Name contains unsupported characters",
+  "@transactionEditNameInvalidChars": { "description": "Validation error when the transaction name contains control characters." },
+
+  "transactionEditNotesMaxLength": "Notes must be {max} characters or fewer",
+  "@transactionEditNotesMaxLength": {
+    "description": "Validation error when the notes exceed the maximum length.",
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "transactionEditNotesInvalidChars": "Notes contain unsupported characters",
+  "@transactionEditNotesInvalidChars": { "description": "Validation error when the notes contain control characters." },
+
+  "transactionEditNoCategory": "No category",
+  "@transactionEditNoCategory": { "description": "Dropdown option representing no selected category in the edit form." },
+
+  "transactionEditCurrentCategory": "Current category",
+  "@transactionEditCurrentCategory": { "description": "Fallback dropdown label for the currently selected category when its name is unknown." },
+
+  "transactionEditNoMerchant": "No merchant",
+  "@transactionEditNoMerchant": { "description": "Dropdown option representing no selected merchant in the edit form." },
+
+  "transactionEditCurrentMerchant": "Current merchant",
+  "@transactionEditCurrentMerchant": { "description": "Fallback dropdown label for the currently selected merchant when its name is unknown." },
+
+  "transactionEditNoTags": "No tags available",
+  "@transactionEditNoTags": { "description": "Message shown when no tags are available to select in the edit form." },
+
+  "transactionEditUnknownTag": "Unknown tag",
+  "@transactionEditUnknownTag": { "description": "Fallback label for a selected tag whose name is unknown." },
+
+  "transactionEditSyncedOnly": "Only synced transactions can be edited from mobile.",
+  "@transactionEditSyncedOnly": { "description": "Notice shown when a transaction cannot be edited because it is not yet synced." },
+
+  "transactionEditCategoryHelper": "Choose a replacement category",
+  "@transactionEditCategoryHelper": { "description": "Helper text under the category dropdown in the edit form." },
+
+  "transactionEditMerchantHelper": "Choose a replacement merchant",
+  "@transactionEditMerchantHelper": { "description": "Helper text under the merchant dropdown in the edit form." },
+
+  "transactionFormSessionExpired": "Session expired. Please login again.",
+  "@transactionFormSessionExpired": { "description": "Snackbar shown when the session expires while creating a transaction." },
+
+  "transactionFormAmountRequiredPrompt": "Please enter an amount",
+  "@transactionFormAmountRequiredPrompt": { "description": "Validation error when the amount field is empty in the create form." },
+
+  "transactionFormAmountInvalidNumber": "Please enter a valid number",
+  "@transactionFormAmountInvalidNumber": { "description": "Validation error when the amount is not a valid number." },
+
+  "transactionFormAmountTooSmall": "Amount must be greater than 0",
+  "@transactionFormAmountTooSmall": { "description": "Validation error when the amount is zero or negative." },
+
+  "transactionFormCreateSuccessOnline": "Transaction created successfully",
+  "@transactionFormCreateSuccessOnline": { "description": "Snackbar shown after a transaction is created while online." },
+
+  "transactionFormCreateSuccessOffline": "Transaction saved (will sync when online)",
+  "@transactionFormCreateSuccessOffline": { "description": "Snackbar shown after a transaction is saved while offline." },
+
+  "transactionFormCreateFailed": "Failed to create transaction",
+  "@transactionFormCreateFailed": { "description": "Snackbar shown when creating a transaction fails." },
+
+  "transactionFormGenericError": "Error: {error}",
+  "@transactionFormGenericError": {
+    "description": "Snackbar shown when an unexpected error occurs while creating a transaction.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "transactionFormLess": "Less",
+  "@transactionFormLess": { "description": "Toggle label to hide the optional transaction fields." },
+
+  "transactionFormMore": "More",
+  "@transactionFormMore": { "description": "Toggle label to show the optional transaction fields." },
+
+  "transactionFormDateHelper": "Optional (default: today)",
+  "@transactionFormDateHelper": { "description": "Helper text for the date field in the create form." },
+
+  "transactionFormNameHelper": "Optional (default: SureApp)",
+  "@transactionFormNameHelper": { "description": "Helper text for the name field in the create form." },
+
+  "transactionFormCategoryLoading": "Loading categories…",
+  "@transactionFormCategoryLoading": { "description": "Placeholder shown while categories are loading in the create form." },
+
+  "transactionFormCategoryHelper": "Optional",
+  "@transactionFormCategoryHelper": { "description": "Helper text for the category dropdown in the create form." },
+
+  "transactionFormNoCategory": "No category",
+  "@transactionFormNoCategory": { "description": "Dropdown option representing no selected category in the create form." },
+
+  "transactionFormCreateButton": "Create Transaction",
+  "@transactionFormCreateButton": { "description": "Submit button label on the create-transaction form." },
+
+  "logViewerClearConfirm": "Are you sure you want to clear all logs?",
+  "@logViewerClearConfirm": { "description": "Body text for the clear-logs confirmation dialog." },
+
+  "logViewerClear": "Clear",
+  "@logViewerClear": { "description": "Confirm button label in the clear-logs dialog." },
+
+  "chatConversationEditTitle": "Edit Title",
+  "@chatConversationEditTitle": { "description": "Title for the edit-chat-title dialog." },
+
+  "chatConversationTitleLabel": "Chat Title",
+  "@chatConversationTitleLabel": { "description": "Label for the chat title input field in the edit dialog." },
+
+  "chatConversationRefreshTooltip": "Refresh",
+  "@chatConversationRefreshTooltip": { "description": "Tooltip for the refresh button in the chat conversation screen." },
+
+  "chatConversationLoadError": "Failed to load chat",
+  "@chatConversationLoadError": { "description": "Error-state heading when a chat fails to load." },
+
+  "navEnableAiChatTitle": "Turn on AI Chat?",
+  "@navEnableAiChatTitle": { "description": "Title for the dialog prompting the user to enable AI chat." },
+
+  "navEnableAiChatContent": "AI Chat is currently disabled in your account settings. Would you like to turn it on now?",
+  "@navEnableAiChatContent": { "description": "Body text for the enable-AI-chat dialog." },
+
+  "navEnableAiChatNotNow": "Not now",
+  "@navEnableAiChatNotNow": { "description": "Dismiss button in the enable-AI-chat dialog." },
+
+  "navEnableAiChatConfirm": "Turn on AI",
+  "@navEnableAiChatConfirm": { "description": "Confirm button in the enable-AI-chat dialog." },
+
+  "navEnableAiChatFailed": "Unable to enable AI right now.",
+  "@navEnableAiChatFailed": { "description": "Snackbar shown when enabling AI chat fails." },
+
+  "transactionsListEditTooltip": "Edit transaction",
+  "@transactionsListEditTooltip": { "description": "Tooltip for the edit button on a transaction row." },
+
+  "connectivitySignInToSync": "Please sign in to sync transactions",
+  "@connectivitySignInToSync": { "description": "Snackbar shown when trying to sync without being signed in." },
+
+  "connectivitySyncSuccess": "Transactions synced successfully",
+  "@connectivitySyncSuccess": { "description": "Snackbar shown after transactions sync successfully." },
+
+  "connectivitySyncFailed": "Failed to sync transactions. Please try again.",
+  "@connectivitySyncFailed": { "description": "Snackbar shown when a manual sync fails." },
+
+  "connectivityAuthFailed": "Unable to authenticate. Please try again.",
+  "@connectivityAuthFailed": { "description": "Snackbar shown when authentication fails during a manual sync." }
 }

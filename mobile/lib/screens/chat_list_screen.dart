@@ -69,26 +69,27 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Future<void> _deleteSelectedChats() async {
+    final l = AppLocalizations.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
-        final l = AppLocalizations.of(context);
+        final dl = AppLocalizations.of(context);
         return AlertDialog(
-          title: Text(l.chatListDeleteTitle),
+          title: Text(dl.chatListDeleteTitle),
           content: Text(
-            'Delete ${_selectedChatIds.length} chat(s)? This cannot be undone.',
+            dl.chatListDeleteMultiContent(_selectedChatIds.length),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text(l.commonCancel),
+              child: Text(dl.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              child: Text(dl.commonDelete, style: const TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -118,7 +119,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          success ? 'Chats deleted' : 'Failed to delete chats',
+          success ? l.chatListDeletedSuccess : l.chatListDeleteFailed,
         ),
         backgroundColor: success ? Colors.green : Colors.red,
       ),
@@ -143,7 +144,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final difference = now.difference(dateTime);
 
     if (difference.inMinutes < 1) {
-      return 'Just now';
+      return AppLocalizations.of(context).chatListJustNow;
     } else if (difference.inHours < 1) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inDays < 1) {
@@ -221,7 +222,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Failed to load chats',
+                      l.chatListError,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
@@ -300,7 +301,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         final l = AppLocalizations.of(context);
                         return AlertDialog(
                           title: Text(l.chatListDeleteTitle),
-                          content: Text('Are you sure you want to delete "${chat.title}"?'),
+                          content: Text(l.chatListDeleteSingleContent(chat.title)),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),

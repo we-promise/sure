@@ -74,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _openSignUpPage() async {
+    final l = AppLocalizations.of(context);
     final signUpUrl = Uri.parse('${ApiConfig.defaultBaseUrl}/registration/new');
     final launched = await launchUrl(
       signUpUrl,
@@ -82,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open sign up page')),
+        SnackBar(content: Text(l.loginSignUpOpenError)),
       );
     }
   }
@@ -95,15 +96,16 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final dl = AppLocalizations.of(dialogContext);
         return StatefulBuilder(
           builder: (_, setDialogState) {
             return AlertDialog(
-              title: const Text('API Key Login'),
+              title: Text(dl.loginApiKeyDialogTitle),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Enter your API key to sign in.',
+                    dl.loginApiKeyDialogBody,
                     style:
                         Theme.of(outerContext).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(outerContext)
@@ -114,9 +116,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: apiKeyController,
-                    decoration: const InputDecoration(
-                      labelText: 'API Key',
-                      prefixIcon: Icon(Icons.vpn_key_outlined),
+                    decoration: InputDecoration(
+                      labelText: dl.loginApiKeyLabel,
+                      prefixIcon: const Icon(Icons.vpn_key_outlined),
                     ),
                     obscureText: true,
                     maxLines: 1,
@@ -132,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           apiKeyController.dispose();
                           Navigator.of(dialogContext).pop();
                         },
-                  child: const Text('Cancel'),
+                  child: Text(dl.commonCancel),
                 ),
                 ElevatedButton(
                   onPressed: isLoading
@@ -163,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ScaffoldMessenger.of(outerContext).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  errorMsg ?? 'Invalid API key',
+                                  errorMsg ?? dl.loginApiKeyInvalid,
                                 ),
                                 backgroundColor:
                                     Theme.of(outerContext).colorScheme.error,
@@ -177,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Sign In'),
+                      : Text(dl.loginApiKeySignIn),
                 ),
               ],
             );
@@ -236,16 +238,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: colorScheme.onSurfaceVariant,
                             ),
                         children: [
-                          const TextSpan(text: 'Demo account or '),
+                          TextSpan(text: l.loginDemoOrSignUpPrefix),
                           TextSpan(
-                            text: 'Sign Up',
+                            text: l.loginSignUpLink,
                             style: TextStyle(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                             recognizer: _signUpTapRecognizer,
                           ),
-                          const TextSpan(text: '!'),
+                          TextSpan(text: l.loginSignUpSuffix),
                         ],
                       ),
                       textAlign: TextAlign.center,
@@ -374,7 +376,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
-                                        'Two-factor authentication is enabled. Enter your code.',
+                                        l.loginMfaInfo,
                                         style: TextStyle(
                                             color: colorScheme.onSurface),
                                       ),
@@ -394,7 +396,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 validator: (value) {
                                   if (showOtp &&
                                       (value == null || value.isEmpty)) {
-                                    return 'Please enter your authentication code';
+                                    return l.loginMfaCodeRequired;
                                   }
                                   return null;
                                 },
@@ -431,7 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            'or',
+                            l.loginOrDivider,
                             style:
                                 TextStyle(color: colorScheme.onSurfaceVariant),
                           ),
@@ -480,7 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'Sure server URL:',
+                              l.loginServerUrlHeading,
                               style:
                                   Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: colorScheme.onSurfaceVariant,
@@ -508,7 +510,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, _) {
                         return SureButton(
-                          label: 'API-Key Login',
+                          label: l.loginApiKeyLoginButton,
                           variant: SureButtonVariant.ghost,
                           onPressed:
                               authProvider.isLoading ? null : _showApiKeyDialog,
@@ -526,7 +528,7 @@ class _LoginScreenState extends State<LoginScreen> {
               top: 8,
               child: IconButton(
                 icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Backend Settings',
+                tooltip: l.loginBackendSettingsTooltip,
                 onPressed: () => widget._openSettings(context),
               ),
             ),

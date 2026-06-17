@@ -1497,6 +1497,594 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cash {amount}'**
   String accountDetailCashChip(String amount);
+
+  /// Snackbar shown on the biometric lock screen when authentication fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Tap Unlock to try again.'**
+  String get biometricLockFailedRetry;
+
+  /// Reason shown in the system biometric prompt when enabling app lock from settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify biometric to enable app lock'**
+  String get settingsBiometricVerifyReason;
+
+  /// Snackbar shown when biometric verification fails while enabling app lock.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric authentication failed.'**
+  String get settingsBiometricFailed;
+
+  /// Snackbar shown when the app store update link cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open store link'**
+  String get settingsUpdateOpenStoreError;
+
+  /// Snackbar shown when clearing local data fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to clear local data.'**
+  String get settingsClearDataFailed;
+
+  /// Snackbar shown after local data is cleared, prompting the user to pull to refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Local data cleared successfully. Pull to refresh to sync from server.'**
+  String get settingsClearDataSuccessDetailed;
+
+  /// Snackbar shown when the contact/Discord link cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open link'**
+  String get settingsContactOpenLinkError;
+
+  /// Body text for the reset-account confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.\n\nThis action cannot be undone. Are you sure?'**
+  String get settingsResetAccountContent;
+
+  /// Title and confirm button label for the reset-account action.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Account'**
+  String get settingsResetAccount;
+
+  /// Snackbar shown after an account reset is initiated.
+  ///
+  /// In en, this message translates to:
+  /// **'Account reset has been initiated. This may take a moment.'**
+  String get settingsResetAccountInitiated;
+
+  /// Snackbar shown when resetting the account fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reset account'**
+  String get settingsResetAccountFailed;
+
+  /// Body text for the delete-account confirmation dialog on the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account will permanently remove all your data and cannot be undone.\n\nAre you sure you want to delete your account?'**
+  String get settingsDeleteAccountConfirmContent;
+
+  /// Snackbar shown when deleting the account fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete account'**
+  String get settingsDeleteAccountFailed;
+
+  /// Explanatory note shown in the custom proxy headers dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Headers are sent by the app with API requests. External browser SSO pages may not receive them.'**
+  String get settingsProxyHeadersNote;
+
+  /// Snackbar shown after custom proxy headers are saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom proxy headers saved'**
+  String get settingsProxyHeadersSaved;
+
+  /// Snackbar shown when saving custom proxy headers fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save custom proxy headers.'**
+  String get settingsProxyHeadersSaveFailed;
+
+  /// App version list tile title on the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'App Version: {version}'**
+  String settingsAppVersion(String version);
+
+  /// Subtitle for the check-for-updates list tile.
+  ///
+  /// In en, this message translates to:
+  /// **'See if a newer version is available'**
+  String get settingsCheckForUpdatesSubtitle;
+
+  /// Title for the contact-us list tile on the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us'**
+  String get settingsContactUs;
+
+  /// Accessibility label for the debug logs list tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open debug logs'**
+  String get settingsDebugLogsSemantics;
+
+  /// Subtitle for the debug logs list tile.
+  ///
+  /// In en, this message translates to:
+  /// **'View app diagnostic logs'**
+  String get settingsDebugLogsSubtitle;
+
+  /// Title for the group-by-account-type toggle on the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Group by Account Type'**
+  String get settingsGroupByAccountType;
+
+  /// Subtitle for the group-by-account-type toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Group accounts by type (Crypto, Bank, etc.)'**
+  String get settingsGroupByAccountTypeSubtitle;
+
+  /// Title for the custom proxy headers list tile on the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom proxy headers'**
+  String get settingsProxyHeadersTileTitle;
+
+  /// Subtitle for the custom proxy headers list tile when no headers are configured.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional headers for a reverse proxy or auth gateway'**
+  String get settingsProxyHeadersTileSubtitleEmpty;
+
+  /// Subtitle for the custom proxy headers list tile when headers are configured.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} configured'**
+  String settingsProxyHeadersTileSubtitleCount(int count);
+
+  /// Subtitle for the clear-local-data list tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove all cached transactions and accounts'**
+  String get settingsClearDataTileSubtitle;
+
+  /// Subtitle for the reset-account list tile in the danger zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all accounts, categories, merchants, and tags but keep your user account'**
+  String get settingsResetAccountTileSubtitle;
+
+  /// Subtitle for the delete-account list tile in the danger zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently remove all your data. This cannot be undone.'**
+  String get settingsDeleteAccountTileSubtitle;
+
+  /// Fallback display name when the user has no name set.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get settingsUserFallback;
+
+  /// Body text for the multi-chat delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete 1 chat? This cannot be undone.} other{Delete {count} chats? This cannot be undone.}}'**
+  String chatListDeleteMultiContent(int count);
+
+  /// Snackbar shown after multiple chats are deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats deleted'**
+  String get chatListDeletedSuccess;
+
+  /// Snackbar shown when deleting multiple chats fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete chats'**
+  String get chatListDeleteFailed;
+
+  /// Error-state heading on the chat list screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load chats'**
+  String get chatListError;
+
+  /// Relative time label for very recent chats.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get chatListJustNow;
+
+  /// Body text for the single-chat delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{title}\"?'**
+  String chatListDeleteSingleContent(String title);
+
+  /// Snackbar shown when the sign-up page cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open sign up page'**
+  String get loginSignUpOpenError;
+
+  /// Title for the API key login dialog on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key Login'**
+  String get loginApiKeyDialogTitle;
+
+  /// Body text for the API key login dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your API key to sign in.'**
+  String get loginApiKeyDialogBody;
+
+  /// Fallback error shown when an API key login fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid API key'**
+  String get loginApiKeyInvalid;
+
+  /// Sign-in button label in the API key login dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get loginApiKeySignIn;
+
+  /// Leading text before the Sign Up link on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo account or '**
+  String get loginDemoOrSignUpPrefix;
+
+  /// Tappable Sign Up link text on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up'**
+  String get loginSignUpLink;
+
+  /// Trailing punctuation after the Sign Up link on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'!'**
+  String get loginSignUpSuffix;
+
+  /// Info banner shown when MFA is required during login.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-factor authentication is enabled. Enter your code.'**
+  String get loginMfaInfo;
+
+  /// Validation error when the MFA code field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your authentication code'**
+  String get loginMfaCodeRequired;
+
+  /// Divider label between primary and alternate sign-in options.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get loginOrDivider;
+
+  /// Heading above the displayed server URL on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sure server URL:'**
+  String get loginServerUrlHeading;
+
+  /// Button label to open the API key login dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'API-Key Login'**
+  String get loginApiKeyLoginButton;
+
+  /// Tooltip for the backend settings button on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Backend Settings'**
+  String get loginBackendSettingsTooltip;
+
+  /// Snackbar shown when the session expires while editing a transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired. Please login again.'**
+  String get transactionEditSessionExpired;
+
+  /// Snackbar shown after a transaction is updated successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction updated'**
+  String get transactionEditUpdated;
+
+  /// Fallback snackbar shown when updating a transaction fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update transaction'**
+  String get transactionEditUpdateFailed;
+
+  /// Validation error when the transaction name exceeds the maximum length.
+  ///
+  /// In en, this message translates to:
+  /// **'Name must be {max} characters or fewer'**
+  String transactionEditNameMaxLength(int max);
+
+  /// Validation error when the transaction name contains control characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Name contains unsupported characters'**
+  String get transactionEditNameInvalidChars;
+
+  /// Validation error when the notes exceed the maximum length.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes must be {max} characters or fewer'**
+  String transactionEditNotesMaxLength(int max);
+
+  /// Validation error when the notes contain control characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes contain unsupported characters'**
+  String get transactionEditNotesInvalidChars;
+
+  /// Dropdown option representing no selected category in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'No category'**
+  String get transactionEditNoCategory;
+
+  /// Fallback dropdown label for the currently selected category when its name is unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Current category'**
+  String get transactionEditCurrentCategory;
+
+  /// Dropdown option representing no selected merchant in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'No merchant'**
+  String get transactionEditNoMerchant;
+
+  /// Fallback dropdown label for the currently selected merchant when its name is unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Current merchant'**
+  String get transactionEditCurrentMerchant;
+
+  /// Message shown when no tags are available to select in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'No tags available'**
+  String get transactionEditNoTags;
+
+  /// Fallback label for a selected tag whose name is unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown tag'**
+  String get transactionEditUnknownTag;
+
+  /// Notice shown when a transaction cannot be edited because it is not yet synced.
+  ///
+  /// In en, this message translates to:
+  /// **'Only synced transactions can be edited from mobile.'**
+  String get transactionEditSyncedOnly;
+
+  /// Helper text under the category dropdown in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a replacement category'**
+  String get transactionEditCategoryHelper;
+
+  /// Helper text under the merchant dropdown in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a replacement merchant'**
+  String get transactionEditMerchantHelper;
+
+  /// Snackbar shown when the session expires while creating a transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired. Please login again.'**
+  String get transactionFormSessionExpired;
+
+  /// Validation error when the amount field is empty in the create form.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter an amount'**
+  String get transactionFormAmountRequiredPrompt;
+
+  /// Validation error when the amount is not a valid number.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number'**
+  String get transactionFormAmountInvalidNumber;
+
+  /// Validation error when the amount is zero or negative.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount must be greater than 0'**
+  String get transactionFormAmountTooSmall;
+
+  /// Snackbar shown after a transaction is created while online.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction created successfully'**
+  String get transactionFormCreateSuccessOnline;
+
+  /// Snackbar shown after a transaction is saved while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction saved (will sync when online)'**
+  String get transactionFormCreateSuccessOffline;
+
+  /// Snackbar shown when creating a transaction fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create transaction'**
+  String get transactionFormCreateFailed;
+
+  /// Snackbar shown when an unexpected error occurs while creating a transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String transactionFormGenericError(String error);
+
+  /// Toggle label to hide the optional transaction fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Less'**
+  String get transactionFormLess;
+
+  /// Toggle label to show the optional transaction fields.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get transactionFormMore;
+
+  /// Helper text for the date field in the create form.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional (default: today)'**
+  String get transactionFormDateHelper;
+
+  /// Helper text for the name field in the create form.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional (default: SureApp)'**
+  String get transactionFormNameHelper;
+
+  /// Placeholder shown while categories are loading in the create form.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading categories…'**
+  String get transactionFormCategoryLoading;
+
+  /// Helper text for the category dropdown in the create form.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get transactionFormCategoryHelper;
+
+  /// Dropdown option representing no selected category in the create form.
+  ///
+  /// In en, this message translates to:
+  /// **'No category'**
+  String get transactionFormNoCategory;
+
+  /// Submit button label on the create-transaction form.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Transaction'**
+  String get transactionFormCreateButton;
+
+  /// Body text for the clear-logs confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to clear all logs?'**
+  String get logViewerClearConfirm;
+
+  /// Confirm button label in the clear-logs dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get logViewerClear;
+
+  /// Title for the edit-chat-title dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Title'**
+  String get chatConversationEditTitle;
+
+  /// Label for the chat title input field in the edit dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Title'**
+  String get chatConversationTitleLabel;
+
+  /// Tooltip for the refresh button in the chat conversation screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get chatConversationRefreshTooltip;
+
+  /// Error-state heading when a chat fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load chat'**
+  String get chatConversationLoadError;
+
+  /// Title for the dialog prompting the user to enable AI chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on AI Chat?'**
+  String get navEnableAiChatTitle;
+
+  /// Body text for the enable-AI-chat dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Chat is currently disabled in your account settings. Would you like to turn it on now?'**
+  String get navEnableAiChatContent;
+
+  /// Dismiss button in the enable-AI-chat dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get navEnableAiChatNotNow;
+
+  /// Confirm button in the enable-AI-chat dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on AI'**
+  String get navEnableAiChatConfirm;
+
+  /// Snackbar shown when enabling AI chat fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to enable AI right now.'**
+  String get navEnableAiChatFailed;
+
+  /// Tooltip for the edit button on a transaction row.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit transaction'**
+  String get transactionsListEditTooltip;
+
+  /// Snackbar shown when trying to sync without being signed in.
+  ///
+  /// In en, this message translates to:
+  /// **'Please sign in to sync transactions'**
+  String get connectivitySignInToSync;
+
+  /// Snackbar shown after transactions sync successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions synced successfully'**
+  String get connectivitySyncSuccess;
+
+  /// Snackbar shown when a manual sync fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to sync transactions. Please try again.'**
+  String get connectivitySyncFailed;
+
+  /// Snackbar shown when authentication fails during a manual sync.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to authenticate. Please try again.'**
+  String get connectivityAuthFailed;
 }
 
 class _AppLocalizationsDelegate

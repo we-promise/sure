@@ -208,25 +208,26 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final newTitle = await showDialog<String>(
       context: context,
       builder: (context) {
+        final dl = AppLocalizations.of(context);
         final controller = TextEditingController(text: currentTitle);
         return AlertDialog(
-          title: const Text('Edit Title'),
+          title: Text(dl.chatConversationEditTitle),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Chat Title',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: dl.chatConversationTitleLabel,
+              border: const OutlineInputBorder(),
             ),
             autofocus: true,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(dl.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Save'),
+              child: Text(dl.commonSave),
             ),
           ],
         );
@@ -291,7 +292,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => _loadChat(forceRefresh: true),
-              tooltip: 'Refresh',
+              tooltip: l.chatConversationRefreshTooltip,
             ),
         ],
       ),
@@ -313,7 +314,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     Icon(Icons.error_outline,
                         size: 64, color: colorScheme.error),
                     const SizedBox(height: 16),
-                    Text('Failed to load chat',
+                    Text(l.chatConversationLoadError,
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     Text(

@@ -155,24 +155,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<bool> _showEnableAiPrompt() async {
+    final l = AppLocalizations.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     final shouldEnable = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Turn on AI Chat?'),
-        content: const Text('AI Chat is currently disabled in your account settings. Would you like to turn it on now?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Turn on AI'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final dl = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(dl.navEnableAiChatTitle),
+          content: Text(dl.navEnableAiChatContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(dl.navEnableAiChatNotNow),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(dl.navEnableAiChatConfirm),
+            ),
+          ],
+        );
+      },
     );
 
     if (shouldEnable != true) {
@@ -184,7 +188,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (!enabled && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Unable to enable AI right now.'),
+          content: Text(authProvider.errorMessage ?? l.navEnableAiChatFailed),
           backgroundColor: Colors.red,
         ),
       );

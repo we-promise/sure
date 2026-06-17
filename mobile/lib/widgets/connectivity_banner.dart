@@ -16,11 +16,12 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   bool _isSyncing = false;
 
   Future<void> _handleSync(BuildContext context, String? accessToken, TransactionsProvider transactionsProvider) async {
+    final l = AppLocalizations.of(context);
     if (accessToken == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to sync transactions'),
+        SnackBar(
+          content: Text(l.connectivitySignInToSync),
           backgroundColor: Colors.orange,
         ),
       );
@@ -37,16 +38,16 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transactions synced successfully'),
+        SnackBar(
+          content: Text(l.connectivitySyncSuccess),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to sync transactions. Please try again.'),
+        SnackBar(
+          content: Text(l.connectivitySyncFailed),
           backgroundColor: Colors.red,
         ),
       );
@@ -115,8 +116,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                                 } catch (e) {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Unable to authenticate. Please try again.'),
+                                    SnackBar(
+                                      content: Text(l.connectivityAuthFailed),
                                       backgroundColor: Colors.red,
                                     ),
                                   );

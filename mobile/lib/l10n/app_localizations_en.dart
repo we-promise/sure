@@ -764,4 +764,345 @@ class AppLocalizationsEn extends AppLocalizations {
   String accountDetailCashChip(String amount) {
     return 'Cash $amount';
   }
+
+  @override
+  String get biometricLockFailedRetry =>
+      'Authentication failed. Tap Unlock to try again.';
+
+  @override
+  String get settingsBiometricVerifyReason =>
+      'Verify biometric to enable app lock';
+
+  @override
+  String get settingsBiometricFailed => 'Biometric authentication failed.';
+
+  @override
+  String get settingsUpdateOpenStoreError => 'Unable to open store link';
+
+  @override
+  String get settingsClearDataFailed => 'Failed to clear local data.';
+
+  @override
+  String get settingsClearDataSuccessDetailed =>
+      'Local data cleared successfully. Pull to refresh to sync from server.';
+
+  @override
+  String get settingsContactOpenLinkError => 'Unable to open link';
+
+  @override
+  String get settingsResetAccountContent =>
+      'Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.\n\nThis action cannot be undone. Are you sure?';
+
+  @override
+  String get settingsResetAccount => 'Reset Account';
+
+  @override
+  String get settingsResetAccountInitiated =>
+      'Account reset has been initiated. This may take a moment.';
+
+  @override
+  String get settingsResetAccountFailed => 'Failed to reset account';
+
+  @override
+  String get settingsDeleteAccountConfirmContent =>
+      'Deleting your account will permanently remove all your data and cannot be undone.\n\nAre you sure you want to delete your account?';
+
+  @override
+  String get settingsDeleteAccountFailed => 'Failed to delete account';
+
+  @override
+  String get settingsProxyHeadersNote =>
+      'Headers are sent by the app with API requests. External browser SSO pages may not receive them.';
+
+  @override
+  String get settingsProxyHeadersSaved => 'Custom proxy headers saved';
+
+  @override
+  String get settingsProxyHeadersSaveFailed =>
+      'Failed to save custom proxy headers.';
+
+  @override
+  String settingsAppVersion(String version) {
+    return 'App Version: $version';
+  }
+
+  @override
+  String get settingsCheckForUpdatesSubtitle =>
+      'See if a newer version is available';
+
+  @override
+  String get settingsContactUs => 'Contact us';
+
+  @override
+  String get settingsDebugLogsSemantics => 'Open debug logs';
+
+  @override
+  String get settingsDebugLogsSubtitle => 'View app diagnostic logs';
+
+  @override
+  String get settingsGroupByAccountType => 'Group by Account Type';
+
+  @override
+  String get settingsGroupByAccountTypeSubtitle =>
+      'Group accounts by type (Crypto, Bank, etc.)';
+
+  @override
+  String get settingsProxyHeadersTileTitle => 'Custom proxy headers';
+
+  @override
+  String get settingsProxyHeadersTileSubtitleEmpty =>
+      'Optional headers for a reverse proxy or auth gateway';
+
+  @override
+  String settingsProxyHeadersTileSubtitleCount(int count) {
+    return '$count configured';
+  }
+
+  @override
+  String get settingsClearDataTileSubtitle =>
+      'Remove all cached transactions and accounts';
+
+  @override
+  String get settingsResetAccountTileSubtitle =>
+      'Delete all accounts, categories, merchants, and tags but keep your user account';
+
+  @override
+  String get settingsDeleteAccountTileSubtitle =>
+      'Permanently remove all your data. This cannot be undone.';
+
+  @override
+  String get settingsUserFallback => 'User';
+
+  @override
+  String chatListDeleteMultiContent(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Delete $count chats? This cannot be undone.',
+      one: 'Delete 1 chat? This cannot be undone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chatListDeletedSuccess => 'Chats deleted';
+
+  @override
+  String get chatListDeleteFailed => 'Failed to delete chats';
+
+  @override
+  String get chatListError => 'Failed to load chats';
+
+  @override
+  String get chatListJustNow => 'Just now';
+
+  @override
+  String chatListDeleteSingleContent(String title) {
+    return 'Are you sure you want to delete \"$title\"?';
+  }
+
+  @override
+  String get loginSignUpOpenError => 'Unable to open sign up page';
+
+  @override
+  String get loginApiKeyDialogTitle => 'API Key Login';
+
+  @override
+  String get loginApiKeyDialogBody => 'Enter your API key to sign in.';
+
+  @override
+  String get loginApiKeyInvalid => 'Invalid API key';
+
+  @override
+  String get loginApiKeySignIn => 'Sign In';
+
+  @override
+  String get loginDemoOrSignUpPrefix => 'Demo account or ';
+
+  @override
+  String get loginSignUpLink => 'Sign Up';
+
+  @override
+  String get loginSignUpSuffix => '!';
+
+  @override
+  String get loginMfaInfo =>
+      'Two-factor authentication is enabled. Enter your code.';
+
+  @override
+  String get loginMfaCodeRequired => 'Please enter your authentication code';
+
+  @override
+  String get loginOrDivider => 'or';
+
+  @override
+  String get loginServerUrlHeading => 'Sure server URL:';
+
+  @override
+  String get loginApiKeyLoginButton => 'API-Key Login';
+
+  @override
+  String get loginBackendSettingsTooltip => 'Backend Settings';
+
+  @override
+  String get transactionEditSessionExpired =>
+      'Session expired. Please login again.';
+
+  @override
+  String get transactionEditUpdated => 'Transaction updated';
+
+  @override
+  String get transactionEditUpdateFailed => 'Failed to update transaction';
+
+  @override
+  String transactionEditNameMaxLength(int max) {
+    return 'Name must be $max characters or fewer';
+  }
+
+  @override
+  String get transactionEditNameInvalidChars =>
+      'Name contains unsupported characters';
+
+  @override
+  String transactionEditNotesMaxLength(int max) {
+    return 'Notes must be $max characters or fewer';
+  }
+
+  @override
+  String get transactionEditNotesInvalidChars =>
+      'Notes contain unsupported characters';
+
+  @override
+  String get transactionEditNoCategory => 'No category';
+
+  @override
+  String get transactionEditCurrentCategory => 'Current category';
+
+  @override
+  String get transactionEditNoMerchant => 'No merchant';
+
+  @override
+  String get transactionEditCurrentMerchant => 'Current merchant';
+
+  @override
+  String get transactionEditNoTags => 'No tags available';
+
+  @override
+  String get transactionEditUnknownTag => 'Unknown tag';
+
+  @override
+  String get transactionEditSyncedOnly =>
+      'Only synced transactions can be edited from mobile.';
+
+  @override
+  String get transactionEditCategoryHelper => 'Choose a replacement category';
+
+  @override
+  String get transactionEditMerchantHelper => 'Choose a replacement merchant';
+
+  @override
+  String get transactionFormSessionExpired =>
+      'Session expired. Please login again.';
+
+  @override
+  String get transactionFormAmountRequiredPrompt => 'Please enter an amount';
+
+  @override
+  String get transactionFormAmountInvalidNumber =>
+      'Please enter a valid number';
+
+  @override
+  String get transactionFormAmountTooSmall => 'Amount must be greater than 0';
+
+  @override
+  String get transactionFormCreateSuccessOnline =>
+      'Transaction created successfully';
+
+  @override
+  String get transactionFormCreateSuccessOffline =>
+      'Transaction saved (will sync when online)';
+
+  @override
+  String get transactionFormCreateFailed => 'Failed to create transaction';
+
+  @override
+  String transactionFormGenericError(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get transactionFormLess => 'Less';
+
+  @override
+  String get transactionFormMore => 'More';
+
+  @override
+  String get transactionFormDateHelper => 'Optional (default: today)';
+
+  @override
+  String get transactionFormNameHelper => 'Optional (default: SureApp)';
+
+  @override
+  String get transactionFormCategoryLoading => 'Loading categories…';
+
+  @override
+  String get transactionFormCategoryHelper => 'Optional';
+
+  @override
+  String get transactionFormNoCategory => 'No category';
+
+  @override
+  String get transactionFormCreateButton => 'Create Transaction';
+
+  @override
+  String get logViewerClearConfirm =>
+      'Are you sure you want to clear all logs?';
+
+  @override
+  String get logViewerClear => 'Clear';
+
+  @override
+  String get chatConversationEditTitle => 'Edit Title';
+
+  @override
+  String get chatConversationTitleLabel => 'Chat Title';
+
+  @override
+  String get chatConversationRefreshTooltip => 'Refresh';
+
+  @override
+  String get chatConversationLoadError => 'Failed to load chat';
+
+  @override
+  String get navEnableAiChatTitle => 'Turn on AI Chat?';
+
+  @override
+  String get navEnableAiChatContent =>
+      'AI Chat is currently disabled in your account settings. Would you like to turn it on now?';
+
+  @override
+  String get navEnableAiChatNotNow => 'Not now';
+
+  @override
+  String get navEnableAiChatConfirm => 'Turn on AI';
+
+  @override
+  String get navEnableAiChatFailed => 'Unable to enable AI right now.';
+
+  @override
+  String get transactionsListEditTooltip => 'Edit transaction';
+
+  @override
+  String get connectivitySignInToSync => 'Please sign in to sync transactions';
+
+  @override
+  String get connectivitySyncSuccess => 'Transactions synced successfully';
+
+  @override
+  String get connectivitySyncFailed =>
+      'Failed to sync transactions. Please try again.';
+
+  @override
+  String get connectivityAuthFailed =>
+      'Unable to authenticate. Please try again.';
 }
