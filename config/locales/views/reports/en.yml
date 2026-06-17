@@ -56,6 +56,8 @@ en:
         good: On Track
         warning: Near Limit
         over: Over Budget
+    cashflow:
+      title: Cashflow
     trends:
       title: Trends & Insights
       monthly_breakdown: Monthly Breakdown

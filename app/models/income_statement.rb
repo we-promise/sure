@@ -107,6 +107,16 @@ class IncomeStatement
     )
   end
 
+  # Builds the nodes/links payload for the cashflow Sankey chart for a period.
+  def cashflow_sankey_data(period: Period.current_month)
+    SankeyBuilder.new(
+      net_totals: net_category_totals(period: period),
+      income_totals: income_totals(period: period),
+      expense_totals: expense_totals(period: period),
+      currency: family.currency
+    ).build
+  end
+
   def median_expense(interval: "month", category: nil)
     if category.present?
       category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0

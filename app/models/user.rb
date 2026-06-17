@@ -456,7 +456,7 @@ class User < ApplicationRecord
     end
 
     def default_reports_section_order
-      %w[trends_insights transactions_breakdown]
+      %w[cashflow trends_insights transactions_breakdown]
     end
     def ensure_valid_profile_image
       return unless profile_image.attached?

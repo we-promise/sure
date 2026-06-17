@@ -118,6 +118,9 @@ class ReportsController < ApplicationController
       @previous_income_totals = @income_statement.income_totals(period: @previous_period)
       @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
 
+      # Cashflow sankey data for the selected period
+      @cashflow_sankey_data = @income_statement.cashflow_sankey_data(period: @period)
+
       # Calculate summary metrics
       @summary_metrics = build_summary_metrics
 
@@ -153,6 +156,14 @@ class ReportsController < ApplicationController
 
     def build_reports_sections
       all_sections = [
+        {
+          key: "cashflow",
+          title: "reports.cashflow.title",
+          partial: "pages/dashboard/cashflow_sankey",
+          locals: { sankey_data: @cashflow_sankey_data, period: @period },
+          visible: @has_accounts,
+          collapsible: true
+        },
         {
           key: "net_worth",
           title: "reports.net_worth.title",
@@ -206,12 +217,10 @@ class ReportsController < ApplicationController
         all_sections.find { |s| s[:key] == key }
       end.compact
 
-      # Add any new sections that aren't in the saved order (future-proofing)
-      all_sections.each do |section|
-        ordered_sections << section unless ordered_sections.include?(section)
-      end
-
-      ordered_sections
+      # Surface sections missing from the saved order at the top (future-proofing),
+      # preserving their relative order as defined in all_sections.
+      missing_sections = all_sections.reject { |section| ordered_sections.include?(section) }
+      missing_sections + ordered_sections
     end
 
     def validate_and_fix_date_range(show_flash: false)

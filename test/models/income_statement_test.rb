@@ -583,6 +583,36 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_nil net.net_expense_categories.find { |ct| ct.category.id == @food_category.id }
   end
 
+  # cashflow_sankey_data tests
+  test "cashflow_sankey_data builds nodes and links for the period" do
+    data = IncomeStatement.new(@family).cashflow_sankey_data(period: Period.last_30_days)
+
+    assert_equal Money::Currency.new(@family.currency).symbol, data[:currency_symbol]
+    assert data[:nodes].is_a?(Array)
+    assert data[:links].is_a?(Array)
+
+    # Central Cash Flow node carries total net income (1000)
+    cash_flow = data[:nodes].find { |n| n[:id] == "cash_flow_node" }
+    assert_not_nil cash_flow
+    assert_equal 1000.0, cash_flow[:value]
+
+    # Income (1000) minus expenses (900) => 100 surplus
+    surplus = data[:nodes].find { |n| n[:id] == "surplus_node" }
+    assert_not_nil surplus
+    assert_equal 100.0, surplus[:value]
+
+    # Income and expense categories are present
+    assert(data[:nodes].any? { |n| n[:name] == @income_category.name })
+    assert(data[:nodes].any? { |n| n[:name] == @food_category.name })
+  end
+
+  test "cashflow_sankey_data returns no links when family has no activity" do
+    empty_family = Family.create!(name: "No Activity Family", currency: "USD")
+    data = IncomeStatement.new(empty_family).cashflow_sankey_data(period: Period.last_30_days)
+
+    assert_empty data[:links]
+  end
+
   test "empty account_ids returns no results for category stats" do
     results = IncomeStatement::CategoryStats.new(@family, account_ids: []).call
     assert_empty results
