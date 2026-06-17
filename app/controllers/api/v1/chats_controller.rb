@@ -13,7 +13,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
 
   def show
     return unless @chat
-    @pagy, @messages = pagy(@chat.messages.ordered, items: 50)
+    @messages = @chat.messages.ordered.last(50)
   end
 
   def create
