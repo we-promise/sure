@@ -423,7 +423,6 @@ class ChatProvider with ChangeNotifier {
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
     try {
       // The backend returns the newest 50 messages without pagination.
-      // The page param is ignored by the server but kept for API compatibility.
       final result = await _chatService.getChat(
         accessToken: accessToken,
         chatId: chatId,
