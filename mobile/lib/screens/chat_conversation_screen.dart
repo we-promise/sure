@@ -613,7 +613,7 @@ class _EmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
-        ...suggestedQuestions.map(
+        ...suggestedQuestions(context).map(
           (q) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: OutlinedButton.icon(

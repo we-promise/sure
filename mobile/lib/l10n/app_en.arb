@@ -1,0 +1,38 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Sure Finances",
+  "@appTitle": {
+    "description": "The application title (task switcher / OS surfaces)."
+  },
+
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Shared label for a cancel action."
+  },
+  "commonSave": "Save",
+  "@commonSave": {
+    "description": "Shared label for a save/confirm action."
+  },
+  "commonTryAgain": "Try Again",
+  "@commonTryAgain": {
+    "description": "Shared label for a retry action."
+  },
+
+  "chatSuggestionNetWorth": "What is my current net worth?",
+  "@chatSuggestionNetWorth": {
+    "description": "Suggested chat prompt shown on the empty assistant screen."
+  },
+  "chatSuggestionSpending": "How has my spending changed this month?",
+  "@chatSuggestionSpending": {
+    "description": "Suggested chat prompt shown on the empty assistant screen."
+  },
+  "chatSuggestionSavings": "How can I improve my savings rate?",
+  "@chatSuggestionSavings": {
+    "description": "Suggested chat prompt shown on the empty assistant screen."
+  },
+  "chatSuggestionExpenses": "What are my biggest expenses lately?",
+  "@chatSuggestionExpenses": {
+    "description": "Suggested chat prompt shown on the empty assistant screen."
+  }
+}
