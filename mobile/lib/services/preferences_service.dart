@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesService {
@@ -15,6 +16,13 @@ class PreferencesService {
   static PreferencesService get instance {
     _instance ??= PreferencesService._();
     return _instance!;
+  }
+
+  /// Drops the cached instance (and its cached [SharedPreferences]) so tests
+  /// can re-read values from freshly mocked storage. Test-only.
+  @visibleForTesting
+  static void resetForTest() {
+    _instance = null;
   }
 
   Future<SharedPreferences> get _preferences async {

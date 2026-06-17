@@ -139,15 +139,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: Center(
-            child: InkWell(
-              onTap: () => context.read<PrivacyProvider>().toggle(),
-              child: SizedBox(
-                width: 36,
-                height: 36,
-                child: Icon(
-                  context.watch<PrivacyProvider>().hidden
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
+            child: Tooltip(
+              message: 'Toggle privacy',
+              child: InkWell(
+                onTap: () => context.read<PrivacyProvider>().toggle(),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(
+                    context.watch<PrivacyProvider>().hidden
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    semanticLabel: 'Toggle privacy',
+                  ),
                 ),
               ),
             ),

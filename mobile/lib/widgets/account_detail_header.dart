@@ -230,7 +230,10 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                     ),
                   if (_account.cashBalance != null)
                     _DetailChip(
-                      label: l.accountDetailCashChip(_account.cashBalance!),
+                      label: l.accountDetailCashChip(
+                        MoneyMasker.mask(_account.cashBalance!,
+                            hidden: hideAmounts),
+                      ),
                       icon: Icons.payments_outlined,
                     ),
                   if (_account.status != null)

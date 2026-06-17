@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sure_mobile/models/account.dart';
 import 'package:sure_mobile/providers/privacy_provider.dart';
+import 'package:sure_mobile/services/preferences_service.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 import 'package:sure_mobile/theme/sure_tokens.dart';
 import 'package:sure_mobile/widgets/account_card.dart';
@@ -11,6 +12,7 @@ import 'package:sure_mobile/widgets/account_card.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    PreferencesService.resetForTest();
   });
 
   Account account(String classification) => Account(
@@ -33,6 +35,12 @@ void main() {
         ),
       ),
     );
+    // PrivacyProvider is fail-closed: it starts masked and reveals once the
+    // (mock-empty -> privacy off) preference load completes. Pump a few frames
+    // so the real balance is shown before asserting on it.
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
   }
 
   testWidgets('liability balance uses the destructive design-system token',
