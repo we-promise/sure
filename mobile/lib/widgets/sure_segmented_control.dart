@@ -49,6 +49,13 @@ class SureSegmentedControl<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Selection is value-based (segment.value == selected), so duplicate values
+    // would render multiple segments as selected at once. Guard in debug builds
+    // (a const constructor can't host this non-constant check).
+    assert(
+      segments.map((s) => s.value).toSet().length == segments.length,
+      'SureSegmentedControl requires unique segment values.',
+    );
     final palette = SureColors.of(context).palette;
     final theme = Theme.of(context);
     // The palette has no single "raised surface" token that reads correctly in
