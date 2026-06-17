@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/connectivity_service.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_localizations.dart';
 
 class ConnectivityBanner extends StatefulWidget {
   const ConnectivityBanner({super.key});
@@ -62,6 +63,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   Widget build(BuildContext context) {
     return Consumer2<ConnectivityService, TransactionsProvider>(
       builder: (context, connectivityService, transactionsProvider, _) {
+        final l = AppLocalizations.of(context);
         final isOffline = connectivityService.isOffline;
         final hasPending = transactionsProvider.hasPendingTransactions;
         final pendingCount = transactionsProvider.pendingCount;
@@ -87,8 +89,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                 Expanded(
                   child: Text(
                     isOffline
-                        ? 'You are offline. Changes will sync when online.'
-                        : '$pendingCount transaction${pendingCount == 1 ? '' : 's'} pending sync',
+                        ? l.connectivityOffline
+                        : l.connectivityPendingSync(pendingCount),
                     style: TextStyle(
                       color: isOffline ? Colors.orange.shade900 : Colors.blue.shade900,
                       fontSize: 14,
@@ -145,7 +147,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade900),
                                 ),
                               )
-                            : const Text('Sync Now'),
+                            : Text(l.connectivitySyncNow),
                       );
                     },
                   ),

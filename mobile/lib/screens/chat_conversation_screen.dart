@@ -8,6 +8,7 @@ import '../providers/chat_provider.dart';
 import '../models/message.dart';
 import '../constants/suggested_questions.dart';
 import '../widgets/typing_indicator.dart';
+import '../l10n/app_localizations.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();
@@ -258,12 +259,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Consumer<ChatProvider>(
           builder: (context, chatProvider, _) {
-            final title = chatProvider.currentChat?.title ?? 'New Conversation';
+            final title = chatProvider.currentChat?.title ?? AppLocalizations.of(context).chatConversationNewTitle;
             return GestureDetector(
               onTap: _chatId != null ? _editTitle : null,
               child: Row(
@@ -323,7 +325,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ElevatedButton.icon(
                       onPressed: _loadChat,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again'),
+                      label: Text(l.commonTryAgain),
                     ),
                   ],
                 ),
@@ -410,7 +412,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           child: TextField(
                             controller: _messageController,
                             decoration: InputDecoration(
-                              hintText: 'Type a message...',
+                              hintText: l.chatConversationMessageHint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
                               ),
@@ -598,8 +600,9 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
     final name = (firstName ?? '').trim();
-    final greeting = name.isNotEmpty ? 'Hi $name, how can I help?' : 'How can I help?';
+    final greeting = name.isNotEmpty ? l.chatConversationGreetingWithName(name) : l.chatConversationGreetingNoName;
 
     return ListView(
       padding: const EdgeInsets.all(24),

@@ -8,6 +8,7 @@ import '../services/api_config.dart';
 import '../widgets/sure_button.dart';
 import '../widgets/sure_logo.dart';
 import 'backend_config_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onGoToSettings;
@@ -212,6 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -295,16 +297,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
+                      decoration: InputDecoration(
+                        labelText: l.loginEmailLabel,
+                        prefixIcon: const Icon(Icons.email_outlined),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
+                          return l.loginEmailRequired;
                         }
                         if (!value.contains('@')) {
-                          return 'Please enter a valid email';
+                          return l.loginEmailInvalid;
                         }
                         return null;
                       },
@@ -328,7 +330,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? TextInputAction.next
                                   : TextInputAction.done,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: l.loginPasswordLabel,
                                 prefixIcon: const Icon(Icons.lock_outlined),
                                 suffixIcon: IconButton(
                                   icon: Icon(
@@ -345,7 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
+                                  return l.loginPasswordRequired;
                                 }
                                 return null;
                               },
@@ -385,9 +387,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _otpController,
                                 keyboardType: TextInputType.number,
                                 textInputAction: TextInputAction.done,
-                                decoration: const InputDecoration(
-                                  labelText: 'Authentication Code',
-                                  prefixIcon: Icon(Icons.pin_outlined),
+                                decoration: InputDecoration(
+                                  labelText: l.loginMfaLabel,
+                                  prefixIcon: const Icon(Icons.pin_outlined),
                                 ),
                                 validator: (value) {
                                   if (showOtp &&
@@ -410,7 +412,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, _) {
                         return SureButton(
-                          label: 'Sign In',
+                          label: l.loginSignIn,
                           size: SureButtonSize.lg,
                           fullWidth: true,
                           loading: authProvider.isLoading,
@@ -445,7 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, _) {
                         return SureButton(
-                          label: 'Sign in with Google',
+                          label: l.loginSignInWithGoogle,
                           variant: SureButtonVariant.outline,
                           size: SureButtonSize.lg,
                           fullWidth: true,

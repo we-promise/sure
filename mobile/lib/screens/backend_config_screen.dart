@@ -6,6 +6,7 @@ import '../services/api_config.dart';
 import '../services/custom_proxy_headers_service.dart';
 import '../services/log_service.dart';
 import '../widgets/custom_proxy_headers_editor.dart';
+import '../l10n/app_localizations.dart';
 
 class BackendConfigScreen extends StatefulWidget {
   final VoidCallback? onConfigSaved;
@@ -203,6 +204,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -223,7 +225,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Configuration',
+                  l.backendConfigTitle,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.primary,
@@ -232,7 +234,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Update your Sure server URL',
+                  l.backendConfigSubtitle,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -255,7 +257,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           Icon(Icons.info_outline, color: colorScheme.primary),
                           const SizedBox(width: 12),
                           Text(
-                            'Example URLs',
+                            l.backendConfigExampleUrlsLabel,
                             style: TextStyle(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.bold,
@@ -354,10 +356,10 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   keyboardType: TextInputType.url,
                   autocorrect: false,
                   textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(
-                    labelText: 'Sure server URL',
-                    prefixIcon: Icon(Icons.cloud_outlined),
-                    hintText: 'https://app.sure.am',
+                  decoration: InputDecoration(
+                    labelText: l.backendConfigUrlLabel,
+                    prefixIcon: const Icon(Icons.cloud_outlined),
+                    hintText: l.backendConfigUrlHint,
                   ),
                   validator: _validateUrl,
                   onFieldSubmitted: (_) => _saveAndContinue(),
@@ -366,11 +368,11 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   leading: const Icon(Icons.http_outlined),
-                  title: const Text('Custom proxy headers'),
+                  title: Text(l.backendConfigProxyHeadersLabel),
                   subtitle: Text(
                     _customHeaders.isEmpty
-                        ? 'Optional headers for a reverse proxy or auth gateway'
-                        : '${_customHeaders.length} configured',
+                        ? l.backendConfigProxyHeadersSubtitle
+                        : l.backendConfigProxyHeadersCount(_customHeaders.length),
                   ),
                   children: [
                     const SizedBox(height: 8),
@@ -409,7 +411,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.cable),
-                  label: Text(_isTesting ? 'Testing...' : 'Test Connection'),
+                  label: Text(_isTesting ? l.backendConfigTesting : l.backendConfigTestButton),
                 ),
 
                 const SizedBox(height: 12),
@@ -423,14 +425,14 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Continue'),
+                      : Text(l.backendConfigContinueButton),
                 ),
 
                 const SizedBox(height: 24),
 
                 // Info text
                 Text(
-                  'You can change this later in the settings.',
+                  l.backendConfigChangeHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

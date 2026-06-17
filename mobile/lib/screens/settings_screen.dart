@@ -18,6 +18,7 @@ import '../models/custom_proxy_header.dart';
 import '../services/api_config.dart';
 import '../services/custom_proxy_headers_service.dart';
 import '../widgets/custom_proxy_headers_editor.dart';
+import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -76,13 +77,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await _showUpdateDialog(storeVersion ?? 'a newer version', storeUrl);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("You're up to date!")),
+          SnackBar(content: Text(AppLocalizations.of(context).settingsNoUpdateAvailable)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to check for updates')),
+          SnackBar(content: Text(AppLocalizations.of(context).settingsUpdateError)),
         );
       }
     } finally {
@@ -94,16 +95,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final launch = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Update available'),
-        content: Text('Version $version is available. Update now?'),
+        title: Text(AppLocalizations.of(ctx).settingsUpdateAvailableTitle),
+        content: Text(AppLocalizations.of(ctx).settingsUpdateAvailableContent(version)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Later'),
+            child: Text(AppLocalizations.of(ctx).commonCancel),
           ),
           TextButton(
             onPressed: storeUrl == null ? null : () => Navigator.pop(ctx, true),
-            child: const Text('Update now'),
+            child: Text(AppLocalizations.of(ctx).settingsUpdateNow),
           ),
         ],
       ),
@@ -203,26 +204,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleClearLocalData(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Local Data'),
-        content: const Text(
-            'This will delete all locally cached transactions and accounts. '
-            'Your data on the server will not be affected. '
-            'Are you sure you want to continue?'),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return AlertDialog(
+        title: Text(l.settingsClearDataTitle),
+        content: Text(l.settingsClearDataContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Clear Data'),
+            child: Text(l.settingsClearData),
           ),
         ],
-      ),
+      );},
     );
 
     if (confirmed == true && context.mounted) {
@@ -412,20 +412,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return AlertDialog(
+        title: Text(l.settingsSignOutTitle),
+        content: Text(l.settingsSignOutContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sign Out'),
+            child: Text(l.settingsSignOut),
           ),
         ],
-      ),
+      );},
     );
 
     if (confirmed == true && context.mounted) {
@@ -446,8 +448,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) {
+        final l = AppLocalizations.of(context);
         return AlertDialog(
-          title: const Text('Custom proxy headers'),
+          title: Text(l.settingsProxyHeadersLabel),
           content: SingleChildScrollView(
             child: Form(
               key: formKey,
@@ -473,14 +476,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(l.commonCancel),
             ),
             ElevatedButton(
               onPressed: () {
                 if (formKey.currentState?.validate() != true) return;
                 Navigator.pop(context, true);
               },
-              child: const Text('Save'),
+              child: Text(l.commonSave),
             ),
           ],
         );
@@ -516,6 +519,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final authProvider = Provider.of<AuthProvider>(context);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       body: ListView(
@@ -591,7 +595,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           ListTile(
             leading: const Icon(Icons.system_update_outlined),
-            title: const Text('Check for updates'),
+            title: Text(l.settingsCheckForUpdates),
             subtitle: const Text('See if a newer version is available'),
             trailing: _isCheckingForUpdate
                 ? const SizedBox(
@@ -621,7 +625,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             button: true,
             child: ListTile(
               leading: const Icon(Icons.bug_report),
-              title: const Text('Debug Logs'),
+              title: Text(l.settingsDebugLogs),
               subtitle: const Text('View app diagnostic logs'),
               onTap: () {
                 Navigator.push(
@@ -636,11 +640,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
 
           // Display Settings Section
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
-              'Display',
-              style: TextStyle(
+              l.settingsSectionDisplay,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
@@ -695,11 +699,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const Divider(),
 
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
-              'Connection',
-              style: TextStyle(
+              l.settingsSectionConnection,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
@@ -721,11 +725,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
 
           // Data Management Section
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
-              'Data Management',
-              style: TextStyle(
+              l.settingsSectionDataManagement,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
@@ -736,18 +740,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Clear local data button
           ListTile(
             leading: const Icon(Icons.delete_outline),
-            title: const Text('Clear Local Data'),
+            title: Text(l.settingsClearDataTitle),
             subtitle: const Text('Remove all cached transactions and accounts'),
             onTap: () => _handleClearLocalData(context),
           ),
 
           if (_biometricSupported) ...[
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
-                'Security',
-                style: TextStyle(
+                l.settingsSectionSecurity,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
@@ -756,9 +760,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               secondary: const Icon(Icons.fingerprint),
-              title: const Text('Biometric Lock'),
-              subtitle: const Text(
-                  'Require biometric authentication when resuming the app'),
+              title: Text(l.settingsBiometricLabel),
+              subtitle: Text(l.settingsBiometricEnableContent),
               value: _biometricEnabled,
               onChanged: _isTogglingBiometric ? null : _toggleBiometric,
             ),
@@ -767,11 +770,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
 
           // Danger Zone Section
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
-              'Danger Zone',
-              style: TextStyle(
+              l.settingsSectionDangerZone,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.red,
@@ -823,7 +826,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ElevatedButton.icon(
               onPressed: () => _handleLogout(context),
               icon: const Icon(Icons.logout),
-              label: const Text('Sign Out'),
+              label: Text(l.settingsSignOut),
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.error,
                 foregroundColor: colorScheme.onError,

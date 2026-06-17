@@ -94,53 +94,1409 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en')];
 
-  /// The application title (task switcher / OS surfaces).
+  /// Application title shown in the OS task switcher.
   ///
   /// In en, this message translates to:
   /// **'Sure Finances'**
   String get appTitle;
 
-  /// Shared label for a cancel action.
+  /// Generic cancel action label.
   ///
   /// In en, this message translates to:
   /// **'Cancel'**
   String get commonCancel;
 
-  /// Shared label for a save/confirm action.
+  /// Generic save/confirm action label.
   ///
   /// In en, this message translates to:
   /// **'Save'**
   String get commonSave;
 
-  /// Shared label for a retry action.
+  /// Generic retry action label.
   ///
   /// In en, this message translates to:
   /// **'Try Again'**
   String get commonTryAgain;
 
-  /// Suggested chat prompt shown on the empty assistant screen.
+  /// Generic delete action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get commonDelete;
+
+  /// Label for the 'All' filter chip (currency filter, category filter, etc.).
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get commonAll;
+
+  /// Generic refresh action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get commonRefresh;
+
+  /// Generic close/dismiss action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get commonClose;
+
+  /// Generic undo action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get commonUndo;
+
+  /// Generic retry action label for error states.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get commonRetry;
+
+  /// Generic in-progress loading label.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get commonLoading;
+
+  /// Generic error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get commonError;
+
+  /// Generic empty-state message.
+  ///
+  /// In en, this message translates to:
+  /// **'No data available'**
+  String get commonNoData;
+
+  /// Suggested chat prompt on the empty assistant screen.
   ///
   /// In en, this message translates to:
   /// **'What is my current net worth?'**
   String get chatSuggestionNetWorth;
 
-  /// Suggested chat prompt shown on the empty assistant screen.
+  /// Suggested chat prompt on the empty assistant screen.
   ///
   /// In en, this message translates to:
   /// **'How has my spending changed this month?'**
   String get chatSuggestionSpending;
 
-  /// Suggested chat prompt shown on the empty assistant screen.
+  /// Suggested chat prompt on the empty assistant screen.
   ///
   /// In en, this message translates to:
   /// **'How can I improve my savings rate?'**
   String get chatSuggestionSavings;
 
-  /// Suggested chat prompt shown on the empty assistant screen.
+  /// Suggested chat prompt on the empty assistant screen.
   ///
   /// In en, this message translates to:
   /// **'What are my biggest expenses lately?'**
   String get chatSuggestionExpenses;
+
+  /// App name shown on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sure Finances'**
+  String get loginTitle;
+
+  /// Label for the email text field on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get loginEmailLabel;
+
+  /// Hint text for the email text field on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email'**
+  String get loginEmailHint;
+
+  /// Validation error when email field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get loginEmailRequired;
+
+  /// Validation error when email format is invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email'**
+  String get loginEmailInvalid;
+
+  /// Label for the password field on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get loginPasswordLabel;
+
+  /// Hint text for the password field on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get loginPasswordHint;
+
+  /// Validation error when password field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is required'**
+  String get loginPasswordRequired;
+
+  /// Primary sign-in button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get loginSignIn;
+
+  /// Google SSO button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get loginSignInWithGoogle;
+
+  /// Title for the MFA code dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-Factor Authentication'**
+  String get loginMfaTitle;
+
+  /// Body text for the MFA code dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code from your authenticator app.'**
+  String get loginMfaContent;
+
+  /// Label for the MFA code input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication Code'**
+  String get loginMfaLabel;
+
+  /// Hint text for the MFA code input.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter 6-digit code'**
+  String get loginMfaHint;
+
+  /// Button label to submit MFA code.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get loginMfaVerify;
+
+  /// Title for the API key dialog on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter API Key'**
+  String get loginApiKeyTitle;
+
+  /// Label for the API key input field.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get loginApiKeyLabel;
+
+  /// Hint text for the API key input.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste your API key'**
+  String get loginApiKeyHint;
+
+  /// Button label to submit an API key.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get loginApiKeySubmit;
+
+  /// Label for the server URL field on the login screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL'**
+  String get loginServerUrlLabel;
+
+  /// Bottom navigation label for the Home (dashboard) tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// Bottom navigation label for the Intro tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Intro'**
+  String get navIntro;
+
+  /// Bottom navigation label for the AI assistant tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get navAssistant;
+
+  /// Bottom navigation label for the More tab.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get navMore;
+
+  /// Title for the dialog prompting the user to enable AI.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable AI Assistant'**
+  String get navEnableAiTitle;
+
+  /// Body text for the enable-AI dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI assistant requires an OpenAI API key configured in your Sure settings. Would you like to go to settings?'**
+  String get navEnableAiContent;
+
+  /// Confirm button in the enable-AI dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings'**
+  String get navEnableAiGoToSettings;
+
+  /// Snackbar message when a sync attempt fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed'**
+  String get dashboardSyncError;
+
+  /// Snackbar message when a sync attempt fails with retry instruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed. Please try again.'**
+  String get dashboardSyncFailed;
+
+  /// Snackbar message while accounts are being refreshed after a transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshing accounts…'**
+  String get dashboardRefreshing;
+
+  /// Snackbar message shown after accounts refresh completes.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts updated'**
+  String get dashboardAccountsUpdated;
+
+  /// Snackbar message while sync is in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing data from server…'**
+  String get dashboardSyncing;
+
+  /// Label shown in the sync status indicator after a successful sync.
+  ///
+  /// In en, this message translates to:
+  /// **'Synced'**
+  String get dashboardSynced;
+
+  /// Button label to trigger a full sync.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync All'**
+  String get dashboardSyncAll;
+
+  /// Error state message when accounts fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load accounts'**
+  String get dashboardErrorLoadingAccounts;
+
+  /// Empty state message when no accounts exist.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts yet'**
+  String get dashboardNoAccounts;
+
+  /// Empty state subtitle when no accounts exist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add accounts in the web app to see them here.'**
+  String get dashboardNoAccountsSubtitle;
+
+  /// Empty state when the active account filter returns no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts match the current filter'**
+  String get dashboardFilterEmpty;
+
+  /// Title for the chat list screen / app bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get chatListTitle;
+
+  /// FAB tooltip for creating a new chat.
+  ///
+  /// In en, this message translates to:
+  /// **'New chat'**
+  String get chatListNewChat;
+
+  /// Empty-state heading on the chat list screen.
+  ///
+  /// In en, this message translates to:
+  /// **'No chats yet'**
+  String get chatListEmpty;
+
+  /// Empty-state subtitle on the chat list screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a conversation with your AI assistant'**
+  String get chatListEmptySubtitle;
+
+  /// Title for the delete-chat confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Chat'**
+  String get chatListDeleteTitle;
+
+  /// Body text for the delete-chat confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this chat?'**
+  String get chatListDeleteContent;
+
+  /// Placeholder title for a new conversation before it is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'New Conversation'**
+  String get chatConversationNewTitle;
+
+  /// Hint text inside the chat message input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask anything about your finances…'**
+  String get chatConversationMessageHint;
+
+  /// Hint text in the edit-title dialog text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation title'**
+  String get chatConversationEditTitleHint;
+
+  /// Title for the rename-conversation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename Conversation'**
+  String get chatConversationRenameTitle;
+
+  /// Confirm button label in the rename-conversation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get chatConversationRename;
+
+  /// Greeting shown in a new conversation when the user's first name is known.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi {firstName}, how can I help?'**
+  String chatConversationGreetingWithName(String firstName);
+
+  /// Greeting shown in a new conversation when the user's first name is not available.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi there, how can I help?'**
+  String get chatConversationGreetingNoName;
+
+  /// Error snackbar when sending a message fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send message'**
+  String get chatConversationError;
+
+  /// App bar title for the new-transaction form.
+  ///
+  /// In en, this message translates to:
+  /// **'New Transaction'**
+  String get transactionFormNewTitle;
+
+  /// Label for the transaction type segmented control.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get transactionFormTypeLabel;
+
+  /// Segment label for an expense transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense'**
+  String get transactionFormTypeExpense;
+
+  /// Segment label for an income transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get transactionFormTypeIncome;
+
+  /// Label for the amount input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get transactionFormAmountLabel;
+
+  /// Hint text for the amount input field.
+  ///
+  /// In en, this message translates to:
+  /// **'0.00'**
+  String get transactionFormAmountHint;
+
+  /// Validation error when amount is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount is required'**
+  String get transactionFormAmountRequired;
+
+  /// Validation error when amount is not a number.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid amount'**
+  String get transactionFormAmountInvalid;
+
+  /// Label for the date picker field.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get transactionFormDateLabel;
+
+  /// Label for the transaction name/payee field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get transactionFormNameLabel;
+
+  /// Hint text for the transaction name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction name'**
+  String get transactionFormNameHint;
+
+  /// Validation error when name is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get transactionFormNameRequired;
+
+  /// Label for the category picker field.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get transactionFormCategoryLabel;
+
+  /// Snackbar message after a transaction is saved successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction saved'**
+  String get transactionFormSaveSuccess;
+
+  /// Snackbar message when saving a transaction fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save transaction'**
+  String get transactionFormSaveError;
+
+  /// App bar title for the edit-transaction screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Transaction'**
+  String get transactionEditTitle;
+
+  /// Label for the name field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get transactionEditNameLabel;
+
+  /// Hint text for the name field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction name'**
+  String get transactionEditNameHint;
+
+  /// Validation error when name is empty in edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get transactionEditNameRequired;
+
+  /// Label for the notes field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get transactionEditNotesLabel;
+
+  /// Hint text for the notes field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get transactionEditNotesHint;
+
+  /// Label for the category field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get transactionEditCategoryLabel;
+
+  /// Label for the merchant field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Merchant'**
+  String get transactionEditMerchantLabel;
+
+  /// Hint text for the merchant search field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Search merchants'**
+  String get transactionEditMerchantHint;
+
+  /// Label for the tags field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get transactionEditTagsLabel;
+
+  /// Hint text for the tags field in the edit form.
+  ///
+  /// In en, this message translates to:
+  /// **'Add tags'**
+  String get transactionEditTagsHint;
+
+  /// In-progress label shown on the save button while saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get transactionEditSaving;
+
+  /// Snackbar message when saving edits fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save changes'**
+  String get transactionEditSaveError;
+
+  /// Title for the single-transaction delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Transaction'**
+  String get transactionsListDeleteTitle;
+
+  /// Body of the delete confirmation dialog for a named transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"?'**
+  String transactionsListDeleteSingleContent(String name);
+
+  /// Title for the multi-transaction delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Transactions'**
+  String get transactionsListDeleteMultiTitle;
+
+  /// Body of the multi-transaction delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete the selected transactions?'**
+  String get transactionsListDeleteMultiContent;
+
+  /// Snackbar message shown after a transaction is deleted with an undo option.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction deleted'**
+  String get transactionsListDeleteUndoMessage;
+
+  /// Undo action label in the delete snackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get transactionsListUndoAction;
+
+  /// Empty-state message when no transactions exist.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions'**
+  String get transactionsListEmpty;
+
+  /// Empty-state subtitle on the transactions list.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions will appear here once synced'**
+  String get transactionsListEmptySubtitle;
+
+  /// Snackbar message when the API returns an auth failure.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed: Please log in again'**
+  String get transactionsListAuthFailed;
+
+  /// Empty-state heading when an account has no transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions yet'**
+  String get transactionsListNoTransactionsYet;
+
+  /// Empty-state subtitle prompting the user to add their first transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to add your first transaction'**
+  String get transactionsListEmptyAddFirst;
+
+  /// Empty state shown when category filter returns no transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions match this category'**
+  String get transactionsListNoCategoryMatch;
+
+  /// Button label on the transactions error state.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get transactionsListRetry;
+
+  /// Snackbar after a single transaction is deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction deleted'**
+  String get transactionsListDeletedSuccess;
+
+  /// Snackbar when deleting a single transaction fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete transaction'**
+  String get transactionsListSingleDeleteFailed;
+
+  /// Snackbar message after multiple transactions are deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Deleted 1 transaction} other{Deleted {count} transactions}}'**
+  String transactionsListDeletedMulti(int count);
+
+  /// Snackbar when multi-delete fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete transactions'**
+  String get transactionsListDeleteFailed;
+
+  /// Snackbar when delete fails due to missing token.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete: No access token'**
+  String get transactionsListDeleteNoToken;
+
+  /// Title for the undo-transaction dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo Transaction'**
+  String get transactionsListUndoTitle;
+
+  /// Confirmation question for removing a pending transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this pending transaction?'**
+  String get transactionsListUndoRemovePending;
+
+  /// Confirmation question for restoring a transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore this transaction?'**
+  String get transactionsListUndoRestoreConfirm;
+
+  /// Snackbar after a pending transaction is removed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending transaction removed'**
+  String get transactionsListUndoPendingRemoved;
+
+  /// Snackbar after a transaction is restored.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction restored'**
+  String get transactionsListUndoRestored;
+
+  /// Snackbar when undoing a transaction fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to undo transaction'**
+  String get transactionsListUndoFailed;
+
+  /// App bar title for the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// Settings section header for display/appearance options.
+  ///
+  /// In en, this message translates to:
+  /// **'Display'**
+  String get settingsSectionDisplay;
+
+  /// Settings section header for server/connection options.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get settingsSectionConnection;
+
+  /// Settings section header for data import/export options.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Management'**
+  String get settingsSectionDataManagement;
+
+  /// Settings section header for security options.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get settingsSectionSecurity;
+
+  /// Settings section header for destructive actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get settingsSectionDangerZone;
+
+  /// Label for the theme picker setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsThemeLabel;
+
+  /// Theme option: follow system setting.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsThemeSystem;
+
+  /// Theme option: light mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsThemeLight;
+
+  /// Theme option: dark mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsThemeDark;
+
+  /// Label for the server URL setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL'**
+  String get settingsServerUrlLabel;
+
+  /// Button to navigate to the server configuration screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Server'**
+  String get settingsChangeServer;
+
+  /// Label for the custom proxy headers setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Proxy Headers'**
+  String get settingsProxyHeadersLabel;
+
+  /// Label for the biometric lock toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric Lock'**
+  String get settingsBiometricLabel;
+
+  /// Title of the dialog to enable biometric lock.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable biometric lock?'**
+  String get settingsBiometricEnable;
+
+  /// Body text of the enable-biometric dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Require biometric authentication when resuming the app.'**
+  String get settingsBiometricEnableContent;
+
+  /// Confirm button label in the enable-biometric dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get settingsBiometricEnable2;
+
+  /// Title of the dialog to disable biometric lock.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable biometric lock?'**
+  String get settingsBiometricDisable;
+
+  /// Body text of the disable-biometric dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric authentication will no longer be required.'**
+  String get settingsBiometricDisableContent;
+
+  /// Confirm button label in the disable-biometric dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable'**
+  String get settingsBiometricDisable2;
+
+  /// Snackbar when biometrics are not supported.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric authentication is not available on this device.'**
+  String get settingsBiometricNotAvailable;
+
+  /// Label for the check-for-updates action.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for Updates'**
+  String get settingsCheckForUpdates;
+
+  /// Title for the update-available dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Available'**
+  String get settingsUpdateAvailableTitle;
+
+  /// Body text for the update-available dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available. Update now?'**
+  String settingsUpdateAvailableContent(String version);
+
+  /// Confirm button in the update-available dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Now'**
+  String get settingsUpdateNow;
+
+  /// Snackbar when no update is available.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on the latest version.'**
+  String get settingsNoUpdateAvailable;
+
+  /// Snackbar when the update check fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not check for updates.'**
+  String get settingsUpdateError;
+
+  /// Title for the clear-all-data confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All Data'**
+  String get settingsClearDataTitle;
+
+  /// Body text for the clear-all-data dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove all locally cached data. Your data on the server will not be affected.'**
+  String get settingsClearDataContent;
+
+  /// Confirm button in the clear-data dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Data'**
+  String get settingsClearData;
+
+  /// Snackbar after local data is cleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Local data cleared'**
+  String get settingsClearDataSuccess;
+
+  /// Title for the reset-application dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Application'**
+  String get settingsResetAppTitle;
+
+  /// Body text for the reset-application dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This will sign you out and clear all local data. Your data on the server will not be affected.'**
+  String get settingsResetAppContent;
+
+  /// Confirm button in the reset-app dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get settingsResetApp;
+
+  /// Title for the delete-account confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get settingsDeleteAccountTitle;
+
+  /// Body text for the delete-account dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete your account and all associated data. This action cannot be undone.'**
+  String get settingsDeleteAccountContent;
+
+  /// Confirm button in the delete-account dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get settingsDeleteAccount;
+
+  /// Title for the sign-out confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get settingsSignOutTitle;
+
+  /// Body text for the sign-out dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to sign out?'**
+  String get settingsSignOutContent;
+
+  /// Confirm button in the sign-out dialog and settings list tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get settingsSignOut;
+
+  /// Label for the debug logs navigation tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug Logs'**
+  String get settingsDebugLogs;
+
+  /// App bar title for the SSO onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Link Your Account'**
+  String get ssoOnboardingTitle;
+
+  /// Tab label for linking an existing Sure account via SSO.
+  ///
+  /// In en, this message translates to:
+  /// **'Link existing'**
+  String get ssoOnboardingTabLink;
+
+  /// Tab label for creating a new Sure account via SSO.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new'**
+  String get ssoOnboardingTabCreate;
+
+  /// Explanatory note shown on the link-existing tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Link your SSO identity to an existing Sure account using your email and password.'**
+  String get ssoOnboardingLinkNote;
+
+  /// Explanatory note shown on the create-new tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new Sure account linked to your SSO identity.'**
+  String get ssoOnboardingCreateNote;
+
+  /// Label for the first-name field on the SSO onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'First Name'**
+  String get ssoOnboardingFirstNameLabel;
+
+  /// Label for the last-name field on the SSO onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Name'**
+  String get ssoOnboardingLastNameLabel;
+
+  /// Button label to link an existing account.
+  ///
+  /// In en, this message translates to:
+  /// **'Link Account'**
+  String get ssoOnboardingLinkButton;
+
+  /// Button label to create a new account.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get ssoOnboardingCreateButton;
+
+  /// Checkbox label for ToS acceptance on the create tab.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the Terms of Service'**
+  String get ssoOnboardingAcceptTerms;
+
+  /// App bar title for the account calendar screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Calendar'**
+  String get calendarTitle;
+
+  /// Section header for the account-type selector on the calendar screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Type'**
+  String get calendarAccountTypeSection;
+
+  /// Segment label for asset-type accounts on the calendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
+  String get calendarSegmentAssets;
+
+  /// Segment label for liability-type accounts on the calendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Liabilities'**
+  String get calendarSegmentLiabilities;
+
+  /// Placeholder shown in the account dropdown when none is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Account'**
+  String get calendarSelectAccount;
+
+  /// Label for the monthly-change metric on the calendar screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Change'**
+  String get calendarMonthlyChange;
+
+  /// Empty-state message when no transactions exist for the selected day.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions on this day'**
+  String get calendarNoTransactions;
+
+  /// Menu item title for Account Calendar in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Calendar'**
+  String get moreCalendar;
+
+  /// Subtitle for the Account Calendar menu item in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'View monthly balance changes by account'**
+  String get moreCalendarSubtitle;
+
+  /// Menu item title for Recent Transactions in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Transactions'**
+  String get moreRecentTransactions;
+
+  /// Subtitle for the Recent Transactions menu item.
+  ///
+  /// In en, this message translates to:
+  /// **'View recent transactions across all accounts'**
+  String get moreRecentTransactionsSubtitle;
+
+  /// Heading shown on the biometric lock screen.
+  ///
+  /// In en, this message translates to:
+  /// **'App Locked'**
+  String get biometricTitle;
+
+  /// Subtitle shown on the biometric lock screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to continue'**
+  String get biometricSubtitle;
+
+  /// Button label when biometric prompt is ready.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get biometricUnlock;
+
+  /// Button label while the biometric prompt is in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticating…'**
+  String get biometricAuthenticating;
+
+  /// Button to log out from the biometric lock screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get biometricLogOut;
+
+  /// Headline on the backend configuration screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration'**
+  String get backendConfigTitle;
+
+  /// Subtitle below the headline on the backend configuration screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your Sure server URL'**
+  String get backendConfigSubtitle;
+
+  /// Label for the example URLs info box on the config screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Example URLs'**
+  String get backendConfigExampleUrlsLabel;
+
+  /// Label for the server URL field on the config screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sure server URL'**
+  String get backendConfigUrlLabel;
+
+  /// Hint text for the server URL field.
+  ///
+  /// In en, this message translates to:
+  /// **'https://app.sure.am'**
+  String get backendConfigUrlHint;
+
+  /// Label for the custom proxy headers section on the config screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom proxy headers'**
+  String get backendConfigProxyHeadersLabel;
+
+  /// Subtitle for the proxy headers expansion tile when no headers are configured.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional headers for a reverse proxy or auth gateway'**
+  String get backendConfigProxyHeadersSubtitle;
+
+  /// Subtitle for the proxy headers expansion tile when headers are configured.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} configured'**
+  String backendConfigProxyHeadersCount(int count);
+
+  /// Label on the test-connection button while the test is in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing…'**
+  String get backendConfigTesting;
+
+  /// Button label to test the server connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Connection'**
+  String get backendConfigTestButton;
+
+  /// Button label to proceed after saving configuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get backendConfigContinueButton;
+
+  /// Helper text below the config form.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change this later in the settings.'**
+  String get backendConfigChangeHint;
+
+  /// App bar title for the recent transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Transactions'**
+  String get recentTransactionsTitle;
+
+  /// Empty-state message on the recent transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'No Transactions'**
+  String get recentTransactionsEmpty;
+
+  /// Tooltip for the display-limit popup menu on the recent transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Limit'**
+  String get recentTransactionsDisplayLimit;
+
+  /// Menu item label to show N recent transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show {count}'**
+  String recentTransactionsShowN(int count);
+
+  /// Empty-state subtitle prompting the user to pull to refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull to refresh'**
+  String get recentTransactionsPullToRefresh;
+
+  /// App bar title for the log viewer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug Logs'**
+  String get logViewerTitle;
+
+  /// Log level filter chip: show all log entries.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get logViewerFilterAll;
+
+  /// Log level filter chip: show info entries only.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get logViewerFilterInfo;
+
+  /// Log level filter chip: show warning entries only.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get logViewerFilterWarning;
+
+  /// Log level filter chip: show error entries only.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get logViewerFilterError;
+
+  /// Log level filter chip: show debug entries only.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug'**
+  String get logViewerFilterDebug;
+
+  /// Tooltip for the auto-scroll toggle button when auto-scroll is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable auto-scroll'**
+  String get logViewerAutoScrollEnable;
+
+  /// Tooltip for the auto-scroll toggle button when auto-scroll is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable auto-scroll'**
+  String get logViewerAutoScrollDisable;
+
+  /// Tooltip for the copy-logs action button.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy logs'**
+  String get logViewerCopyLogs;
+
+  /// Tooltip for the clear-logs action button.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear logs'**
+  String get logViewerClearLogs;
+
+  /// Snackbar message after logs are copied to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs copied to clipboard'**
+  String get logViewerLogsCopied;
+
+  /// Snackbar message after logs are cleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs cleared'**
+  String get logViewerLogsCleared;
+
+  /// Empty-state message when there are no log entries.
+  ///
+  /// In en, this message translates to:
+  /// **'No logs to display'**
+  String get logViewerEmpty;
+
+  /// Message shown in the connectivity banner when the device has no network.
+  ///
+  /// In en, this message translates to:
+  /// **'You are offline'**
+  String get connectivityOffline;
+
+  /// Connectivity banner message showing how many transactions are queued for sync.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 transaction pending sync} other{{count} transactions pending sync}}'**
+  String connectivityPendingSync(int count);
+
+  /// Button label in the connectivity banner to trigger an immediate sync.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Now'**
+  String get connectivitySyncNow;
+
+  /// Snackbar shown when the connectivity service gets an auth error.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication error — please sign in again.'**
+  String get connectivityAuthError;
+
+  /// Snackbar shown when a background sync fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed — tap to retry.'**
+  String get connectivitySyncError;
+
+  /// Button label to add a new custom proxy header.
+  ///
+  /// In en, this message translates to:
+  /// **'Add header'**
+  String get proxyHeadersAddHeader;
+
+  /// Label for the header-name input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Header name'**
+  String get proxyHeadersNameLabel;
+
+  /// Hint text for the header-name input (example header name).
+  ///
+  /// In en, this message translates to:
+  /// **'X-Auth-Token'**
+  String get proxyHeadersNameHint;
+
+  /// Label for the header-value input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Header value'**
+  String get proxyHeadersValueLabel;
+
+  /// Tooltip for the remove-header icon button.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove header'**
+  String get proxyHeadersRemove;
+
+  /// Tooltip for the refresh button on the account detail header.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh account details'**
+  String get accountDetailRefreshTooltip;
+
+  /// Error message shown in the account detail header.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load account details'**
+  String get accountDetailError;
+
+  /// Section heading for the balance history chart in the account detail header.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent balance history'**
+  String get accountDetailRecentBalanceHistory;
+
+  /// Section heading for the top holdings list in the account detail header.
+  ///
+  /// In en, this message translates to:
+  /// **'Top holdings'**
+  String get accountDetailTopHoldings;
+
+  /// Fallback label when a holding has no name.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding'**
+  String get accountDetailHoldingFallback;
+
+  /// Label for the cash position chip in the account detail header.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash {amount}'**
+  String accountDetailCashChip(String amount);
 }
 
 class _AppLocalizationsDelegate

@@ -2,37 +2,728 @@
   "@@locale": "en",
 
   "appTitle": "Sure Finances",
-  "@appTitle": {
-    "description": "The application title (task switcher / OS surfaces)."
-  },
+  "@appTitle": { "description": "Application title shown in the OS task switcher." },
 
   "commonCancel": "Cancel",
-  "@commonCancel": {
-    "description": "Shared label for a cancel action."
-  },
+  "@commonCancel": { "description": "Generic cancel action label." },
+
   "commonSave": "Save",
-  "@commonSave": {
-    "description": "Shared label for a save/confirm action."
-  },
+  "@commonSave": { "description": "Generic save/confirm action label." },
+
   "commonTryAgain": "Try Again",
-  "@commonTryAgain": {
-    "description": "Shared label for a retry action."
-  },
+  "@commonTryAgain": { "description": "Generic retry action label." },
+
+  "commonDelete": "Delete",
+  "@commonDelete": { "description": "Generic delete action label." },
+
+  "commonAll": "All",
+  "@commonAll": { "description": "Label for the 'All' filter chip (currency filter, category filter, etc.)." },
+
+  "commonRefresh": "Refresh",
+  "@commonRefresh": { "description": "Generic refresh action label." },
+
+  "commonClose": "Close",
+  "@commonClose": { "description": "Generic close/dismiss action label." },
+
+  "commonUndo": "Undo",
+  "@commonUndo": { "description": "Generic undo action label." },
+
+  "commonRetry": "Retry",
+  "@commonRetry": { "description": "Generic retry action label for error states." },
+
+  "commonLoading": "Loading…",
+  "@commonLoading": { "description": "Generic in-progress loading label." },
+
+  "commonError": "Something went wrong",
+  "@commonError": { "description": "Generic error message." },
+
+  "commonNoData": "No data available",
+  "@commonNoData": { "description": "Generic empty-state message." },
 
   "chatSuggestionNetWorth": "What is my current net worth?",
-  "@chatSuggestionNetWorth": {
-    "description": "Suggested chat prompt shown on the empty assistant screen."
-  },
+  "@chatSuggestionNetWorth": { "description": "Suggested chat prompt on the empty assistant screen." },
+
   "chatSuggestionSpending": "How has my spending changed this month?",
-  "@chatSuggestionSpending": {
-    "description": "Suggested chat prompt shown on the empty assistant screen."
-  },
+  "@chatSuggestionSpending": { "description": "Suggested chat prompt on the empty assistant screen." },
+
   "chatSuggestionSavings": "How can I improve my savings rate?",
-  "@chatSuggestionSavings": {
-    "description": "Suggested chat prompt shown on the empty assistant screen."
-  },
+  "@chatSuggestionSavings": { "description": "Suggested chat prompt on the empty assistant screen." },
+
   "chatSuggestionExpenses": "What are my biggest expenses lately?",
-  "@chatSuggestionExpenses": {
-    "description": "Suggested chat prompt shown on the empty assistant screen."
+  "@chatSuggestionExpenses": { "description": "Suggested chat prompt on the empty assistant screen." },
+
+  "loginTitle": "Sure Finances",
+  "@loginTitle": { "description": "App name shown on the login screen." },
+
+  "loginEmailLabel": "Email",
+  "@loginEmailLabel": { "description": "Label for the email text field on the login screen." },
+
+  "loginEmailHint": "Enter your email",
+  "@loginEmailHint": { "description": "Hint text for the email text field on the login screen." },
+
+  "loginEmailRequired": "Email is required",
+  "@loginEmailRequired": { "description": "Validation error when email field is empty." },
+
+  "loginEmailInvalid": "Please enter a valid email",
+  "@loginEmailInvalid": { "description": "Validation error when email format is invalid." },
+
+  "loginPasswordLabel": "Password",
+  "@loginPasswordLabel": { "description": "Label for the password field on the login screen." },
+
+  "loginPasswordHint": "Enter your password",
+  "@loginPasswordHint": { "description": "Hint text for the password field on the login screen." },
+
+  "loginPasswordRequired": "Password is required",
+  "@loginPasswordRequired": { "description": "Validation error when password field is empty." },
+
+  "loginSignIn": "Sign in",
+  "@loginSignIn": { "description": "Primary sign-in button label." },
+
+  "loginSignInWithGoogle": "Sign in with Google",
+  "@loginSignInWithGoogle": { "description": "Google SSO button label." },
+
+  "loginMfaTitle": "Two-Factor Authentication",
+  "@loginMfaTitle": { "description": "Title for the MFA code dialog." },
+
+  "loginMfaContent": "Enter the 6-digit code from your authenticator app.",
+  "@loginMfaContent": { "description": "Body text for the MFA code dialog." },
+
+  "loginMfaLabel": "Authentication Code",
+  "@loginMfaLabel": { "description": "Label for the MFA code input field." },
+
+  "loginMfaHint": "Enter 6-digit code",
+  "@loginMfaHint": { "description": "Hint text for the MFA code input." },
+
+  "loginMfaVerify": "Verify",
+  "@loginMfaVerify": { "description": "Button label to submit MFA code." },
+
+  "loginApiKeyTitle": "Enter API Key",
+  "@loginApiKeyTitle": { "description": "Title for the API key dialog on the login screen." },
+
+  "loginApiKeyLabel": "API Key",
+  "@loginApiKeyLabel": { "description": "Label for the API key input field." },
+
+  "loginApiKeyHint": "Paste your API key",
+  "@loginApiKeyHint": { "description": "Hint text for the API key input." },
+
+  "loginApiKeySubmit": "Submit",
+  "@loginApiKeySubmit": { "description": "Button label to submit an API key." },
+
+  "loginServerUrlLabel": "Server URL",
+  "@loginServerUrlLabel": { "description": "Label for the server URL field on the login screen." },
+
+  "navHome": "Home",
+  "@navHome": { "description": "Bottom navigation label for the Home (dashboard) tab." },
+
+  "navIntro": "Intro",
+  "@navIntro": { "description": "Bottom navigation label for the Intro tab." },
+
+  "navAssistant": "Assistant",
+  "@navAssistant": { "description": "Bottom navigation label for the AI assistant tab." },
+
+  "navMore": "More",
+  "@navMore": { "description": "Bottom navigation label for the More tab." },
+
+  "navEnableAiTitle": "Enable AI Assistant",
+  "@navEnableAiTitle": { "description": "Title for the dialog prompting the user to enable AI." },
+
+  "navEnableAiContent": "The AI assistant requires an OpenAI API key configured in your Sure settings. Would you like to go to settings?",
+  "@navEnableAiContent": { "description": "Body text for the enable-AI dialog." },
+
+  "navEnableAiGoToSettings": "Go to Settings",
+  "@navEnableAiGoToSettings": { "description": "Confirm button in the enable-AI dialog." },
+
+  "dashboardSyncError": "Sync failed",
+  "@dashboardSyncError": { "description": "Snackbar message when a sync attempt fails." },
+
+  "dashboardSyncFailed": "Sync failed. Please try again.",
+  "@dashboardSyncFailed": { "description": "Snackbar message when a sync attempt fails with retry instruction." },
+
+  "dashboardRefreshing": "Refreshing accounts…",
+  "@dashboardRefreshing": { "description": "Snackbar message while accounts are being refreshed after a transaction." },
+
+  "dashboardAccountsUpdated": "Accounts updated",
+  "@dashboardAccountsUpdated": { "description": "Snackbar message shown after accounts refresh completes." },
+
+  "dashboardSyncing": "Syncing data from server…",
+  "@dashboardSyncing": { "description": "Snackbar message while sync is in progress." },
+
+  "dashboardSynced": "Synced",
+  "@dashboardSynced": { "description": "Label shown in the sync status indicator after a successful sync." },
+
+  "dashboardSyncAll": "Sync All",
+  "@dashboardSyncAll": { "description": "Button label to trigger a full sync." },
+
+  "dashboardErrorLoadingAccounts": "Failed to load accounts",
+  "@dashboardErrorLoadingAccounts": { "description": "Error state message when accounts fail to load." },
+
+  "dashboardNoAccounts": "No accounts yet",
+  "@dashboardNoAccounts": { "description": "Empty state message when no accounts exist." },
+
+  "dashboardNoAccountsSubtitle": "Add accounts in the web app to see them here.",
+  "@dashboardNoAccountsSubtitle": { "description": "Empty state subtitle when no accounts exist." },
+
+  "dashboardFilterEmpty": "No accounts match the current filter",
+  "@dashboardFilterEmpty": { "description": "Empty state when the active account filter returns no results." },
+
+  "chatListTitle": "Chats",
+  "@chatListTitle": { "description": "Title for the chat list screen / app bar." },
+
+  "chatListNewChat": "New chat",
+  "@chatListNewChat": { "description": "FAB tooltip for creating a new chat." },
+
+  "chatListEmpty": "No chats yet",
+  "@chatListEmpty": { "description": "Empty-state heading on the chat list screen." },
+
+  "chatListEmptySubtitle": "Start a conversation with your AI assistant",
+  "@chatListEmptySubtitle": { "description": "Empty-state subtitle on the chat list screen." },
+
+  "chatListDeleteTitle": "Delete Chat",
+  "@chatListDeleteTitle": { "description": "Title for the delete-chat confirmation dialog." },
+
+  "chatListDeleteContent": "Are you sure you want to delete this chat?",
+  "@chatListDeleteContent": { "description": "Body text for the delete-chat confirmation dialog." },
+
+  "chatConversationNewTitle": "New Conversation",
+  "@chatConversationNewTitle": { "description": "Placeholder title for a new conversation before it is saved." },
+
+  "chatConversationMessageHint": "Ask anything about your finances…",
+  "@chatConversationMessageHint": { "description": "Hint text inside the chat message input field." },
+
+  "chatConversationEditTitleHint": "Conversation title",
+  "@chatConversationEditTitleHint": { "description": "Hint text in the edit-title dialog text field." },
+
+  "chatConversationRenameTitle": "Rename Conversation",
+  "@chatConversationRenameTitle": { "description": "Title for the rename-conversation dialog." },
+
+  "chatConversationRename": "Rename",
+  "@chatConversationRename": { "description": "Confirm button label in the rename-conversation dialog." },
+
+  "chatConversationGreetingWithName": "Hi {firstName}, how can I help?",
+  "@chatConversationGreetingWithName": {
+    "description": "Greeting shown in a new conversation when the user's first name is known.",
+    "placeholders": { "firstName": { "type": "String" } }
+  },
+
+  "chatConversationGreetingNoName": "Hi there, how can I help?",
+  "@chatConversationGreetingNoName": { "description": "Greeting shown in a new conversation when the user's first name is not available." },
+
+  "chatConversationError": "Failed to send message",
+  "@chatConversationError": { "description": "Error snackbar when sending a message fails." },
+
+  "transactionFormNewTitle": "New Transaction",
+  "@transactionFormNewTitle": { "description": "App bar title for the new-transaction form." },
+
+  "transactionFormTypeLabel": "Type",
+  "@transactionFormTypeLabel": { "description": "Label for the transaction type segmented control." },
+
+  "transactionFormTypeExpense": "Expense",
+  "@transactionFormTypeExpense": { "description": "Segment label for an expense transaction." },
+
+  "transactionFormTypeIncome": "Income",
+  "@transactionFormTypeIncome": { "description": "Segment label for an income transaction." },
+
+  "transactionFormAmountLabel": "Amount",
+  "@transactionFormAmountLabel": { "description": "Label for the amount input field." },
+
+  "transactionFormAmountHint": "0.00",
+  "@transactionFormAmountHint": { "description": "Hint text for the amount input field." },
+
+  "transactionFormAmountRequired": "Amount is required",
+  "@transactionFormAmountRequired": { "description": "Validation error when amount is empty." },
+
+  "transactionFormAmountInvalid": "Please enter a valid amount",
+  "@transactionFormAmountInvalid": { "description": "Validation error when amount is not a number." },
+
+  "transactionFormDateLabel": "Date",
+  "@transactionFormDateLabel": { "description": "Label for the date picker field." },
+
+  "transactionFormNameLabel": "Name",
+  "@transactionFormNameLabel": { "description": "Label for the transaction name/payee field." },
+
+  "transactionFormNameHint": "Transaction name",
+  "@transactionFormNameHint": { "description": "Hint text for the transaction name field." },
+
+  "transactionFormNameRequired": "Name is required",
+  "@transactionFormNameRequired": { "description": "Validation error when name is empty." },
+
+  "transactionFormCategoryLabel": "Category",
+  "@transactionFormCategoryLabel": { "description": "Label for the category picker field." },
+
+  "transactionFormSaveSuccess": "Transaction saved",
+  "@transactionFormSaveSuccess": { "description": "Snackbar message after a transaction is saved successfully." },
+
+  "transactionFormSaveError": "Failed to save transaction",
+  "@transactionFormSaveError": { "description": "Snackbar message when saving a transaction fails." },
+
+  "transactionEditTitle": "Edit Transaction",
+  "@transactionEditTitle": { "description": "App bar title for the edit-transaction screen." },
+
+  "transactionEditNameLabel": "Name",
+  "@transactionEditNameLabel": { "description": "Label for the name field in the edit form." },
+
+  "transactionEditNameHint": "Transaction name",
+  "@transactionEditNameHint": { "description": "Hint text for the name field in the edit form." },
+
+  "transactionEditNameRequired": "Name is required",
+  "@transactionEditNameRequired": { "description": "Validation error when name is empty in edit form." },
+
+  "transactionEditNotesLabel": "Notes",
+  "@transactionEditNotesLabel": { "description": "Label for the notes field in the edit form." },
+
+  "transactionEditNotesHint": "Add a note",
+  "@transactionEditNotesHint": { "description": "Hint text for the notes field in the edit form." },
+
+  "transactionEditCategoryLabel": "Category",
+  "@transactionEditCategoryLabel": { "description": "Label for the category field in the edit form." },
+
+  "transactionEditMerchantLabel": "Merchant",
+  "@transactionEditMerchantLabel": { "description": "Label for the merchant field in the edit form." },
+
+  "transactionEditMerchantHint": "Search merchants",
+  "@transactionEditMerchantHint": { "description": "Hint text for the merchant search field in the edit form." },
+
+  "transactionEditTagsLabel": "Tags",
+  "@transactionEditTagsLabel": { "description": "Label for the tags field in the edit form." },
+
+  "transactionEditTagsHint": "Add tags",
+  "@transactionEditTagsHint": { "description": "Hint text for the tags field in the edit form." },
+
+  "transactionEditSaving": "Saving…",
+  "@transactionEditSaving": { "description": "In-progress label shown on the save button while saving." },
+
+  "transactionEditSaveError": "Failed to save changes",
+  "@transactionEditSaveError": { "description": "Snackbar message when saving edits fails." },
+
+  "transactionsListDeleteTitle": "Delete Transaction",
+  "@transactionsListDeleteTitle": { "description": "Title for the single-transaction delete confirmation dialog." },
+
+  "transactionsListDeleteSingleContent": "Are you sure you want to delete \"{name}\"?",
+  "@transactionsListDeleteSingleContent": {
+    "description": "Body of the delete confirmation dialog for a named transaction.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "transactionsListDeleteMultiTitle": "Delete Transactions",
+  "@transactionsListDeleteMultiTitle": { "description": "Title for the multi-transaction delete confirmation dialog." },
+
+  "transactionsListDeleteMultiContent": "Are you sure you want to delete the selected transactions?",
+  "@transactionsListDeleteMultiContent": { "description": "Body of the multi-transaction delete confirmation dialog." },
+
+  "transactionsListDeleteUndoMessage": "Transaction deleted",
+  "@transactionsListDeleteUndoMessage": { "description": "Snackbar message shown after a transaction is deleted with an undo option." },
+
+  "transactionsListUndoAction": "Undo",
+  "@transactionsListUndoAction": { "description": "Undo action label in the delete snackbar." },
+
+  "transactionsListEmpty": "No transactions",
+  "@transactionsListEmpty": { "description": "Empty-state message when no transactions exist." },
+
+  "transactionsListEmptySubtitle": "Transactions will appear here once synced",
+  "@transactionsListEmptySubtitle": { "description": "Empty-state subtitle on the transactions list." },
+
+  "transactionsListAuthFailed": "Authentication failed: Please log in again",
+  "@transactionsListAuthFailed": { "description": "Snackbar message when the API returns an auth failure." },
+
+  "transactionsListNoTransactionsYet": "No transactions yet",
+  "@transactionsListNoTransactionsYet": { "description": "Empty-state heading when an account has no transactions." },
+
+  "transactionsListEmptyAddFirst": "Tap + to add your first transaction",
+  "@transactionsListEmptyAddFirst": { "description": "Empty-state subtitle prompting the user to add their first transaction." },
+
+  "transactionsListNoCategoryMatch": "No transactions match this category",
+  "@transactionsListNoCategoryMatch": { "description": "Empty state shown when category filter returns no transactions." },
+
+  "transactionsListRetry": "Retry",
+  "@transactionsListRetry": { "description": "Button label on the transactions error state." },
+
+  "transactionsListDeletedSuccess": "Transaction deleted",
+  "@transactionsListDeletedSuccess": { "description": "Snackbar after a single transaction is deleted." },
+
+  "transactionsListSingleDeleteFailed": "Failed to delete transaction",
+  "@transactionsListSingleDeleteFailed": { "description": "Snackbar when deleting a single transaction fails." },
+
+  "transactionsListDeletedMulti": "{count, plural, =1{Deleted 1 transaction} other{Deleted {count} transactions}}",
+  "@transactionsListDeletedMulti": {
+    "description": "Snackbar message after multiple transactions are deleted.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "transactionsListDeleteFailed": "Failed to delete transactions",
+  "@transactionsListDeleteFailed": { "description": "Snackbar when multi-delete fails." },
+
+  "transactionsListDeleteNoToken": "Failed to delete: No access token",
+  "@transactionsListDeleteNoToken": { "description": "Snackbar when delete fails due to missing token." },
+
+  "transactionsListUndoTitle": "Undo Transaction",
+  "@transactionsListUndoTitle": { "description": "Title for the undo-transaction dialog." },
+
+  "transactionsListUndoRemovePending": "Remove this pending transaction?",
+  "@transactionsListUndoRemovePending": { "description": "Confirmation question for removing a pending transaction." },
+
+  "transactionsListUndoRestoreConfirm": "Restore this transaction?",
+  "@transactionsListUndoRestoreConfirm": { "description": "Confirmation question for restoring a transaction." },
+
+  "transactionsListUndoPendingRemoved": "Pending transaction removed",
+  "@transactionsListUndoPendingRemoved": { "description": "Snackbar after a pending transaction is removed." },
+
+  "transactionsListUndoRestored": "Transaction restored",
+  "@transactionsListUndoRestored": { "description": "Snackbar after a transaction is restored." },
+
+  "transactionsListUndoFailed": "Failed to undo transaction",
+  "@transactionsListUndoFailed": { "description": "Snackbar when undoing a transaction fails." },
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": { "description": "App bar title for the settings screen." },
+
+  "settingsSectionDisplay": "Display",
+  "@settingsSectionDisplay": { "description": "Settings section header for display/appearance options." },
+
+  "settingsSectionConnection": "Connection",
+  "@settingsSectionConnection": { "description": "Settings section header for server/connection options." },
+
+  "settingsSectionDataManagement": "Data Management",
+  "@settingsSectionDataManagement": { "description": "Settings section header for data import/export options." },
+
+  "settingsSectionSecurity": "Security",
+  "@settingsSectionSecurity": { "description": "Settings section header for security options." },
+
+  "settingsSectionDangerZone": "Danger Zone",
+  "@settingsSectionDangerZone": { "description": "Settings section header for destructive actions." },
+
+  "settingsThemeLabel": "Theme",
+  "@settingsThemeLabel": { "description": "Label for the theme picker setting." },
+
+  "settingsThemeSystem": "System",
+  "@settingsThemeSystem": { "description": "Theme option: follow system setting." },
+
+  "settingsThemeLight": "Light",
+  "@settingsThemeLight": { "description": "Theme option: light mode." },
+
+  "settingsThemeDark": "Dark",
+  "@settingsThemeDark": { "description": "Theme option: dark mode." },
+
+  "settingsServerUrlLabel": "Server URL",
+  "@settingsServerUrlLabel": { "description": "Label for the server URL setting." },
+
+  "settingsChangeServer": "Change Server",
+  "@settingsChangeServer": { "description": "Button to navigate to the server configuration screen." },
+
+  "settingsProxyHeadersLabel": "Custom Proxy Headers",
+  "@settingsProxyHeadersLabel": { "description": "Label for the custom proxy headers setting." },
+
+  "settingsBiometricLabel": "Biometric Lock",
+  "@settingsBiometricLabel": { "description": "Label for the biometric lock toggle." },
+
+  "settingsBiometricEnable": "Enable biometric lock?",
+  "@settingsBiometricEnable": { "description": "Title of the dialog to enable biometric lock." },
+
+  "settingsBiometricEnableContent": "Require biometric authentication when resuming the app.",
+  "@settingsBiometricEnableContent": { "description": "Body text of the enable-biometric dialog." },
+
+  "settingsBiometricEnable2": "Enable",
+  "@settingsBiometricEnable2": { "description": "Confirm button label in the enable-biometric dialog." },
+
+  "settingsBiometricDisable": "Disable biometric lock?",
+  "@settingsBiometricDisable": { "description": "Title of the dialog to disable biometric lock." },
+
+  "settingsBiometricDisableContent": "Biometric authentication will no longer be required.",
+  "@settingsBiometricDisableContent": { "description": "Body text of the disable-biometric dialog." },
+
+  "settingsBiometricDisable2": "Disable",
+  "@settingsBiometricDisable2": { "description": "Confirm button label in the disable-biometric dialog." },
+
+  "settingsBiometricNotAvailable": "Biometric authentication is not available on this device.",
+  "@settingsBiometricNotAvailable": { "description": "Snackbar when biometrics are not supported." },
+
+  "settingsCheckForUpdates": "Check for Updates",
+  "@settingsCheckForUpdates": { "description": "Label for the check-for-updates action." },
+
+  "settingsUpdateAvailableTitle": "Update Available",
+  "@settingsUpdateAvailableTitle": { "description": "Title for the update-available dialog." },
+
+  "settingsUpdateAvailableContent": "Version {version} is available. Update now?",
+  "@settingsUpdateAvailableContent": {
+    "description": "Body text for the update-available dialog.",
+    "placeholders": { "version": { "type": "String" } }
+  },
+
+  "settingsUpdateNow": "Update Now",
+  "@settingsUpdateNow": { "description": "Confirm button in the update-available dialog." },
+
+  "settingsNoUpdateAvailable": "You're on the latest version.",
+  "@settingsNoUpdateAvailable": { "description": "Snackbar when no update is available." },
+
+  "settingsUpdateError": "Could not check for updates.",
+  "@settingsUpdateError": { "description": "Snackbar when the update check fails." },
+
+  "settingsClearDataTitle": "Clear All Data",
+  "@settingsClearDataTitle": { "description": "Title for the clear-all-data confirmation dialog." },
+
+  "settingsClearDataContent": "This will remove all locally cached data. Your data on the server will not be affected.",
+  "@settingsClearDataContent": { "description": "Body text for the clear-all-data dialog." },
+
+  "settingsClearData": "Clear Data",
+  "@settingsClearData": { "description": "Confirm button in the clear-data dialog." },
+
+  "settingsClearDataSuccess": "Local data cleared",
+  "@settingsClearDataSuccess": { "description": "Snackbar after local data is cleared." },
+
+  "settingsResetAppTitle": "Reset Application",
+  "@settingsResetAppTitle": { "description": "Title for the reset-application dialog." },
+
+  "settingsResetAppContent": "This will sign you out and clear all local data. Your data on the server will not be affected.",
+  "@settingsResetAppContent": { "description": "Body text for the reset-application dialog." },
+
+  "settingsResetApp": "Reset",
+  "@settingsResetApp": { "description": "Confirm button in the reset-app dialog." },
+
+  "settingsDeleteAccountTitle": "Delete Account",
+  "@settingsDeleteAccountTitle": { "description": "Title for the delete-account confirmation dialog." },
+
+  "settingsDeleteAccountContent": "This will permanently delete your account and all associated data. This action cannot be undone.",
+  "@settingsDeleteAccountContent": { "description": "Body text for the delete-account dialog." },
+
+  "settingsDeleteAccount": "Delete Account",
+  "@settingsDeleteAccount": { "description": "Confirm button in the delete-account dialog." },
+
+  "settingsSignOutTitle": "Sign Out",
+  "@settingsSignOutTitle": { "description": "Title for the sign-out confirmation dialog." },
+
+  "settingsSignOutContent": "Are you sure you want to sign out?",
+  "@settingsSignOutContent": { "description": "Body text for the sign-out dialog." },
+
+  "settingsSignOut": "Sign Out",
+  "@settingsSignOut": { "description": "Confirm button in the sign-out dialog and settings list tile label." },
+
+  "settingsDebugLogs": "Debug Logs",
+  "@settingsDebugLogs": { "description": "Label for the debug logs navigation tile." },
+
+  "ssoOnboardingTitle": "Link Your Account",
+  "@ssoOnboardingTitle": { "description": "App bar title for the SSO onboarding screen." },
+
+  "ssoOnboardingTabLink": "Link existing",
+  "@ssoOnboardingTabLink": { "description": "Tab label for linking an existing Sure account via SSO." },
+
+  "ssoOnboardingTabCreate": "Create new",
+  "@ssoOnboardingTabCreate": { "description": "Tab label for creating a new Sure account via SSO." },
+
+  "ssoOnboardingLinkNote": "Link your SSO identity to an existing Sure account using your email and password.",
+  "@ssoOnboardingLinkNote": { "description": "Explanatory note shown on the link-existing tab." },
+
+  "ssoOnboardingCreateNote": "Create a new Sure account linked to your SSO identity.",
+  "@ssoOnboardingCreateNote": { "description": "Explanatory note shown on the create-new tab." },
+
+  "ssoOnboardingFirstNameLabel": "First Name",
+  "@ssoOnboardingFirstNameLabel": { "description": "Label for the first-name field on the SSO onboarding screen." },
+
+  "ssoOnboardingLastNameLabel": "Last Name",
+  "@ssoOnboardingLastNameLabel": { "description": "Label for the last-name field on the SSO onboarding screen." },
+
+  "ssoOnboardingLinkButton": "Link Account",
+  "@ssoOnboardingLinkButton": { "description": "Button label to link an existing account." },
+
+  "ssoOnboardingCreateButton": "Create Account",
+  "@ssoOnboardingCreateButton": { "description": "Button label to create a new account." },
+
+  "ssoOnboardingAcceptTerms": "I accept the Terms of Service",
+  "@ssoOnboardingAcceptTerms": { "description": "Checkbox label for ToS acceptance on the create tab." },
+
+  "calendarTitle": "Account Calendar",
+  "@calendarTitle": { "description": "App bar title for the account calendar screen." },
+
+  "calendarAccountTypeSection": "Account Type",
+  "@calendarAccountTypeSection": { "description": "Section header for the account-type selector on the calendar screen." },
+
+  "calendarSegmentAssets": "Assets",
+  "@calendarSegmentAssets": { "description": "Segment label for asset-type accounts on the calendar." },
+
+  "calendarSegmentLiabilities": "Liabilities",
+  "@calendarSegmentLiabilities": { "description": "Segment label for liability-type accounts on the calendar." },
+
+  "calendarSelectAccount": "Select Account",
+  "@calendarSelectAccount": { "description": "Placeholder shown in the account dropdown when none is selected." },
+
+  "calendarMonthlyChange": "Monthly Change",
+  "@calendarMonthlyChange": { "description": "Label for the monthly-change metric on the calendar screen." },
+
+  "calendarNoTransactions": "No transactions on this day",
+  "@calendarNoTransactions": { "description": "Empty-state message when no transactions exist for the selected day." },
+
+  "moreCalendar": "Account Calendar",
+  "@moreCalendar": { "description": "Menu item title for Account Calendar in the More screen." },
+
+  "moreCalendarSubtitle": "View monthly balance changes by account",
+  "@moreCalendarSubtitle": { "description": "Subtitle for the Account Calendar menu item in the More screen." },
+
+  "moreRecentTransactions": "Recent Transactions",
+  "@moreRecentTransactions": { "description": "Menu item title for Recent Transactions in the More screen." },
+
+  "moreRecentTransactionsSubtitle": "View recent transactions across all accounts",
+  "@moreRecentTransactionsSubtitle": { "description": "Subtitle for the Recent Transactions menu item." },
+
+  "biometricTitle": "App Locked",
+  "@biometricTitle": { "description": "Heading shown on the biometric lock screen." },
+
+  "biometricSubtitle": "Authenticate to continue",
+  "@biometricSubtitle": { "description": "Subtitle shown on the biometric lock screen." },
+
+  "biometricUnlock": "Unlock",
+  "@biometricUnlock": { "description": "Button label when biometric prompt is ready." },
+
+  "biometricAuthenticating": "Authenticating…",
+  "@biometricAuthenticating": { "description": "Button label while the biometric prompt is in progress." },
+
+  "biometricLogOut": "Log out",
+  "@biometricLogOut": { "description": "Button to log out from the biometric lock screen." },
+
+  "backendConfigTitle": "Configuration",
+  "@backendConfigTitle": { "description": "Headline on the backend configuration screen." },
+
+  "backendConfigSubtitle": "Update your Sure server URL",
+  "@backendConfigSubtitle": { "description": "Subtitle below the headline on the backend configuration screen." },
+
+  "backendConfigExampleUrlsLabel": "Example URLs",
+  "@backendConfigExampleUrlsLabel": { "description": "Label for the example URLs info box on the config screen." },
+
+  "backendConfigUrlLabel": "Sure server URL",
+  "@backendConfigUrlLabel": { "description": "Label for the server URL field on the config screen." },
+
+  "backendConfigUrlHint": "https://app.sure.am",
+  "@backendConfigUrlHint": { "description": "Hint text for the server URL field." },
+
+  "backendConfigProxyHeadersLabel": "Custom proxy headers",
+  "@backendConfigProxyHeadersLabel": { "description": "Label for the custom proxy headers section on the config screen." },
+
+  "backendConfigProxyHeadersSubtitle": "Optional headers for a reverse proxy or auth gateway",
+  "@backendConfigProxyHeadersSubtitle": { "description": "Subtitle for the proxy headers expansion tile when no headers are configured." },
+
+  "backendConfigProxyHeadersCount": "{count} configured",
+  "@backendConfigProxyHeadersCount": {
+    "description": "Subtitle for the proxy headers expansion tile when headers are configured.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "backendConfigTesting": "Testing…",
+  "@backendConfigTesting": { "description": "Label on the test-connection button while the test is in progress." },
+
+  "backendConfigTestButton": "Test Connection",
+  "@backendConfigTestButton": { "description": "Button label to test the server connection." },
+
+  "backendConfigContinueButton": "Continue",
+  "@backendConfigContinueButton": { "description": "Button label to proceed after saving configuration." },
+
+  "backendConfigChangeHint": "You can change this later in the settings.",
+  "@backendConfigChangeHint": { "description": "Helper text below the config form." },
+
+  "recentTransactionsTitle": "Recent Transactions",
+  "@recentTransactionsTitle": { "description": "App bar title for the recent transactions screen." },
+
+  "recentTransactionsEmpty": "No Transactions",
+  "@recentTransactionsEmpty": { "description": "Empty-state message on the recent transactions screen." },
+
+  "recentTransactionsDisplayLimit": "Display Limit",
+  "@recentTransactionsDisplayLimit": { "description": "Tooltip for the display-limit popup menu on the recent transactions screen." },
+
+  "recentTransactionsShowN": "Show {count}",
+  "@recentTransactionsShowN": {
+    "description": "Menu item label to show N recent transactions.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "recentTransactionsPullToRefresh": "Pull to refresh",
+  "@recentTransactionsPullToRefresh": { "description": "Empty-state subtitle prompting the user to pull to refresh." },
+
+  "logViewerTitle": "Debug Logs",
+  "@logViewerTitle": { "description": "App bar title for the log viewer screen." },
+
+  "logViewerFilterAll": "All",
+  "@logViewerFilterAll": { "description": "Log level filter chip: show all log entries." },
+
+  "logViewerFilterInfo": "Info",
+  "@logViewerFilterInfo": { "description": "Log level filter chip: show info entries only." },
+
+  "logViewerFilterWarning": "Warning",
+  "@logViewerFilterWarning": { "description": "Log level filter chip: show warning entries only." },
+
+  "logViewerFilterError": "Error",
+  "@logViewerFilterError": { "description": "Log level filter chip: show error entries only." },
+
+  "logViewerFilterDebug": "Debug",
+  "@logViewerFilterDebug": { "description": "Log level filter chip: show debug entries only." },
+
+  "logViewerAutoScrollEnable": "Enable auto-scroll",
+  "@logViewerAutoScrollEnable": { "description": "Tooltip for the auto-scroll toggle button when auto-scroll is off." },
+
+  "logViewerAutoScrollDisable": "Disable auto-scroll",
+  "@logViewerAutoScrollDisable": { "description": "Tooltip for the auto-scroll toggle button when auto-scroll is on." },
+
+  "logViewerCopyLogs": "Copy logs",
+  "@logViewerCopyLogs": { "description": "Tooltip for the copy-logs action button." },
+
+  "logViewerClearLogs": "Clear logs",
+  "@logViewerClearLogs": { "description": "Tooltip for the clear-logs action button." },
+
+  "logViewerLogsCopied": "Logs copied to clipboard",
+  "@logViewerLogsCopied": { "description": "Snackbar message after logs are copied to the clipboard." },
+
+  "logViewerLogsCleared": "Logs cleared",
+  "@logViewerLogsCleared": { "description": "Snackbar message after logs are cleared." },
+
+  "logViewerEmpty": "No logs to display",
+  "@logViewerEmpty": { "description": "Empty-state message when there are no log entries." },
+
+  "connectivityOffline": "You are offline",
+  "@connectivityOffline": { "description": "Message shown in the connectivity banner when the device has no network." },
+
+  "connectivityPendingSync": "{count, plural, =1{1 transaction pending sync} other{{count} transactions pending sync}}",
+  "@connectivityPendingSync": {
+    "description": "Connectivity banner message showing how many transactions are queued for sync.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "connectivitySyncNow": "Sync Now",
+  "@connectivitySyncNow": { "description": "Button label in the connectivity banner to trigger an immediate sync." },
+
+  "connectivityAuthError": "Authentication error — please sign in again.",
+  "@connectivityAuthError": { "description": "Snackbar shown when the connectivity service gets an auth error." },
+
+  "connectivitySyncError": "Sync failed — tap to retry.",
+  "@connectivitySyncError": { "description": "Snackbar shown when a background sync fails." },
+
+  "proxyHeadersAddHeader": "Add header",
+  "@proxyHeadersAddHeader": { "description": "Button label to add a new custom proxy header." },
+
+  "proxyHeadersNameLabel": "Header name",
+  "@proxyHeadersNameLabel": { "description": "Label for the header-name input field." },
+
+  "proxyHeadersNameHint": "X-Auth-Token",
+  "@proxyHeadersNameHint": { "description": "Hint text for the header-name input (example header name)." },
+
+  "proxyHeadersValueLabel": "Header value",
+  "@proxyHeadersValueLabel": { "description": "Label for the header-value input field." },
+
+  "proxyHeadersRemove": "Remove header",
+  "@proxyHeadersRemove": { "description": "Tooltip for the remove-header icon button." },
+
+  "accountDetailRefreshTooltip": "Refresh account details",
+  "@accountDetailRefreshTooltip": { "description": "Tooltip for the refresh button on the account detail header." },
+
+  "accountDetailError": "Could not load account details",
+  "@accountDetailError": { "description": "Error message shown in the account detail header." },
+
+  "accountDetailRecentBalanceHistory": "Recent balance history",
+  "@accountDetailRecentBalanceHistory": { "description": "Section heading for the balance history chart in the account detail header." },
+
+  "accountDetailTopHoldings": "Top holdings",
+  "@accountDetailTopHoldings": { "description": "Section heading for the top holdings list in the account detail header." },
+
+  "accountDetailHoldingFallback": "Holding",
+  "@accountDetailHoldingFallback": { "description": "Fallback label when a holding has no name." },
+
+  "accountDetailCashChip": "Cash {amount}",
+  "@accountDetailCashChip": {
+    "description": "Label for the cash position chip in the account detail header.",
+    "placeholders": { "amount": { "type": "String" } }
   }
 }

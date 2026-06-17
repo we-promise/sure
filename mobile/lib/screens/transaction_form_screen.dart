@@ -9,6 +9,7 @@ import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
 import '../services/connectivity_service.dart';
 import '../utils/amount_parser.dart';
+import '../l10n/app_localizations.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
@@ -206,6 +207,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -240,7 +242,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'New Transaction',
+                      l.transactionFormNewTitle,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -307,23 +309,23 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
                         // Transaction type selection
                         Text(
-                          'Type',
+                          l.transactionFormTypeLabel,
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 8),
                         SegmentedButton<String>(
-                          segments: const [
+                          segments: [
                             ButtonSegment<String>(
                               value: 'expense',
-                              label: Text('Expense'),
-                              icon: Icon(Icons.arrow_downward),
+                              label: Text(l.transactionFormTypeExpense),
+                              icon: const Icon(Icons.arrow_downward),
                             ),
                             ButtonSegment<String>(
                               value: 'income',
-                              label: Text('Income'),
-                              icon: Icon(Icons.arrow_upward),
+                              label: Text(l.transactionFormTypeIncome),
+                              icon: const Icon(Icons.arrow_upward),
                             ),
                           ],
                           selected: {_nature},
@@ -340,10 +342,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                           controller: _amountController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
-                            labelText: 'Amount *',
+                            labelText: l.transactionFormAmountLabel,
                             prefixIcon: const Icon(Icons.attach_money),
                             suffixText: widget.account.currency,
-                            helperText: 'Required',
                           ),
                           validator: _validateAmount,
                         ),

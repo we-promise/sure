@@ -8,6 +8,7 @@ import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/log_service.dart';
 import '../utils/amount_parser.dart';
+import '../l10n/app_localizations.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -192,6 +193,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final transactions = _getTransactionsForDate(date);
     final formattedDate = DateFormat('yyyy-MM-dd').format(date);
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     showDialog(
       context: context,
@@ -208,7 +210,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        'No transactions on this day',
+                        l.calendarNoTransactions,
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -227,7 +229,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              child: Text(l.commonClose),
             ),
           ],
         );
@@ -303,12 +305,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final accountsProvider = context.watch<AccountsProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Account Calendar'),
+        title: Text(l.calendarTitle),
       ),
       body: Column(
         children: [
@@ -328,23 +331,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Account Type',
+                  l.calendarAccountTypeSection,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
-                  segments: const [
+                  segments: [
                     ButtonSegment<String>(
                       value: 'asset',
-                      label: Text('Assets'),
-                      icon: Icon(Icons.account_balance_wallet),
+                      label: Text(l.calendarSegmentAssets),
+                      icon: const Icon(Icons.account_balance_wallet),
                     ),
                     ButtonSegment<String>(
                       value: 'liability',
-                      label: Text('Liabilities'),
-                      icon: Icon(Icons.credit_card),
+                      label: Text(l.calendarSegmentLiabilities),
+                      icon: const Icon(Icons.credit_card),
                     ),
                   ],
                   selected: {_accountType},
@@ -386,7 +389,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: DropdownButtonFormField<Account>(
               value: _selectedAccount,
               decoration: InputDecoration(
-                labelText: 'Select Account',
+                labelText: l.calendarSelectAccount,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -461,7 +464,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Monthly Change',
+                  l.calendarMonthlyChange,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(

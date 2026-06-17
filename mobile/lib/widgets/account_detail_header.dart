@@ -7,6 +7,7 @@ import '../models/account_balance.dart';
 import '../models/account_holding.dart';
 import '../providers/auth_provider.dart';
 import '../services/account_detail_service.dart';
+import '../l10n/app_localizations.dart';
 
 class AccountDetailHeader extends StatefulWidget {
   final Account account;
@@ -151,6 +152,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final latestBalance = _balances.isNotEmpty ? _balances.first : null;
 
@@ -196,7 +198,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                 else
                   IconButton(
                     icon: const Icon(Icons.refresh),
-                    tooltip: 'Refresh account details',
+                    tooltip: l.accountDetailRefreshTooltip,
                     onPressed: _loadDetails,
                   ),
               ],
@@ -222,7 +224,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                     ),
                   if (_account.cashBalance != null)
                     _DetailChip(
-                      label: 'Cash ${_account.cashBalance}',
+                      label: l.accountDetailCashChip(_account.cashBalance!),
                       icon: Icons.payments_outlined,
                     ),
                   if (_account.status != null)
@@ -239,7 +241,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Recent balance history',
+                      l.accountDetailRecentBalanceHistory,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
@@ -264,7 +266,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
             if (_holdings.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
-                'Top holdings',
+                l.accountDetailTopHoldings,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -277,7 +279,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                             child: Text(
                               holding.ticker?.isNotEmpty == true
                                   ? holding.ticker!
-                                  : holding.securityName ?? 'Holding',
+                                  : holding.securityName ?? l.accountDetailHoldingFallback,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

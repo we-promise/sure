@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_conversation_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -73,22 +74,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Chats'),
-        content: Text(
-          'Delete ${_selectedChatIds.length} chat(s)? This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l.chatListDeleteTitle),
+          content: Text(
+            'Delete ${_selectedChatIds.length} chat(s)? This cannot be undone.',
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l.commonCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true || !mounted) return;
@@ -153,11 +157,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chats'),
+        title: Text(l.chatListTitle),
         centerTitle: false,
         actions: [
           if (_isSelectionMode) ...[
@@ -229,7 +234,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ElevatedButton.icon(
                       onPressed: _handleRefresh,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again'),
+                      label: Text(l.commonTryAgain),
                     ),
                   ],
                 ),
@@ -251,12 +256,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No chats yet',
+                      l.chatListEmpty,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Start a new conversation with the AI assistant.',
+                      l.chatListEmptySubtitle,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                       textAlign: TextAlign.center,
                     ),
@@ -291,20 +296,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   confirmDismiss: (direction) async {
                     return await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Chat'),
-                        content: Text('Are you sure you want to delete "${chat.title}"?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                          ),
-                        ],
-                      ),
+                      builder: (context) {
+                        final l = AppLocalizations.of(context);
+                        return AlertDialog(
+                          title: Text(l.chatListDeleteTitle),
+                          content: Text('Are you sure you want to delete "${chat.title}"?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text(l.commonCancel),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text(l.commonDelete, style: const TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                   onDismissed: (direction) async {
@@ -385,7 +393,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openNewChat,
-        tooltip: 'New Chat',
+        tooltip: l.chatListNewChat,
         child: const Icon(Icons.add),
       ),
     );

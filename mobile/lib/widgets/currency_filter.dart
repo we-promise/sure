@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class CurrencyFilter extends StatelessWidget {
   final Set<String> availableCurrencies;
@@ -37,6 +38,7 @@ class CurrencyFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (availableCurrencies.length <= 1) {
       return const SizedBox.shrink();
     }
@@ -56,7 +58,7 @@ class CurrencyFilter extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: const Text('All'),
+              label: Text(l.commonAll),
               selected: isAllSelected,
               onSelected: (_) {
                 onSelectionChanged({});

@@ -9,6 +9,7 @@ import '../providers/categories_provider.dart';
 import '../providers/merchants_provider.dart';
 import '../providers/tags_provider.dart';
 import '../providers/transactions_provider.dart';
+import '../l10n/app_localizations.dart';
 
 class TransactionEditScreen extends StatefulWidget {
   final OfflineTransaction transaction;
@@ -313,8 +314,10 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
     final canEdit = widget.transaction.id != null &&
         widget.transaction.syncStatus == SyncStatus.synced;
 
+    final l = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Transaction')),
+      appBar: AppBar(title: Text(l.transactionEditTitle)),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -338,9 +341,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               enabled: canEdit && !_isSaving,
               validator: _validateName,
               maxLength: _maxNameLength,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                prefixIcon: Icon(Icons.label),
+              decoration: InputDecoration(
+                labelText: l.transactionEditNameLabel,
+                prefixIcon: const Icon(Icons.label),
               ),
             ),
             const SizedBox(height: 16),
@@ -351,9 +354,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               maxLength: _maxNotesLength,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                prefixIcon: Icon(Icons.notes),
+              decoration: InputDecoration(
+                labelText: l.transactionEditNotesLabel,
+                prefixIcon: const Icon(Icons.notes),
               ),
             ),
             const SizedBox(height: 16),
@@ -361,9 +364,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               builder: (context, categoriesProvider, _) {
                 return DropdownButtonFormField<String?>(
                   value: _selectedCategoryId,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    prefixIcon: Icon(Icons.category),
+                  decoration: InputDecoration(
+                    labelText: l.transactionEditCategoryLabel,
+                    prefixIcon: const Icon(Icons.category),
                     helperText: 'Choose a replacement category',
                   ),
                   isExpanded: true,
@@ -379,9 +382,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               builder: (context, merchantsProvider, _) {
                 return DropdownButtonFormField<String?>(
                   value: _selectedMerchantId,
-                  decoration: const InputDecoration(
-                    labelText: 'Merchant',
-                    prefixIcon: Icon(Icons.storefront),
+                  decoration: InputDecoration(
+                    labelText: l.transactionEditMerchantLabel,
+                    prefixIcon: const Icon(Icons.storefront),
                     helperText: 'Choose a replacement merchant',
                   ),
                   isExpanded: true,
@@ -393,7 +396,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               },
             ),
             const SizedBox(height: 24),
-            Text('Tags', style: Theme.of(context).textTheme.titleMedium),
+            Text(l.transactionEditTagsLabel, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Consumer<TagsProvider>(
               builder: (context, tagsProvider, _) =>
@@ -409,7 +412,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.save),
-              label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
+              label: Text(_isSaving ? l.transactionEditSaving : l.commonSave),
             ),
           ],
         ),
