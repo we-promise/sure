@@ -2,6 +2,14 @@
   <%= turbo_stream.replace @transfer.inflow_transaction.entry %>
   <%= turbo_stream.replace @transfer.outflow_transaction.entry %>
 
+  <%= turbo_stream.replace dom_id(@transfer.outflow_transaction.entry, :name) do %>
+    <dd class="font-medium text-right" id="<%= dom_id(@transfer.outflow_transaction.entry, :name) %>"><%= @transfer.outflow_transaction.entry.name %></dd>
+  <% end %>
+
+  <%= turbo_stream.replace dom_id(@transfer.inflow_transaction.entry, :name) do %>
+    <dd class="font-medium text-right" id="<%= dom_id(@transfer.inflow_transaction.entry, :name) %>"><%= @transfer.inflow_transaction.entry.name %></dd>
+  <% end %>
+
   <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "category_menu_mobile"),
                           partial: "transactions/transaction_category",
                           locals: { transaction: @transfer.inflow_transaction, variant: "mobile" } %>

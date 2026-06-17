@@ -179,6 +179,29 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "renaming a transfer updates the name on both transactions" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: { transfer: { name: "Rent" } }
+
+    assert_redirected_to transactions_url
+    assert_equal "Transfer updated", flash[:notice]
+    assert_equal "Rent", transfer.outflow_transaction.entry.reload.name
+    assert_equal "Rent", transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "blank name does not overwrite transaction names" do
+    transfer = transfers(:one)
+    original_outflow_name = transfer.outflow_transaction.entry.name
+    original_inflow_name = transfer.inflow_transaction.entry.name
+
+    patch transfer_url(transfer), params: { transfer: { name: "", notes: "Test notes" } }
+
+    assert_equal original_outflow_name, transfer.outflow_transaction.entry.reload.name
+    assert_equal original_inflow_name, transfer.inflow_transaction.entry.reload.name
+    assert_equal "Test notes", transfer.reload.notes
+  end
+
   test "handles rejection without FrozenError" do
     transfer = transfers(:one)
 

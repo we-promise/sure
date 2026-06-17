@@ -37,6 +37,10 @@
             <dt class="text-secondary"><%= t(".amount") %></dt>
             <dd class="font-medium text-red-500 privacy-sensitive"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
+          <dl class="flex items-center gap-2 justify-between">
+            <dt class="text-secondary"><%= t(".transaction_name") %></dt>
+            <dd class="font-medium text-right" id="<%= dom_id(@transfer.outflow_transaction.entry, :name) %>"><%= @transfer.outflow_transaction.entry.name %></dd>
+          </dl>
         </div>
         <%= render "shared/ruler", classes: "my-2" %>
         <div class="space-y-3">
@@ -55,12 +59,20 @@
             <dt class="text-secondary"><%= t(".amount") %></dt>
             <dd class="font-medium text-green-500 privacy-sensitive">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
+          <dl class="flex items-center gap-2 justify-between">
+            <dt class="text-secondary"><%= t(".transaction_name") %></dt>
+            <dd class="font-medium text-right" id="<%= dom_id(@transfer.inflow_transaction.entry, :name) %>"><%= @transfer.inflow_transaction.entry.name %></dd>
+          </dl>
         </div>
       </div>
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>
       <%= styled_form_with model: @transfer,
               data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
+        <%= f.text_field :name,
+                  label: t(".name_label"),
+                  value: @transfer.outflow_transaction.entry.name,
+                  "data-auto-submit-form-target": "auto" %>
         <% if @transfer.categorizable? %>
           <%= f.collection_select :category_id, @categories.alphabetically, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @transfer.outflow_transaction.category&.id }, "data-auto-submit-form-target": "auto" %>
         <% end %>
