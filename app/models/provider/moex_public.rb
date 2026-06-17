@@ -56,6 +56,10 @@ class Provider::MoexPublic < Provider
   SEARCH_CACHE_TTL = 5.minutes
   INSTRUMENT_CACHE_TTL = 24.hours
 
+  # When a single FX date falls on a weekend/holiday, look back this many days so
+  # we can return the most recent prior trading-day quote instead of failing.
+  FX_RATE_LOOKBACK_DAYS = 10
+
   def initialize
     # No API key required — public market data only.
   end
@@ -176,7 +180,9 @@ class Provider::MoexPublic < Provider
 
   def fetch_exchange_rate(from:, to:, date:)
     with_provider_response do
-      rates = exchange_rates(from, to, date, date)
+      # Fetch a short lookback window, not just the exact day, so a weekend or
+      # holiday request still resolves to the previous trading day's close.
+      rates = exchange_rates(from, to, date - FX_RATE_LOOKBACK_DAYS, date)
       raise Error, "No MOEX FX rate for #{from}/#{to} on #{date}" if rates.blank?
 
       rates.find { |r| r.date == date } ||
@@ -428,11 +434,7 @@ class Provider::MoexPublic < Provider
       date = row["tradedate"]
       return nil if date.blank?
 
-      raw = if bond
-        row["close"].presence || row["legalcloseprice"].presence
-      else
-        row["close"].presence || row["legalcloseprice"].presence
-      end
+      raw = row["close"].presence || row["legalcloseprice"].presence
       return nil if raw.nil?
 
       value = raw.to_f

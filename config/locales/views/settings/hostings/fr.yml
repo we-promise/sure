@@ -43,7 +43,7 @@ fr:
         requires_api_key_alpha_vantage: "nécessite une clé API, limite de 25 appels/jour"
         mfapi_hint: "gratuit, aucune clé API -- fonds communs indiens uniquement"
         binance_public_hint: "gratuit, aucune clé API -- crypto uniquement (BTC, ETH, etc.)"
-        moex_public_hint: "free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX"
+        moex_public_hint: "gratuit, aucune clé API -- actions, fonds et obligations russes (MOEX), incl. change RUB"
         providers:
           twelve_data: "Twelve Data"
           yahoo_finance: "Yahoo Finance"

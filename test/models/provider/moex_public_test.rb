@@ -290,6 +290,19 @@ class Provider::MoexPublicTest < ActiveSupport::TestCase
     assert_equal "RUB", response.data.to
   end
 
+  test "fetch_exchange_rate looks back to the prior trading day on a non-trading date" do
+    non_trading_day = Date.current - 5
+    prior_trading_day = non_trading_day - 2
+    # ISS returns nothing for the weekend/holiday itself, only the earlier close.
+    stub_fx_history("USD000UTSTOM", [ fx_row(tradedate: prior_trading_day.to_s, close: "91.0") ])
+
+    response = @provider.fetch_exchange_rate(from: "USD", to: "RUB", date: non_trading_day)
+
+    assert response.success?
+    assert_equal prior_trading_day, response.data.date
+    assert_in_delta 91.0, response.data.rate.to_f
+  end
+
   test "fetch_exchange_rate RUB to USD inverts the selt quote" do
     date = Date.current - 5
     stub_fx_history("USD000UTSTOM", [ fx_row(tradedate: date.to_s, close: "90.5") ])

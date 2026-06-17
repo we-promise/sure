@@ -43,7 +43,7 @@ vi:
         requires_api_key_alpha_vantage: yêu cầu khóa API, giới hạn 25 lần gọi/ngày
         mfapi_hint: miễn phí, không cần khóa API -- chỉ quỹ tương hỗ Ấn Độ
         binance_public_hint: miễn phí, không cần khóa API -- chỉ tiền điện tử (BTC, ETH, v.v.)
-        moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
+        moex_public_hint: miễn phí, không cần khóa API -- cổ phiếu, quỹ và trái phiếu Nga (MOEX), bao gồm tỷ giá RUB
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
