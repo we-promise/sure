@@ -91,8 +91,10 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                   const SizedBox(height: 16),
                   Text(
                     authProvider.ssoEmail != null
-                        ? 'Signed in as ${authProvider.ssoEmail}'
-                        : 'Google account verified',
+                        ? AppLocalizations.of(context)
+                            .ssoOnboardingSignedInAs(authProvider.ssoEmail!)
+                        : AppLocalizations.of(context)
+                            .ssoOnboardingGoogleVerified,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: colorScheme.onSurfaceVariant,
@@ -196,7 +198,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Enter your existing account credentials to link with Google Sign-In.',
+                    AppLocalizations.of(context)
+                        .ssoOnboardingLinkCredentialsNote,
                     style: TextStyle(color: colorScheme.onSurface),
                   ),
                 ),
@@ -283,8 +286,10 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                 Expanded(
                   child: Text(
                     hasPendingInvitation
-                        ? 'You have a pending invitation. Accept it to join an existing household.'
-                        : 'Create a new account using your Google identity.',
+                        ? AppLocalizations.of(context)
+                            .ssoOnboardingPendingInvitationNote
+                        : AppLocalizations.of(context)
+                            .ssoOnboardingCreateIdentityNote,
                     style: TextStyle(color: colorScheme.onSurface),
                   ),
                 ),
@@ -300,7 +305,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
               prefixIcon: const Icon(Icons.person_outlined),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) return AppLocalizations.of(context).loginEmailRequired;
+              if (value == null || value.isEmpty) return AppLocalizations.of(context).ssoOnboardingFirstNameRequired;
               return null;
             },
           ),
@@ -313,7 +318,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
               prefixIcon: const Icon(Icons.person_outlined),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) return AppLocalizations.of(context).loginEmailRequired;
+              if (value == null || value.isEmpty) return AppLocalizations.of(context).ssoOnboardingLastNameRequired;
               return null;
             },
             onFieldSubmitted: (_) => _handleCreateAccount(),

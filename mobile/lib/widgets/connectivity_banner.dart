@@ -16,10 +16,12 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   bool _isSyncing = false;
 
   Future<void> _handleSync(BuildContext context, String? accessToken, TransactionsProvider transactionsProvider) async {
+    // Capture context-derived objects before the async gap so we never touch
+    // `context` after an await.
     final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     if (accessToken == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(l.connectivitySignInToSync),
           backgroundColor: Colors.orange,
@@ -37,7 +39,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
       await transactionsProvider.syncTransactions(accessToken: accessToken);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(l.connectivitySyncSuccess),
           backgroundColor: Colors.green,
@@ -45,7 +47,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(l.connectivitySyncFailed),
           backgroundColor: Colors.red,

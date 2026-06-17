@@ -36,18 +36,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonUndo => 'Undo';
 
   @override
-  String get commonRetry => 'Retry';
-
-  @override
-  String get commonLoading => 'Loading…';
-
-  @override
-  String get commonError => 'Something went wrong';
-
-  @override
-  String get commonNoData => 'No data available';
-
-  @override
   String get chatSuggestionNetWorth => 'What is my current net worth?';
 
   @override
@@ -61,13 +49,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSuggestionExpenses => 'What are my biggest expenses lately?';
 
   @override
-  String get loginTitle => 'Sure Finances';
-
-  @override
   String get loginEmailLabel => 'Email';
-
-  @override
-  String get loginEmailHint => 'Enter your email';
 
   @override
   String get loginEmailRequired => 'Email is required';
@@ -79,9 +61,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginPasswordLabel => 'Password';
 
   @override
-  String get loginPasswordHint => 'Enter your password';
-
-  @override
   String get loginPasswordRequired => 'Password is required';
 
   @override
@@ -91,35 +70,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginSignInWithGoogle => 'Sign in with Google';
 
   @override
-  String get loginMfaTitle => 'Two-Factor Authentication';
-
-  @override
-  String get loginMfaContent =>
-      'Enter the 6-digit code from your authenticator app.';
-
-  @override
   String get loginMfaLabel => 'Authentication Code';
 
   @override
-  String get loginMfaHint => 'Enter 6-digit code';
-
-  @override
-  String get loginMfaVerify => 'Verify';
-
-  @override
-  String get loginApiKeyTitle => 'Enter API Key';
-
-  @override
   String get loginApiKeyLabel => 'API Key';
-
-  @override
-  String get loginApiKeyHint => 'Paste your API key';
-
-  @override
-  String get loginApiKeySubmit => 'Submit';
-
-  @override
-  String get loginServerUrlLabel => 'Server URL';
 
   @override
   String get navHome => 'Home';
@@ -132,16 +86,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navMore => 'More';
-
-  @override
-  String get navEnableAiTitle => 'Enable AI Assistant';
-
-  @override
-  String get navEnableAiContent =>
-      'The AI assistant requires an OpenAI API key configured in your Sure settings. Would you like to go to settings?';
-
-  @override
-  String get navEnableAiGoToSettings => 'Go to Settings';
 
   @override
   String get dashboardSyncError => 'Sync failed';
@@ -160,9 +104,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardSynced => 'Synced';
-
-  @override
-  String get dashboardSyncAll => 'Sync All';
 
   @override
   String get dashboardErrorLoadingAccounts => 'Failed to load accounts';
@@ -194,23 +135,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatListDeleteTitle => 'Delete Chat';
 
   @override
-  String get chatListDeleteContent =>
-      'Are you sure you want to delete this chat?';
-
-  @override
   String get chatConversationNewTitle => 'New Conversation';
 
   @override
   String get chatConversationMessageHint => 'Ask anything about your finances…';
-
-  @override
-  String get chatConversationEditTitleHint => 'Conversation title';
-
-  @override
-  String get chatConversationRenameTitle => 'Rename Conversation';
-
-  @override
-  String get chatConversationRename => 'Rename';
 
   @override
   String chatConversationGreetingWithName(String firstName) {
@@ -219,9 +147,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatConversationGreetingNoName => 'Hi there, how can I help?';
-
-  @override
-  String get chatConversationError => 'Failed to send message';
 
   @override
   String get transactionFormNewTitle => 'New Transaction';
@@ -239,9 +164,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionFormAmountLabel => 'Amount';
 
   @override
-  String get transactionFormAmountHint => '0.00';
-
-  @override
   String get transactionFormAmountRequired => 'Amount is required';
 
   @override
@@ -254,19 +176,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionFormNameLabel => 'Name';
 
   @override
-  String get transactionFormNameHint => 'Transaction name';
-
-  @override
-  String get transactionFormNameRequired => 'Name is required';
-
-  @override
   String get transactionFormCategoryLabel => 'Category';
-
-  @override
-  String get transactionFormSaveSuccess => 'Transaction saved';
-
-  @override
-  String get transactionFormSaveError => 'Failed to save transaction';
 
   @override
   String get transactionEditTitle => 'Edit Transaction';
@@ -275,16 +185,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionEditNameLabel => 'Name';
 
   @override
-  String get transactionEditNameHint => 'Transaction name';
-
-  @override
   String get transactionEditNameRequired => 'Name is required';
 
   @override
   String get transactionEditNotesLabel => 'Notes';
-
-  @override
-  String get transactionEditNotesHint => 'Add a note';
 
   @override
   String get transactionEditCategoryLabel => 'Category';
@@ -293,19 +197,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionEditMerchantLabel => 'Merchant';
 
   @override
-  String get transactionEditMerchantHint => 'Search merchants';
-
-  @override
   String get transactionEditTagsLabel => 'Tags';
 
   @override
-  String get transactionEditTagsHint => 'Add tags';
-
-  @override
   String get transactionEditSaving => 'Saving…';
-
-  @override
-  String get transactionEditSaveError => 'Failed to save changes';
 
   @override
   String get transactionsListDeleteTitle => 'Delete Transaction';
@@ -323,17 +218,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to delete the selected transactions?';
 
   @override
-  String get transactionsListDeleteUndoMessage => 'Transaction deleted';
-
-  @override
-  String get transactionsListUndoAction => 'Undo';
-
-  @override
   String get transactionsListEmpty => 'No transactions';
-
-  @override
-  String get transactionsListEmptySubtitle =>
-      'Transactions will appear here once synced';
 
   @override
   String get transactionsListAuthFailed =>
@@ -399,9 +284,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionsListUndoFailed => 'Failed to undo transaction';
 
   @override
-  String get settingsTitle => 'Settings';
-
-  @override
   String get settingsSectionDisplay => 'Display';
 
   @override
@@ -429,12 +311,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsThemeDark => 'Dark';
 
   @override
-  String get settingsServerUrlLabel => 'Server URL';
-
-  @override
-  String get settingsChangeServer => 'Change Server';
-
-  @override
   String get settingsProxyHeadersLabel => 'Custom Proxy Headers';
 
   @override
@@ -446,23 +322,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsBiometricEnableContent =>
       'Require biometric authentication when resuming the app.';
-
-  @override
-  String get settingsBiometricEnable2 => 'Enable';
-
-  @override
-  String get settingsBiometricDisable => 'Disable biometric lock?';
-
-  @override
-  String get settingsBiometricDisableContent =>
-      'Biometric authentication will no longer be required.';
-
-  @override
-  String get settingsBiometricDisable2 => 'Disable';
-
-  @override
-  String get settingsBiometricNotAvailable =>
-      'Biometric authentication is not available on this device.';
 
   @override
   String get settingsCheckForUpdates => 'Check for Updates';
@@ -498,21 +357,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsClearDataSuccess => 'Local data cleared';
 
   @override
-  String get settingsResetAppTitle => 'Reset Application';
-
-  @override
-  String get settingsResetAppContent =>
-      'This will sign you out and clear all local data. Your data on the server will not be affected.';
-
-  @override
-  String get settingsResetApp => 'Reset';
-
-  @override
   String get settingsDeleteAccountTitle => 'Delete Account';
-
-  @override
-  String get settingsDeleteAccountContent =>
-      'This will permanently delete your account and all associated data. This action cannot be undone.';
 
   @override
   String get settingsDeleteAccount => 'Delete Account';
@@ -537,14 +382,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ssoOnboardingTabCreate => 'Create new';
-
-  @override
-  String get ssoOnboardingLinkNote =>
-      'Link your SSO identity to an existing Sure account using your email and password.';
-
-  @override
-  String get ssoOnboardingCreateNote =>
-      'Create a new Sure account linked to your SSO identity.';
 
   @override
   String get ssoOnboardingFirstNameLabel => 'First Name';
@@ -701,12 +538,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logViewerLogsCopied => 'Logs copied to clipboard';
 
   @override
-  String get logViewerLogsCleared => 'Logs cleared';
-
-  @override
-  String get logViewerEmpty => 'No logs to display';
-
-  @override
   String get connectivityOffline => 'You are offline';
 
   @override
@@ -722,13 +553,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectivitySyncNow => 'Sync Now';
-
-  @override
-  String get connectivityAuthError =>
-      'Authentication error — please sign in again.';
-
-  @override
-  String get connectivitySyncError => 'Sync failed — tap to retry.';
 
   @override
   String get proxyHeadersAddHeader => 'Add header';
@@ -747,9 +571,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountDetailRefreshTooltip => 'Refresh account details';
-
-  @override
-  String get accountDetailError => 'Could not load account details';
 
   @override
   String get accountDetailRecentBalanceHistory => 'Recent balance history';
@@ -1105,4 +926,92 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get connectivityAuthFailed =>
       'Unable to authenticate. Please try again.';
+
+  @override
+  String ssoOnboardingSignedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
+  String get ssoOnboardingGoogleVerified => 'Google account verified';
+
+  @override
+  String get ssoOnboardingLinkCredentialsNote =>
+      'Enter your existing account credentials to link with Google Sign-In.';
+
+  @override
+  String get ssoOnboardingPendingInvitationNote =>
+      'You have a pending invitation. Accept it to join an existing household.';
+
+  @override
+  String get ssoOnboardingCreateIdentityNote =>
+      'Create a new account using your Google identity.';
+
+  @override
+  String get ssoOnboardingFirstNameRequired => 'First name is required';
+
+  @override
+  String get ssoOnboardingLastNameRequired => 'Last name is required';
+
+  @override
+  String get backendConfigTimeout =>
+      'Connection timeout. Please check the URL and try again.';
+
+  @override
+  String get backendConfigSuccess => 'Connection successful!';
+
+  @override
+  String backendConfigServerError(int code) {
+    return 'Server responded with status $code. Please check if this is a Sure backend server.';
+  }
+
+  @override
+  String backendConfigConnectionFailed(String error) {
+    return 'Connection failed: $error';
+  }
+
+  @override
+  String backendConfigSaveFailed(String error) {
+    return 'Failed to save URL: $error';
+  }
+
+  @override
+  String get backendConfigUrlRequired => 'Please enter a backend URL';
+
+  @override
+  String get backendConfigUrlScheme =>
+      'URL must start with http:// or https://';
+
+  @override
+  String get backendConfigUrlInvalid => 'Please enter a valid URL';
+
+  @override
+  String get backendConfigHeadersHelp =>
+      'Headers are sent by the app with API requests. External browser SSO pages may not receive them.';
+
+  @override
+  String get recentTransactionsUnknownAccount => 'Unknown Account';
+
+  @override
+  String get accountDetailUnavailable =>
+      'Account details are temporarily unavailable';
+
+  @override
+  String chatListMinutesAgo(int minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String chatListHoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String chatListDaysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String get chatConversationStartFailed =>
+      'Failed to start conversation. Please try again.';
 }

@@ -30,7 +30,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
       widget.accountDetailService == null;
   late Account _account;
   bool _isLoading = false;
-  String? _error;
+  bool _detailsUnavailable = false;
   List<AccountBalance> _balances = [];
   List<AccountHolding> _holdings = [];
   bool _disposed = false;
@@ -47,6 +47,9 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
   Future<void> _loadDetails() async {
     if (_disposed) return;
 
+    // NOTE: this runs synchronously from initState(); do not touch inherited
+    // widgets (e.g. AppLocalizations.of) here. The failure message is localized
+    // at render time in build() via the _detailsUnavailable flag.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
     if (_disposed) return;
@@ -61,7 +64,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
     if (mounted) {
       setState(() {
         _isLoading = true;
-        _error = null;
+        _detailsUnavailable = false;
       });
     }
 
@@ -118,7 +121,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
         }
         if (accountResult['success'] != true &&
             balancesResult['success'] != true) {
-          _error = 'Account details are temporarily unavailable';
+          _detailsUnavailable = true;
         }
         _isLoading = false;
       });
@@ -279,7 +282,9 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                             child: Text(
                               holding.ticker?.isNotEmpty == true
                                   ? holding.ticker!
-                                  : holding.securityName ?? l.accountDetailHoldingFallback,
+                                  : holding.securityName?.trim().isNotEmpty == true
+                                      ? holding.securityName!
+                                      : l.accountDetailHoldingFallback,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -297,10 +302,10 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                     ),
                   ),
             ],
-            if (_error != null) ...[
+            if (_detailsUnavailable) ...[
               const SizedBox(height: 8),
               Text(
-                _error!,
+                l.accountDetailUnavailable,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colorScheme.error,
                     ),

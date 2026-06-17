@@ -122,7 +122,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(l.logViewerLogsCopied),
-                  duration: Duration(seconds: 2),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             },

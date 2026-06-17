@@ -17,8 +17,10 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^10.0.0
-  # Bumped from ^0.18.1: flutter_localizations on Flutter 3.32 pins intl 0.20.x.
-  intl: ^0.20.2
+  # flutter_localizations pins intl per Flutter SDK (0.19.x on <3.32, 0.20.x on
+  # 3.32+). Per the Flutter i18n guide, use `any` so the SDK-constrained version
+  # is selected instead of pinning a version that conflicts with our Flutter floor.
+  intl: any
   sqflite: ^2.4.2
   path: ^1.9.1
   connectivity_plus: ^7.0.0

@@ -181,7 +181,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
   Widget _buildTransactionItem(
       BuildContext context, Transaction transaction, ColorScheme colorScheme) {
     final account = _getAccount(transaction.accountId);
-    final accountName = account?.name ?? 'Unknown Account';
+    final accountName = account?.name ??
+        AppLocalizations.of(context).recentTransactionsUnknownAccount;
 
     double? amount;
     try {
@@ -211,7 +212,9 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     String formattedDate;
     try {
       final date = DateTime.parse(transaction.date);
-      formattedDate = DateFormat('yyyy-MM-dd HH:mm').format(date);
+      formattedDate = DateFormat('yyyy-MM-dd HH:mm',
+              Localizations.localeOf(context).toString())
+          .format(date);
     } catch (e) {
       formattedDate = transaction.date;
     }

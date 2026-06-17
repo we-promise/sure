@@ -191,7 +191,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _showTransactionsDialog(DateTime date) {
     final transactions = _getTransactionsForDate(date);
-    final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+    final formattedDate = DateFormat.yMMMd(
+      Localizations.localeOf(context).toString(),
+    ).format(date);
     final colorScheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
 
@@ -437,7 +439,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   onPressed: _previousMonth,
                 ),
                 Text(
-                  DateFormat('yyyy-MM').format(_currentMonth),
+                  DateFormat.yMMM(
+                    Localizations.localeOf(context).toString(),
+                  ).format(_currentMonth),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 IconButton(
@@ -499,6 +503,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final daysInMonth = lastDayOfMonth.day;
     final startWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday
 
+    // Localized narrow weekday labels, Sunday→Saturday to match the
+    // Sunday-anchored grid math above. 2024-01-07 is a Sunday, so indices
+    // 0..6 map Sunday..Saturday.
+    final localeName = Localizations.localeOf(context).toString();
+    final weekdayLabels = List.generate(
+      7,
+      (i) => DateFormat.E(localeName)
+          .format(DateTime(2024, 1, 7 + i))
+          .substring(0, 1),
+    );
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(8),
@@ -508,7 +523,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             SizedBox(
               height: 40,
               child: Row(
-                children: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) {
+                children: weekdayLabels.map((day) {
                   return Expanded(
                     child: Center(
                       child: Text(

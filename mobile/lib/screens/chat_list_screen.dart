@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
@@ -143,16 +144,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
+    final l = AppLocalizations.of(context);
     if (difference.inMinutes < 1) {
-      return AppLocalizations.of(context).chatListJustNow;
+      return l.chatListJustNow;
     } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
+      return l.chatListMinutesAgo(difference.inMinutes);
     } else if (difference.inDays < 1) {
-      return '${difference.inHours}h ago';
+      return l.chatListHoursAgo(difference.inHours);
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+      return l.chatListDaysAgo(difference.inDays);
     } else {
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      return DateFormat.yMd(Localizations.localeOf(context).toString())
+          .format(dateTime);
     }
   }
 

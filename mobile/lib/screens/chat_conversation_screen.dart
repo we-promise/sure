@@ -136,6 +136,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (content.isEmpty) return;
     setState(() => _isSendInFlight = true);
 
+    final l = AppLocalizations.of(context);
+
     try {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
@@ -161,7 +163,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         _messageController.text = content;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(chatProvider.errorMessage ?? 'Failed to start conversation. Please try again.'),
+            content: Text(chatProvider.errorMessage ?? l.chatConversationStartFailed),
             backgroundColor: Colors.red,
           ),
         );

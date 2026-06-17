@@ -148,30 +148,6 @@ abstract class AppLocalizations {
   /// **'Undo'**
   String get commonUndo;
 
-  /// Generic retry action label for error states.
-  ///
-  /// In en, this message translates to:
-  /// **'Retry'**
-  String get commonRetry;
-
-  /// Generic in-progress loading label.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading…'**
-  String get commonLoading;
-
-  /// Generic error message.
-  ///
-  /// In en, this message translates to:
-  /// **'Something went wrong'**
-  String get commonError;
-
-  /// Generic empty-state message.
-  ///
-  /// In en, this message translates to:
-  /// **'No data available'**
-  String get commonNoData;
-
   /// Suggested chat prompt on the empty assistant screen.
   ///
   /// In en, this message translates to:
@@ -196,23 +172,11 @@ abstract class AppLocalizations {
   /// **'What are my biggest expenses lately?'**
   String get chatSuggestionExpenses;
 
-  /// App name shown on the login screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Sure Finances'**
-  String get loginTitle;
-
   /// Label for the email text field on the login screen.
   ///
   /// In en, this message translates to:
   /// **'Email'**
   String get loginEmailLabel;
-
-  /// Hint text for the email text field on the login screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your email'**
-  String get loginEmailHint;
 
   /// Validation error when email field is empty.
   ///
@@ -232,12 +196,6 @@ abstract class AppLocalizations {
   /// **'Password'**
   String get loginPasswordLabel;
 
-  /// Hint text for the password field on the login screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your password'**
-  String get loginPasswordHint;
-
   /// Validation error when password field is empty.
   ///
   /// In en, this message translates to:
@@ -256,65 +214,17 @@ abstract class AppLocalizations {
   /// **'Sign in with Google'**
   String get loginSignInWithGoogle;
 
-  /// Title for the MFA code dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Two-Factor Authentication'**
-  String get loginMfaTitle;
-
-  /// Body text for the MFA code dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter the 6-digit code from your authenticator app.'**
-  String get loginMfaContent;
-
   /// Label for the MFA code input field.
   ///
   /// In en, this message translates to:
   /// **'Authentication Code'**
   String get loginMfaLabel;
 
-  /// Hint text for the MFA code input.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter 6-digit code'**
-  String get loginMfaHint;
-
-  /// Button label to submit MFA code.
-  ///
-  /// In en, this message translates to:
-  /// **'Verify'**
-  String get loginMfaVerify;
-
-  /// Title for the API key dialog on the login screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter API Key'**
-  String get loginApiKeyTitle;
-
   /// Label for the API key input field.
   ///
   /// In en, this message translates to:
   /// **'API Key'**
   String get loginApiKeyLabel;
-
-  /// Hint text for the API key input.
-  ///
-  /// In en, this message translates to:
-  /// **'Paste your API key'**
-  String get loginApiKeyHint;
-
-  /// Button label to submit an API key.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit'**
-  String get loginApiKeySubmit;
-
-  /// Label for the server URL field on the login screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Server URL'**
-  String get loginServerUrlLabel;
 
   /// Bottom navigation label for the Home (dashboard) tab.
   ///
@@ -339,24 +249,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'More'**
   String get navMore;
-
-  /// Title for the dialog prompting the user to enable AI.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable AI Assistant'**
-  String get navEnableAiTitle;
-
-  /// Body text for the enable-AI dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'The AI assistant requires an OpenAI API key configured in your Sure settings. Would you like to go to settings?'**
-  String get navEnableAiContent;
-
-  /// Confirm button in the enable-AI dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Go to Settings'**
-  String get navEnableAiGoToSettings;
 
   /// Snackbar message when a sync attempt fails.
   ///
@@ -393,12 +285,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Synced'**
   String get dashboardSynced;
-
-  /// Button label to trigger a full sync.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync All'**
-  String get dashboardSyncAll;
 
   /// Error state message when accounts fail to load.
   ///
@@ -454,12 +340,6 @@ abstract class AppLocalizations {
   /// **'Delete Chat'**
   String get chatListDeleteTitle;
 
-  /// Body text for the delete-chat confirmation dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Are you sure you want to delete this chat?'**
-  String get chatListDeleteContent;
-
   /// Placeholder title for a new conversation before it is saved.
   ///
   /// In en, this message translates to:
@@ -472,24 +352,6 @@ abstract class AppLocalizations {
   /// **'Ask anything about your finances…'**
   String get chatConversationMessageHint;
 
-  /// Hint text in the edit-title dialog text field.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversation title'**
-  String get chatConversationEditTitleHint;
-
-  /// Title for the rename-conversation dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename Conversation'**
-  String get chatConversationRenameTitle;
-
-  /// Confirm button label in the rename-conversation dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename'**
-  String get chatConversationRename;
-
   /// Greeting shown in a new conversation when the user's first name is known.
   ///
   /// In en, this message translates to:
@@ -501,12 +363,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hi there, how can I help?'**
   String get chatConversationGreetingNoName;
-
-  /// Error snackbar when sending a message fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to send message'**
-  String get chatConversationError;
 
   /// App bar title for the new-transaction form.
   ///
@@ -538,12 +394,6 @@ abstract class AppLocalizations {
   /// **'Amount'**
   String get transactionFormAmountLabel;
 
-  /// Hint text for the amount input field.
-  ///
-  /// In en, this message translates to:
-  /// **'0.00'**
-  String get transactionFormAmountHint;
-
   /// Validation error when amount is empty.
   ///
   /// In en, this message translates to:
@@ -568,35 +418,11 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get transactionFormNameLabel;
 
-  /// Hint text for the transaction name field.
-  ///
-  /// In en, this message translates to:
-  /// **'Transaction name'**
-  String get transactionFormNameHint;
-
-  /// Validation error when name is empty.
-  ///
-  /// In en, this message translates to:
-  /// **'Name is required'**
-  String get transactionFormNameRequired;
-
   /// Label for the category picker field.
   ///
   /// In en, this message translates to:
   /// **'Category'**
   String get transactionFormCategoryLabel;
-
-  /// Snackbar message after a transaction is saved successfully.
-  ///
-  /// In en, this message translates to:
-  /// **'Transaction saved'**
-  String get transactionFormSaveSuccess;
-
-  /// Snackbar message when saving a transaction fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to save transaction'**
-  String get transactionFormSaveError;
 
   /// App bar title for the edit-transaction screen.
   ///
@@ -610,12 +436,6 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get transactionEditNameLabel;
 
-  /// Hint text for the name field in the edit form.
-  ///
-  /// In en, this message translates to:
-  /// **'Transaction name'**
-  String get transactionEditNameHint;
-
   /// Validation error when name is empty in edit form.
   ///
   /// In en, this message translates to:
@@ -627,12 +447,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notes'**
   String get transactionEditNotesLabel;
-
-  /// Hint text for the notes field in the edit form.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a note'**
-  String get transactionEditNotesHint;
 
   /// Label for the category field in the edit form.
   ///
@@ -646,35 +460,17 @@ abstract class AppLocalizations {
   /// **'Merchant'**
   String get transactionEditMerchantLabel;
 
-  /// Hint text for the merchant search field in the edit form.
-  ///
-  /// In en, this message translates to:
-  /// **'Search merchants'**
-  String get transactionEditMerchantHint;
-
   /// Label for the tags field in the edit form.
   ///
   /// In en, this message translates to:
   /// **'Tags'**
   String get transactionEditTagsLabel;
 
-  /// Hint text for the tags field in the edit form.
-  ///
-  /// In en, this message translates to:
-  /// **'Add tags'**
-  String get transactionEditTagsHint;
-
   /// In-progress label shown on the save button while saving.
   ///
   /// In en, this message translates to:
   /// **'Saving…'**
   String get transactionEditSaving;
-
-  /// Snackbar message when saving edits fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to save changes'**
-  String get transactionEditSaveError;
 
   /// Title for the single-transaction delete confirmation dialog.
   ///
@@ -700,29 +496,11 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete the selected transactions?'**
   String get transactionsListDeleteMultiContent;
 
-  /// Snackbar message shown after a transaction is deleted with an undo option.
-  ///
-  /// In en, this message translates to:
-  /// **'Transaction deleted'**
-  String get transactionsListDeleteUndoMessage;
-
-  /// Undo action label in the delete snackbar.
-  ///
-  /// In en, this message translates to:
-  /// **'Undo'**
-  String get transactionsListUndoAction;
-
   /// Empty-state message when no transactions exist.
   ///
   /// In en, this message translates to:
   /// **'No transactions'**
   String get transactionsListEmpty;
-
-  /// Empty-state subtitle on the transactions list.
-  ///
-  /// In en, this message translates to:
-  /// **'Transactions will appear here once synced'**
-  String get transactionsListEmptySubtitle;
 
   /// Snackbar message when the API returns an auth failure.
   ///
@@ -820,12 +598,6 @@ abstract class AppLocalizations {
   /// **'Failed to undo transaction'**
   String get transactionsListUndoFailed;
 
-  /// App bar title for the settings screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get settingsTitle;
-
   /// Settings section header for display/appearance options.
   ///
   /// In en, this message translates to:
@@ -880,18 +652,6 @@ abstract class AppLocalizations {
   /// **'Dark'**
   String get settingsThemeDark;
 
-  /// Label for the server URL setting.
-  ///
-  /// In en, this message translates to:
-  /// **'Server URL'**
-  String get settingsServerUrlLabel;
-
-  /// Button to navigate to the server configuration screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Change Server'**
-  String get settingsChangeServer;
-
   /// Label for the custom proxy headers setting.
   ///
   /// In en, this message translates to:
@@ -915,36 +675,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Require biometric authentication when resuming the app.'**
   String get settingsBiometricEnableContent;
-
-  /// Confirm button label in the enable-biometric dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable'**
-  String get settingsBiometricEnable2;
-
-  /// Title of the dialog to disable biometric lock.
-  ///
-  /// In en, this message translates to:
-  /// **'Disable biometric lock?'**
-  String get settingsBiometricDisable;
-
-  /// Body text of the disable-biometric dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric authentication will no longer be required.'**
-  String get settingsBiometricDisableContent;
-
-  /// Confirm button label in the disable-biometric dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Disable'**
-  String get settingsBiometricDisable2;
-
-  /// Snackbar when biometrics are not supported.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric authentication is not available on this device.'**
-  String get settingsBiometricNotAvailable;
 
   /// Label for the check-for-updates action.
   ///
@@ -1006,35 +736,11 @@ abstract class AppLocalizations {
   /// **'Local data cleared'**
   String get settingsClearDataSuccess;
 
-  /// Title for the reset-application dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset Application'**
-  String get settingsResetAppTitle;
-
-  /// Body text for the reset-application dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'This will sign you out and clear all local data. Your data on the server will not be affected.'**
-  String get settingsResetAppContent;
-
-  /// Confirm button in the reset-app dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset'**
-  String get settingsResetApp;
-
   /// Title for the delete-account confirmation dialog.
   ///
   /// In en, this message translates to:
   /// **'Delete Account'**
   String get settingsDeleteAccountTitle;
-
-  /// Body text for the delete-account dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'This will permanently delete your account and all associated data. This action cannot be undone.'**
-  String get settingsDeleteAccountContent;
 
   /// Confirm button in the delete-account dialog.
   ///
@@ -1083,18 +789,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create new'**
   String get ssoOnboardingTabCreate;
-
-  /// Explanatory note shown on the link-existing tab.
-  ///
-  /// In en, this message translates to:
-  /// **'Link your SSO identity to an existing Sure account using your email and password.'**
-  String get ssoOnboardingLinkNote;
-
-  /// Explanatory note shown on the create-new tab.
-  ///
-  /// In en, this message translates to:
-  /// **'Create a new Sure account linked to your SSO identity.'**
-  String get ssoOnboardingCreateNote;
 
   /// Label for the first-name field on the SSO onboarding screen.
   ///
@@ -1390,18 +1084,6 @@ abstract class AppLocalizations {
   /// **'Logs copied to clipboard'**
   String get logViewerLogsCopied;
 
-  /// Snackbar message after logs are cleared.
-  ///
-  /// In en, this message translates to:
-  /// **'Logs cleared'**
-  String get logViewerLogsCleared;
-
-  /// Empty-state message when there are no log entries.
-  ///
-  /// In en, this message translates to:
-  /// **'No logs to display'**
-  String get logViewerEmpty;
-
   /// Message shown in the connectivity banner when the device has no network.
   ///
   /// In en, this message translates to:
@@ -1419,18 +1101,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sync Now'**
   String get connectivitySyncNow;
-
-  /// Snackbar shown when the connectivity service gets an auth error.
-  ///
-  /// In en, this message translates to:
-  /// **'Authentication error — please sign in again.'**
-  String get connectivityAuthError;
-
-  /// Snackbar shown when a background sync fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync failed — tap to retry.'**
-  String get connectivitySyncError;
 
   /// Button label to add a new custom proxy header.
   ///
@@ -1467,12 +1137,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refresh account details'**
   String get accountDetailRefreshTooltip;
-
-  /// Error message shown in the account detail header.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not load account details'**
-  String get accountDetailError;
 
   /// Section heading for the balance history chart in the account detail header.
   ///
@@ -2085,6 +1749,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to authenticate. Please try again.'**
   String get connectivityAuthFailed;
+
+  /// Header text on the SSO onboarding screen showing the signed-in Google email.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {email}'**
+  String ssoOnboardingSignedInAs(String email);
+
+  /// Header text on the SSO onboarding screen when the Google email is unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Google account verified'**
+  String get ssoOnboardingGoogleVerified;
+
+  /// Explanatory note on the link-existing form prompting the user to enter their credentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your existing account credentials to link with Google Sign-In.'**
+  String get ssoOnboardingLinkCredentialsNote;
+
+  /// Explanatory note on the create form when the user has a pending household invitation.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a pending invitation. Accept it to join an existing household.'**
+  String get ssoOnboardingPendingInvitationNote;
+
+  /// Explanatory note on the create form when creating a brand-new account via Google.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new account using your Google identity.'**
+  String get ssoOnboardingCreateIdentityNote;
+
+  /// Validation error when the first-name field is empty on the SSO onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'First name is required'**
+  String get ssoOnboardingFirstNameRequired;
+
+  /// Validation error when the last-name field is empty on the SSO onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Last name is required'**
+  String get ssoOnboardingLastNameRequired;
+
+  /// Error shown when the connection test times out.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection timeout. Please check the URL and try again.'**
+  String get backendConfigTimeout;
+
+  /// Message shown when the connection test succeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection successful!'**
+  String get backendConfigSuccess;
+
+  /// Error shown when the server returns a non-success status during the connection test.
+  ///
+  /// In en, this message translates to:
+  /// **'Server responded with status {code}. Please check if this is a Sure backend server.'**
+  String backendConfigServerError(int code);
+
+  /// Error shown when the connection test fails with an exception.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed: {error}'**
+  String backendConfigConnectionFailed(String error);
+
+  /// Error shown when saving the backend URL fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save URL: {error}'**
+  String backendConfigSaveFailed(String error);
+
+  /// Validation error when the backend URL field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a backend URL'**
+  String get backendConfigUrlRequired;
+
+  /// Validation error when the backend URL is missing an http(s) scheme.
+  ///
+  /// In en, this message translates to:
+  /// **'URL must start with http:// or https://'**
+  String get backendConfigUrlScheme;
+
+  /// Validation error when the backend URL is malformed.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid URL'**
+  String get backendConfigUrlInvalid;
+
+  /// Helper text below the custom proxy headers section on the backend config screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Headers are sent by the app with API requests. External browser SSO pages may not receive them.'**
+  String get backendConfigHeadersHelp;
+
+  /// Fallback label when a transaction's account cannot be resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Account'**
+  String get recentTransactionsUnknownAccount;
+
+  /// Error message shown when account detail and balances both fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Account details are temporarily unavailable'**
+  String get accountDetailUnavailable;
+
+  /// Relative time label for a chat updated some minutes ago.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String chatListMinutesAgo(int minutes);
+
+  /// Relative time label for a chat updated some hours ago.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String chatListHoursAgo(int hours);
+
+  /// Relative time label for a chat updated some days ago.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String chatListDaysAgo(int days);
+
+  /// Fallback snackbar shown when creating a new conversation from the first message fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start conversation. Please try again.'**
+  String get chatConversationStartFailed;
 }
 
 class _AppLocalizationsDelegate

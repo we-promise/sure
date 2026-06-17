@@ -28,18 +28,6 @@
   "commonUndo": "Undo",
   "@commonUndo": { "description": "Generic undo action label." },
 
-  "commonRetry": "Retry",
-  "@commonRetry": { "description": "Generic retry action label for error states." },
-
-  "commonLoading": "Loading…",
-  "@commonLoading": { "description": "Generic in-progress loading label." },
-
-  "commonError": "Something went wrong",
-  "@commonError": { "description": "Generic error message." },
-
-  "commonNoData": "No data available",
-  "@commonNoData": { "description": "Generic empty-state message." },
-
   "chatSuggestionNetWorth": "What is my current net worth?",
   "@chatSuggestionNetWorth": { "description": "Suggested chat prompt on the empty assistant screen." },
 
@@ -52,14 +40,8 @@
   "chatSuggestionExpenses": "What are my biggest expenses lately?",
   "@chatSuggestionExpenses": { "description": "Suggested chat prompt on the empty assistant screen." },
 
-  "loginTitle": "Sure Finances",
-  "@loginTitle": { "description": "App name shown on the login screen." },
-
   "loginEmailLabel": "Email",
   "@loginEmailLabel": { "description": "Label for the email text field on the login screen." },
-
-  "loginEmailHint": "Enter your email",
-  "@loginEmailHint": { "description": "Hint text for the email text field on the login screen." },
 
   "loginEmailRequired": "Email is required",
   "@loginEmailRequired": { "description": "Validation error when email field is empty." },
@@ -70,9 +52,6 @@
   "loginPasswordLabel": "Password",
   "@loginPasswordLabel": { "description": "Label for the password field on the login screen." },
 
-  "loginPasswordHint": "Enter your password",
-  "@loginPasswordHint": { "description": "Hint text for the password field on the login screen." },
-
   "loginPasswordRequired": "Password is required",
   "@loginPasswordRequired": { "description": "Validation error when password field is empty." },
 
@@ -82,35 +61,11 @@
   "loginSignInWithGoogle": "Sign in with Google",
   "@loginSignInWithGoogle": { "description": "Google SSO button label." },
 
-  "loginMfaTitle": "Two-Factor Authentication",
-  "@loginMfaTitle": { "description": "Title for the MFA code dialog." },
-
-  "loginMfaContent": "Enter the 6-digit code from your authenticator app.",
-  "@loginMfaContent": { "description": "Body text for the MFA code dialog." },
-
   "loginMfaLabel": "Authentication Code",
   "@loginMfaLabel": { "description": "Label for the MFA code input field." },
 
-  "loginMfaHint": "Enter 6-digit code",
-  "@loginMfaHint": { "description": "Hint text for the MFA code input." },
-
-  "loginMfaVerify": "Verify",
-  "@loginMfaVerify": { "description": "Button label to submit MFA code." },
-
-  "loginApiKeyTitle": "Enter API Key",
-  "@loginApiKeyTitle": { "description": "Title for the API key dialog on the login screen." },
-
   "loginApiKeyLabel": "API Key",
   "@loginApiKeyLabel": { "description": "Label for the API key input field." },
-
-  "loginApiKeyHint": "Paste your API key",
-  "@loginApiKeyHint": { "description": "Hint text for the API key input." },
-
-  "loginApiKeySubmit": "Submit",
-  "@loginApiKeySubmit": { "description": "Button label to submit an API key." },
-
-  "loginServerUrlLabel": "Server URL",
-  "@loginServerUrlLabel": { "description": "Label for the server URL field on the login screen." },
 
   "navHome": "Home",
   "@navHome": { "description": "Bottom navigation label for the Home (dashboard) tab." },
@@ -123,15 +78,6 @@
 
   "navMore": "More",
   "@navMore": { "description": "Bottom navigation label for the More tab." },
-
-  "navEnableAiTitle": "Enable AI Assistant",
-  "@navEnableAiTitle": { "description": "Title for the dialog prompting the user to enable AI." },
-
-  "navEnableAiContent": "The AI assistant requires an OpenAI API key configured in your Sure settings. Would you like to go to settings?",
-  "@navEnableAiContent": { "description": "Body text for the enable-AI dialog." },
-
-  "navEnableAiGoToSettings": "Go to Settings",
-  "@navEnableAiGoToSettings": { "description": "Confirm button in the enable-AI dialog." },
 
   "dashboardSyncError": "Sync failed",
   "@dashboardSyncError": { "description": "Snackbar message when a sync attempt fails." },
@@ -150,9 +96,6 @@
 
   "dashboardSynced": "Synced",
   "@dashboardSynced": { "description": "Label shown in the sync status indicator after a successful sync." },
-
-  "dashboardSyncAll": "Sync All",
-  "@dashboardSyncAll": { "description": "Button label to trigger a full sync." },
 
   "dashboardErrorLoadingAccounts": "Failed to load accounts",
   "@dashboardErrorLoadingAccounts": { "description": "Error state message when accounts fail to load." },
@@ -181,23 +124,11 @@
   "chatListDeleteTitle": "Delete Chat",
   "@chatListDeleteTitle": { "description": "Title for the delete-chat confirmation dialog." },
 
-  "chatListDeleteContent": "Are you sure you want to delete this chat?",
-  "@chatListDeleteContent": { "description": "Body text for the delete-chat confirmation dialog." },
-
   "chatConversationNewTitle": "New Conversation",
   "@chatConversationNewTitle": { "description": "Placeholder title for a new conversation before it is saved." },
 
   "chatConversationMessageHint": "Ask anything about your finances…",
   "@chatConversationMessageHint": { "description": "Hint text inside the chat message input field." },
-
-  "chatConversationEditTitleHint": "Conversation title",
-  "@chatConversationEditTitleHint": { "description": "Hint text in the edit-title dialog text field." },
-
-  "chatConversationRenameTitle": "Rename Conversation",
-  "@chatConversationRenameTitle": { "description": "Title for the rename-conversation dialog." },
-
-  "chatConversationRename": "Rename",
-  "@chatConversationRename": { "description": "Confirm button label in the rename-conversation dialog." },
 
   "chatConversationGreetingWithName": "Hi {firstName}, how can I help?",
   "@chatConversationGreetingWithName": {
@@ -207,9 +138,6 @@
 
   "chatConversationGreetingNoName": "Hi there, how can I help?",
   "@chatConversationGreetingNoName": { "description": "Greeting shown in a new conversation when the user's first name is not available." },
-
-  "chatConversationError": "Failed to send message",
-  "@chatConversationError": { "description": "Error snackbar when sending a message fails." },
 
   "transactionFormNewTitle": "New Transaction",
   "@transactionFormNewTitle": { "description": "App bar title for the new-transaction form." },
@@ -226,9 +154,6 @@
   "transactionFormAmountLabel": "Amount",
   "@transactionFormAmountLabel": { "description": "Label for the amount input field." },
 
-  "transactionFormAmountHint": "0.00",
-  "@transactionFormAmountHint": { "description": "Hint text for the amount input field." },
-
   "transactionFormAmountRequired": "Amount is required",
   "@transactionFormAmountRequired": { "description": "Validation error when amount is empty." },
 
@@ -241,20 +166,8 @@
   "transactionFormNameLabel": "Name",
   "@transactionFormNameLabel": { "description": "Label for the transaction name/payee field." },
 
-  "transactionFormNameHint": "Transaction name",
-  "@transactionFormNameHint": { "description": "Hint text for the transaction name field." },
-
-  "transactionFormNameRequired": "Name is required",
-  "@transactionFormNameRequired": { "description": "Validation error when name is empty." },
-
   "transactionFormCategoryLabel": "Category",
   "@transactionFormCategoryLabel": { "description": "Label for the category picker field." },
-
-  "transactionFormSaveSuccess": "Transaction saved",
-  "@transactionFormSaveSuccess": { "description": "Snackbar message after a transaction is saved successfully." },
-
-  "transactionFormSaveError": "Failed to save transaction",
-  "@transactionFormSaveError": { "description": "Snackbar message when saving a transaction fails." },
 
   "transactionEditTitle": "Edit Transaction",
   "@transactionEditTitle": { "description": "App bar title for the edit-transaction screen." },
@@ -262,17 +175,11 @@
   "transactionEditNameLabel": "Name",
   "@transactionEditNameLabel": { "description": "Label for the name field in the edit form." },
 
-  "transactionEditNameHint": "Transaction name",
-  "@transactionEditNameHint": { "description": "Hint text for the name field in the edit form." },
-
   "transactionEditNameRequired": "Name is required",
   "@transactionEditNameRequired": { "description": "Validation error when name is empty in edit form." },
 
   "transactionEditNotesLabel": "Notes",
   "@transactionEditNotesLabel": { "description": "Label for the notes field in the edit form." },
-
-  "transactionEditNotesHint": "Add a note",
-  "@transactionEditNotesHint": { "description": "Hint text for the notes field in the edit form." },
 
   "transactionEditCategoryLabel": "Category",
   "@transactionEditCategoryLabel": { "description": "Label for the category field in the edit form." },
@@ -280,20 +187,11 @@
   "transactionEditMerchantLabel": "Merchant",
   "@transactionEditMerchantLabel": { "description": "Label for the merchant field in the edit form." },
 
-  "transactionEditMerchantHint": "Search merchants",
-  "@transactionEditMerchantHint": { "description": "Hint text for the merchant search field in the edit form." },
-
   "transactionEditTagsLabel": "Tags",
   "@transactionEditTagsLabel": { "description": "Label for the tags field in the edit form." },
 
-  "transactionEditTagsHint": "Add tags",
-  "@transactionEditTagsHint": { "description": "Hint text for the tags field in the edit form." },
-
   "transactionEditSaving": "Saving…",
   "@transactionEditSaving": { "description": "In-progress label shown on the save button while saving." },
-
-  "transactionEditSaveError": "Failed to save changes",
-  "@transactionEditSaveError": { "description": "Snackbar message when saving edits fails." },
 
   "transactionsListDeleteTitle": "Delete Transaction",
   "@transactionsListDeleteTitle": { "description": "Title for the single-transaction delete confirmation dialog." },
@@ -310,17 +208,8 @@
   "transactionsListDeleteMultiContent": "Are you sure you want to delete the selected transactions?",
   "@transactionsListDeleteMultiContent": { "description": "Body of the multi-transaction delete confirmation dialog." },
 
-  "transactionsListDeleteUndoMessage": "Transaction deleted",
-  "@transactionsListDeleteUndoMessage": { "description": "Snackbar message shown after a transaction is deleted with an undo option." },
-
-  "transactionsListUndoAction": "Undo",
-  "@transactionsListUndoAction": { "description": "Undo action label in the delete snackbar." },
-
   "transactionsListEmpty": "No transactions",
   "@transactionsListEmpty": { "description": "Empty-state message when no transactions exist." },
-
-  "transactionsListEmptySubtitle": "Transactions will appear here once synced",
-  "@transactionsListEmptySubtitle": { "description": "Empty-state subtitle on the transactions list." },
 
   "transactionsListAuthFailed": "Authentication failed: Please log in again",
   "@transactionsListAuthFailed": { "description": "Snackbar message when the API returns an auth failure." },
@@ -373,9 +262,6 @@
   "transactionsListUndoFailed": "Failed to undo transaction",
   "@transactionsListUndoFailed": { "description": "Snackbar when undoing a transaction fails." },
 
-  "settingsTitle": "Settings",
-  "@settingsTitle": { "description": "App bar title for the settings screen." },
-
   "settingsSectionDisplay": "Display",
   "@settingsSectionDisplay": { "description": "Settings section header for display/appearance options." },
 
@@ -403,12 +289,6 @@
   "settingsThemeDark": "Dark",
   "@settingsThemeDark": { "description": "Theme option: dark mode." },
 
-  "settingsServerUrlLabel": "Server URL",
-  "@settingsServerUrlLabel": { "description": "Label for the server URL setting." },
-
-  "settingsChangeServer": "Change Server",
-  "@settingsChangeServer": { "description": "Button to navigate to the server configuration screen." },
-
   "settingsProxyHeadersLabel": "Custom Proxy Headers",
   "@settingsProxyHeadersLabel": { "description": "Label for the custom proxy headers setting." },
 
@@ -420,21 +300,6 @@
 
   "settingsBiometricEnableContent": "Require biometric authentication when resuming the app.",
   "@settingsBiometricEnableContent": { "description": "Body text of the enable-biometric dialog." },
-
-  "settingsBiometricEnable2": "Enable",
-  "@settingsBiometricEnable2": { "description": "Confirm button label in the enable-biometric dialog." },
-
-  "settingsBiometricDisable": "Disable biometric lock?",
-  "@settingsBiometricDisable": { "description": "Title of the dialog to disable biometric lock." },
-
-  "settingsBiometricDisableContent": "Biometric authentication will no longer be required.",
-  "@settingsBiometricDisableContent": { "description": "Body text of the disable-biometric dialog." },
-
-  "settingsBiometricDisable2": "Disable",
-  "@settingsBiometricDisable2": { "description": "Confirm button label in the disable-biometric dialog." },
-
-  "settingsBiometricNotAvailable": "Biometric authentication is not available on this device.",
-  "@settingsBiometricNotAvailable": { "description": "Snackbar when biometrics are not supported." },
 
   "settingsCheckForUpdates": "Check for Updates",
   "@settingsCheckForUpdates": { "description": "Label for the check-for-updates action." },
@@ -469,20 +334,8 @@
   "settingsClearDataSuccess": "Local data cleared",
   "@settingsClearDataSuccess": { "description": "Snackbar after local data is cleared." },
 
-  "settingsResetAppTitle": "Reset Application",
-  "@settingsResetAppTitle": { "description": "Title for the reset-application dialog." },
-
-  "settingsResetAppContent": "This will sign you out and clear all local data. Your data on the server will not be affected.",
-  "@settingsResetAppContent": { "description": "Body text for the reset-application dialog." },
-
-  "settingsResetApp": "Reset",
-  "@settingsResetApp": { "description": "Confirm button in the reset-app dialog." },
-
   "settingsDeleteAccountTitle": "Delete Account",
   "@settingsDeleteAccountTitle": { "description": "Title for the delete-account confirmation dialog." },
-
-  "settingsDeleteAccountContent": "This will permanently delete your account and all associated data. This action cannot be undone.",
-  "@settingsDeleteAccountContent": { "description": "Body text for the delete-account dialog." },
 
   "settingsDeleteAccount": "Delete Account",
   "@settingsDeleteAccount": { "description": "Confirm button in the delete-account dialog." },
@@ -507,12 +360,6 @@
 
   "ssoOnboardingTabCreate": "Create new",
   "@ssoOnboardingTabCreate": { "description": "Tab label for creating a new Sure account via SSO." },
-
-  "ssoOnboardingLinkNote": "Link your SSO identity to an existing Sure account using your email and password.",
-  "@ssoOnboardingLinkNote": { "description": "Explanatory note shown on the link-existing tab." },
-
-  "ssoOnboardingCreateNote": "Create a new Sure account linked to your SSO identity.",
-  "@ssoOnboardingCreateNote": { "description": "Explanatory note shown on the create-new tab." },
 
   "ssoOnboardingFirstNameLabel": "First Name",
   "@ssoOnboardingFirstNameLabel": { "description": "Label for the first-name field on the SSO onboarding screen." },
@@ -667,12 +514,6 @@
   "logViewerLogsCopied": "Logs copied to clipboard",
   "@logViewerLogsCopied": { "description": "Snackbar message after logs are copied to the clipboard." },
 
-  "logViewerLogsCleared": "Logs cleared",
-  "@logViewerLogsCleared": { "description": "Snackbar message after logs are cleared." },
-
-  "logViewerEmpty": "No logs to display",
-  "@logViewerEmpty": { "description": "Empty-state message when there are no log entries." },
-
   "connectivityOffline": "You are offline",
   "@connectivityOffline": { "description": "Message shown in the connectivity banner when the device has no network." },
 
@@ -684,12 +525,6 @@
 
   "connectivitySyncNow": "Sync Now",
   "@connectivitySyncNow": { "description": "Button label in the connectivity banner to trigger an immediate sync." },
-
-  "connectivityAuthError": "Authentication error — please sign in again.",
-  "@connectivityAuthError": { "description": "Snackbar shown when the connectivity service gets an auth error." },
-
-  "connectivitySyncError": "Sync failed — tap to retry.",
-  "@connectivitySyncError": { "description": "Snackbar shown when a background sync fails." },
 
   "proxyHeadersAddHeader": "Add header",
   "@proxyHeadersAddHeader": { "description": "Button label to add a new custom proxy header." },
@@ -708,9 +543,6 @@
 
   "accountDetailRefreshTooltip": "Refresh account details",
   "@accountDetailRefreshTooltip": { "description": "Tooltip for the refresh button on the account detail header." },
-
-  "accountDetailError": "Could not load account details",
-  "@accountDetailError": { "description": "Error message shown in the account detail header." },
 
   "accountDetailRecentBalanceHistory": "Recent balance history",
   "@accountDetailRecentBalanceHistory": { "description": "Section heading for the balance history chart in the account detail header." },
@@ -1040,5 +872,92 @@
   "@connectivitySyncFailed": { "description": "Snackbar shown when a manual sync fails." },
 
   "connectivityAuthFailed": "Unable to authenticate. Please try again.",
-  "@connectivityAuthFailed": { "description": "Snackbar shown when authentication fails during a manual sync." }
+  "@connectivityAuthFailed": { "description": "Snackbar shown when authentication fails during a manual sync." },
+
+  "ssoOnboardingSignedInAs": "Signed in as {email}",
+  "@ssoOnboardingSignedInAs": {
+    "description": "Header text on the SSO onboarding screen showing the signed-in Google email.",
+    "placeholders": { "email": { "type": "String" } }
+  },
+
+  "ssoOnboardingGoogleVerified": "Google account verified",
+  "@ssoOnboardingGoogleVerified": { "description": "Header text on the SSO onboarding screen when the Google email is unknown." },
+
+  "ssoOnboardingLinkCredentialsNote": "Enter your existing account credentials to link with Google Sign-In.",
+  "@ssoOnboardingLinkCredentialsNote": { "description": "Explanatory note on the link-existing form prompting the user to enter their credentials." },
+
+  "ssoOnboardingPendingInvitationNote": "You have a pending invitation. Accept it to join an existing household.",
+  "@ssoOnboardingPendingInvitationNote": { "description": "Explanatory note on the create form when the user has a pending household invitation." },
+
+  "ssoOnboardingCreateIdentityNote": "Create a new account using your Google identity.",
+  "@ssoOnboardingCreateIdentityNote": { "description": "Explanatory note on the create form when creating a brand-new account via Google." },
+
+  "ssoOnboardingFirstNameRequired": "First name is required",
+  "@ssoOnboardingFirstNameRequired": { "description": "Validation error when the first-name field is empty on the SSO onboarding screen." },
+
+  "ssoOnboardingLastNameRequired": "Last name is required",
+  "@ssoOnboardingLastNameRequired": { "description": "Validation error when the last-name field is empty on the SSO onboarding screen." },
+
+  "backendConfigTimeout": "Connection timeout. Please check the URL and try again.",
+  "@backendConfigTimeout": { "description": "Error shown when the connection test times out." },
+
+  "backendConfigSuccess": "Connection successful!",
+  "@backendConfigSuccess": { "description": "Message shown when the connection test succeeds." },
+
+  "backendConfigServerError": "Server responded with status {code}. Please check if this is a Sure backend server.",
+  "@backendConfigServerError": {
+    "description": "Error shown when the server returns a non-success status during the connection test.",
+    "placeholders": { "code": { "type": "int" } }
+  },
+
+  "backendConfigConnectionFailed": "Connection failed: {error}",
+  "@backendConfigConnectionFailed": {
+    "description": "Error shown when the connection test fails with an exception.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "backendConfigSaveFailed": "Failed to save URL: {error}",
+  "@backendConfigSaveFailed": {
+    "description": "Error shown when saving the backend URL fails.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "backendConfigUrlRequired": "Please enter a backend URL",
+  "@backendConfigUrlRequired": { "description": "Validation error when the backend URL field is empty." },
+
+  "backendConfigUrlScheme": "URL must start with http:// or https://",
+  "@backendConfigUrlScheme": { "description": "Validation error when the backend URL is missing an http(s) scheme." },
+
+  "backendConfigUrlInvalid": "Please enter a valid URL",
+  "@backendConfigUrlInvalid": { "description": "Validation error when the backend URL is malformed." },
+
+  "backendConfigHeadersHelp": "Headers are sent by the app with API requests. External browser SSO pages may not receive them.",
+  "@backendConfigHeadersHelp": { "description": "Helper text below the custom proxy headers section on the backend config screen." },
+
+  "recentTransactionsUnknownAccount": "Unknown Account",
+  "@recentTransactionsUnknownAccount": { "description": "Fallback label when a transaction's account cannot be resolved." },
+
+  "accountDetailUnavailable": "Account details are temporarily unavailable",
+  "@accountDetailUnavailable": { "description": "Error message shown when account detail and balances both fail to load." },
+
+  "chatListMinutesAgo": "{minutes}m ago",
+  "@chatListMinutesAgo": {
+    "description": "Relative time label for a chat updated some minutes ago.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+
+  "chatListHoursAgo": "{hours}h ago",
+  "@chatListHoursAgo": {
+    "description": "Relative time label for a chat updated some hours ago.",
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "chatListDaysAgo": "{days}d ago",
+  "@chatListDaysAgo": {
+    "description": "Relative time label for a chat updated some days ago.",
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "chatConversationStartFailed": "Failed to start conversation. Please try again.",
+  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." }
 }
