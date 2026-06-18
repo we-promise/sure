@@ -34,4 +34,25 @@ class RulesTest < ApplicationSystemTestCase
     assert_selector "th", text: /queued\s+processed\s+modified\s+blocked/i
     assert_selector "td", text: "20 / 20 / 10 / 10"
   end
+
+  test "rules page renders gracefully when a condition has an unsupported condition_type" do
+    rule = @user.family.rules.create!(
+      name: "Legacy bad rule",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "x")
+      ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id)
+      ]
+    )
+
+    # Simulate a legacy row written before the inclusion validation existed.
+    rule.conditions.first.update_columns(condition_type: "name")
+
+    visit rules_path
+
+    assert_selector "h3", text: "Legacy bad rule"
+    assert_text "Unsupported (name)"
+  end
 end
