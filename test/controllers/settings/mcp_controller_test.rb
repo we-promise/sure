@@ -92,4 +92,32 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_mcp_path
     assert_nil token.reload.revoked_at
   end
+
+  test "non-admin member cannot view MCP settings" do
+    sign_in users(:family_member)
+    get settings_mcp_path
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("shared.require_admin"), flash[:alert]
+  end
+
+  test "non-admin member cannot revoke MCP tokens" do
+    member = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Claude",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: member.id,
+      scopes: "read",
+      expires_in: 1.year
+    )
+
+    sign_in member
+    delete revoke_token_settings_mcp_path(token_id: token.id)
+
+    assert_redirected_to accounts_path
+    assert_nil token.reload.revoked_at
+  end
 end
