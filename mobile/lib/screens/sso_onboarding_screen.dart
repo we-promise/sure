@@ -152,7 +152,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                           Expanded(
                             child: _TabButton(
                               label: authProvider.ssoHasPendingInvitation
-                                  ? AppLocalizations.of(context).ssoOnboardingAcceptTerms
+                                  ? AppLocalizations.of(context).ssoOnboardingAcceptInvitation
                                   : AppLocalizations.of(context).ssoOnboardingTabCreate,
                               isSelected: !_showLinkForm,
                               onTap: () =>
@@ -333,7 +333,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(hasPendingInvitation
-                        ? AppLocalizations.of(context).ssoOnboardingAcceptTerms
+                        ? AppLocalizations.of(context).ssoOnboardingAcceptInvitation
                         : AppLocalizations.of(context).ssoOnboardingCreateButton),
           ),
         ],

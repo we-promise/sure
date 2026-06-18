@@ -547,7 +547,7 @@ abstract class AppLocalizations {
   /// Snackbar message after multiple transactions are deleted.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Deleted 1 transaction} other{Deleted {count} transactions}}'**
+  /// **'{count, plural, one{Deleted {count} transaction} other{Deleted {count} transactions}}'**
   String transactionsListDeletedMulti(int count);
 
   /// Snackbar when multi-delete fails.
@@ -694,6 +694,12 @@ abstract class AppLocalizations {
   /// **'Version {version} is available. Update now?'**
   String settingsUpdateAvailableContent(String version);
 
+  /// Fallback used in the update-available dialog when the store version number is unknown (e.g. 'Version a newer version is available').
+  ///
+  /// In en, this message translates to:
+  /// **'a newer version'**
+  String get settingsUpdateNewerVersionFallback;
+
   /// Confirm button in the update-available dialog.
   ///
   /// In en, this message translates to:
@@ -814,11 +820,11 @@ abstract class AppLocalizations {
   /// **'Create Account'**
   String get ssoOnboardingCreateButton;
 
-  /// Checkbox label for ToS acceptance on the create tab.
+  /// Tab and submit button label when the user has a pending household invitation to accept.
   ///
   /// In en, this message translates to:
-  /// **'I accept the Terms of Service'**
-  String get ssoOnboardingAcceptTerms;
+  /// **'Accept Invitation'**
+  String get ssoOnboardingAcceptInvitation;
 
   /// App bar title for the account calendar screen.
   ///
@@ -1099,7 +1105,7 @@ abstract class AppLocalizations {
   /// Connectivity banner message showing how many transactions are queued for sync.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 transaction pending sync} other{{count} transactions pending sync}}'**
+  /// **'{count, plural, one{{count} transaction pending sync} other{{count} transactions pending sync}}'**
   String connectivityPendingSync(int count);
 
   /// Button label in the connectivity banner to trigger an immediate sync.
@@ -1351,7 +1357,7 @@ abstract class AppLocalizations {
   /// Body text for the multi-chat delete confirmation dialog.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Delete 1 chat? This cannot be undone.} other{Delete {count} chats? This cannot be undone.}}'**
+  /// **'{count, plural, one{Delete {count} chat? This cannot be undone.} other{Delete {count} chats? This cannot be undone.}}'**
   String chatListDeleteMultiContent(int count);
 
   /// Snackbar shown after multiple chats are deleted.

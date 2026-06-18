@@ -74,7 +74,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final storeUrl = _manualUpgrader.versionInfo?.appStoreListingURL;
 
       if (available) {
-        await _showUpdateDialog(storeVersion ?? 'a newer version', storeUrl);
+        await _showUpdateDialog(
+          storeVersion ??
+              AppLocalizations.of(context).settingsUpdateNewerVersionFallback,
+          storeUrl,
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context).settingsNoUpdateAvailable)),

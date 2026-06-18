@@ -344,7 +344,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                           controller: _amountController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
-                            labelText: l.transactionFormAmountLabel,
+                            // Trailing "*" preserves the required-field indicator
+                            // the pre-i18n label ("Amount *") carried.
+                            labelText: '${l.transactionFormAmountLabel} *',
                             prefixIcon: const Icon(Icons.attach_money),
                             suffixText: widget.account.currency,
                           ),

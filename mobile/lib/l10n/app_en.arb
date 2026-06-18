@@ -232,7 +232,7 @@
   "transactionsListSingleDeleteFailed": "Failed to delete transaction",
   "@transactionsListSingleDeleteFailed": { "description": "Snackbar when deleting a single transaction fails." },
 
-  "transactionsListDeletedMulti": "{count, plural, =1{Deleted 1 transaction} other{Deleted {count} transactions}}",
+  "transactionsListDeletedMulti": "{count, plural, one{Deleted {count} transaction} other{Deleted {count} transactions}}",
   "@transactionsListDeletedMulti": {
     "description": "Snackbar message after multiple transactions are deleted.",
     "placeholders": { "count": { "type": "int" } }
@@ -313,6 +313,9 @@
     "placeholders": { "version": { "type": "String" } }
   },
 
+  "settingsUpdateNewerVersionFallback": "a newer version",
+  "@settingsUpdateNewerVersionFallback": { "description": "Fallback used in the update-available dialog when the store version number is unknown (e.g. 'Version a newer version is available')." },
+
   "settingsUpdateNow": "Update Now",
   "@settingsUpdateNow": { "description": "Confirm button in the update-available dialog." },
 
@@ -373,8 +376,8 @@
   "ssoOnboardingCreateButton": "Create Account",
   "@ssoOnboardingCreateButton": { "description": "Button label to create a new account." },
 
-  "ssoOnboardingAcceptTerms": "I accept the Terms of Service",
-  "@ssoOnboardingAcceptTerms": { "description": "Checkbox label for ToS acceptance on the create tab." },
+  "ssoOnboardingAcceptInvitation": "Accept Invitation",
+  "@ssoOnboardingAcceptInvitation": { "description": "Tab and submit button label when the user has a pending household invitation to accept." },
 
   "calendarTitle": "Account Calendar",
   "@calendarTitle": { "description": "App bar title for the account calendar screen." },
@@ -520,7 +523,7 @@
   "connectivityOffline": "You are offline",
   "@connectivityOffline": { "description": "Message shown in the connectivity banner when the device has no network." },
 
-  "connectivityPendingSync": "{count, plural, =1{1 transaction pending sync} other{{count} transactions pending sync}}",
+  "connectivityPendingSync": "{count, plural, one{{count} transaction pending sync} other{{count} transactions pending sync}}",
   "@connectivityPendingSync": {
     "description": "Connectivity banner message showing how many transactions are queued for sync.",
     "placeholders": { "count": { "type": "int" } }
@@ -658,7 +661,7 @@
   "settingsUserFallback": "User",
   "@settingsUserFallback": { "description": "Fallback display name when the user has no name set." },
 
-  "chatListDeleteMultiContent": "{count, plural, =1{Delete 1 chat? This cannot be undone.} other{Delete {count} chats? This cannot be undone.}}",
+  "chatListDeleteMultiContent": "{count, plural, one{Delete {count} chat? This cannot be undone.} other{Delete {count} chats? This cannot be undone.}}",
   "@chatListDeleteMultiContent": {
     "description": "Body text for the multi-chat delete confirmation dialog.",
     "placeholders": { "count": { "type": "int" } }

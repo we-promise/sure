@@ -251,7 +251,7 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other: 'Deleted $count transactions',
-      one: 'Deleted 1 transaction',
+      one: 'Deleted $count transaction',
     );
     return '$_temp0';
   }
@@ -335,6 +335,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsUpdateNewerVersionFallback => 'a newer version';
+
+  @override
   String get settingsUpdateNow => 'Update Now';
 
   @override
@@ -396,7 +399,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ssoOnboardingCreateButton => 'Create Account';
 
   @override
-  String get ssoOnboardingAcceptTerms => 'I accept the Terms of Service';
+  String get ssoOnboardingAcceptInvitation => 'Accept Invitation';
 
   @override
   String get calendarTitle => 'Account Calendar';
@@ -549,7 +552,7 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count transactions pending sync',
-      one: '1 transaction pending sync',
+      one: '$count transaction pending sync',
     );
     return '$_temp0';
   }
@@ -703,7 +706,7 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other: 'Delete $count chats? This cannot be undone.',
-      one: 'Delete 1 chat? This cannot be undone.',
+      one: 'Delete $count chat? This cannot be undone.',
     );
     return '$_temp0';
   }
