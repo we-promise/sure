@@ -136,9 +136,12 @@ class BitstampItemsController < ApplicationController
       bitstamp_account.with_lock do
         next if bitstamp_account.account_provider.present?
 
-        account = Account.create_from_bitstamp_account(bitstamp_account)
-        provider_link = bitstamp_account.ensure_account_provider!(account)
-        provider_link ? created_accounts << account : account.destroy!
+        Account.transaction do
+          account = Account.create_from_bitstamp_account(bitstamp_account)
+          provider_link = bitstamp_account.ensure_account_provider!(account)
+          raise ActiveRecord::Rollback unless provider_link
+          created_accounts << account
+        end
       end
 
       BitstampAccount::Processor.new(bitstamp_account.reload).process
