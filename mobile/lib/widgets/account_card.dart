@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/account.dart';
 import '../theme/sure_colors.dart';
 import 'money_text.dart';
+import 'sure_icon.dart';
 
 class AccountCard extends StatelessWidget {
   final Account account;
@@ -15,28 +16,28 @@ class AccountCard extends StatelessWidget {
     this.onSwipe,
   });
 
-  IconData _getAccountIcon() {
+  String _getAccountIconName() {
     switch (account.accountType) {
       case 'depository':
-        return Icons.account_balance;
+        return SureIcons.landmark;
       case 'credit_card':
-        return Icons.credit_card;
+        return SureIcons.creditCard;
       case 'investment':
-        return Icons.trending_up;
+        return SureIcons.trendingUp;
       case 'loan':
-        return Icons.receipt_long;
+        return SureIcons.receipt;
       case 'property':
-        return Icons.home;
+        return SureIcons.house;
       case 'vehicle':
-        return Icons.directions_car;
+        return SureIcons.car;
       case 'crypto':
-        return Icons.currency_bitcoin;
+        return SureIcons.bitcoin;
       case 'other_asset':
-        return Icons.category;
+        return SureIcons.shapes;
       case 'other_liability':
-        return Icons.payment;
+        return SureIcons.handCoins;
       default:
-        return Icons.account_balance_wallet;
+        return SureIcons.wallet;
     }
   }
 
@@ -73,10 +74,10 @@ class AccountCard extends StatelessWidget {
                   color: accountColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  _getAccountIcon(),
+                child: SureIcon(
+                  _getAccountIconName(),
                   color: accountColor,
-                  size: 24,
+                  size: SureIconSize.lg,
                 ),
               ),
               const SizedBox(width: 16),
@@ -89,7 +90,7 @@ class AccountCard extends StatelessWidget {
                     Text(
                       account.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -113,7 +114,7 @@ class AccountCard extends StatelessWidget {
                     account.balance,
                     style: SureMoney.tabular(
                       Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w500,
                             color: account.isLiability
                                 ? SureColors.of(context).palette.destructive
                                 : null,
@@ -156,7 +157,11 @@ class AccountCard extends StatelessWidget {
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.receipt_long, color: Colors.white, size: 28),
+              SureIcon(
+                SureIcons.receipt,
+                color: Colors.white,
+                size: SureIconSize.xl,
+              ),
               SizedBox(height: 4),
               Text(
                 'Transactions',

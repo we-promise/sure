@@ -217,6 +217,14 @@ en:
     securities:
       show:
         page_title: Security
+        encryption_warning:
+          title: Encryption keys missing
+          intro: "Sensitive data (API keys, provider tokens, MFA secrets, and PII) are being stored unencrypted at rest. To enable encryption, set the following keys in your environment variables or Rails credentials:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Generate a set with: bin/rails db:encryption:init"
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
         enable_mfa: Enable 2FA

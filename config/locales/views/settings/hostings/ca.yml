@@ -153,6 +153,7 @@ ca:
         uri_base_placeholder: https://api.openai.com/v1 (per defecte)
       provider_selection:
         binance_public_hint: gratuït, sense clau API — només cripto (BTC, ETH, etc.)
+        moex_public_hint: gratuït, sense clau API — accions, fons i bons russos (MOEX), inclou canvi RUB
         description: Tria un únic proveïdor per obtenir tipus de canvi de divisa.
         env_configured_message: La selecció de proveïdor està desactivada perquè hi
           ha variables d'entorn configurades. Per activar la selecció aquí, elimina
@@ -165,6 +166,7 @@ ca:
         providers:
           alpha_vantage: Alpha Vantage
           binance_public: Binance
+          moex_public: MOEX
           eodhd: EODHD
           mfapi: MFAPI.in
           tiingo: Tiingo

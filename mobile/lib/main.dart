@@ -21,6 +21,7 @@ import 'services/log_service.dart';
 import 'services/preferences_service.dart';
 import 'services/telemetry_service.dart';
 import 'theme/sure_theme.dart';
+import 'package:upgrader/upgrader.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,6 +110,12 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   bool _isLocked = false;
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+
+  final _upgrader = Upgrader(
+    durationUntilAlertAgain: const Duration(days: 7),
+    countryCode: 'us',
+    messages: _SureUpgraderMessages(),
+  );
 
   @override
   void initState() {
@@ -267,7 +274,11 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
         if (authProvider.isAuthenticated) {
           return Stack(
             children: [
-              const MainNavigationScreen(),
+              UpgradeAlert(
+                upgrader: _upgrader,
+                showIgnore: false,
+                child: const MainNavigationScreen(),
+              ),
               if (_isLocked)
                 BiometricLockScreen(
                   onUnlocked: _onUnlocked,
@@ -292,4 +303,24 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
       },
     );
   }
+}
+
+class _SureUpgraderMessages extends UpgraderMessages {
+  @override
+  String get title => 'Update available';
+
+  @override
+  String get body =>
+      '{{appName}} {{currentAppStoreVersion}} is now available — '
+      'you have {{currentInstalledVersion}}.\n\n'
+      "What's new? Check the store for release notes.";
+
+  @override
+  String get buttonTitleUpdate => 'Update now';
+
+  @override
+  String get buttonTitleLater => 'Later';
+
+  @override
+  String get releaseNotes => '';
 }

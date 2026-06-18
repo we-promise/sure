@@ -68,6 +68,7 @@ zh-CN:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
         securities_provider_label: 证券（股票价格）数据提供商
         title: 数据提供商选择
         exchange_rate_title: 汇率提供商
@@ -81,6 +82,7 @@ zh-CN:
         requires_api_key_alpha_vantage: Alpha Vantage 需要 API Key。
         mfapi_hint: MFAPI.in 可用于部分印度基金数据。
         binance_public_hint: Binance 公共接口可用于加密资产行情。
+        moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
       show:
         clear_cache: 清除数据缓存
         clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
