@@ -28,7 +28,7 @@ class Provider::MoexPublic < Provider
 
   # Hardcoded board preference, consulted only when ISS does not flag a primary
   # board. Shares (TQBR), ETF/funds (TQTF/TQIF), OFZ (TQOB), corporate/exchange
-  # bonds (TQCB/TQIR), USD/EUR-settled boards (TQTD/TQOD/TQOE), restructured
+  # bonds (TQCB/TQIR), USD/EUR-settled boards (TQTD/TQOD/TQOE/TQTE), restructured
   # (TQRD). Earlier = higher priority.
   BOARD_PRIORITY = %w[TQBR TQTF TQIF TQOB TQCB TQIR TQRD TQTD TQOD TQOE TQTE].freeze
 
@@ -431,8 +431,8 @@ class Provider::MoexPublic < Provider
     end
 
     def history_row_price(secid, row, instrument, bond)
-      date = row["tradedate"]
-      return nil if date.blank?
+      date = parse_iss_date(row["tradedate"], context: secid)
+      return nil if date.nil?
 
       raw = row["close"].presence || row["legalcloseprice"].presence
       return nil if raw.nil?
@@ -447,7 +447,7 @@ class Provider::MoexPublic < Provider
 
       Price.new(
         symbol: secid,
-        date: Date.parse(date.to_s),
+        date: date,
         price: value,
         currency: currency,
         exchange_operating_mic: MOEX_MIC
@@ -539,8 +539,8 @@ class Provider::MoexPublic < Provider
         break if rows.empty?
 
         rows.each do |row|
-          date = row["tradedate"]
-          next if date.blank?
+          date = parse_iss_date(row["tradedate"], context: instrument)
+          next if date.nil?
 
           raw = row["close"].presence || row["waprice"].presence
           next if raw.nil?
@@ -548,7 +548,7 @@ class Provider::MoexPublic < Provider
           value = raw.to_f
           next if value <= 0
 
-          quotes << { date: Date.parse(date.to_s), value: value }
+          quotes << { date: date, value: value }
         end
 
         pages += 1
@@ -562,6 +562,17 @@ class Provider::MoexPublic < Provider
     # ================================
     #            Helpers
     # ================================
+
+    # Parses an ISS TRADEDATE, skipping (rather than raising on) a malformed
+    # value so one bad row can't fail an entire history fetch. Logs the offending
+    # value with context for actionable diagnostics.
+    def parse_iss_date(raw, context:)
+      return nil if raw.blank?
+      Date.parse(raw.to_s)
+    rescue Date::Error
+      Rails.logger.warn("MoexPublic: skipping #{context} history row with unparseable date #{raw.inspect}")
+      nil
+    end
 
     def normalize_currency(code)
       return "RUB" if code.blank?

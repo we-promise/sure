@@ -222,6 +222,22 @@ class Provider::MoexPublicTest < ActiveSupport::TestCase
     assert_equal 150, response.data.size
   end
 
+  test "fetch_security_prices skips a row with an unparseable date instead of failing" do
+    good_date = Date.current - 5
+    @provider.stubs(:resolve_instrument).returns(stock_instrument)
+    stub_history([
+      history_row(tradedate: "not-a-date", close: "300.0"),
+      history_row(tradedate: good_date.to_s, close: "311.4")
+    ])
+
+    response = @provider.fetch_security_prices(
+      symbol: "SBER", exchange_operating_mic: "MISX", start_date: Date.current - 7, end_date: good_date
+    )
+
+    assert response.success?
+    assert_equal [ good_date ], response.data.map(&:date)
+  end
+
   test "fetch_security_prices converts bond percent-of-par to currency via FACEVALUE" do
     date = Date.current - 5
     @provider.stubs(:resolve_instrument).returns(bond_instrument)
