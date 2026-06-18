@@ -75,7 +75,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     # chat1_assistant_response). Add 48 more so the total is 51 — the oldest fixture
     # message must be trimmed and the rest returned in ascending chronological order.
     48.times do |i|
-      @chat.messages.create!(type: "UserMessage", content: "msg #{i}", ai_model: "gpt-4.1")
+      @chat.messages.create!(type: "AssistantMessage", content: "msg #{i}", ai_model: "gpt-4.1")
     end
 
     get "/api/v1/chats/#{@chat.id}", headers: api_headers(@api_key)
