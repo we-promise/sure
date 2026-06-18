@@ -61,6 +61,20 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["messages"].is_a?(Array)
   end
 
+  test "show caps response at 50 newest messages and omits pagination key" do
+    # chats(:one) has 3 fixture messages; add 48 more to push the total to 51
+    48.times do |i|
+      @chat.messages.create!(type: "UserMessage", content: "msg #{i}", ai_model: "gpt-4.1")
+    end
+
+    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal 50, response_body["messages"].size
+    assert_not response_body.key?("pagination"), "show must not include a pagination key"
+  end
+
   test "should create chat with write scope" do
     assert_difference "Chat.count" do
       post "/api/v1/chats",

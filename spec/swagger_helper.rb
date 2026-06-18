@@ -205,10 +205,6 @@ RSpec.configure do |config|
                   messages: {
                     type: :array,
                     items: { '$ref' => '#/components/schemas/Message' }
-                  },
-                  pagination: {
-                    '$ref' => '#/components/schemas/Pagination',
-                    nullable: true
                   }
                 }
               }
