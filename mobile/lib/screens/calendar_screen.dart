@@ -198,6 +198,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ).format(date);
     final colorScheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
+    // Read once when the (modal) dialog opens and pass it down, rather than
+    // reading the provider inside each tile.
+    final hideAmounts = context.read<PrivacyProvider>().hidden;
 
     showDialog(
       context: context,
@@ -226,7 +229,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
                       final transaction = transactions[index];
-                      return _buildTransactionTile(transaction);
+                      return _buildTransactionTile(transaction, hideAmounts);
                     },
                   ),
           ),
@@ -241,7 +244,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildTransactionTile(Transaction transaction) {
+  Widget _buildTransactionTile(Transaction transaction, bool hideAmounts) {
     // Parse amount to determine if positive or negative
     var isNegative = false;
     try {
@@ -287,7 +290,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       trailing: Text(
         MoneyMasker.mask(
           transaction.amount,
-          hidden: context.read<PrivacyProvider>().hidden,
+          hidden: hideAmounts,
         ),
         style: TextStyle(
           color: amountColor,
@@ -497,14 +500,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _buildCalendar(colorScheme),
+                : _buildCalendar(colorScheme, hideAmounts),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCalendar(ColorScheme colorScheme) {
+  Widget _buildCalendar(ColorScheme colorScheme, bool hideAmounts) {
     final firstDayOfMonth =
         DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDayOfMonth =
@@ -575,6 +578,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         change,
                         hasChange,
                         colorScheme,
+                        hideAmounts,
                       ),
                     );
                   }).toList(),
@@ -588,7 +592,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildDayCell(DateTime date, int day, double change, bool hasChange,
-      ColorScheme colorScheme) {
+      ColorScheme colorScheme, bool hideAmounts) {
     Color? backgroundColor;
     Color? textColor;
 
@@ -643,7 +647,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Text(
                       MoneyMasker.mask(
                         _formatAmount(change),
-                        hidden: context.read<PrivacyProvider>().hidden,
+                        hidden: hideAmounts,
                       ),
                       style: TextStyle(
                         fontSize: 10,
