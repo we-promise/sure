@@ -130,15 +130,15 @@ class UpItem < ApplicationRecord
   end
 
   def linked_accounts_count
-    up_accounts.joins(:account_provider).count
+    account_counts[:linked]
   end
 
   def unlinked_accounts_count
-    up_accounts.needs_setup.count
+    account_counts[:unlinked]
   end
 
   def total_accounts_count
-    up_accounts.count
+    account_counts[:total]
   end
 
   def institution_display_name
@@ -167,4 +167,21 @@ class UpItem < ApplicationRecord
   def credentials_configured?
     access_token.present?
   end
+
+  private
+
+    # Single query for all three account counts, reused across sync_status_summary
+    # and the settings partial to avoid 3+ separate COUNT queries per rendered item.
+    def account_counts
+      @account_counts ||= begin
+        rows = up_accounts
+                 .left_joins(:account_provider)
+                 .pluck(Arel.sql("account_providers.id IS NOT NULL"), :ignored)
+
+        linked = rows.count { |has_provider, _ignored| has_provider }
+        unlinked = rows.count { |has_provider, ignored| !has_provider && !ignored }
+
+        { linked: linked, unlinked: unlinked, total: rows.size }
+      end
+    end
 end

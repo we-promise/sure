@@ -45,6 +45,16 @@ class UpAccount::Processor
     rescue => e
       report_exception(e, "transactions")
       Rails.logger.error "UpAccount::Processor - Failed to process transactions up_account_id=#{up_account.id} error_class=#{e.class.name}"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process transactions",
+        source: self.class.name,
+        provider_key: "up",
+        family: up_account.up_item.family,
+        account_provider: up_account.account_provider,
+        metadata: { up_account_id: up_account.id, error_class: e.class.name, error_message: e.message }
+      )
       { success: false, failed: 1, errors: [ { error: I18n.t("up_item.errors.account_processing_failed") } ] }
     end
 

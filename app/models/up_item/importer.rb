@@ -41,13 +41,16 @@ class UpItem::Importer
     rescue Provider::Up::UpError => e
       mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
       Rails.logger.error "UpItem::Importer - Up API error: #{e.error_type}"
+      capture_sync_error("Failed to fetch accounts data", e, error_type: e.error_type)
       nil
     rescue JSON::ParserError => e
       Rails.logger.error "UpItem::Importer - Failed to parse Up API response: #{e.class}"
+      capture_sync_error("Failed to parse Up accounts response", e)
       nil
     rescue => e
       Rails.logger.error "UpItem::Importer - Unexpected error fetching accounts: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
+      capture_sync_error("Unexpected error fetching accounts", e)
       nil
     end
 
@@ -114,7 +117,7 @@ class UpItem::Importer
         since: start_date
       )
 
-      if Rails.configuration.x.up.debug_raw
+      if Rails.configuration.x.up.debug_raw && Rails.env.local?
         Rails.logger.debug "Up raw transactions response: #{transactions.to_json}"
       end
 
@@ -124,13 +127,16 @@ class UpItem::Importer
     rescue Provider::Up::UpError => e
       mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
       Rails.logger.error "UpItem::Importer - Up API error for account #{up_account.id}: #{e.error_type}"
+      capture_sync_error("Failed to fetch transactions", e, up_account: up_account, error_type: e.error_type)
       { success: false, transactions_count: 0, error: I18n.t("up_item.errors.transactions_failed") }
     rescue JSON::ParserError => e
       Rails.logger.error "UpItem::Importer - Failed to parse transaction response for account #{up_account.id}: #{e.class}"
+      capture_sync_error("Failed to parse Up transactions response", e, up_account: up_account)
       { success: false, transactions_count: 0, error: "Failed to parse response" }
     rescue => e
       Rails.logger.error "UpItem::Importer - Unexpected error fetching transactions for account #{up_account.id}: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
+      capture_sync_error("Unexpected error fetching transactions", e, up_account: up_account)
       { success: false, transactions_count: 0, error: I18n.t("up_item.errors.transactions_failed") }
     end
 
@@ -182,6 +188,23 @@ class UpItem::Importer
       else
         90.days.ago
       end
+    end
+
+    def capture_sync_error(message, error, up_account: nil, error_type: nil)
+      metadata = { up_item_id: up_item.id, error_class: error.class.name, error_message: error.message }
+      metadata[:up_account_id] = up_account.id if up_account
+      metadata[:error_type] = error_type if error_type
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: message,
+        source: self.class.name,
+        provider_key: "up",
+        family: up_item.family,
+        account_provider: up_account&.account_provider,
+        metadata: metadata
+      )
     end
 
     def mark_requires_update!
