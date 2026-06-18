@@ -41,6 +41,11 @@ class Provider::BinancePublic < Provider
   # enough and avoids surfacing transient depeg ticks from market data.
   USD_STABLECOINS = %w[USDT USDC BUSD DAI FDUSD TUSD USDP PYUSD].freeze
 
+  # Trailing separator between base and quote in a stored pair ticker
+  # ("BTC-USD", "BTC/USD", "BTC_USD"), stripped so parse_ticker builds a valid
+  # Binance pair.
+  QUOTE_SEPARATOR = /[-\/_ ]\z/
+
   # Symbol prefix applied by holdings processors (CoinStats, Coinbase, Kraken,
   # Binance, SimpleFIN, Lunchflow) to distinguish crypto from stock tickers.
   CRYPTO_PREFIX = "CRYPTO:".freeze
@@ -68,12 +73,23 @@ class Provider::BinancePublic < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      query = symbol.to_s.strip.upcase.delete_prefix(CRYPTO_PREFIX)
+      # Collapse separators so the canonical "BTC-USD" / "TRX/USDT" form is
+      # treated like Binance's own unseparated "BTCUSD" — the existing narrow
+      # matching then resolves it instead of falling through to an offline row.
+      query = symbol.to_s.strip.upcase.delete_prefix(CRYPTO_PREFIX).gsub(/[\s\-\/_]/, "")
       next [] if query.empty?
 
-      if USD_STABLECOINS.include?(query)
-        next [ stablecoin_search_result(query) ]
+      # Stablecoins have no Binance self-pair, so a USD-quoted query gets a
+      # synthetic 1.0 USD result: the bare coin ("USDT", or coins that end in
+      # USD like PYUSD/FDUSD), or the "<coin>USD" form ("USDTUSD", from a pasted
+      # "USDT-USD"). A non-USD quote like "USDTEUR" has a real Binance pair and
+      # must fall through to normal matching, so only the USD case short-circuits.
+      stablecoin = if USD_STABLECOINS.include?(query)
+        query
+      elsif query.end_with?("USD") && USD_STABLECOINS.include?(query.delete_suffix("USD"))
+        query.delete_suffix("USD")
       end
+      next [ stablecoin_search_result(stablecoin) ] if stablecoin
 
       symbols = exchange_info_symbols
 
@@ -86,8 +102,8 @@ class Provider::BinancePublic < Provider
 
         # Match on either the base asset (so "BTC" surfaces every BTC pair) or
         # the full Binance pair symbol (so users pasting their own portfolio
-        # ticker like "BTCEUR" or "BTCUSD" — which prefixes Binance's raw
-        # "BTCUSDT" — also hit a result).
+        # ticker like "BTCEUR", "BTCUSD", or "BTC-USD" — which prefix Binance's
+        # raw "BTCUSDT" once separators are collapsed — also hit a result).
         base.include?(query) || symbol == query || symbol.start_with?(query)
       end
 
@@ -319,7 +335,9 @@ class Provider::BinancePublic < Provider
         display_currency = QUOTE_TO_CURRENCY[quote]
         next unless ticker_up.end_with?(display_currency)
 
-        base = ticker_up.delete_suffix(display_currency)
+        # Strip the quote plus any separator so the canonical "BTC-USD" form
+        # yields "BTC" (not "BTC-") and builds a valid "BTCUSDT" pair.
+        base = ticker_up.delete_suffix(display_currency).sub(QUOTE_SEPARATOR, "")
         next if base.empty?
 
         # "{stablecoin}USD" form (e.g. "USDTUSD" produced by search_securities)
