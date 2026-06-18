@@ -24,6 +24,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
   void initState() {
     super.initState();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    _showLinkForm = !authProvider.ssoHasPendingInvitation;
     _emailController.text = authProvider.ssoEmail ?? '';
     _firstNameController.text = authProvider.ssoFirstName ?? '';
     _lastNameController.text = authProvider.ssoLastName ?? '';
@@ -67,8 +68,10 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Provider.of<AuthProvider>(context, listen: false)
-                .cancelSsoOnboarding();
+            Provider.of<AuthProvider>(
+              context,
+              listen: false,
+            ).cancelSsoOnboarding();
           },
         ),
         title: const Text('Link Your Account'),
@@ -94,8 +97,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                         : 'Google account verified',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -116,7 +119,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                             child: Text(
                               authProvider.errorMessage!,
                               style: TextStyle(
-                                  color: colorScheme.onErrorContainer),
+                                color: colorScheme.onErrorContainer,
+                              ),
                             ),
                           ),
                           IconButton(
@@ -132,8 +136,9 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                   if (authProvider.ssoAllowAccountCreation) ...[
                     Container(
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
+                        color: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.3,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -142,8 +147,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                             child: _TabButton(
                               label: 'Link Existing',
                               isSelected: _showLinkForm,
-                              onTap: () =>
-                                  setState(() => _showLinkForm = true),
+                              onTap: () => setState(() => _showLinkForm = true),
                             ),
                           ),
                           Expanded(
@@ -213,7 +217,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
               prefixIcon: Icon(Icons.email_outlined),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter your email';
+              if (value == null || value.isEmpty)
+                return 'Please enter your email';
               if (!value.contains('@')) return 'Please enter a valid email';
               return null;
             },
@@ -238,7 +243,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
               ),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter your password';
+              if (value == null || value.isEmpty)
+                return 'Please enter your password';
               return null;
             },
             onFieldSubmitted: (_) => _handleLinkAccount(),
@@ -299,7 +305,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
               prefixIcon: Icon(Icons.person_outlined),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter your first name';
+              if (value == null || value.isEmpty)
+                return 'Please enter your first name';
               return null;
             },
           ),
@@ -312,7 +319,8 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
               prefixIcon: Icon(Icons.person_outlined),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter your last name';
+              if (value == null || value.isEmpty)
+                return 'Please enter your last name';
               return null;
             },
             onFieldSubmitted: (_) => _handleCreateAccount(),
@@ -326,9 +334,11 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(hasPendingInvitation
+                : Text(
+                    hasPendingInvitation
                         ? 'Accept Invitation'
-                        : 'Create Account'),
+                        : 'Create Account',
+                  ),
           ),
         ],
       ),
