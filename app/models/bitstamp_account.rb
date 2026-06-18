@@ -34,6 +34,6 @@ class BitstampAccount < ApplicationRecord
       end
   rescue StandardError => e
     Rails.logger.warn("BitstampAccount #{id}: failed to link account provider - #{e.class}: #{e.message}")
-    nil
+    raise
   end
 end
