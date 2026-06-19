@@ -9,7 +9,7 @@
         the fallback `ds.popover.avatar_default_label` is used. %>
     <button type="button"
             data-DS--popover-target="button"
-            class="inline-flex items-center justify-center w-11 h-11 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 theme-dark:focus-visible:outline-white"
+            class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 cursor-pointer rounded-full focus-ring"
             aria-label="<%= trigger_aria_label %>"
             aria-haspopup="dialog"
             aria-expanded="false"
@@ -21,7 +21,7 @@
   <% end %>
 
   <div id="<%= panel_id %>" data-DS--popover-target="content" class="px-2 lg:px-0 max-w-full hidden z-50">
-    <%= tag.div class: "mx-auto min-w-[200px] shadow-border-xs bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
+    <%= tag.div class: "mx-auto min-w-[200px] shadow-border-lg bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
       <%= header %>
 
       <%= tag.div class: class_names("py-1" => !no_padding) do %>

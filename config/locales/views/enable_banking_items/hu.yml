@@ -9,7 +9,6 @@ hu:
     authorize:
       authorization_failed: "Nem sikerült elindítani az engedélyezést: %{message}"
       bank_required: Kérjük, válassz bankot.
-      decoupled_not_supported: Ez a bank egy különálló eszközös hitelesítési módszert használ, amely jelenleg nem támogatott. Kérjük, add hozzá ezt a számlát manuálisan.
       invalid_redirect: A kapott engedélyezési URL érvénytelen. Kérjük, próbáld újra.
       redirect_uri_not_allowed: Az átirányítás nem engedélyezett. Kérjük, konfiguráld a `%{callback_url}` címet az Enable Banking alkalmazás beállításaiban.
       unexpected_error: Váratlan hiba történt. Kérjük, próbáld újra.

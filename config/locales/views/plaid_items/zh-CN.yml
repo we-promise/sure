@@ -21,8 +21,17 @@ zh-CN:
       status_never: 需要数据同步
       syncing: 同步中...
       update: 更新
+      deletion_in_progress: "（正在删除...）"
     select_existing_account:
       cancel: 取消
       description: 选择一个 Plaid 账户与您的现有账户关联
       link_account: 关联账户
       title: 将 %{account_name} 关联到 Plaid
+      no_available_accounts: 没有可关联的 Plaid 账户。请先连接新的 Plaid 账户。
+    errors:
+      link_token_generic: 暂时无法打开 Plaid。请重试；如果问题仍然存在，请查看服务器日志。
+      link_token_with_message: Plaid 无法打开连接：%{message}
+    link_existing_account:
+      invalid_account: 选择的 Plaid 账户无效。
+      already_linked: 此 Plaid 账户已关联。
+      success: 账户已成功关联到 Plaid。

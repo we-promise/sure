@@ -134,7 +134,8 @@ class IncomeStatement
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
 
     def categories
-      @categories ||= family.categories.all.to_a
+      # Keep Category#subcategory?'s parent-based orphan semantics without lazy loads.
+      @categories ||= family.categories.includes(:parent).to_a
     end
 
     def period_cache_key(period)
@@ -143,7 +144,7 @@ class IncomeStatement
 
     def build_period_total(classification:, period:)
       # Exclude pending transactions from budget calculations
-      totals = totals_query(transactions_scope: family.transactions.visible.excluding_pending.in_period(period), date_range: period.date_range).select { |t| t.classification == classification }
+      totals = totals_for_period(period).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -184,6 +185,15 @@ class IncomeStatement
         currency: family.currency,
         category_totals: category_totals
       )
+    end
+
+    def totals_for_period(period)
+      @totals_for_period ||= {}
+      @totals_for_period[period_cache_key(period)] ||=
+        totals_query(
+          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          date_range: period.date_range
+        )
     end
 
     def family_stats(interval: "month")

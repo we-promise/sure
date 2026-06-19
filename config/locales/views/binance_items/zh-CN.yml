@@ -20,6 +20,7 @@ zh-CN:
       import_selected: 导入所选
       cancel: 取消
       creating: 正在导入...
+      historical_import: 历史导入
     complete_account_setup:
       success:
         one: 已导入 %{count} 个账户

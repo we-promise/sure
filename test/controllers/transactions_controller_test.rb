@@ -123,6 +123,56 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], child.reload.entryable.tag_ids
   end
 
+  test "can update tags through tag-only endpoint" do
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, tags(:two).id ]
+    }
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert_equal @entry.entryable.tag_ids.sort, JSON.parse(response.body)["tag_ids"].sort
+  end
+
+  test "tag-only endpoint ignores tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, other_tag.id ]
+    }
+
+    assert_response :success
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint locks tags when clearing all tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: []
+    }, as: :json
+
+    assert_response :success
+    assert_empty @entry.reload.entryable.tag_ids
+    assert @entry.entryable.locked?(:tag_ids)
+  end
+
+  test "tag-only endpoint returns forbidden json for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: {
+      tag_ids: [ tags(:one).id ]
+    }, headers: {
+      "Accept" => "application/json"
+    }
+
+    assert_response :forbidden
+    assert_equal "application/json", response.media_type
+    assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
@@ -188,6 +238,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   overflow_count = css_select("turbo-frame[id^='entry_']").count
   assert_operator overflow_count, :>, 0, "Overflow should show some transactions"
 end
+
+  test "pagination does not duplicate or skip transactions with same date and timestamp" do
+    family = families(:empty)
+    user = users(:empty)
+    sign_in user
+
+    family.accounts.each { |account| account.entries.delete_all }
+
+    account = family.accounts.create! name: "Same day", balance: 0, currency: "USD", accountable: Depository.new
+    timestamp = Time.zone.parse("2026-05-05 12:00:00")
+
+    entries = 13.times.map do |index|
+      create_transaction(
+        account: account,
+        name: "May 05 Transaction #{index + 1}",
+        amount: 100 + index,
+        date: Date.new(2026, 5, 5),
+        created_at: timestamp,
+        updated_at: timestamp
+      )
+    end
+
+    expected_entry_ids = Entry.where(id: entries.map(&:id)).reverse_chronological.pluck(:id).map(&:to_s)
+
+    get transactions_url(page: 1, per_page: 10)
+    assert_response :success
+    page_1_entry_ids = rendered_entry_ids
+
+    get transactions_url(page: 2, per_page: 10)
+    assert_response :success
+    page_2_entry_ids = rendered_entry_ids
+
+    assert_equal expected_entry_ids.first(10), page_1_entry_ids
+    assert_equal expected_entry_ids.drop(10), page_2_entry_ids
+    assert_empty page_1_entry_ids & page_2_entry_ids
+    assert_equal expected_entry_ids, page_1_entry_ids + page_2_entry_ids
+  end
 
   test "calls Transaction::Search totals method with correct search parameters" do
     family = families(:empty)
@@ -412,6 +499,56 @@ end
     end
   end
 
+  test "new preloads transaction form option data" do
+    family = families(:empty)
+    user = users(:empty)
+    sign_in user
+
+    manual_account_ids = []
+    4.times do |idx|
+      account = family.accounts.create!(
+        name: "Manual Account #{idx}",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      )
+      assert Account.manual.active.exists?(id: account.id), "Account should be included in the manual active scope"
+      manual_account_ids << account.id
+      family.categories.create!(
+        name: "Category #{idx}",
+        color: "#000000",
+        lucide_icon: "shapes"
+      )
+      family.merchants.create!(name: "Merchant #{idx}")
+      family.tags.create!(name: "Tag #{idx}")
+    end
+
+    inaccessible_account = families(:dylan_family).accounts.create!(
+      name: "Other Family Account",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    queries = capture_sql_queries { get new_transaction_url }
+
+    assert_response :success
+    assert_select "input[name='entry[account_id]']"
+    assert_select "input[name='entry[entryable_attributes][category_id]']"
+    assert_select "input[name='entry[entryable_attributes][merchant_id]']"
+    assert_select "form[data-transaction-form-account-currencies-value]" do |forms|
+      account_currencies = JSON.parse(forms.first["data-transaction-form-account-currencies-value"])
+      manual_account_ids.each do |account_id|
+        assert_equal "USD", account_currencies[account_id.to_s]
+      end
+      assert_nil account_currencies[inaccessible_account.id.to_s]
+    end
+
+    assert_empty queries.grep(/FROM "account_providers" WHERE "account_providers"\."account_id" =/)
+    assert_operator queries.grep(/FROM "active_storage_attachments" WHERE "active_storage_attachments"\."record_id" =/).size, :<=, 1
+    assert_operator queries.grep(/SELECT "categories"\.\* FROM "categories" WHERE "categories"\."family_id" =/).size, :<=, 1
+  end
+
   test "unlock clears import_locked flag" do
     family = families(:empty)
     sign_in users(:empty)
@@ -584,4 +721,25 @@ end
     created_entry = Entry.order(:created_at).last
     assert_nil created_entry.transaction.extra["exchange_rate"]
   end
+
+  private
+    def rendered_entry_ids
+      css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end

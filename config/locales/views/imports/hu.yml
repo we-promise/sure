@@ -302,7 +302,6 @@ hu:
       description: Importálás pénzügyi eszközből vagy nyers adatfájlok feltöltése.
       tab_financial_tools: Pénzügyi eszközök és fájlok
       tab_raw_data: Nyers adatok
-      coming_soon: Hamarosan
       import_ynab: Importálás YNAB-ból
       import_accounts: Számlák importálása
       import_categories: Kategóriák importálása

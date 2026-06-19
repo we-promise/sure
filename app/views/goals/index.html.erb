@@ -1,0 +1,198 @@
+<%# @container so the KPI strip + card grids respond to the actual content
+    width (which shrinks when the account / AI sidebars are open) rather than
+    the viewport. Viewport breakpoints kept 3 columns in a narrow center
+    column and crushed the cards. %>
+<div class="@container space-y-8 pb-6 lg:pb-12">
+  <header>
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+      <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+    </div>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+  </header>
+
+  <% if @counts["all"].zero? %>
+    <%= render "empty_state", linkable_account_count: @linkable_account_count %>
+  <% else %>
+    <%# KPI strip. Contributed last 30d (with prior-30d comparison) / Needs / On track %>
+    <section class="grid grid-cols-1 @3xl:grid-cols-3 gap-3">
+      <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.contributed_label") %></p>
+        <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive">
+          <%= @kpi[:velocity_30d_sign] %><%= @kpi[:velocity_30d_money].format %>
+        </p>
+        <% if @kpi[:velocity_direction] == :flat %>
+          <p class="text-xs text-secondary mt-1 tabular-nums">
+            <% if @kpi[:velocity_prior_30d_money].zero? && @kpi[:velocity_30d_money].zero? %>
+              <%= t(".kpi.velocity_delta_zero_base") %>
+            <% else %>
+              <%= t(".kpi.velocity_delta_flat") %>
+            <% end %>
+          </p>
+        <% elsif @kpi[:velocity_delta_percent].nil? %>
+          <p class="text-xs text-success mt-1 tabular-nums"><%= t(".kpi.velocity_delta_zero_base") %></p>
+        <% else %>
+          <p class="text-xs <%= @kpi[:velocity_direction] == :up ? "text-success" : "text-destructive" %> mt-1 tabular-nums">
+            <%= t(".kpi.velocity_delta_#{@kpi[:velocity_direction]}", percent: @kpi[:velocity_delta_percent].abs) %>
+          </p>
+        <% end %>
+      </div>
+
+      <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.needs_this_month_label") %></p>
+        <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive"><%= @kpi[:needs_this_month_money].format %></p>
+        <p class="text-xs text-secondary mt-1">
+          <% if @kpi[:behind_count].zero? %>
+            <%= t(".kpi.needs_this_month_zero_sub") %>
+          <% else %>
+            <%= t(".kpi.needs_this_month_sub", count: @kpi[:behind_count]) %>
+          <% end %>
+        </p>
+      </div>
+
+      <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.on_track_label") %></p>
+        <% if @kpi[:tracked_total].zero? && @kpi[:reached_count].positive? %>
+          <%# All active goals already hit their target — fraction would
+              read "0 of 0" or paper over success. Swap to a celebratory
+              empty state instead. %>
+          <p class="text-3xl font-medium text-primary mt-2">
+            <%= t(".kpi.on_track_all_caught_up") %>
+          </p>
+          <p class="text-xs text-secondary mt-1">
+            <%= t(".kpi.on_track_sub_parts.reached", count: @kpi[:reached_count]) %>
+          </p>
+        <% else %>
+          <p class="text-3xl font-medium text-primary tabular-nums mt-2">
+            <%= t(".kpi.on_track_value", on_track: @kpi[:on_track_count], total: @kpi[:tracked_total]) %>
+          </p>
+          <p class="text-xs text-secondary mt-1">
+            <%
+              # Reached goals are intentionally absent from the subline when
+              # the fraction is calculable. They no longer count toward pace
+              # tracking, and surfacing "N reached" next to "X of Y" muddied
+              # the message (the fraction is a needle, "N reached" is a
+              # trophy. different signals).
+              parts = []
+              parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
+              parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
+              parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?
+            %>
+            <% if parts.any? %>
+              <%= parts.join(" · ") %>
+            <% else %>
+              <%= t(".kpi.on_track_sub_all_good") %>
+            <% end %>
+          </p>
+        <% end %>
+      </div>
+    </section>
+
+    <% if @any_pending_pledge %>
+      <%= render DS::Alert.new(variant: "info", message: t(".pending_pledges_callout"), live: :polite) %>
+    <% end %>
+
+    <%# Goals section %>
+    <section data-controller="goals-filter"
+             data-goals-filter-empty-query-value="<%= t(".search.empty_with_query", query: "__QUERY__") %>"
+             data-goals-filter-empty-filter-value="<%= t(".search.empty_with_filter") %>"
+             data-goals-filter-empty-both-value="<%= t(".search.empty_with_both", query: "__QUERY__") %>"
+             data-goals-filter-empty-default-value="<%= t(".search.empty") %>">
+      <% if @linkable_account_count > 0 %>
+        <div class="flex items-center justify-end mb-4">
+          <%= render DS::Link.new(
+            text: t(".new_goal"),
+            variant: "primary",
+            href: new_goal_path,
+            icon: "plus",
+            frame: :modal
+          ) %>
+        </div>
+      <% end %>
+
+      <% if @show_search %>
+        <div class="flex flex-wrap items-center gap-2.5 mb-4">
+          <%= render DS::SearchInput.new(
+                aria_label: t(".search.aria_label"),
+                placeholder: t(".search.placeholder"),
+                class: "flex-1 min-w-[200px]",
+                data: {
+                  goals_filter_target: "input",
+                  action: "input->goals-filter#filter"
+                }
+              ) %>
+          <%# overflow-x-auto + nowrap chips: the segmented control scrolls
+              horizontally when the column is too narrow for all six chips,
+              rather than wrapping "On track" mid-label or forcing the row
+              wider than the viewport. %>
+          <%= render DS::SegmentedControl.new(aria_label: t(".chips_aria", default: "Filter goals by status"), class: "overflow-x-auto max-w-full") do |sc| %>
+            <% %w[all on_track behind no_target_date paused completed].each do |status| %>
+              <% sc.with_segment(t(".chips.#{status}"),
+                   active: status == "all",
+                   class: "shrink-0 whitespace-nowrap",
+                   data: {
+                     "goals-filter-target": "chip",
+                     status: status,
+                     action: "click->goals-filter#selectChip"
+                   }) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @grid_goals.any? %>
+        <div class="flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
+          <span><%= t(".ongoing_section.heading") %></span>
+          <span class="text-subdued">·</span>
+          <span class="tabular-nums" data-goals-filter-target="count"><%= @grid_goals.size %></span>
+        </div>
+        <div class="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-3.5" data-goals-filter-target="grid">
+          <% @grid_goals.each do |goal| %>
+            <%= render Goals::CardComponent.new(goal: goal) %>
+          <% end %>
+        </div>
+        <div class="hidden bg-container rounded-xl shadow-border-xs py-10 text-center" data-goals-filter-target="empty">
+          <p class="text-sm text-secondary" data-goals-filter-target="emptyCopy"><%= t(".search.empty") %></p>
+          <div class="mt-3 flex items-center justify-center gap-2">
+            <button type="button"
+                    class="hidden text-xs font-medium text-secondary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100"
+                    data-goals-filter-target="emptyClearSearch"
+                    data-action="click->goals-filter#clearSearch">
+              <%= t(".search.clear_search") %>
+            </button>
+            <button type="button"
+                    class="hidden text-xs font-medium text-secondary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-100"
+                    data-goals-filter-target="emptyClearFilter"
+                    data-action="click->goals-filter#clearFilter">
+              <%= t(".search.show_all") %>
+            </button>
+          </div>
+        </div>
+      <% else %>
+        <div class="bg-container rounded-xl shadow-border-xs py-12 text-center">
+          <p class="text-sm text-secondary"><%= t(".empty_filtered") %></p>
+        </div>
+      <% end %>
+    </section>
+
+    <% if @archived_goals.any? %>
+      <section>
+        <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <span class="inline-flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
+              <span class="text-subdued group-open:rotate-90 motion-safe:transition-transform"><%= icon("chevron-right", size: "sm") %></span>
+              <span><%= t(".archived_section.heading") %></span>
+              <span class="text-subdued">·</span>
+              <span class="tabular-nums"><%= @archived_goals.size %></span>
+            </span>
+          <% end %>
+          <div class="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-3.5">
+            <% @archived_goals.each do |goal| %>
+              <%= render Goals::CardComponent.new(goal: goal, filterable: false) %>
+            <% end %>
+          </div>
+        <% end %>
+      </section>
+    <% end %>
+  <% end %>
+</div>

@@ -13,3 +13,13 @@ zh-CN:
       success: 已离开会话
     reject:
       success: 请求已拒绝
+    super_admin_bar:
+      super_admin: 超级管理员
+      jobs: 后台任务
+      impersonating: 正在代入用户
+      leave: 离开
+      terminate: 终止
+      join_a_session: 加入会话
+      join: 加入
+      uuid_placeholder: UUID
+      request_impersonation: 请求代入访问

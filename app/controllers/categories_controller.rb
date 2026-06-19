@@ -4,7 +4,9 @@ class CategoriesController < ApplicationController
   before_action :set_transaction, only: :create
 
   def index
-    @categories = Current.family.categories.alphabetically
+    @categories = Current.family.categories.alphabetically.to_a
+    @category_groups = Category::Group.for(@categories)
+    @category_ids_with_transactions = category_ids_with_transactions(@categories)
 
     render layout: "settings"
   end
@@ -121,6 +123,17 @@ class CategoriesController < ApplicationController
 
     def category_merge_params
       params.permit(:target_id, source_ids: [])
+    end
+
+    def category_ids_with_transactions(categories)
+      category_ids = categories.map(&:id)
+      return {} if category_ids.empty?
+
+      Current.family.transactions
+                    .where(category_id: category_ids)
+                    .distinct
+                    .pluck(:category_id)
+                    .index_with(true)
     end
 
     def record_error_message(error)

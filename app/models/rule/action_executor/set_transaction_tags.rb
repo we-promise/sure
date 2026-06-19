@@ -26,7 +26,8 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
       txn.enrich_attribute(
         :tag_ids,
         merged_tag_ids,
-        source: "rule"
+        source: "rule",
+        ignore_locks: ignore_attribute_locks
       )
     end
   end

@@ -18,6 +18,20 @@ class Provider::Registry
       raise Error.new("Provider '#{name}' not found in registry")
     end
 
+    # Resolves the LLM provider for batch/PDF flows, honoring Setting.llm_provider
+    # the way chat does: prefer the configured provider, but fall back to whichever
+    # one actually has credentials so an install that swaps providers (or has only
+    # one configured) keeps working. Returns nil when neither is configured —
+    # callers guard on that.
+    def preferred_llm_provider
+      order = Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
+      order.each do |name|
+        provider = get_provider(name)
+        return provider if provider
+      end
+      nil
+    end
+
     def plaid_provider_for_region(region)
       region.to_sym == :us ? plaid_us : plaid_eu
     end
@@ -126,6 +140,10 @@ class Provider::Registry
       def binance_public
         Provider::BinancePublic.new
       end
+
+      def moex_public
+        Provider::MoexPublic.new
+      end
   end
 
   def initialize(concept)
@@ -156,9 +174,9 @@ class Provider::Registry
     def available_providers
       case concept
       when :exchange_rates
-        %i[twelve_data yahoo_finance]
+        %i[twelve_data yahoo_finance moex_public]
       when :securities
-        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public]
       when :llm
         %i[openai anthropic]
       else

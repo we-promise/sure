@@ -10,7 +10,7 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport PdfImport QifImport SureImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -41,11 +41,15 @@ class Import < ApplicationRecord
   belongs_to :family
   belongs_to :account, optional: true
   belongs_to :account_statement, optional: true
+  belongs_to :import_session, optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
+  before_save :ensure_utf8_encoding
+  normalizes :client_chunk_id, with: ->(value) { value.strip.presence }
 
   scope :ordered, -> { order(created_at: :desc) }
+  scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
 
   enum :status, {
     pending: "pending",
@@ -61,9 +65,15 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validates :sequence, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validates :client_chunk_id, length: { maximum: 255 }, allow_blank: true
+  validates :checksum, length: { is: 64 }, allow_blank: true
   validate :custom_column_import_requires_identifier
   validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
+  validate :import_session_belongs_to_family
+  validate :session_chunk_metadata
+  validate :session_payloads_are_json_objects
   validate :rows_to_skip_within_file_bounds
 
   has_many :rows, dependent: :destroy
@@ -562,6 +572,25 @@ class Import < ApplicationRecord
       return if account.family_id == family_id
 
       errors.add(:account, "must belong to your family")
+    end
+
+    def import_session_belongs_to_family
+      return if import_session.nil?
+      return if import_session.family_id == family_id
+
+      errors.add(:import_session, "must belong to your family")
+    end
+
+    def session_chunk_metadata
+      return if import_session.nil?
+
+      errors.add(:sequence, "must be present for import session chunks") if sequence.blank?
+      errors.add(:checksum, "must be present for import session chunks") if checksum.blank?
+    end
+
+    def session_payloads_are_json_objects
+      errors.add(:summary, "must be an object") unless summary.is_a?(Hash)
+      errors.add(:error_details, "must be an object") unless error_details.is_a?(Hash)
     end
 
     def rows_to_skip_within_file_bounds

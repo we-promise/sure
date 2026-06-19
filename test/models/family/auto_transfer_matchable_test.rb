@@ -98,6 +98,44 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
     end
+
+    create_transaction(date: Date.current, account: @depository, amount: 700)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, excluded: true)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not consider excluded entries when matching transfers" do
+    create_transaction(date: Date.current, account: @depository, amount: 500, excluded: true)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "account-scoped auto-matching only considers pairs touching that account" do
+    depository_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    credit_card_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    connected_outflow = create_transaction(date: Date.current, account: accounts(:connected), amount: 700)
+    loan_inflow = create_transaction(date: Date.current, account: @loan, amount: -700)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!(account: @depository)
+    end
+
+    Transfer.find_by!(
+      inflow_transaction_id: credit_card_inflow.entryable_id,
+      outflow_transaction_id: depository_outflow.entryable_id
+    )
+    assert_nil Transfer.find_by(inflow_transaction_id: loan_inflow.entryable_id, outflow_transaction_id: connected_outflow.entryable_id)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!(account: accounts(:connected))
+    end
   end
 
   test "does not match transactions outside the 4-day window" do
@@ -106,6 +144,19 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
+    end
+  end
+
+  test "transfer candidate options require valid numeric input" do
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: "wide") }
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: Float::INFINITY) }
+    error = assert_raises(ArgumentError) { @family.transfer_match_candidates(exchange_rate_tolerance: -0.1) }
+    assert_equal "exchange_rate_tolerance must be non-negative", error.message
+
+    assert_nothing_raised do
+      @family.transfer_match_candidates(date_window: "4", exchange_rate_tolerance: "0.1")
     end
   end
 
@@ -122,6 +173,22 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal category, outflow_entry.entryable.category
   end
 
+  test "auto-matched investment transfers reuse contribution category lookup" do
+    investment = accounts(:investment)
+    category = @family.investment_contributions_category
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: investment, amount: -500)
+    create_transaction(date: Date.current, account: @depository, amount: 700)
+    create_transaction(date: Date.current, account: investment, amount: -700)
+
+    @family.expects(:investment_contributions_category).once.returns(category)
+
+    assert_difference -> { Transfer.count }, 2 do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "does not match multi-currency transfer with missing exchange rate" do
     create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "GBP")
@@ -129,6 +196,55 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
     end
+  end
+
+  test "same-currency matching ignores amount-mismatched busy-window entries" do
+    noise_transaction_ids = []
+
+    25.times do |index|
+      noise_outflow = create_transaction(date: Date.current, account: @depository, amount: 13_001 + index)
+      noise_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -(27_001 + index))
+
+      noise_transaction_ids << noise_outflow.entryable_id
+      noise_transaction_ids << noise_inflow.entryable_id
+    end
+
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    candidate_pairs = @family.transfer_match_candidates.map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+
+    noise_pairs = candidate_pairs.select do |inflow_transaction_id, outflow_transaction_id|
+      noise_transaction_ids.include?(inflow_transaction_id) || noise_transaction_ids.include?(outflow_transaction_id)
+    end
+
+    assert_empty noise_pairs
+  end
+
+  test "single transaction transfer candidates filter optimized relation aliases" do
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    outflow_candidates = outflow.transaction.transfer_match_candidates
+    inflow_candidates = inflow.transaction.transfer_match_candidates
+
+    assert_equal [ inflow.entryable_id ], outflow_candidates.map(&:inflow_transaction_id)
+    assert_equal [ outflow.entryable_id ], inflow_candidates.map(&:outflow_transaction_id)
+  end
+
+  test "transfer candidate query separates exact and exchange-rate matching paths" do
+    sql = @family.send(:transfer_match_candidates_sql)
+
+    assert_includes sql, "UNION ALL"
+    assert_includes sql, "inflow_candidates.excluded = FALSE"
+    assert_includes sql, "outflow_candidates.excluded = FALSE"
+    assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
+    assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
+    assert_includes sql, "JOIN exchange_rates"
   end
 
   # Regression tests for loan transfer kind assignment bug
