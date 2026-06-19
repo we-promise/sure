@@ -1,0 +1,59 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+        <% if @available_accounts.empty? %>
+          <div class="p-6 flex flex-col gap-3 items-center justify-center text-center">
+            <%= icon "check-circle", size: "lg", class: "text-success" %>
+            <p class="text-primary font-medium"><%= t(".no_accounts_found") %></p>
+          </div>
+          <div class="flex justify-end">
+            <%= link_to t(".cancel"), @return_to || accounts_path,
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                data: { turbo_frame: "_top" } %>
+          </div>
+        <% else %>
+          <%= form_with url: link_existing_account_wise_items_path,
+                        method: :post,
+                        data: { turbo_frame: "_top" },
+                        class: "space-y-4" do %>
+            <%= hidden_field_tag :wise_item_id, @wise_item&.id %>
+            <%= hidden_field_tag :account_id, @account.id %>
+            <%= hidden_field_tag :return_to, @return_to %>
+
+            <div class="space-y-2">
+              <% @available_accounts.each do |wise_account| %>
+                <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
+                  <%= radio_button_tag "wise_account_id", wise_account.id, false, class: "mt-1" %>
+                  <div class="flex-1">
+                    <p class="font-medium text-sm text-primary"><%= wise_account.name %></p>
+                    <p class="text-xs text-secondary mt-0.5">
+                      <%= format_money(Money.new(wise_account.current_balance || 0, wise_account.currency)) %>
+                      &nbsp;·&nbsp;
+                      <%= wise_account.currency %>
+                    </p>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+
+            <div class="flex gap-2 justify-end pt-4">
+              <%= link_to t(".cancel"), @return_to || accounts_path,
+                  class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                  data: { turbo_frame: "_top" } %>
+              <%= render DS::Button.new(
+                text: t(".link_account"),
+                variant: :primary,
+                type: :submit
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

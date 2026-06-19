@@ -280,6 +280,23 @@ class Account < ApplicationRecord
       )
     end
 
+    def create_from_wise_account(wise_account)
+      family = wise_account.wise_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: wise_account.name || "Wise #{wise_account.currency}",
+          balance: wise_account.current_balance || 0,
+          cash_balance: wise_account.current_balance || 0,
+          currency: wise_account.currency,
+          accountable_type: "Depository",
+          accountable_attributes: { subtype: wise_account.account_subtype }
+        },
+        skip_initial_sync: true
+      )
+    end
+
     def create_from_coinbase_account(coinbase_account)
       # All Coinbase accounts are crypto exchange accounts
       family = coinbase_account.coinbase_item.family

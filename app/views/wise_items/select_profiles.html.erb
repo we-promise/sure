@@ -1,0 +1,64 @@
+<% content_for :title, t(".title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "globe", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: link_profiles_wise_items_path,
+                  method: :post,
+                  local: true,
+                  data: { turbo_frame: "_top" },
+                  class: "space-y-6" do |form| %>
+
+      <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+      <div class="space-y-3">
+        <% @pending_profiles.each do |profile| %>
+          <% profile_id = profile["id"].to_s %>
+          <% already_connected = @existing_profile_ids.include?(profile_id) %>
+          <% profile_type = profile["type"] == "business" ? "business" : "personal" %>
+          <% details = profile["details"] || {} %>
+          <% display_name = details["name"].presence || [ details["firstName"], details["lastName"] ].compact.join(" ") %>
+
+          <label class="flex items-start gap-3 p-3 border <%= already_connected ? "border-secondary opacity-60 cursor-not-allowed" : "border-primary hover:bg-subtle cursor-pointer" %> rounded-lg transition-colors">
+            <%= check_box_tag "profile_ids[]", profile_id, !already_connected, disabled: already_connected, class: "mt-1" %>
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-sm text-primary"><%= display_name.presence || t(".unnamed_profile") %></span>
+                <span class="text-xs px-1.5 py-0.5 rounded bg-surface-inset text-secondary">
+                  <%= t("wise_items.profile_types.#{profile_type}") %>
+                </span>
+                <% if already_connected %>
+                  <span class="text-xs text-secondary"><%= t(".already_connected_label") %></span>
+                <% end %>
+              </div>
+              <% if details["email"].present? %>
+                <p class="text-xs text-secondary mt-0.5"><%= details["email"] %></p>
+              <% end %>
+            </div>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: t(".connect"),
+          variant: "primary",
+          icon: "link",
+          type: "submit",
+          class: "flex-1"
+        ) %>
+        <%= render DS::Link.new(
+          text: t(".cancel"),
+          variant: "secondary",
+          href: settings_providers_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
