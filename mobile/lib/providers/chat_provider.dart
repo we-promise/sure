@@ -466,7 +466,20 @@ class ChatProvider with ChangeNotifier {
               if (!localById.containsKey(m.id)) m,
           ]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-          _currentChat = _currentChat!.copyWith(messages: _trimMessages(merged));
+          // Drop ghost optimistic messages (pending_* IDs) created by createChat
+          // that have been confirmed by a real server user message with the same content.
+          final confirmedContents = {
+            for (final m in serverMessages)
+              if (m.role == 'user') m.content,
+          };
+          final cleaned = merged.where((m) {
+            if (m.id.startsWith('pending_') && m.role == 'user') {
+              return !confirmedContents.contains(m.content);
+            }
+            return true;
+          }).toList();
+
+          _currentChat = _currentChat!.copyWith(messages: _trimMessages(cleaned));
           if (hasNewMessage) {
             _lastAssistantContentLength = null;
             _pollingStartTime = DateTime.now();
