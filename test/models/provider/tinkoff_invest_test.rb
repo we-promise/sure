@@ -88,7 +88,7 @@ class Provider::TinkoffInvestTest < ActiveSupport::TestCase
   test "fetch_security_prices converts bond percent-of-par to money via nominal" do
     travel_to Date.new(2026, 6, 18) do
       stub_find("RU000A10AAQ4", [ instrument_short(ticker: "RU000A10AAQ4", isin: "RU000A10AAQ4", type: "bond", class_code: "TQCB", uid: "uid-bond", currency: "rub") ])
-      stub_instrument_by("uid-bond", instrument_full(name: "Bond", nominal: { "units" => "1000", "nano" => 0 }))
+      stub_bond_by("uid-bond", { "nominal" => { "units" => "1000", "nano" => 0 } })
       @provider.stubs(:post).with("MarketDataService", "GetCandles", anything).returns(
         "candles" => [ candle("2026-06-17", units: 103, nano: 700_000_000) ] # 103.7% of par
       )
@@ -104,7 +104,7 @@ class Provider::TinkoffInvestTest < ActiveSupport::TestCase
   test "fetch_security_prices fails (no zero price) when a bond nominal is missing" do
     travel_to Date.new(2026, 6, 18) do
       stub_find("RU000A10AAQ4", [ instrument_short(ticker: "RU000A10AAQ4", type: "bond", class_code: "TQCB", uid: "uid-bond", currency: "rub") ])
-      stub_instrument_by("uid-bond", instrument_full(name: "Bond")) # no nominal
+      stub_bond_by("uid-bond", {}) # no nominal
       @provider.stubs(:post).with("MarketDataService", "GetCandles", anything).returns("candles" => [ candle("2026-06-17", units: 103, nano: 0) ])
       @provider.stubs(:post).with("MarketDataService", "GetLastPrices", anything).returns("lastPrices" => [])
 
@@ -143,10 +143,16 @@ class Provider::TinkoffInvestTest < ActiveSupport::TestCase
                .returns("instrument" => instrument)
     end
 
-    def instrument_short(ticker:, type:, class_code:, name: nil, uid: "uid", isin: "", currency: "rub", country: "RU", exchange: "moex")
+    def stub_bond_by(uid, instrument)
+      @provider.stubs(:post)
+               .with("InstrumentsService", "BondBy", has_entry(id: uid))
+               .returns("instrument" => instrument)
+    end
+
+    def instrument_short(ticker:, type:, class_code:, name: nil, uid: "uid", isin: "", currency: "rub", country: "RU", exchange: "moex", tradeable: true)
       {
         "ticker" => ticker, "name" => name || ticker, "instrumentType" => type,
-        "classCode" => class_code, "uid" => uid, "isin" => isin,
+        "classCode" => class_code, "uid" => uid, "isin" => isin, "apiTradeAvailableFlag" => tradeable,
         "currency" => currency, "countryOfRisk" => country, "exchange" => exchange
       }
     end

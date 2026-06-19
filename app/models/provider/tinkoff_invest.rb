@@ -77,6 +77,7 @@ class Provider::TinkoffInvest < Provider
       next [] if query.empty?
 
       find_instruments(query).filter_map do |row|
+        next nil unless row["apiTradeAvailableFlag"] # only surface instruments the API can actually price
         next nil unless surfaced_kind(row["instrumentType"])
 
         Provider::SecurityConcept::Security.new(
@@ -222,13 +223,19 @@ class Provider::TinkoffInvest < Provider
 
     def find_instruments(query)
       Rails.cache.fetch("tinkoff_invest:find:#{query.downcase}", expires_in: SEARCH_CACHE_TTL) do
-        body = post("InstrumentsService", "FindInstrument", query: query, apiTradeAvailableFlag: false)
+        # Return all matches (not just apiTradeAvailableFlag) — a ticker can have
+        # several non-tradeable listings plus one tradeable board; resolve_short
+        # ranks the tradeable one first while keeping a fallback for instruments
+        # Tinkoff lists but can't trade via API.
+        body = post("InstrumentsService", "FindInstrument", query: query)
         body["instruments"] || []
       end
     end
 
-    # Best FindInstrument hit for a ticker/ISIN: exact ticker (or ISIN) match,
-    # preferring a requested MIC, then a surfaced kind, then any result.
+    # Best FindInstrument hit for a ticker/ISIN. A ticker like SBER returns many
+    # listings (TQBR, SPB, dark boards); only the API-tradeable one has live
+    # prices, so rank tradeable first, then a requested-MIC match, then exact
+    # ticker/ISIN, then a surfaced kind.
     def resolve_short(symbol, exchange_operating_mic)
       key = symbol.to_s.strip
       Rails.cache.fetch("tinkoff_invest:short:#{key.downcase}:#{exchange_operating_mic}", expires_in: INSTRUMENT_CACHE_TTL) do
@@ -237,13 +244,17 @@ class Provider::TinkoffInvest < Provider
 
         exact = rows.select { |r| r["ticker"].to_s.upcase == up || r["isin"].to_s.upcase == up }
         pool = exact.any? ? exact : rows
-        pool = pool.select { |r| surfaced_kind(r["instrumentType"]) } if pool.any? { |r| surfaced_kind(r["instrumentType"]) }
+        typed = pool.select { |r| surfaced_kind(r["instrumentType"]) }
+        pool = typed if typed.any?
+        next nil if pool.empty?
 
-        if exchange_operating_mic.present?
-          preferred = pool.find { |r| mic_for(r["classCode"], r["exchange"]) == exchange_operating_mic.upcase }
-          preferred || pool.first
-        else
-          pool.first
+        mic = exchange_operating_mic.to_s.upcase
+        pool.min_by do |r|
+          [
+            r["apiTradeAvailableFlag"] ? 0 : 1,
+            (mic.present? && mic_for(r["classCode"], r["exchange"]) == mic) ? 0 : 1,
+            (r["ticker"].to_s.upcase == up || r["isin"].to_s.upcase == up) ? 0 : 1
+          ]
         end
       end
     end
@@ -256,8 +267,12 @@ class Provider::TinkoffInvest < Provider
       end
     end
 
+    # Bond nominal comes from BondBy (the generic GetInstrumentBy omits it).
+    # Returns the current (amortized) nominal so percent-of-par prices convert to
+    # money correctly across the bond's life.
     def instrument_nominal(uid)
-      quotation_to_d(instrument_detail(uid)["nominal"])
+      body = post("InstrumentsService", "BondBy", idType: "INSTRUMENT_ID_TYPE_UID", id: uid)
+      quotation_to_d((body["instrument"] || {})["nominal"])
     end
 
     # ================================
