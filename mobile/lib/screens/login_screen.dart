@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // out from under a still-mounted TextField during the exit transition.
     final result = await showDialog<bool>(
       context: context,
-      builder: (_) => const _ApiKeyLoginDialog(),
+      builder: (_) => const ApiKeyLoginDialog(),
     );
 
     // result: true = signed in, false = login attempt failed, null = dismissed.
@@ -467,15 +467,22 @@ class _LoginScreenState extends State<LoginScreen> {
 /// with the dialog's State — never leaked (barrier/back dismissal) and never
 /// disposed while the field is still mounted. Pops `true` on a successful
 /// sign-in, `false` on a failed attempt, and `null` when dismissed.
-class _ApiKeyLoginDialog extends StatefulWidget {
-  const _ApiKeyLoginDialog();
+@visibleForTesting
+class ApiKeyLoginDialog extends StatefulWidget {
+  const ApiKeyLoginDialog({super.key, this.controller});
+
+  /// Test seam: a controller the dialog will adopt and dispose, so a test can
+  /// assert disposal. Production passes none and the dialog creates its own.
+  @visibleForTesting
+  final TextEditingController? controller;
 
   @override
-  State<_ApiKeyLoginDialog> createState() => _ApiKeyLoginDialogState();
+  State<ApiKeyLoginDialog> createState() => _ApiKeyLoginDialogState();
 }
 
-class _ApiKeyLoginDialogState extends State<_ApiKeyLoginDialog> {
-  final _apiKeyController = TextEditingController();
+class _ApiKeyLoginDialogState extends State<ApiKeyLoginDialog> {
+  late final TextEditingController _apiKeyController =
+      widget.controller ?? TextEditingController();
   bool _isLoading = false;
 
   @override
