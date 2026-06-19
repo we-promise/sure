@@ -27,9 +27,14 @@ class SnaptradeItemsController < ApplicationController
       registration_error = nil
       begin
         @snaptrade_item.ensure_user_registered!
-      rescue => e
-        Rails.logger.error "SnapTrade user registration failed: #{e.message}"
+      rescue SnaptradeItem::RegistrationError => e
+        # Actionable, localized guidance (e.g. personal keys must supply their
+        # pre-provisioned User ID/Secret). Safe to show to the user verbatim.
         registration_error = e.message
+      rescue => e
+        # Unexpected failure — log internally and let the user retry via Connect
+        # rather than exposing raw error details (provider/API/internal messages).
+        Rails.logger.error "SnapTrade user registration failed: #{e.class} - #{e.message}"
       end
 
       if turbo_frame_request?

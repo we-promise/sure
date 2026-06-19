@@ -267,4 +267,26 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#snaptrade-sync-spinner", count: 1, message: "Expected the spinner to be shown while sync is in progress"
     assert_select ".no-accounts-found", count: 0, message: "Expected the no-accounts UI to be hidden while a sync is active"
   end
+
+  test "create surfaces actionable registration guidance to the user" do
+    guidance = "Enter the User ID and User Secret from your SnapTrade dashboard."
+    SnaptradeItem.any_instance
+      .stubs(:ensure_user_registered!)
+      .raises(SnaptradeItem::RegistrationError.new(guidance))
+
+    post snaptrade_items_url, params: { snaptrade_item: { client_id: "cid", consumer_key: "ckey" } }
+
+    assert_equal guidance, flash[:alert]
+  end
+
+  test "create does not leak internal error details on unexpected registration failures" do
+    SnaptradeItem.any_instance
+      .stubs(:ensure_user_registered!)
+      .raises(Provider::Snaptrade::ApiError.new("SnapTrade API error: internal upstream detail", status_code: 500))
+
+    post snaptrade_items_url, params: { snaptrade_item: { client_id: "cid", consumer_key: "ckey" } }
+
+    assert_nil flash[:alert]
+    assert_not_includes flash[:notice].to_s, "internal upstream detail"
+  end
 end

@@ -1,6 +1,11 @@
 class SnaptradeItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
+  # Raised when registration can't proceed and we have an actionable, localized
+  # message that is safe to display to the end user (e.g. personal-key guidance).
+  # Distinct from raw provider/API errors, which must not be shown verbatim.
+  class RegistrationError < StandardError; end
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Helper to detect if ActiveRecord Encryption is configured for this app

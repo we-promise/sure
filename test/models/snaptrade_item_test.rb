@@ -149,7 +149,7 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     )
     item.stubs(:snaptrade_provider).returns(provider)
 
-    error = assert_raises(StandardError) { item.ensure_user_registered! }
+    error = assert_raises(SnaptradeItem::RegistrationError) { item.ensure_user_registered! }
     assert_match(/personal key/i, error.message)
     assert_not item.user_registered?
   end

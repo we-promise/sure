@@ -99,7 +99,7 @@ module SnaptradeItem::Provided
     # Personal keys can't call registerUser. Surface an actionable message so the
     # user knows to paste their pre-provisioned User ID and User Secret instead.
     Rails.logger.error "SnapTrade: #{e.message}"
-    raise StandardError, I18n.t("snaptrade_item.errors.personal_key_registration_unavailable")
+    raise SnaptradeItem::RegistrationError, I18n.t("snaptrade_item.errors.personal_key_registration_unavailable")
   rescue Provider::Snaptrade::ApiError => e
     Rails.logger.error "SnapTrade user registration failed: #{e.class} - #{e.message}"
     # Log status code but not response_body to avoid credential exposure
