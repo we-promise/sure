@@ -59,6 +59,7 @@ class Setting < RailsSettings::Base
   field :tiingo_api_key, type: :string, default: ENV["TIINGO_API_KEY"]
   field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
+  field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -73,6 +74,7 @@ class Setting < RailsSettings::Base
       tiingo_api_key
       eodhd_api_key
       alpha_vantage_api_key
+      tinkoff_invest_api_key
       openai_access_token
       anthropic_access_token
       external_assistant_token
