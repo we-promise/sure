@@ -44,6 +44,7 @@ en:
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
         mfapi_hint: free, no API key -- Indian mutual funds only
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
+        moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -52,6 +53,7 @@ en:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -205,6 +207,8 @@ en:
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action
+      ensure_admin:
+        not_authorized: You are not authorized to perform this action
       ensure_super_admin_for_onboarding:
         not_authorized: You are not authorized to perform this action
       sync_auto_sync_scheduler!:

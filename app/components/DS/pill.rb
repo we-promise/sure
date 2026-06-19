@@ -178,7 +178,7 @@ class DS::Pill < DesignSystemComponent
       # tracking snap to Tailwind's scale to satisfy the design-system
       # "no arbitrary values" rule.
       base << "rounded-md uppercase"
-      base << (size == :md ? "px-2 py-0.5 text-[11px] tracking-wide gap-1" : "px-1.5 py-0.5 text-[10px] tracking-wider gap-1")
+      base << (size == :md ? "px-2 py-1 text-[11px] tracking-wide gap-1" : "px-1.5 py-0.5 text-[10px] tracking-wider gap-1")
     else
       # Badge mode (Pending / Active / Past due / category tag):
       # rounded-full pill shape (matches the existing convention used
@@ -186,7 +186,7 @@ class DS::Pill < DesignSystemComponent
       # the inline transaction badges). Normal case, snaps to the
       # design-system text scale (`text-xs` / `text-sm`).
       base << "rounded-full"
-      base << (size == :md ? "px-2 py-0.5 text-sm gap-1.5" : "px-1.5 py-0.5 text-xs gap-1")
+      base << (size == :md ? "px-2 py-1 text-sm gap-1.5" : "px-1.5 py-0.5 text-xs gap-1")
     end
     class_names(*base)
   end

@@ -140,6 +140,10 @@ class Provider::Registry
       def binance_public
         Provider::BinancePublic.new
       end
+
+      def moex_public
+        Provider::MoexPublic.new
+      end
   end
 
   def initialize(concept)
@@ -170,9 +174,9 @@ class Provider::Registry
     def available_providers
       case concept
       when :exchange_rates
-        %i[twelve_data yahoo_finance]
+        %i[twelve_data yahoo_finance moex_public]
       when :securities
-        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public]
       when :llm
         %i[openai anthropic]
       else

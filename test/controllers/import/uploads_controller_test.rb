@@ -35,6 +35,18 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "CSV uploaded successfully.", flash[:notice]
   end
 
+  test "account select does not leak unshared family accounts (#1803)" do
+    sign_in users(:family_member)
+
+    get import_upload_url(@import)
+
+    assert_response :success
+    assert_select 'select[name="import[account_id]"] option', text: "Checking Account"
+    assert_select 'select[name="import[account_id]"] option', text: "Collectable Account", count: 0
+    assert_select 'select[name="import[account_id]"] option', text: "IOU (personal debt to friend)", count: 0
+    assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
+  end
+
   test "invalid csv cannot be uploaded" do
     patch import_upload_url(@import), params: {
       import: {

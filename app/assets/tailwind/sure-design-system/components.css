@@ -1,4 +1,39 @@
 @layer components {
+  /*
+    Canonical keyboard-focus indicator (#2136). One recipe for every focusable
+    primitive: a neutral 2px `outline` that hugs the control (`outline-offset: 0`
+    so it sits right at the edge and follows the border-radius), in the
+    theme-aware `focus-ring` token.
+
+    `outline` — NOT box-shadow — on purpose: a components-layer box-shadow loses
+    to any utility-layer `shadow-*` (or `focus-within:shadow-none` on the field)
+    on the same element, so the ring silently vanished on shadowed controls.
+    `outline` is a separate property with no such conflict, and it doubles as the
+    forced-colors (Windows high-contrast) indicator. `:focus-visible` only, so it
+    never shows for mouse/touch. `.focus-ring-within` mirrors it onto a wrapper
+    whose focus lands on a child input. `.form-field` deliberately does NOT
+    adopt it: form fields keep their original always-on soft halo (ring-4 at
+    low alpha) — a resting decoration, not a keyboard-only indicator.
+  */
+  /* Base: an always-present transparent outline so consumers that carry
+     `transition-all` (or any transition touching outline-color) animate
+     transparent -> token instead of passing through `currentColor` — the
+     latter reads as a black border flashing in and out. */
+  .focus-ring,
+  .focus-ring-within {
+    outline: 2px solid transparent;
+    outline-offset: 0;
+  }
+
+  .focus-ring:focus-visible,
+  .focus-ring-within:focus-within {
+    /* Note: consumers carrying `transition-colors` animate this in over
+       150ms — Tailwind v4's color transition list includes outline-color.
+       Combined with the transparent base above, that reads as a quick
+       fade-in rather than a pop, never a flash through currentColor. */
+    outline-color: var(--color-focus-ring);
+  }
+
   /* Forms */
   .form-field {
     @apply flex flex-col gap-1 relative px-3 py-2 rounded-md border bg-container border-secondary shadow-xs w-full;
@@ -168,8 +203,9 @@
     because `@apply`-ing a custom utility drops its dark override. The near-black
     dark track (alpha-black-700) is what makes the gray-700 selected pill read —
     the bespoke controls used a too-light `container-inset` track, hence the
-    audit's "selected pill invisible on dark." Focus = neutral outline (matches
-    the canonical focus ring; inlined until that token lands on main).
+    audit's "selected pill invisible on dark." Focus comes from the canonical
+    recipe (`focus-ring` on link segments, the base button rule on button
+    segments), not from this block.
   */
   .segmented-control {
     @apply inline-flex items-center gap-0.5 p-1 rounded-lg bg-gray-50;
@@ -182,8 +218,6 @@
     @apply inline-flex items-center justify-center px-2 py-1 rounded-md whitespace-nowrap;
     @apply text-sm font-medium text-secondary cursor-pointer transition-colors duration-200;
     @apply hover:bg-gray-200;
-    @apply focus-visible:outline-2 focus-visible:outline-offset-2;
-    @apply focus-visible:outline-alpha-black-400 theme-dark:focus-visible:outline-alpha-white-400;
     @variant theme-dark {
       @apply hover:bg-gray-800;
     }

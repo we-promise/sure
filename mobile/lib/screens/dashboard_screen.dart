@@ -11,6 +11,7 @@ import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/net_worth_card.dart';
 import '../widgets/currency_filter.dart';
+import '../widgets/sure_icon.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
 
@@ -173,7 +174,7 @@ class DashboardScreenState extends State<DashboardScreen> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error, color: Colors.white),
+                  const SureIcon(SureIcons.circleAlert, color: Colors.white),
                   const SizedBox(width: 12),
                   const Expanded(child: Text('Sync failed. Please try again.')),
                 ],
@@ -194,7 +195,7 @@ class DashboardScreenState extends State<DashboardScreen> {
           const SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error, color: Colors.white),
+                SureIcon(SureIcons.circleAlert, color: Colors.white),
                 SizedBox(width: 12),
                 Expanded(child: Text('Sync failed. Please try again.')),
               ],
@@ -323,7 +324,7 @@ class DashboardScreenState extends State<DashboardScreen> {
           const SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
+                SureIcon(SureIcons.circleCheck, color: Colors.white),
                 SizedBox(width: 12),
                 Text('Accounts updated'),
               ],
@@ -368,7 +369,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.cloud_done, color: Colors.green, size: 18),
+                    SureIcon(
+                      SureIcons.cloudCheck,
+                      color: Colors.green,
+                      size: 18,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Synced',
@@ -397,8 +402,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.error_outline,
+                    SureIcon(
+                      SureIcons.circleAlert,
                       size: 64,
                       color: colorScheme.error,
                     ),
@@ -416,7 +421,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
                       onPressed: _handleRefresh,
-                      icon: const Icon(Icons.refresh),
+                      icon: const SureIcon(SureIcons.refresh),
                       label: const Text('Try Again'),
                     ),
                   ],
@@ -433,8 +438,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
+                    SureIcon(
+                      SureIcons.wallet,
                       size: 64,
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -452,7 +457,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
                       onPressed: _handleRefresh,
-                      icon: const Icon(Icons.refresh),
+                      icon: const SureIcon(SureIcons.refresh),
                       label: const Text('Refresh'),
                     ),
                   ],
@@ -530,8 +535,8 @@ class DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(32),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
+                  SureIcon(
+                    SureIcons.wallet,
                     size: 48,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -666,28 +671,28 @@ class _CollapsibleTypeHeader extends StatelessWidget {
     required this.onToggle,
   });
 
-  IconData _getTypeIcon() {
+  String _getTypeIconName() {
     switch (accountType) {
       case 'depository':
-        return Icons.account_balance;
+        return SureIcons.landmark;
       case 'credit_card':
-        return Icons.credit_card;
+        return SureIcons.creditCard;
       case 'investment':
-        return Icons.trending_up;
+        return SureIcons.trendingUp;
       case 'loan':
-        return Icons.receipt_long;
+        return SureIcons.receipt;
       case 'property':
-        return Icons.home;
+        return SureIcons.house;
       case 'vehicle':
-        return Icons.directions_car;
+        return SureIcons.car;
       case 'crypto':
-        return Icons.currency_bitcoin;
+        return SureIcons.bitcoin;
       case 'other_asset':
-        return Icons.category;
+        return SureIcons.shapes;
       case 'other_liability':
-        return Icons.payment;
+        return SureIcons.handCoins;
       default:
-        return Icons.account_balance_wallet;
+        return SureIcons.wallet;
     }
   }
 
@@ -701,8 +706,8 @@ class _CollapsibleTypeHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Row(
           children: [
-            Icon(
-              _getTypeIcon(),
+            SureIcon(
+              _getTypeIconName(),
               size: 18,
               color: colorScheme.onSurfaceVariant,
             ),
@@ -710,7 +715,7 @@ class _CollapsibleTypeHeader extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
             ),
             const SizedBox(width: 8),
@@ -724,15 +729,15 @@ class _CollapsibleTypeHeader extends StatelessWidget {
                 count.toString(),
                 style: TextStyle(
                   color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   fontSize: 11,
                 ),
               ),
             ),
             const Spacer(),
-            Icon(
-              isCollapsed ? Icons.expand_more : Icons.expand_less,
-              size: 20,
+            SureIcon(
+              isCollapsed ? SureIcons.chevronDown : SureIcons.chevronUp,
+              size: SureIconSize.md,
               color: colorScheme.onSurfaceVariant,
             ),
           ],

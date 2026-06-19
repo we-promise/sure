@@ -36,12 +36,14 @@
     </div>
   <% end %>
 
-  <div class="grid grid-cols-1 <%= "2xl:grid-cols-2" if Current.user.dashboard_two_column? %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
+  <% two_column = Current.user.dashboard_two_column? %>
+  <div class="grid grid-cols-1 <%= "2xl:grid-cols-2 2xl:items-start 2xl:gap-y-0 2xl:[grid-auto-flow:row_dense] 2xl:[grid-auto-rows:1px]" if two_column %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable dashboard-masonry" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="<%= t("pages.dashboard.sections_aria_label") %>">
   <% if accessible_accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
       <section
-        class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+        class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2<%= " 2xl:col-span-2" if two_column && section[:layout][:col_span] == "full" %>"
+        style="<%= "--dash-widget-h: #{section[:layout][:height_px]}px;" if section[:layout][:grow] %>"
         data-dashboard-sortable-target="section"
         data-section-key="<%= section[:key] %>"
         data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
@@ -84,6 +86,57 @@
                 aria-label="<%= t("global.expand") %>">
                 <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
               </button>
+            <% end %>
+            <% layout = section[:layout] %>
+            <% show_width = layout[:width_toggle] && two_column %>
+            <% if layout[:grow] || show_width %>
+              <details
+                class="relative hidden lg:block"
+                data-controller="dashboard-widget-size"
+                data-dashboard-widget-size-section-key-value="<%= section[:key] %>"
+                data-action="keydown->dashboard-widget-size#stopKeydown">
+                <summary
+                  class="focus-ring list-none cursor-pointer text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100 [&::-webkit-details-marker]:hidden"
+                  aria-label="<%= t("pages.dashboard.widget_size.label") %>">
+                  <%= icon("sliders-horizontal", size: "sm", class: "!w-3.5 !h-3.5") %>
+                </summary>
+                <div class="absolute right-0 top-full mt-1.5 z-10 w-48 p-2.5 space-y-2.5 bg-surface rounded-xl shadow-border-xs border border-primary">
+                  <% if show_width %>
+                    <div class="space-y-1.5">
+                      <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
+                        <%= icon("move-horizontal", size: "xs") %>
+                        <%= t("pages.dashboard.widget_size.width_label") %>
+                      </p>
+                      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t("pages.dashboard.widget_size.width_label")) do |sc| %>
+                        <% { "single" => "half", "full" => "full" }.each do |value, i18n_key| %>
+                          <% sc.with_segment(
+                               t("pages.dashboard.widget_size.#{i18n_key}"),
+                               active: layout[:col_span] == value,
+                               data: { action: "dashboard-widget-size#selectWidth", col_span: value }
+                             ) %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                  <% if layout[:grow] %>
+                    <div class="space-y-1.5">
+                      <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
+                        <%= icon("move-vertical", size: "xs") %>
+                        <%= t("pages.dashboard.widget_size.height_label") %>
+                      </p>
+                      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t("pages.dashboard.widget_size.height_label")) do |sc| %>
+                        <% PagesController::DASHBOARD_HEIGHT_PRESETS.each do |preset, px| %>
+                          <% sc.with_segment(
+                               t("pages.dashboard.widget_size.#{preset}"),
+                               active: layout[:height_preset] == preset,
+                               data: { action: "dashboard-widget-size#selectHeight", preset: preset, height: px }
+                             ) %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </details>
             <% end %>
             <button
               type="button"

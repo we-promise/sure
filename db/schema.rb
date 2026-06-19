@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_08_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -636,10 +636,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
     t.boolean "import_locked", default: false, null: false
     t.uuid "parent_entry_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
+    t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
-    t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "((entryable_type)::text = 'Transaction'::text)"
+    t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["import_id"], name: "index_entries_on_import_id"
@@ -2134,8 +2135,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_01_120000) do
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
-  add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
-  add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
+  add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
+  add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
   add_foreign_key "rule_conditions", "rules"
