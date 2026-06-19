@@ -60,7 +60,7 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
      signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
    ```
 
-   If your host user is not uid 1000, use this variant instead and run the compose service with your uid/gid so the mounted key and evidence directory are readable and writable by the same user:
+   If your host user is not uid 1000, use this variant instead so the mounted key and evidence directory are readable and writable by the same user that runs the Pipelock service. `compose.example.ai.yml` already has `user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"` on the `pipelock` service, so export those variables in the same shell before restarting, or put them in your `.env` file:
 
    ```bash
    export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
@@ -68,7 +68,7 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
      signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
    ```
 
-   Then uncomment the `pipelock-evidence` and `pipelock-keys` volume mounts in `compose.example.ai.yml`, uncomment `flight_recorder.dir` and `flight_recorder.signing_key_path` in `pipelock.example.yaml`, and restart Pipelock:
+   Then uncomment the `pipelock-evidence` and `pipelock-keys` volume mounts in `compose.example.ai.yml`, uncomment `flight_recorder.dir` and `flight_recorder.signing_key_path` in `pipelock.example.yaml`, and restart Pipelock from the same shell if you exported `PIPELOCK_UID` and `PIPELOCK_GID`:
 
    ```bash
    docker compose -f compose.ai.yml restart pipelock
@@ -142,7 +142,7 @@ pipelock:
   flightRecorder:
     enabled: true
     dir: /var/lib/pipelock/evidence
-    signingKeyPath: /etc/pipelock/keys/flight-recorder-signing.key
+    signingKeyPath: /run/secrets/pipelock/flight-recorder-signing.key
     requireReceipts: false
     redact: true
   extraVolumes:
@@ -161,7 +161,9 @@ pipelock:
     - name: pipelock-evidence
       mountPath: /var/lib/pipelock/evidence
     - name: pipelock-receipt-key
-      mountPath: /etc/pipelock/keys
+      # Do not mount this under /etc/pipelock; the chart already mounts the
+      # Pipelock ConfigMap there.
+      mountPath: /run/secrets/pipelock
       readOnly: true
 ```
 

@@ -586,7 +586,7 @@ pipelock:
     requireReceipts: false      # true = fail closed if allow-path receipt cannot be emitted
     redact: true                # redact DLP-shaped content before writing receipts
     dir: ""                     # e.g. /var/lib/pipelock/evidence
-    signingKeyPath: ""          # e.g. /etc/pipelock/keys/flight-recorder-signing.key
+    signingKeyPath: ""          # e.g. /run/secrets/pipelock/flight-recorder-signing.key
   service:
     type: ClusterIP
   resources:

@@ -739,7 +739,7 @@ pipelock:
   flightRecorder:
     enabled: true
     dir: /var/lib/pipelock/evidence
-    signingKeyPath: /etc/pipelock/keys/flight-recorder-signing.key
+    signingKeyPath: /run/secrets/pipelock/flight-recorder-signing.key
     requireReceipts: false
     redact: true
   extraVolumes:
@@ -758,7 +758,9 @@ pipelock:
     - name: pipelock-evidence
       mountPath: /var/lib/pipelock/evidence
     - name: pipelock-receipt-key
-      mountPath: /etc/pipelock/keys
+      # Do not mount this under /etc/pipelock; the chart already mounts the
+      # Pipelock ConfigMap there.
+      mountPath: /run/secrets/pipelock
       readOnly: true
 ```
 
