@@ -128,6 +128,12 @@ en:
       consumer_key_label: "Consumer Key"
       consumer_key_placeholder: "Enter your SnapTrade Consumer Key"
       consumer_key_update_placeholder: "Enter new Consumer Key to update"
+      personal_key_summary: "Using a personal SnapTrade key?"
+      personal_key_help: "Personal SnapTrade keys are provisioned with a user automatically at signup, so they can't register a new user. Paste the User ID and User Secret from your SnapTrade dashboard to connect."
+      user_id_label: "User ID"
+      user_id_placeholder: "Enter your SnapTrade User ID"
+      user_secret_label: "User Secret"
+      user_secret_placeholder: "Enter your SnapTrade User Secret"
       save_button: "Save Configuration"
       update_button: "Update Configuration"
       status_connected:
@@ -165,6 +171,8 @@ en:
       delete_orphaned_user_confirm: "Delete Registration"
 
   snaptrade_item:
+    errors:
+      personal_key_registration_unavailable: "This SnapTrade key is a personal key, which can't register a new user. Enter the User ID and User Secret from your SnapTrade dashboard under \"Using a personal SnapTrade key?\" and save again."
     sync_status:
       no_accounts: "No accounts found"
       synced:

@@ -37,6 +37,28 @@
                         placeholder: is_new_record ? t("providers.snaptrade.consumer_key_placeholder") : t("providers.snaptrade.consumer_key_update_placeholder"),
                         type: :password %>
 
+    <details class="group rounded-lg border border-primary p-3">
+      <summary class="flex cursor-pointer items-center justify-between text-sm text-secondary hover:text-primary">
+        <%= t("providers.snaptrade.personal_key_summary") %>
+        <%= icon "chevron-right", class: "w-4 h-4 group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+      </summary>
+
+      <div class="mt-3 space-y-3">
+        <p class="text-xs text-secondary"><%= t("providers.snaptrade.personal_key_help") %></p>
+
+        <%= form.text_field :snaptrade_user_id,
+                            label: t("providers.snaptrade.user_id_label"),
+                            placeholder: t("providers.snaptrade.user_id_placeholder"),
+                            required: false %>
+
+        <%= form.text_field :snaptrade_user_secret,
+                            label: t("providers.snaptrade.user_secret_label"),
+                            placeholder: t("providers.snaptrade.user_secret_placeholder"),
+                            type: :password,
+                            required: false %>
+      </div>
+    </details>
+
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("providers.snaptrade.save_button") : t("providers.snaptrade.update_button") %>
     </div>

@@ -21,16 +21,23 @@ class SnaptradeItemsController < ApplicationController
     @snaptrade_item.name ||= t("snaptrade_items.default_name")
 
     if @snaptrade_item.save
-      # Register user with SnapTrade after saving credentials
+      # Register user with SnapTrade after saving credentials. Personal keys can't
+      # register (they're provisioned with a user at signup), so we surface the
+      # guidance instead of failing the whole save.
+      registration_error = nil
       begin
         @snaptrade_item.ensure_user_registered!
       rescue => e
         Rails.logger.error "SnapTrade user registration failed: #{e.message}"
-        # Don't fail the whole operation - user can retry connection later
+        registration_error = e.message
       end
 
       if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured SnapTrade.")
+        if registration_error
+          flash.now[:alert] = registration_error
+        else
+          flash.now[:notice] = t(".success", default: "Successfully configured SnapTrade.")
+        end
         @snaptrade_items = Current.family.snaptrade_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
@@ -40,6 +47,8 @@ class SnaptradeItemsController < ApplicationController
           ),
           *flash_notification_stream_items
         ]
+      elsif registration_error
+        redirect_to settings_providers_path, alert: registration_error, status: :see_other
       else
         redirect_to settings_providers_path, notice: t(".success"), status: :see_other
       end
@@ -456,12 +465,24 @@ class SnaptradeItemsController < ApplicationController
     end
 
     def snaptrade_item_params
-      params.require(:snaptrade_item).permit(
+      permitted = params.require(:snaptrade_item).permit(
         :name,
         :sync_start_date,
         :client_id,
-        :consumer_key
+        :consumer_key,
+        :snaptrade_user_id,
+        :snaptrade_user_secret
       )
+
+      # On update, drop blank credential fields so leaving an input empty keeps the
+      # existing stored value rather than wiping it.
+      if action_name == "update"
+        %i[client_id consumer_key snaptrade_user_id snaptrade_user_secret].each do |key|
+          permitted.delete(key) if permitted[key].blank?
+        end
+      end
+
+      permitted
     end
 
     def build_connections_list

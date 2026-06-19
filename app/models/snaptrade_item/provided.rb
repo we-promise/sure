@@ -50,15 +50,16 @@ module SnaptradeItem::Provided
   # Returns true if registration succeeded or already registered
   # If existing credentials are invalid (user was deleted), clears them and re-registers
   def ensure_user_registered!
-    # If we think we're registered, verify the user still exists
+    # If we think we're registered, verify the user still exists. This covers both
+    # auto-registered users and pre-provisioned credentials supplied manually for a
+    # personal key.
     if user_registered?
-      if verify_user_exists?
-        return true
-      else
-        # User was deleted from SnapTrade API - clear local credentials and re-register
-        Rails.logger.warn "SnapTrade: User #{snaptrade_user_id} no longer exists, clearing credentials and re-registering"
-        update!(snaptrade_user_id: nil, snaptrade_user_secret: nil)
-      end
+      return true if verify_user_exists?
+
+      # Stored credentials no longer verify. We re-register below, but we do NOT
+      # clear them first: registerUser generates a brand new user, so if it fails
+      # (e.g. for a personal key) the existing credentials remain intact.
+      Rails.logger.warn "SnapTrade: User #{snaptrade_user_id} did not verify, attempting re-registration"
     end
 
     provider = snaptrade_provider
@@ -79,6 +80,11 @@ module SnaptradeItem::Provided
     )
 
     true
+  rescue Provider::Snaptrade::PersonalKeyError => e
+    # Personal keys can't call registerUser. Surface an actionable message so the
+    # user knows to paste their pre-provisioned User ID and User Secret instead.
+    Rails.logger.error "SnapTrade: #{e.message}"
+    raise StandardError, I18n.t("snaptrade_item.errors.personal_key_registration_unavailable")
   rescue Provider::Snaptrade::ApiError => e
     Rails.logger.error "SnapTrade user registration failed: #{e.class} - #{e.message}"
     # Log status code but not response_body to avoid credential exposure

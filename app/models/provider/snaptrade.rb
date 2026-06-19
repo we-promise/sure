@@ -12,6 +12,12 @@ class Provider::Snaptrade
     end
   end
 
+  # Raised when a personal SnapTrade key is used with registerUser. Personal keys
+  # are provisioned with their user automatically at signup, so registerUser is
+  # not available for them — the user must supply their pre-provisioned User ID
+  # and User Secret instead. (SnapTrade error code 1012.)
+  class PersonalKeyError < ApiError; end
+
   # Retry configuration for transient network failures
   MAX_RETRIES = 3
   INITIAL_RETRY_DELAY = 2 # seconds
@@ -231,6 +237,16 @@ class Provider::Snaptrade
 
       Rails.logger.error("SnapTrade API error (#{operation}): #{status} - #{error.message}")
 
+      if personal_key_error?(status, body, error.message)
+        raise PersonalKeyError.new(
+          "Personal SnapTrade keys are provisioned with their user automatically at signup. " \
+          "registerUser is not available for personal keys — enter your pre-provisioned " \
+          "User ID and User Secret instead.",
+          status_code: status,
+          response_body: body
+        )
+      end
+
       case status
       when 401, 403
         raise AuthenticationError, "Authentication failed: #{error.message}"
@@ -241,6 +257,17 @@ class Provider::Snaptrade
       else
         raise ApiError.new("SnapTrade API error: #{error.message}", status_code: status, response_body: body)
       end
+    end
+
+    # SnapTrade returns HTTP 400 with code 1012 when registerUser is called with a
+    # personal key. Match on the code or the descriptive message so we degrade
+    # gracefully regardless of which field the SDK surfaces.
+    def personal_key_error?(status, body, message)
+      return false unless status == 400
+
+      haystack = "#{body} #{message}".downcase
+      haystack.include?("1012") ||
+        haystack.include?("personal") && haystack.include?("registeruser")
     end
 
     def with_retries(operation_name, max_retries: MAX_RETRIES)

@@ -113,4 +113,44 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_not item.delete_orphaned_user("family_999_222")
     assert_not item.delete_orphaned_user("legacy_user_333")
   end
+
+  test "ensure_user_registered! uses pre-provisioned personal-key credentials without re-registering" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "personal_user",
+      snaptrade_user_secret: "personal_secret"
+    )
+
+    provider = mock
+    provider.expects(:list_connections)
+            .with(user_id: "personal_user", user_secret: "personal_secret")
+            .returns([])
+    provider.expects(:register_user).never
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert item.ensure_user_registered!
+    assert_equal "personal_user", item.snaptrade_user_id
+  end
+
+  test "ensure_user_registered! surfaces a friendly error when a personal key cannot register" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test"
+    )
+
+    provider = mock
+    provider.expects(:register_user).raises(
+      Provider::Snaptrade::PersonalKeyError.new("registerUser is not available for personal keys", status_code: 400)
+    )
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    error = assert_raises(StandardError) { item.ensure_user_registered! }
+    assert_match(/personal key/i, error.message)
+    assert_not item.user_registered?
+  end
 end
