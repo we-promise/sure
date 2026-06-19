@@ -153,4 +153,38 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_match(/personal key/i, error.message)
     assert_not item.user_registered?
   end
+
+  test "delete_snaptrade_user skips API deletion for externally-provisioned personal-key users" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "personal_dashboard_user",
+      snaptrade_user_secret: "secret"
+    )
+
+    provider = mock
+    provider.expects(:delete_user).never
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    item.delete_snaptrade_user
+  end
+
+  test "delete_snaptrade_user deletes app-generated users via the API" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_123",
+      snaptrade_user_secret: "secret"
+    )
+
+    provider = mock
+    provider.expects(:delete_user).with(user_id: "family_#{@family.id}_123").once
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    item.delete_snaptrade_user
+  end
 end

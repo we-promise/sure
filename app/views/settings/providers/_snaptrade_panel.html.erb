@@ -51,11 +51,12 @@
                             placeholder: t("providers.snaptrade.user_id_placeholder"),
                             required: false %>
 
-        <%= form.text_field :snaptrade_user_secret,
-                            label: t("providers.snaptrade.user_secret_label"),
-                            placeholder: t("providers.snaptrade.user_secret_placeholder"),
-                            type: :password,
-                            required: false %>
+        <%# Force value: nil so the stored secret is never rendered into the DOM on edit %>
+        <%= form.password_field :snaptrade_user_secret,
+                                label: t("providers.snaptrade.user_secret_label"),
+                                placeholder: t("providers.snaptrade.user_secret_placeholder"),
+                                value: nil,
+                                required: false %>
       </div>
     </details>
 
