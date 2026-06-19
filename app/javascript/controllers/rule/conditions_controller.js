@@ -11,8 +11,11 @@ export default class extends Controller {
     "subConditionsList",
   ];
 
+  // Operators that don't take a value (mirrors Rule::ConditionFilter::VALUELESS_OPERATORS)
+  static valuelessOperators = ["is_null", "is_not_null"];
+
   connect() {
-    // Hide value field on initial load if operator is "is_null"
+    // Hide value field on initial load for valueless operators (e.g. "is_null")
     this.#toggleValueFieldVisibility();
   }
 
@@ -129,7 +132,7 @@ export default class extends Controller {
   #toggleValueFieldVisibility() {
     const operator = this.operatorSelectTarget.value;
 
-    if (operator === "is_null") {
+    if (this.constructor.valuelessOperators.includes(operator)) {
       this.filterValueTarget.classList.add("hidden");
       // Clear the value since it's not needed
       if (this.valueInputEl) {
