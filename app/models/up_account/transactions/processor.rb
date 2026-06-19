@@ -1,10 +1,13 @@
 class UpAccount::Transactions::Processor
   attr_reader :up_account
 
+  # Build a transactions processor for the given +up_account+.
   def initialize(up_account)
     @up_account = up_account
   end
 
+  # Process each stored raw transaction into a Sure entry, prune stale pending
+  # entries, and return a stats hash (total/imported/failed/pruned/errors).
   def process
     unless up_account.raw_transactions_payload.present?
       Rails.logger.info "UpAccount::Transactions::Processor - No Up transactions available to process"
@@ -54,10 +57,12 @@ class UpAccount::Transactions::Processor
 
   private
 
+    # Extract the Up transaction id from raw data, or "unknown".
     def transaction_id(transaction_data)
       transaction_data.try(:[], :id) || transaction_data.try(:[], "id") || "unknown"
     end
 
+    # Canonical external ids of the currently-HELD (pending) transactions.
     def pending_external_ids
       up_account.raw_transactions_payload.filter_map do |transaction_data|
         next unless transaction_data.is_a?(Hash)
@@ -67,6 +72,8 @@ class UpAccount::Transactions::Processor
       end
     end
 
+    # Delete previously-imported pending entries no longer present in the latest
+    # fetch (cancelled/settled holds), returning how many were removed.
     def prune_stale_pending_entries(current_pending_external_ids)
       account = up_account.current_account
       return 0 unless account.present?

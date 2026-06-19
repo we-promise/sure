@@ -30,18 +30,22 @@ class UpAccount < ApplicationRecord
   # Unlinked accounts that still need a setup decision (i.e. not explicitly skipped).
   scope :needs_setup, -> { unlinked.where(ignored: false) }
 
+  # The linked Sure account, if any.
   def current_account
     account
   end
 
+  # Suggested Sure accountable type derived from Up's account type, or nil.
   def suggested_account_type
     UP_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.fetch(:accountable_type)
   end
 
+  # Suggested Sure subtype (e.g. checking/savings) for this Up account, or nil.
   def suggested_subtype
     UP_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.[](:subtype)
   end
 
+  # Persist the latest Up account snapshot, normalizing balance/currency/metadata.
   def upsert_up_snapshot!(account_snapshot)
     snapshot = account_snapshot.with_indifferent_access
     balance = snapshot[:balance].is_a?(Hash) ? snapshot[:balance].with_indifferent_access : {}
@@ -65,6 +69,7 @@ class UpAccount < ApplicationRecord
     save!
   end
 
+  # Persist the latest raw transactions payload for this account.
   def upsert_up_transactions_snapshot!(transactions_snapshot)
     assign_attributes(raw_transactions_payload: transactions_snapshot)
     save!
@@ -72,6 +77,7 @@ class UpAccount < ApplicationRecord
 
   private
 
+    # Parse an Up balance string into a BigDecimal, defaulting to 0 on bad input.
     def parse_balance(value)
       return 0 if value.blank?
 
@@ -80,6 +86,7 @@ class UpAccount < ApplicationRecord
       0
     end
 
+    # CurrencyNormalizable hook: warn when an Up currency code is unrecognized.
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for Up account #{id}, defaulting to AUD")
     end

@@ -6,21 +6,26 @@ class UpItemsController < ApplicationController
     :destroy, :sync, :setup_accounts, :complete_account_setup
   ]
 
+  # List the family's active Up connections in settings.
   def index
     @up_items = Current.family.up_items.active.ordered
     render layout: "settings"
   end
 
+  # Show a single Up connection.
   def show
   end
 
+  # Render the new-connection form.
   def new
     @up_item = Current.family.up_items.build
   end
 
+  # Render the edit-connection form.
   def edit
   end
 
+  # Create an Up connection and kick off its first sync.
   def create
     @up_item = Current.family.up_items.build(up_item_params)
     @up_item.name = t("up_items.provider_panel.default_connection_name") if @up_item.name.blank?
@@ -33,6 +38,7 @@ class UpItemsController < ApplicationController
     end
   end
 
+  # Update connection settings (name/token/start date).
   def update
     if @up_item.update(update_params)
       render_provider_panel(:notice, t(".success"))
@@ -41,6 +47,7 @@ class UpItemsController < ApplicationController
     end
   end
 
+  # Unlink all accounts then schedule deletion of the connection.
   def destroy
     results = @up_item.unlink_all!(dry_run: false)
 
@@ -73,6 +80,7 @@ class UpItemsController < ApplicationController
     redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
   end
 
+  # Trigger a manual sync unless one is already running.
   def sync
     @up_item.sync_later unless @up_item.syncing?
 
@@ -82,6 +90,7 @@ class UpItemsController < ApplicationController
     end
   end
 
+  # Fetch accounts from the API (JSON) so the UI can show whether any exist.
   def preload_accounts
     up_item = requested_up_item
     return render json: { success: false, error: "no_credentials", has_accounts: false } unless up_item.credentials_configured?
@@ -90,6 +99,7 @@ class UpItemsController < ApplicationController
     render json: { success: error.blank?, error_message: error, has_accounts: up_item.up_accounts.exists? }
   end
 
+  # Render the picker of unlinked Up accounts for a new Sure account.
   def select_accounts
     @accountable_type = params[:accountable_type] || "Depository"
     @return_to = safe_return_to_path
@@ -109,6 +119,7 @@ class UpItemsController < ApplicationController
     render layout: false
   end
 
+  # Create new Sure accounts for the selected Up accounts and link them.
   def link_accounts
     up_item = requested_up_item
     unless up_item.credentials_configured?
@@ -149,6 +160,7 @@ class UpItemsController < ApplicationController
     end
   end
 
+  # Render the picker to attach an Up account to an existing Sure account.
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
 
@@ -173,6 +185,7 @@ class UpItemsController < ApplicationController
     render layout: false
   end
 
+  # Link a selected Up account to an existing Sure account and sync.
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
     up_item = requested_up_item
@@ -209,6 +222,7 @@ class UpItemsController < ApplicationController
     redirect_to safe_return_to_path || accounts_path, notice: t(".success", account_name: account.name)
   end
 
+  # Render the post-sync setup screen for accounts still needing a decision.
   def setup_accounts
     @api_error = fetch_up_accounts_from_api(@up_item)
     @up_accounts = @up_item.up_accounts.needs_setup.order(:name)
@@ -222,6 +236,7 @@ class UpItemsController < ApplicationController
     end
   end
 
+  # Apply the user's per-account setup choices (create/link or skip).
   def complete_account_setup
     account_types = params[:account_types] || {}
     created_accounts = []
@@ -274,24 +289,29 @@ class UpItemsController < ApplicationController
 
   private
 
+    # Load the requested item scoped to the current family.
     def set_up_item
       @up_item = Current.family.up_items.find(params[:id])
     end
 
+    # Strong params for creating/updating a connection.
     def up_item_params
       params.require(:up_item).permit(:name, :sync_start_date, :access_token)
     end
 
+    # Params for update, dropping a blank token so it isn't overwritten.
     def update_params
       permitted = up_item_params
       permitted = permitted.except(:access_token) if permitted[:access_token].blank?
       permitted
     end
 
+    # Load the active item referenced by up_item_id, scoped to the family.
     def requested_up_item
       Current.family.up_items.active.find_by!(id: params[:up_item_id])
     end
 
+    # Fetch and upsert account snapshots from the API; returns an error string or nil.
     def fetch_up_accounts_from_api(up_item)
       return t("up_items.setup_accounts.no_credentials") unless up_item.credentials_configured?
 
@@ -331,6 +351,7 @@ class UpItemsController < ApplicationController
       t("up_items.setup_accounts.api_error")
     end
 
+    # Create and sync a Sure account from an Up account snapshot.
     def create_account_from_up(up_account, account_type)
       # Linking an account clears any prior skip so a future unlink re-prompts for setup.
       up_account.update!(ignored: false) if up_account.ignored?
@@ -355,6 +376,7 @@ class UpItemsController < ApplicationController
       )
     end
 
+    # Re-render the providers settings panel (Turbo) or redirect with a flash.
     def render_provider_panel(flash_type, message)
       if turbo_frame_request?
         flash.now[flash_type] = message
@@ -372,6 +394,7 @@ class UpItemsController < ApplicationController
       end
     end
 
+    # Re-render the providers panel with an error (Turbo) or redirect with alert.
     def render_provider_panel_error(message)
       @error_message = message
       if turbo_frame_request?
@@ -385,6 +408,7 @@ class UpItemsController < ApplicationController
       end
     end
 
+    # Validate the return_to param as a safe in-app relative path, or nil.
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
@@ -404,6 +428,8 @@ class UpItemsController < ApplicationController
       nil
     end
 
+    # True if the path's second char is a percent-encoded slash/backslash
+    # (used to block protocol-relative redirect bypasses).
     def encoded_path_separator?(return_to)
       encoded_second_character = return_to[1, 3]
       return false unless encoded_second_character&.start_with?("%")

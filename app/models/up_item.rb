@@ -22,11 +22,13 @@ class UpItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Mark the item for deletion and enqueue the background destroy job.
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
+  # Run the importer to fetch the latest accounts/transactions from Up.
   def import_latest_up_data
     provider = up_provider
     unless provider
@@ -56,6 +58,7 @@ class UpItem < ApplicationRecord
     raise
   end
 
+  # Process each linked, visible Up account, returning a per-account result array.
   def process_accounts
     return [] if up_accounts.empty?
 
@@ -81,6 +84,7 @@ class UpItem < ApplicationRecord
     end
   end
 
+  # Enqueue a balance sync for each visible linked account, returning per-account results.
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
@@ -106,15 +110,18 @@ class UpItem < ApplicationRecord
     end
   end
 
+  # Persist the latest raw accounts payload for this item.
   def upsert_up_snapshot!(accounts_snapshot)
     assign_attributes(raw_payload: accounts_snapshot)
     save!
   end
 
+  # True once at least one Up account has been linked to a Sure account.
   def has_completed_initial_setup?
     accounts.any?
   end
 
+  # Human-readable summary of linked vs. unlinked account counts.
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
@@ -129,22 +136,27 @@ class UpItem < ApplicationRecord
     end
   end
 
+  # Number of Up accounts linked to a Sure account.
   def linked_accounts_count
     account_counts[:linked]
   end
 
+  # Number of unlinked Up accounts still awaiting setup.
   def unlinked_accounts_count
     account_counts[:unlinked]
   end
 
+  # Total number of Up accounts under this item.
   def total_accounts_count
     account_counts[:total]
   end
 
+  # Best available display name for the connected institution.
   def institution_display_name
     institution_name.presence || institution_domain.presence || name
   end
 
+  # Distinct institution metadata across this item's accounts.
   def connected_institutions
     up_accounts.includes(:account)
                .where.not(institution_metadata: nil)
@@ -152,6 +164,7 @@ class UpItem < ApplicationRecord
                .uniq { |inst| inst["name"] || inst["domain"] }
   end
 
+  # Human-readable summary of connected institutions (none/one/count).
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -164,6 +177,7 @@ class UpItem < ApplicationRecord
     end
   end
 
+  # True when an access token is present and the item can call the Up API.
   def credentials_configured?
     access_token.present?
   end

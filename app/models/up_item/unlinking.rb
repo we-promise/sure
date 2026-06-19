@@ -1,6 +1,9 @@
 module UpItem::Unlinking
   extend ActiveSupport::Concern
 
+  # Unlink every Up account from its Sure account, detaching holdings and
+  # destroying the AccountProvider links. With +dry_run+, only reports what
+  # would be unlinked. Returns a per-account result array (with :error on failure).
   def unlink_all!(dry_run: false)
     results = []
 

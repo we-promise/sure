@@ -4,10 +4,12 @@ class Provider::UpAdapter < Provider::Base
 
   Provider::Factory.register("UpAccount", self)
 
+  # Sure accountable types that can be created from Up accounts.
   def self.supported_account_types
     %w[Depository Loan]
   end
 
+  # Connection config hashes for each of the family's configured Up items.
   def self.connection_configs(family:)
     return [] unless family.can_connect_up?
 
@@ -16,6 +18,7 @@ class Provider::UpAdapter < Provider::Base
     end
   end
 
+  # Build an Up API client for the resolved item, or nil if none is usable.
   def self.build_provider(family: nil, up_item_id: nil)
     return nil unless family.present?
 
@@ -25,6 +28,7 @@ class Provider::UpAdapter < Provider::Base
     Provider::Up.new(up_item.access_token)
   end
 
+  # Build the settings connection-config hash for a single Up item.
   def self.connection_config_for(up_item)
     path_params = ->(extra = {}) { extra.merge(up_item_id: up_item.id) }
 
@@ -47,22 +51,27 @@ class Provider::UpAdapter < Provider::Base
   end
   private_class_method :connection_config_for
 
+  # Provider key used across the sync/account-provider machinery.
   def provider_name
     "up"
   end
 
+  # Route to trigger a manual sync for this provider account's item.
   def sync_path
     Rails.application.routes.url_helpers.sync_up_item_path(item)
   end
 
+  # The UpItem backing this provider account.
   def item
     provider_account.up_item
   end
 
+  # Up holdings are never deletable by the sync machinery.
   def can_delete_holdings?
     false
   end
 
+  # Institution domain from account metadata, or nil.
   def institution_domain
     metadata = provider_account.institution_metadata
     return nil unless metadata.present?
@@ -70,20 +79,24 @@ class Provider::UpAdapter < Provider::Base
     metadata["domain"]
   end
 
+  # Institution name from account metadata, falling back to the item's.
   def institution_name
     metadata = provider_account.institution_metadata
     metadata&.dig("name").presence || item&.institution_name
   end
 
+  # Institution URL from account metadata, falling back to the item's.
   def institution_url
     metadata = provider_account.institution_metadata
     metadata&.dig("url").presence || item&.institution_url
   end
 
+  # Brand color for the institution, from the item.
   def institution_color
     item&.institution_color
   end
 
+  # Resolve the target Up item: the requested one, else the first configured.
   def self.resolve_up_item(family, up_item_id)
     if up_item_id.present?
       item = family.up_items.active.find_by(id: up_item_id)

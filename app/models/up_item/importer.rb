@@ -1,11 +1,18 @@
+# Imports Up Bank accounts and transactions for a single UpItem connection.
+# Fetches account snapshots and per-account transaction history from the Up
+# provider, persisting raw snapshots and returning aggregate import statistics.
 class UpItem::Importer
   attr_reader :up_item, :up_provider
 
+  # Build an importer for the given +up_item+ using the supplied +up_provider+ client.
   def initialize(up_item, up_provider:)
     @up_item = up_item
     @up_provider = up_provider
   end
 
+  # Run the full import (accounts then transactions) and return a result hash
+  # of success flag and per-entity counts. On a failed accounts fetch, returns
+  # a +failed_result+ with the same shape and zeroed counts.
   def import
     Rails.logger.info "UpItem::Importer - Starting import for item #{up_item.id}"
 
@@ -35,6 +42,8 @@ class UpItem::Importer
 
   private
 
+    # Fetch the current account list from Up, returning a hash of +items+ or
+    # +nil+ on any provider/parse error (which is logged and captured).
     def fetch_accounts_data
       items = up_provider.get_accounts
       { items: items }
@@ -54,6 +63,8 @@ class UpItem::Importer
       nil
     end
 
+    # Upsert snapshots for linked accounts and record newly discovered ones,
+    # returning a stats hash of +updated+, +created+, and +failed+ counts.
     def import_accounts(accounts_data)
       stats = { updated: 0, created: 0, failed: 0 }
       accounts = Array(accounts_data[:items])
@@ -82,6 +93,7 @@ class UpItem::Importer
       stats
     end
 
+    # Upsert the snapshot for a single already-linked Up account.
     def import_account(account_data)
       account = account_data.with_indifferent_access
       up_account = up_item.up_accounts.find_by(account_id: account[:id].to_s)
@@ -90,6 +102,8 @@ class UpItem::Importer
       up_account.upsert_up_snapshot!(account)
     end
 
+    # Fetch and store transactions for every visible linked account, returning
+    # a stats hash of +imported+ and +failed+ counts.
     def import_transactions
       stats = { imported: 0, failed: 0 }
 
@@ -108,6 +122,8 @@ class UpItem::Importer
       stats
     end
 
+    # Fetch transactions for +up_account+ since its sync start date and persist
+    # them, returning a result hash with +success+ and +transactions_count+.
     def fetch_and_store_transactions(up_account)
       start_date = determine_sync_start_date(up_account)
       Rails.logger.info "UpItem::Importer - Fetching transactions for Up account #{up_account.id} since #{start_date}"
@@ -173,11 +189,14 @@ class UpItem::Importer
       end
     end
 
+    # Extract the Up transaction id from a raw transaction hash, or +nil+.
     def transaction_id(transaction)
       data = transaction.with_indifferent_access
       data[:id].presence
     end
 
+    # Resolve the date from which to fetch transactions for +up_account+,
+    # preferring explicit per-account/item start dates, then a recent window.
     def determine_sync_start_date(up_account)
       return up_account.sync_start_date if up_account.sync_start_date.present?
       return up_item.sync_start_date if up_item.sync_start_date.present?
@@ -190,6 +209,8 @@ class UpItem::Importer
       end
     end
 
+    # Record a provider sync error as a DebugLogEntry with structured metadata
+    # for support, attaching family and account provider when available.
     def capture_sync_error(message, error, up_account: nil, error_type: nil)
       metadata = { up_item_id: up_item.id, error_class: error.class.name, error_message: error.message }
       metadata[:up_account_id] = up_account.id if up_account
@@ -207,13 +228,23 @@ class UpItem::Importer
       )
     end
 
+    # Flag the item as requiring re-authorization, swallowing update errors.
     def mark_requires_update!
       up_item.update!(status: :requires_update)
     rescue => e
       Rails.logger.error "UpItem::Importer - Failed to update item status: #{e.message}"
     end
 
+    # Build a failure result mirroring +import+'s shape with zeroed counts.
     def failed_result(error)
-      { success: false, error: error, accounts_imported: 0, transactions_imported: 0 }
+      {
+        success: false,
+        error: error,
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }
     end
 end

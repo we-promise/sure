@@ -5,10 +5,13 @@ class UpAccount::Processor
 
   attr_reader :up_account
 
+  # Build a processor for the given +up_account+.
   def initialize(up_account)
     @up_account = up_account
   end
 
+  # Sync the linked account's balance and process its transactions. No-op when
+  # the Up account isn't linked to a Sure account.
   def process
     unless up_account.current_account.present?
       Rails.logger.info "UpAccount::Processor - No linked account for up_account #{up_account.id}, skipping processing"
@@ -25,6 +28,7 @@ class UpAccount::Processor
 
   private
 
+    # Update the linked Sure account's balance/currency from the Up snapshot.
     def process_account!
       account = up_account.current_account
       balance = up_account.current_balance || 0
@@ -40,6 +44,7 @@ class UpAccount::Processor
       )
     end
 
+    # Delegate to the transactions processor, capturing and logging failures.
     def process_transactions
       UpAccount::Transactions::Processor.new(up_account).process
     rescue => e
@@ -58,6 +63,7 @@ class UpAccount::Processor
       { success: false, failed: 1, errors: [ { error: I18n.t("up_item.errors.account_processing_failed") } ] }
     end
 
+    # Report a processing error to Sentry with a sanitized message and tags.
     def report_exception(error, context)
       safe_error = SanitizedProcessingError.new("Up account processing failed")
 
@@ -78,6 +84,7 @@ class UpAccount::Processor
       end
     end
 
+    # CurrencyNormalizable hook: warn when an Up currency code is unrecognized.
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for Up account #{up_account.id}, falling back to account currency")
     end

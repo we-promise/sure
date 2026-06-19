@@ -3,9 +3,11 @@ class UpItem::Syncer
 
   SafeSyncError = Class.new(StandardError)
 
+  # Error carrying the structured per-stage sync errors for health reporting.
   class SyncError < StandardError
     attr_reader :sync_errors
 
+    # Build the error with a +message+ and the collected +sync_errors+.
     def initialize(message, sync_errors:)
       super(message)
       @sync_errors = sync_errors
@@ -14,10 +16,13 @@ class UpItem::Syncer
 
   attr_reader :up_item
 
+  # Build a syncer for the given +up_item+.
   def initialize(up_item)
     @up_item = up_item
   end
 
+  # Run the full sync: import, account setup detection, transaction processing,
+  # balance sync scheduling, and stats/health collection. Raises on failures.
   def perform_sync(sync)
     sync.update!(status_text: "Importing accounts from Up...") if sync.respond_to?(:status_text)
     import_result = up_item.import_latest_up_data
@@ -75,12 +80,14 @@ class UpItem::Syncer
     raise SafeSyncError.new(safe_message), cause: nil
   end
 
+  # Post-sync hook (no work required for Up).
   def perform_post_sync
     # no-op
   end
 
   private
 
+    # Raise a SyncError if a single result hash indicates failure.
     def raise_if_failed_result!(result, stage:)
       return unless failed_result?(result)
 
@@ -88,6 +95,7 @@ class UpItem::Syncer
       raise SyncError.new(error_message(stage, errors), sync_errors: errors)
     end
 
+    # Raise a SyncError if any result in the collection indicates failure.
     def raise_if_failed_results!(results, stage:)
       errors = Array(results).filter_map do |result|
         next unless failed_result?(result)
@@ -100,10 +108,12 @@ class UpItem::Syncer
       raise SyncError.new(error_message(stage, errors), sync_errors: errors)
     end
 
+    # True when +result+ is a hash explicitly flagged success: false.
     def failed_result?(result)
       result.is_a?(Hash) && result.with_indifferent_access[:success] == false
     end
 
+    # Normalize a failed result into an array of { message:, category: } errors.
     def errors_from_result(result, stage:)
       data = result.with_indifferent_access
       messages = []
@@ -116,11 +126,13 @@ class UpItem::Syncer
       messages.map { |message| { message: "#{stage}: #{message}", category: "sync_error" } }
     end
 
+    # Join the error messages into a single stage summary string.
     def error_message(stage, errors)
       messages = errors.map { |error| error[:message] || error["message"] }.compact
       messages.presence&.join(", ") || "#{stage} failed"
     end
 
+    # Extract a human-readable message from a heterogeneous error value.
     def error_message_value(error)
       return error[:message].presence || error["message"].presence || error[:error].presence || error["error"].presence if error.is_a?(Hash)
 
