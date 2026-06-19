@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/screens/login_screen.dart';
 
 void main() {
@@ -10,6 +11,8 @@ void main() {
     final controller = TextEditingController();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Builder(
             builder: (context) => ElevatedButton(
@@ -47,8 +50,12 @@ void main() {
       (tester) async {
     final controller = await openDialog(tester);
 
-    // Tap outside the centered dialog -> the modal barrier dismisses it.
-    await tester.tapAt(const Offset(10, 10));
+    // The barrier fills the screen but its centre is occluded by the dialog, so
+    // tap halfway between the screen corner and the dialog's top-left — a point
+    // derived from the dialog's real geometry (not a fixed coordinate) that is
+    // always on the dismissible barrier.
+    final dialogTopLeft = tester.getTopLeft(find.byType(AlertDialog));
+    await tester.tapAt(dialogTopLeft / 2);
     await tester.pumpAndSettle();
 
     expect(find.text('API Key Login'), findsNothing);
