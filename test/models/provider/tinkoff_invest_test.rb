@@ -115,6 +115,32 @@ class Provider::TinkoffInvestTest < ActiveSupport::TestCase
     end
   end
 
+  test "fetch_security_prices returns only the live price for an amortizing bond" do
+    travel_to Date.new(2026, 6, 18) do
+      stub_find("RU000A10AAQ4", [ instrument_short(ticker: "RU000A10AAQ4", type: "bond", class_code: "TQCB", uid: "uid-bond", currency: "rub") ])
+      stub_bond_by("uid-bond", { "nominal" => { "units" => "417", "nano" => 710_000_000 }, "amortizationFlag" => true })
+      @provider.stubs(:post).with("MarketDataService", "GetCandles", anything).returns("candles" => [ candle("2026-06-10", units: 105, nano: 0) ])
+      @provider.stubs(:post).with("MarketDataService", "GetLastPrices", anything).returns("lastPrices" => [ { "price" => { "units" => "103", "nano" => 0 } } ])
+
+      response = @provider.fetch_security_prices(symbol: "RU000A10AAQ4", exchange_operating_mic: "MISX", start_date: Date.new(2026, 6, 10), end_date: Date.new(2026, 6, 18))
+
+      # The historical candle is skipped (today's nominal must not reprice old par);
+      # only the live price remains, converted with the current nominal.
+      assert_equal [ Date.new(2026, 6, 18) ], response.data.map(&:date)
+      assert_equal (BigDecimal("103") / 100 * BigDecimal("417.71")), response.data.first.price
+    end
+  end
+
+  test "resolve strips an exchange suffix before querying T-Invest" do
+    stub_find("T", [ instrument_short(ticker: "T", type: "share", class_code: "TQBR", uid: "uid-t") ])
+    stub_instrument_by("uid-t", instrument_full(name: "T-Tech", logo_name: "tcs2.png"))
+
+    response = @provider.fetch_security_info(symbol: "T.MOEX", exchange_operating_mic: "MISX")
+
+    assert response.success?
+    assert_equal "https://invest-brands.cdn-tinkoff.ru/tcs2x160.png", response.data.logo_url
+  end
+
   test "fetch_security_prices skips incomplete candles" do
     travel_to Date.new(2026, 6, 18) do
       stub_find("SBER", [ instrument_short(ticker: "SBER", type: "share", class_code: "TQBR", uid: "uid-sber", currency: "rub") ])
