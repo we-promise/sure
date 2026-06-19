@@ -6,11 +6,6 @@ require "json"
 require "openssl"
 
 class Provider::CoinbaseTest < ActiveSupport::TestCase
-  # Test EC P-256 private key (generated solely for tests — not a real credential).
-  # Stored as a single-line escaped string to avoid accidentally triggering secret
-  # scanners on a properly formatted PEM block.
-  TEST_KEY_SINGLE_LINE = "-----BEGIN EC PRIVATE KEY-----\\nMHcCAQEEINvHUOr0YU4bYyTBzQb7AlRugFeG/6HrSJ/mJESww2U4oAoGCCqGSM49\\nAwEHoUQDQgAEeB4AmVVQ1+sKMh2lx/+KHnw0fE2l2S2xgXje0RbVvzLD70wiqNmv\\nnYZEE+DhrZRAtf5igB/kohMtuoh54ufQ8A==\\n-----END EC PRIVATE KEY-----\\n".freeze
-  TEST_KEY_MULTILINE = TEST_KEY_SINGLE_LINE.gsub('\n', "\n").freeze
   TEST_API_KEY = "organizations/test-org/apiKeys/test-key-id".freeze
 
   # JWT base64url parts omit padding — add the correct amount before decoding.
@@ -20,19 +15,26 @@ class Provider::CoinbaseTest < ActiveSupport::TestCase
   end
 
   setup do
-    @provider = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: TEST_KEY_MULTILINE)
-    @provider_escaped = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: TEST_KEY_SINGLE_LINE)
+    # Generate a fresh P-256 (prime256v1) key per run so no private key material
+    # is ever committed to the repo — avoids hardcoded-secret scanner findings.
+    ec = OpenSSL::PKey::EC.generate("prime256v1")
+    @test_key_multiline = ec.to_pem
+    # Simulate the common CDP "JSON paste" format where newlines are escaped as \n.
+    @test_key_single_line = @test_key_multiline.gsub("\n", '\n')
+
+    @provider = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: @test_key_multiline)
+    @provider_escaped = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: @test_key_single_line)
   end
 
   # --- parse_ec_private_key ---
 
   test "parse_ec_private_key accepts real-newline PEM" do
-    key = @provider.send(:parse_ec_private_key, TEST_KEY_MULTILINE)
+    key = @provider.send(:parse_ec_private_key, @test_key_multiline)
     assert_instance_of OpenSSL::PKey::EC, key
   end
 
   test "parse_ec_private_key accepts escaped-newline PEM (JSON paste format)" do
-    key = @provider.send(:parse_ec_private_key, TEST_KEY_SINGLE_LINE)
+    key = @provider.send(:parse_ec_private_key, @test_key_single_line)
     assert_instance_of OpenSSL::PKey::EC, key
   end
 
@@ -84,7 +86,7 @@ class Provider::CoinbaseTest < ActiveSupport::TestCase
     jwt = @provider.send(:generate_jwt, "GET", "/v2/user")
     encoded_header, encoded_payload, encoded_sig = jwt.split(".")
 
-    public_key = OpenSSL::PKey::EC.new(TEST_KEY_MULTILINE)
+    public_key = OpenSSL::PKey::EC.new(@test_key_multiline)
     message = "#{encoded_header}.#{encoded_payload}"
 
     # Re-encode raw r||s signature back to DER for OpenSSL verification
