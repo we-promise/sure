@@ -2101,6 +2101,39 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
+  create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "balance_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "name"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.decimal "reserved_balance", precision: 19, scale: 4
+    t.datetime "updated_at", null: false
+    t.uuid "wise_item_id", null: false
+    t.index ["wise_item_id", "balance_id"], name: "index_wise_accounts_on_wise_item_id_and_balance_id", unique: true
+    t.index ["wise_item_id"], name: "index_wise_accounts_on_wise_item_id"
+  end
+
+  create_table "wise_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.string "profile_id", null: false
+    t.string "profile_type", null: false
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.text "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "profile_id"], name: "index_wise_items_on_family_id_and_profile_id", unique: true
+    t.index ["family_id"], name: "index_wise_items_on_family_id"
+    t.index ["status"], name: "index_wise_items_on_status"
+  end
+
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "account_shares", "accounts"
   add_foreign_key "account_shares", "users"
@@ -2227,4 +2260,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
   add_foreign_key "webauthn_credentials", "users"
+  add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
+  add_foreign_key "wise_items", "families"
 end

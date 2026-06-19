@@ -355,6 +355,7 @@ en:
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
         brex: Sync Brex cash and corporate card activity with read-only access.
         coinbase: Import your Coinbase crypto holdings and track performance.
