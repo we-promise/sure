@@ -3,6 +3,12 @@ class Rule::ConditionFilter::TransactionDetails < Rule::ConditionFilter
     "text"
   end
 
+  # JSONB search only supports contains/equals/empty semantics, so we keep the
+  # original operator set rather than inheriting the extended text operators.
+  def operators
+    [ [ "Contains", "like" ], [ "Equal to", "=" ], [ "Is empty", "is_null" ] ]
+  end
+
   def prepare(scope)
     scope
   end
