@@ -146,7 +146,7 @@ class Provider::MoexPublicTest < ActiveSupport::TestCase
   #          Security info
   # ================================
 
-  test "fetch_security_info maps kind and a MOEX issue link" do
+  test "fetch_security_info maps kind and omits an exchange website" do
     @provider.stubs(:resolve_instrument).returns(bond_instrument)
 
     response = @provider.fetch_security_info(symbol: "SU26238RMFS4", exchange_operating_mic: "MISX")
@@ -154,7 +154,9 @@ class Provider::MoexPublicTest < ActiveSupport::TestCase
     assert response.success?
     assert_equal "bond", response.data.kind
     assert_equal "MISX", response.data.exchange_operating_mic
-    assert_match(/moex\.com/, response.data.links)
+    # No issuer website: moex.com is the exchange, not the issuer, and would make
+    # Brandfetch render the exchange logo for every instrument.
+    assert_nil response.data.links
   end
 
   # ================================
