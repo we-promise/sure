@@ -31,6 +31,7 @@ class CoinstatsItem::Importer
     linked_accounts = coinstats_item.coinstats_accounts
                                     .joins(:account_provider)
                                     .includes(:account)
+                                    .order(:created_at, :id)
 
     if linked_accounts.empty?
       Rails.logger.info "CoinstatsItem::Importer - No linked accounts to sync for item #{coinstats_item.id}"
@@ -149,8 +150,17 @@ class CoinstatsItem::Importer
       response = coinstats_provider.get_wallet_balances(wallets_param)
       response.success? ? response.data : FETCH_FAILED
     rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - Bulk balance fetch failed: #{e.message}"
-      FETCH_FAILED
+      log_debug_event(
+        level: "warn",
+        message: "CoinStats bulk balance fetch failed",
+        metadata: {
+          coinstats_item_id: coinstats_item.id,
+          wallets: wallets.map { |wallet| "#{wallet[:blockchain]}:#{wallet[:address]}" },
+          error_class: e.class.name,
+          error_message: e.message
+        }
+      )
+      nil
     end
 
     def fetch_portfolio_coins_for_exchange(linked_accounts)
@@ -244,20 +254,67 @@ class CoinstatsItem::Importer
         return { success: false, error: "Missing address or blockchain" }
       end
 
-      # Extract balance data for this specific wallet from the bulk response
-      balance_data = if bulk_balance_data.present?
-        coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
+      if bulk_balance_data.nil?
+        log_debug_event(
+          level: "warn",
+          message: "CoinStats wallet balance sync preserved existing snapshot after bulk fetch failure",
+          account_provider: coinstats_account.account_provider,
+          metadata: {
+            coinstats_item_id: coinstats_item.id,
+            coinstats_account_id: coinstats_account.id,
+            wallet_address: address,
+            blockchain: blockchain,
+            reason: "bulk_balance_data_missing"
+          }
+        )
+      elsif wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
+        log_debug_event(
+          level: "warn",
+          message: "CoinStats wallet balance sync preserved existing snapshot because wallet was missing from bulk response",
+          account_provider: coinstats_account.account_provider,
+          metadata: {
+            coinstats_item_id: coinstats_item.id,
+            coinstats_account_id: coinstats_account.id,
+            wallet_address: address,
+            blockchain: blockchain,
+            reason: "wallet_missing_from_bulk_response"
+          }
+        )
       else
-        []
-      end
+        balance_data = coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
 
-      # Update the coinstats account with new balance data
-      coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
+        # Update the coinstats account with new balance data
+        coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
+      end
 
       # Extract and merge transactions from bulk response
       transactions_count = fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
 
       { success: true, transactions_count: transactions_count }
+    end
+
+    def wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
+      return true unless bulk_balance_data.is_a?(Array)
+
+      bulk_balance_data.none? do |entry|
+        entry = entry.with_indifferent_access
+        entry[:address]&.downcase == address&.downcase &&
+          (entry[:connectionId]&.downcase == blockchain&.downcase ||
+           entry[:blockchain]&.downcase == blockchain&.downcase)
+      end
+    end
+
+    def log_debug_event(level:, message:, metadata:, account_provider: nil)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: "coinstats",
+        family: coinstats_item.family,
+        account_provider: account_provider,
+        metadata: metadata
+      )
     end
 
     def update_exchange_account(coinstats_account, portfolio_coins_data:, portfolio_transactions_data:)
