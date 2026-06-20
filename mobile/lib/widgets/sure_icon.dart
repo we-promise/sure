@@ -100,4 +100,5 @@ abstract final class SureIcons {
   static const String refresh = 'refresh-cw';
   static const String chevronUp = 'chevron-up';
   static const String chevronDown = 'chevron-down';
+  static const String chevronRight = 'chevron-right';
 }
