@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:upgrader/upgrader.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
@@ -34,6 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricEnabled = false;
   bool _isTogglingBiometric = false;
   List<CustomProxyHeader> _customHeaders = [];
+  bool _isCheckingForUpdate = false;
+  late final Upgrader _manualUpgrader;
 
   String _displayInitial(String? displayName) {
     final trimmed = displayName?.trim() ?? '';
@@ -47,6 +50,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadAppVersion();
     _loadBiometricState();
     _loadCustomHeaders();
+    _manualUpgrader = Upgrader(
+      durationUntilAlertAgain: Duration.zero,
+      countryCode: 'us',
+    );
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_isCheckingForUpdate) return;
+    setState(() => _isCheckingForUpdate = true);
+    try {
+      await _manualUpgrader.initialize();
+      if (!mounted) {
+        _manualUpgrader.dispose();
+        return;
+      }
+      await _manualUpgrader.updateVersionInfo();
+      if (!mounted) return;
+
+      final available = _manualUpgrader.isUpdateAvailable();
+      final storeVersion = _manualUpgrader.versionInfo?.appStoreVersion?.toString();
+      final storeUrl = _manualUpgrader.versionInfo?.appStoreListingURL;
+
+      if (available) {
+        await _showUpdateDialog(storeVersion ?? 'a newer version', storeUrl);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You're up to date!")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to check for updates')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckingForUpdate = false);
+    }
+  }
+
+  Future<void> _showUpdateDialog(String version, String? storeUrl) async {
+    final launch = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Update available'),
+        content: Text('Version $version is available. Update now?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Later'),
+          ),
+          TextButton(
+            onPressed: storeUrl == null ? null : () => Navigator.pop(ctx, true),
+            child: const Text('Update now'),
+          ),
+        ],
+      ),
+    );
+
+    if (launch == true && storeUrl != null && mounted) {
+      final uri = Uri.tryParse(storeUrl);
+      final opened = uri != null
+          ? await launchUrl(uri, mode: LaunchMode.externalApplication)
+          : false;
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open store link')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _manualUpgrader.dispose();
+    super.dispose();
   }
 
   Future<void> _loadBiometricState() async {
@@ -508,6 +587,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
               ],
             ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.system_update_outlined),
+            title: const Text('Check for updates'),
+            subtitle: const Text('See if a newer version is available'),
+            trailing: _isCheckingForUpdate
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right),
+            onTap: _isCheckingForUpdate ? null : _checkForUpdate,
           ),
 
           ListTile(
