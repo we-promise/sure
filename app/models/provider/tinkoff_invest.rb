@@ -253,7 +253,9 @@ class Provider::TinkoffInvest < Provider
     # ticker/ISIN match.
     def resolve_short(symbol, exchange_operating_mic)
       key = symbol.to_s.strip.sub(SUFFIX, "")
-      Rails.cache.fetch("tinkoff_invest:short:#{key.downcase}:#{exchange_operating_mic}", expires_in: INSTRUMENT_CACHE_TTL) do
+      # skip_nil so a transient empty/no-match response isn't cached as "unknown"
+      # for the full 24h TTL.
+      Rails.cache.fetch("tinkoff_invest:short:#{key.downcase}:#{exchange_operating_mic}", expires_in: INSTRUMENT_CACHE_TTL, skip_nil: true) do
         rows = find_instruments(key)
         up = key.upcase
 
