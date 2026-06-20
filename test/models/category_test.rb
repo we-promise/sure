@@ -53,7 +53,7 @@ class CategoryTest < ActiveSupport::TestCase
     )
 
     assert_nothing_raised { category.valid? }
-    assert category.subcategory?
+    assert_not category.subcategory?
     assert_nil category.parent
   end
 
