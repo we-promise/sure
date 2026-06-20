@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[toggle_active destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -103,6 +103,11 @@ class AccountsController < ApplicationController
     elsif @account.disabled?
       @account.enable!
     end
+    redirect_to accounts_path
+  end
+
+  def toggle_exclude_from_reports
+    @account.update!(exclude_from_reports: !@account.exclude_from_reports)
     redirect_to accounts_path
   end
 

@@ -287,6 +287,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert @account.active?
   end
 
+  test "toggle_exclude_from_reports toggles the flag on an account" do
+    assert_not @account.exclude_from_reports?
+
+    patch toggle_exclude_from_reports_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert @account.exclude_from_reports?
+
+    patch toggle_exclude_from_reports_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert_not @account.exclude_from_reports?
+  end
+
   test "select_provider shows available providers" do
     get select_provider_account_url(@account)
     assert_response :success

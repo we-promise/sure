@@ -21,6 +21,10 @@
           <div class="flex items-center gap-1.5">
             <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
 
+            <% if account.exclude_from_reports? %>
+              <%= icon("eye-off", class: "w-3.5 h-3.5 text-secondary", title: t("accounts.account.excluded_from_reports_indicator")) %>
+            <% end %>
+
             <% if account.shared? %>
               <%= icon("users", class: "w-3.5 h-3.5 text-secondary", title: account.owned_by?(Current.user) ? nil : account.owner&.display_name) %>
             <% end %>
@@ -93,6 +97,12 @@
               <% menu.with_item(variant: "button", text: t("accounts.account.disable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-right", data: { turbo_frame: :_top }) %>
             <% elsif account.disabled? %>
               <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
+            <% end %>
+
+            <% if account.exclude_from_reports? %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.include_in_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye", data: { turbo_frame: :_top }) %>
+            <% else %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.exclude_from_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye-off", data: { turbo_frame: :_top }) %>
             <% end %>
           <% end %>
 
