@@ -1,14 +1,15 @@
 # Pipelock configuration for Docker Compose
 # See https://github.com/luckyPipewrench/pipelock for full options.
 #
-# Recent additions (2.5): Audit Packet v0 schema with Go/TypeScript/Rust
-# verifiers, request-body prompt-injection blocking, SPIFFE-strict inbound
-# mediation envelopes, scanner attribution on MCP block receipts, wedge-
-# detection health watchdog, learn-and-lock behavioural contracts, trusted
-# domains, redirect profiles, attack simulation, security scoring, process
-# sandbox, signed action receipts, per-pattern DLP warn mode, and the
-# `pipelock posture verify` / `pipelock session` / `pipelock doctor` CLIs.
-# Run `pipelock simulate --config <file>` to test your config against 24 attack scenarios.
+# Recent additions through 2.8: default-on flight recorder receipts, safe-by-
+# default receipt verification, request-policy scoring, request-body prompt-
+# injection blocking, SPIFFE-strict inbound mediation envelopes, scanner
+# attribution on MCP block receipts, wedge-detection health watchdog,
+# learn-and-lock behavioural contracts, trusted domains, redirect profiles,
+# MCP `defer` authorization, `pipelock explain`, `pipelock keys status`,
+# `pipelock support bundle`, verified `pipelock update`, and `pipelock doctor`
+# checks for inert exemptions.
+# Run `pipelock assess init --config <file>` to create an assessment workspace.
 # Run `pipelock audit score --config <file>` for a security posture score (0-100).
 # Run `pipelock doctor` to verify configured protections are actually enforceable.
 
@@ -83,7 +84,7 @@ tool_chain_detection:
 # destinations even when action is "warn". Trusted provider hosts (OpenAI,
 # Anthropic, etc.) remain exempt via the response_scanning exemption list.
 request_body_scanning:
-  enabled: false
+  enabled: true
   action: warn
   max_body_bytes: 5242880
   scan_headers: true
@@ -96,3 +97,14 @@ health_watchdog:
   enabled: true
   interval_seconds: 2
   expose_subsystems: false
+
+# Flight recorder (pipelock 2.7+): signed, hash-chained action receipts.
+# Enabled by default, but inert until both `dir` and `signing_key_path` are set.
+# For Docker Compose, mount ./pipelock-evidence and ./pipelock-keys as shown in
+# compose.example.ai.yml, then uncomment these paths.
+flight_recorder:
+  enabled: true
+  require_receipts: false
+  redact: true
+  # dir: /var/lib/pipelock/evidence
+  # signing_key_path: /etc/pipelock/keys/flight-recorder-signing.key

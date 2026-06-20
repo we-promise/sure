@@ -160,6 +160,19 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "https://example.com/aapl.png", sec.display_logo_url
   end
 
+  test "display_logo_url for non-crypto with no website prefers stored logo over brandfetch lettermark" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.new(
+      ticker: "SBER",
+      exchange_operating_mic: "MISX",
+      logo_url: "https://invest-brands.cdn-tinkoff.ru/SBERx160.png"
+    )
+
+    assert_equal "https://invest-brands.cdn-tinkoff.ru/SBERx160.png", sec.display_logo_url
+  end
+
   test "before_save writes the /crypto/{base} URL to logo_url for new crypto securities" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
