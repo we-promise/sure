@@ -26,6 +26,7 @@ require "webmock/minitest"
 require "rack/test"
 require "tempfile"
 require "uri"
+require Rails.root.join("test/support/sql_query_capture").to_s
 
 require_relative "support/sql_query_capture"
 
@@ -88,6 +89,8 @@ module ActiveSupport
     # reading a stale "" where nil is expected). Reset the cache before every
     # test so each starts from the rolled-back DB state.
     setup { Setting.clear_cache }
+
+    include SqlQueryCapture
 
     # Add more helper methods to be used by all tests here...
     def sign_in(user)

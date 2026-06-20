@@ -364,7 +364,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     3.times do |idx|
       security = Security.create!(ticker: "PERF#{idx}", name: "Performance #{idx}")
-      create_trade(security, account: account, qty: 10, price: 100 + idx, date: 1.day.ago.to_date)
+      create_trade(account: account, security: security, qty: 10, amount: (100 + idx) * 10, date: 1.day.ago.to_date)
       Holding.create!(
         account: account, security: security, date: Date.current,
         qty: 10, price: 110 + idx, amount: (110 + idx) * 10, currency: "USD"
@@ -384,6 +384,50 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
   end
 
+  test "totals skips cache when there are no investment accounts" do
+    Rails.cache.expects(:fetch).never
+
+    totals = @statement.totals(period: Period.current_month)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.dividends
+    assert_equal Money.new(0, "USD"), totals.interest
+    assert_equal 0, totals.trades_count
+  end
+
+  test "totals aggregate directly from trade entries" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    shared_user = users(:new_email)
+    investment_account = create_investment_account(balance: 500)
+    hidden_account = create_investment_account(balance: 500)
+    investment_account.share_with!(shared_user, permission: "read_only", include_in_finances: true)
+
+    create_trade(account: investment_account, qty: 2, amount: 120, date: period.start_date)
+    create_trade(account: investment_account, qty: -1, amount: -40, date: period.start_date + 1.day)
+    create_trade(account: investment_account, qty: 1, amount: 999, date: period.start_date - 1.day)
+    create_trade(account: hidden_account, qty: 1, amount: 9999, date: period.start_date)
+
+    statement = InvestmentStatement.new(@family, user: shared_user)
+    totals = nil
+    queries = capture_sql_queries { totals = statement.totals(period: period) }
+
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(40, "USD"), totals.withdrawals
+    assert_equal 2, totals.trades_count
+
+    aggregate_queries = queries.grep(/SUM\(CASE WHEN trades\.qty > 0/)
+    assert_equal 1, aggregate_queries.size
+    assert_includes aggregate_queries.first, "FROM entries JOIN trades"
+    assert_includes aggregate_queries.first, "entries.entryable_type = 'Trade'"
+    assert_includes aggregate_queries.first, "entries.account_id IN"
+    assert_includes aggregate_queries.first, "entries.excluded = false"
+    assert_no_match(/FROM \(SELECT "trades"\.\*/, aggregate_queries.first)
+    # account_ids is pre-scoped to the family's visible accounts, so the
+    # aggregate trusts that input and no longer joins back to accounts.
+    assert_no_match(/JOIN accounts/, aggregate_queries.first)
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
@@ -392,6 +436,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    def create_trade(account:, qty:, amount:, date:, security: nil)
+      account.entries.create!(
+        name: "Trade #{SecureRandom.hex(3)}",
+        amount: amount,
+        date: date,
+        currency: account.currency,
+        entryable: Trade.new(
+          security: security || Security.create!(ticker: "T#{SecureRandom.hex(2)}", name: "Test Security"),
+          qty: qty,
+          price: amount.to_d.abs / qty.to_d.abs,
+          currency: account.currency
+        )
       )
     end
 end

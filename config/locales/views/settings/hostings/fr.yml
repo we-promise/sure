@@ -43,6 +43,7 @@ fr:
         requires_api_key_alpha_vantage: "nécessite une clé API, limite de 25 appels/jour"
         mfapi_hint: "gratuit, aucune clé API -- fonds communs indiens uniquement"
         binance_public_hint: "gratuit, aucune clé API -- crypto uniquement (BTC, ETH, etc.)"
+        moex_public_hint: "gratuit, aucune clé API -- actions, fonds et obligations russes (MOEX), incl. change RUB"
         providers:
           twelve_data: "Twelve Data"
           yahoo_finance: "Yahoo Finance"
@@ -51,6 +52,7 @@ fr:
           alpha_vantage: "Alpha Vantage"
           mfapi: "MFAPI.in"
           binance_public: "Binance"
+          moex_public: "MOEX"
       assistant_settings:
         title: "Assistant IA"
         description: "Choisissez comment l'assistant de discussion répond. Intégré utilise directement votre fournisseur LLM configuré. Externe délègue à un agent IA distant qui peut invoquer les outils financiers de Sure via MCP."
