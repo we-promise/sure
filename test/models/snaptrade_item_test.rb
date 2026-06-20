@@ -196,6 +196,30 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_equal "personal_secret", item.snaptrade_user_secret
   end
 
+  test "ensure_user_registered! preserves credentials on transient verification failures" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_existing",
+      snaptrade_user_secret: "existing_secret"
+    )
+
+    provider = mock
+    provider.stubs(:list_connections).raises(
+      Provider::Snaptrade::ApiError.new("Rate limit exceeded. Please try again later.", status_code: 429)
+    )
+    provider.expects(:register_user).never
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert_raises(Provider::Snaptrade::ApiError) { item.ensure_user_registered! }
+
+    item.reload
+    assert_equal "family_#{@family.id}_existing", item.snaptrade_user_id
+    assert_equal "existing_secret", item.snaptrade_user_secret
+  end
+
   test "delete_snaptrade_user skips API deletion for externally-provisioned personal-key users" do
     item = SnaptradeItem.create!(
       family: @family,
