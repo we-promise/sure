@@ -8,6 +8,7 @@ en:
       ethereum_credentials_prefix: "Add one in "
       bank_sync_settings: Provider settings
       ethereum_credentials_suffix: " before linking an Ethereum wallet."
+      auto_detect_chain: "Auto-detect from address"
       chain_label: Chain
       bitcoin: Bitcoin
       ethereum: Ethereum

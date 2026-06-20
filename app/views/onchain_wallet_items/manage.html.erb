@@ -23,16 +23,20 @@
                   </div>
 
                   <div class="flex items-center gap-3">
-                    <%= link_to t(".edit_wallet"),
-                                edit_wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, wallet_address: wallet_address),
-                                class: "text-sm text-primary hover:underline",
-                                data: { turbo_frame: "modal" } %>
+                    <%= render DS::Link.new(
+                          text: t(".edit_wallet"),
+                          href: edit_wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, wallet_address: wallet_address),
+                          frame: :modal
+                        ) %>
 
-                    <%= button_to t(".disconnect_wallet"),
-                                  wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, wallet_address: wallet_address),
-                                  method: :delete,
-                                  class: "text-sm text-destructive hover:underline",
-                                  data: { turbo_confirm: t(".disconnect_confirm", address: wallet_accounts.first.display_address) } %>
+                    <%= render DS::Button.new(
+                          text: t(".disconnect_wallet"),
+                          href: wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, wallet_address: wallet_address),
+                          variant: :outline_destructive,
+                          size: :sm,
+                          method: :delete,
+                          data: { turbo_confirm: t(".disconnect_confirm", address: wallet_accounts.first.display_address) }
+                        ) %>
                   </div>
                 </div>
               </div>

@@ -36,8 +36,11 @@
                         value: nil %>
 
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? t("settings.providers.onchain_wallet_panel.save_connection") : t("settings.providers.onchain_wallet_panel.update_connection"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+      <%= render DS::Button.new(
+            text: is_new_record ? t("settings.providers.onchain_wallet_panel.save_connection") : t("settings.providers.onchain_wallet_panel.update_connection"),
+            variant: :primary,
+            type: :submit
+          ) %>
     </div>
   <% end %>
 </div>

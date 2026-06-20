@@ -24,7 +24,7 @@
             <%= form.label :chain, t(".chain_label"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= form.select :chain,
                             options_for_select(
-                              [ [ "Auto-detect from address", "auto" ] ] + OnchainWalletAccount::CHAINS.map { |chain| [ chain.titleize, chain ] },
+                              [ [ t(".auto_detect_chain"), "auto" ] ] + OnchainWalletAccount::CHAINS.map { |chain| [ chain.titleize, chain ] },
                               selected_chain
                             ),
                             {},
