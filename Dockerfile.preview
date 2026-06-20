@@ -280,14 +280,14 @@ fi
 echo "Setting up database..."
 emit_status db-setup "setting up database"
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'" | grep -q 1 || \
-  psql -h localhost -U postgres -c "CREATE USER rails WITH SUPERUSER PASSWORD 'rails';"
+  psql -h localhost -U postgres -c "CREATE USER rails WITH SUPERUSER PASSWORD 'rails';" # pipelock:ignore ephemeral preview-only credentials
 
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
   psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
 
 # Set database env if not already set (ephemeral preview-only credentials)
 export POSTGRES_USER="${POSTGRES_USER:-rails}"
-export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-rails}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-rails}" # pipelock:ignore ephemeral preview-only credentials
 export POSTGRES_DB="${POSTGRES_DB:-sure_development}"
 export DB_HOST="${DB_HOST:-localhost}"
 export DB_PORT="${DB_PORT:-5432}"
