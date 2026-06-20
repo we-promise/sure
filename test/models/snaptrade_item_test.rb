@@ -154,6 +154,48 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_not item.user_registered?
   end
 
+  test "ensure_user_registered! clears and re-registers an app-generated user that no longer verifies" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_old",
+      snaptrade_user_secret: "old_secret"
+    )
+    item.stubs(:verify_user_exists?).returns(false)
+
+    provider = mock
+    provider.expects(:register_user).returns(user_id: "family_#{@family.id}_new", user_secret: "new_secret")
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert item.ensure_user_registered!
+    assert_equal "family_#{@family.id}_new", item.snaptrade_user_id
+    assert_equal "new_secret", item.snaptrade_user_secret
+  end
+
+  test "ensure_user_registered! preserves personal-key credentials when verification fails" do
+    item = SnaptradeItem.create!(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "personal_user",
+      snaptrade_user_secret: "personal_secret"
+    )
+    item.stubs(:verify_user_exists?).returns(false)
+
+    provider = mock
+    provider.expects(:register_user).never
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert_raises(SnaptradeItem::RegistrationError) { item.ensure_user_registered! }
+
+    item.reload
+    assert_equal "personal_user", item.snaptrade_user_id
+    assert_equal "personal_secret", item.snaptrade_user_secret
+  end
+
   test "delete_snaptrade_user skips API deletion for externally-provisioned personal-key users" do
     item = SnaptradeItem.create!(
       family: @family,

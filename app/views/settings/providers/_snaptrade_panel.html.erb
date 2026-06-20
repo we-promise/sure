@@ -37,13 +37,15 @@
                         placeholder: is_new_record ? t("providers.snaptrade.consumer_key_placeholder") : t("providers.snaptrade.consumer_key_update_placeholder"),
                         type: :password %>
 
-    <details class="group rounded-lg border border-primary p-3">
-      <summary class="flex cursor-pointer items-center justify-between text-sm text-secondary hover:text-primary">
-        <%= t("providers.snaptrade.personal_key_summary") %>
-        <%= icon "chevron-right", class: "w-4 h-4 group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
-      </summary>
+    <%= render DS::Disclosure.new(variant: :card_inset) do |disclosure| %>
+      <% disclosure.with_summary_content do %>
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm text-secondary"><%= t("providers.snaptrade.personal_key_summary") %></p>
+          <%= icon "chevron-down", class: "text-secondary group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
+        </div>
+      <% end %>
 
-      <div class="mt-3 space-y-3">
+      <div class="mt-4 space-y-3">
         <p class="text-xs text-secondary"><%= t("providers.snaptrade.personal_key_help") %></p>
 
         <%= form.text_field :snaptrade_user_id,
@@ -58,7 +60,7 @@
                                 value: nil,
                                 required: false %>
       </div>
-    </details>
+    <% end %>
 
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("providers.snaptrade.save_button") : t("providers.snaptrade.update_button") %>

@@ -267,7 +267,7 @@ class Provider::Snaptrade
 
       haystack = "#{body} #{message}".downcase
       haystack.include?("1012") ||
-        haystack.include?("personal") && haystack.include?("registeruser")
+        (haystack.include?("personal") && haystack.include?("registeruser"))
     end
 
     def with_retries(operation_name, max_retries: MAX_RETRIES)

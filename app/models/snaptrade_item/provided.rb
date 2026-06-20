@@ -61,9 +61,11 @@ module SnaptradeItem::Provided
     snaptrade_user_id.present? && snaptrade_user_secret.present?
   end
 
-  # Register user with SnapTrade if not already registered
-  # Returns true if registration succeeded or already registered
-  # If existing credentials are invalid (user was deleted), clears them and re-registers
+  # Register user with SnapTrade if not already registered.
+  # Returns true if registration succeeded or already registered.
+  # If a Sure-registered user no longer exists, clears the stale credentials and
+  # re-registers. Personal-key (externally provisioned) credentials are never
+  # cleared or re-registered; failed verification surfaces actionable guidance.
   def ensure_user_registered!
     # If we think we're registered, verify the user still exists. This covers both
     # auto-registered users and pre-provisioned credentials supplied manually for a
@@ -71,10 +73,19 @@ module SnaptradeItem::Provided
     if user_registered?
       return true if verify_user_exists?
 
-      # Stored credentials no longer verify. We re-register below, but we do NOT
-      # clear them first: registerUser generates a brand new user, so if it fails
-      # (e.g. for a personal key) the existing credentials remain intact.
-      Rails.logger.warn "SnapTrade: User #{snaptrade_user_id} did not verify, attempting re-registration"
+      if app_generated_user_id?(snaptrade_user_id)
+        # Sure-registered user no longer exists upstream (e.g. deleted) — clear the
+        # stale credentials so we re-register with a fresh ID below. Without this,
+        # every call would re-verify the same dead user instead of recovering.
+        Rails.logger.warn "SnapTrade: User #{snaptrade_user_id} no longer exists, clearing credentials and re-registering"
+        update!(snaptrade_user_id: nil, snaptrade_user_secret: nil)
+      else
+        # Externally-provisioned personal-key user. registerUser can't mint a
+        # replacement, and clearing would discard the user's only credentials, so
+        # surface actionable guidance instead of attempting a doomed re-register.
+        Rails.logger.warn "SnapTrade: Personal-key user #{snaptrade_user_id} failed verification"
+        raise SnaptradeItem::RegistrationError, I18n.t("snaptrade_item.errors.personal_key_registration_unavailable")
+      end
     end
 
     provider = snaptrade_provider
