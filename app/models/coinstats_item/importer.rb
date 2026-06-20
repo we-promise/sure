@@ -145,8 +145,13 @@ class CoinstatsItem::Importer
       return [] if wallets.empty?
 
       Rails.logger.info "CoinstatsItem::Importer - Fetching balances for #{wallets.size} wallet(s) via bulk endpoint"
-      # Build comma-separated string in format "blockchain:address"
-      wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
+      # Build comma-separated string in format "blockchain:address". Sort for a
+      # deterministic batch order so the request is stable regardless of the
+      # account query order (otherwise the bulk-endpoint param varies run to run).
+      wallets_param = wallets
+        .sort_by { |w| "#{w[:blockchain]}:#{w[:address]}".downcase }
+        .map { |w| "#{w[:blockchain]}:#{w[:address]}" }
+        .join(",")
       response = coinstats_provider.get_wallet_balances(wallets_param)
       response.success? ? response.data : FETCH_FAILED
     rescue => e
@@ -192,8 +197,13 @@ class CoinstatsItem::Importer
       return [] if wallets.empty?
 
       Rails.logger.info "CoinstatsItem::Importer - Fetching transactions for #{wallets.size} wallet(s) via bulk endpoint"
-      # Build comma-separated string in format "blockchain:address"
-      wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
+      # Build comma-separated string in format "blockchain:address". Sort for a
+      # deterministic batch order so the request is stable regardless of the
+      # account query order (otherwise the bulk-endpoint param varies run to run).
+      wallets_param = wallets
+        .sort_by { |w| "#{w[:blockchain]}:#{w[:address]}".downcase }
+        .map { |w| "#{w[:blockchain]}:#{w[:address]}" }
+        .join(",")
       response = coinstats_provider.get_wallet_transactions(wallets_param)
       response.success? ? response.data : FETCH_FAILED
     rescue => e
