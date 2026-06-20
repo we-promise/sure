@@ -493,8 +493,8 @@ class ReportsController < ApplicationController
       # Get sell trades in period with realized gains
       # Eager-load security, account, and accountable to avoid N+1
       sell_trades = Current.family.trades
-        .joins(:entry)
-        .where(entries: { date: @period.date_range })
+        .joins(entry: :account)
+        .where(entries: { date: @period.date_range }, accounts: { exclude_from_reports: [ false, nil ] })
         .where("trades.qty < 0")
         .includes(:security, entry: { account: :accountable })
         .to_a

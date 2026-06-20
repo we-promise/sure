@@ -107,7 +107,8 @@ class AccountsController < ApplicationController
   end
 
   def toggle_exclude_from_reports
-    @account.update!(exclude_from_reports: !@account.exclude_from_reports)
+    Account.where(id: @account.id).update_all("exclude_from_reports = NOT exclude_from_reports")
+    @account.reload
     redirect_to accounts_path
   end
 
