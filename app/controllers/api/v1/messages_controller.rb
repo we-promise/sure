@@ -49,7 +49,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     end
 
     def set_chat
-      @chat = Current.user.chats.find(params[:chat_id])
+      @chat = current_resource_owner.chats.find(params[:chat_id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "Chat not found" }, status: :not_found
     end
