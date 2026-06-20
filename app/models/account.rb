@@ -46,7 +46,7 @@ class Account < ApplicationRecord
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
-  scope :included_in_reports, -> { where(exclude_from_reports: [false, nil]) }
+  scope :included_in_reports, -> { where(exclude_from_reports: [ false, nil ]) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
