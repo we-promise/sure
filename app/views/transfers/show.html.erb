@@ -111,12 +111,15 @@
             <h4 class="text-primary"><%= t(".delete_title") %></h4>
             <p class="text-secondary"><%= t(".delete_subtitle") %></p>
           </div>
-          <%= button_to t(".delete"),
-                transfer_path(@transfer),
+          <%= render DS::Button.new(
+                text: t(".delete"),
+                variant: :outline_destructive,
+                size: :md,
+                href: transfer_path(@transfer),
                 method: :delete,
-                class:  "rounded-lg px-3 py-2 whitespace-nowrap text-destructive text-sm
-                          font-medium border border-secondary",
-                data:   { turbo_confirm: true, turbo_frame: "_top" } %>
+                confirm: true,
+                frame: "_top"
+              ) %>
         </div>
       </div>
     <% end %>
