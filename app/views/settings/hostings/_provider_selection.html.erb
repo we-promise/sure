@@ -59,7 +59,7 @@
             <input type="checkbox"
                    name="setting[securities_providers][]"
                    value="<%= value %>"
-                   class="rounded border-primary text-primary focus:ring-primary"
+                   class="checkbox checkbox--light"
                    <%= "checked" if enabled_providers.include?(value) %>
                    <%= "disabled" if disabled %>
                    data-auto-submit-form-target="auto">
