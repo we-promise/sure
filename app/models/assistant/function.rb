@@ -79,6 +79,10 @@ class Assistant::Function
       user.family
     end
 
+    def valid_uuid?(str)
+      UuidFormat.valid?(str)
+    end
+
     # To save tokens, we provide the AI metadata about the series and a flat array of
     # raw, formatted values which it can infer dates from
     def to_ai_time_series(series)
