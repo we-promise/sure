@@ -12,36 +12,43 @@ class MoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      body: ListView(
-        children: [
-          _buildMenuItem(
-            context: context,
-            icon: Icons.calendar_month,
-            title: l.moreCalendar,
-            subtitle: l.moreCalendarSubtitle,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CalendarScreen(),
+      // Setting an explicit ListView padding opts out of the scroll view's
+      // automatic safe-area inset, so restore it with SafeArea (keeps the group
+      // clear of the status bar / home indicator).
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SureListGroup(
+              children: [
+                SureListRow(
+                  leading: _iconBadge(context, Icons.calendar_month),
+                  title: l.moreCalendar,
+                  subtitle: l.moreCalendarSubtitle,
+                  showChevron: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CalendarScreen(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          Divider(height: 1, color: colorScheme.outlineVariant),
-          _buildMenuItem(
-            context: context,
-            icon: Icons.receipt_long,
-            title: l.moreRecentTransactions,
-            subtitle: l.moreRecentTransactionsSubtitle,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RecentTransactionsScreen(),
+                SureListRow(
+                  leading: _iconBadge(context, Icons.receipt_long),
+                  title: l.moreRecentTransactions,
+                  subtitle: l.moreRecentTransactionsSubtitle,
+                  showChevron: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecentTransactionsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

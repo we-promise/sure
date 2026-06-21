@@ -882,6 +882,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionFormCreateButton => 'Create Transaction';
 
   @override
+  String get transactionFormAmountHelper => 'Required';
+
+  @override
   String get logViewerClearConfirm =>
       'Are you sure you want to clear all logs?';
 

@@ -1666,6 +1666,12 @@ abstract class AppLocalizations {
   /// **'Create Transaction'**
   String get transactionFormCreateButton;
 
+  /// Helper text under the amount field indicating it is required.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get transactionFormAmountHelper;
+
   /// Body text for the clear-logs confirmation dialog.
   ///
   /// In en, this message translates to:

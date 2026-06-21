@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/custom_proxy_header.dart';
 import 'sure_text_field.dart';
 
@@ -111,19 +111,16 @@ class _HeaderRow extends StatelessWidget {
             children: [
               SureTextField(
                 controller: draft.name,
-                decoration: InputDecoration(
-                  labelText: l.proxyHeadersNameLabel,
-                  hintText: l.proxyHeadersNameHint,
-                ),
-                validator: (value) => CustomProxyHeader.validateName(value ?? ''),
+                label: l.proxyHeadersNameLabel,
+                hint: l.proxyHeadersNameHint,
+                validator: (value) =>
+                    CustomProxyHeader.validateName(value ?? ''),
                 onChanged: (_) => onChanged(),
               ),
               const SizedBox(height: 12),
               SureTextField(
                 controller: draft.value,
-                decoration: InputDecoration(
-                  labelText: l.proxyHeadersValueLabel,
-                ),
+                label: l.proxyHeadersValueLabel,
                 obscureText: true,
                 validator: (value) =>
                     CustomProxyHeader.validateValue(value ?? ''),

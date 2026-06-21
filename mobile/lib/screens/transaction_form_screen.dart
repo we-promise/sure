@@ -9,8 +9,8 @@ import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
 import '../services/connectivity_service.dart';
 import '../utils/amount_parser.dart';
-import '../l10n/app_localizations.dart';
 import '../widgets/sure_segmented_control.dart';
+import '../l10n/app_localizations.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
@@ -105,7 +105,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    final l = AppLocalizations.of(context);
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -115,6 +114,8 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     });
 
     _log.info('TransactionForm', 'Starting transaction creation...');
+
+    final l = AppLocalizations.of(context);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -187,7 +188,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               content: Text(
                 isOnline
                     ? l.transactionFormCreateSuccessOnline
-                    : l.transactionFormCreateSuccessOffline
+                    : l.transactionFormCreateSuccessOffline,
               ),
               backgroundColor: Colors.green,
             ),
@@ -227,8 +228,8 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
@@ -342,21 +343,26 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                         // Transaction type selection
                         Text(
                           l.transactionFormTypeLabel,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
-                        SegmentedButton<String>(
+                        SureSegmentedControl<String>(
+                          selected: _nature,
+                          onChanged: (value) {
+                            setState(() {
+                              _nature = value;
+                            });
+                          },
                           segments: [
-                            ButtonSegment<String>(
+                            SureSegment<String>(
                               value: 'expense',
-                              label: Text(l.transactionFormTypeExpense),
+                              label: l.transactionFormTypeExpense,
                               icon: const Icon(Icons.arrow_downward),
                             ),
                             SureSegment<String>(
                               value: 'income',
-                              label: Text(l.transactionFormTypeIncome),
+                              label: l.transactionFormTypeIncome,
                               icon: const Icon(Icons.arrow_upward),
                             ),
                           ],
@@ -370,11 +376,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                             decimal: true,
                           ),
                           decoration: InputDecoration(
-                            // Trailing "*" preserves the required-field indicator
-                            // the pre-i18n label ("Amount *") carried.
                             labelText: '${l.transactionFormAmountLabel} *',
                             prefixIcon: const Icon(Icons.attach_money),
                             suffixText: widget.account.currency,
+                            helperText: l.transactionFormAmountHelper,
                           ),
                           validator: _validateAmount,
                         ),
@@ -387,8 +392,16 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                               _showMoreFields = !_showMoreFields;
                             });
                           },
-                          icon: Icon(_showMoreFields ? Icons.expand_less : Icons.expand_more),
-                          label: Text(_showMoreFields ? l.transactionFormLess : l.transactionFormMore),
+                          icon: Icon(
+                            _showMoreFields
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                          ),
+                          label: Text(
+                            _showMoreFields
+                                ? l.transactionFormLess
+                                : l.transactionFormMore,
+                          ),
                         ),
 
                         // Optional fields (shown when More is clicked)
@@ -428,7 +441,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                     labelText: l.transactionFormCategoryLabel,
                                     prefixIcon: const Icon(Icons.category),
                                   ),
-                                  child: Text(l.transactionFormCategoryLoading),
+                                  child: Text(
+                                    l.transactionFormCategoryLoading,
+                                  ),
                                 );
                               }
 

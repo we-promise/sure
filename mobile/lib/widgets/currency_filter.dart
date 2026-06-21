@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 
+import '../l10n/app_localizations.dart';
 import 'sure_chip.dart';
 
 class CurrencyFilter extends StatelessWidget {
@@ -62,8 +62,8 @@ class CurrencyFilter extends StatelessWidget {
           // "All" chip
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(l.commonAll),
+            child: SureChip(
+              label: l.commonAll,
               selected: isAllSelected,
               onSelected: (_) => onSelectionChanged({}),
             ),

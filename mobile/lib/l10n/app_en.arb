@@ -832,6 +832,9 @@
   "transactionFormCreateButton": "Create Transaction",
   "@transactionFormCreateButton": { "description": "Submit button label on the create-transaction form." },
 
+  "transactionFormAmountHelper": "Required",
+  "@transactionFormAmountHelper": { "description": "Helper text under the amount field indicating it is required." },
+
   "logViewerClearConfirm": "Are you sure you want to clear all logs?",
   "@logViewerClearConfirm": { "description": "Body text for the clear-logs confirmation dialog." },
 
