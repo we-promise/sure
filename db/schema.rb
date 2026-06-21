@@ -1594,40 +1594,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
-  create_table "savings_contributions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "savings_goal_id", null: false
-    t.uuid "budget_id"
-    t.decimal "amount", precision: 19, scale: 4, null: false
-    t.string "currency", null: false
-    t.string "source", null: false
-    t.text "notes"
-    t.date "contributed_at", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["budget_id"], name: "index_savings_contributions_on_budget_id"
-    t.index ["savings_goal_id", "budget_id"], name: "index_auto_contributions_unique_per_goal_per_budget", unique: true, where: "((source)::text = 'auto'::text)"
-    t.index ["savings_goal_id"], name: "index_savings_contributions_on_savings_goal_id"
-    t.check_constraint "source::text <> 'auto'::text OR budget_id IS NOT NULL", name: "chk_savings_contributions_auto_requires_budget"
-  end
-
-  create_table "savings_goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "name", null: false
-    t.decimal "target_amount", precision: 19, scale: 4, null: false
-    t.string "currency", null: false
-    t.date "target_date"
-    t.string "color"
-    t.string "icon"
-    t.text "notes"
-    t.string "state", default: "active", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.uuid "account_id", null: false
-    t.index ["account_id"], name: "index_savings_goals_on_account_id"
-    t.index ["family_id", "state"], name: "index_savings_goals_on_family_id_and_state"
-    t.index ["family_id"], name: "index_savings_goals_on_family_id"
-  end
-
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ticker", null: false
     t.string "name"
@@ -1969,17 +1935,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
-  create_table "transaction_exclusions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "external_id", null: false
-    t.string "provider", null: false
-    t.string "exclusion_reason", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["family_id", "external_id", "provider"], name: "index_transaction_exclusions_unique", unique: true
-    t.index ["family_id", "provider", "exclusion_reason"], name: "idx_on_family_id_provider_exclusion_reason_6d8d54d021"
-  end
-
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -2230,10 +2185,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
-  add_foreign_key "savings_contributions", "budgets", on_delete: :cascade
-  add_foreign_key "savings_contributions", "savings_goals"
-  add_foreign_key "savings_goals", "accounts"
-  add_foreign_key "savings_goals", "families"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
   add_foreign_key "sessions", "users"
@@ -2250,7 +2201,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trades", "securities"
-  add_foreign_key "transaction_exclusions", "families"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
