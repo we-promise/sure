@@ -22,6 +22,9 @@ class SureTokens {
   static const double radiusMd = 8.0;
   static const double radiusLg = 10.0;
 
+  static const FontWeight weightMedium = FontWeight.w500;
+  static const FontWeight weightSemibold = FontWeight.w600;
+
   static const light = SureTokenPalette(
     surface: Color(0xFFF7F7F7),
     surfaceHover: Color(0xFFF0F0F0),

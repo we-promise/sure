@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_tokens.dart';
 import '../widgets/sure_list_group.dart';
@@ -10,6 +11,7 @@ class MoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       // Setting an explicit ListView padding opts out of the scroll view's
       // automatic safe-area inset, so restore it with SafeArea (keeps the group
@@ -22,8 +24,8 @@ class MoreScreen extends StatelessWidget {
               children: [
                 SureListRow(
                   leading: _iconBadge(context, Icons.calendar_month),
-                  title: 'Account Calendar',
-                  subtitle: 'View monthly balance changes by account',
+                  title: l.moreCalendar,
+                  subtitle: l.moreCalendarSubtitle,
                   showChevron: true,
                   onTap: () {
                     Navigator.push(
@@ -36,8 +38,8 @@ class MoreScreen extends StatelessWidget {
                 ),
                 SureListRow(
                   leading: _iconBadge(context, Icons.receipt_long),
-                  title: 'Recent Transactions',
-                  subtitle: 'View recent transactions across all accounts',
+                  title: l.moreRecentTransactions,
+                  subtitle: l.moreRecentTransactionsSubtitle,
                   showChevron: true,
                   onTap: () {
                     Navigator.push(
