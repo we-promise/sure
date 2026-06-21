@@ -49,11 +49,17 @@ class OnchainWalletAccount::Processor
     end
 
     def process_account_balance
-      account.update!(
-        balance: onchain_wallet_account.current_balance || 0,
-        cash_balance: 0,
-        currency: family_currency
-      )
+      balance = onchain_wallet_account.current_balance || 0
+
+      Account.transaction do
+        account.update!(
+          cash_balance: 0,
+          currency: family_currency
+        )
+
+        result = Account::CurrentBalanceManager.new(account).set_current_balance(balance)
+        raise result.error unless result.success?
+      end
     end
 
     # For each on-chain transaction, record a Buy/Sell trade when a historical
