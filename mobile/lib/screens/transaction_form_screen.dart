@@ -9,14 +9,12 @@ import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
 import '../services/connectivity_service.dart';
 import '../utils/amount_parser.dart';
+import '../widgets/sure_segmented_control.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
 
-  const TransactionFormScreen({
-    super.key,
-    required this.account,
-  });
+  const TransactionFormScreen({super.key, required this.account});
 
   @override
   State<TransactionFormScreen> createState() => _TransactionFormScreenState();
@@ -47,7 +45,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
   Future<void> _fetchCategories() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final categoriesProvider = Provider.of<CategoriesProvider>(context, listen: false);
+    final categoriesProvider = Provider.of<CategoriesProvider>(
+      context,
+      listen: false,
+    );
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken != null) {
       categoriesProvider.fetchCategories(accessToken: accessToken);
@@ -114,11 +115,17 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+      final transactionsProvider = Provider.of<TransactionsProvider>(
+        context,
+        listen: false,
+      );
       final accessToken = await authProvider.getValidAccessToken();
 
       if (accessToken == null) {
-        _log.warning('TransactionForm', 'Access token is null, session expired');
+        _log.warning(
+          'TransactionForm',
+          'Access token is null, session expired',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -139,7 +146,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         locale: _currentLocaleName(),
       );
 
-      _log.info('TransactionForm', 'Calling TransactionsProvider.createTransaction (offline-first)');
+      _log.info(
+        'TransactionForm',
+        'Calling TransactionsProvider.createTransaction (offline-first)',
+      );
 
       // Use TransactionsProvider for offline-first transaction creation
       final success = await transactionsProvider.createTransaction(
@@ -157,18 +167,24 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
       if (mounted) {
         if (success) {
-          _log.info('TransactionForm', 'Transaction created successfully (saved locally)');
-          
+          _log.info(
+            'TransactionForm',
+            'Transaction created successfully (saved locally)',
+          );
+
           // Check current connectivity status to show appropriate message
-          final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
+          final connectivityService = Provider.of<ConnectivityService>(
+            context,
+            listen: false,
+          );
           final isOnline = connectivityService.isOnline;
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 isOnline
                     ? 'Transaction created successfully'
-                    : 'Transaction saved (will sync when online)'
+                    : 'Transaction saved (will sync when online)',
               ),
               backgroundColor: Colors.green,
             ),
@@ -185,7 +201,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         }
       }
     } catch (e) {
-      _log.error('TransactionForm', 'Exception during transaction creation: $e');
+      _log.error(
+        'TransactionForm',
+        'Exception during transaction creation: $e',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -235,7 +254,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               ),
               // Title
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -281,20 +303,28 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         widget.account.name,
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         '${widget.account.balance} ${widget.account.currency}',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -308,37 +338,38 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                         // Transaction type selection
                         Text(
                           'Type',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
-                        SegmentedButton<String>(
+                        SureSegmentedControl<String>(
+                          selected: _nature,
+                          onChanged: (value) {
+                            setState(() {
+                              _nature = value;
+                            });
+                          },
                           segments: const [
-                            ButtonSegment<String>(
+                            SureSegment<String>(
                               value: 'expense',
-                              label: Text('Expense'),
+                              label: 'Expense',
                               icon: Icon(Icons.arrow_downward),
                             ),
-                            ButtonSegment<String>(
+                            SureSegment<String>(
                               value: 'income',
-                              label: Text('Income'),
+                              label: 'Income',
                               icon: Icon(Icons.arrow_upward),
                             ),
                           ],
-                          selected: {_nature},
-                          onSelectionChanged: (Set<String> newSelection) {
-                            setState(() {
-                              _nature = newSelection.first;
-                            });
-                          },
                         ),
                         const SizedBox(height: 24),
 
                         // Amount field
                         TextFormField(
                           controller: _amountController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: InputDecoration(
                             labelText: 'Amount *',
                             prefixIcon: const Icon(Icons.attach_money),
@@ -356,7 +387,11 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                               _showMoreFields = !_showMoreFields;
                             });
                           },
-                          icon: Icon(_showMoreFields ? Icons.expand_less : Icons.expand_more),
+                          icon: Icon(
+                            _showMoreFields
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                          ),
                           label: Text(_showMoreFields ? 'Less' : 'More'),
                         ),
 
@@ -428,8 +463,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                     if (value == null) {
                                       _selectedCategory = null;
                                     } else {
-                                      _selectedCategory = categories
-                                          .firstWhere((c) => c.id == value);
+                                      _selectedCategory = categories.firstWhere(
+                                        (c) => c.id == value,
+                                      );
                                     }
                                   });
                                 },
