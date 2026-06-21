@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
+import '../constants/ai_messages.dart';
 import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
 import '../constants/suggested_questions.dart';
 import '../widgets/typing_indicator.dart';
+import '../widgets/ai_disabled_empty_state.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();
@@ -70,7 +72,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   void _onChatChanged() {
     if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage || chatProvider.isPolling) {
+    if (chatProvider.isWaitingForResponse ||
+        chatProvider.isSendingMessage ||
+        chatProvider.isPolling) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scrollToBottom();
       });
@@ -99,6 +103,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (_chatId == null) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.aiEnabled) return;
+
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
     // Skip fetch if the provider already has this chat loaded (e.g. just created).
@@ -136,65 +142,79 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     setState(() => _isSendInFlight = true);
 
     try {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-
-    final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken == null) {
-      await authProvider.logout();
-      return;
-    }
-
-    _messageController.clear();
-
-    if (_chatId == null) {
-      // First message in a new chat — create the chat with it.
-      final chat = await chatProvider.createChat(
-        accessToken: accessToken,
-        title: Chat.generateTitle(content),
-        initialMessage: content,
-      );
-      if (!mounted) return;
-      if (chat == null) {
-        // Restore the message so the user doesn't lose it.
-        _messageController.text = content;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (!authProvider.aiEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(chatProvider.errorMessage ?? 'Failed to start conversation. Please try again.'),
-            backgroundColor: Colors.red,
+          const SnackBar(
+            content: Text(
+              aiDisabledAccountMessage,
+            ),
           ),
         );
         return;
       }
-      setState(() => _chatId = chat.id);
-    } else {
-      final shouldUpdateTitle =
-          chatProvider.currentChat?.hasDefaultTitle == true;
 
-      final delivered = await chatProvider.sendMessage(
-        accessToken: accessToken,
-        chatId: _chatId!,
-        content: content,
-      );
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
-      if (delivered && shouldUpdateTitle) {
-        await chatProvider.updateChatTitle(
+      final accessToken = await authProvider.getValidAccessToken();
+      if (accessToken == null) {
+        await authProvider.logout();
+        return;
+      }
+
+      _messageController.clear();
+
+      if (_chatId == null) {
+        // First message in a new chat — create the chat with it.
+        final chat = await chatProvider.createChat(
+          accessToken: accessToken,
+          title: Chat.generateTitle(content),
+          initialMessage: content,
+        );
+        if (!mounted) return;
+        if (chat == null) {
+          // Restore the message so the user doesn't lose it.
+          _messageController.text = content;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                chatProvider.errorMessage ??
+                    'Failed to start conversation. Please try again.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        setState(() => _chatId = chat.id);
+      } else {
+        final shouldUpdateTitle =
+            chatProvider.currentChat?.hasDefaultTitle == true;
+
+        final delivered = await chatProvider.sendMessage(
           accessToken: accessToken,
           chatId: _chatId!,
-          title: Chat.generateTitle(content),
+          content: content,
         );
-      }
-    }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (delivered && shouldUpdateTitle) {
+          await chatProvider.updateChatTitle(
+            accessToken: accessToken,
+            chatId: _chatId!,
+            title: Chat.generateTitle(content),
+          );
+        }
       }
-    });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     } finally {
       if (mounted) setState(() => _isSendInFlight = false);
     }
@@ -257,7 +277,17 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: true);
     final colorScheme = Theme.of(context).colorScheme;
+
+    if (!authProvider.aiEnabled) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Chats'),
+        ),
+        body: const AiDisabledEmptyState(),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -399,7 +429,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     actions: <Type, Action<Intent>>{
                       _SendMessageIntent: CallbackAction<_SendMessageIntent>(
                         onInvoke: (_) {
-                          if (!_isSendInFlight && !chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse && !chatProvider.isPolling) _sendMessage();
+                          if (!_isSendInFlight &&
+                              !chatProvider.isSendingMessage &&
+                              !chatProvider.isWaitingForResponse &&
+                              !chatProvider.isPolling) {
+                            _sendMessage();
+                          }
                           return null;
                         },
                       ),
@@ -427,7 +462,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
-                          onPressed: (_isSendInFlight || chatProvider.isSendingMessage || chatProvider.isWaitingForResponse || chatProvider.isPolling)
+                          onPressed: (_isSendInFlight ||
+                                  chatProvider.isSendingMessage ||
+                                  chatProvider.isWaitingForResponse ||
+                                  chatProvider.isPolling)
                               ? null
                               : _sendMessage,
                           color: colorScheme.primary,

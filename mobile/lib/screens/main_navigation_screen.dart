@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../constants/ai_messages.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/sure_logo.dart';
 import 'chat_list_screen.dart';
@@ -50,10 +51,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const chatIndex = 1;
 
     if (index == chatIndex && !authProvider.aiEnabled) {
-      final enabled = await _showEnableAiPrompt();
-      if (!enabled) {
-        return;
-      }
+      _showAiDisabledMessage();
+      return;
     }
 
     if (mounted) {
@@ -67,7 +66,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  Future<void> _handleSelectSettings(AuthProvider authProvider, bool introLayout) async {
+  Future<void> _handleSelectSettings(
+    AuthProvider authProvider,
+    bool introLayout,
+  ) async {
     final settingsIndex = introLayout ? 2 : 3;
     await _handleDestinationSelected(settingsIndex, authProvider, introLayout);
   }
@@ -153,59 +155,60 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  Future<bool> _showEnableAiPrompt() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  void _showAiDisabledMessage() {
+    if (!mounted) return;
 
-    final shouldEnable = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Turn on AI Chat?'),
-        content: const Text('AI Chat is currently disabled in your account settings. Would you like to turn it on now?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Turn on AI'),
-          ),
-        ],
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          aiDisabledAccountMessage,
+        ),
       ),
     );
-
-    if (shouldEnable != true) {
-      return false;
-    }
-
-    final enabled = await authProvider.enableAi();
-
-    if (!enabled && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Unable to enable AI right now.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-
-    return enabled;
   }
 
-  int _resolveBottomSelectedIndex(List<NavigationDestination> destinations) {
-    if (destinations.isEmpty) {
+  int _resolveCurrentIndex({
+    required int screenCount,
+    required bool aiEnabled,
+  }) {
+    if (screenCount == 0) {
       return 0;
     }
 
-    if (_currentIndex < 0) {
+    var index = _currentIndex;
+
+    if (index == 1 && !aiEnabled) {
+      index = 0;
+    }
+
+    if (index < 0) {
       return 0;
     }
 
-    if (_currentIndex >= destinations.length) {
-      return destinations.length - 1;
+    if (index >= screenCount) {
+      return screenCount - 1;
     }
 
-    return _currentIndex;
+    return index;
+  }
+
+  int _resolveBottomSelectedIndex({
+    required int currentIndex,
+    required int destinationCount,
+  }) {
+    if (destinationCount == 0) {
+      return 0;
+    }
+
+    if (currentIndex < 0) {
+      return 0;
+    }
+
+    if (currentIndex >= destinationCount) {
+      return destinationCount - 1;
+    }
+
+    return currentIndex;
   }
 
   @override
@@ -219,16 +222,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           () => _handleDestinationSelected(chatIndex, authProvider, introLayout),
         );
         final destinations = _buildDestinations(introLayout);
-        final bottomNavIndex = _resolveBottomSelectedIndex(destinations);
-
-        if (_currentIndex >= screens.length) {
-          _currentIndex = 0;
-        }
+        final currentIndex = _resolveCurrentIndex(
+          screenCount: screens.length,
+          aiEnabled: authProvider.aiEnabled,
+        );
+        final bottomNavIndex = _resolveBottomSelectedIndex(
+          currentIndex: currentIndex,
+          destinationCount: destinations.length,
+        );
 
         return Scaffold(
           appBar: _buildTopBar(authProvider, introLayout),
           body: IndexedStack(
-            index: _currentIndex,
+            index: currentIndex,
             children: screens,
           ),
           bottomNavigationBar: NavigationBar(
