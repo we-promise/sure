@@ -9,8 +9,13 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       )
       end_non_cash_balance = account.current_anchor_balance - end_cash_balance
 
-      # Calculates in reverse-chronological order (End of day -> Start of day)
-      account.current_anchor_date.downto(account.opening_anchor_date).map do |date|
+      # Calculates in reverse-chronological order (End of day -> Start of day).
+      # Bound on calculation_start_date (not opening_anchor_date) so entries
+      # backfilled with a date earlier than the opening anchor are still
+      # materialized. Reconciliation waypoints below the anchor reset the
+      # balance on their own dates; use_opening_anchor_for_date? still keys off
+      # the anchor's real date, so the anchor's own treatment is unchanged.
+      account.current_anchor_date.downto(calculation_start_date).map do |date|
         flows = flows_for_date(date)
         valuation = sync_cache.get_valuation(date)
 

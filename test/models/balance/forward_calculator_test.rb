@@ -757,6 +757,72 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_not calculator.incremental?, "Should not be incremental for foreign currency accounts"
   end
 
+  # Regression: a reconciliation (or any entry) backfilled with a date EARLIER
+  # than the opening anchor must still be materialized into Balance rows. The
+  # window is bounded on min(opening_anchor_date, oldest_entry_date), and the
+  # pre-anchor start seeds from zero — each valuation resets the absolute
+  # balance on its own date.
+  test "materializes entries dated before the opening anchor" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "reconciliation", date: 5.days.ago.to_date, balance: 10000 }, # before anchor
+        { type: "opening_anchor",  date: 3.days.ago.to_date, balance: 17000 },
+        { type: "reconciliation", date: 1.day.ago.to_date,  balance: 20000 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    # Window extends back to the earliest entry, not the (later) opening anchor.
+    assert_equal 5.days.ago.to_date, calculated.map(&:date).min
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          # Pre-anchor reconciliation: seeded from 0, valuation sets the balance.
+          date: 5.days.ago.to_date,
+          legacy_balances: { balance: 10000, cash_balance: 10000 },
+          balances: { start: 0, start_cash: 0, start_non_cash: 0, end_cash: 10000, end_non_cash: 0, end: 10000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 10000, non_cash_adjustments: 0 }
+        },
+        {
+          # Carries forward on a day with no entries.
+          date: 4.days.ago.to_date,
+          legacy_balances: { balance: 10000, cash_balance: 10000 },
+          balances: { start: 10000, start_cash: 10000, start_non_cash: 0, end_cash: 10000, end_non_cash: 0, end: 10000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          # Opening anchor resets the balance on its own date.
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 10000, start_cash: 10000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 7000, non_cash_adjustments: 0 }
+        },
+        {
+          # Carries forward on a day with no entries.
+          date: 2.days.ago.to_date,
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago.to_date,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 3000, non_cash_adjustments: 0 }
+        }
+      ]
+    )
+  end
+
   private
     def assert_balances(calculated_data:, expected_balances:)
       # Sort calculated data by date to ensure consistent ordering

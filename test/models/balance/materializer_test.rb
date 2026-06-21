@@ -116,6 +116,46 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
       "Recalculated balance for 2.days.ago should be persisted"
   end
 
+  # Regression: a prior full sync materializes balances for entries dated BEFORE
+  # the opening anchor; a later incremental sync (window after the anchor) must
+  # preserve them. The purge lower bound uses calculation_start_date — the same
+  # bound the calculator uses — not opening_anchor_date.
+  test "incremental sync preserves balances dated before the opening anchor" do
+    # Opening anchor at 5.days.ago, but a reconciliation backfilled earlier.
+    @account.entries.create!(
+      name: "Opening Balance", date: 5.days.ago.to_date, amount: 5000,
+      currency: "USD", entryable: Valuation.new(kind: "opening_anchor")
+    )
+    @account.entries.create!(
+      name: "Backfilled reconciliation", date: 8.days.ago.to_date, amount: 3000,
+      currency: "USD", entryable: Valuation.new(kind: "reconciliation")
+    )
+
+    # Pre-anchor balance materialized by a prior full sync.
+    pre_anchor    = create_balance(account: @account, date: 8.days.ago.to_date, balance: 3000)
+    preserved_mid = create_balance(account: @account, date: 6.days.ago.to_date, balance: 4000)
+
+    recalculated = [
+      Balance.new(
+        date: 2.days.ago.to_date, balance: 15000, cash_balance: 15000, currency: "USD",
+        start_cash_balance: 12000, start_non_cash_balance: 0,
+        cash_inflows: 3000, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
+      )
+    ]
+
+    Balance::ForwardCalculator.any_instance.expects(:calculate).returns(recalculated)
+    Balance::ForwardCalculator.any_instance.stubs(:incremental?).returns(true)
+    Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
+
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 2.days.ago.to_date).materialize_balances
+
+    assert_not_nil @account.balances.find_by(id: pre_anchor.id),
+      "Balance before the opening anchor must be preserved during incremental purge"
+    assert_not_nil @account.balances.find_by(id: preserved_mid.id),
+      "Balance between anchor and window must be preserved"
+  end
+
   test "falls back to full recalculation when window_start_date is given but no prior balance exists" do
     @account.entries.create!(
       name: "Opening Balance",
