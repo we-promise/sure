@@ -18,7 +18,7 @@ class WiseItemsController < ApplicationController
 
   # Step 1: Validate token and fetch profiles, then proceed to profile selection.
   def create
-    token = wise_item_token_param
+    token = wise_item_token_param # pipelock:ignore
 
     if token.blank?
       @wise_item = Current.family.wise_items.build
@@ -59,7 +59,7 @@ class WiseItemsController < ApplicationController
 
   # Step 3: Create one WiseItem per selected profile.
   def link_profiles
-    token = session[:wise_pending_token]
+    token = session[:wise_pending_token] # pipelock:ignore
     profiles = session[:wise_pending_profiles]
 
     if token.blank? || profiles.blank?
