@@ -448,6 +448,8 @@ When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelo
 
 Pipelock scans for prompt injection, DLP violations, and tool poisoning. The external agent does not need Pipelock installed. Sure's Pipelock handles both directions.
 
+If you need audit evidence, configure Pipelock's flight recorder as described in [Pipelock signed action receipts](pipelock.md#signed-action-receipts). `pipelock.enabled=true` gives scanning; receipts require mounted evidence storage plus a receipt-signing key.
+
 **`NO_PROXY` behavior (Helm/Kubernetes only):** The Helm chart's env template sets `NO_PROXY` to include `.svc.cluster.local` and other internal domains. This means in-cluster agent URLs (like `http://agent.namespace.svc.cluster.local:18789`) bypass the forward proxy and go directly. If your agent is in-cluster, its traffic won't be forward-proxy scanned (but MCP callbacks from the agent are still scanned by the reverse proxy). Docker Compose deployments use a different `NO_PROXY` set; check your compose file for the exact values.
 
 **`mcpToolPolicy` note:** The Helm chart's `pipelock.mcpToolPolicy.enabled` defaults to `false`. Pipelock rejects an enabled tool policy with no rules, so the chart ships it off by default. To turn it on, define at least one rule and set `enabled: true`:
@@ -1078,9 +1080,9 @@ ollama pull model-name  # Install a model
    kubectl logs deploy/sure-worker -c sidekiq --tail=50 | grep -i "external\|assistant\|error"
    ```
 
-4. **If using Pipelock:** Check pipelock sidecar logs. A crashed pipelock can block outbound requests:
+4. **If using Pipelock:** Check the Pipelock deployment logs. A crashed Pipelock proxy can block outbound requests:
    ```bash
-   kubectl logs deploy/sure-worker -c pipelock --tail=20
+   kubectl logs deploy/sure-pipelock --tail=20
    ```
 
 ### High Costs

@@ -11,8 +11,11 @@ import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/net_worth_card.dart';
 import '../widgets/currency_filter.dart';
+import '../widgets/sure_icon.dart';
+import '../theme/sure_tokens.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -129,6 +132,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   Future<void> _performManualSync() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
+    final l = AppLocalizations.of(context);
 
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken == null) {
@@ -139,10 +143,10 @@ class DashboardScreenState extends State<DashboardScreen> {
     // Show syncing indicator
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
@@ -150,11 +154,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),
-              SizedBox(width: 12),
-              Text('Syncing data from server...'),
+              const SizedBox(width: 12),
+              Expanded(child: Text(l.dashboardSyncing)),
             ],
           ),
-          duration: Duration(seconds: 30),
+          duration: const Duration(seconds: 30),
         ),
       );
     }
@@ -173,9 +177,9 @@ class DashboardScreenState extends State<DashboardScreen> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error, color: Colors.white),
+                  const SureIcon(SureIcons.circleAlert, color: Colors.white),
                   const SizedBox(width: 12),
-                  const Expanded(child: Text('Sync failed. Please try again.')),
+                  Expanded(child: Text(l.dashboardSyncFailed)),
                 ],
               ),
               backgroundColor: Colors.red,
@@ -191,16 +195,16 @@ class DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(child: Text('Sync failed. Please try again.')),
+                const SureIcon(SureIcons.circleAlert, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(l.dashboardSyncError)),
               ],
             ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -280,6 +284,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleAccountTap(Account account) async {
+    final l = AppLocalizations.of(context);
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -291,10 +296,10 @@ class DashboardScreenState extends State<DashboardScreen> {
     if (result == true && mounted) {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
@@ -302,11 +307,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),
-              SizedBox(width: 12),
-              Text('Refreshing accounts...'),
+              const SizedBox(width: 12),
+              Expanded(child: Text(l.dashboardRefreshing)),
             ],
           ),
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
 
@@ -320,16 +325,16 @@ class DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Accounts updated'),
+                const SureIcon(SureIcons.circleCheck, color: Colors.white),
+                const SizedBox(width: 12),
+                Text(l.dashboardAccountsUpdated),
               ],
             ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 1),
+            duration: const Duration(seconds: 1),
           ),
         );
       }
@@ -352,6 +357,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -365,14 +371,18 @@ class DashboardScreenState extends State<DashboardScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 color: Colors.green.withValues(alpha: 0.1),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.cloud_done, color: Colors.green, size: 18),
-                    SizedBox(width: 8),
+                    const SureIcon(
+                      SureIcons.cloudCheck,
+                      color: Colors.green,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      'Synced',
-                      style: TextStyle(color: Colors.green, fontSize: 13),
+                      l.dashboardSynced,
+                      style: const TextStyle(color: Colors.green, fontSize: 13),
                     ),
                   ],
                 ),
@@ -397,14 +407,14 @@ class DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.error_outline,
+                    SureIcon(
+                      SureIcons.circleAlert,
                       size: 64,
                       color: colorScheme.error,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Failed to load accounts',
+                      l.dashboardErrorLoadingAccounts,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
@@ -416,8 +426,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
                       onPressed: _handleRefresh,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again'),
+                      icon: const SureIcon(SureIcons.refresh),
+                      label: Text(l.commonTryAgain),
                     ),
                   ],
                 ),
@@ -433,27 +443,27 @@ class DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
+                    SureIcon(
+                      SureIcons.wallet,
                       size: 64,
                       color: colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No accounts yet',
+                      l.dashboardNoAccounts,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Add accounts in the web app to see them here.',
+                      l.dashboardNoAccountsSubtitle,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
                       onPressed: _handleRefresh,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Refresh'),
+                      icon: const SureIcon(SureIcons.refresh),
+                      label: Text(l.commonRefresh),
                     ),
                   ],
                 ),
@@ -521,6 +531,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   List<Widget> _buildFilteredAccountsSection(AccountsProvider accountsProvider) {
     final filteredAccounts = _getFilteredAccounts(accountsProvider);
+    final l = AppLocalizations.of(context);
 
     if (filteredAccounts.isEmpty) {
       return [
@@ -530,14 +541,14 @@ class DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(32),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
+                  SureIcon(
+                    SureIcons.wallet,
                     size: 48,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No accounts match the current filter',
+                    l.dashboardFilterEmpty,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -666,28 +677,28 @@ class _CollapsibleTypeHeader extends StatelessWidget {
     required this.onToggle,
   });
 
-  IconData _getTypeIcon() {
+  String _getTypeIconName() {
     switch (accountType) {
       case 'depository':
-        return Icons.account_balance;
+        return SureIcons.landmark;
       case 'credit_card':
-        return Icons.credit_card;
+        return SureIcons.creditCard;
       case 'investment':
-        return Icons.trending_up;
+        return SureIcons.trendingUp;
       case 'loan':
-        return Icons.receipt_long;
+        return SureIcons.receipt;
       case 'property':
-        return Icons.home;
+        return SureIcons.house;
       case 'vehicle':
-        return Icons.directions_car;
+        return SureIcons.car;
       case 'crypto':
-        return Icons.currency_bitcoin;
+        return SureIcons.bitcoin;
       case 'other_asset':
-        return Icons.category;
+        return SureIcons.shapes;
       case 'other_liability':
-        return Icons.payment;
+        return SureIcons.handCoins;
       default:
-        return Icons.account_balance_wallet;
+        return SureIcons.wallet;
     }
   }
 
@@ -701,8 +712,8 @@ class _CollapsibleTypeHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Row(
           children: [
-            Icon(
-              _getTypeIcon(),
+            SureIcon(
+              _getTypeIconName(),
               size: 18,
               color: colorScheme.onSurfaceVariant,
             ),
@@ -710,7 +721,7 @@ class _CollapsibleTypeHeader extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: SureTokens.weightMedium,
                   ),
             ),
             const SizedBox(width: 8),
@@ -724,15 +735,15 @@ class _CollapsibleTypeHeader extends StatelessWidget {
                 count.toString(),
                 style: TextStyle(
                   color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: SureTokens.weightMedium,
                   fontSize: 11,
                 ),
               ),
             ),
             const Spacer(),
-            Icon(
-              isCollapsed ? Icons.expand_more : Icons.expand_less,
-              size: 20,
+            SureIcon(
+              isCollapsed ? SureIcons.chevronDown : SureIcons.chevronUp,
+              size: SureIconSize.md,
               color: colorScheme.onSurfaceVariant,
             ),
           ],

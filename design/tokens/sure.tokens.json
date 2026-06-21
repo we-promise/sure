@@ -11,6 +11,10 @@
     "mono": {
       "$value": "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       "$type": "fontFamily"
+    },
+    "weight": {
+      "medium": { "$value": 500, "$type": "fontWeight" },
+      "semibold": { "$value": 600, "$type": "fontWeight" }
     }
   },
 
@@ -20,11 +24,12 @@
 
     "success":     { "$value": "{color.green.700}",  "$type": "color", "$extensions": { "sure.dark": "{color.green.400}" } },
     "warning":     { "$value": "{color.yellow.600}", "$type": "color", "$extensions": { "sure.dark": "{color.yellow.400}" } },
-    "destructive": { "$value": "{color.red.600}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
+    "destructive": { "$value": "{color.red.500}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
     "info":        { "$value": "{color.blue.600}",   "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
     "shadow":      { "$value": "{color.black|6%}",   "$type": "color", "$extensions": { "sure.dark": "{color.white|8%}" } },
 
     "link":                  { "$value": "{color.blue.600}",         "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
+    "focus-ring":            { "$value": "{color.alpha-black.700}",  "$type": "color", "$extensions": { "sure.dark": "{color.alpha-white.700}" } },
     "tertiary":              { "$value": "{color.alpha-black.100}",  "$type": "color", "$extensions": { "sure.dark": "{color.alpha-white.200}" } },
     "surface":               { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.black}" } },
     "surface-hover":         { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
@@ -333,7 +338,7 @@
     "border-divider":     { "$type": "utility", "$value": "border-tertiary" },
     "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.200}" } },
     "border-solid":       { "$type": "utility", "$value": "{color.black}",           "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.white}" } },
-    "border-destructive": { "$type": "utility", "$value": "{color.red.600}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
+    "border-destructive": { "$type": "utility", "$value": "{color.red.500}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
     "border-inverse":     { "$type": "utility", "$value": "{color.alpha-white.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-black.300}" } },
 
     "button-bg-primary":           { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },

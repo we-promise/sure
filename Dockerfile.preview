@@ -3,7 +3,7 @@
 # Preview Dockerfile for Cloudflare Containers
 # Includes PostgreSQL and Redis for self-contained development testing
 
-ARG RUBY_VERSION=3.4.7
+ARG RUBY_VERSION=3.4.9
 FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
 
 WORKDIR /rails
@@ -48,13 +48,41 @@ RUN groupadd --system --gid 1000 rails && \
     echo "rails ALL=(ALL) NOPASSWD: /usr/bin/pg_ctlcluster, /usr/bin/redis-server" > /etc/sudoers.d/rails && \
     chmod 0440 /etc/sudoers.d/rails
 
-# Configure PostgreSQL to allow local connections
-RUN PG_HBA=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1) && \
-    if [ -n "$PG_HBA" ]; then \
-      echo "local all all trust" > "$PG_HBA" && \
-      echo "host all all 127.0.0.1/32 trust" >> "$PG_HBA" && \
-      echo "host all all ::1/128 trust" >> "$PG_HBA"; \
-    fi
+# Configure PostgreSQL to allow local connections. Target the highest-version
+# cluster's pg_hba.conf -- the same one the entrypoint starts (ls
+# /etc/postgresql | sort -V | tail -1) -- so the trust rules always land on the
+# cluster that actually runs, even if multiple majors are present.
+RUN PG_VERSION="$(ls /etc/postgresql 2>/dev/null | sort -V | tail -1)" && \
+    PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf" && \
+    if [ -z "$PG_VERSION" ] || [ ! -f "$PG_HBA" ]; then \
+      echo "ERROR: pg_hba.conf not found for cluster '${PG_VERSION:-none}'; cannot configure local trust" >&2; \
+      exit 1; \
+    fi && \
+    echo "local all all trust" > "$PG_HBA" && \
+    echo "host all all 127.0.0.1/32 trust" >> "$PG_HBA" && \
+    echo "host all all ::1/128 trust" >> "$PG_HBA"
+
+# Use file-backed dynamic shared memory instead of POSIX /dev/shm.
+# Cloudflare Containers provide only a tiny /dev/shm, and PostgreSQL's default
+# dynamic_shared_memory_type = posix FATALs on startup there with
+# "could not resize shared memory segment ... No space left on device", which
+# kills the container before it can serve a port. mmap keeps DSM in the data
+# directory ($PGDATA/pg_dynshmem), removing the /dev/shm dependency. Local
+# Docker hides this because its default /dev/shm is 64MB.
+#
+# Select the highest-version cluster's config -- the same one the entrypoint
+# starts (ls /etc/postgresql | sort -V | tail -1) -- so the override always
+# lands on the cluster that actually runs, even if multiple majors are present.
+RUN PG_VERSION="$(ls /etc/postgresql 2>/dev/null | sort -V | tail -1)" && \
+    PG_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf" && \
+    if [ -z "$PG_VERSION" ] || [ ! -f "$PG_CONF" ]; then \
+      echo "ERROR: postgresql.conf not found for cluster '${PG_VERSION:-none}'; cannot disable /dev/shm DSM dependency" >&2; \
+      exit 1; \
+    fi && \
+    sed -i 's/^[[:space:]]*dynamic_shared_memory_type[[:space:]]*=/# &/' "$PG_CONF" && \
+    printf '\n# Preview: avoid /dev/shm dependency (small in Cloudflare Containers)\ndynamic_shared_memory_type = mmap\n' >> "$PG_CONF" && \
+    grep -qx 'dynamic_shared_memory_type = mmap' "$PG_CONF" && \
+    echo "Configured dynamic_shared_memory_type=mmap in $PG_CONF"
 
 # Create database directory with correct permissions
 RUN mkdir -p /var/run/postgresql && \
@@ -72,17 +100,24 @@ set -e
 
 cd /rails
 
-emit_status() {
+# Diagnostics posts are best-effort and must NEVER stall boot: the worker's
+# Durable Object can be unresponsive while it waits for this container's port,
+# so an unbounded curl here deadlocks startup against the port check.
+emit_status_sync() {
   if [ -n "$PREVIEW_ORIGIN" ] && [ -n "$PREVIEW_DIAGNOSTICS_NONCE" ]; then
     local stage="$1"
     local detail="$2"
     local payload
     payload=$(STAGE="$stage" DETAIL="$detail" ruby -rjson -e 'print JSON.generate({stage: ENV.fetch("STAGE"), detail: ENV.fetch("DETAIL", "")})' 2>/dev/null) || return 0
-    curl -fsS -X POST "$PREVIEW_ORIGIN/_container_event" \
+    curl -fsS --connect-timeout 2 --max-time 5 -X POST "$PREVIEW_ORIGIN/_container_event" \
       -H 'content-type: application/json' \
       -H "x-preview-diagnostics-nonce: $PREVIEW_DIAGNOSTICS_NONCE" \
       --data "$payload" >/dev/null || true
   fi
+}
+
+emit_status() {
+  emit_status_sync "$1" "$2" &
 }
 
 summarize_log_tail() {
@@ -104,7 +139,12 @@ summarize_log_tail() {
 fail_preview() {
   local detail="$1"
   trap - ERR
-  emit_status failed "$detail"
+  # Always log to stderr too: the HTTP diagnostics channel can be unreachable
+  # while the worker's Durable Object is still waiting for this container's
+  # port, but stderr is captured by Cloudflare container observability, so the
+  # real reason survives even when the event POST does not.
+  echo "PREVIEW FAILED: ${detail}" >&2
+  emit_status_sync failed "$detail"
   exit 1
 }
 
@@ -126,8 +166,59 @@ postgres_cluster_snapshot() {
   printf '%s' "$snapshot"
 }
 
-trap 'emit_status failed "preview-entrypoint failed on line ${LINENO}"' ERR
+trap 'emit_status_sync failed "preview-entrypoint failed on line ${LINENO}"' ERR
 emit_status boot "preview-entrypoint started"
+
+# Bind :3000 immediately with a tiny placeholder responder. Cloudflare's
+# container supervisor only waits ~20s for the port, while the full stack
+# (redis, postgres, migrations) needs 60s+ on a basic instance. The
+# placeholder answers 503 with a meta-refresh; the worker still gates
+# previewReady on the real Rails /up probe and sample data, so readiness
+# semantics are unchanged. It is replaced by the real server below.
+ruby -rsocket -e '
+  server = TCPServer.new("0.0.0.0", 3000)
+  body = "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"3\"><title>Sure preview warming</title></head><body>Sure preview is booting (database setup in progress). This page refreshes automatically.</body></html>"
+  loop do
+    client = begin
+      server.accept
+    rescue StandardError
+      next
+    end
+    begin
+      # Never read from the client: the response is static, and a blocking read
+      # would let one silent connection (e.g. a bare TCP port probe) wedge this
+      # single-threaded loop and starve every later probe.
+      client.write("HTTP/1.1 503 Service Unavailable\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: #{body.bytesize}\r\nRetry-After: 3\r\nConnection: close\r\n\r\n#{body}")
+    rescue StandardError
+    ensure
+      begin
+        client.close
+      rescue StandardError
+      end
+    end
+  end
+' >/tmp/port-placeholder.log 2>&1 &
+PLACEHOLDER_PID=$!
+
+# Confirm the placeholder actually bound :3000 before reporting it. A plain
+# TCP connect is used because the placeholder intentionally answers 503.
+PLACEHOLDER_BOUND=0
+for i in {1..10}; do
+  if (exec 3<>/dev/tcp/127.0.0.1/3000) 2>/dev/null; then
+    PLACEHOLDER_BOUND=1
+    break
+  fi
+  if ! kill -0 "$PLACEHOLDER_PID" 2>/dev/null; then
+    break
+  fi
+  sleep 0.2
+done
+if [ "$PLACEHOLDER_BOUND" -eq 1 ]; then
+  emit_status port-placeholder "bound :3000 placeholder responder (pid ${PLACEHOLDER_PID})"
+else
+  echo "Warning: :3000 placeholder did not come up; continuing boot" >&2
+  emit_status port-placeholder-missing "placeholder responder failed to bind :3000: $(summarize_log_tail /tmp/port-placeholder.log port-placeholder)"
+fi
 
 REDIS_READY=0
 POSTGRES_READY=0
@@ -229,6 +320,11 @@ if psql "$DATABASE_URL" -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_
 else
   emit_status demo-data-deferred "deferring demo data creation until after rails boot"
 fi
+
+# Release :3000 for the real server. The brief listener gap is handled by the
+# worker, which catches containerFetch errors and serves its wait page.
+kill "$PLACEHOLDER_PID" 2>/dev/null || true
+wait "$PLACEHOLDER_PID" 2>/dev/null || true
 
 # Execute the main command with an internal readiness probe
 echo "Starting Rails server..."
