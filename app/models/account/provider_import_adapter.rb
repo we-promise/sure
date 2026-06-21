@@ -77,13 +77,18 @@ class Account::ProviderImportAdapter
             # Mirrors the lock! in the auto-claim path; prevents a concurrent split! from
             # creating children between our split_parent? check and the child-clearing loop.
             entry.lock!
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+            # A plain "excluded" entry is one the user deliberately excluded (not a split
+            # parent). Leave those untouched — only split parents, which are also excluded,
+            # should have their pending flag cleared when the booked version arrives.
+            # "user_modified" entries keep the original bypass behavior.
+            unless skip_reason == "excluded" && !entry.split_parent?
+              if entry.transaction.pending?
+                entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
 
-              # For split parents, also clear the inherited pending flag from every child so
-              # they stop showing the pending badge and re-enter analytics.
-              clear_split_child_pending_flags(entry)
+                # For split parents, also clear the inherited pending flag from every child so
+                # they stop showing the pending badge and re-enter analytics.
+                clear_split_child_pending_flags(entry)
+              end
             end
           end
           record_skip(entry, skip_reason)
@@ -195,7 +200,7 @@ class Account::ProviderImportAdapter
       # must clear the stale pending flag here before the final save.
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
-        if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+        if entry.transaction.pending?
           entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
         end
       end

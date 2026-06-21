@@ -409,7 +409,7 @@ class Entry < ApplicationRecord
     pending_extra = begin
       parent_extra = entryable.try(:extra) || {}
       Transaction::PENDING_PROVIDERS.each_with_object({}) do |provider, hash|
-        if parent_extra.is_a?(Hash) && parent_extra.dig(provider, "pending")
+        if parent_extra.is_a?(Hash) && ActiveModel::Type::Boolean.new.cast(parent_extra.dig(provider, "pending"))
           hash[provider] = { "pending" => true }
         end
       end
