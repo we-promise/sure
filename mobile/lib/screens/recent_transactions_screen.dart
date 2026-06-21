@@ -6,6 +6,7 @@ import '../models/account.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
+import '../theme/sure_tokens.dart';
 import '../utils/amount_parser.dart';
 import '../widgets/money_text.dart';
 
@@ -232,7 +233,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       ),
       title: Text(
         transaction.name,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        style: const TextStyle(fontWeight: SureTokens.weightMedium),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +275,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
             : '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
         trend: moneyTrend,
         style: const TextStyle(
-          fontWeight: FontWeight.w500,
+          fontWeight: SureTokens.weightMedium,
           fontSize: 16,
         ),
       ),
