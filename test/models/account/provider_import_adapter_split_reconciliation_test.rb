@@ -319,4 +319,37 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
       refute child.entryable.pending?, "split child pending flag should be cleared via same-external-id bypass"
     end
   end
+
+  # --- The bypass must NOT touch a user-excluded standalone pending entry ---
+
+  test "same-external-id bypass leaves a user-excluded standalone pending entry untouched" do
+    entry = create_transaction(
+      account: @account,
+      amount: 45.00,
+      currency: "USD",
+      date: 3.days.ago.to_date,
+      external_id: "eb_excluded_standalone",
+      source: "enable_banking"
+    )
+    entry.transaction.update!(extra: { "enable_banking" => { "pending" => true } })
+    # User manually excluded this standalone pending transaction (not a split parent).
+    entry.update!(excluded: true)
+
+    assert_no_difference "@account.entries.count" do
+      @adapter.import_transaction(
+        external_id: "eb_excluded_standalone",
+        amount: 45.00,
+        currency: "USD",
+        date: Date.current,
+        name: "SUPERMARKET",
+        source: "enable_banking"
+        # no pending extra → incoming is booked, reaches the excluded bypass branch
+      )
+    end
+
+    entry.transaction.reload
+    assert entry.transaction.pending?,
+      "a user-excluded standalone pending entry must keep its pending flag; only split parents are cleared by the bypass"
+    assert entry.reload.excluded?, "entry should remain excluded"
+  end
 end
