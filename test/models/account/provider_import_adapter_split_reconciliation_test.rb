@@ -320,6 +320,35 @@ class Account::ProviderImportAdapterSplitReconciliationTest < ActiveSupport::Tes
     end
   end
 
+  # --- The bypass must NOT clear a split parent whose booked amount differs ---
+
+  test "same-external-id bypass leaves split family pending when booked amount differs (tip/FX/partial post)" do
+    pending_entry = create_split_pending(amount: 60.00, external_id: "eb_bypass_mismatch", source: "enable_banking")
+    child_ids = pending_entry.child_entries.pluck(:id)
+
+    # Booked version arrives with a different amount (e.g. a tip was added). The bypass must
+    # not silently re-enter children into analytics against stale split amounts.
+    assert_no_difference "@account.entries.count" do
+      @adapter.import_transaction(
+        external_id: "eb_bypass_mismatch",
+        amount: 72.00,
+        currency: "USD",
+        date: Date.current,
+        name: "RESTAURANT",
+        source: "enable_banking"
+        # no pending extra → incoming is booked
+      )
+    end
+
+    pending_entry.transaction.reload
+    assert pending_entry.transaction.pending?, "split parent must stay pending when the booked amount differs"
+    assert_equal 60.00.to_d, pending_entry.reload.amount, "split parent amount must be untouched on mismatch"
+
+    Entry.where(id: child_ids).each do |child|
+      assert child.entryable.pending?, "split child must stay pending when the booked amount differs"
+    end
+  end
+
   # --- The bypass must NOT touch a user-excluded standalone pending entry ---
 
   test "same-external-id bypass leaves a user-excluded standalone pending entry untouched" do

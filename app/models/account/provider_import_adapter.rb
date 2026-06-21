@@ -81,7 +81,15 @@ class Account::ProviderImportAdapter
             # parent). Leave those untouched — only split parents, which are also excluded,
             # should have their pending flag cleared when the booked version arrives.
             # "user_modified" entries keep the original bypass behavior.
-            unless skip_reason == "excluded" && !entry.split_parent?
+            #
+            # For an excluded split parent, only clear pending flags when the booked amount
+            # matches the parent exactly. A tip/FX/partial-post amount change must not silently
+            # re-enter split children into analytics against stale split amounts; leave the
+            # parent pending so the mismatch surfaces for review (mirrors the auto-claim gate).
+            split_parent_amount_mismatch =
+              skip_reason == "excluded" && entry.split_parent? && entry.amount != amount
+
+            unless (skip_reason == "excluded" && !entry.split_parent?) || split_parent_amount_mismatch
               if entry.transaction.pending?
                 entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
 
@@ -158,10 +166,19 @@ class Account::ProviderImportAdapter
           # Note: Plaid's pending_transaction_id link (priority 1 above) does NOT verify
           # amount equality, so this gate is required for both priority-1 and priority-2 paths.
           if pending_match.split_parent? && pending_match.amount != amount
-            Rails.logger.info(
-              "Skipping pending→posted auto-claim: entry #{pending_match.id} (#{pending_match.name}) " \
-              "is a split parent with amount #{pending_match.amount}, posted amount=#{amount}. " \
-              "Storing potential_posted_match suggestion instead."
+            # Keep monetary amounts and transaction names out of info logs; record the skip
+            # as a support-visible diagnostic with non-sensitive identifiers only.
+            DebugLogEntry.capture(
+              category: "provider_import",
+              level: "info",
+              message: "Skipped pending→posted auto-claim for split parent amount mismatch; storing suggestion instead",
+              source: "account.provider_import_adapter",
+              provider_key: source,
+              family: account.family,
+              metadata: {
+                pending_entry_id: pending_match.id,
+                posted_external_id: external_id
+              }
             )
             skipped_split_parent_match = pending_match
             pending_match = nil
@@ -200,8 +217,17 @@ class Account::ProviderImportAdapter
       # must clear the stale pending flag here before the final save.
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
+        # Lock before clearing so a concurrent split! cannot copy pending flags onto freshly
+        # created children between our check and the parent booking, which would otherwise
+        # strand those children as permanently pending (mirrors the auto-claim lock above).
+        # Skip when the entry already has unpersisted changes: that only happens on the
+        # auto-claim path, which already acquired the row lock earlier.
+        entry.lock! if entry.persisted? && !entry.changed?
         if entry.transaction.pending?
           entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
+          # Defensive: if this entry became a split parent, drop the inherited pending flag
+          # from its children too (no-op when there are no children).
+          clear_split_child_pending_flags(entry)
         end
       end
 
@@ -319,7 +345,18 @@ class Account::ProviderImportAdapter
             posted_amount: amount,
             confidence: "high"
           )
-          Rails.logger.info("Suggested potential duplicate (authoritative link): split parent #{skipped_split_parent_match.id} (#{skipped_split_parent_match.name}, #{skipped_split_parent_match.amount}) may match posted #{entry.name} (#{amount})")
+          DebugLogEntry.capture(
+            category: "provider_import",
+            level: "info",
+            message: "Stored authoritative split-parent duplicate suggestion",
+            source: "account.provider_import_adapter",
+            provider_key: source,
+            family: account.family,
+            metadata: {
+              pending_entry_id: skipped_split_parent_match.id,
+              posted_entry_id: entry.id
+            }
+          )
         rescue ActiveRecord::RecordInvalid => e
           Rails.logger.warn("Failed to store split-parent duplicate suggestion for entry #{skipped_split_parent_match.id}: #{e.message}")
         end
