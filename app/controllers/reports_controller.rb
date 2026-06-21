@@ -361,7 +361,8 @@ class ReportsController < ApplicationController
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], exclude_from_reports: false })
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
@@ -373,7 +374,8 @@ class ReportsController < ApplicationController
       trades = Trade
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], exclude_from_reports: false })
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
 
@@ -494,7 +496,8 @@ class ReportsController < ApplicationController
       # Eager-load security, account, and accountable to avoid N+1
       sell_trades = Current.family.trades
         .joins(entry: :account)
-        .where(entries: { date: @period.date_range }, accounts: { exclude_from_reports: [ false, nil ] })
+        .where(entries: { date: @period.date_range })
+        .merge(Account.included_in_reports)
         .where("trades.qty < 0")
         .includes(:security, entry: { account: :accountable })
         .to_a
@@ -665,7 +668,8 @@ class ReportsController < ApplicationController
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], exclude_from_reports: false })
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
@@ -702,7 +706,8 @@ class ReportsController < ApplicationController
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], exclude_from_reports: false })
+        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
+        .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])

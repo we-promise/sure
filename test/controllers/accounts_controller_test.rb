@@ -301,6 +301,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not @account.exclude_from_reports?
   end
 
+  test "toggle_exclude_from_reports requires write permission" do
+    sign_in users(:family_member)
+
+    patch toggle_exclude_from_reports_account_url(accounts(:credit_card))
+    assert_redirected_to account_url(accounts(:credit_card))
+  end
+
   test "select_provider shows available providers" do
     get select_provider_account_url(@account)
     assert_response :success

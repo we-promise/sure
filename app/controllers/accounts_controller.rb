@@ -106,9 +106,11 @@ class AccountsController < ApplicationController
     redirect_to accounts_path
   end
 
+  # Toggles the exclude_from_reports flag on the account and redirects to the
+  # account list. The flag controls whether the account's data appears in
+  # financial reports, dashboards, and exports.
   def toggle_exclude_from_reports
-    Account.where(id: @account.id).update_all("exclude_from_reports = NOT exclude_from_reports")
-    @account.reload
+    @account.update!(exclude_from_reports: !@account.exclude_from_reports?)
     redirect_to accounts_path
   end
 

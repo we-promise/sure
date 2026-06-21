@@ -19,6 +19,8 @@ class BalanceSheet::AccountTotals
     AccountRow = Data.define(:account, :converted_balance, :is_syncing, :included_in_finances, :exclude_from_reports) do
       def syncing? = is_syncing
       def included_in_finances? = included_in_finances
+      # Whether this account is excluded from financial reports, dashboards,
+      # and exports.
       def exclude_from_reports? = exclude_from_reports
 
       # Allows Rails path helpers to generate URLs from the wrapper
