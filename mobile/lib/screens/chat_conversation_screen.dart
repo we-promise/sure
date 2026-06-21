@@ -17,9 +17,13 @@ class ChatConversationScreen extends StatefulWidget {
   /// Null means this is a brand-new chat — it will be created on first send.
   final String? chatId;
 
+  /// When true, shows a hamburger menu that opens a drawer listing all chats.
+  final bool showDrawer;
+
   const ChatConversationScreen({
     super.key,
     required this.chatId,
+    this.showDrawer = false,
   });
 
   @override
@@ -29,6 +33,7 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /// Tracks the real chat ID once the chat has been created.
   String? _chatId;
@@ -36,6 +41,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   ChatProvider? _chatProvider;
   bool _listenerAdded = false;
   bool _isSendInFlight = false;
+
+  // Drawer selection state
+  bool _drawerSelectionMode = false;
+  final Set<String> _selectedChatIds = {};
 
   @override
   void initState() {
@@ -52,6 +61,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     });
     if (_chatId != null) {
       _loadChat();
+    }
+    if (widget.showDrawer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadChats());
     }
   }
 
@@ -249,6 +261,269 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
   }
 
+  // ── Drawer helpers ──────────────────────────────────────────────────────────
+
+  Future<void> _loadChats() async {
+    if (!mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken == null) return;
+    await chatProvider.fetchChats(accessToken: accessToken);
+  }
+
+  void _startNewChat() {
+    _scaffoldKey.currentState?.closeDrawer();
+    if (_chatId == null) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    setState(() => _chatId = null);
+    chatProvider.clearCurrentChat();
+  }
+
+  Future<void> _switchToChat(String chatId) async {
+    _scaffoldKey.currentState?.closeDrawer();
+    if (chatId == _chatId) return;
+    // Clear currentChat immediately so the screen shows loading state and
+    // _sendMessage cannot target the previous thread while the fetch is in
+    // flight. fetchChat never clears currentChat on its own, so without this
+    // the old messages stay visible (and writable) until the response arrives.
+    Provider.of<ChatProvider>(context, listen: false).clearCurrentChat();
+    setState(() => _chatId = chatId);
+    await _loadChat();
+  }
+
+  Future<void> _deleteSelectedChats() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Chats'),
+        content: Text(
+            'Delete ${_selectedChatIds.length} chat(s)? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete',
+                style: TextStyle(
+                    color: Theme.of(ctx).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken == null) return;
+    final success = await chatProvider.deleteMultipleChats(
+      accessToken: accessToken,
+      chatIds: _selectedChatIds.toList(),
+    );
+    if (!mounted) return;
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(chatProvider.errorMessage ?? 'Failed to delete chats')),
+      );
+    }
+    // Sync _chatId from the provider's actual post-delete state rather than
+    // the pre-delete selection; deleteMultipleChats may partially fail so the
+    // current chat may still exist even if it was in the selection set.
+    setState(() {
+      _drawerSelectionMode = false;
+      _selectedChatIds.clear();
+      _chatId = chatProvider.currentChat?.id;
+    });
+  }
+
+  String _formatChatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+  }
+
+  Widget _buildDrawer(ColorScheme colorScheme) {
+    return Drawer(
+      width: MediaQuery.of(context).size.width,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header — changes when in selection mode
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+              child: _drawerSelectionMode
+                  ? Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Cancel',
+                          onPressed: () => setState(() {
+                            _drawerSelectionMode = false;
+                            _selectedChatIds.clear();
+                          }),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${_selectedChatIds.length} selected',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        Consumer<ChatProvider>(
+                          builder: (context, chatProvider, _) {
+                            final allIds =
+                                chatProvider.chats.map((c) => c.id).toList();
+                            final allSelected =
+                                _selectedChatIds.length == allIds.length &&
+                                    allIds.isNotEmpty;
+                            return IconButton(
+                              icon: Icon(allSelected
+                                  ? Icons.deselect
+                                  : Icons.select_all),
+                              tooltip:
+                                  allSelected ? 'Deselect all' : 'Select all',
+                              onPressed: () => setState(() {
+                                if (allSelected) {
+                                  _selectedChatIds.clear();
+                                } else {
+                                  _selectedChatIds
+                                    ..clear()
+                                    ..addAll(allIds);
+                                }
+                              }),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Delete selected',
+                          onPressed: _selectedChatIds.isNotEmpty
+                              ? _deleteSelectedChats
+                              : null,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Chats',
+                              style: Theme.of(context).textTheme.titleLarge),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'New Chat',
+                          onPressed: _startNewChat,
+                        ),
+                      ],
+                    ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: Consumer<ChatProvider>(
+                builder: (context, chatProvider, _) {
+                  if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (chatProvider.chats.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'No chats yet.\nStart a new conversation!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: _loadChats,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(top: 4),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: chatProvider.chats.length,
+                      itemBuilder: (context, index) {
+                        final chat = chatProvider.chats[index];
+                        final isActive =
+                            !_drawerSelectionMode && chat.id == _chatId;
+                        final isSelected =
+                            _selectedChatIds.contains(chat.id);
+                        return ListTile(
+                          selected: isActive,
+                          selectedTileColor: colorScheme.primaryContainer
+                              .withValues(alpha: 0.3),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 2),
+                          leading: _drawerSelectionMode
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) => setState(() {
+                                    if (isSelected) {
+                                      _selectedChatIds.remove(chat.id);
+                                    } else {
+                                      _selectedChatIds.add(chat.id);
+                                    }
+                                  }),
+                                )
+                              : null,
+                          title: Text(
+                            chat.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isActive
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: chat.lastMessageAt != null
+                              ? Text(
+                                  _formatChatDateTime(chat.lastMessageAt!),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                )
+                              : null,
+                          onTap: _drawerSelectionMode
+                              ? () => setState(() {
+                                    if (isSelected) {
+                                      _selectedChatIds.remove(chat.id);
+                                    } else {
+                                      _selectedChatIds.add(chat.id);
+                                    }
+                                  })
+                              : () => _switchToChat(chat.id),
+                          onLongPress: _drawerSelectionMode
+                              ? null
+                              : () => setState(() {
+                                    _drawerSelectionMode = true;
+                                    _selectedChatIds.add(chat.id);
+                                  }),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Message helpers ─────────────────────────────────────────────────────────
+
   String _formatTime(DateTime dateTime) {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
@@ -260,32 +535,57 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: widget.showDrawer ? _buildDrawer(colorScheme) : null,
+      onDrawerChanged: (isOpen) {
+        if (!isOpen && _drawerSelectionMode) {
+          setState(() {
+            _drawerSelectionMode = false;
+            _selectedChatIds.clear();
+          });
+        }
+      },
       appBar: AppBar(
+        leading: widget.showDrawer
+            ? IconButton(
+                icon: const Icon(Icons.menu),
+                tooltip: 'Chats',
+                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              )
+            : null,
         title: Consumer<ChatProvider>(
           builder: (context, chatProvider, _) {
             final title = chatProvider.currentChat?.title ?? 'New Conversation';
-            return GestureDetector(
-              onTap: _chatId != null ? _editTitle : null,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      title,
-                      overflow: TextOverflow.ellipsis,
+            final canRename = _chatId != null;
+            return Tooltip(
+              message: canRename ? 'Long-press to rename' : '',
+              child: GestureDetector(
+                onLongPress: canRename ? _editTitle : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  if (_chatId != null) ...[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.edit, size: 18),
+                    if (canRename) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             );
           },
         ),
         actions: [
-          if (widget.chatId != null)
+          if (!widget.showDrawer && widget.chatId != null)
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => _loadChat(forceRefresh: true),
