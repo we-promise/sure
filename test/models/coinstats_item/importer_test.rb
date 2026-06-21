@@ -458,7 +458,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_balances)
-      .with("ethereum:0xworking,ethereum:0xfailing")
+      .with("ethereum:0xfailing,ethereum:0xworking")
       .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
@@ -475,7 +475,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_transactions)
-      .with("ethereum:0xworking,ethereum:0xfailing")
+      .with("ethereum:0xfailing,ethereum:0xworking")
       .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
@@ -551,7 +551,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_balances)
-      .with("ethereum:0xworking,dogecoin:Ddoge123")
+      .with("dogecoin:Ddoge123,ethereum:0xworking")
       .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
@@ -568,7 +568,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_transactions)
-      .with("ethereum:0xworking,dogecoin:Ddoge123")
+      .with("dogecoin:Ddoge123,ethereum:0xworking")
       .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
@@ -650,12 +650,12 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     AccountProvider.create!(account: account2, provider: coinstats_account2)
 
     @mock_provider.expects(:get_wallet_balances)
-      .with("ethereum:0xeth123,dogecoin:Ddoge456")
+      .with("dogecoin:Ddoge456,ethereum:0xeth123")
       .raises(Provider::Coinstats::Error.new("CoinStats timeout"))
 
     bulk_transactions_response = []
     @mock_provider.expects(:get_wallet_transactions)
-      .with("ethereum:0xeth123,dogecoin:Ddoge456")
+      .with("dogecoin:Ddoge456,ethereum:0xeth123")
       .returns(success_response(bulk_transactions_response))
 
     assert_difference "DebugLogEntry.count", 3 do
@@ -729,7 +729,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_balances)
-      .with("ethereum:0xeth123,bitcoin:bc1qbtc456")
+      .with("bitcoin:bc1qbtc456,ethereum:0xeth123")
       .returns(success_response(bulk_response))
 
     @mock_provider.expects(:extract_wallet_balance)
@@ -756,7 +756,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     ]
 
     @mock_provider.expects(:get_wallet_transactions)
-      .with("ethereum:0xeth123,bitcoin:bc1qbtc456")
+      .with("bitcoin:bc1qbtc456,ethereum:0xeth123")
       .returns(success_response(bulk_transactions_response))
 
     @mock_provider.expects(:extract_wallet_transactions)
