@@ -79,10 +79,8 @@ class Assistant::Function
       user.family
     end
 
-    UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-
     def valid_uuid?(str)
-      UUID_PATTERN.match?(str.to_s)
+      UuidFormat.valid?(str)
     end
 
     # To save tokens, we provide the AI metadata about the series and a flat array of
