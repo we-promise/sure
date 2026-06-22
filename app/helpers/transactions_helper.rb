@@ -29,7 +29,7 @@ module TransactionsHelper
       .where.not("entries.id" => entry.id)
       .order(date: :desc)
       .limit(50)
-      .map { |e| ["#{e.name} (#{e.date.strftime('%b %-d, %Y')} · #{format_money(e.amount_money)})", e.entryable_id] }
+      .map { |e| [ "#{e.name} (#{e.date.strftime('%b %-d, %Y')} · #{format_money(e.amount_money)})", e.entryable_id ] }
   end
 
   def in_split_group?(entry, params_grouped)
