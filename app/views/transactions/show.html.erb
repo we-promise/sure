@@ -364,15 +364,7 @@
                     <div class="pl-2 border-l-2 border-surface-inset space-y-1">
                       <p class="text-xs text-subdued"><%= t(".refund_link_label") %></p>
                       <%= ef.collection_select :refund_of_transaction_id,
-                            @entry.account.entries
-                              .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-                              .where(transactions: { kind: "standard" })
-                              .where("entries.amount > 0")
-                              .where("entries.date >= ?", 1.year.ago)
-                              .where.not("entries.id" => @entry.id)
-                              .order(date: :desc)
-                              .limit(50)
-                              .map { |e| ["#{e.name} (#{e.date.strftime('%b %-d, %Y')} · #{format_money(e.amount_money)})", e.entryable_id] },
+                            refund_original_options(@entry),
                             :last, :first,
                             { include_blank: t(".refund_no_link"), label: false },
                             class: "form-field__input",
