@@ -132,7 +132,57 @@ class Chat < ApplicationRecord
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
+  # Handles the case where an assistant response was never delivered — the
+  # background worker never ran `AssistantResponseJob` (or it died before it
+  # could broadcast an error), leaving a `pending` "Thinking…" bubble forever.
+  # Mirrors `Assistant::Builtin`'s rescue: clears the dead bubble, records a
+  # friendly error + a debug log entry, and broadcasts the error/Retry UI.
+  def handle_undelivered_response!(assistant_message)
+    return false unless assistant_message.is_a?(AssistantMessage) && assistant_message.pending?
+
+    capture_undelivered_response!(assistant_message)
+
+    update!(error: undelivered_error_payload(assistant_message).to_json)
+
+    if assistant_message.content.blank?
+      assistant_message.destroy
+    else
+      # Demote partially-streamed turns to `failed` so history builders exclude them.
+      assistant_message.update_columns(status: "failed")
+    end
+
+    broadcast_append target: messages_target, partial: "chats/error", locals: { chat: self }
+    true
+  end
+
   private
+
+    def undelivered_error_payload(assistant_message)
+      {
+        message: I18n.t("chat.errors.no_response"),
+        technical_message: "Assistant response was never delivered. The background worker did not process " \
+          "AssistantResponseJob for message ##{assistant_message.id} (model #{assistant_message.ai_model}). " \
+          "#{BackgroundJobHealth.summary}",
+        type: "DeliveryTimeout"
+      }
+    end
+
+    def capture_undelivered_response!(assistant_message)
+      DebugLogEntry.capture(
+        category: "assistant",
+        level: "error",
+        message: "Assistant response not delivered — background worker likely down or not polling the high_priority queue",
+        source: "chat.delivery_timeout",
+        metadata: {
+          chat_id: id,
+          message_id: assistant_message.id,
+          ai_model: assistant_message.ai_model,
+          waited_seconds: (Time.current - assistant_message.created_at).round,
+          background_jobs: BackgroundJobHealth.snapshot
+        },
+        family: user&.family
+      )
+    end
 
     def build_error_payload(error)
       technical_message = error_message_for(error)
