@@ -37,11 +37,7 @@ void main() {
 
       final deco = tester
           .widget<Container>(
-            find
-                .descendant(
-                    of: find.byType(NetWorthCard),
-                    matching: find.byType(Container))
-                .first,
+            find.byKey(const ValueKey('netWorthCardChrome')),
           )
           .decoration as BoxDecoration;
 

@@ -32,6 +32,7 @@ class NetWorthCard extends StatelessWidget {
     final palette = SureColors.of(context).palette;
 
     return Container(
+      key: const ValueKey('netWorthCardChrome'),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         // Align the hero card with the Sure card chrome (mirrors SureCard /

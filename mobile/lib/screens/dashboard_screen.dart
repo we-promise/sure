@@ -182,9 +182,14 @@ class DashboardScreenState extends State<DashboardScreen> {
             SnackBar(
               content: Row(
                 children: [
-                  const SureIcon(SureIcons.circleAlert, color: Colors.white),
+                  SureIcon(SureIcons.circleAlert, color: palette.textInverse),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(l.dashboardSyncFailed)),
+                  Expanded(
+                    child: Text(
+                      l.dashboardSyncFailed,
+                      style: TextStyle(color: palette.textInverse),
+                    ),
+                  ),
                 ],
               ),
               backgroundColor: palette.destructive,
@@ -203,9 +208,14 @@ class DashboardScreenState extends State<DashboardScreen> {
           SnackBar(
             content: Row(
               children: [
-                const SureIcon(SureIcons.circleAlert, color: Colors.white),
+                SureIcon(SureIcons.circleAlert, color: palette.textInverse),
                 const SizedBox(width: 12),
-                Expanded(child: Text(l.dashboardSyncError)),
+                Expanded(
+                  child: Text(
+                    l.dashboardSyncError,
+                    style: TextStyle(color: palette.textInverse),
+                  ),
+                ),
               ],
             ),
             backgroundColor: palette.destructive,
@@ -334,9 +344,12 @@ class DashboardScreenState extends State<DashboardScreen> {
           SnackBar(
             content: Row(
               children: [
-                const SureIcon(SureIcons.circleCheck, color: Colors.white),
+                SureIcon(SureIcons.circleCheck, color: palette.textInverse),
                 const SizedBox(width: 12),
-                Text(l.dashboardAccountsUpdated),
+                Text(
+                  l.dashboardAccountsUpdated,
+                  style: TextStyle(color: palette.textInverse),
+                ),
               ],
             ),
             backgroundColor: palette.success,
