@@ -16,7 +16,7 @@ class Family::Syncer
   end
 
   def perform_post_sync
-    family.auto_match_transfers!
+    family.auto_match_transfers!(since_date: 90.days.ago.to_date)
 
     Rails.logger.info("Applying rules for family #{family.id}")
     family.rules.where(active: true).each do |rule|
