@@ -11,6 +11,10 @@
     "mono": {
       "$value": "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       "$type": "fontFamily"
+    },
+    "weight": {
+      "medium": { "$value": 500, "$type": "fontWeight" },
+      "semibold": { "$value": 600, "$type": "fontWeight" }
     }
   },
 

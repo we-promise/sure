@@ -112,12 +112,33 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :2.5.0) for production
+    image: ghcr.io/luckypipewrench/pipelock:2.8.0
+    user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
     volumes:
       - ./pipelock.example.yaml:/etc/pipelock/pipelock.yaml:ro
+      # Optional signed receipts (flight recorder). Off until you create the
+      # dirs, generate a key, uncomment the two mounts below, and uncomment
+      # flight_recorder.dir + signing_key_path in pipelock.example.yaml.
+      # Create the dirs yourself first so they are owned by your host user
+      # (Docker would otherwise create missing bind-mount paths as root, which
+      # the uid-1000 Pipelock process cannot write to):
+      #   mkdir -p ./pipelock-evidence ./pipelock-keys
+      # Generate the receipt-signing key via the image (no host binary needed;
+      # --out must be an absolute path inside the container):
+      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+      #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
+      # The key is written 0600 owned by uid 1000 (Pipelock's default user). If
+      # your host user is not uid 1000, use this variant instead:
+      #   export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
+      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+      #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
+      # That makes the key and evidence directory readable/writable by the same
+      # uid/gid the compose service uses.
+      # - ./pipelock-evidence:/var/lib/pipelock/evidence
+      # - ./pipelock-keys:/etc/pipelock/keys:ro
     command:
       - "run"
       - "--config"

@@ -104,6 +104,40 @@ class AccountsTest < ApplicationSystemTestCase
       end
     end
 
+    # The account page issues a Turbo morph refresh shortly after it loads
+    # (`turbo_refreshes_with method: :morph` reacting to a family-stream
+    # broadcast). Opening the menu while that refresh is in flight can detach the
+    # node mid-click ("Node with given id does not belong to the document") or
+    # wipe the just-opened edit form — neither of which Capybara auto-retries.
+    # Retry until the edit form is present so the test is deterministic instead
+    # of racing the broadcast (mirrors PropertyTest#open_account_edit_dialog).
+    def open_account_edit_dialog
+      3.times do
+        # A prior (slow) attempt may have already opened the edit form.
+        return if has_field?("Account name", wait: 0)
+
+        begin
+          within_testid("account-menu") do
+            # Open the menu only when it's closed. DS::Menu's trigger toggles
+            # (menu_controller#toggle), so blindly re-clicking an already-open
+            # menu would close it and hide "Edit", turning a slow-but-successful
+            # modal load into a fresh flake.
+            unless has_selector?("[role='menu']", visible: true, wait: 0)
+              find("button").click
+            end
+            click_on "Edit"
+          end
+        rescue Selenium::WebDriver::Error::WebDriverError => e
+          raise unless e.message.match?(
+            /does not belong to the document|stale element reference/i,
+          )
+          next
+        end
+        return if has_field?("Account name", wait: 2)
+      end
+      assert_field "Account name"
+    end
+
     def assert_account_created(accountable_type, &block)
       click_link Accountable.from_type(accountable_type).singular_display_name
       click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto Loan CreditCard])
@@ -140,10 +174,7 @@ class AccountsTest < ApplicationSystemTestCase
 
       visit account_url(created_account)
 
-      within_testid("account-menu") do
-        find("button").click
-        click_on "Edit"
-      end
+      open_account_edit_dialog
 
       updated_institution_name = "[system test] Updated Institution"
       updated_institution_domain = "updated.example.com"
