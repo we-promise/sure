@@ -1,10 +1,14 @@
 class ProcessPdfJob < ApplicationJob
   queue_as :medium_priority
 
+  discard_on(RuntimeError) do |job, err|
+    Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}): #{err.message}")
+  end
+
   def perform(pdf_import)
     return unless pdf_import.is_a?(PdfImport)
     return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
-    return if pdf_import.status == "complete"
+    return if pdf_import.status.in?(%w[complete failed])
     return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
 
     pdf_import.update!(status: :importing)
