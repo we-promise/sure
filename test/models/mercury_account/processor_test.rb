@@ -51,9 +51,11 @@ class MercuryAccount::ProcessorTest < ActiveSupport::TestCase
       name: "Unlinked", account_id: "acc_unlinked", currency: "USD", current_balance: 100
     )
 
+    result = nil
     assert_nothing_raised do
-      MercuryAccount::Processor.new(mercury_account).process
+      result = MercuryAccount::Processor.new(mercury_account).process
     end
+    assert_nil result
   end
 
   # ---------------------------------------------------------------------------
