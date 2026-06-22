@@ -237,10 +237,26 @@ class MercuryItem::Importer
 
             if new_transactions.any? || updated_transactions.any?
               merged = existing_by_id.values + new_transactions
-              Rails.logger.info "MercuryItem::Importer - Storing #{new_transactions.count} new, #{updated_transactions.count} status-updated transactions for account #{mercury_account.account_id}"
+              DebugLogEntry.capture(
+                category: "provider_sync",
+                level: "info",
+                message: "Storing #{new_transactions.count} new, #{updated_transactions.count} status-updated transactions for account #{mercury_account.account_id}",
+                source: self.class.name,
+                provider_key: "mercury",
+                family: mercury_item.family,
+                metadata: { account_id: mercury_account.account_id, new_count: new_transactions.count, updated_count: updated_transactions.count }
+              )
               mercury_account.upsert_mercury_transactions_snapshot!(merged)
             else
-              Rails.logger.info "MercuryItem::Importer - No new or updated transactions for account #{mercury_account.account_id}"
+              DebugLogEntry.capture(
+                category: "provider_sync",
+                level: "info",
+                message: "No new or updated transactions for account #{mercury_account.account_id}",
+                source: self.class.name,
+                provider_key: "mercury",
+                family: mercury_item.family,
+                metadata: { account_id: mercury_account.account_id }
+              )
             end
           rescue => e
             Rails.logger.error "MercuryItem::Importer - Failed to store transactions for account #{mercury_account.account_id}: #{e.message}"
