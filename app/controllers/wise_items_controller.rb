@@ -127,9 +127,7 @@ class WiseItemsController < ApplicationController
   end
 
   def setup_accounts
-    @wise_accounts = @wise_item.wise_accounts
-                               .left_joins(:account_provider)
-                               .where(account_providers: { id: nil })
+    @wise_accounts = @wise_item.wise_accounts.unlinked
   end
 
   def complete_account_setup
@@ -164,7 +162,7 @@ class WiseItemsController < ApplicationController
       redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
     end
 
-    @available_accounts = unlinked_wise_accounts_for(@wise_item)
+    @available_accounts = @wise_item.wise_accounts.unlinked
 
     render layout: false
   end
@@ -194,7 +192,7 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.select_existing_account.not_found") and return
     end
 
-    @available_accounts = unlinked_wise_accounts_for(@wise_item)
+    @available_accounts = @wise_item.wise_accounts.unlinked
 
     render layout: false
   end
@@ -240,12 +238,6 @@ class WiseItemsController < ApplicationController
       else
         Current.family.wise_items.active.ordered.first
       end
-    end
-
-    def unlinked_wise_accounts_for(wise_item)
-      wise_item.wise_accounts
-               .left_joins(:account_provider)
-               .where(account_providers: { id: nil })
     end
 
     def find_wise_account_for_linking(wise_account_id)

@@ -130,7 +130,7 @@ class WiseItem::Importer
       cursor = nil
 
       loop do
-        result = wise_provider.get_activities(wise_item.profile_id, cursor: cursor, size: 100)
+        result = with_rate_limit_retry { wise_provider.get_activities(wise_item.profile_id, cursor: cursor, size: 100) }
         batch = Array(result["activities"])
         break if batch.empty?
 
@@ -161,7 +161,7 @@ class WiseItem::Importer
       limit = 100
 
       loop do
-        page = wise_provider.get_transfers(wise_item.profile_id, limit: limit, offset: offset)
+        page = with_rate_limit_retry { wise_provider.get_transfers(wise_item.profile_id, limit: limit, offset: offset) }
         batch = Array(page.is_a?(Hash) ? page["content"] : page)
         break if batch.empty?
 
@@ -215,17 +215,21 @@ class WiseItem::Importer
       { transactions_imported: transactions_imported, transactions_failed: transactions_failed }
     end
 
-    # Routes an activity to the given WiseAccount.
-    # JAR: receives INTERBALANCE (by title), BALANCE_CASHBACK, BALANCE_ASSET_FEE.
-    # STANDARD: receives INTERBALANCE that reference the JAR (the other side of the transfer).
+    # Routes an activity to the given WiseAccount using structured resource metadata.
+    # JAR: receives INTERBALANCE where resource.id matches the JAR's balance_id,
+    #      plus BALANCE_CASHBACK and BALANCE_ASSET_FEE.
+    # STANDARD: receives INTERBALANCE where resource.id references any known JAR balance.
     def activity_for_account?(activity, wise_account)
-      type  = activity["type"]
-      title = activity["title"].to_s.gsub(/<[^>]+>/, "")
-      jar_names = jar_account_names
+      type = activity["type"]
+      resource_id = activity.dig("resource", "id").to_s
 
       case type
       when "INTERBALANCE"
-        jar_names.any? { |n| title.include?(n) }
+        if wise_account.jar?
+          resource_id == wise_account.balance_id.to_s
+        else
+          jar_balance_ids.include?(resource_id)
+        end
       when "BALANCE_ASSET_FEE", "BALANCE_CASHBACK"
         wise_account.jar?
       else
@@ -274,10 +278,20 @@ class WiseItem::Importer
            .first
     end
 
-    def jar_account_names
-      @jar_account_names ||= wise_item.wise_accounts
-                                      .select(&:jar?)
-                                      .map { |wa| wa.raw_payload&.dig("name").presence || "Jar" }
+    def jar_balance_ids
+      @jar_balance_ids ||= wise_item.wise_accounts.select(&:jar?).map { |wa| wa.balance_id.to_s }.to_set
+    end
+
+    def with_rate_limit_retry(max_retries: 3)
+      retries = 0
+      begin
+        yield
+      rescue Provider::Wise::WiseError => e
+        raise unless e.error_type == :rate_limited && retries < max_retries
+        retries += 1
+        sleep(2 ** retries)
+        retry
+      end
     end
 
     def transfer_cutoff
