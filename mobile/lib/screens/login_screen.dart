@@ -486,7 +486,16 @@ class _ApiKeyLoginDialogState extends State<ApiKeyLoginDialog> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _apiKeyController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() => setState(() {});
+
+  @override
   void dispose() {
+    _apiKeyController.removeListener(_onTextChanged);
     _apiKeyController.dispose();
     super.dispose();
   }
@@ -528,6 +537,7 @@ class _ApiKeyLoginDialogState extends State<ApiKeyLoginDialog> {
             obscureText: true,
             maxLines: 1,
             enabled: !_isLoading,
+            onSubmitted: (_) => _submit(),
           ),
         ],
       ),
@@ -537,7 +547,7 @@ class _ApiKeyLoginDialogState extends State<ApiKeyLoginDialog> {
           child: Text(l.commonCancel),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : _submit,
+          onPressed: _isLoading || _apiKeyController.text.trim().isEmpty ? null : _submit,
           child: _isLoading
               ? const SizedBox(
                   height: 20,
