@@ -32,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _appVersion;
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
+  bool _isClearingData = false;
   bool _biometricSupported = false;
   bool _biometricEnabled = false;
   bool _isTogglingBiometric = false;
@@ -231,6 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && context.mounted) {
+      setState(() => _isClearingData = true);
       try {
         final offlineStorage = OfflineStorageService();
         final log = LogService.instance;
@@ -269,6 +271,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
         }
+      } finally {
+        if (mounted) setState(() => _isClearingData = false);
       }
     }
   }
@@ -747,7 +751,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.delete_outline),
             title: Text(l.settingsClearDataTitle),
             subtitle: Text(l.settingsClearDataTileSubtitle),
-            onTap: () => _handleClearLocalData(context),
+            trailing: _isClearingData
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
+            enabled: !_isClearingData,
+            onTap: _isClearingData
+                ? null
+                : () => _handleClearLocalData(context),
           ),
 
           if (_biometricSupported) ...[
