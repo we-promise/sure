@@ -6,7 +6,11 @@ module Syncable
   end
 
   def syncing?
-    syncs.visible.any?
+    if syncs.loaded?
+      syncs.any? { |s| %w[pending syncing].include?(s.status) && s.created_at > Sync::VISIBLE_FOR.ago }
+    else
+      syncs.visible.any?
+    end
   end
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
