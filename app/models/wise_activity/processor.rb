@@ -88,7 +88,7 @@ class WiseActivity::Processor
 
     # True when the activity title indicates money flowing INTO the JAR.
     def deposit_direction?
-      title = activity[:title].to_s.gsub(/<[^>]+>/, "").downcase
+      title = strip_html(activity[:title]).downcase
       title.start_with?("to") || title.include?("received") || title.include?("added")
     end
 
@@ -111,7 +111,7 @@ class WiseActivity::Processor
       when "BALANCE_ASSET_FEE"
         I18n.t("wise_items.activities.asset_fee")
       else
-        activity[:title].to_s.gsub(/<[^>]+>/, "").strip.presence ||
+        strip_html(activity[:title]).strip.presence ||
           I18n.t("wise_items.activities.default_name")
       end
     end
@@ -142,11 +142,15 @@ class WiseActivity::Processor
     #   "<positive>+ 1.12 EUR</positive>"    → 1.12
     #   "0.83 EUR"                           → 0.83
     def parse_amount
-      stripped = activity[:primaryAmount].to_s.gsub(/<[^>]+>/, "").strip
+      stripped = strip_html(activity[:primaryAmount]).strip
       stripped.scan(/[\d,]+\.?\d*/).first.to_s.delete(",").to_d
     end
 
     def parse_currency
       activity[:primaryAmount].to_s.scan(/\b[A-Z]{3}\b/).first
+    end
+
+    def strip_html(str)
+      ActionController::Base.helpers.strip_tags(str.to_s)
     end
 end

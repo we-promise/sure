@@ -16,6 +16,8 @@ class WiseAccount < ApplicationRecord
   validates :balance_id, :currency, presence: true
   validates :balance_id, uniqueness: { scope: :wise_item_id }
 
+  scope :unlinked, -> { left_joins(:account_provider).where(account_providers: { id: nil }) }
+
   def current_account
     account
   end
