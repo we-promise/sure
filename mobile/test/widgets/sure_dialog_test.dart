@@ -164,4 +164,39 @@ void main() {
     expect(find.widgetWithText(SureButton, 'Save'), findsOneWidget);
     expect(find.widgetWithText(SureButton, 'Cancel'), findsOneWidget);
   });
+
+  testWidgets('bounds oversized content so it scrolls instead of overflowing',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pump(
+      tester,
+      SureDialog(
+        title: 'Busy day',
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: List.generate(
+              40,
+              (i) => SizedBox(height: 40, child: Text('row $i')),
+            ),
+          ),
+        ),
+        actions: [SureButton(label: 'Close', onPressed: () {})],
+      ),
+    );
+
+    // The body is height-bounded and scrollable, so there is no overflow even
+    // when the content far exceeds the available dialog height.
+    expect(tester.takeException(), isNull);
+    expect(
+      find.descendant(
+          of: find.byType(SureDialog), matching: find.byType(Scrollable)),
+      findsWidgets,
+    );
+  });
 }

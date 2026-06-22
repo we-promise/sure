@@ -82,17 +82,29 @@ class SureDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = SureColors.of(context).palette;
 
-    final Widget? body = content ??
-        (message != null
-            ? Text(
-                message!,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.4,
-                  color: palette.textSecondary,
-                ),
-              )
-            : null);
+    // Bound the body to the available dialog height and let it scroll, so
+    // large content (long lists, forms) doesn't overflow on small screens —
+    // matching Material AlertDialog's scrollable content area. The body is a
+    // Flexible (loose) child of the Column: short content sizes naturally,
+    // tall content is capped and scrolls. Caller-supplied [content] keeps its
+    // own scrollable; a plain [message] is wrapped in one here.
+    Widget? body;
+    if (content != null) {
+      body = Flexible(child: content!);
+    } else if (message != null) {
+      body = Flexible(
+        child: SingleChildScrollView(
+          child: Text(
+            message!,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: palette.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
