@@ -58,6 +58,40 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     assert_equal({ "name" => "Sure read-only" }, @provider.get_api_key_info)
   end
 
+  test "get_ledgers sends request to Ledgers endpoint" do
+    ledger_payload = {
+      "ledger" => {
+        "LXXXXXX" => {
+          "refid" => "SXXXXXX", "time" => 1609459200, "type" => "deposit",
+          "subtype" => "", "aclass" => "currency", "asset" => "XXBT",
+          "amount" => "0.10000000", "fee" => "0.00000000", "balance" => "0.50000000"
+        }
+      },
+      "count" => 1
+    }
+    response = mock_httparty_response(200, { "error" => [], "result" => ledger_payload })
+
+    Provider::Kraken.expects(:post)
+      .with("/0/private/Ledgers", anything)
+      .returns(response)
+
+    result = @provider.get_ledgers
+    assert_equal ledger_payload, result
+  end
+
+  test "get_ledgers forwards start, type, and offset params" do
+    response = mock_httparty_response(200, { "error" => [], "result" => { "ledger" => {}, "count" => 0 } })
+
+    Provider::Kraken.expects(:post)
+      .with(
+        "/0/private/Ledgers",
+        has_entries(body: includes("start=1609459200", "type=deposit", "ofs=50"))
+      )
+      .returns(response)
+
+    @provider.get_ledgers(start: Time.zone.at(1609459200), type: "deposit", offset: 50)
+  end
+
   test "handle response returns result on success" do
     response = mock_httparty_response(200, { "error" => [], "result" => { "XXBT" => { "balance" => "1.0" } } })
 
