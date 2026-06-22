@@ -36,7 +36,8 @@ class MercuryEntry::Processor
         name: name,
         source: "mercury",
         merchant: merchant,
-        notes: notes
+        notes: notes,
+        extra: extra
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -112,6 +113,17 @@ class MercuryEntry::Processor
         Rails.logger.error "MercuryEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"
         nil
       end
+    end
+
+    def extra
+      meta = { "pending" => pending? }
+      meta["kind"]           = data[:kind] if data[:kind].present?
+      meta["counterparty_id"] = data[:counterpartyId] if data[:counterpartyId].present?
+      { "mercury" => meta }
+    end
+
+    def pending?
+      data[:status] == "pending"
     end
 
     def amount
