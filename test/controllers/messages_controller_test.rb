@@ -24,7 +24,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     BackgroundJobHealth.stubs(:snapshot).returns({})
     BackgroundJobHealth.stubs(:summary).returns("")
 
-    pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending)
+    pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
 
     post report_timeout_chat_message_url(@chat, pending)
 

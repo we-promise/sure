@@ -132,25 +132,41 @@ class Chat < ApplicationRecord
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
+  # Minimum age before the server will treat a still-pending response as
+  # undelivered. The browser watchdog waits longer (default 90s) before it even
+  # asks, but the client clock is untrusted, so the server enforces its own floor.
+  UNDELIVERED_RESPONSE_TIMEOUT = 60.seconds
+
   # Handles the case where an assistant response was never delivered — the
   # background worker never ran `AssistantResponseJob` (or it died before it
   # could broadcast an error), leaving a `pending` "Thinking…" bubble forever.
   # Mirrors `Assistant::Builtin`'s rescue: clears the dead bubble, records a
   # friendly error + a debug log entry, and broadcasts the error/Retry UI.
+  #
+  # Driven by an untrusted client watchdog, so the state change is gated behind a
+  # row lock + a server-side age check: we re-read the row under lock and only act
+  # if it is *still* pending and has genuinely waited past the timeout, so we never
+  # race a worker that is finishing a legitimate (slow) response.
   def handle_undelivered_response!(assistant_message)
-    return false unless assistant_message.is_a?(AssistantMessage) && assistant_message.pending?
+    return false unless assistant_message.is_a?(AssistantMessage)
 
-    capture_undelivered_response!(assistant_message)
+    resolved = assistant_message.with_lock do
+      next false unless assistant_message.pending?
+      next false if assistant_message.created_at > UNDELIVERED_RESPONSE_TIMEOUT.ago
 
-    update!(error: undelivered_error_payload(assistant_message).to_json)
-
-    if assistant_message.content.blank?
-      assistant_message.destroy
-    else
-      # Demote partially-streamed turns to `failed` so history builders exclude them.
-      assistant_message.update_columns(status: "failed")
+      if assistant_message.content.blank?
+        assistant_message.destroy!
+      else
+        # Demote partially-streamed turns to `failed` so history builders exclude them.
+        assistant_message.update_columns(status: "failed")
+      end
+      true
     end
 
+    return false unless resolved
+
+    capture_undelivered_response!(assistant_message)
+    update!(error: undelivered_error_payload(assistant_message).to_json)
     broadcast_append target: messages_target, partial: "chats/error", locals: { chat: self }
     true
   end

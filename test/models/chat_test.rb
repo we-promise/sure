@@ -156,7 +156,7 @@ class ChatTest < ActiveSupport::TestCase
     BackgroundJobHealth.stubs(:summary).returns("workers=0")
 
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
 
     assert_difference -> { DebugLogEntry.count } => 1, -> { Message.count } => -1 do
       assert chat.handle_undelivered_response!(pending)
@@ -171,13 +171,24 @@ class ChatTest < ActiveSupport::TestCase
     BackgroundJobHealth.stubs(:summary).returns("")
 
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
 
     assert_no_difference -> { Message.count } do
       assert chat.handle_undelivered_response!(pending)
     end
 
     assert_equal "failed", pending.reload.status
+  end
+
+  test "handle_undelivered_response! ignores a pending bubble younger than the server timeout" do
+    chat = chats(:two)
+    fresh = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.seconds.ago)
+
+    assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+      assert_not chat.handle_undelivered_response!(fresh)
+    end
+
+    assert fresh.reload.pending?
   end
 
   test "handle_undelivered_response! is a no-op for non-pending messages" do

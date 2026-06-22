@@ -13,6 +13,7 @@ export default class extends Controller {
 
   connect() {
     this.reportedUrls = new Set();
+    this.inFlightUrls = new Set();
     this.#configureAutoScroll();
     this.#updateSubmitState();
     this.#startUndeliveredWatchdog();
@@ -110,20 +111,21 @@ export default class extends Controller {
 
     this.pendingResponseTargets.forEach((el) => {
       const url = el.dataset.pendingResponseTimeoutUrl;
-      if (!url || this.reportedUrls.has(url)) return;
+      // Skip if already reported (succeeded) or a report is in flight.
+      if (!url || this.reportedUrls.has(url) || this.inFlightUrls.has(url)) return;
 
       const createdAt = Date.parse(el.dataset.pendingResponseCreatedAt);
       if (Number.isNaN(createdAt)) return;
       if (now - createdAt < this.responseTimeoutValue) return;
 
-      // Report once per bubble; the server response is idempotent anyway.
-      this.reportedUrls.add(url);
       this.#reportUndelivered(url);
     });
   }
 
   #reportUndelivered(url) {
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    this.inFlightUrls.add(url);
 
     fetch(url, {
       method: "POST",
@@ -132,9 +134,18 @@ export default class extends Controller {
         Accept: "text/vnd.turbo-stream.html, text/html",
       },
       credentials: "same-origin",
-    }).catch(() => {
-      // Best-effort. The server marks the message failed and broadcasts the
-      // error/Retry UI over Turbo; nothing to do on the client if this fails.
-    });
+    })
+      .then((response) => {
+        // Only mark as reported on success. fetch resolves on HTTP 4xx/5xx
+        // (it rejects only on network errors), so without this check a failed
+        // POST would permanently suppress retries and strand the bubble.
+        if (response.ok) this.reportedUrls.add(url);
+      })
+      .catch(() => {
+        // Best-effort. Leave the URL un-reported so the next tick can retry.
+      })
+      .finally(() => {
+        this.inFlightUrls.delete(url);
+      });
   }
 }
