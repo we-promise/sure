@@ -53,6 +53,7 @@ class UpEntry::Processor
       date: date,
       name: name,
       source: "up",
+      kind: kind,
       merchant: merchant,
       notes: notes,
       extra: extra_metadata
@@ -96,6 +97,22 @@ class UpEntry::Processor
     # Display name: the Up description, or a generic fallback.
     def name
       data[:description].presence || I18n.t("transactions.unknown_name")
+    end
+
+    # The id of the other account in an internal money movement, if any (see
+    # Provider::Up#flatten_transaction). Present for transfers between the user's own
+    # accounts and for round-ups swept into a Saver; nil for ordinary income/expense.
+    def transfer_account_id
+      data[:transfer_account_id].presence
+    end
+
+    # Mark internal movements as funds_movement so they are excluded from income,
+    # expense, and budget analytics. Two-sided transfers between two linked accounts are
+    # additionally paired into a Transfer by Family#auto_match_transfers!; one-sided moves
+    # (counterpart not linked in Sure) and round-ups rely on this flag, since the matcher
+    # has no opposing entry to pair them with.
+    def kind
+      transfer_account_id ? "funds_movement" : nil
     end
 
     # Optional user-entered message attached to the transaction.
@@ -170,6 +187,7 @@ class UpEntry::Processor
           "pending" => pending?,
           "status" => data[:status],
           "category_id" => data[:category_id],
+          "transfer_account_id" => transfer_account_id,
           "raw_text" => data[:rawText],
           "fx_from" => foreign_amount_data[:currencyCode],
           "fx_amount" => foreign_amount_data[:value]

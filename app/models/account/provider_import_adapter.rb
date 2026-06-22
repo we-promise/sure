@@ -26,7 +26,7 @@ class Account::ProviderImportAdapter
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -208,18 +208,23 @@ class Account::ProviderImportAdapter
         detected_label = detect_activity_label(name, amount)
       end
 
-      # Auto-set kind for internal movements and contributions
-      auto_kind = nil
+      # Determine the transaction kind. An explicit kind supplied by the provider takes
+      # precedence over the account-type auto-detection below: a provider such as Up that
+      # flags internal transfers and round-ups (via relationships.transferAccount) has
+      # authoritative knowledge that the movement is a transfer, so we honour it directly.
+      auto_kind = kind.presence
       auto_category = nil
-      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
-        auto_kind = "funds_movement"
-      elsif detected_label == "Contribution"
-        auto_kind = "investment_contribution"
-        auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
-        auto_kind = "loan_payment"
-      elsif account.accountable_type == "CreditCard" && amount.negative?
-        auto_kind = "cc_payment"
+      if auto_kind.nil?
+        if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
+          auto_kind = "funds_movement"
+        elsif detected_label == "Contribution"
+          auto_kind = "investment_contribution"
+          auto_category = account.family.investment_contributions_category
+        elsif account.accountable_type == "Loan" && amount.negative?
+          auto_kind = "loan_payment"
+        elsif account.accountable_type == "CreditCard" && amount.negative?
+          auto_kind = "cc_payment"
+        end
       end
 
       # Set investment activity label, kind, and category if detected
