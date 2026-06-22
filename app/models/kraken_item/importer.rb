@@ -155,7 +155,15 @@ class KrakenItem::Importer
         ledgers = result.to_h.fetch("ledger", {})
         duplicate_ids = all_ledgers.keys & ledgers.keys
         if duplicate_ids.any?
-          Rails.logger.warn("KrakenItem::Importer - #{duplicate_ids.size} duplicate ledger ids from Kraken page ignored")
+          DebugLogEntry.capture(
+            category: "provider_sync_error",
+            level: "warn",
+            message: "#{duplicate_ids.size} duplicate ledger ids from Kraken ignored",
+            source: self.class.name,
+            provider_key: "kraken",
+            family: kraken_item.family,
+            metadata: { kraken_item_id: kraken_item.id, duplicate_ids: duplicate_ids }
+          )
         end
         all_ledgers.merge!(ledgers.except(*duplicate_ids))
 
