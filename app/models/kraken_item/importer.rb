@@ -168,8 +168,16 @@ class KrakenItem::Importer
 
       all_ledgers
     rescue Provider::Kraken::PermissionError => e
-      # Key may not have Query Ledger Entries permission; log and continue without ledgers.
-      Rails.logger.warn("KrakenItem::Importer - Ledgers permission denied, skipping: #{e.message}")
+      # Key may not have Query Ledger Entries permission; degrade gracefully.
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Ledgers permission denied; skipping ledger import: #{e.message}",
+        source: self.class.name,
+        provider_key: "kraken",
+        family: kraken_item.family,
+        metadata: { kraken_item_id: kraken_item.id }
+      )
       {}
     end
 

@@ -15,6 +15,7 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     @provider.stubs(:get_api_key_info).returns({ "name" => "Sure read-only" })
     @provider.stubs(:get_asset_pairs).returns(pair_metadata)
     @provider.stubs(:get_trades_history).returns({ "count" => 0, "trades" => {} })
+    @provider.stubs(:get_ledgers).returns({ "ledger" => {}, "count" => 0 })
     @provider.stubs(:get_ticker).returns(nil)
   end
 

@@ -7,6 +7,9 @@
 # type="trade" are therefore skipped here to avoid double-counting.  Internal
 # sub-account transfers (type="transfer") and margin events (type="margin",
 # "rollover", "settled") are also skipped.
+#
+# Sign convention (Sure): negative = inflow/income, positive = outflow/expense.
+# Deposits and rewards are negative; withdrawals and fees are positive.
 class KrakenAccount::LedgerProcessor
   include KrakenAccount::UsdConverter
 
@@ -15,6 +18,9 @@ class KrakenAccount::LedgerProcessor
 
   # Ledger types we intentionally ignore (handled elsewhere or out of scope).
   SKIP_TYPES = %w[trade transfer margin rollover settled adjustment].freeze
+
+  # Kraken Earn internal subtypes that represent fund movements, not income.
+  EARN_INTERNAL_SUBTYPES = %w[allocation deallocation].freeze
 
   def initialize(kraken_account)
     @kraken_account = kraken_account
@@ -27,7 +33,15 @@ class KrakenAccount::LedgerProcessor
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
     rescue StandardError => e
-      Rails.logger.error("KrakenAccount::LedgerProcessor - failed ledger #{ledger_id}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process ledger entry #{ledger_id}: #{e.message}",
+        source: self.class.name,
+        provider_key: "kraken",
+        family: kraken_account.kraken_item&.family,
+        metadata: { ledger_id: ledger_id, error_class: e.class.name }
+      )
     end
   end
 
@@ -52,33 +66,40 @@ class KrakenAccount::LedgerProcessor
     end
 
     def process_ledger_entry(ledger_id, ledger)
-      type = ledger["type"].to_s.downcase
+      type    = ledger["type"].to_s.downcase
+      subtype = ledger["subtype"].to_s.downcase
+
       return if SKIP_TYPES.include?(type)
       return unless SUPPORTED_TYPES.include?(type)
+
+      # Skip Earn allocation/deallocation — these are internal fund movements, not income.
+      return if type == "earn" && EARN_INTERNAL_SUBTYPES.include?(subtype)
 
       external_id = "kraken_ledger_#{ledger_id}"
       return if account.entries.exists?(external_id: external_id, source: "kraken")
 
       raw_asset  = ledger["asset"].to_s
-      raw_amount = ledger["amount"].to_d   # negative = debit, positive = credit
+      raw_amount = ledger["amount"].to_d
       raw_fee    = ledger["fee"].to_d
       date       = Time.zone.at(ledger["time"].to_d).to_date
 
-      return if raw_amount.zero? && raw_fee.zero?
+      # Compute the total balance impact: Kraken applies amount - fee to the balance.
+      # abs_impact captures the full magnitude of the cash movement for this event.
+      abs_impact = (raw_amount - raw_fee).abs
+      return if abs_impact.zero?
 
       normalized = normalizer.normalize(raw_asset)
       symbol     = normalized[:symbol]
 
-      entry_amount, price_missing = resolve_amount(raw_amount.abs, symbol, date)
+      entry_amount, price_missing = resolve_amount(abs_impact, symbol, date)
       return if entry_amount.nil?
 
-      # Withdrawals and fees are outflows (negative in Sure's sign convention)
-      signed_amount = outflow?(type, raw_amount) ? -entry_amount.abs : entry_amount.abs
+      # Sure sign convention: inflow = negative, outflow = positive.
+      signed_amount = inflow?(type) ? -entry_amount.abs : entry_amount.abs
 
-      name  = build_name(type, raw_amount.abs, symbol)
+      name  = build_name(type, abs_impact, symbol)
       label = activity_label(type)
       kind  = transaction_kind(type)
-
       extra = build_extra(ledger_id, ledger, raw_asset, price_missing)
 
       account.entries.create!(
@@ -97,47 +118,71 @@ class KrakenAccount::LedgerProcessor
     end
 
     # Returns [family_currency_amount, price_missing_bool] or [nil, nil] on hard failure.
-    def resolve_amount(abs_amount, symbol, date)
-      return [ abs_amount, false ] if symbol == target_currency
+    def resolve_amount(abs_impact, symbol, date)
+      return [ abs_impact, false ] if symbol == target_currency
 
       if KrakenAccount::FIAT_CURRENCIES.include?(symbol)
-        resolve_fiat_amount(abs_amount, symbol, date)
+        resolve_fiat_amount(abs_impact, symbol, date)
       else
-        resolve_crypto_amount(abs_amount, symbol, date)
+        resolve_crypto_amount(abs_impact, symbol, date)
       end
     end
 
-    def resolve_fiat_amount(abs_amount, symbol, date)
+    def resolve_fiat_amount(abs_impact, symbol, date)
       if symbol == "USD"
-        converted, stale, = convert_from_usd(abs_amount, date: date)
+        converted, stale, = convert_from_usd(abs_impact, date: date)
         return [ converted, stale ]
       end
 
-      # Non-USD fiat: go via USD as intermediate
+      # Non-USD fiat: bridge through USD
       rate_to_usd = ExchangeRate.find_or_fetch_rate(from: symbol, to: "USD", date: date)
       return [ nil, nil ] unless rate_to_usd
 
-      usd_amount = abs_amount * rate_to_usd.rate.to_d
+      usd_amount = abs_impact * rate_to_usd.rate.to_d
       converted, stale, = convert_from_usd(usd_amount, date: date)
       [ converted, stale ]
     rescue StandardError => e
-      Rails.logger.warn("KrakenAccount::LedgerProcessor - fiat rate fetch failed #{symbol}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Fiat rate fetch failed for #{symbol}: #{e.message}",
+        source: self.class.name,
+        provider_key: "kraken",
+        family: kraken_account.kraken_item&.family,
+        metadata: { symbol: symbol, date: date.to_s, error_class: e.class.name }
+      )
       [ nil, nil ]
     end
 
-    def resolve_crypto_amount(abs_amount, symbol, date)
+    def resolve_crypto_amount(abs_impact, symbol, date)
       price_usd = stored_price_usd(symbol)
 
       if price_usd.nil?
-        Rails.logger.warn("KrakenAccount::LedgerProcessor - no price for #{symbol} on #{date}, amount set to 0")
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "No price available for #{symbol} on #{date}; amount recorded as 0",
+          source: self.class.name,
+          provider_key: "kraken",
+          family: kraken_account.kraken_item&.family,
+          metadata: { symbol: symbol, date: date.to_s }
+        )
         return [ 0.to_d, true ]
       end
 
-      usd_amount = abs_amount * price_usd
+      usd_amount = abs_impact * price_usd
       converted, stale, = convert_from_usd(usd_amount, date: date)
       [ converted, stale ]
     rescue StandardError => e
-      Rails.logger.warn("KrakenAccount::LedgerProcessor - crypto price resolve failed #{symbol}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Crypto price resolution failed for #{symbol}: #{e.message}",
+        source: self.class.name,
+        provider_key: "kraken",
+        family: kraken_account.kraken_item&.family,
+        metadata: { symbol: symbol, date: date.to_s, error_class: e.class.name }
+      )
       [ 0.to_d, true ]
     end
 
@@ -146,23 +191,24 @@ class KrakenAccount::LedgerProcessor
     # approximation; precise historical pricing is a future enhancement.
     def stored_price_usd(symbol)
       assets = raw_payload&.dig("assets") || []
-      asset = assets.find do |a|
+      asset  = assets.find do |a|
         (a["symbol"] || a[:symbol]).to_s.upcase == symbol.upcase
       end
       price = asset&.dig("price_usd") || asset&.dig(:price_usd)
       price.present? ? price.to_d : nil
     end
 
-    def outflow?(type, raw_amount)
+    # True when the ledger event represents money flowing INTO the account.
+    def inflow?(type)
       case type
-      when "withdrawal", "fee" then true
-      when "deposit", "staking", "earn" then false
-      else raw_amount.negative?
+      when "deposit", "staking", "earn" then true
+      when "withdrawal", "fee"          then false
+      else false
       end
     end
 
-    def build_name(type, abs_amount, symbol)
-      qty = abs_amount.to_d.round(8).to_s("F").sub(/\.?0+\z/, "")
+    def build_name(type, abs_impact, symbol)
+      qty = abs_impact.to_d.round(8).to_s("F").sub(/\.?0+\z/, "")
       case type
       when "deposit"    then "Deposit #{qty} #{symbol}"
       when "withdrawal" then "Withdrawal #{qty} #{symbol}"
