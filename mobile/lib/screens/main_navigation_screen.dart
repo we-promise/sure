@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../widgets/sure_dialog.dart';
 import '../widgets/sure_logo.dart';
 import 'chat_list_screen.dart';
 import 'dashboard_screen.dart';
@@ -158,25 +159,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final l = AppLocalizations.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final shouldEnable = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.navEnableAiChatTitle),
-          content: Text(dl.navEnableAiChatContent),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(dl.navEnableAiChatNotNow),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(dl.navEnableAiChatConfirm),
-            ),
-          ],
-        );
-      },
+    final shouldEnable = await SureDialog.confirm(
+      context,
+      title: l.navEnableAiChatTitle,
+      message: l.navEnableAiChatContent,
+      confirmLabel: l.navEnableAiChatConfirm,
+      cancelLabel: l.navEnableAiChatNotNow,
     );
 
     if (shouldEnable != true) {

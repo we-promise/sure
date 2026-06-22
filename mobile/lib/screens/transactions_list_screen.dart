@@ -10,6 +10,7 @@ import '../screens/transaction_edit_screen.dart';
 import '../screens/transaction_form_screen.dart';
 import '../widgets/account_detail_header.dart';
 import '../widgets/category_filter.dart';
+import '../widgets/sure_dialog.dart';
 import '../widgets/sync_status_badge.dart';
 import '../services/log_service.dart';
 import '../theme/sure_tokens.dart';
@@ -155,26 +156,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     if (_selectedTransactions.isEmpty) return;
     final l = AppLocalizations.of(context);
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.transactionsListDeleteMultiTitle),
-          content: Text(dl.transactionsListDeleteMultiContent),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(dl.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: Text(dl.commonDelete),
-            ),
-          ],
-        );
-      },
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.transactionsListDeleteMultiTitle,
+      message: l.transactionsListDeleteMultiContent,
+      confirmLabel: l.commonDelete,
+      cancelLabel: l.commonCancel,
+      destructive: true,
     );
 
     if (confirmed != true || !mounted) return;
@@ -220,29 +208,14 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final isPending = transaction.syncStatus == SyncStatus.pending;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.transactionsListUndoTitle),
-          content: Text(
-            isPending
-                ? dl.transactionsListUndoRemovePending
-                : dl.transactionsListUndoRestoreConfirm,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(dl.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(dl.commonUndo),
-            ),
-          ],
-        );
-      },
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.transactionsListUndoTitle,
+      message: isPending
+          ? l.transactionsListUndoRemovePending
+          : l.transactionsListUndoRestoreConfirm,
+      confirmLabel: l.commonUndo,
+      cancelLabel: l.commonCancel,
     );
 
     if (confirmed != true) return;
@@ -291,26 +264,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.transactionsListDeleteTitle),
-          content: Text(dl.transactionsListDeleteSingleContent(transaction.name)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(dl.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: Text(dl.commonDelete),
-            ),
-          ],
-        );
-      },
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.transactionsListDeleteTitle,
+      message: l.transactionsListDeleteSingleContent(transaction.name),
+      confirmLabel: l.commonDelete,
+      cancelLabel: l.commonCancel,
+      destructive: true,
     );
 
     if (confirmed != true) return false;

@@ -18,6 +18,8 @@ import '../models/custom_proxy_header.dart';
 import '../services/api_config.dart';
 import '../services/custom_proxy_headers_service.dart';
 import '../widgets/custom_proxy_headers_editor.dart';
+import '../widgets/sure_dialog.dart';
+import '../widgets/sure_button.dart';
 import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -96,22 +98,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showUpdateDialog(String version, String? storeUrl) async {
-    final launch = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(ctx).settingsUpdateAvailableTitle),
-        content: Text(AppLocalizations.of(ctx).settingsUpdateAvailableContent(version)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(ctx).commonCancel),
-          ),
-          TextButton(
-            onPressed: storeUrl == null ? null : () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(ctx).settingsUpdateNow),
-          ),
-        ],
-      ),
+    final launch = await SureDialog.confirm(
+      context,
+      title: AppLocalizations.of(context).settingsUpdateAvailableTitle,
+      message: AppLocalizations.of(context).settingsUpdateAvailableContent(version),
+      confirmLabel: AppLocalizations.of(context).settingsUpdateNow,
+      cancelLabel: AppLocalizations.of(context).commonCancel,
+      confirmEnabled: storeUrl != null,
     );
 
     if (launch == true && storeUrl != null && mounted) {
@@ -207,27 +200,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleClearLocalData(BuildContext context) async {
     final l = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final l = AppLocalizations.of(context);
-        return AlertDialog(
-        title: Text(l.settingsClearDataTitle),
-        content: Text(l.settingsClearDataContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: Text(l.settingsClearData),
-          ),
-        ],
-      );},
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.settingsClearDataTitle,
+      message: l.settingsClearDataContent,
+      confirmLabel: l.settingsClearData,
+      cancelLabel: l.commonCancel,
+      destructive: true,
     );
 
     if (confirmed == true && context.mounted) {
@@ -286,28 +265,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleResetAccount(BuildContext context) async {
     final l = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.settingsResetAccount),
-          content: Text(dl.settingsResetAccountContent),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(dl.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-              ),
-              child: Text(dl.settingsResetAccount),
-            ),
-          ],
-        );
-      },
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.settingsResetAccount,
+      message: l.settingsResetAccountContent,
+      confirmLabel: l.settingsResetAccount,
+      cancelLabel: l.commonCancel,
+      destructive: true,
     );
 
     if (confirmed != true || !context.mounted) return;
@@ -358,28 +322,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleDeleteAccount(BuildContext context) async {
     final l = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.settingsDeleteAccountTitle),
-          content: Text(dl.settingsDeleteAccountConfirmContent),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(dl.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-              ),
-              child: Text(dl.settingsDeleteAccount),
-            ),
-          ],
-        );
-      },
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.settingsDeleteAccountTitle,
+      message: l.settingsDeleteAccountConfirmContent,
+      confirmLabel: l.settingsDeleteAccount,
+      cancelLabel: l.commonCancel,
+      destructive: true,
     );
 
     if (confirmed != true || !context.mounted) return;
@@ -414,24 +363,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final l = AppLocalizations.of(context);
-        return AlertDialog(
-        title: Text(l.settingsSignOutTitle),
-        content: Text(l.settingsSignOutContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.settingsSignOut),
-          ),
-        ],
-      );},
+    final l = AppLocalizations.of(context);
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.settingsSignOutTitle,
+      message: l.settingsSignOutContent,
+      confirmLabel: l.settingsSignOut,
+      cancelLabel: l.commonCancel,
     );
 
     if (confirmed == true && context.mounted) {
@@ -454,8 +392,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         final l = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(l.settingsProxyHeadersLabel),
+        return SureDialog(
+          title: l.settingsProxyHeadersLabel,
           content: SingleChildScrollView(
             child: Form(
               key: formKey,
@@ -479,16 +417,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           actions: [
-            TextButton(
+            SureButton(
+              label: l.commonCancel,
               onPressed: () => Navigator.pop(context, false),
-              child: Text(l.commonCancel),
+              variant: SureButtonVariant.ghost,
             ),
-            ElevatedButton(
+            SureButton(
+              label: l.commonSave,
               onPressed: () {
                 if (formKey.currentState?.validate() != true) return;
                 Navigator.pop(context, true);
               },
-              child: Text(l.commonSave),
+              variant: SureButtonVariant.primary,
             ),
           ],
         );

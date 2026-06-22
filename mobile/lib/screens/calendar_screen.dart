@@ -8,6 +8,8 @@ import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/log_service.dart';
 import '../utils/amount_parser.dart';
+import '../widgets/sure_dialog.dart';
+import '../widgets/sure_button.dart';
 import '../l10n/app_localizations.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -200,11 +202,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            formattedDate,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+        return SureDialog(
+          title: formattedDate,
           content: SizedBox(
             width: double.maxFinite,
             child: transactions.isEmpty
@@ -229,9 +228,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
           ),
           actions: [
-            TextButton(
+            SureButton(
+              label: l.commonClose,
+              variant: SureButtonVariant.primary,
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(l.commonClose),
             ),
           ],
         );

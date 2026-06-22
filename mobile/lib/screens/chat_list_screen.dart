@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_conversation_screen.dart';
+import '../widgets/sure_dialog.dart';
 import '../l10n/app_localizations.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -74,27 +75,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final dl = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(dl.chatListDeleteTitle),
-          content: Text(
-            dl.chatListDeleteMultiContent(_selectedChatIds.length),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(dl.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(dl.commonDelete, style: const TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
+    final confirmed = await SureDialog.confirm(
+      context,
+      title: l.chatListDeleteTitle,
+      message: l.chatListDeleteMultiContent(_selectedChatIds.length),
+      confirmLabel: l.commonDelete,
+      cancelLabel: l.commonCancel,
+      destructive: true,
     );
 
     if (confirmed != true || !mounted) return;
@@ -298,25 +285,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                   ),
                   confirmDismiss: (direction) async {
-                    return await showDialog<bool>(
-                      context: context,
-                      builder: (context) {
-                        final l = AppLocalizations.of(context);
-                        return AlertDialog(
-                          title: Text(l.chatListDeleteTitle),
-                          content: Text(l.chatListDeleteSingleContent(chat.title)),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: Text(l.commonCancel),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: Text(l.commonDelete, style: const TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        );
-                      },
+                    final l = AppLocalizations.of(context);
+                    return await SureDialog.confirm(
+                      context,
+                      title: l.chatListDeleteTitle,
+                      message: l.chatListDeleteSingleContent(chat.title),
+                      confirmLabel: l.commonDelete,
+                      cancelLabel: l.commonCancel,
+                      destructive: true,
                     );
                   },
                   onDismissed: (direction) async {

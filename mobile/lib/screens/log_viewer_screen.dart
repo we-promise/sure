@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/log_service.dart';
+import '../widgets/sure_dialog.dart';
 
 class LogViewerScreen extends StatefulWidget {
   const LogViewerScreen({super.key});
@@ -130,28 +131,18 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(l.logViewerClearLogs),
-                  content: Text(l.logViewerClearConfirm),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(l.commonCancel),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        LogService.instance.clear();
-                        Navigator.pop(context);
-                      },
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: Text(l.logViewerClear),
-                    ),
-                  ],
-                ),
+            onPressed: () async {
+              final confirmed = await SureDialog.confirm(
+                context,
+                title: l.logViewerClearLogs,
+                message: l.logViewerClearConfirm,
+                confirmLabel: l.logViewerClear,
+                cancelLabel: l.commonCancel,
+                destructive: true,
               );
+              if (confirmed == true) {
+                LogService.instance.clear();
+              }
             },
             tooltip: l.logViewerClearLogs,
           ),

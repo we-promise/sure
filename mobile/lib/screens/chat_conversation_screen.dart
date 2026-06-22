@@ -8,6 +8,9 @@ import '../providers/chat_provider.dart';
 import '../models/message.dart';
 import '../constants/suggested_questions.dart';
 import '../widgets/typing_indicator.dart';
+import '../widgets/sure_dialog.dart';
+import '../widgets/sure_button.dart';
+import '../widgets/sure_text_field.dart';
 import '../l10n/app_localizations.dart';
 
 class _SendMessageIntent extends Intent {
@@ -212,24 +215,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       builder: (context) {
         final dl = AppLocalizations.of(context);
         final controller = TextEditingController(text: currentTitle);
-        return AlertDialog(
-          title: Text(dl.chatConversationEditTitle),
-          content: TextField(
+        return SureDialog(
+          title: dl.chatConversationEditTitle,
+          content: SureTextField(
             controller: controller,
-            decoration: InputDecoration(
-              labelText: dl.chatConversationTitleLabel,
-              border: const OutlineInputBorder(),
-            ),
+            label: dl.chatConversationTitleLabel,
             autofocus: true,
           ),
           actions: [
-            TextButton(
+            SureButton(
+              label: dl.commonCancel,
+              variant: SureButtonVariant.ghost,
               onPressed: () => Navigator.pop(context),
-              child: Text(dl.commonCancel),
             ),
-            TextButton(
+            SureButton(
+              label: dl.commonSave,
+              variant: SureButtonVariant.primary,
               onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: Text(dl.commonSave),
             ),
           ],
         );

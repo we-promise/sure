@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
 import '../widgets/sure_button.dart';
+import '../widgets/sure_dialog.dart';
 import '../widgets/sure_logo.dart';
 import 'backend_config_screen.dart';
 import '../l10n/app_localizations.dart';
@@ -99,8 +100,8 @@ class _LoginScreenState extends State<LoginScreen> {
         final dl = AppLocalizations.of(dialogContext);
         return StatefulBuilder(
           builder: (_, setDialogState) {
-            return AlertDialog(
-              title: Text(dl.loginApiKeyDialogTitle),
+            return SureDialog(
+              title: dl.loginApiKeyDialogTitle,
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -127,16 +128,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               actions: [
-                TextButton(
+                SureButton(
+                  label: dl.commonCancel,
+                  variant: SureButtonVariant.ghost,
                   onPressed: isLoading
                       ? null
                       : () {
                           apiKeyController.dispose();
                           Navigator.of(dialogContext).pop();
                         },
-                  child: Text(dl.commonCancel),
                 ),
-                ElevatedButton(
+                SureButton(
+                  label: dl.loginApiKeySignIn,
+                  loading: isLoading,
                   onPressed: isLoading
                       ? null
                       : () async {
@@ -173,13 +177,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                           }
                         },
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(dl.loginApiKeySignIn),
                 ),
               ],
             );
