@@ -198,13 +198,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ).format(date);
     final colorScheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
-    // Read once when the (modal) dialog opens and pass it down, rather than
-    // reading the provider inside each tile.
-    final hideAmounts = context.read<PrivacyProvider>().hidden;
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        // Watch inside the dialog builder so the amounts re-mask if the user
+        // toggles privacy while the dialog is open.
+        final hideAmounts = context.watch<PrivacyProvider>().hidden;
         return AlertDialog(
           title: Text(
             formattedDate,
