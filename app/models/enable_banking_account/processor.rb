@@ -48,10 +48,10 @@ class EnableBankingAccount::Processor
       if account.accountable_type == "Loan"
         balance = balance.abs
       elsif account.accountable_type == "CreditCard"
+        balance = balance.abs
         if enable_banking_account.credit_limit.present?
-          available = enable_banking_account.credit_limit - balance.abs
+          available = enable_banking_account.credit_limit - balance
           available_credit = [ available, 0 ].max
-          balance = available_credit
           unless account.accountable.present?
             Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
           end
@@ -59,11 +59,6 @@ class EnableBankingAccount::Processor
           # Fallback: no credit_limit from API — compute it using available_credit defined at account level
           Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
           available_credit = account.accountable.available_credit
-          outstanding = balance.abs
-          balance = [ available_credit - outstanding, 0 ].max
-        else
-          # Fallback: no credit_limit from API — display raw outstanding balance
-          # We cannot derive available credit without knowing the limit; leave balance unchanged.
         end
       end
 
