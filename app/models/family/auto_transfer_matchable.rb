@@ -83,7 +83,10 @@ module Family::AutoTransferMatchable
         )
       end
     rescue ActiveRecord::RecordNotUnique
-      # Concurrent job already created it; savepoint rolled back, transaction intact.
+      # Lost the insert race; savepoint rolled back, transaction intact.
+    rescue ActiveRecord::RecordInvalid => e
+      # Same race caught by the uniqueness validation; re-raise anything else.
+      raise unless %i[inflow_transaction_id outflow_transaction_id].any? { |attr| e.record.errors.of_kind?(attr, :taken) }
     end
 
     def coerce_transfer_match_date_window!(value)

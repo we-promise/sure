@@ -54,6 +54,38 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "cc_payment", outflow_entry.entryable.kind
   end
 
+  test "validation-path race during matching does not abort the run" do
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    # A concurrent job already matched one of these transactions, so the uniqueness
+    # validation rejects the insert with :taken (a plain raise, no aborted SQL).
+    invalid = Transfer.new(inflow_transaction_id: inflow_entry.entryable_id, outflow_transaction_id: outflow_entry.entryable_id)
+    invalid.errors.add(:inflow_transaction_id, :taken)
+    Transfer.stubs(:find_or_create_by!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    assert_nothing_raised { @family.auto_match_transfers! }
+
+    inflow_entry.reload
+    outflow_entry.reload
+
+    # The duplicate was swallowed, so the loop kept running and wrote kinds.
+    assert_equal "funds_movement", inflow_entry.entryable.kind
+    assert_equal "cc_payment", outflow_entry.entryable.kind
+  end
+
+  test "non-uniqueness validation failure during matching is not swallowed" do
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    # A genuine (non-race) validation failure must surface, not be skipped silently.
+    invalid = Transfer.new
+    invalid.errors.add(:base, :different_accounts)
+    Transfer.stubs(:find_or_create_by!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    assert_raises(ActiveRecord::RecordInvalid) { @family.auto_match_transfers! }
+  end
+
   test "auto-matches multi-currency transfers" do
     load_exchange_prices
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
