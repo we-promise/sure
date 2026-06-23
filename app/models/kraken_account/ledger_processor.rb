@@ -30,6 +30,11 @@ class KrakenAccount::LedgerProcessor
   def process
     return unless account.present?
 
+    # Idempotency: load existing Kraken external IDs once and test membership in
+    # memory, instead of an EXISTS query per ledger entry (a full sync can carry
+    # up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
+    @existing_external_ids = account.entries.where(source: "kraken").pluck(:external_id).to_set
+
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
     rescue StandardError => e
@@ -76,7 +81,7 @@ class KrakenAccount::LedgerProcessor
       return if type == "earn" && EARN_INTERNAL_SUBTYPES.include?(subtype)
 
       external_id = "kraken_ledger_#{ledger_id}"
-      return if account.entries.exists?(external_id: external_id, source: "kraken")
+      return if @existing_external_ids.include?(external_id)
 
       raw_asset  = ledger["asset"].to_s
       raw_amount = ledger["amount"].to_d
@@ -115,6 +120,8 @@ class KrakenAccount::LedgerProcessor
           extra: extra
         )
       )
+
+      @existing_external_ids << external_id
     end
 
     # Returns [family_currency_amount, price_missing_bool] or [nil, nil] on hard failure.

@@ -209,10 +209,34 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
       "LIDEM01" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "100.00", fee: "0.00", time: 1_700_000_000)
     )
 
-    process
+    # First pass must actually create the entry...
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    # ...and a second pass must be a no-op.
     assert_no_difference "@account.entries.count" do
       process
     end
+  end
+
+  test "idempotency check does not scale entries queries with ledger count" do
+    set_ledgers(
+      "LQ1" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "10.00", fee: "0.00", time: 1_700_000_000),
+      "LQ2" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "20.00", fee: "0.00", time: 1_700_000_100),
+      "LQ3" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "30.00", fee: "0.00", time: 1_700_000_200)
+    )
+
+    process # first pass creates the 3 entries
+    assert_equal 3, @account.entries.count
+
+    # On a second pass every entry is already present, so all are skipped. The
+    # existence check must be a single bulk pluck regardless of ledger count —
+    # the previous per-entry `exists?` would issue one query per entry instead.
+    queries = capture_sql_queries { process }
+    entries_selects = queries.count { |q| q.match?(/from "entries"/i) }
+    assert_equal 1, entries_selects,
+      "second pass should issue exactly one bulk external_id pluck, not one per entry"
   end
 
   # ---------------------------------------------------------------------------
