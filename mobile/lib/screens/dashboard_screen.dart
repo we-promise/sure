@@ -448,11 +448,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     SureButton(
                       label: l.commonTryAgain,
                       onPressed: _handleRefresh,
-                      leading: SureIcon(
-                        SureIcons.refresh,
-                        size: 18,
-                        color: palette.textInverse,
-                      ),
+                      leading: const SureIcon(SureIcons.refresh, size: 18),
                     ),
                   ],
                 ),
@@ -488,11 +484,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     SureButton(
                       label: l.commonRefresh,
                       onPressed: _handleRefresh,
-                      leading: SureIcon(
-                        SureIcons.refresh,
-                        size: 18,
-                        color: palette.textInverse,
-                      ),
+                      leading: const SureIcon(SureIcons.refresh, size: 18),
                     ),
                   ],
                 ),
