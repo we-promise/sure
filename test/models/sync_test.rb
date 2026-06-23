@@ -3,6 +3,31 @@ require "test_helper"
 class SyncTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  # Guards against the in-memory predicate drifting from the SQL scope: for the
+  # same records, Sync#visible? must agree with Sync.visible (Syncable#syncing?
+  # relies on this equivalence when `syncs` is preloaded).
+  test "visible? mirrors the visible scope" do
+    syncable = accounts(:depository)
+    recent_pending = Sync.create!(syncable: syncable, status: :pending)
+    completed = Sync.create!(
+      syncable: syncable, status: :completed, completed_at: Time.current
+    )
+    stale_pending = Sync.create!(syncable: syncable, status: :pending)
+    stale_pending.update_column(:created_at, Sync::VISIBLE_FOR.ago - 1.minute)
+
+    visible_ids = Sync.visible.pluck(:id).to_set
+
+    [ recent_pending, completed, stale_pending ].each do |sync|
+      sync.reload
+      assert_equal visible_ids.include?(sync.id), sync.visible?,
+        "Sync##{sync.id} (#{sync.status}) visible? disagreed with Sync.visible"
+    end
+
+    assert recent_pending.visible?
+    assert_not completed.visible?
+    assert_not stale_pending.visible?
+  end
+
   test "does not run if not in a valid state" do
     syncable = accounts(:depository)
     sync = Sync.create!(syncable: syncable, status: :completed)
