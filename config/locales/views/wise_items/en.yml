@@ -93,6 +93,7 @@ en:
         one: "Successfully connected %{count} Wise profile"
         other: "Successfully connected %{count} Wise profiles"
     select_profiles:
+      session_expired: Session expired. Please try connecting again.
       title: Select Wise Profiles
       subtitle: Choose which profiles to connect
       description: Your Wise account has multiple profiles. Select the ones you want to sync with Sure.

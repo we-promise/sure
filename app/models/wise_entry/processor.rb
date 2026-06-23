@@ -25,17 +25,22 @@ class WiseEntry::Processor
     end
 
     result = import_main_transaction
-    import_fee_transaction if fee > 0
+
+    if fee > 0
+      begin
+        import_fee_transaction
+      rescue StandardError => e
+        Rails.logger.warn "WiseEntry::Processor - Fee transaction failed for transfer #{safe_id}: #{e.message}"
+      end
+    end
+
     result
   rescue ArgumentError => e
     Rails.logger.error "WiseEntry::Processor - Validation error for transfer #{safe_id}: #{e.message}"
     raise
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error "WiseEntry::Processor - Failed to save transfer #{safe_id}: #{e.message}"
-    raise StandardError, "Failed to import transaction: #{e.message}"
   rescue => e
     Rails.logger.error "WiseEntry::Processor - Unexpected error for transfer #{safe_id}: #{e.class} - #{e.message}"
-    raise StandardError, "Unexpected error: #{e.message}"
+    raise
   end
 
   private
@@ -93,9 +98,13 @@ class WiseEntry::Processor
 
     # Expenses (outgoing) → positive amount in Sure convention.
     # Incomes (incoming)  → negative amount in Sure convention.
+    # Incoming cross-currency transfers use targetValue (what actually arrived) not sourceValue.
     def main_amount
-      value = data[:sourceValue].to_d.abs
-      outgoing? ? value : -value
+      if outgoing?
+        data[:sourceValue].to_d.abs
+      else
+        -(data[:targetValue].to_d.abs)
+      end
     end
 
     # Fee is the difference between what was debited and what the recipient received,

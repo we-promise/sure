@@ -28,7 +28,7 @@ class WiseActivity::Processor
     raise
   rescue => e
     Rails.logger.error "WiseActivity::Processor - Error for activity #{safe_id}: #{e.class} - #{e.message}"
-    raise StandardError, e.message
+    raise
   end
 
   private
