@@ -35,10 +35,12 @@ class WiseItemsController < ApplicationController
       render :new, status: :unprocessable_entity and return
     end
 
-    session[:wise_pending_token] = token
     session[:wise_pending_profiles] = profiles
+    @pending_profiles = profiles
+    @existing_profile_ids = Current.family.wise_items.pluck(:profile_id).map(&:to_s).to_set
+    @encrypted_pending_token = encrypt_pending_token(token)
 
-    redirect_to select_profiles_wise_items_path
+    render :select_profiles
   rescue Provider::Wise::WiseError => e
     @wise_item = Current.family.wise_items.build
     error_key = e.error_type == :unauthorized ? ".invalid_token" : ".connection_failed"
@@ -59,7 +61,7 @@ class WiseItemsController < ApplicationController
 
   # Step 3: Create one WiseItem per selected profile.
   def link_profiles
-    token = session[:wise_pending_token] # pipelock:ignore
+    token = decrypt_pending_token(params[:encrypted_pending_token])
     profiles = session[:wise_pending_profiles]
 
     if token.blank? || profiles.blank?
@@ -89,7 +91,6 @@ class WiseItemsController < ApplicationController
       created += 1
     end
 
-    session.delete(:wise_pending_token)
     session.delete(:wise_pending_profiles)
 
     if created.zero?
@@ -287,6 +288,22 @@ class WiseItemsController < ApplicationController
       ]
       streams += flash_notification_stream_items if include_flash
       render turbo_stream: streams, status: status
+    end
+
+    def encrypt_pending_token(token)
+      build_token_encryptor.encrypt_and_sign(token, expires_in: 15.minutes)
+    end
+
+    def decrypt_pending_token(encrypted)
+      return nil if encrypted.blank?
+      build_token_encryptor.decrypt_and_verify(encrypted)
+    rescue ActiveSupport::MessageEncryptor::InvalidMessage, ArgumentError
+      nil
+    end
+
+    def build_token_encryptor
+      key = Rails.application.key_generator.generate_key("wise_pending_token", 32)
+      ActiveSupport::MessageEncryptor.new(key)
     end
 
     def safe_return_to_path

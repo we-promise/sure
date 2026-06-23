@@ -215,20 +215,20 @@ class WiseItem::Importer
       { transactions_imported: transactions_imported, transactions_failed: transactions_failed }
     end
 
-    # Routes an activity to the given WiseAccount using structured resource metadata.
-    # JAR: receives INTERBALANCE where resource.id matches the JAR's balance_id,
+    # Routes an activity to the given WiseAccount.
+    # JAR: receives INTERBALANCE where the activity title's <strong> tag matches the JAR name,
     #      plus BALANCE_CASHBACK and BALANCE_ASSET_FEE.
-    # STANDARD: receives INTERBALANCE where resource.id references any known JAR balance.
+    # STANDARD: receives all INTERBALANCE activities (outflow side of JAR transfers).
     def activity_for_account?(activity, wise_account)
       type = activity["type"]
-      resource_id = activity.dig("resource", "id").to_s
 
       case type
       when "INTERBALANCE"
         if wise_account.jar?
-          resource_id == wise_account.balance_id.to_s
+          jar_name_in_title = activity["title"].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last.to_s.strip
+          jar_name_in_title.present? && jar_name_in_title.casecmp?(wise_account.name.to_s.strip)
         else
-          jar_balance_ids.include?(resource_id)
+          true
         end
       when "BALANCE_ASSET_FEE", "BALANCE_CASHBACK"
         wise_account.jar?
@@ -276,10 +276,6 @@ class WiseItem::Importer
            .joins("INNER JOIN wise_accounts ON wise_accounts.id = account_providers.provider_id")
            .where(wise_accounts: { wise_item_id: wise_item.id })
            .first
-    end
-
-    def jar_balance_ids
-      @jar_balance_ids ||= wise_item.wise_accounts.select(&:jar?).map { |wa| wa.balance_id.to_s }.to_set
     end
 
     def with_rate_limit_retry(max_retries: 3)
