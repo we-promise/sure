@@ -148,13 +148,14 @@ class Account < ApplicationRecord
       attrs = attributes.dup
       attrs[:cash_balance] = attrs[:balance] unless attrs.key?(:cash_balance)
       account = new(attrs)
+      initial_balance = attributes.dig(:accountable_attributes, :initial_balance)&.to_d
 
       transaction do
         account.save!
 
         manager = Account::OpeningBalanceManager.new(account)
         result = manager.set_opening_balance(
-          balance: account.balance,
+          balance: initial_balance || account.balance,
           date: opening_balance_date
         )
         raise result.error if result.error

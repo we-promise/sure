@@ -30,7 +30,7 @@ class Loan < ApplicationRecord
   end
 
   def original_balance
-    Money.new(initial_balance || account.first_valuation_amount, account.currency)
+    Money.new(account.first_valuation_amount, account.currency)
   end
 
   class << self

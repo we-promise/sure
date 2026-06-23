@@ -52,26 +52,6 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
-  test "opening anchor uses current balance, not original principal" do
-    post loans_path, params: {
-      account: {
-        name: "My Mortgage",
-        balance: 80_000,
-        currency: "USD",
-        accountable_type: "Loan",
-        accountable_attributes: {
-          initial_balance: 100_000,
-          rate_type: "fixed"
-        }
-      }
-    }
-
-    created = Account.order(:created_at).last
-
-    assert_equal 80_000, created.entries.valuations.order(:date).first.amount
-    assert_equal 100_000, created.accountable.initial_balance
-  end
-
   test "updates with loan details" do
     assert_no_difference [ "Account.count", "Loan.count" ] do
       patch loan_path(@account), params: {

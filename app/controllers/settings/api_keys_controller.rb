@@ -42,6 +42,9 @@ class Settings::ApiKeysController < ApplicationController
   def destroy
     @api_key.revoke!
     flash[:notice] = t(".revoked_successfully")
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+    flash[:alert] = t(".revoke_failed")
+  ensure
     redirect_to settings_api_keys_path
   end
 

@@ -10,6 +10,7 @@ en:
         success: "Your API key has been created successfully"
       destroy:
         revoked_successfully: "API key has been revoked successfully"
+        revoke_failed: "Failed to revoke API key"
       shared:
         active: "Active"
         created_ago: "Created %{time} ago"
