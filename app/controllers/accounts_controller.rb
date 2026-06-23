@@ -65,6 +65,9 @@ class AccountsController < ApplicationController
     )
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
+    # The preload and split-parent lookup below are intentionally scoped to the
+    # current page (@entries) — only this page is rendered, so a child entry
+    # whose split parent sits on another page deliberately won't resolve it.
     transactions = @entries.filter_map { |e| e.entryable if e.transaction? }
     if transactions.any?
       ActiveRecord::Associations::Preloader.new(
