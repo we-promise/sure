@@ -44,20 +44,29 @@ class EnableBankingAccount::Processor
       # For CreditCards, we expect the main balance to reflect the absolute outstanding debt
       # rather than available credit, to ensure net worth calculations handle the liability accurately.
       # Any available credit metrics (from limits) are instead stored safely as metadata on the Accountable.
-      if account.accountable_type == "Loan"
-        balance = balance.abs
-      elsif account.accountable_type == "CreditCard"
-        balance = balance.abs
-        if enable_banking_account.credit_limit.present?
-          available = enable_banking_account.credit_limit - balance
-          available_credit = [ available, 0 ].max
-          unless account.accountable.present?
-            Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
+      # Loans and CreditCards must always represent their outstanding balance as an absolute 
+      # positive debt amount, regardless of the API's reported sign, to ensure the BalanceSheet 
+      # calculates net worth accurately.
+      if account.accountable_type == "Loan" || account.accountable_type == "CreditCard"
+        # Standardize the raw balance to an absolute positive debt
+        outstanding_debt = balance.abs 
+        
+        # Override the top-level balance variable intended for the account
+        balance = outstanding_debt
+
+        if account.accountable_type == "CreditCard"
+          if enable_banking_account.credit_limit.present?
+            # Compute available credit based on the strictly positive outstanding debt 
+            available = enable_banking_account.credit_limit - outstanding_debt
+            available_credit = [ available, 0 ].max
+            unless account.accountable.present?
+              Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
+            end
+          elsif account.accountable&.available_credit.present?
+            # Fallback: no credit_limit from API — compute it using available_credit defined at account level
+            Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
+            available_credit = account.accountable.available_credit
           end
-        elsif account.accountable&.available_credit.present?
-          # Fallback: no credit_limit from API — compute it using available_credit defined at account level
-          Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
-          available_credit = account.accountable.available_credit
         end
       end
 
