@@ -30,10 +30,15 @@ class KrakenAccount::LedgerProcessor
   def process
     return unless account.present?
 
-    # Idempotency: load existing Kraken external IDs once and test membership in
-    # memory, instead of an EXISTS query per ledger entry (a full sync can carry
-    # up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
-    @existing_external_ids = account.entries.where(source: "kraken").pluck(:external_id).to_set
+    # Idempotency: load existing Kraken *ledger* external IDs once and test
+    # membership in memory, instead of an EXISTS query per ledger entry (a full
+    # sync can carry up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
+    # Scoped to the kraken_ledger_ prefix so trade entries aren't loaded.
+    @existing_external_ids = account.entries
+                                    .where(source: "kraken")
+                                    .where("external_id LIKE 'kraken_ledger_%'")
+                                    .pluck(:external_id)
+                                    .to_set
 
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
