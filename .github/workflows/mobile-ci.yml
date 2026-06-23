@@ -1,22 +1,8 @@
 name: Mobile CI
 
+# Disabled: automatic PR/push triggers removed. Runs manually only.
 on:
-  pull_request:
-    paths:
-      - 'mobile/**'
-      - 'public/android-chrome-*.png'
-      - 'public/apple-touch-icon.png'
-      - '.github/workflows/flutter-build.yml'
-      - '.github/workflows/mobile-ci.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'mobile/**'
-      - 'public/android-chrome-*.png'
-      - 'public/apple-touch-icon.png'
-      - '.github/workflows/flutter-build.yml'
-      - '.github/workflows/mobile-ci.yml'
+  workflow_dispatch:
 
 concurrency:
   group: mobile-ci-${{ github.ref }}

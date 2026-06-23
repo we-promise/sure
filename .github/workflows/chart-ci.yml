@@ -1,19 +1,8 @@
 name: Chart CI
 
+# Disabled: automatic PR/push triggers removed. Runs manually only.
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'charts/**'
-      - '.sure-version'
-      - '.github/workflows/chart-ci.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'charts/**'
-      - '.sure-version'
-      - '.github/workflows/chart-ci.yml'
 
 jobs:
   version-sync:
