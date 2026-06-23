@@ -3,6 +3,7 @@
 class ProviderConnectionStatus
   PROVIDERS = [
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
+    { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },

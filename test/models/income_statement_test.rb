@@ -39,6 +39,17 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "orphaned categories still count as root category totals" do
+    orphan_category = @family.categories.create! name: "Orphaned Category"
+    orphan_category.update_column(:parent_id, SecureRandom.uuid)
+    create_transaction(account: @checking_account, amount: 123, category: orphan_category)
+
+    expense_totals = IncomeStatement.new(@family).expense_totals(period: Period.last_30_days)
+
+    assert_equal 200 + 300 + 400 + 123, expense_totals.total
+    assert_equal 123, expense_totals.category_totals.find { |ct| ct.category.id == orphan_category.id }.total
+  end
+
   test "memoizes expense and income period totals across repeated calculations" do
     income_statement = IncomeStatement.new(@family)
     period = Period.last_30_days
