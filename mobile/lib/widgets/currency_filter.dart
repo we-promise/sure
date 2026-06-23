@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'sure_chip.dart';
 
 class CurrencyFilter extends StatelessWidget {
@@ -39,6 +40,7 @@ class CurrencyFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (availableCurrencies.length <= 1) {
       return const SizedBox.shrink();
     }
@@ -61,7 +63,7 @@ class CurrencyFilter extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: SureChip(
-              label: 'All',
+              label: l.commonAll,
               selected: isAllSelected,
               onSelected: (_) => onSelectionChanged({}),
             ),

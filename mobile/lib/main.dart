@@ -21,6 +21,7 @@ import 'services/log_service.dart';
 import 'services/preferences_service.dart';
 import 'services/telemetry_service.dart';
 import 'theme/sure_theme.dart';
+import 'l10n/app_localizations.dart';
 import 'package:upgrader/upgrader.dart';
 
 void main() async {
@@ -79,7 +80,9 @@ class SureApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) => MaterialApp(
-          title: 'Sure Finances',
+          onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           debugShowCheckedModeBanner: false,
           navigatorObservers: TelemetryService.instance.navigatorObservers,
           theme: SureTheme.light,
