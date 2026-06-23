@@ -19,6 +19,41 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "concurrent unique-index race does not poison the surrounding transaction" do
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow_id = inflow_entry.entryable_id
+
+    # An existing transfer we can collide with to trigger a real unique violation,
+    # mimicking a concurrent job that won the race. A genuine failing INSERT (not a
+    # synthetic raise) is what aborts the transaction, so only this reproduces the bug.
+    rival_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 250)
+    rival_in = create_transaction(date: Date.current, account: @credit_card, amount: -250)
+    rival = Transfer.create!(inflow_transaction_id: rival_in.entryable_id, outflow_transaction_id: rival_out.entryable_id)
+
+    original = Transfer.method(:find_or_create_by!)
+    Transfer.singleton_class.send(:define_method, :find_or_create_by!) do |attributes|
+      if attributes[:inflow_transaction_id] == inflow_id
+        insert!(inflow_transaction_id: rival.inflow_transaction_id, outflow_transaction_id: rival.outflow_transaction_id)
+      else
+        original.call(attributes)
+      end
+    end
+
+    begin
+      assert_nothing_raised { @family.auto_match_transfers! }
+    ensure
+      Transfer.singleton_class.send(:remove_method, :find_or_create_by!)
+    end
+
+    inflow_entry.reload
+    outflow_entry.reload
+
+    # Surrounding transaction stayed healthy, so kinds were still written.
+    assert_equal "funds_movement", inflow_entry.entryable.kind
+    assert_equal "cc_payment", outflow_entry.entryable.kind
+  end
+
   test "auto-matches multi-currency transfers" do
     load_exchange_prices
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
