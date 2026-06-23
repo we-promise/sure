@@ -30,7 +30,13 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
   String? _appVersion;
-  // Tracks which destructive action is in progress ('clear', 'reset', 'delete'),
+  // Identifiers for the in-progress destructive action. Defined once so the
+  // discriminator can't drift via a mistyped string literal across handlers and
+  // tiles.
+  static const String _clearAction = 'clear';
+  static const String _resetAction = 'reset';
+  static const String _deleteAction = 'delete';
+  // Tracks which destructive action is in progress (one of the constants above),
   // or null when idle. Used to disable all three tiles while any one is running.
   String? _activeDestructiveAction;
   bool _biometricSupported = false;
@@ -232,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && context.mounted) {
-      setState(() => _activeDestructiveAction = 'clear');
+      setState(() => _activeDestructiveAction = _clearAction);
       try {
         final offlineStorage = OfflineStorageService();
         final log = LogService.instance;
@@ -316,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    setState(() => _activeDestructiveAction = 'reset');
+    setState(() => _activeDestructiveAction = _resetAction);
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
@@ -388,7 +394,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    setState(() => _activeDestructiveAction = 'delete');
+    setState(() => _activeDestructiveAction = _deleteAction);
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
@@ -751,7 +757,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.delete_outline),
             title: Text(l.settingsClearDataTitle),
             subtitle: Text(l.settingsClearDataTileSubtitle),
-            trailing: _activeDestructiveAction == 'clear'
+            trailing: _activeDestructiveAction == _clearAction
                 ? const SizedBox(
                     width: 20,
                     height: 20,
@@ -804,7 +810,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.restart_alt, color: Colors.red),
             title: Text(l.settingsResetAccount),
             subtitle: Text(l.settingsResetAccountTileSubtitle),
-            trailing: _activeDestructiveAction == 'reset'
+            trailing: _activeDestructiveAction == _resetAction
                 ? const SizedBox(
                     width: 20,
                     height: 20,
@@ -820,7 +826,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: Text(l.settingsDeleteAccount),
             subtitle: Text(l.settingsDeleteAccountTileSubtitle),
-            trailing: _activeDestructiveAction == 'delete'
+            trailing: _activeDestructiveAction == _deleteAction
                 ? const SizedBox(
                     width: 20,
                     height: 20,
