@@ -66,8 +66,9 @@ class PagesController < ApplicationController
     render layout: "blank"
   end
 
-  COUNTRY_NAMES = { "rw" => "Rwanda", "za" => "South Africa", "gh" => "Ghana" }.freeze
-  PRIVACY_TEMPLATES = { "rw" => "pages/privacy_rw", "za" => "pages/privacy_za", "gh" => "pages/privacy_gh" }.freeze
+  COUNTRY_NAMES = { "ke" => "Kenya", "rw" => "Rwanda", "za" => "South Africa", "gh" => "Ghana" }.freeze
+  PRIVACY_TEMPLATES = { "ke" => "pages/privacy_ke", "rw" => "pages/privacy_rw", "za" => "pages/privacy_za", "gh" => "pages/privacy_gh" }.freeze
+  TERMS_TEMPLATES = { "ke" => "pages/terms_ke" }.freeze
 
   def privacy
     @country_name = COUNTRY_NAMES[params[:country]]
@@ -76,7 +77,7 @@ class PagesController < ApplicationController
 
   def terms
     @country_name = COUNTRY_NAMES[params[:country]]
-    render layout: "blank"
+    render TERMS_TEMPLATES.fetch(params[:country], "pages/terms"), layout: "blank"
   end
 
   private
