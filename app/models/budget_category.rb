@@ -230,6 +230,15 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories.select { |bc| bc.category.parent_id == category.parent_id && bc.id != id }
   end
 
+  # Budget categories whose category is a child of this (top-level) category.
+  #
+  # Returns an Array (an in-memory filter over the preloaded association), not an
+  # ActiveRecord::Relation — do not chain AR scopes (.where/.order/.count(:col)/
+  # etc.) on the result.
+  #
+  # Callers are expected to have `budget.budget_categories` already loaded with
+  # their `:category` preloaded (budgets#show and budget_categories#update both
+  # do this); otherwise this re-queries and N+1s on `bc.category`.
   def subcategories
     return [] unless category.parent_id.nil?
     return [] if category.id.nil?
