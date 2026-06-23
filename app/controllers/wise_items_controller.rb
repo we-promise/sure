@@ -145,6 +145,8 @@ class WiseItemsController < ApplicationController
       provider: wise_account
     )
 
+    @wise_item.sync_later unless @wise_item.syncing?
+
     redirect_to accounts_path, notice: t(".success")
   rescue => e
     Rails.logger.error "WiseItemsController#complete_account_setup - #{e.class}: #{e.message}"
@@ -176,6 +178,7 @@ class WiseItemsController < ApplicationController
 
     account = Account.create_from_wise_account(wise_account)
     AccountProvider.create!(account: account, provider: wise_account)
+    wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
 
     redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_accounts.success")
   rescue => e
@@ -206,8 +209,9 @@ class WiseItemsController < ApplicationController
     end
 
     AccountProvider.create!(account: account, provider: wise_account)
+    wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
 
-    redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_existing_account.success")
+    redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_existing_account.success", account_name: account.name)
   rescue => e
     Rails.logger.error "WiseItemsController#link_existing_account - #{e.class}: #{e.message}"
     redirect_to accounts_path, alert: t("wise_items.link_existing_account.failed")
@@ -243,19 +247,19 @@ class WiseItemsController < ApplicationController
     def find_wise_account_for_linking(wise_account_id)
       return nil if wise_account_id.blank?
 
-      Current.family.wise_items.active
-             .joins(:wise_accounts)
-             .then { |_| WiseAccount.joins(:wise_item).where(wise_items: { family_id: Current.family.id }, id: wise_account_id) }
-             .first
+      WiseAccount.joins(:wise_item)
+                 .merge(Current.family.wise_items.active)
+                 .find_by(id: wise_account_id)
     end
 
     def profile_display_name(profile)
-      type = profile["type"] == "business" ? "Business" : "Personal"
+      type_key = profile["type"] == "business" ? :business : :personal
+      type_label = I18n.t("wise_items.profile_types.#{type_key}")
       details = profile["details"] || {}
       name = details["name"].presence ||
              [ details["firstName"], details["lastName"] ].compact.join(" ").presence
 
-      name.present? ? "#{name} (#{type})" : "Wise #{type}"
+      name.present? ? "#{name} (#{type_label})" : "Wise #{type_label}"
     end
 
     def render_provider_panel_success(message)

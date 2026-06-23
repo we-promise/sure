@@ -31,6 +31,7 @@ module WiseItem::Unlinking
           "WiseItem Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
         )
         result[:error] = e.message
+        raise
       end
     end
 
