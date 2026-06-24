@@ -1,0 +1,70 @@
+<div class="@container space-y-8 pb-6 lg:pb-12">
+  <header>
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+      <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+    </div>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+  </header>
+
+  <% unless @has_snapshots %>
+    <div class="bg-container rounded-xl shadow-border-xs py-16 px-6 text-center">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-surface-inset mb-4">
+        <%= icon("scale", size: "lg") %>
+      </div>
+      <h2 class="text-lg font-medium text-primary"><%= t(".empty.title") %></h2>
+      <p class="text-sm text-secondary mt-1 max-w-md mx-auto"><%= t(".empty.body") %></p>
+    </div>
+  <% else %>
+    <div
+      data-controller="basis-chart"
+      data-basis-chart-payload-value="<%= @basis_chart_payload.to_json %>"
+      data-basis-chart-labels-value="<%= { spot: t(".tooltip.spot"), short: t(".tooltip.short"), funding: t(".tooltip.funding"), rewards: t(".tooltip.rewards"), combined: t(".tooltip.combined") }.to_json %>"
+      data-basis-chart-currency-value="<%= @basis_chart_payload[:currency] %>"
+      data-basis-chart-locale-value="<%= I18n.locale %>"
+      class="space-y-6">
+
+      <%# KPI strip. Selected total updates live as legs are toggled. %>
+      <section class="grid grid-cols-2 @3xl:grid-cols-5 gap-3">
+        <div class="bg-container rounded-xl shadow-border-xs px-5 py-5 col-span-2 @3xl:col-span-1">
+          <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.selected_total") %></p>
+          <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive" data-basis-chart-target="selectedTotal"></p>
+        </div>
+        <% %i[spot short funding rewards].each do |leg| %>
+          <div class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+            <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.#{leg}") %></p>
+            <p class="text-xl font-medium text-primary tabular-nums mt-2 privacy-sensitive" data-basis-chart-target="legTotal" data-leg="<%= leg %>"></p>
+          </div>
+        <% end %>
+      </section>
+
+      <%# Leg toggles. All enabled by default. %>
+      <section class="bg-container rounded-xl shadow-border-xs px-5 py-4">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary mb-3"><%= t(".toggles.heading") %></p>
+        <div class="flex flex-wrap gap-x-8 gap-y-3">
+          <% %i[spot short funding rewards].each do |leg| %>
+            <div class="flex items-center gap-2.5">
+              <%= render DS::Toggle.new(
+                id: "basis-toggle-#{leg}",
+                name: "basis_leg_#{leg}",
+                checked: true,
+                data: {
+                  basis_chart_target: "toggle",
+                  leg: leg,
+                  action: "change->basis-chart#redraw"
+                }
+              ) %>
+              <label for="basis-toggle-<%= leg %>" class="text-sm text-primary cursor-pointer"><%= t(".toggles.#{leg}") %></label>
+            </div>
+          <% end %>
+        </div>
+      </section>
+
+      <%# Main chart card %>
+      <section class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary mb-4"><%= t(".chart.heading") %></p>
+        <div class="relative w-full h-80" data-basis-chart-target="chart"></div>
+      </section>
+    </div>
+  <% end %>
+</div>

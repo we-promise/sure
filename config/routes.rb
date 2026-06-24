@@ -325,6 +325,8 @@ Rails.application.routes.draw do
     end
   end
 
+  resource :basis, only: :show, controller: "basis"
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge

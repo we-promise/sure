@@ -1,0 +1,39 @@
+---
+en:
+  basis:
+    show:
+      title: Basis
+      subtitle: Monitor your delta-neutral carry legs over time.
+      empty:
+        title: No basis snapshots yet
+        body: Once basis trade snapshots are recorded, your combined leg equity curve will appear here.
+      ranges:
+        30d: 30D
+        90d: 90D
+        1y: 1Y
+        all: All
+      kpi:
+        selected_total: Selected total
+        spot: weETH spot leg
+        short: Perps short leg
+        funding: Funding accrued
+        rewards: Rewards accrued
+      toggles:
+        heading: Legs
+        spot: weETH Spot
+        short: Perps Short
+        funding: Funding
+        rewards: Rewards
+      chart:
+        heading: Combined leg equity
+        empty: No data in this range.
+      breakdown:
+        heading: Latest snapshot
+        active_legs: Active legs
+        note: Minor wiggles are expected from hedge mismatch, funding timing, and reward claim timing.
+      tooltip:
+        spot: weETH spot
+        short: Perps short
+        funding: Funding
+        rewards: Rewards
+        combined: Selected total

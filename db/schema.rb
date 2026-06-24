@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_23_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -275,6 +275,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
     t.index ["account_id", "date", "currency"], name: "index_account_balances_on_account_id_date_currency_unique", unique: true
     t.index ["account_id", "date"], name: "index_balances_on_account_id_and_date", order: { date: :desc }
     t.index ["account_id"], name: "index_balances_on_account_id"
+  end
+
+  create_table "basis_trade_snapshots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.datetime "recorded_at", null: false
+    t.bigint "spot_leg_cents", default: 0, null: false
+    t.bigint "short_leg_cents", default: 0, null: false
+    t.bigint "funding_accrued_cents", default: 0, null: false
+    t.bigint "rewards_accrued_cents", default: 0, null: false
+    t.string "currency", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "recorded_at"], name: "index_basis_trade_snapshots_on_family_id_and_recorded_at", unique: true
+    t.index ["family_id"], name: "index_basis_trade_snapshots_on_family_id"
+    t.index ["recorded_at"], name: "index_basis_trade_snapshots_on_recorded_at"
   end
 
   create_table "binance_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2059,6 +2075,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_07_071000) do
   add_foreign_key "akahu_items", "families"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
+  add_foreign_key "basis_trade_snapshots", "families", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
   add_foreign_key "brex_accounts", "brex_items"
