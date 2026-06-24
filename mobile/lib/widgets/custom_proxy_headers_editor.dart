@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/custom_proxy_header.dart';
 import 'sure_text_field.dart';
 
@@ -65,6 +66,7 @@ class _CustomProxyHeadersEditorState extends State<CustomProxyHeadersEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -79,7 +81,7 @@ class _CustomProxyHeadersEditorState extends State<CustomProxyHeadersEditor> {
         OutlinedButton.icon(
           onPressed: _addHeader,
           icon: const Icon(Icons.add),
-          label: const Text('Add header'),
+          label: Text(l.proxyHeadersAddHeader),
         ),
       ],
     );
@@ -99,6 +101,7 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -108,8 +111,8 @@ class _HeaderRow extends StatelessWidget {
             children: [
               SureTextField(
                 controller: draft.name,
-                label: 'Header name',
-                hint: 'X-Auth-Token',
+                label: l.proxyHeadersNameLabel,
+                hint: l.proxyHeadersNameHint,
                 validator: (value) =>
                     CustomProxyHeader.validateName(value ?? ''),
                 onChanged: (_) => onChanged(),
@@ -117,7 +120,7 @@ class _HeaderRow extends StatelessWidget {
               const SizedBox(height: 12),
               SureTextField(
                 controller: draft.value,
-                label: 'Header value',
+                label: l.proxyHeadersValueLabel,
                 obscureText: true,
                 validator: (value) =>
                     CustomProxyHeader.validateValue(value ?? ''),
@@ -127,7 +130,7 @@ class _HeaderRow extends StatelessWidget {
           ),
         ),
         IconButton(
-          tooltip: 'Remove header',
+          tooltip: l.proxyHeadersRemove,
           icon: const Icon(Icons.delete_outline),
           onPressed: onRemove,
         ),

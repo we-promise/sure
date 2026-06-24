@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/models/custom_proxy_header.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 import 'package:sure_mobile/widgets/custom_proxy_headers_editor.dart';
@@ -10,7 +11,12 @@ import 'package:sure_mobile/widgets/sure_text_field.dart';
 void main() {
   Future<void> pump(WidgetTester tester, Widget child) {
     return tester.pumpWidget(
-      MaterialApp(theme: SureTheme.light, home: Scaffold(body: child)),
+      MaterialApp(
+        theme: SureTheme.light,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: child),
+      ),
     );
   }
 
