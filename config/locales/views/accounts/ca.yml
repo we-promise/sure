@@ -146,7 +146,7 @@ ca:
         tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries
         per calcular saldos històrics precisos dels comptes."
       new_account: Nou compte
-      new_account_group: Nou %{account_group}
+      new_account_group: Afegeix %{account_group}
       new_asset: Nou actiu
       new_debt: Nou deute
       tabs:
