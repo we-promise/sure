@@ -47,7 +47,10 @@ class Assistant::Builtin < Assistant::Base
 
     responder.on(:response) do |data|
       if data[:function_tool_calls].present?
-        assistant_message.tool_calls = data[:function_tool_calls]
+        # Append, don't replace — multi-iteration turns (#2241) emit per-round
+        # tool_calls and the prior `=` overwrote earlier rounds, so a chained
+        # turn ended up persisting only the last round's tools in chat history.
+        assistant_message.tool_calls.concat(data[:function_tool_calls])
         latest_response_id = data[:id]
       else
         chat.update_latest_response!(data[:id])
