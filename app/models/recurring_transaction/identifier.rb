@@ -72,7 +72,12 @@ class RecurringTransaction
         end
       end
 
-      # Create or update RecurringTransaction records
+      # Create or update RecurringTransaction records. Load existing rows once
+      # so a busy family does not issue one lookup per detected pattern.
+      existing_recurring_transactions_by_key = family.recurring_transactions
+        .to_a
+        .index_by { |recurring| recurring_transaction_lookup_key(recurring) }
+
       recurring_patterns.each do |pattern|
         # Build find conditions based on whether it's merchant-based or name-based
         find_conditions = {
@@ -90,12 +95,14 @@ class RecurringTransaction
         end
 
         begin
-          recurring_transaction = family.recurring_transactions.find_or_initialize_by(find_conditions)
+          lookup_key = recurring_transaction_lookup_key(find_conditions)
+          recurring_transaction = existing_recurring_transactions_by_key[lookup_key] ||
+                                  family.recurring_transactions.build(find_conditions)
 
           # Handle manual recurring transactions specially
           if recurring_transaction.persisted? && recurring_transaction.manual?
-            # Update variance for manual recurring transactions
-            update_manual_recurring_variance(recurring_transaction, pattern)
+            # Manual recurring variance is recalculated once in the batch pass
+            # after automatic pattern updates finish.
             next
           end
 
@@ -119,6 +126,7 @@ class RecurringTransaction
           )
 
           recurring_transaction.save!
+          existing_recurring_transactions_by_key[lookup_key] = recurring_transaction
         rescue ActiveRecord::RecordNotUnique
           # Race condition: another process created the same record between find and save.
           # Retry with find to get the existing record and update it.
@@ -127,7 +135,8 @@ class RecurringTransaction
 
           # Skip manual recurring transactions
           if recurring_transaction.manual?
-            update_manual_recurring_variance(recurring_transaction, pattern)
+            # Manual recurring variance is recalculated once in the batch pass
+            # after automatic pattern updates finish.
             next
           end
 
@@ -153,21 +162,19 @@ class RecurringTransaction
     # both endpoints rather than the single-account name/merchant match
     # the helper performs. Issue #1590 tracks the proper Cleaner-aware
     # matching for recurring transfers.
-    def update_manual_recurring_transactions(since_date)
-      family.recurring_transactions
-            .where(manual: true, status: "active", destination_account_id: nil)
-            .find_each do |recurring|
-        # Find matching transactions in the recent period
-        matching_entries = RecurringTransaction.find_matching_transaction_entries(
-          family: family,
-          merchant_id: recurring.merchant_id,
-          name: recurring.name,
-          currency: recurring.currency,
-          expected_day: recurring.expected_day_of_month,
-          lookback_months: 6,
-          account: recurring.account
-        )
+    def update_manual_recurring_transactions(_since_date)
+      manual_recurring_transactions = family.recurring_transactions
+        .where(manual: true, status: "active", destination_account_id: nil)
+        .includes(:account)
+        .to_a
 
+      matching_entries_by_recurring_id = matching_entries_by_manual_recurring_id(
+        manual_recurring_transactions,
+        lookback_months: 6
+      )
+
+      manual_recurring_transactions.each do |recurring|
+        matching_entries = matching_entries_by_recurring_id.fetch(recurring.id, [])
         next if matching_entries.empty?
 
         # Extract amounts and dates from all matching entries
@@ -186,38 +193,69 @@ class RecurringTransaction
       end
     end
 
-    # Update variance for a manual recurring transaction when pattern is found
-    def update_manual_recurring_variance(recurring_transaction, pattern)
-      # Check if this transaction's date is more recent
-      if pattern[:last_occurrence_date] > recurring_transaction.last_occurrence_date
-        # Find all matching transactions to recalculate variance
-        matching_entries = RecurringTransaction.find_matching_transaction_entries(
-          family: family,
-          merchant_id: recurring_transaction.merchant_id,
-          name: recurring_transaction.name,
-          currency: recurring_transaction.currency,
-          expected_day: recurring_transaction.expected_day_of_month,
-          lookback_months: 6,
-          account: recurring_transaction.account
-        )
+    private
+      def recurring_transaction_lookup_key(recurring_or_attributes)
+        # Keep this aligned with the non-transfer recurring transaction unique
+        # indexes. Automatic recurring rows are amount-scoped; variable manual
+        # amounts are tracked separately in expected_amount_*.
+        amount = recurring_or_attributes.respond_to?(:amount) ? recurring_or_attributes.amount : recurring_or_attributes[:amount]
+        currency = recurring_or_attributes.respond_to?(:currency) ? recurring_or_attributes.currency : recurring_or_attributes[:currency]
+        account_id = recurring_or_attributes.respond_to?(:account_id) ? recurring_or_attributes.account_id : recurring_or_attributes[:account_id]
+        merchant_id = recurring_or_attributes.respond_to?(:merchant_id) ? recurring_or_attributes.merchant_id : recurring_or_attributes[:merchant_id]
+        name = recurring_or_attributes.respond_to?(:name) ? recurring_or_attributes.name : recurring_or_attributes[:name]
 
-        # Update if we have any matching transactions
-        if matching_entries.any?
-          matching_amounts = matching_entries.map(&:amount)
+        identifier_type = merchant_id.present? ? :merchant : :name
+        identifier_value = merchant_id.presence || name
 
-          recurring_transaction.update!(
-            expected_amount_min: matching_amounts.min,
-            expected_amount_max: matching_amounts.max,
-            expected_amount_avg: matching_amounts.sum / matching_amounts.size,
-            occurrence_count: matching_amounts.size,
-            last_occurrence_date: pattern[:last_occurrence_date],
-            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], recurring_transaction.expected_day_of_month)
-          )
+        [ amount, currency, account_id, identifier_type, identifier_value ]
+      end
+
+      def matching_entries_by_manual_recurring_id(recurring_transactions, lookback_months:)
+        return {} if recurring_transactions.empty?
+
+        lookback_date = lookback_months.months.ago.to_date
+        currencies = recurring_transactions.map(&:currency).uniq
+        account_ids = recurring_transactions.filter_map(&:account_id).uniq
+
+        entries = family.entries
+          .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+          .where(entries: { entryable_type: "Transaction", currency: currencies })
+          .where("entries.date >= ?", lookback_date)
+          .select("entries.*, transactions.merchant_id AS transaction_merchant_id")
+          .order(date: :desc)
+
+        # Legacy manual rows without account_id can match any account in the
+        # family, so only push account filtering into SQL when every row is
+        # account-scoped.
+        if account_ids.any? && recurring_transactions.all? { |recurring| recurring.account_id.present? }
+          entries = entries.where(entries: { account_id: account_ids })
+        end
+
+        candidate_entries = entries.to_a
+
+        recurring_transactions.to_h do |recurring|
+          [
+            recurring.id,
+            candidate_entries.select { |entry| manual_recurring_matches_entry?(recurring, entry) }
+          ]
         end
       end
-    end
 
-    private
+      def manual_recurring_matches_entry?(recurring, entry)
+        return false unless entry.currency == recurring.currency
+        return false if recurring.account_id.present? && entry.account_id != recurring.account_id
+
+        expected_day = [ recurring.expected_day_of_month, entry.date.end_of_month.day ].min
+        day = entry.date.day
+        return false if circular_distance(day, expected_day) > 2
+
+        if recurring.merchant_id.present?
+          entry.read_attribute("transaction_merchant_id") == recurring.merchant_id
+        else
+          entry.name == recurring.name
+        end
+      end
+
       # Check if days cluster together (within ~5 days variance)
       # Uses circular distance to handle month-boundary wrapping (e.g., 28, 29, 30, 31, 1, 2)
       def days_cluster_together?(days)
