@@ -3,6 +3,7 @@ require "test_helper"
 class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::Snaptrade.new(client_id: "snap_client", consumer_key: "snap_secret")
+    Rails.configuration.x.snaptrade.oauth_client_id = "sure-oauth-client"
     stub_request(:get, Provider::Snaptrade::OAUTH_DISCOVERY_URL)
       .to_return(
         status: 200,
@@ -17,7 +18,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "starts device authorization using well known metadata" do
     stub_request(:post, "https://api.snaptrade.com/oauth/device_authorization/")
-      .with(body: "client_id=PRSVp9N9F5ofw90KCaaOg4U9CN2afhgGVlqCOWSr&scope=read")
+      .with(body: "client_id=sure-oauth-client&scope=read")
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
@@ -39,7 +40,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "polls token endpoint with device code grant" do
     stub_request(:post, "https://api.snaptrade.com/oauth/token/")
-      .with(body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=device-code&client_id=PRSVp9N9F5ofw90KCaaOg4U9CN2afhgGVlqCOWSr")
+      .with(body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=device-code&client_id=sure-oauth-client")
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
@@ -57,6 +58,16 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_equal "access-token", response["access_token"]
     assert_equal "refresh-token", response["refresh_token"]
     assert_equal "Bearer", response["token_type"]
+  end
+
+  test "raises configuration error when oauth client id is missing" do
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+
+    error = assert_raises Provider::Snaptrade::ConfigurationError do
+      @provider.start_device_authorization
+    end
+
+    assert_equal "SnapTrade OAuth client ID is not configured", error.message
   end
 
   test "raises api error for oauth error responses" do
