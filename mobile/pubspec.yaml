@@ -10,12 +10,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.6
   http: ^1.1.0
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^10.0.0
-  intl: ^0.18.1
+  # flutter_localizations pins intl per Flutter SDK (0.19.x on <3.32, 0.20.x on
+  # 3.32+). Per the Flutter i18n guide, use `any` so the SDK-constrained version
+  # is selected instead of pinning a version that conflicts with our Flutter floor.
+  intl: any
   sqflite: ^2.4.2
   path: ^1.9.1
   connectivity_plus: ^7.0.0
@@ -37,6 +42,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/icon/
     - assets/images/
