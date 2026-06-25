@@ -28,7 +28,7 @@ class BasisTradeSnapshotTest < ActiveSupport::TestCase
     later = BasisTradeSnapshot.create!(family: @family, recorded_at: Time.zone.parse("2026-06-21 12:00:00"), currency: "USD")
     earlier = BasisTradeSnapshot.create!(family: @family, recorded_at: Time.zone.parse("2026-06-20 12:00:00"), currency: "USD")
 
-    assert_equal [earlier, later], BasisTradeSnapshot.for_family(@family).chronological.to_a
+    assert_equal [ earlier, later ], BasisTradeSnapshot.for_family(@family).chronological.to_a
   end
 
   test "filters within a time range" do
@@ -37,6 +37,6 @@ class BasisTradeSnapshotTest < ActiveSupport::TestCase
 
     results = BasisTradeSnapshot.between(Time.zone.parse("2026-06-15 00:00:00"), Time.zone.parse("2026-06-21 00:00:00"))
 
-    assert_equal [inside], results.to_a
+    assert_equal [ inside ], results.to_a
   end
 end

@@ -9,7 +9,7 @@ class BasisTradeSeriesBuilderTest < ActiveSupport::TestCase
     payload = BasisTradeSeriesBuilder.new(family: @family).payload
 
     assert_equal @family.primary_currency_code, payload[:currency]
-    assert_equal [], payload[:points]
+    assert_equal [ ], payload[:points]
     assert_equal({ spot: 0.0, short: 0.0, funding: 0.0, rewards: 0.0, combined: 0.0 }, payload[:totals])
   end
 
@@ -35,7 +35,7 @@ class BasisTradeSeriesBuilderTest < ActiveSupport::TestCase
 
     payload = BasisTradeSeriesBuilder.new(family: @family).payload
 
-    assert_equal ["2026-06-20", "2026-06-21"], payload[:points].map { |point| point[:date] }
+    assert_equal [ "2026-06-20", "2026-06-21" ], payload[:points].map { |point| point[:date] }
     assert_equal 1491.0, payload[:points].first[:combined]
     assert_equal 1540.0, payload[:points].last[:combined]
   end
@@ -85,6 +85,6 @@ class BasisTradeSeriesBuilderTest < ActiveSupport::TestCase
       end_date: Date.new(2026, 6, 21)
     ).payload
 
-    assert_equal [inside.recorded_at.to_date.iso8601], payload[:points].map { |point| point[:date] }
+    assert_equal [ inside.recorded_at.to_date.iso8601 ], payload[:points].map { |point| point[:date] }
   end
 end

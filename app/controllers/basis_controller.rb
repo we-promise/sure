@@ -18,9 +18,7 @@ class BasisController < ApplicationController
 
     @has_snapshots = @basis_chart_payload[:points].any?
 
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
-      [ t("basis.show.title"), nil ]
-    ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ],
+                     [ t("basis.show.title"), nil ] ]
   end
 end
