@@ -32,11 +32,11 @@ class Assistant::Function::GetCategories < Assistant::Function
 
   def params_schema
     build_schema(
-      required: [ "page" ],
+      required: [],
       properties: {
         page: {
           type: "integer",
-          description: "Page number"
+          description: "Page number (defaults to 1)"
         }
       }
     )
