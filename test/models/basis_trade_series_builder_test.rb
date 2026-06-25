@@ -9,7 +9,7 @@ class BasisTradeSeriesBuilderTest < ActiveSupport::TestCase
     payload = BasisTradeSeriesBuilder.new(family: @family).payload
 
     assert_equal @family.primary_currency_code, payload[:currency]
-    assert_equal [ ], payload[:points]
+    assert_equal [], payload[:points]
     assert_equal({ spot: 0.0, short: 0.0, funding: 0.0, rewards: 0.0, combined: 0.0 }, payload[:totals])
   end
 
