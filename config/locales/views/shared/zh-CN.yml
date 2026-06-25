@@ -36,3 +36,7 @@ zh-CN:
       expense: 支出
       income: 收入
       transfer: 转账
+    preview: 预览
+    sync_toast:
+      message: 有新数据可用
+      refresh: 刷新

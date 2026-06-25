@@ -41,8 +41,18 @@ en:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"
+      sections_aria_label: "Dashboard sections"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
+      widget_size:
+        label: "Adjust size"
+        width_label: "Width"
+        half: "Half"
+        full: "Full"
+        height_label: "Height"
+        compact: "Compact"
+        auto: "Auto"
+        tall: "Tall"
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth

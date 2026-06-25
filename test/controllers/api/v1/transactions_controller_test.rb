@@ -778,28 +778,7 @@ end
   end
 
   test "transactions with transfers should include transfer information" do
-    # Create a transfer between two accounts to test transfer rendering
-    from_account = @family.accounts.create!(
-      name: "Transfer From Account",
-      balance: 1000,
-      currency: "USD",
-      accountable: Depository.new
-    )
-
-    to_account = @family.accounts.create!(
-      name: "Transfer To Account",
-      balance: 0,
-      currency: "USD",
-      accountable: Depository.new
-    )
-
-    transfer = Transfer::Creator.new(
-      family: @family,
-      source_account_id: from_account.id,
-      destination_account_id: to_account.id,
-      date: Date.current,
-      amount: 100
-    ).create
+    transfer = create_transfer_between_accounts
 
     get api_v1_transaction_url(transfer.inflow_transaction), headers: api_headers(@api_key)
     assert_response :success
@@ -810,6 +789,28 @@ end
     assert transaction_data["transfer"].key?("amount")
     assert transaction_data["transfer"].key?("currency")
     assert transaction_data["transfer"].key?("other_account")
+  end
+
+  test "index renders transfer rows without per-transfer transaction lookups" do
+    transfer = create_transfer_between_accounts
+
+    queries = capture_sql_queries do
+      get api_v1_transactions_url,
+          params: { per_page: 100 },
+          headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transfer_transaction_ids = [ transfer.inflow_transaction_id, transfer.outflow_transaction_id ]
+    transfer_rows = response_data["transactions"].select { |transaction| transfer_transaction_ids.include?(transaction["id"]) }
+
+    assert_equal 2, transfer_rows.size
+    assert transfer_rows.all? { |transaction| transaction["transfer"].present? }
+    assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
+    assert_empty queries.grep(/SELECT "entries"\.\* FROM "entries" WHERE "entries"\."id" =/)
+    assert_empty queries.grep(/SELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id" =/)
   end
 
   private
@@ -828,6 +829,46 @@ end
       end
 
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+      queries
+    end
+
+    def create_transfer_between_accounts
+      from_account = @family.accounts.create!(
+        name: "Transfer From Account",
+        balance: 1000,
+        currency: "USD",
+        accountable: Depository.new
+      )
+
+      to_account = @family.accounts.create!(
+        name: "Transfer To Account",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      )
+
+      Transfer::Creator.new(
+        family: @family,
+        source_account_id: from_account.id,
+        destination_account_id: to_account.id,
+        date: Date.current,
+        amount: 100
+      ).create
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
       queries
     end
 

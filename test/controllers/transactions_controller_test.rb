@@ -239,6 +239,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   assert_operator overflow_count, :>, 0, "Overflow should show some transactions"
 end
 
+  test "pagination does not duplicate or skip transactions with same date and timestamp" do
+    family = families(:empty)
+    user = users(:empty)
+    sign_in user
+
+    family.accounts.each { |account| account.entries.delete_all }
+
+    account = family.accounts.create! name: "Same day", balance: 0, currency: "USD", accountable: Depository.new
+    timestamp = Time.zone.parse("2026-05-05 12:00:00")
+
+    entries = 13.times.map do |index|
+      create_transaction(
+        account: account,
+        name: "May 05 Transaction #{index + 1}",
+        amount: 100 + index,
+        date: Date.new(2026, 5, 5),
+        created_at: timestamp,
+        updated_at: timestamp
+      )
+    end
+
+    expected_entry_ids = Entry.where(id: entries.map(&:id)).reverse_chronological.pluck(:id).map(&:to_s)
+
+    get transactions_url(page: 1, per_page: 10)
+    assert_response :success
+    page_1_entry_ids = rendered_entry_ids
+
+    get transactions_url(page: 2, per_page: 10)
+    assert_response :success
+    page_2_entry_ids = rendered_entry_ids
+
+    assert_equal expected_entry_ids.first(10), page_1_entry_ids
+    assert_equal expected_entry_ids.drop(10), page_2_entry_ids
+    assert_empty page_1_entry_ids & page_2_entry_ids
+    assert_equal expected_entry_ids, page_1_entry_ids + page_2_entry_ids
+  end
+
   test "calls Transaction::Search totals method with correct search parameters" do
     family = families(:empty)
     sign_in users(:empty)
@@ -686,6 +723,10 @@ end
   end
 
   private
+    def rendered_entry_ids
+      css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+    end
+
     def capture_sql_queries
       queries = []
       callback = lambda do |_name, _started, _finished, _unique_id, payload|

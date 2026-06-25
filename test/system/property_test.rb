@@ -13,12 +13,27 @@ class PropertiesEditTest < ApplicationSystemTestCase
 
   test "can persist property subtype" do
     click_link "[system test] Property Account"
-    find("[data-testid='account-menu']").click
-    click_on "Edit"
+    open_account_edit_dialog
     assert_equal "single_family_home", find("#account_accountable_attributes_subtype").value
   end
 
   private
+
+    # The account page issues a Turbo morph refresh shortly after it loads
+    # (`turbo_refreshes_with method: :morph` reacting to a family-stream
+    # broadcast). If the edit modal is opened while that refresh is in flight,
+    # the morph re-renders the page and wipes the just-loaded `#modal`
+    # turbo-frame before the dialog is interactive. Open via the account menu and
+    # retry once the refresh has settled so the test is deterministic instead of
+    # racing the broadcast.
+    def open_account_edit_dialog
+      3.times do
+        find("[data-testid='account-menu']").click
+        click_on "Edit"
+        return if has_selector?("#account_accountable_attributes_subtype", wait: 2)
+      end
+      assert_selector "#account_accountable_attributes_subtype"
+    end
 
     def open_new_account_modal
       within "[data-controller='DS--tabs']" do

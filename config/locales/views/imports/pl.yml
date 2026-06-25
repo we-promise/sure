@@ -168,7 +168,6 @@ pl:
       description: Importuj dane z narzędzia finansowego lub prześlij surowe pliki danych.
       tab_financial_tools: Narzędzia i pliki finansowe
       tab_raw_data: Surowe dane
-      coming_soon: Wkrótce
       import_ynab: Importuj z YNAB
       import_accounts: Importuj konta
       import_categories: Importuj kategorie

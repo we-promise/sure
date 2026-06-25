@@ -7,14 +7,10 @@ ca:
       success: Transferència eliminada
     form:
       amount: Import
-      calculate_rate_tab: Calcula la taxa de canvi
-      convert_tab: Converteix amb la taxa de canvi
       date: Data
       destination_amount: Import rebut
       destination_amount_display: 'Import rebut: %{amount}'
-      exchange_rate: Taxa de canvi
       exchange_rate_display: 'Taxa de canvi: %{rate}'
-      exchange_rate_help: Tria com introduir l'import de la transferència.
       expense: Despesa
       from: Des de
       income: Ingrés

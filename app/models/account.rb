@@ -95,9 +95,18 @@ class Account < ApplicationRecord
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
 
-  # Writer for subtype that delegates to the accountable
-  # This allows forms to set subtype directly on the account
+  # Writer for subtype that delegates to the accountable.
+  # This allows forms to set subtype directly on the account.
+  #
+  # On create the accountable may not be built yet: mass-assignment can apply
+  # `subtype` before `accountable_attributes` (which is what builds the
+  # accountable via accepts_nested_attributes_for). With no accountable in place
+  # `accountable&.subtype = value` is a silent no-op and the chosen subtype is
+  # dropped. Build the accountable from the delegated type first so the value is
+  # preserved; the later `accountable_attributes` assignment (update_only) then
+  # updates this same record instead of building a new one.
   def subtype=(value)
+    self.accountable = accountable_class.new if accountable.nil? && accountable_type.present?
     accountable&.subtype = value
   end
 
