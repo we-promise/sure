@@ -1,4 +1,6 @@
 class McpController < ApplicationController
+  include OauthBase
+
   PROTOCOL_VERSION = "2025-03-26"
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
@@ -101,36 +103,52 @@ class McpController < ApplicationController
     end
 
     def authenticate_mcp_token!
-      expected = ENV["MCP_API_TOKEN"]
+      auth_header = request.authorization.to_s
+      token = auth_header[/\ABearer\s+(.+)\z/i, 1]&.strip&.presence # pipelock:ignore
 
-      unless expected.present?
-        render json: { error: "MCP endpoint not configured" }, status: :service_unavailable
-        return
-      end
+      return if token.present? && authenticate_via_doorkeeper(token)
+      return if token.present? && authenticate_via_env_token(token)
 
-      token = request.headers["Authorization"]&.delete_prefix("Bearer ")&.strip
-
-      unless ActiveSupport::SecurityUtils.secure_compare(token.to_s, expected)
-        render json: { error: "unauthorized" }, status: :unauthorized
-        return
-      end
-
-      setup_mcp_user
+      render_mcp_unauthorized
     end
 
-    def setup_mcp_user
-      email = ENV["MCP_USER_EMAIL"]
-      @mcp_user = User.find_by(email: email) if email.present?
+    def authenticate_via_doorkeeper(token)
+      access_token = Doorkeeper::AccessToken.by_token(token)
+      return false unless access_token&.accessible?
+      return false unless access_token.scopes.include?("read_write")
 
-      unless @mcp_user
-        render json: { error: "MCP user not configured" }, status: :service_unavailable
-        return
+      user = User.find_by(id: access_token.resource_owner_id)
+      return false unless user&.active?
+
+      setup_mcp_session(user)
+      true
+    end
+
+    def authenticate_via_env_token(token)
+      expected = ENV["MCP_API_TOKEN"]
+      return false unless expected.present?
+      return false unless ActiveSupport::SecurityUtils.secure_compare(
+        OpenSSL::Digest::SHA256.hexdigest(token),
+        OpenSSL::Digest::SHA256.hexdigest(expected)
+      )
+
+      user = User.find_by(email: ENV["MCP_USER_EMAIL"])
+
+      unless user
+        Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match any user — check environment configuration"
+        return false
       end
 
+      setup_mcp_session(user)
+      true
+    end
+
+    def setup_mcp_session(user)
+      @mcp_user = user
       # Build a fresh session to avoid inheriting impersonation state from
       # existing sessions (Current.user resolves via active_impersonator_session
       # first, which could leak another user's data into MCP tool calls).
-      Current.session = @mcp_user.sessions.build(
+      Current.session = user.sessions.build(
         user_agent: request.user_agent,
         ip_address: request.ip
       )
@@ -138,6 +156,14 @@ class McpController < ApplicationController
 
     def mcp_user
       @mcp_user
+    end
+
+    def render_mcp_unauthorized
+      response.set_header(
+        "WWW-Authenticate",
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\""
+      )
+      render json: { error: "unauthorized" }, status: :unauthorized
     end
 
     def render_jsonrpc_error(id, code, message)

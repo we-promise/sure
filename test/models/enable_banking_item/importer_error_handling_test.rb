@@ -112,18 +112,40 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
-  test "fetch_and_store_transactions fails when validation error is unrelated to transactionStatus" do
+  # Regression for #1805: ImaginV2 (and other Enable Banking connectors) reject PDNG with
+  # a generic WRONG_REQUEST_PARAMETERS body whose message does not mention "transactionStatus".
+  # The sync must still succeed and import booked transactions.
+  test "fetch_and_store_transactions succeeds when ASPSP rejects PDNG with WRONG_REQUEST_PARAMETERS" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     @importer.stubs(:determine_sync_start_date).returns(Date.today)
     @importer.stubs(:include_pending?).returns(true)
 
-    date_error = Provider::EnableBanking::EnableBankingError.new(
-      "Validation error from Enable Banking API: {\"message\":\"Invalid date_from format\"}",
-      :validation_error
+    imagin_error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: {\"error\":\"WRONG_REQUEST_PARAMETERS\"}",
+      :validation_error,
+      response_data: { error: "WRONG_REQUEST_PARAMETERS" }
     )
 
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
-    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(date_error)
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(imagin_error)
+
+    result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+
+    assert result[:success]
+  end
+
+  test "fetch_and_store_transactions propagates non-validation EnableBankingError from PDNG fetch" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:include_pending?).returns(true)
+
+    rate_limit_error = Provider::EnableBanking::EnableBankingError.new(
+      "Rate limit exceeded. Please try again later.",
+      :rate_limited
+    )
+
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(rate_limit_error)
 
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
 

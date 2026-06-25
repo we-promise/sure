@@ -34,6 +34,7 @@ zh-CN:
         merchant: 商户
         actions: 操作
         source: 来源
+      import: 导入商户
     family_merchant:
       edit: 编辑
       delete: 删除

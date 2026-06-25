@@ -9,50 +9,122 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   # -- Authentication --
 
   test "returns 401 without authorization header" do
-    with_mcp_env do
-      post "/mcp", params: jsonrpc_request("initialize").to_json,
-           headers: { "Content-Type" => "application/json" }
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: { "Content-Type" => "application/json" }
 
-      assert_response :unauthorized
-      assert_equal "unauthorized", JSON.parse(response.body)["error"]
-    end
+    assert_response :unauthorized
+    assert_equal "unauthorized", JSON.parse(response.body)["error"]
+    assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
+    assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource"
   end
 
   test "returns 401 with wrong token" do
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers("wrong-token")
+
+    assert_response :unauthorized
+    assert response.headers["WWW-Authenticate"].present?
+  end
+
+  test "authenticates via Doorkeeper bearer token" do
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Client #{SecureRandom.hex(4)}",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :ok
+    result = JSON.parse(response.body)["result"]
+    assert_equal "2025-03-26", result["protocolVersion"]
+  end
+
+  test "rejects token with read-only scope" do
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Client #{SecureRandom.hex(4)}",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read",
+      expires_in: 1.year
+    )
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :unauthorized
+  end
+
+  test "rejects expired Doorkeeper token" do
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Client #{SecureRandom.hex(4)}",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: -1.second # already expired at creation time
+    )
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :unauthorized
+  end
+
+  test "rejects token for deactivated user" do
+    inactive_user = users(:family_member)
+    inactive_user.update!(active: false)
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Client #{SecureRandom.hex(4)}",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: inactive_user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :unauthorized
+  ensure
+    inactive_user&.update!(active: true)
+  end
+
+  test "env-var token still works as fallback" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("initialize").to_json,
-           headers: mcp_headers("wrong-token")
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+    end
+  end
+
+  test "returns 401 and warns when env-var token matches but MCP_USER_EMAIL finds no user" do
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => "nonexistent@example.com") do # pipelock:ignore
+      Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
 
       assert_response :unauthorized
-    end
-  end
-
-  test "returns 503 when MCP_API_TOKEN is not set" do
-    with_env_overrides("MCP_USER_EMAIL" => @user.email) do
-      post "/mcp", params: jsonrpc_request("initialize").to_json,
-           headers: mcp_headers(@token)
-
-      assert_response :service_unavailable
-      assert_includes JSON.parse(response.body)["error"], "not configured"
-    end
-  end
-
-  test "returns 503 when MCP_USER_EMAIL is not set" do
-    with_env_overrides("MCP_API_TOKEN" => @token) do
-      post "/mcp", params: jsonrpc_request("initialize").to_json,
-           headers: mcp_headers(@token)
-
-      assert_response :service_unavailable
-      assert_includes JSON.parse(response.body)["error"], "user not configured"
-    end
-  end
-
-  test "returns 503 when MCP_USER_EMAIL does not match any user" do
-    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => "nonexistent@example.com") do
-      post "/mcp", params: jsonrpc_request("initialize").to_json,
-           headers: mcp_headers(@token)
-
-      assert_response :service_unavailable
     end
   end
 
@@ -273,7 +345,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   private
 
     def with_mcp_env(&block)
-      with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block)
+      with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
     end
 
     def mcp_headers(token)

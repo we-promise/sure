@@ -155,5 +155,5 @@ zh-CN:
         other: 已勾稽 %{count} 笔重复待处理交易
     stale_pending_status:
       message:
-        one: 1 笔待处理交易早于 %{days} 天
+        one: "%{count} 笔待处理交易早于 %{days} 天"
         other: "%{count} 笔待处理交易早于 %{days} 天"

@@ -36,12 +36,14 @@
   <% end %>
 <% else %>
   <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
-    <div>
-      <h2 class="text-lg font-medium text-primary"><%= title %></h2>
-      <% if subtitle.present? %>
-        <p class="text-secondary text-sm mt-1"><%= subtitle %></p>
-      <% end %>
-    </div>
+    <% if title.present? %>
+      <div>
+        <h2 class="text-lg font-medium text-primary"><%= title %></h2>
+        <% if subtitle.present? %>
+          <p class="text-secondary text-sm mt-1"><%= subtitle %></p>
+        <% end %>
+      </div>
+    <% end %>
     <div class="space-y-4">
       <%= content %>
     </div>

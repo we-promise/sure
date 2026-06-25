@@ -23,7 +23,7 @@
     <% elsif import.has_unassigned_account? %>
       <div class="w-full max-w-full overflow-hidden mb-4">
         <div class="overflow-x-auto">
-          <div class="flex items-center justify-between p-4 gap-4 text-secondary bg-yellow-100 border border-yellow-200 rounded-lg w-[650px] min-w-0 mx-auto">
+          <div class="flex items-center justify-between p-4 gap-4 text-secondary bg-warning/10 border border-warning/20 rounded-lg w-[650px] min-w-0 mx-auto">
             <%= tag.p t(".unassigned_account"), class: "text-sm" %>
             <%= render DS::Link.new(
               text: t(".create_account"),

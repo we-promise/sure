@@ -36,6 +36,9 @@
     <% if @show_alpha_vantage_settings %>
       <%= render "settings/hostings/alpha_vantage_settings" %>
     <% end %>
+    <% if @show_tinkoff_invest_settings %>
+      <%= render "settings/hostings/tinkoff_invest_settings" %>
+    <% end %>
   </div>
 <% end %>
 <%= settings_section title: t(".sync_settings") do %>

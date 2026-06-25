@@ -1,29 +1,6 @@
 class Family::Syncer
   attr_reader :family
 
-  # Registry of item association names that participate in family sync.
-  # Each model must:
-  #   1. Include Syncable
-  #   2. Define a `syncable` scope (items ready for auto-sync)
-  #
-  # To add a new provider: add its association name here.
-  # The model handles its own "ready to sync" logic via the syncable scope.
-  SYNCABLE_ITEM_ASSOCIATIONS = %i[
-    plaid_items
-    simplefin_items
-    lunchflow_items
-    akahu_items
-    enable_banking_items
-    indexa_capital_items
-    coinbase_items
-    coinstats_items
-    mercury_items
-    brex_items
-    binance_items
-    snaptrade_items
-    sophtron_items
-  ].freeze
-
   def initialize(family)
     @family = family
   end
@@ -49,14 +26,25 @@ class Family::Syncer
 
   private
 
-    # Collects all syncable items from registered providers + manual accounts.
-    # Each provider model defines its own `syncable` scope that encapsulates
-    # the "ready to sync" business logic (active, configured, etc.)
+    # Collect all syncable provider items via reflection so new `*_items`
+    # integrations participate in nightly family sync as soon as they include
+    # Syncable and expose a `syncable` scope.
     def child_syncables
-      provider_items = SYNCABLE_ITEM_ASSOCIATIONS.flat_map do |association|
+      provider_items = syncable_item_associations.flat_map do |association|
         family.public_send(association).syncable
       end
 
       provider_items + family.accounts.manual
+    end
+
+    def syncable_item_associations
+      Family.reflect_on_all_associations(:has_many).filter_map do |association|
+        next unless association.name.to_s.end_with?("_items")
+        next unless association.klass.included_modules.include?(Syncable)
+
+        association.name
+      rescue NameError
+        nil
+      end
     end
 end

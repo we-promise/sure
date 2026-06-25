@@ -140,6 +140,18 @@ class Provider::Registry
       def binance_public
         Provider::BinancePublic.new
       end
+
+      def moex_public
+        Provider::MoexPublic.new
+      end
+
+      def tinkoff_invest
+        api_key = ENV["TINKOFF_INVEST_API_KEY"].presence || Setting.tinkoff_invest_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::TinkoffInvest.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -170,9 +182,9 @@ class Provider::Registry
     def available_providers
       case concept
       when :exchange_rates
-        %i[twelve_data yahoo_finance]
+        %i[twelve_data yahoo_finance moex_public]
       when :securities
-        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest]
       when :llm
         %i[openai anthropic]
       else

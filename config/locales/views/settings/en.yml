@@ -112,7 +112,7 @@ en:
         dashboard_title: Dashboard
         dashboard_subtitle: Customize how the dashboard is displayed
         dashboard_two_column_title: Two-column layout
-        dashboard_two_column_description: Display dashboard widgets in two columns on large screens. When off, widgets stack in a single column.
+        dashboard_two_column_description: Display dashboard widgets in two columns on large screens, with per-widget width and height controls in each widget's header. When off, widgets stack in a single column.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
     preferences:
@@ -207,10 +207,20 @@ en:
         profile_title: Personal
         remove_invitation: Remove Invitation
         remove_member: Remove Member
+        resend_confirmation_link: request a new confirmation email
         save: Save
+        unconfirmed_email_notice_html: You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{resend_link}.
     securities:
       show:
         page_title: Security
+        encryption_warning:
+          title: Encryption keys missing
+          intro: "Sensitive data (API keys, provider tokens, MFA secrets, and PII) are being stored unencrypted at rest. To enable encryption, set the following keys in your environment variables or Rails credentials:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Generate a set with: bin/rails db:encryption:init"
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
         enable_mfa: Enable 2FA
@@ -228,6 +238,26 @@ en:
         sso_confirm_body: Are you sure you want to disconnect your %{provider} account? You can reconnect it later by signing in with that provider again.
         sso_confirm_button: Disconnect
         sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
+    mcp:
+      show:
+        page_title: MCP Server
+        connect_title: Connect an AI assistant
+        connect_subtitle: Paste this URL into Claude.ai (or any MCP-compatible client) to connect it to your Sure account.
+        copy_url: Copy
+        copied: Copied!
+        how_to_connect_title: How to connect Claude
+        step_1: "Open Claude.ai and go to Settings → Integrations."
+        step_2: Click "Add integration" and paste the MCP server URL above.
+        step_3: Click Connect — you'll be redirected to Sure to sign in and authorize access.
+        step_4: Once authorized, Claude can read your accounts, transactions, and balance data.
+        connected_title: Connected clients
+        connected_subtitle: These apps currently have access to your Sure data. Revoke any you no longer use.
+        unknown_client: Unknown client
+        connected_ago: "Connected %{time} ago"
+        revoke: Revoke
+        revoke_confirm: Revoke access for this client?
+      revoke:
+        revoked: Connection revoked.
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Advanced
@@ -249,6 +279,7 @@ en:
       profile_label: Profile Info
       recurring_transactions_label: Recurring
       rules_label: Rules
+      mcp_label: MCP
       security_label: Security
       self_hosting_label: Self-Hosting
       sso_providers_label: SSO Providers
@@ -447,6 +478,10 @@ en:
         step_1_html: "Go to %{link} and create a personal app."
         step_2: "Copy your app token and user token."
         step_3: "Paste the tokens below, save, then link your synced accounts."
+      up_panel:
+        step_1_html: "Go to %{link} and generate a personal access token."
+        step_2: "Copy your personal access token."
+        step_3: "Paste the token below, save, then link your synced accounts."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
