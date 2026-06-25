@@ -105,6 +105,7 @@ en:
       pledge_just_saved: Log money you set aside
       funding_accounts_heading: Funding accounts
       funding_accounts:
+        earmarked_of: "%{earmarked} earmarked of %{balance}"
         empty:
           heading: No funding accounts linked yet
           body: Edit the goal to link the depository accounts you save into.
@@ -258,7 +259,10 @@ en:
         notes: Notes (optional)
         notes_placeholder: A reminder for future you…
         funding_accounts: Funding accounts
-        funding_accounts_hint: This goal's balance is the balance of these accounts.
+        funding_accounts_hint: This goal's balance is the balance (or earmarked portion) of these accounts.
+        whole_balance: Whole balance
+        earmark_for: Earmark amount for %{account}
+        earmark_hint: Leave an amount blank to dedicate that account's whole balance.
       subtypes:
         checking: Checking
         savings: Savings

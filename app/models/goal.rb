@@ -87,6 +87,13 @@ class Goal < ApplicationRecord
     @current_balance_money ||= Money.new(current_balance, currency)
   end
 
+  # This goal's backing from a single linked account — the earmarked slice, or
+  # the whole-balance remainder when the link is unallocated — as Money. Used
+  # by the funding breakdown so the per-account rows reconcile with the ring.
+  def account_backing(account)
+    Money.new(backing_balance_for(account), currency)
+  end
+
   def remaining_amount
     @remaining_amount ||= [ target_amount - current_balance, 0 ].max
   end
