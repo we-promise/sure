@@ -17,7 +17,7 @@
   ) %>
 <% end %>
 
-<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @akahu_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @brex_items.empty? && @ibkr_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? && @sophtron_items.empty? && @binance_items.empty? %>
+<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @akahu_items.empty? && @up_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @brex_items.empty? && @ibkr_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? && @sophtron_items.empty? && @binance_items.empty? %>
   <%= render "empty" %>
 <% else %>
   <div class="space-y-2">
@@ -35,6 +35,10 @@
 
     <% if @akahu_items.any? %>
       <%= render @akahu_items.sort_by(&:created_at) %>
+    <% end %>
+
+    <% if @up_items.any? %>
+      <%= render @up_items.sort_by(&:created_at) %>
     <% end %>
 
     <% if @enable_banking_items.any? %>

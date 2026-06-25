@@ -25,11 +25,7 @@
         </ul>
       </div>
 
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-        <p class="text-sm text-amber-800">
-          <strong><%= t(".note_label") %>:</strong> <%= t(".note_description") %>
-        </p>
-      </div>
+      <%= render DS::Alert.new(title: t(".note_label"), message: t(".note_description"), variant: :warning) %>
 
       <%= form_with url: family_exports_path, method: :post, class: "space-y-4" do |form| %>
         <div class="flex gap-3">

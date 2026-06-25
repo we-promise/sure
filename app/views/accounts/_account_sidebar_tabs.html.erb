@@ -5,22 +5,12 @@
   <% balance_sheet = family.balance_sheet(user: Current.user) %>
 
   <% if family.missing_data_provider? %>
-    <details class="group bg-yellow-tint-10 rounded-lg p-2 text-yellow-600 mb-3 text-xs">
-      <summary class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-          <%= icon "triangle-alert", size: "sm", color: "warning" %>
-          <p class="font-medium"><%= t("accounts.sidebar.missing_data") %></p>
-        </div>
-
-        <%= icon("chevron-down", color: "warning", class: "group-open:transform group-open:rotate-180") %>
-      </summary>
-      <div class="text-xs py-2 space-y-2">
-        <p><%= t("accounts.sidebar.missing_data_description", product: product_name) %></p>
-        <p>
-          <%= link_to t("accounts.sidebar.configure_providers"), settings_hosting_path, class: "text-yellow-600 underline" %>
-        </p>
-      </div>
-    </details>
+    <div class="mb-3">
+      <%= render DS::Alert.new(title: t("accounts.sidebar.missing_data"), variant: :warning) do %>
+        <p class="text-secondary"><%= t("accounts.sidebar.missing_data_description", product: product_name) %></p>
+        <p><%= link_to t("accounts.sidebar.configure_providers"), settings_hosting_path, class: "underline font-medium" %></p>
+      <% end %>
+    </div>
   <% end %>
 
   <%= render DS::Tabs.new(active_tab: active_tab, session_key: "account_sidebar_tab", testid: "account-sidebar-tabs") do |tabs| %>

@@ -106,7 +106,7 @@
     <div class="table-scroll rounded-lg" tabindex="0" role="region" aria-label="<%= t(".recent_usage") %>">
       <% if @llm_usages.any? %>
         <table class="w-full">
-          <thead class="bg-surface-default border-b border-primary">
+          <thead class="bg-surface border-b border-primary">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".col_date") %></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".col_operation") %></th>
@@ -115,9 +115,9 @@
               <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".col_cost") %></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
             <% @llm_usages.each do |usage| %>
-              <tr class="<%= "bg-red-50 theme-dark:bg-red-950/30" if usage.failed? %>">
+              <tr class="<%= "bg-red-tint-5 theme-dark:bg-red-tint-10" if usage.failed? %>">
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
                   <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
                 </td>
@@ -131,10 +131,10 @@
                   <% if usage.failed? %>
                     <div data-controller="tooltip" class="inline-flex justify-end">
                       <div class="inline-flex items-center gap-1 cursor-help">
-                        <%= icon "alert-circle", class: "w-4 h-4 text-red-600 theme-dark:text-red-400" %>
-                        <span class="text-red-600 theme-dark:text-red-400 font-medium"><%= t(".failed") %></span>
+                        <%= icon "alert-circle", size: "sm", color: "destructive" %>
+                        <span class="text-destructive font-medium"><%= t(".failed") %></span>
                       </div>
-                      <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-inverse text-sm p-3 rounded w-72 text-left break-words whitespace-normal shadow-lg hidden">
+                      <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-inverse text-sm p-2 rounded-md w-64 text-left break-words whitespace-normal hidden">
                         <div class="text-inverse">
                           <% if usage.http_status_code.present? %>
                             <p class="text-xs mt-1 text-inverse opacity-70">HTTP Status: <%= usage.http_status_code %></p>

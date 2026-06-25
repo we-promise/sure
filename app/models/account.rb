@@ -106,14 +106,28 @@ class Account < ApplicationRecord
     @subtype_from_accountable = accountable&.subtype
   end
 
+  # Writer for subtype that delegates to the accountable.
+  # This allows forms to set subtype directly on the account.
+  #
+  # On create the accountable may not be built yet: mass-assignment can apply
+  # `subtype` before `accountable_attributes` (which is what builds the
+  # accountable via accepts_nested_attributes_for). With no accountable in place
+  # `accountable&.subtype = value` is a silent no-op and the chosen subtype is
+  # dropped. Build the accountable from the delegated type first so the value is
+  # preserved; the later `accountable_attributes` assignment (update_only) then
+  # updates this same record instead of building a new one.
   def subtype=(value)
     self[:subtype] = value
     remove_instance_variable(:@subtype_from_accountable) if defined?(@subtype_from_accountable)
+
+    self.accountable = accountable_class.new if accountable.nil? && accountable_type.present?
 
     if association(:accountable).loaded? && (target = association(:accountable).target)
       if target.respond_to?(:subtype=) && (value.present? || target.subtype.blank?)
         target.subtype = value
       end
+    elsif accountable&.respond_to?(:subtype=)
+      accountable.subtype = value
     end
   end
 

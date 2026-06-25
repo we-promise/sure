@@ -142,6 +142,7 @@ zh-CN:
       title: 投资表现
       portfolio_value: 投资组合价值
       total_return: 总回报
+      period_return: 本期回报
       contributions: 本期投入
       withdrawals: 本期提取
       top_holdings: 主要持仓
@@ -232,6 +233,7 @@ zh-CN:
         weight: 占比
         value: 金额
         return: 回报
+        period_return: 本期回报
       spending:
         title: 按分类支出
         income: 收入

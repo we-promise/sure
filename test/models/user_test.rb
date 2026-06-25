@@ -534,6 +534,45 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_order, @user.dashboard_section_order
   end
 
+  test "dashboard_section_height returns stored preset or nil" do
+    @user.update!(preferences: {})
+    assert_nil @user.dashboard_section_height("net_worth_chart")
+
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "net_worth_chart" => { "height" => "tall" } }
+    })
+    @user.reload
+
+    assert_equal "tall", @user.dashboard_section_height("net_worth_chart")
+    assert_nil @user.dashboard_section_height("balance_sheet")
+  end
+
+  test "dashboard_section_width returns stored col_span or nil" do
+    @user.update!(preferences: {})
+    assert_nil @user.dashboard_section_width("cashflow_sankey")
+
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "cashflow_sankey" => { "col_span" => "single" } }
+    })
+
+    assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
+  end
+
+  test "dashboard_section_layout merges width and height without clobbering" do
+    @user.update!(preferences: {})
+
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "net_worth_chart" => { "height" => "tall" } }
+    })
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "net_worth_chart" => { "col_span" => "full" } }
+    })
+    @user.reload
+
+    assert_equal "tall", @user.dashboard_section_height("net_worth_chart")
+    assert_equal "full", @user.dashboard_section_width("net_worth_chart")
+  end
+
   test "handles empty preferences gracefully for dashboard methods" do
     @user.update!(preferences: {})
 

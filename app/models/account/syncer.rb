@@ -13,7 +13,7 @@ class Account::Syncer
   end
 
   def perform_post_sync
-    account.family.auto_match_transfers!
+    account.family.auto_match_transfers!(account: account)
   end
 
   private

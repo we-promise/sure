@@ -7,14 +7,17 @@
 @theme {
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --color-white: #ffffff;
   --color-black: #0B0B0B;
   --color-success: var(--color-green-700);
   --color-warning: var(--color-yellow-600);
-  --color-destructive: var(--color-red-600);
+  --color-destructive: var(--color-red-500);
   --color-info: var(--color-blue-600);
   --color-shadow: --alpha(var(--color-black) / 6%);
   --color-link: var(--color-blue-600);
+  --color-focus-ring: var(--color-alpha-black-700);
   --color-tertiary: var(--color-alpha-black-100);
   --color-surface: var(--color-gray-50);
   --color-surface-hover: var(--color-gray-100);
@@ -216,6 +219,7 @@
     --color-info: var(--color-blue-500);
     --color-shadow: --alpha(var(--color-white) / 8%);
     --color-link: var(--color-blue-500);
+    --color-focus-ring: var(--color-alpha-white-700);
     --color-tertiary: var(--color-alpha-white-200);
     --color-surface: var(--color-black);
     --color-surface-hover: var(--color-gray-800);
@@ -375,7 +379,7 @@
 }
 
 @utility border-destructive {
-  @apply border-red-600;
+  @apply border-red-500;
 
   @variant theme-dark {
     @apply border-red-400;

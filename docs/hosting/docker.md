@@ -251,6 +251,7 @@ Pipelock sits between Sure and external services, scanning AI traffic for:
 - **Secret exfiltration** (DLP): catches API keys, tokens, or personal data leaking in prompts
 - **Prompt injection**: detects attempts to override system instructions
 - **Tool poisoning**: validates MCP tool calls against known-safe patterns
+- **Signed receipts**: optional hash-chained evidence of mediated decisions when `flight_recorder.dir` and `signing_key_path` are configured
 
 When using `compose.example.ai.yml`, Pipelock is always running. External AI agents should connect to port 8889 (MCP reverse proxy) instead of directly to Sure's `/mcp` on port 3000.
 

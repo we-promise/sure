@@ -12,3 +12,12 @@ zh-CN:
       loading: 正在加载记录...
     update:
       success: 记录已更新
+    unlock:
+      success: 记录解除锁定成功
+    protection:
+      tooltip: 受同步保护
+      title: 受同步保护
+      description: 你对此记录的编辑不会被提供商同步覆盖。
+      locked_fields_label: 锁定字段：
+      unlock_button: 允许同步更新
+      unlock_confirm: 允许同步更新此记录？下次同步时你的更改可能会被覆盖。

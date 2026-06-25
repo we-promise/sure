@@ -38,6 +38,21 @@ class Rule::ActionTest < ActiveSupport::TestCase
     end
   end
 
+  test "set_transaction_category overrides locked category when ignore_attribute_locks" do
+    # Explicit "Re-apply" from the rules UI passes ignore_attribute_locks: true (issue #2051)
+    @txn1.lock_attr!(:category_id)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_category",
+      value: @grocery_category.id
+    )
+
+    action.apply(@rule_scope, ignore_attribute_locks: true)
+
+    assert_equal @grocery_category.id, @txn1.reload.category_id
+  end
+
   test "set_transaction_tags" do
     tag = @family.tags.create!(name: "Rule test tag")
 
@@ -144,6 +159,22 @@ class Rule::ActionTest < ActiveSupport::TestCase
     [ @txn2, @txn3 ].each do |transaction|
       assert_equal new_name, transaction.reload.entry.name
     end
+  end
+
+  test "set_transaction_name overrides locked name when ignore_attribute_locks" do
+    # Explicit "Re-apply" from the rules UI passes ignore_attribute_locks: true (issue #2051)
+    new_name = "Renamed Transaction"
+    @txn1.entry.lock_attr!(:name)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_name",
+      value: new_name
+    )
+
+    action.apply(@rule_scope, ignore_attribute_locks: true)
+
+    assert_equal new_name, @txn1.reload.entry.name
   end
 
   test "set_investment_activity_label" do

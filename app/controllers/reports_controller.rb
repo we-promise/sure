@@ -1072,14 +1072,18 @@ class ReportsController < ApplicationController
         return false
       end
 
-      # Find or create a session for this API request
-      # We need to find or create a persisted session so that Current.user delegation works properly
-      session = @current_user.sessions.first_or_create!(
+      unless @current_user.active?
+        render plain: "Invalid or expired API key", status: :unauthorized
+        return false
+      end
+
+      # Build a fresh unsaved session so API key exports never reuse an existing
+      # web session that may already carry impersonation state.
+      Current.session = @current_user.sessions.build(
         user_agent: request.user_agent,
         ip_address: request.ip
       )
-
-      Current.session = session
+      Current.session.active_impersonator_session = nil
 
       # Verify the delegation chain works
       unless Current.user

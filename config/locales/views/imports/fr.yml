@@ -168,7 +168,6 @@ fr:
       description: Importez depuis un outil financier ou téléversez des fichiers de données bruts.
       tab_financial_tools: Outils financiers et fichiers
       tab_raw_data: Données brutes
-      coming_soon: Bientôt disponible
       import_ynab: Importer depuis YNAB
       import_accounts: Importer les comptes
       import_categories: Importer les catégories

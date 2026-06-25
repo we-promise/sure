@@ -134,7 +134,8 @@ class IncomeStatement
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
 
     def categories
-      @categories ||= family.categories.all.to_a
+      # Keep Category#subcategory?'s parent-based orphan semantics without lazy loads.
+      @categories ||= family.categories.includes(:parent).to_a
     end
 
     def period_cache_key(period)
