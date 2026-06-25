@@ -21,7 +21,7 @@ class Goal < ApplicationRecord
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
-  before_validation :default_progress_basis_for_investment, on: :create
+  before_validation :default_progress_basis_for_investment
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -57,6 +57,19 @@ class Goal < ApplicationRecord
   end
 
   attr_writer :pooled_allocations
+
+  # Family-wide map of cumulative market gain/loss per account_id (sum of
+  # balances.net_market_flows). Injected on index alongside pooled_allocations
+  # so contributions-basis goals don't fire one Balance aggregate per account
+  # per goal (N+1).
+  def self.market_flows_for(family)
+    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+    return {} if account_ids.empty?
+
+    Balance.where(account_id: account_ids).group(:account_id).sum(:net_market_flows)
+  end
+
+  attr_writer :market_flows
 
   aasm column: :state do
     after_all_transitions :reset_state_dependent_caches!
@@ -129,7 +142,7 @@ class Goal < ApplicationRecord
   # progress basis — the "what it's worth today" figure shown next to
   # contributions on an investment-backed goal.
   def market_value_money
-    amount = linked_accounts.select { |a| a.currency == currency }.sum { |a| backing_balance_for(a) }
+    amount = linked_accounts.select { |a| a.currency == currency }.sum { |a| backing_share_for(a, a.balance.to_d) }
     Money.new(amount, currency)
   end
 
@@ -467,32 +480,32 @@ class Goal < ApplicationRecord
     # basis: net contributions (market-gain-excluded, floored at 0) on the
     # contributions basis, or the allocation-aware backing balance otherwise.
     def account_amount_for(account)
-      contributions_basis? ? [ contribution_for(account), 0.to_d ].max : backing_balance_for(account)
+      base = contributions_basis? ? net_contributed_for(account) : account.balance.to_d
+      backing_share_for(account, base)
     end
 
     # Net contributions into `account` to date = current value minus cumulative
-    # market gain/loss (sum of balances.net_market_flows). Depository accounts
-    # have zero net_market_flows, so this equals their balance. Allocation
-    # (earmark) is a balance-basis concept and is intentionally ignored here.
-    def contribution_for(account)
-      market_gain = Balance.where(account_id: account.id).sum(:net_market_flows).to_d
-      account.balance.to_d - market_gain
+    # market gain/loss (sum of balances.net_market_flows), floored at 0.
+    # Depository accounts have zero net_market_flows, so this equals their
+    # balance. The per-account base on the contributions basis.
+    def net_contributed_for(account)
+      market_gain = (market_flows[account.id] || 0).to_d
+      [ account.balance.to_d - market_gain, 0.to_d ].max
     end
 
-    # This goal's share of `account`'s live balance under the family-wide
-    # shared pool. The goal's OWN earmark is read from its own goal_accounts
-    # (reliable even for an archived goal, which is excluded from the pool);
-    # OTHER non-archived goals' fixed earmarks come from the shared pool. A
-    # fixed earmark takes its slice; an unallocated link takes the balance left
-    # after others' fixed earmarks (so it keeps the v1 whole-balance behaviour
-    # when nothing else earmarks the account). When the fixed earmarks on an
-    # account exceed its balance every fixed slice is scaled down pro-rata (to
-    # within sub-cent rounding) so the goals' shares effectively never sum past
-    # the account's balance — no double-counting. An overdrawn (<= 0) account
-    # backs nothing.
-    def backing_balance_for(account)
-      balance = account.balance.to_d
-      return 0.to_d if balance <= 0
+    # This goal's share of one linked account given a per-account `base` amount
+    # (the live balance on the balance basis, net contributions on the
+    # contributions basis). Shared-pool semantics are the same either way: the
+    # goal's OWN earmark is read from its own goal_accounts (reliable even for
+    # an archived goal, which is excluded from the pool); OTHER non-archived
+    # goals' fixed earmarks come from the shared pool. A fixed earmark takes its
+    # slice; an unallocated link takes the remainder after others' fixed
+    # earmarks. When fixed earmarks exceed the base they're scaled down pro-rata
+    # (to within sub-cent rounding) so shares never sum past it — no
+    # double-counting. A non-positive base backs nothing.
+    def backing_share_for(account, base)
+      base = base.to_d
+      return 0.to_d if base <= 0
 
       mine = own_allocation_for(account)
       others_fixed = (pooled_allocations[account.id] || [])
@@ -501,13 +514,13 @@ class Goal < ApplicationRecord
 
       if mine
         total_fixed = others_fixed + mine
-        if total_fixed > balance && total_fixed.positive?
-          (mine * (balance / total_fixed)).round(4) # pro-rata haircut
+        if total_fixed > base && total_fixed.positive?
+          (mine * (base / total_fixed)).round(4) # pro-rata haircut
         else
           mine
         end
       else
-        [ balance - others_fixed, 0 ].max # unallocated link: the remainder
+        [ base - others_fixed, 0 ].max # unallocated link: the remainder
       end
     end
 
@@ -523,6 +536,10 @@ class Goal < ApplicationRecord
     # a single query for the standalone (show) case.
     def pooled_allocations
       @pooled_allocations ||= self.class.pooled_allocations_for(family)
+    end
+
+    def market_flows
+      @market_flows ||= self.class.market_flows_for(family)
     end
 
     # Cleared after every AASM transition. The state column drives the

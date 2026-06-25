@@ -28,10 +28,14 @@ class GoalsController < ApplicationController
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
-    # One family-wide earmark-pool query injected into every rendered goal so
-    # the shared-pool backing math doesn't fire a query per card (N+1).
+    # One family-wide earmark-pool + market-flows query injected into every
+    # rendered goal so the backing math doesn't fire a query per card (N+1).
     pooled = Goal.pooled_allocations_for(Current.family)
-    (@grid_goals + @archived_goals).each { |goal| goal.pooled_allocations = pooled }
+    flows = Goal.market_flows_for(Current.family)
+    (@grid_goals + @archived_goals).each do |goal|
+      goal.pooled_allocations = pooled
+      goal.market_flows = flows
+    end
 
     @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.count
     @kpi = kpi_payload(@active_goals)

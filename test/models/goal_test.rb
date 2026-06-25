@@ -434,4 +434,23 @@ class GoalTest < ActiveSupport::TestCase
   test "investment accounts default to transfer pledge kind, never manual_save" do
     assert_equal "transfer", accounts(:investment).default_pledge_kind
   end
+
+  test "adding an investment account via update flips a depository goal to contributions" do
+    goal = goals(:emergency_fund)
+    assert_equal "balance", goal.progress_basis
+    goal.goal_accounts.build(account: accounts(:investment))
+    goal.save!
+    assert_equal "contributions", goal.reload.progress_basis
+  end
+
+  test "earmark is respected on a contributions-basis goal" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Brokerage2", currency: "USD", balance: 10_000)
+    account.balances.create!(date: 5.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 2_000)
+    goal = @family.goals.create!(name: "Earmarked invest", target_amount: 20_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+    assert_equal "contributions", goal.progress_basis
+    # net contributed = 10,000 − 2,000 = 8,000; earmark 1,000 ≤ 8,000 → 1,000.
+    assert_equal BigDecimal("1000"), goal.current_balance.to_d
+  end
 end
