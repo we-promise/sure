@@ -5,6 +5,17 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Bumped `pipelock.image.tag` from `2.5.0` to `2.8.0`, picking up default-on flight recorder receipts, safe-by-default receipt verification, MCP `defer` authorization, `pipelock explain`, `pipelock keys status`, `pipelock support bundle`, verified self-update, and inert-exemption diagnostics.
+- Refreshed Pipelock docs across Docker, MCP, AI, and chart setup to distinguish scanning from verifiable receipt evidence.
+- Enabled `pipelock.requestBodyScanning` by default with `action: warn`, matching Pipelock's current balanced preset so outbound prompt bodies and sensitive headers are scanned.
+
+### Added
+- `pipelock.flightRecorder`: structured Helm values for rendering `flight_recorder.enabled`, `require_receipts`, `redact`, `dir`, and `signing_key_path`.
+- `pipelock.extraVolumes` and `pipelock.extraVolumeMounts`: mount receipt evidence storage and receipt-signing keys without duplicating the Pipelock deployment template.
+
 ## [0.7.1] - 2026-05-31]
 
 ### Changed

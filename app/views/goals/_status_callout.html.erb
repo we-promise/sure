@@ -4,11 +4,11 @@
 
   variant_classes = case goal.status
                     when :behind
-                      "bg-warning/10 border-warning/20 text-warning"
+                      "bg-warning/10 border-warning/20"
                     when :on_track
-                      "bg-success/10 border-success/20 text-success"
+                      "bg-success/10 border-success/20"
                     else
-                      "bg-surface-inset border-secondary text-secondary"
+                      "bg-surface-inset border-secondary"
                     end
 
   icon_glyph = case goal.status
@@ -18,10 +18,16 @@
                else "info"
                end
 
+  icon_color = case goal.status
+               when :behind then "warning"
+               when :on_track then "success"
+               else "default"
+               end
+
   label = t("goals.status.#{goal.status}", default: goal.status.to_s.titleize)
 %>
-<div class="rounded-lg border px-3 py-2 text-sm flex items-center gap-2 <%= variant_classes %>">
-  <span class="shrink-0"><%= icon(icon_glyph, size: "sm") %></span>
+<div class="rounded-lg border px-3 py-2 text-sm flex items-center gap-2 text-primary <%= variant_classes %>">
+  <span class="shrink-0"><%= icon(icon_glyph, size: "sm", color: icon_color) %></span>
   <span class="font-medium"><%= label %></span>
   <span class="opacity-60">·</span>
   <span class="opacity-90 <%= "privacy-sensitive" if goal.status == :behind %>"><%= context %></span>

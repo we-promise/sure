@@ -100,6 +100,22 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     assert_equal "USD", parsed[:display_currency]
   end
 
+  test "parse_ticker strips a separator before the quote (TRX-USD)" do
+    parsed = @provider.send(:parse_ticker, "TRX-USD")
+    refute parsed[:stablecoin]
+    # Without separator handling this would build the invalid pair "TRX-USDT".
+    assert_equal "TRXUSDT", parsed[:binance_pair]
+    assert_equal "TRX", parsed[:base]
+    assert_equal "USD", parsed[:display_currency]
+  end
+
+  test "parse_ticker treats a separated stablecoin (USDT-USD) as stablecoin" do
+    parsed = @provider.send(:parse_ticker, "USDT-USD")
+    assert parsed[:stablecoin]
+    assert_nil parsed[:binance_pair]
+    assert_equal "USDT", parsed[:base]
+  end
+
   test "search_securities returns empty array when query does not match" do
     @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
 
@@ -144,6 +160,62 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     # "BTCUSD" is a prefix of Binance's raw "BTCUSDT" — that single USDT-backed
     # USD variant is what should come back (we store it as BTCUSD for the user).
     assert_equal [ "BTCUSD" ], tickers
+  end
+
+  test "search_securities resolves the canonical dashed BASE-USD form" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+
+    # "BTC-USD" (Yahoo's crypto format, and what users paste) must resolve to
+    # the same single USD variant as "BTCUSD" — not fall through to offline.
+    response = @provider.search_securities("BTC-USD")
+
+    assert response.success?
+    assert_equal [ "BTCUSD" ], response.data.map(&:symbol)
+  end
+
+  test "search_securities resolves a dashed crypto the stock provider may miss (TRX-USD)" do
+    info = [ info_row("TRX", "USDT"), info_row("BTC", "USDT") ]
+    @provider.stubs(:exchange_info_symbols).returns(info)
+
+    response = @provider.search_securities("TRX-USD")
+
+    assert response.success?
+    assert_equal [ "TRXUSD" ], response.data.map(&:symbol)
+  end
+
+  test "search_securities accepts a slash separator (BTC/USD)" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+
+    response = @provider.search_securities("BTC/USD")
+
+    assert response.success?
+    assert_equal [ "BTCUSD" ], response.data.map(&:symbol)
+  end
+
+  test "search_securities treats a dashed stablecoin (USDT-USD) as synthetic without hitting exchangeInfo" do
+    @provider.expects(:exchange_info_symbols).never
+
+    response = @provider.search_securities("USDT-USD")
+
+    assert response.success?
+    assert_equal 1, response.data.size
+    row = response.data.first
+    assert_equal "USDTUSD", row.symbol
+    assert_equal "USDT", row.name
+    assert_equal "USD", row.currency
+  end
+
+  test "search_securities keeps a native non-USD stablecoin pair (USDT-EUR) over the USD synthetic" do
+    info = [ info_row("USDT", "EUR"), info_row("BTC", "USDT") ]
+    @provider.stubs(:exchange_info_symbols).returns(info)
+
+    # Only USD-quoted stablecoins synthesize; a real EUR pair must survive.
+    response = @provider.search_securities("USDT-EUR")
+
+    assert response.success?
+    row = response.data.find { |s| s.symbol == "USDTEUR" }
+    assert_not_nil row, "expected native USDT/EUR pair, got #{response.data.map(&:symbol).inspect}"
+    assert_equal "EUR", row.currency
   end
 
   test "search_securities ranks exact symbol match above base prefix match" do

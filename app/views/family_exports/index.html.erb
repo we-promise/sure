@@ -1,8 +1,7 @@
 <%= content_for :page_title, t(".title") %>
 
-<%= settings_section title: t(".title") do %>
-  <div class="space-y-4">
-    <% has_processing = @exports.any? { |e| e.pending? || e.processing? } %>
+<%= settings_section do %>
+  <% has_processing = @exports.any? { |e| e.pending? || e.processing? } %>
     <%= turbo_frame_tag "family_exports",
         data: has_processing ? {
           controller: "polling",
@@ -18,7 +17,7 @@
           <p><%= @pagy.count %></p>
         </div>
 
-        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+        <div class="overflow-x-auto">
           <% if @exports.any? %>
             <table class="w-full overflow-x-auto">
               <thead>
@@ -135,5 +134,4 @@
       <%= icon("plus") %>
       <%= t(".new") %>
     <% end %>
-  </div>
 <% end %>

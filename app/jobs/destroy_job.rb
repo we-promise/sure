@@ -1,6 +1,10 @@
 class DestroyJob < ApplicationJob
   queue_as :low_priority
-  self.enqueue_after_transaction_commit = :never
+  # Inherits enqueue_after_transaction_commit = true from ApplicationJob. (This
+  # previously read `= :never`, the removed Rails 7.2 symbol API; under 8.1 that
+  # symbol is truthy, so it already deferred — the explicit line was dead and
+  # misleading.) Deferring is correct here: destroy after the enclosing
+  # transaction commits, never against an uncommitted/rolled-back record.
 
   def perform(model)
     model.destroy

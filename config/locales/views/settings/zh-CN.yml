@@ -163,6 +163,7 @@ zh-CN:
         member_removal_failed: 移除成员时出现问题。
         member_removed: 成员已成功移除。
         not_authorized: 您没有权限移除成员。
+        member_owns_other_family_data: 此成员仍拥有其他家庭的数据，无法移除。请先转移或删除这些账户。
       show:
         confirm_delete:
           body: 确定要永久删除您的账户吗？此操作不可逆。
@@ -327,6 +328,7 @@ zh-CN:
         sophtron: 连接美国和加拿大的银行及公用事业账户。
         plaid: 通过 Plaid 连接数千家美国金融机构。
         plaid_eu: 通过 Plaid 连接欧洲金融机构（PSD2 / Open Banking）。
+        akahu: 通过 Akahu 同步新西兰金融机构。
       search_filters:
         aria_label: 搜索提供商
         placeholder: 搜索提供商
@@ -373,6 +375,9 @@ zh-CN:
         syncing: 正在同步...
         sync: 同步
         disconnect_confirm: 确定要断开 Binance 吗？
+        historical_import: 历史导入设置
+        sync_start_date_label: 导入起始日期
+        sync_start_date_help: 选择要向前获取历史交易的时间范围。
       kraken_panel:
         step1_html: '前往 <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API 设置</a>'
         step2: 仅创建一个具备 Query Funds 和 Query Closed Orders & Trades 权限的 API key。
@@ -506,3 +511,7 @@ zh-CN:
         accounts_tab: 账户
         status_configured_suffix: 标签页以管理已发现的账户。
         not_configured: 未配置。
+      akahu_panel:
+        step_1_html: 前往 %{link} 并创建个人应用。
+        step_2: 复制 App Token 和 User Token。
+        step_3: 粘贴 Token、保存，然后关联同步到账户。

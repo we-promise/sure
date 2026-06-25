@@ -1,6 +1,7 @@
 name: Chart CI
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'charts/**'

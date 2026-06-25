@@ -142,6 +142,7 @@ class DS::Dialog < DesignSystemComponent
     classes = responsive? ? "ml-auto hidden lg:flex" : "ml-auto"
     render DS::Button.new(
       variant: "icon",
+      size: :sm,
       class: classes,
       icon: "x",
       title: I18n.t("ds.dialog.close"),
