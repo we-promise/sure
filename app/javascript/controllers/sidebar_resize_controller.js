@@ -133,17 +133,26 @@ export default class extends Controller {
   }
 
   #applyStoredWidth(side) {
-    const stored = Number.parseInt(
-      localStorage.getItem(this.constructor.STORAGE_KEYS[side]),
-      10,
-    );
+    let stored = Number.NaN;
+    try {
+      stored = Number.parseInt(
+        localStorage.getItem(this.constructor.STORAGE_KEYS[side]),
+        10,
+      );
+    } catch (_e) {
+      // Storage blocked (private mode / locked down) — fall back to default.
+    }
     const requested = Number.isFinite(stored) ? stored : SIDEBAR_DEFAULTS[side];
     this.#setWidth(side, this.#clamp(side, requested));
   }
 
   #clamp(side, rawWidth) {
-    const otherWidth = this.#sidebar(side === "left" ? "right" : "left")
-      ? this.#currentWidth(side === "left" ? "right" : "left")
+    const opposite = this.#sidebar(side === "left" ? "right" : "left");
+    // Use the opposite sidebar's *rendered* width, not its stored CSS variable:
+    // a collapsed sidebar renders at 0 (w-0), so its space is correctly freed
+    // for this one instead of staying reserved at the stored value.
+    const otherWidth = opposite
+      ? Math.round(opposite.getBoundingClientRect().width)
       : 0;
 
     return clampSidebarWidth(rawWidth, {
