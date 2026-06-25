@@ -279,7 +279,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       if params[:tag_ids].present?
         tag_ids = Array(params[:tag_ids])
         query = query.where(
-          id: query.joins(:tags).where(tags: { id: tag_ids }).select(:id)
+          id: query.joins(:tags).where(tags: { id: tag_ids }).distinct.select(:id)
         )
       end
 

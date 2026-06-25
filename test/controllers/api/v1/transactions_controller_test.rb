@@ -148,13 +148,14 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should filter transactions by tag_ids without error" do
-    tag = Tag.first
+    tag_one = tags(:one)
+    tag_two = tags(:two)
     tagged_entry = @account.entries.create!(
       name: "Tagged Transaction",
       amount: 12.34,
       currency: "USD",
       date: Date.current,
-      entryable: Transaction.new(tags: [ tag ])
+      entryable: Transaction.new(tags: [ tag_one, tag_two ])
     )
 
     untagged_entry = @account.entries.create!(
@@ -166,12 +167,13 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     )
 
     get api_v1_transactions_url,
-        params: { tag_ids: [ tag.id ], per_page: 200 },
+        params: { tag_ids: [ tag_one.id, tag_two.id ], per_page: 200 },
         headers: api_headers(@api_key)
     assert_response :success
 
     response_data = JSON.parse(response.body)
     transaction_ids = response_data["transactions"].map { |t| t["id"] }
+    assert_equal 1, transaction_ids.count(tagged_entry.transaction.id)
     assert_includes transaction_ids, tagged_entry.transaction.id
     assert_not_includes transaction_ids, untagged_entry.transaction.id
   end
