@@ -25,12 +25,22 @@
         <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
           <div class="flex items-center justify-between gap-3">
             <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
-            <%= render DS::Button.new(
-              text: t(".newly_created.copy_api_key"),
-              variant: "ghost",
-              icon: "copy",
-              data: { action: "clipboard#copy" }
-            ) %>
+            <span data-clipboard-target="iconDefault">
+              <%= render DS::Button.new(
+                text: t(".newly_created.copy_api_key"),
+                variant: "ghost",
+                icon: "copy",
+                data: { action: "clipboard#copy" }
+              ) %>
+            </span>
+            <span data-clipboard-target="iconSuccess" class="hidden">
+              <%= render DS::Button.new(
+                text: t(".newly_created.copied"),
+                variant: "ghost",
+                icon: "check",
+                data: { action: "clipboard#copy" }
+              ) %>
+            </span>
           </div>
         </div>
       </div>
@@ -113,12 +123,22 @@
         <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
           <div class="flex items-center justify-between gap-3">
             <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
-            <%= render DS::Button.new(
-              text: t(".current_api_key.copy_api_key"),
-              variant: "ghost",
-              icon: "copy",
-              data: { action: "clipboard#copy" }
-            ) %>
+            <span data-clipboard-target="iconDefault">
+              <%= render DS::Button.new(
+                text: t(".current_api_key.copy_api_key"),
+                variant: "ghost",
+                icon: "copy",
+                data: { action: "clipboard#copy" }
+              ) %>
+            </span>
+            <span data-clipboard-target="iconSuccess" class="hidden">
+              <%= render DS::Button.new(
+                text: t(".current_api_key.copied"),
+                variant: "ghost",
+                icon: "check",
+                data: { action: "clipboard#copy" }
+              ) %>
+            </span>
           </div>
         </div>
       </div>

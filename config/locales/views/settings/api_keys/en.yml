@@ -38,6 +38,7 @@ en:
           your_api_key: "Your API Key"
           copy_store_securely: "Copy and store this key securely. You'll need it to authenticate your API requests."
           copy_api_key: "Copy API Key"
+          copied: "Copied!"
           how_to_use: "How to use your API key"
           continue: "Continue to API Key Settings"
         current_api_key:
@@ -57,6 +58,7 @@ en:
           scope_read_only: "Read Only"
           scope_read_write: "Read/Write"
           copy_api_key: "Copy API Key"
+          copied: "Copied!"
           copy_store_securely: "Copy and store this key securely. You'll need it to authenticate your API requests."
           usage_instructions_title: "How to use your API key"
           usage_instructions: "Include your API key in the X-Api-Key header when making requests to the %{product_name} API:"
@@ -112,4 +114,5 @@ en:
         critical_warning_3: "If you lose this key, you'll need to create a new one."
         usage_instructions: "Use your API key by including it in the X-Api-Key header:"
         copy_key: "Copy API Key"
+        copied: "Copied!"
         continue: "Continue to API Key Settings"
