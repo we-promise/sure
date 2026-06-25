@@ -60,6 +60,9 @@ module SettingsHelper
     when "akahu"
       return { status: :off } unless @akahu_items&.any?
       sync_based_summary(key)
+    when "up"
+      return { status: :off } unless @up_items&.any?
+      sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
       sync_based_summary(key)

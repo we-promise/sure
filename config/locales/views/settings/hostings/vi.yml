@@ -43,6 +43,7 @@ vi:
         requires_api_key_alpha_vantage: yêu cầu khóa API, giới hạn 25 lần gọi/ngày
         mfapi_hint: miễn phí, không cần khóa API -- chỉ quỹ tương hỗ Ấn Độ
         binance_public_hint: miễn phí, không cần khóa API -- chỉ tiền điện tử (BTC, ETH, v.v.)
+        moex_public_hint: miễn phí, không cần khóa API -- cổ phiếu, quỹ và trái phiếu Nga (MOEX), bao gồm tỷ giá RUB
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -51,6 +52,7 @@ vi:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
       assistant_settings:
         title: Trợ lý AI
         description: Chọn cách trợ lý trò chuyện phản hồi. Tích hợp sẵn sử dụng nhà cung cấp LLM đã cấu hình trực tiếp. Bên ngoài ủy thác cho tác nhân AI từ xa có thể gọi lại các công cụ tài chính của Sure qua MCP.

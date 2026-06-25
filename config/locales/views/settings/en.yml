@@ -478,6 +478,10 @@ en:
         step_1_html: "Go to %{link} and create a personal app."
         step_2: "Copy your app token and user token."
         step_3: "Paste the tokens below, save, then link your synced accounts."
+      up_panel:
+        step_1_html: "Go to %{link} and generate a personal access token."
+        step_2: "Copy your personal access token."
+        step_3: "Paste the token below, save, then link your synced accounts."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."

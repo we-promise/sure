@@ -44,6 +44,8 @@ en:
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
         mfapi_hint: free, no API key -- Indian mutual funds only
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
+        moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
+        tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -52,6 +54,8 @@ en:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -153,6 +157,16 @@ en:
         step_1_html: 'Visit <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> and create a free account.'
         step_2_html: 'Go to the <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> page.'
         step_3: Copy your API token and paste it below.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Enter a read-only T-Invest API token. Used to fetch brand logos for securities (incl. funds and bonds, even when MOEX prices them) and, when enabled above, prices for Russian instruments.
+        env_configured_message: Successfully configured through the TINKOFF_INVEST_API_KEY environment variable.
+        label: API Token
+        placeholder: Enter your T-Invest API token here
+        show_details: "(show details)"
+        step_1: Open T-Bank investments, then Settings, then API tokens (requires an open T-Bank brokerage account).
+        step_2: Create a token with read-only access.
+        step_3: Copy the token and paste it below.
       eodhd_settings:
         title: EODHD
         description: Enter the API token provided by EODHD. Supports EU ETFs on LSE, XETRA, and other international exchanges.

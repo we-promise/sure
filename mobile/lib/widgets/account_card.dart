@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/account.dart';
 import '../theme/sure_colors.dart';
+import '../theme/sure_tokens.dart';
 import 'money_text.dart';
+import 'sure_card.dart';
 import 'sure_icon.dart';
 
 class AccountCard extends StatelessWidget {
@@ -43,7 +45,7 @@ class AccountCard extends StatelessWidget {
 
   Color _getAccountColor(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     if (account.isAsset) {
       return SureColors.of(context).palette.success;
     } else if (account.isLiability) {
@@ -57,82 +59,76 @@ class AccountCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final accountColor = _getAccountColor(context);
 
-    final cardContent = Card(
+    final cardContent = SureCard(
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+      onTap: onTap,
+      child: Row(
+        children: [
+          // Account icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: accountColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SureIcon(
+              _getAccountIconName(),
+              color: accountColor,
+              size: SureIconSize.lg,
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Account info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: SureTokens.weightMedium,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  account.displayAccountType,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Balance
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Account icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accountColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SureIcon(
-                  _getAccountIconName(),
-                  color: accountColor,
-                  size: SureIconSize.lg,
+              Text(
+                account.balance,
+                style: SureMoney.tabular(
+                  Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: SureTokens.weightMedium,
+                    color: account.isLiability
+                        ? SureColors.of(context).palette.destructive
+                        : null,
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-
-              // Account info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      account.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      account.displayAccountType,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 4),
+              Text(
+                account.currency,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
-              ),
-
-              // Balance
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    account.balance,
-                    style: SureMoney.tabular(
-                      Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: account.isLiability
-                                ? SureColors.of(context).palette.destructive
-                                : null,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    account.currency,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
 
@@ -152,7 +148,7 @@ class AccountCard extends StatelessWidget {
           padding: const EdgeInsets.only(right: 20),
           decoration: BoxDecoration(
             color: Colors.blue,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(SureTokens.radiusLg),
           ),
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
