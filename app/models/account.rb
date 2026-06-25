@@ -101,9 +101,7 @@ class Account < ApplicationRecord
 
     return self[:subtype] if self[:subtype].present?
 
-    return @subtype_from_accountable if defined?(@subtype_from_accountable)
-
-    @subtype_from_accountable = accountable&.subtype
+    accountable&.subtype
   end
 
   # Writer for subtype that delegates to the accountable.
@@ -118,7 +116,6 @@ class Account < ApplicationRecord
   # updates this same record instead of building a new one.
   def subtype=(value)
     self[:subtype] = value
-    remove_instance_variable(:@subtype_from_accountable) if defined?(@subtype_from_accountable)
 
     self.accountable = accountable_class.new if accountable.nil? && accountable_type.present?
 

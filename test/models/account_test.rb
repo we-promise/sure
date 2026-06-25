@@ -174,6 +174,25 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "visa", reloaded.subtype
   end
 
+  test "subtype reflects accountable changes without stale cache" do
+    investment = Investment.new(subtype: "brokerage")
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Test Investment",
+      balance: 1000,
+      currency: "USD",
+      accountable: investment
+    )
+
+    # Force the accountable fallback path (no denormalized column value)
+    account.update_column(:subtype, nil)
+
+    assert_equal "brokerage", account.subtype
+
+    account.accountable.update!(subtype: "401k")
+    assert_equal "401k", account.subtype
+  end
+
   test "tax_treatment delegates to accountable for Investment" do
     investment = Investment.new(subtype: "401k")
     account = @family.accounts.create!(
