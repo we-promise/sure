@@ -167,6 +167,9 @@ class Provider::UpTest < ActiveSupport::TestCase
       }.to_json
     )
 
+    # The stub deliberately ignores the query: keyword: this test exercises only
+    # response flattening, not the request params (pagination/date filters), which
+    # are covered by the pagination tests above.
     Provider::Up.stub(:get, ->(_url, headers:, query: nil) { response }) do
       transactions = Provider::Up.new("up-access-token").get_account_transactions(account_id: "acc_123")
 

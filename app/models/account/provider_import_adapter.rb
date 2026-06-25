@@ -208,24 +208,26 @@ class Account::ProviderImportAdapter
         detected_label = detect_activity_label(name, amount)
       end
 
-      # Determine the transaction kind. An explicit kind supplied by the provider takes
-      # precedence over the account-type auto-detection below: a provider such as Up that
-      # flags internal transfers and round-ups (via relationships.transferAccount) has
-      # authoritative knowledge that the movement is a transfer, so we honour it directly.
-      auto_kind = kind.presence
+      # Determine the transaction kind. Activity-label and account-type classification
+      # take precedence; an explicit kind supplied by the provider is used as a fallback
+      # for the standard case. A provider such as Up flags internal transfers and
+      # round-ups (via relationships.transferAccount) and passes funds_movement, but a
+      # repayment imported onto a linked Loan/CreditCard account must stay
+      # loan_payment/cc_payment (a budgeted expense) rather than being reclassified, so
+      # the account-type branches below win over the provider hint.
+      auto_kind = nil
       auto_category = nil
-      if auto_kind.nil?
-        if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
-          auto_kind = "funds_movement"
-        elsif detected_label == "Contribution"
-          auto_kind = "investment_contribution"
-          auto_category = account.family.investment_contributions_category
-        elsif account.accountable_type == "Loan" && amount.negative?
-          auto_kind = "loan_payment"
-        elsif account.accountable_type == "CreditCard" && amount.negative?
-          auto_kind = "cc_payment"
-        end
+      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
+        auto_kind = "funds_movement"
+      elsif detected_label == "Contribution"
+        auto_kind = "investment_contribution"
+        auto_category = account.family.investment_contributions_category
+      elsif account.accountable_type == "Loan" && amount.negative?
+        auto_kind = "loan_payment"
+      elsif account.accountable_type == "CreditCard" && amount.negative?
+        auto_kind = "cc_payment"
       end
+      auto_kind ||= kind.presence
 
       # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
