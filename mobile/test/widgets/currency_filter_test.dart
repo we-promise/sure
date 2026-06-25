@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 import 'package:sure_mobile/widgets/currency_filter.dart';
 import 'package:sure_mobile/widgets/sure_chip.dart';
@@ -15,6 +16,8 @@ void main() {
     return tester.pumpWidget(
       MaterialApp(
         theme: SureTheme.light,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: CurrencyFilter(
             availableCurrencies: const {'USD', 'EUR', 'GBP'},
