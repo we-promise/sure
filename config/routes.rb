@@ -185,7 +185,13 @@ Rails.application.routes.draw do
 
   # AI chats
   resources :chats do
-    resources :messages, only: :create
+    resources :messages, only: :create do
+      member do
+        # Client-side watchdog reports a "Thinking…" bubble that never received
+        # a response (e.g. the background worker is down) so it can be failed.
+        post :report_timeout
+      end
+    end
 
     member do
       post :retry
