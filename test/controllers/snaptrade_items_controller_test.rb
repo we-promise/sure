@@ -45,6 +45,48 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to portal_url
   end
 
+  test "complete oauth device flow preserves provider oauth error fields" do
+    error = Provider::Snaptrade::ApiError.new(
+      "SnapTrade OAuth error (poll_device_token): authorization_pending",
+      status_code: 400,
+      response_body: {
+        error: "authorization_pending",
+        error_description: "The user has not completed authorization",
+        error_uri: "https://api.snaptrade.com/docs/oauth",
+        interval: 5
+      }.to_json
+    )
+    SnaptradeItem.any_instance
+      .stubs(:complete_oauth_device_flow!)
+      .raises(error)
+
+    post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item), params: { device_code: "device-code" }
+
+    assert_response :bad_request
+    payload = JSON.parse(response.body)
+    assert_equal "authorization_pending", payload["error"]
+    assert_equal "The user has not completed authorization", payload["error_description"]
+    assert_equal "https://api.snaptrade.com/docs/oauth", payload["error_uri"]
+    assert_equal 5, payload["interval"]
+  end
+
+  test "complete oauth device flow falls back to api error message without json body" do
+    error = Provider::Snaptrade::ApiError.new(
+      "SnapTrade OAuth error (poll_device_token): invalid response",
+      status_code: 502,
+      response_body: "upstream unavailable"
+    )
+    SnaptradeItem.any_instance
+      .stubs(:complete_oauth_device_flow!)
+      .raises(error)
+
+    post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item), params: { device_code: "device-code" }
+
+    assert_response :bad_gateway
+    payload = JSON.parse(response.body)
+    assert_equal "SnapTrade OAuth error (poll_device_token): invalid response", payload["error"]
+  end
+
   test "select_accounts redirects unregistered users into connect flow" do
     sign_out
     sign_in @user = users(:empty)

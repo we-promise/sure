@@ -281,7 +281,7 @@ class SnaptradeItemsController < ApplicationController
       expires_at: @snaptrade_item.oauth_token_expires_at&.iso8601
     }
   rescue Provider::Snaptrade::ApiError => e
-    render json: { error: e.message }, status: e.status_code || :unprocessable_entity
+    render json: oauth_error_payload(e), status: e.status_code || :unprocessable_entity
   rescue => e
     Rails.logger.error "SnapTrade OAuth device token error: #{e.class} - #{e.message}"
     render json: { error: e.message }, status: :unprocessable_entity
@@ -535,6 +535,22 @@ class SnaptradeItemsController < ApplicationController
     rescue Provider::Snaptrade::ApiError => e
       @error = e.message
       { connections: [], orphaned_users: [] }
+    end
+
+    def oauth_error_payload(error)
+      parsed_body = parse_oauth_error_body(error.response_body)
+      payload = parsed_body.slice("error", "error_description", "error_uri", "interval")
+      payload["error"] ||= error.message
+      payload
+    end
+
+    def parse_oauth_error_body(response_body)
+      return {} if response_body.blank?
+
+      parsed_body = JSON.parse(response_body)
+      parsed_body.is_a?(Hash) ? parsed_body : {}
+    rescue JSON::ParserError
+      {}
     end
 
     def link_snaptrade_account(snaptrade_account)
