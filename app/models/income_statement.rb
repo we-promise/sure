@@ -12,6 +12,14 @@ class IncomeStatement
     @user = user || Current.user
   end
 
+  def monthly_trends(date_range:)
+    totals_query(
+      transactions_scope: family.transactions.visible.excluding_pending.in_date_range(date_range),
+      date_range: date_range,
+      group_by_month: true
+    )
+  end
+
   def totals(transactions_scope: nil, date_range:)
     # Default to excluding pending transactions from budget/analytics calculations
     # Pending transactions shouldn't affect budget totals until they post

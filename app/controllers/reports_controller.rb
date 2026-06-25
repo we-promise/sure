@@ -322,37 +322,26 @@ class ReportsController < ApplicationController
     end
 
     def build_trends_data(income_statement:)
-      # Generate month-by-month data based on the current period filter
-      trends = []
+      date_range = @start_date.beginning_of_month..@end_date.end_of_month
+      monthly_totals = income_statement.monthly_trends(date_range: date_range)
 
-      # Generate list of months within the period
-      current_month = @start_date.beginning_of_month
-      end_of_period = @end_date.end_of_month
+      trends = monthly_totals.group_by(&:month).map do |month, totals|
+        income = totals.select { |t| t.classification == "income" }.sum(&:total)
+        expenses = totals.select { |t| t.classification == "expense" }.sum(&:total)
 
-      while current_month <= end_of_period
-        month_start = current_month
-        month_end = current_month.end_of_month
-
-        # Ensure we don't go beyond the end date
-        month_end = @end_date if month_end > @end_date
-
-        period = Period.custom(start_date: month_start, end_date: month_end)
-
-        income = income_statement.income_totals(period: period).total
-        expenses = income_statement.expense_totals(period: period).total
-
-        trends << {
-          month: month_start.strftime("%b %Y"),
-          is_current_month: (month_start.month == Date.current.month && month_start.year == Date.current.year),
+        {
+          month: month.strftime("%b %Y"),
+          is_current_month: (month.month == Date.current.month && month.year == Date.current.year),
           income: income,
           expenses: expenses,
           net: income - expenses
         }
-
-        current_month = current_month.next_month
       end
 
-      trends
+      # Ensure all months in the range are present, even if there are no transactions
+      (date_range.begin.to_date..date_range.end.to_date).map { |d| d.strftime("%b %Y") }.uniq.map do |month_str|
+        trends.find { |t| t[:month] == month_str } || { month: month_str, is_current_month: false, income: 0, expenses: 0, net: 0 }
+      end
     end
 
     def build_transactions_breakdown

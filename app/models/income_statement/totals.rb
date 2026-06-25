@@ -1,10 +1,11 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, group_by_month: false)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @group_by_month = group_by_month
 
     validate_date_range!
   end
@@ -15,6 +16,7 @@ class IncomeStatement::Totals
 
     ActiveRecord::Base.connection.select_all(query_sql).map do |row|
       TotalsRow.new(
+        month: row["month"],
         parent_category_id: row["parent_category_id"],
         category_id: row["category_id"],
         classification: row["classification"],
@@ -26,7 +28,7 @@ class IncomeStatement::Totals
   end
 
   private
-    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
+    TotalsRow = Data.define(:month, :parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
 
     def query_sql
       ActiveRecord::Base.sanitize_sql_array([
@@ -39,6 +41,7 @@ class IncomeStatement::Totals
     def combined_query_sql
       <<~SQL
         SELECT
+          #{select_month_sql("combined.month")}
           category_id,
           parent_category_id,
           classification,
@@ -50,7 +53,7 @@ class IncomeStatement::Totals
           UNION ALL
           #{trades_subquery_sql}
         ) combined
-        GROUP BY category_id, parent_category_id, classification, is_uncategorized_investment;
+        GROUP BY #{group_by_month_sql("combined.month")}category_id, parent_category_id, classification, is_uncategorized_investment;
       SQL
     end
 
@@ -58,6 +61,7 @@ class IncomeStatement::Totals
     def transactions_only_query_sql
       <<~SQL
         SELECT
+          #{select_month_sql("ae.date")}
           c.id as category_id,
           c.parent_id as parent_category_id,
           CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
@@ -79,13 +83,24 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+        GROUP BY #{group_by_month_sql("ae.date")}c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
+    end
+
+    def select_month_sql(date_column)
+      return '' unless @group_by_month
+      "#{date_column} AS month,"
+    end
+
+    def group_by_month_sql(date_column)
+      return '' unless @group_by_month
+      "#{date_column}, "
     end
 
     def transactions_subquery_sql
       <<~SQL
         SELECT
+          #{select_month_sql('DATE_TRUNC(\'month\', ae.date)')}
           c.id as category_id,
           c.parent_id as parent_category_id,
           CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
@@ -111,7 +126,7 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY #{group_by_month_sql('DATE_TRUNC(\'month\', ae.date)')}c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
     end
 
@@ -121,7 +136,7 @@ class IncomeStatement::Totals
       # Example: Selling $10k AAPL to buy MSFT = no net worth change, not an expense
       # Contributions/withdrawals are tracked separately as Transactions with activity labels
       <<~SQL
-        SELECT NULL as category_id, NULL as parent_category_id, NULL as classification,
+        SELECT #{select_month_sql('NULL')} NULL as category_id, NULL as parent_category_id, NULL as classification,
                NULL as total, NULL as entry_count, NULL as is_uncategorized_investment
         WHERE false
       SQL
