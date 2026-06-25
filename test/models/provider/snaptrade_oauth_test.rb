@@ -17,7 +17,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "starts device authorization using well known metadata" do
     stub_request(:post, "https://api.snaptrade.com/oauth/device_authorization/")
-      .with(body: "client_id=snap_client&client_secret=snap_secret&scope=read")
+      .with(body: "client_id=PRSVp9N9F5ofw90KCaaOg4U9CN2afhgGVlqCOWSr&scope=read")
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
@@ -39,7 +39,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "polls token endpoint with device code grant" do
     stub_request(:post, "https://api.snaptrade.com/oauth/token/")
-      .with(body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=device-code&client_id=snap_client&client_secret=snap_secret")
+      .with(body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=device-code&client_id=PRSVp9N9F5ofw90KCaaOg4U9CN2afhgGVlqCOWSr")
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },

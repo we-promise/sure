@@ -17,6 +17,7 @@ class Provider::Snaptrade
   INITIAL_RETRY_DELAY = 2 # seconds
   MAX_RETRY_DELAY = 30 # seconds
   OAUTH_DISCOVERY_URL = "https://api.snaptrade.com/.well-known/oauth-authorization-server".freeze
+  OAUTH_CLIENT_ID = "PRSVp9N9F5ofw90KCaaOg4U9CN2afhgGVlqCOWSr".freeze
   DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code".freeze
 
   attr_reader :client, :client_id, :consumer_key
@@ -49,8 +50,7 @@ class Provider::Snaptrade
       response = oauth_connection.post(endpoint) do |request|
         request.headers["Content-Type"] = "application/x-www-form-urlencoded"
         request.body = URI.encode_www_form(
-          client_id: client_id,
-          client_secret: consumer_key,
+          client_id: OAUTH_CLIENT_ID,
           scope: scope
         )
       end
@@ -71,8 +71,7 @@ class Provider::Snaptrade
         request.body = URI.encode_www_form(
           grant_type: DEVICE_CODE_GRANT,
           device_code: device_code,
-          client_id: client_id,
-          client_secret: consumer_key
+          client_id: OAUTH_CLIENT_ID
         )
       end
 
