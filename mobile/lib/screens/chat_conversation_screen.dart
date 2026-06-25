@@ -8,6 +8,7 @@ import '../providers/chat_provider.dart';
 import '../models/message.dart';
 import '../constants/suggested_questions.dart';
 import '../widgets/typing_indicator.dart';
+import '../l10n/app_localizations.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();
@@ -135,6 +136,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (content.isEmpty) return;
     setState(() => _isSendInFlight = true);
 
+    final l = AppLocalizations.of(context);
+
     try {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
@@ -160,7 +163,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         _messageController.text = content;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(chatProvider.errorMessage ?? 'Failed to start conversation. Please try again.'),
+            content: Text(chatProvider.errorMessage ?? l.chatConversationStartFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -207,25 +210,26 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final newTitle = await showDialog<String>(
       context: context,
       builder: (context) {
+        final dl = AppLocalizations.of(context);
         final controller = TextEditingController(text: currentTitle);
         return AlertDialog(
-          title: const Text('Edit Title'),
+          title: Text(dl.chatConversationEditTitle),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Chat Title',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: dl.chatConversationTitleLabel,
+              border: const OutlineInputBorder(),
             ),
             autofocus: true,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(dl.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Save'),
+              child: Text(dl.commonSave),
             ),
           ],
         );
@@ -258,12 +262,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Consumer<ChatProvider>(
           builder: (context, chatProvider, _) {
-            final title = chatProvider.currentChat?.title ?? 'New Conversation';
+            final title = chatProvider.currentChat?.title ?? AppLocalizations.of(context).chatConversationNewTitle;
             return GestureDetector(
               onTap: _chatId != null ? _editTitle : null,
               child: Row(
@@ -289,7 +294,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => _loadChat(forceRefresh: true),
-              tooltip: 'Refresh',
+              tooltip: l.chatConversationRefreshTooltip,
             ),
         ],
       ),
@@ -311,7 +316,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     Icon(Icons.error_outline,
                         size: 64, color: colorScheme.error),
                     const SizedBox(height: 16),
-                    Text('Failed to load chat',
+                    Text(l.chatConversationLoadError,
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     Text(
@@ -323,7 +328,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ElevatedButton.icon(
                       onPressed: _loadChat,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again'),
+                      label: Text(l.commonTryAgain),
                     ),
                   ],
                 ),
@@ -410,7 +415,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           child: TextField(
                             controller: _messageController,
                             decoration: InputDecoration(
-                              hintText: 'Type a message...',
+                              hintText: l.chatConversationMessageHint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
                               ),
@@ -598,8 +603,9 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
     final name = (firstName ?? '').trim();
-    final greeting = name.isNotEmpty ? 'Hi $name, how can I help?' : 'How can I help?';
+    final greeting = name.isNotEmpty ? l.chatConversationGreetingWithName(name) : l.chatConversationGreetingNoName;
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -613,7 +619,7 @@ class _EmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
-        ...suggestedQuestions.map(
+        ...suggestedQuestions(context).map(
           (q) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: OutlinedButton.icon(

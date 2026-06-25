@@ -185,7 +185,13 @@ Rails.application.routes.draw do
 
   # AI chats
   resources :chats do
-    resources :messages, only: :create
+    resources :messages, only: :create do
+      member do
+        # Client-side watchdog reports a "Thinking…" bubble that never received
+        # a response (e.g. the background worker is down) so it can be failed.
+        post :report_timeout
+      end
+    end
 
     member do
       post :retry
@@ -634,6 +640,22 @@ Rails.application.routes.draw do
   end
 
   resources :akahu_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :up_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
       get :select_accounts
