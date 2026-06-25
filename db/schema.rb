@@ -394,7 +394,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.string "classification_unused", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
     t.index ["family_id"], name: "index_categories_on_family_id"
-    t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name"
+    t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
   end
 
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1916,7 +1916,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_tags_on_family_id"
-    t.index ["family_id", "name"], name: "index_tags_on_family_id_and_name"
+    t.index ["family_id", "name"], name: "index_tags_on_family_id_and_name", unique: true
   end
 
   create_table "tool_calls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
