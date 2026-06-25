@@ -52,7 +52,10 @@ class UpAccount::Transactions::CategoryMatcher
     def category_details(up_category_slug)
       return nil if up_category_slug.blank?
 
-      detailed_categories.find { |c| c[:key] == up_category_slug.to_s.downcase.to_sym }
+      # Up category ids are string slugs (e.g. "restaurants-and-cafes"); compare as
+      # strings so the lookup does not depend on the taxonomy keys being symbols.
+      slug = up_category_slug.to_s.downcase
+      detailed_categories.find { |c| c[:key].to_s == slug }
     end
 
     def detailed_categories
