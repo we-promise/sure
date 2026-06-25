@@ -64,13 +64,14 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Balance is the live balance of every linked depository account that
-  # matches the goal's currency. The model validates this invariant at
-  # write time, but defensive filter + telemetry here guards against any
-  # drift caused by direct DB writes, account-currency edits outside
-  # goal validation, or future code that bypasses the validation chain.
-  # v1.1+: minus other goals' allocations via the upcoming GoalBacking
-  # query.
+  # Balance is this goal's backing across its linked depository accounts that
+  # match the goal's currency. Each linked account contributes either its
+  # earmarked slice (goal_accounts.allocated_amount) or — when unallocated —
+  # the whole balance left after other goals' earmarks (see
+  # #backing_balance_for). The model validates the currency invariant at write
+  # time, but the defensive filter + telemetry here guards against drift from
+  # direct DB writes, account-currency edits outside goal validation, or
+  # future code that bypasses the validation chain.
   def current_balance
     @current_balance ||= begin
       matching = linked_accounts.select { |a| a.currency == currency }
@@ -78,7 +79,7 @@ class Goal < ApplicationRecord
         Rails.logger.warn("Goal##{id} linked-account currency drift: #{linked_accounts.size - matching.size} of #{linked_accounts.size} mismatched (expected #{currency})")
         Sentry.capture_message("Goal linked-account currency drift", level: :warning, extra: { goal_id: id, expected_currency: currency }) if defined?(Sentry)
       end
-      matching.sum { |a| a.balance.to_d }
+      matching.sum { |account| backing_balance_for(account) }
     end
   end
 
@@ -402,6 +403,56 @@ class Goal < ApplicationRecord
   end
 
   private
+    # This goal's share of `account`'s live balance under the family-wide
+    # shared pool. An explicit allocated_amount earmarks a fixed slice; an
+    # unallocated (NULL) link claims whatever balance is left after every
+    # goal's fixed earmarks (so an unallocated link keeps the v1 whole-balance
+    # behaviour when nothing else earmarks the account). When the fixed
+    # earmarks on an account exceed its balance, every fixed slice is scaled
+    # down pro-rata so the goals' shares can never sum past the account's
+    # actual balance — i.e. no double-counting.
+    def backing_balance_for(account)
+      rows = pooled_allocations[account.id] || []
+      balance = account.balance.to_d
+      sum_fixed = rows.sum { |r| r[:allocated_amount].to_d } # NULL → 0
+
+      mine = rows.find { |r| r[:goal_id] == id }
+      if mine && mine[:allocated_amount]
+        amount = mine[:allocated_amount].to_d
+        if sum_fixed > balance && sum_fixed.positive?
+          (amount * (balance / sum_fixed)).round(4) # pro-rata haircut
+        else
+          amount
+        end
+      else
+        [ balance - sum_fixed, 0 ].max # whole-balance link: the remainder
+      end
+    end
+
+    # { account_id => [{ goal_id:, allocated_amount: }, ...] } for every
+    # non-archived goal in the family that links one of THIS goal's accounts.
+    # One query; the shared pool is computed across goals so two goals can't
+    # each claim a fixed slice that overlaps the same dollars.
+    def pooled_allocations
+      return @pooled_allocations if defined?(@pooled_allocations)
+
+      account_ids = linked_accounts.map(&:id)
+      @pooled_allocations =
+        if account_ids.empty?
+          {}
+        else
+          GoalAccount.joins(:goal)
+                     .where(account_id: account_ids)
+                     .where(goals: { family_id: family_id })
+                     .where.not(goals: { state: "archived" })
+                     .pluck(:account_id, :goal_id, :allocated_amount)
+                     .group_by(&:first)
+                     .transform_values do |triples|
+                       triples.map { |(_, goal_id, amount)| { goal_id: goal_id, allocated_amount: amount } }
+                     end
+        end
+    end
+
     # Cleared after every AASM transition. The state column drives the
     # display_status / projection_summary memos; without this the same
     # instance keeps returning the pre-transition value if a controller

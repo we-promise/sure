@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -811,9 +811,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_17_120000) do
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "allocated_amount", precision: 19, scale: 4
     t.index ["account_id"], name: "index_goal_accounts_on_account_id"
     t.index ["goal_id", "account_id"], name: "index_savings_goal_accounts_on_goal_and_account", unique: true
     t.index ["goal_id"], name: "index_goal_accounts_on_goal_id"
+    t.check_constraint "allocated_amount IS NULL OR allocated_amount >= 0::numeric", name: "chk_goal_accounts_allocation_non_negative"
   end
 
   create_table "goal_pledges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
