@@ -24,7 +24,8 @@ class UpAccount::Transactions::Processor
     up_account.raw_transactions_payload.each_with_index do |transaction_data, index|
       result = UpEntry::Processor.new(
         transaction_data,
-        up_account: up_account
+        up_account: up_account,
+        category_matcher: category_matcher
       ).process
 
       if result.nil?
@@ -56,6 +57,27 @@ class UpAccount::Transactions::Processor
   end
 
   private
+
+    # A single category matcher reused across this account's transactions, built from
+    # the family's categories (mirrors PlaidAccount::Transactions::Processor).
+    def category_matcher
+      @category_matcher ||= UpAccount::Transactions::CategoryMatcher.new(family_categories)
+    end
+
+    # The family's categories, bootstrapping Sure's defaults if the family has none so
+    # there is a target set to match against. Returns [] when the account isn't linked
+    # (in which case each entry is skipped before the matcher is consulted).
+    def family_categories
+      @family_categories ||= begin
+        account = up_account.current_account
+        if account
+          account.family.categories.bootstrap! if account.family.categories.none?
+          account.family.categories.to_a
+        else
+          []
+        end
+      end
+    end
 
     # Extract the Up transaction id from raw data, or "unknown".
     def transaction_id(transaction_data)
