@@ -357,4 +357,27 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1500"), account.goal_earmarked_total
     assert_equal BigDecimal("3500"), account.free_to_earmark
   end
+
+  test "an overdrawn account backs nothing for fixed or whole-balance links" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Overdrawn", currency: "USD", balance: BigDecimal("-100"))
+    fixed = @family.goals.create!(name: "Fixed OD", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 50)
+    end
+    whole = @family.goals.create!(name: "Whole OD", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_equal 0.to_d, fixed.current_balance.to_d
+    assert_equal 0.to_d, whole.current_balance.to_d
+  end
+
+  test "an archived goal still shows its own earmark, not the whole balance" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Archived Earmark", currency: "USD", balance: 5_000)
+    earmarked = @family.goals.create!(name: "Archived Fixed", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 2_000)
+    end
+    earmarked.archive!
+    # Excluded from the shared pool, but its own earmark is read from its own
+    # goal_accounts — so it still reports 2,000, not the whole 5,000.
+    assert_equal BigDecimal("2000"), Goal.find(earmarked.id).current_balance.to_d
+  end
 end

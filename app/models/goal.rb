@@ -35,6 +35,24 @@ class Goal < ApplicationRecord
     Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
   end
 
+  # Family-wide map of non-archived goal earmarks, grouped by account_id:
+  # { account_id => [{ goal_id:, allocated_amount: }, ...] }. The controller
+  # assigns this to each goal on index (goal.pooled_allocations = ...) so the
+  # shared-pool backing math runs ONE query for the whole page instead of one
+  # per goal.
+  def self.pooled_allocations_for(family)
+    GoalAccount.joins(:goal)
+               .where(goals: { family_id: family.id })
+               .where.not(goals: { state: "archived" })
+               .pluck(:account_id, :goal_id, :allocated_amount)
+               .group_by(&:first)
+               .transform_values do |triples|
+                 triples.map { |(_, goal_id, amount)| { goal_id: goal_id, allocated_amount: amount } }
+               end
+  end
+
+  attr_writer :pooled_allocations
+
   aasm column: :state do
     after_all_transitions :reset_state_dependent_caches!
 
@@ -147,6 +165,11 @@ class Goal < ApplicationRecord
   # user records a pledge, the transfer arrives, balance goes up, pace
   # goes up, status flips off "behind". Excludes user-flagged-excluded
   # entries. Entry amount sign convention in Sure: inflow is negative.
+  #
+  # NOTE: pace is whole-account inflow by design in this phase, even for an
+  # earmarked goal whose current_balance is only a slice — so runway/status
+  # mix a whole-account numerator with an earmark-scoped balance. Earmark-aware
+  # pace is a deliberate follow-up; don't "fix" the basis without that work.
   def pace
     return @pace if defined?(@pace)
 
@@ -198,7 +221,14 @@ class Goal < ApplicationRecord
   # strings server-side rather than build them with its own Intl calls.
   def projection_payload
     series_values = balance_series_values
-    saved_series = series_values.map { |v| { date: v.date.to_s, value: v.value.amount.to_f } }
+    # The historical series tracks the whole linked-account balances. Scale it
+    # to this goal's backing so the saved line meets current_balance at "today"
+    # instead of dropping off a cliff for earmarked goals. Assumes the earmark
+    # ratio held over the window (an approximation); exact for unallocated
+    # goals, where ratio == 1 and the series is unchanged.
+    whole_total = linked_accounts.select { |a| a.currency == currency }.sum { |a| a.balance.to_d }
+    backing_ratio = whole_total.positive? ? (current_balance.to_d / whole_total) : 1.to_d
+    saved_series = series_values.map { |v| { date: v.date.to_s, value: (v.value.amount.to_d * backing_ratio).to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
     target_amt = target_amount.to_d
@@ -411,53 +441,49 @@ class Goal < ApplicationRecord
 
   private
     # This goal's share of `account`'s live balance under the family-wide
-    # shared pool. An explicit allocated_amount earmarks a fixed slice; an
-    # unallocated (NULL) link claims whatever balance is left after every
-    # goal's fixed earmarks (so an unallocated link keeps the v1 whole-balance
-    # behaviour when nothing else earmarks the account). When the fixed
-    # earmarks on an account exceed its balance, every fixed slice is scaled
-    # down pro-rata so the goals' shares can never sum past the account's
-    # actual balance — i.e. no double-counting.
+    # shared pool. The goal's OWN earmark is read from its own goal_accounts
+    # (reliable even for an archived goal, which is excluded from the pool);
+    # OTHER non-archived goals' fixed earmarks come from the shared pool. A
+    # fixed earmark takes its slice; an unallocated link takes the balance left
+    # after others' fixed earmarks (so it keeps the v1 whole-balance behaviour
+    # when nothing else earmarks the account). When the fixed earmarks on an
+    # account exceed its balance every fixed slice is scaled down pro-rata (to
+    # within sub-cent rounding) so the goals' shares effectively never sum past
+    # the account's balance — no double-counting. An overdrawn (<= 0) account
+    # backs nothing.
     def backing_balance_for(account)
-      rows = pooled_allocations[account.id] || []
       balance = account.balance.to_d
-      sum_fixed = rows.sum { |r| r[:allocated_amount].to_d } # NULL → 0
+      return 0.to_d if balance <= 0
 
-      mine = rows.find { |r| r[:goal_id] == id }
-      if mine && mine[:allocated_amount]
-        amount = mine[:allocated_amount].to_d
-        if sum_fixed > balance && sum_fixed.positive?
-          (amount * (balance / sum_fixed)).round(4) # pro-rata haircut
+      mine = own_allocation_for(account)
+      others_fixed = (pooled_allocations[account.id] || [])
+        .reject { |r| r[:goal_id] == id }
+        .sum { |r| r[:allocated_amount].to_d }
+
+      if mine
+        total_fixed = others_fixed + mine
+        if total_fixed > balance && total_fixed.positive?
+          (mine * (balance / total_fixed)).round(4) # pro-rata haircut
         else
-          amount
+          mine
         end
       else
-        [ balance - sum_fixed, 0 ].max # whole-balance link: the remainder
+        [ balance - others_fixed, 0 ].max # unallocated link: the remainder
       end
     end
 
-    # { account_id => [{ goal_id:, allocated_amount: }, ...] } for every
-    # non-archived goal in the family that links one of THIS goal's accounts.
-    # One query; the shared pool is computed across goals so two goals can't
-    # each claim a fixed slice that overlaps the same dollars.
-    def pooled_allocations
-      return @pooled_allocations if defined?(@pooled_allocations)
+    # This goal's own earmark on `account` (a BigDecimal, or nil for a
+    # whole-balance link). Read from the loaded goal_accounts association so it
+    # is correct even for archived goals, which are excluded from the pool.
+    def own_allocation_for(account)
+      goal_accounts.find { |ga| ga.account_id == account.id }&.allocated_amount
+    end
 
-      account_ids = linked_accounts.map(&:id)
-      @pooled_allocations =
-        if account_ids.empty?
-          {}
-        else
-          GoalAccount.joins(:goal)
-                     .where(account_id: account_ids)
-                     .where(goals: { family_id: family_id })
-                     .where.not(goals: { state: "archived" })
-                     .pluck(:account_id, :goal_id, :allocated_amount)
-                     .group_by(&:first)
-                     .transform_values do |triples|
-                       triples.map { |(_, goal_id, amount)| { goal_id: goal_id, allocated_amount: amount } }
-                     end
-        end
+    # Family-wide map of non-archived goal earmarks. Injected once per request
+    # by the controller on index (one query for the whole page); falls back to
+    # a single query for the standalone (show) case.
+    def pooled_allocations
+      @pooled_allocations ||= self.class.pooled_allocations_for(family)
     end
 
     # Cleared after every AASM transition. The state column drives the

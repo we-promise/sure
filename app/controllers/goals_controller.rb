@@ -14,7 +14,7 @@ class GoalsController < ApplicationController
 
     all_goals = Current.family.goals
                        .alphabetically
-                       .includes(:open_pledges, linked_accounts: :account_providers)
+                       .includes(:open_pledges, :goal_accounts, linked_accounts: :account_providers)
                        .to_a
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
@@ -25,6 +25,11 @@ class GoalsController < ApplicationController
     # separate collapsed-by-default section, opted out of the filter
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
+
+    # One family-wide earmark-pool query injected into every rendered goal so
+    # the shared-pool backing math doesn't fire a query per card (N+1).
+    pooled = Goal.pooled_allocations_for(Current.family)
+    (@grid_goals + @archived_goals).each { |goal| goal.pooled_allocations = pooled }
 
     @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: "Depository").visible.count
     @kpi = kpi_payload(@active_goals)
