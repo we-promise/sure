@@ -65,8 +65,7 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
     # Change to GBP (exchange rate is set up in fixtures)
     find("select[data-money-field-target='currency']").find("option[value='GBP']").select_option
 
-    # Wait for async fetch to populate the field (container visibility alone is not enough)
-    assert page.has_field?("Exchange rate", with: "1.27")
+    assert_exchange_rate_value "1.27"
   end
 
   test "exchange rate field is empty when rate not found" do
@@ -94,11 +93,11 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
 
     # Change to EUR
     find("select[data-money-field-target='currency']").find("option[value='EUR']").select_option
-    assert page.has_field?("Exchange rate", with: "1.10")
+    assert_exchange_rate_value "1.10"
 
     # Change to GBP — container stays visible; wait for the new rate, not visibility alone
     find("select[data-money-field-target='currency']").find("option[value='GBP']").select_option
-    assert page.has_field?("Exchange rate", with: "1.27")
+    assert_exchange_rate_value "1.27"
   end
 
   test "changing account also recalculates exchange rate for current currency" do
