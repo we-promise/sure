@@ -99,6 +99,23 @@ class AccountActivityTest < ApplicationSystemTestCase
     assert metrics["categoryOverflow"]
   end
 
+  test "account activity filter menu shows transaction filters without account filter" do
+    visit account_url(@account, tab: "activity")
+
+    click_button "Filter"
+
+    within "#account-activity-filters-menu" do
+      assert_button "Date"
+      assert_button "Type"
+      assert_button "Status"
+      assert_button "Amount"
+      assert_button "Category"
+      assert_button "Tag"
+      assert_button "Merchant"
+      assert_no_button "Account"
+    end
+  end
+
   private
     def ensure_tailwind_build
       return if self.class.instance_variable_defined?(:@tailwind_css_built)

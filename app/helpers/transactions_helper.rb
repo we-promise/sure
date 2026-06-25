@@ -12,12 +12,16 @@ module TransactionsHelper
     ]
   end
 
+  def account_activity_search_filters
+    transaction_search_filters.reject { |filter| filter[:key] == "account_filter" }
+  end
+
   def get_transaction_search_filter_partial_path(filter)
     "transactions/searches/filters/#{filter[:key]}"
   end
 
-  def get_default_transaction_search_filter
-    transaction_search_filters[0]
+  def get_default_transaction_search_filter(filters = transaction_search_filters)
+    filters[0]
   end
 
   def in_split_group?(entry, params_grouped)

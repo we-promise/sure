@@ -2,6 +2,7 @@ require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -150,6 +151,114 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.overflow-hidden"
     assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} [data-testid='category-name']"
     assert_select "div.hidden.md\\:flex.min-w-0"
+  end
+
+  test "account activity filters by transaction attributes within the current account" do
+    @user.family.accounts.each { |account| account.entries.delete_all }
+    matching = create_transaction(
+      account: @account,
+      name: "Matching account activity",
+      date: Date.new(2026, 5, 20),
+      amount: 42,
+      category: categories(:food_and_drink),
+      merchant: merchants(:netflix),
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+    create_transaction(
+      account: @account,
+      name: "Wrong category",
+      date: Date.new(2026, 5, 20),
+      amount: 42,
+      category: categories(:income),
+      merchant: merchants(:netflix),
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+    other_account_entry = create_transaction(
+      account: accounts(:credit_card),
+      name: "Other account match",
+      date: Date.new(2026, 5, 20),
+      amount: 42,
+      category: categories(:food_and_drink),
+      merchant: merchants(:netflix),
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    get account_url(@account, tab: "activity", q: {
+      start_date: "2026-05-01",
+      end_date: "2026-05-31",
+      types: [ "expense" ],
+      categories: [ "Food & Drink" ],
+      merchants: [ "Netflix" ],
+      tags: [ "Trips" ]
+    })
+
+    assert_response :success
+    assert_select "##{dom_id(matching)}", count: 1
+    assert_select "##{dom_id(other_account_entry)}", count: 0
+    assert_select "turbo-frame[id^='entry_']", count: 1
+  end
+
+  test "account activity status filter supports pending transactions" do
+    @user.family.accounts.each { |account| account.entries.delete_all }
+    pending = create_transaction(account: @account, name: "Pending transaction")
+    pending.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    confirmed = create_transaction(account: @account, name: "Confirmed transaction")
+
+    get account_url(@account, tab: "activity", q: { status: [ "pending" ] })
+
+    assert_response :success
+    assert_select "##{dom_id(pending)}", count: 1
+    assert_select "##{dom_id(confirmed)}", count: 0
+  end
+
+  test "account activity filter menu shows transaction filters without account filter" do
+    get account_url(@account, tab: "activity")
+
+    assert_response :success
+    assert_select "#account-activity-filters-menu" do
+      assert_select "button", text: "Date"
+      assert_select "button", text: "Type"
+      assert_select "button", text: "Status"
+      assert_select "button", text: "Amount"
+      assert_select "button", text: "Category"
+      assert_select "button", text: "Tag"
+      assert_select "button", text: "Merchant"
+      assert_select "button", text: "Account", count: 0
+    end
+  end
+
+  test "account activity shows active filter badges" do
+    get account_url(@account, tab: "activity", q: { categories: [ "Food & Drink" ], tags: [ "Trips" ] })
+
+    assert_response :success
+    assert_select "#account-activity-search-filters", text: /Food & Drink/
+    assert_select "#account-activity-search-filters", text: /Trips/
+  end
+
+  test "clears one account activity filter value and preserves remaining filters" do
+    delete clear_filter_account_url(
+      @account,
+      tab: "activity",
+      param_key: "tags",
+      param_value: "Trips",
+      q: { categories: [ "Food & Drink" ], tags: [ "Trips", "Emergency fund" ] }
+    )
+
+    assert_redirected_to account_url(
+      @account,
+      tab: "activity",
+      q: { "categories" => [ "Food & Drink" ], "tags" => [ "Emergency fund" ] }
+    )
+  end
+
+  test "clears all account activity filters from menu link" do
+    get account_url(@account, tab: "activity", q: { categories: [ "Food & Drink" ] })
+
+    assert_response :success
+    assert_select "a[href='#{account_path(@account, tab: "activity")}']", text: "Clear filters"
   end
 
   test "should sync account" do

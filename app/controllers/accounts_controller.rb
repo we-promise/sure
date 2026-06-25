@@ -1,7 +1,7 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[toggle_active destroy unlink confirm_unlink select_provider]
   include Periodable
 
@@ -51,7 +51,7 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
-    @q = params.fetch(:q, {}).permit(:search, status: [])
+    @q = account_activity_search_params
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
@@ -84,6 +84,31 @@ class AccountsController < ApplicationController
     end
 
     redirect_to account_path(@account)
+  end
+
+  def clear_filter
+    updated_params = {
+      "tab" => "activity",
+      "q" => account_activity_search_params,
+      "page" => params[:page],
+      "per_page" => params[:per_page]
+    }
+
+    q_params = updated_params["q"] || {}
+    param_key = params[:param_key]
+    param_value = params[:param_value]
+
+    if q_params[param_key].is_a?(Array)
+      q_params[param_key].delete(param_value)
+      q_params.delete(param_key) if q_params[param_key].empty?
+    else
+      q_params.delete(param_key)
+      q_params.delete("amount_operator") if param_key == "amount"
+    end
+
+    updated_params["q"] = q_params.presence
+
+    redirect_to account_path(@account, updated_params)
   end
 
   def sparkline
@@ -223,6 +248,19 @@ class AccountsController < ApplicationController
 
     def set_account
       @account = Current.user.accessible_accounts.find(params[:id])
+    end
+
+    def account_activity_search_params
+      cleaned_params = params.fetch(:q, {})
+                            .permit(
+                              :start_date, :end_date, :search, :amount, :amount_operator,
+                              categories: [], merchants: [], types: [], tags: [], status: []
+                            )
+                            .to_h
+                            .compact_blank
+
+      cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
+      cleaned_params
     end
 
     def set_manageable_account

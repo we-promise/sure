@@ -52,6 +52,8 @@
               scope: :q,
               method: :get,
               data: { controller: "auto-submit-form" } do |form| %>
+        <%= hidden_field_tag :tab, "activity" %>
+
         <div class="flex gap-2 mb-4">
           <div class="grow">
             <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:border-primary">
@@ -69,7 +71,7 @@
 
           <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
             <% popover.with_button(
-              id: "activity-status-filter-button",
+              id: "activity-filters-button",
               type: "button",
               text: t("accounts.show.activity.filter"),
               variant: "outline",
@@ -77,44 +79,61 @@
             ) %>
 
             <% popover.with_custom_content do %>
-              <div class="p-3 space-y-3 min-w-[160px]">
-                <p class="text-xs font-medium text-secondary uppercase"><%= t("accounts.show.activity.status") %></p>
-                <div class="flex items-center gap-3">
-                  <%= check_box_tag "q[status][]",
-                                    "confirmed",
-                                    params.dig(:q, :status)&.include?("confirmed"),
-                                    id: "q_status_confirmed",
-                                    class: "checkbox checkbox--light",
-                                    form: "entries-search",
-                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
-                  <%= label_tag "q_status_confirmed", t("accounts.show.activity.confirmed"), class: "text-sm text-primary" %>
-                </div>
-                <div class="flex items-center gap-3">
-                  <%= check_box_tag "q[status][]",
-                                    "pending",
-                                    params.dig(:q, :status)&.include?("pending"),
-                                    id: "q_status_pending",
-                                    class: "checkbox checkbox--light",
-                                    form: "entries-search",
-                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
-                  <%= label_tag "q_status_pending", t("accounts.show.activity.pending"), class: "text-sm text-primary" %>
-                </div>
-              </div>
+              <%= render "transactions/searches/menu",
+                         form: form,
+                         filters: helpers.account_activity_search_filters,
+                         clear_filters_href: account_path(account, tab: "activity"),
+                         menu_id: "account-activity-filters-menu" %>
             <% end %>
           <% end %>
+
+          <%= button_tag type: "button",
+                id: "toggle-checkboxes-button",
+                aria: { label: t(".toggle_selection_checkboxes") },
+                class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+                data: {
+                  action: "click->checkbox-toggle#toggle",
+                  checkbox_toggle_target: "toggleButton"
+                } do %>
+                <%= helpers.icon("list-todo") %>
+            <% end %>
+        </div>
       <% end %>
-      <%= button_tag type: "button",
-            id: "toggle-checkboxes-button",
-            aria: { label: t(".toggle_selection_checkboxes") },
-            class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
-            data: {
-              action: "click->checkbox-toggle#toggle",
-              checkbox_toggle_target: "toggleButton"
-            } do %>
-            <%= helpers.icon("list-todo") %>
-        <% end %>
-      </div>
     </div>
+
+    <ul id="account-activity-search-filters" class="flex items-center flex-wrap gap-2 mb-4">
+      <% q.reject { |key| key == "amount_operator" }.each do |param_key, param_value| %>
+        <% unless param_value.blank? %>
+          <% if param_key == "amount" %>
+            <% amount_operator = case q[:amount_operator]
+                                 when "equal"
+                                   t("transactions.searches.search.equal_to")
+                                 when "greater"
+                                   t("transactions.searches.search.greater_than")
+                                 when "less"
+                                   t("transactions.searches.search.less_than")
+                                 else
+                                   t("transactions.searches.search.#{q[:amount_operator]}", default: q[:amount_operator])
+                                 end %>
+            <%= render partial: "transactions/searches/filters/badge",
+                       locals: {
+                         param_key: "amount",
+                         param_value: "#{amount_operator} #{param_value}",
+                         clear_filter_path: clear_filter_account_path(account, param_key: "amount", param_value: param_value, **request.query_parameters)
+                       } %>
+          <% else %>
+            <% Array(param_value).each do |value| %>
+              <%= render partial: "transactions/searches/filters/badge",
+                         locals: {
+                           param_key: param_key,
+                           param_value: value,
+                           clear_filter_path: clear_filter_account_path(account, param_key: param_key, param_value: value, **request.query_parameters)
+                         } %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </ul>
 
     <% if activity_dates.empty? %>
       <%= tag.p t("accounts.show.activity.no_entries"), class: "text-secondary text-sm p-4" %>

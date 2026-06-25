@@ -457,6 +457,7 @@ Rails.application.routes.draw do
       patch :toggle_active
       patch :set_default
       patch :remove_default
+      delete :clear_filter
       get :select_provider
       get :confirm_unlink
       delete :unlink
