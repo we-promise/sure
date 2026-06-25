@@ -322,6 +322,7 @@ Rails.application.routes.draw do
       patch :complete
       patch :archive
       patch :unarchive
+      patch :reopen
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do

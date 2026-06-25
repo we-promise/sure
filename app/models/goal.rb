@@ -21,8 +21,10 @@ class Goal < ApplicationRecord
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
+  before_validation :default_progress_basis_for_investment, on: :create
+
   validate :must_have_at_least_one_linked_account
-  validate :linked_accounts_must_be_depository
+  validate :linked_accounts_must_be_fundable
   validate :linked_accounts_must_match_goal_currency
   validate :linked_accounts_must_belong_to_family
   validate :currency_locked_once_linked
@@ -83,6 +85,10 @@ class Goal < ApplicationRecord
     event :unarchive do
       transitions from: :archived, to: :active
     end
+
+    event :reopen do
+      transitions from: :completed, to: :active
+    end
   end
 
   # Balance is this goal's backing across its linked depository accounts that
@@ -100,7 +106,7 @@ class Goal < ApplicationRecord
         Rails.logger.warn("Goal##{id} linked-account currency drift: #{linked_accounts.size - matching.size} of #{linked_accounts.size} mismatched (expected #{currency})")
         Sentry.capture_message("Goal linked-account currency drift", level: :warning, extra: { goal_id: id, expected_currency: currency }) if defined?(Sentry)
       end
-      matching.sum { |account| backing_balance_for(account) }
+      matching.sum { |account| account_amount_for(account) }
     end
   end
 
@@ -112,7 +118,19 @@ class Goal < ApplicationRecord
   # the whole-balance remainder when the link is unallocated — as Money. Used
   # by the funding breakdown so the per-account rows reconcile with the ring.
   def account_backing(account)
-    Money.new(backing_balance_for(account), currency)
+    Money.new(account_amount_for(account), currency)
+  end
+
+  def contributions_basis?
+    progress_basis == "contributions"
+  end
+
+  # Market value of the goal's backing (balance basis), regardless of the
+  # progress basis — the "what it's worth today" figure shown next to
+  # contributions on an investment-backed goal.
+  def market_value_money
+    amount = linked_accounts.select { |a| a.currency == currency }.sum { |a| backing_balance_for(a) }
+    Money.new(amount, currency)
   end
 
   def remaining_amount
@@ -445,6 +463,22 @@ class Goal < ApplicationRecord
   end
 
   private
+    # This goal's amount from one linked account under the active progress
+    # basis: net contributions (market-gain-excluded, floored at 0) on the
+    # contributions basis, or the allocation-aware backing balance otherwise.
+    def account_amount_for(account)
+      contributions_basis? ? [ contribution_for(account), 0.to_d ].max : backing_balance_for(account)
+    end
+
+    # Net contributions into `account` to date = current value minus cumulative
+    # market gain/loss (sum of balances.net_market_flows). Depository accounts
+    # have zero net_market_flows, so this equals their balance. Allocation
+    # (earmark) is a balance-basis concept and is intentionally ignored here.
+    def contribution_for(account)
+      market_gain = Balance.where(account_id: account.id).sum(:net_market_flows).to_d
+      account.balance.to_d - market_gain
+    end
+
     # This goal's share of `account`'s live balance under the family-wide
     # shared pool. The goal's OWN earmark is read from its own goal_accounts
     # (reliable even for an archived goal, which is excluded from the pool);
@@ -550,13 +584,23 @@ class Goal < ApplicationRecord
       errors.add(:base, :at_least_one_linked_account_required)
     end
 
-    def linked_accounts_must_be_depository
+    def linked_accounts_must_be_fundable
       offending = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account&.depository?
+        sga.account&.depository? || sga.account&.investment?
       end
       return if offending.empty?
 
-      errors.add(:linked_accounts, :must_be_depository)
+      errors.add(:linked_accounts, :must_be_fundable)
+    end
+
+    # Goals funded by an investment account default to the contributions basis
+    # (so a market swing doesn't move them); depository-only goals stay on the
+    # balance basis. Only auto-set when the basis is still the default.
+    def default_progress_basis_for_investment
+      return unless goal_accounts.any? { |ga| ga.account&.investment? }
+      return unless progress_basis.blank? || progress_basis == "balance"
+
+      self.progress_basis = "contributions"
     end
 
     def linked_accounts_must_match_goal_currency

@@ -49,12 +49,20 @@ class GoalTest < ActiveSupport::TestCase
     assert_match(/at least one/i, new_goal.errors[:base].join)
   end
 
-  test "linked accounts must be depository" do
+  test "investment accounts are fundable and default to the contributions basis" do
     investment = accounts(:investment)
-    new_goal = @family.goals.new(name: "Test", target_amount: 100, currency: "USD")
+    new_goal = @family.goals.new(name: "Inv", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: investment)
+    assert new_goal.valid?, new_goal.errors.full_messages.to_sentence
+    assert_equal "contributions", new_goal.progress_basis
+  end
+
+  test "non-fundable account types are rejected" do
+    credit = accounts(:credit_card)
+    new_goal = @family.goals.new(name: "Test", target_amount: 100, currency: "USD")
+    new_goal.goal_accounts.build(account: credit)
     assert_not new_goal.valid?
-    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be depository (checking, savings, HSA, CD, money-market)."
+    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be cash or investment accounts."
   end
 
   test "linked accounts must belong to family" do
@@ -401,5 +409,29 @@ class GoalTest < ActiveSupport::TestCase
     assert_operator goal.progress_percent, :<, 100 # memoize the underfunded value
     goal.complete!
     assert_equal 100, goal.progress_percent, "stale memo would still report the pre-complete percent"
+  end
+
+  test "contributions basis excludes market gains" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Brokerage", currency: "USD", balance: 10_000)
+    account.balances.create!(date: 10.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 3_000)
+    goal = @family.goals.create!(name: "Invest goal", target_amount: 20_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_equal "contributions", goal.progress_basis
+    # 10,000 value − 3,000 market gain = 7,000 contributed.
+    assert_equal BigDecimal("7000"), goal.current_balance.to_d
+    assert_equal BigDecimal("10000"), goal.market_value_money.amount
+  end
+
+  test "reopen transitions a completed goal back to active" do
+    fresh = goals(:emergency_fund)
+    fresh.complete!
+    assert fresh.completed?
+    fresh.reopen!
+    assert fresh.active?
+  end
+
+  test "investment accounts default to transfer pledge kind, never manual_save" do
+    assert_equal "transfer", accounts(:investment).default_pledge_kind
   end
 end
