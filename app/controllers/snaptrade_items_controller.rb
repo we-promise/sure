@@ -262,9 +262,9 @@ class SnaptradeItemsController < ApplicationController
   rescue ActiveRecord::Encryption::Errors::Decryption => e
     Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item.id}: #{e.class} - #{e.message}"
     render json: { error: t("snaptrade_items.connect.decryption_failed") }, status: :unprocessable_entity
-  rescue => e
+  rescue Provider::Snaptrade::Error => e
     Rails.logger.error "SnapTrade OAuth device authorization error: #{e.class} - #{e.message}"
-    render json: { error: e.message }, status: :unprocessable_entity
+    render json: { error: start_oauth_device_flow_error_message }, status: :unprocessable_entity
   end
 
   def complete_oauth_device_flow
@@ -542,6 +542,13 @@ class SnaptradeItemsController < ApplicationController
       payload = parsed_body.slice("error", "error_description", "error_uri", "interval")
       payload["error"] ||= error.message
       payload
+    end
+
+    def start_oauth_device_flow_error_message
+      t(
+        "snaptrade_items.start_oauth_device_flow.failed",
+        default: "Unable to start SnapTrade OAuth device authorization. Please try again."
+      )
     end
 
     def parse_oauth_error_body(response_body)

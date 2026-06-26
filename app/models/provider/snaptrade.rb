@@ -43,7 +43,9 @@ class Provider::Snaptrade
 
   def start_device_authorization(scope: "read")
     metadata = oauth_authorization_server_metadata
-    endpoint = metadata.fetch("device_authorization_endpoint")
+    endpoint = metadata.fetch("device_authorization_endpoint") do
+      raise ApiError.new("SnapTrade OAuth metadata missing device_authorization_endpoint")
+    end
 
     with_retries("start_device_authorization") do
       response = oauth_connection.post(endpoint) do |request|
@@ -62,7 +64,9 @@ class Provider::Snaptrade
     raise ConfigurationError, "device_code is required" if device_code.blank?
 
     metadata = oauth_authorization_server_metadata
-    endpoint = metadata.fetch("token_endpoint")
+    endpoint = metadata.fetch("token_endpoint") do
+      raise ApiError.new("SnapTrade OAuth metadata missing token_endpoint")
+    end
 
     with_retries("poll_device_token") do
       response = oauth_connection.post(endpoint) do |request|

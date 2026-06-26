@@ -134,7 +134,7 @@ module SnaptradeItem::Provided
 
   def start_oauth_device_flow(scope: "read")
     provider = snaptrade_provider
-    raise StandardError, "SnapTrade provider not configured" unless provider
+    raise Provider::Snaptrade::ConfigurationError, "SnapTrade provider not configured" unless provider
 
     provider.start_device_authorization(scope: scope)
   end

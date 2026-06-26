@@ -87,6 +87,18 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "SnapTrade OAuth error (poll_device_token): invalid response", payload["error"]
   end
 
+  test "start oauth device flow does not expose provider error details" do
+    SnaptradeItem.any_instance
+      .stubs(:start_oauth_device_flow)
+      .raises(Provider::Snaptrade::ApiError.new("upstream leaked internal path /srv/app/config.yml"))
+
+    post start_oauth_device_flow_snaptrade_item_url(@snaptrade_item)
+
+    assert_response :unprocessable_entity
+    payload = JSON.parse(response.body)
+    assert_equal "Unable to start SnapTrade OAuth device authorization. Please try again.", payload["error"]
+  end
+
   test "select_accounts redirects unregistered users into connect flow" do
     sign_out
     sign_in @user = users(:empty)
