@@ -136,7 +136,7 @@ class SessionsController < ApplicationController
 
   def mobile_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       mobile_sso_redirect(error: "invalid_provider", message: "SSO provider not configured")
@@ -167,7 +167,7 @@ class SessionsController < ApplicationController
   # like the mobile flow (reusing its auto-submitting form).
   def desktop_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
@@ -250,7 +250,7 @@ class SessionsController < ApplicationController
     end
 
     if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
-      reject_removed_sso_identity(auth.provider)
+      reject_sso_login(auth.provider, reason: "removed_identity")
       return
     end
 
@@ -258,6 +258,11 @@ class SessionsController < ApplicationController
     oidc_identity = OidcIdentity.find_by(provider: auth.provider, uid: auth.uid)
 
     if oidc_identity
+      unless oidc_identity.issuer_matches_config?
+        reject_sso_login(auth.provider, reason: "issuer_mismatch")
+        return
+      end
+
       # Existing OIDC identity found - authenticate the user
       user = oidc_identity.user
 
@@ -392,11 +397,11 @@ class SessionsController < ApplicationController
   end
 
   private
-    def reject_removed_sso_identity(provider)
+    def reject_sso_login(provider, reason:)
       SsoAuditLog.log_login_failed!(
         provider: provider,
         request: request,
-        reason: "removed_identity"
+        reason: reason
       )
 
       if session.delete(:mobile_sso).present?
