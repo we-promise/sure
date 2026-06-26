@@ -21,7 +21,9 @@ class Goal < ApplicationRecord
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
-  before_validation :default_progress_basis_for_investment
+  # before_save (not before_validation) so it only mutates on persistence, not
+  # on every valid? call — a goal can be inspected without its basis flipping.
+  before_save :default_progress_basis_for_investment
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -362,9 +364,17 @@ class Goal < ApplicationRecord
     linked_accounts.any? { |a| !a.manual? }
   end
 
-  # "I just transferred" for bank-connected accounts, "I just saved" for manual-only.
+  # "I just transferred" when any linked account resolves pledges via a transfer
+  # (synced accounts AND investment accounts, per default_pledge_kind); "I just
+  # saved" only for manual cash accounts. Keyed off default_pledge_kind so the
+  # copy matches the kind actually saved — a manual brokerage uses transfer, not
+  # manual_save, so it must not show the "update your manual balance" path.
   def pledge_action_label_key
-    any_connected_account? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
+    pledges_use_transfer? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
+  end
+
+  def pledges_use_transfer?
+    linked_accounts.any? { |a| a.default_pledge_kind == "transfer" }
   end
 
   # { account_id => palette_hex } for this goal's linked accounts. Stable

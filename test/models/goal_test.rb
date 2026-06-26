@@ -54,6 +54,7 @@ class GoalTest < ActiveSupport::TestCase
     new_goal = @family.goals.new(name: "Inv", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: investment)
     assert new_goal.valid?, new_goal.errors.full_messages.to_sentence
+    new_goal.save! # basis is set on save (before_save), not on valid?
     assert_equal "contributions", new_goal.progress_basis
   end
 
