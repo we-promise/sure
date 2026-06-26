@@ -6,6 +6,11 @@ class Sync < ApplicationRecord
   # The max time that a sync will show in the UI (after 5 minutes)
   VISIBLE_FOR = 5.minutes
 
+  # Statuses considered "incomplete" (still in flight). Shared by the
+  # incomplete/visible scopes and the #visible? predicate so the SQL and
+  # in-memory definitions of visibility can't drift apart.
+  INCOMPLETE_STATUSES = %w[pending syncing].freeze
+
   include AASM
 
   Error = Class.new(StandardError)
@@ -16,8 +21,16 @@ class Sync < ApplicationRecord
   has_many :children, class_name: "Sync", foreign_key: :parent_id, dependent: :destroy
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
-  scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
+  scope :incomplete, -> { where(status: INCOMPLETE_STATUSES) }
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
+
+  # Ruby mirror of the `visible` scope, for in-memory checks over an already
+  # loaded `syncs` association (see Syncable#syncing?) without re-querying. Keep
+  # in lockstep with the scope above — both derive from INCOMPLETE_STATUSES and
+  # VISIBLE_FOR, so changing either constant updates both paths.
+  def visible?
+    INCOMPLETE_STATUSES.include?(status) && created_at > VISIBLE_FOR.ago
+  end
 
   after_commit :update_family_sync_timestamp
 

@@ -6,7 +6,14 @@ module Syncable
   end
 
   def syncing?
-    syncs.visible.any?
+    # When `syncs` is already loaded (e.g. preloaded on accounts/index), filter
+    # in memory to avoid an N+1 re-query; otherwise use the SQL scope. Both use
+    # the same definition of visibility (Sync#visible? mirrors Sync.visible).
+    if syncs.loaded?
+      syncs.any?(&:visible?)
+    else
+      syncs.visible.any?
+    end
   end
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,

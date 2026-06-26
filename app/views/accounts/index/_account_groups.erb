@@ -3,7 +3,7 @@
 <% if accounts.any? %>
   <% ActiveRecord::Associations::Preloader.new(
        records: accounts,
-       associations: [ :account_shares, :accountable, :plaid_account, :simplefin_account, { account_providers: :provider } ]
+       associations: [ :account_shares, :accountable, :plaid_account, :simplefin_account, { account_providers: :provider }, :syncs ]
      ).call %>
 <% end %>
 <% accounts.group_by(&:accountable_type).sort_by { |group, _| group }.each do |group, accounts| %>
