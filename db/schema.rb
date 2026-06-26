@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_12_010000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_26_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1473,6 +1473,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_12_010000) do
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "etherscan_api_key"
+    t.string "ethereum_data_provider", default: "blockscout", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_onchain_wallet_items_on_family_id"

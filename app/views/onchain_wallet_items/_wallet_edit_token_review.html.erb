@@ -1,6 +1,7 @@
 <%# locals: (onchain_wallet_item:, chain:, old_address:, new_address:, preview:, existing_token_accounts:, new_token_candidates:) %>
 
 <%= turbo_frame_tag "modal" do %>
+  <% native = OnchainWalletItem::Importer::EVM_NATIVE.fetch(chain) %>
   <%= render DS::Dialog.new do |dialog| %>
     <% dialog.with_header(
          title: t(".title"),
@@ -24,11 +25,12 @@
         </div>
 
         <div class="rounded-lg border border-primary bg-container-inset p-3">
-          <p class="text-sm font-medium text-primary"><%= t(".native_title") %></p>
+          <p class="text-sm font-medium text-primary"><%= t(".native_title", symbol: native[:symbol]) %></p>
           <p class="text-sm text-secondary">
             <%= t(".native_body",
-                  quantity: number_with_delimiter(preview[:eth_quantity].to_d.to_s("F")),
-                  value: format_money(Money.new(preview[:eth_current_balance].to_d, Current.family.currency))) %>
+                  symbol: native[:symbol],
+                  quantity: number_with_delimiter(preview[:native_quantity].to_d.to_s("F")),
+                  value: format_money(Money.new(preview[:native_current_balance].to_d, Current.family.currency))) %>
           </p>
         </div>
 

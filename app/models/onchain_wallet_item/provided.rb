@@ -8,9 +8,15 @@ module OnchainWalletItem::Provided
   end
 
   def etherscan_provider
-    return nil unless credentials_configured?
-
     Provider::Etherscan.new(api_key: etherscan_api_key)
+  end
+
+  def evm_provider(chain)
+    chain = chain.to_s.downcase
+
+    return etherscan_provider if chain == "ethereum" && ethereum_data_provider == "etherscan"
+
+    blockscout_provider(chain)
   end
 
   # Keyless EVM provider used for Ethereum and all other supported EVM chains.

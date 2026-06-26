@@ -422,7 +422,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
-  test "on-chain wallets provider panel only configures Etherscan credentials" do
+  test "on-chain wallets provider panel configures ethereum data source" do
     item = families(:dylan_family).onchain_wallet_items.create!(
       name: "On-chain Wallets",
       etherscan_api_key: "key"
@@ -441,6 +441,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get connect_form_settings_providers_path(provider_key: "onchain_wallet")
 
     assert_response :success
+    assert_select "input[name='onchain_wallet_item[ethereum_data_provider]'][value='blockscout']", count: 1
+    assert_match(/Blockscout/i, response.body)
+    assert_match(/Etherscan/i, response.body)
     assert_select "input[name='onchain_wallet_item[etherscan_api_key]']", count: 1
     assert_select "select[name='chain']", count: 0
     assert_select "input[name='wallet_address']", count: 0

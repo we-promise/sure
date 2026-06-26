@@ -23,8 +23,8 @@
           <% end %>
         </div>
 
-        <% if chain == "ethereum" %>
-          <%= render DS::Alert.new(variant: :info, message: t(".ethereum_note")) %>
+        <% if OnchainWalletAccount.evm_chain?(chain) %>
+          <%= render DS::Alert.new(variant: :info, message: t(".evm_note")) %>
         <% end %>
 
         <%= form_with url: update_wallet_onchain_wallet_item_path(onchain_wallet_item),

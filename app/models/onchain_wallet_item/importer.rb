@@ -152,10 +152,6 @@ class OnchainWalletItem::Importer
       token_transfers = snapshot[:token_transfers]
       token_holdings = snapshot[:token_holdings]
 
-      if balance_wei.zero? && normal_transactions.blank? && token_holdings.none? { |holding| holding[:quantity].positive? }
-        raise Provider::Blockscout::InvalidAddressError, "No #{native[:name]} balance, token holdings, or transactions found for this address."
-      end
-
       selected_contracts = Array(selected_token_contracts).map { |contract| contract.to_s.downcase }
 
       native_quantity = balance_wei / WEI_PER_ETH
@@ -208,7 +204,7 @@ class OnchainWalletItem::Importer
     # given EVM chain.
     def evm_wallet_snapshot(chain, address)
       native = EVM_NATIVE.fetch(chain)
-      provider = onchain_wallet_item.blockscout_provider(chain)
+      provider = onchain_wallet_item.evm_provider(chain)
 
       balance_wei = provider.get_native_balance(address).to_d
       normal_transactions = provider.get_normal_transactions(address)
@@ -216,7 +212,7 @@ class OnchainWalletItem::Importer
       token_holdings = token_holdings_from_transfers(token_transfers, address)
 
       if balance_wei.zero? && normal_transactions.blank? && token_holdings.none? { |holding| holding[:quantity].positive? }
-        raise Provider::Blockscout::InvalidAddressError, "No #{native[:name]} balance, token holdings, or transactions found for this address."
+        raise evm_invalid_address_error_class(provider), "No #{native[:name]} balance, token holdings, or transactions found for this address."
       end
 
       {
@@ -339,6 +335,14 @@ class OnchainWalletItem::Importer
           current_balance: estimate_current_balance(data[:symbol], data[:quantity_raw] / (10.to_d**data[:decimals])),
           transfers: data[:transfers]
         }
+      end
+    end
+
+    def evm_invalid_address_error_class(provider)
+      if provider.is_a?(Provider::Etherscan)
+        Provider::Etherscan::InvalidAddressError
+      else
+        Provider::Blockscout::InvalidAddressError
       end
     end
 

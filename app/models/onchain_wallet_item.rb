@@ -3,12 +3,16 @@
 class OnchainWalletItem < ApplicationRecord
   include Syncable, OnchainWalletItem::Provided, OnchainWalletItem::Unlinking, Encryptable
 
+  ETHEREUM_DATA_PROVIDERS = %w[blockscout etherscan].freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   encrypts :etherscan_api_key, deterministic: true if encryption_ready?
   encrypts :raw_payload if encryption_ready?
 
   validates :name, presence: true
+  validates :ethereum_data_provider, inclusion: { in: ETHEREUM_DATA_PROVIDERS }
+  validates :etherscan_api_key, presence: true, if: :etherscan_ethereum_data_provider?
 
   belongs_to :family
   has_many :onchain_wallet_accounts, dependent: :destroy
@@ -19,7 +23,7 @@ class OnchainWalletItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  before_validation :strip_credentials
+  before_validation :normalize_provider_settings
 
   def destroy_later
     update!(scheduled_for_deletion: true)
@@ -72,7 +76,7 @@ class OnchainWalletItem < ApplicationRecord
   end
 
   def credentials_configured?
-    etherscan_api_key.to_s.strip.present?
+    !etherscan_ethereum_data_provider? || etherscan_api_key.to_s.strip.present?
   end
 
   def sync_status_summary
@@ -98,7 +102,12 @@ class OnchainWalletItem < ApplicationRecord
   end
 
   private
-    def strip_credentials
+    def etherscan_ethereum_data_provider?
+      ethereum_data_provider == "etherscan"
+    end
+
+    def normalize_provider_settings
+      self.ethereum_data_provider = ethereum_data_provider.to_s.strip.downcase.presence || "blockscout"
       self.etherscan_api_key = etherscan_api_key.to_s.strip if etherscan_api_key_changed? && !etherscan_api_key.nil?
     end
 end

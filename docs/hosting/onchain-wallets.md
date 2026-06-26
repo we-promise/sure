@@ -1,52 +1,45 @@
-# Setting Up On-Chain Wallets (Etherscan / Mempool.space)
+# Setting Up On-Chain Wallets
 
-Sure supports self-custody wallet tracking for **Bitcoin** and **Ethereum** (including ERC-20 tokens). This guide explains how to configure the required API keys for self-hosted deployments.
+Sure supports self-custody wallet tracking for Bitcoin, Ethereum, Solana, and supported EVM chains. Wallet sync is read-only; wallet addresses and explorer API keys cannot move funds.
 
-## Bitcoin (Mempool.space)
+## Data Sources
 
-Bitcoin wallet tracking uses the public [mempool.space](https://mempool.space) API. **No API key is required.** Rate limits are handled automatically with client-side throttling and retry-with-backoff.
+- Bitcoin uses the public [mempool.space](https://mempool.space) API. No API key is required.
+- Solana uses public RPC. No API key is required.
+- Ethereum uses Blockscout by default. No API key is required.
+- Polygon, Arbitrum, Optimism, Base, and Gnosis use Blockscout. No API key is required.
+- Ethereum can optionally use Etherscan instead of Blockscout. This requires an Etherscan API key.
 
-## Ethereum (Etherscan)
+## Configure Ethereum Source
 
-Ethereum wallet tracking requires an Etherscan API key.
-
-### 1. Create an Etherscan Account
-
-1. Go to [https://etherscan.io/register](https://etherscan.io/register) and create a free account.
-2. After confirming your email, go to [https://etherscan.io/myapikey](https://etherscan.io/myapikey).
-3. Click **Add** to create a new API key.
-4. Copy the generated key.
-
-### 2. Configure in Sure
-
-The Etherscan API key is configured **per-family** through the Sure UI:
+The Ethereum data source is configured per family:
 
 1. Log in to your Sure instance.
 2. Navigate to **Settings > Providers > On-chain Wallets**.
-3. Paste your Etherscan API key in the "Etherscan API Key" field.
-4. Click **Save**.
+3. Choose **Blockscout** or **Etherscan** as the Ethereum data source.
+4. If choosing Etherscan, paste the Etherscan API key.
+5. Click **Save**.
 
-### Security Notes
+## Etherscan API Key
 
-- The API key is encrypted at rest using Rails encrypted attributes (`encrypts :etherscan_api_key, deterministic: true`). The database column stores ciphertext, not plaintext.
-- The key is never logged or exposed in error messages.
-- Each family can have their own key, or multiple families can share a key by entering the same value.
+To use Etherscan for Ethereum:
 
-### Rate Limits
+1. Create an account at [https://etherscan.io/register](https://etherscan.io/register).
+2. Open [https://etherscan.io/myapikey](https://etherscan.io/myapikey).
+3. Create and copy an API key.
+4. Enter it in **Settings > Providers > On-chain Wallets** after selecting Etherscan.
 
-Etherscan's free tier allows **5 calls/second** (the provider uses a conservative 0.4s interval between requests). If rate-limited, the provider retries with exponential backoff (up to 3 retries). For heavy usage (many wallets with many tokens), consider upgrading to an Etherscan Pro plan.
+The Etherscan key is encrypted at rest with Rails encrypted attributes. There is no global environment variable for this key; each family configures it in the UI.
 
-### Environment Variable (Optional)
+## Rate Limits
 
-There is no global environment variable for the Etherscan key — it is stored per-family in the database. This is by design: in multi-family deployments, each family manages their own provider credentials.
-
-If you want all families to use a shared key, enter the same key in each family's provider settings.
+Blockscout and mempool.space calls are throttled client-side and retried when rate-limited. Etherscan calls use a conservative request interval and retry rate-limit responses with exponential backoff. For heavy Ethereum usage with Etherscan, consider an Etherscan paid plan.
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| "Etherscan API key is required" | Add your key in Settings > Providers > On-chain Wallets |
-| "Max rate limit reached" errors | The provider retries automatically; if persistent, wait a few minutes or upgrade your Etherscan plan |
-| "No Ethereum balance or transactions found" | Verify the wallet address is correct and has on-chain activity |
-| Bitcoin address errors | Ensure the address starts with `bc1`, `1`, or `3` (legacy, SegWit, or native SegWit formats) |
+| "Etherscan API key can't be blank" | Choose Blockscout or add an Etherscan key in Settings > Providers > On-chain Wallets |
+| Etherscan rate limit errors | Wait a few minutes, switch Ethereum back to Blockscout, or upgrade the Etherscan plan |
+| No EVM balance, token holdings, or transactions found | Verify the address and selected chain have on-chain activity |
+| Bitcoin address errors | Ensure the address starts with `bc1`, `1`, or `3` |

@@ -436,16 +436,21 @@ en:
         disconnect_confirm: "Are you sure you want to disconnect %{name}?"
       onchain_wallet_panel:
         default_connection_name: On-chain Wallets
-        step1: Save an Etherscan API key if you want to add Ethereum addresses.
-        step2: Add Bitcoin or Ethereum wallet addresses.
+        step1: Choose the Ethereum data source. Blockscout works without an API key.
+        step2: Add Bitcoin, Ethereum, Solana, or supported EVM wallet addresses.
         step3: Sure imports balances, token holdings, and read-only transaction references.
         read_only_title: Read-only wallet sync
-        read_only_body: Wallet addresses and explorer API keys cannot move funds. Ethereum sync requires an Etherscan API key; Bitcoin uses mempool.space without a key.
+        read_only_body: Wallet addresses and explorer API keys cannot move funds. Blockscout powers supported EVM chains without keys; Etherscan is optional for Ethereum only.
         connection_name_label: Connection name
         connection_name_placeholder: On-chain Wallets
+        ethereum_data_provider_label: Ethereum data source
+        blockscout_label: Blockscout
+        etherscan_label: Etherscan
+        ethereum_data_provider_help: Blockscout is used for Polygon, Arbitrum, Optimism, Base, and Gnosis. This setting only changes Ethereum.
         etherscan_api_key_label: Etherscan API key
         etherscan_api_key_placeholder: Paste your Etherscan API key
         keep_etherscan_key_placeholder: Leave blank to keep the current Etherscan key
+        etherscan_help: Required only when Etherscan is selected as the Ethereum data source.
         save_connection: Save connection
         update_connection: Update connection
         add_wallet: Add wallet address

@@ -95,6 +95,30 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
            as: :turbo_stream,
            headers: { "Turbo-Frame" => "modal" }
     end
+
+    assert_response :success
+  end
+
+  test "link Ethereum wallet uses Etherscan when selected" do
+    @family.onchain_wallet_items.create!(
+      name: "On-chain Wallets",
+      ethereum_data_provider: "etherscan",
+      etherscan_api_key: "key"
+    )
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+
+    Provider::Etherscan.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Etherscan.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Etherscan.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Etherscan.any_instance.stubs(:get_erc20_transfers).returns([])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    assert_difference -> { OnchainWalletAccount.where(chain: "ethereum").count }, 1 do
+      post link_wallet_onchain_wallet_items_path,
+           params: { source: "account_modal", chain: "ethereum", wallet_address: address },
+           as: :turbo_stream,
+           headers: { "Turbo-Frame" => "modal" }
+    end
   end
 
   test "Ethereum first submit renders token review with priced tokens preselected" do
@@ -129,7 +153,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match %r{<turbo-stream action="replace" target="modal">}, response.body
-    assert_match "Review Ethereum Tokens", response.body
+    assert_match "Review Ethereum tokens", response.body
     assert_select "input[name='selected_token_contracts[]'][value='#{usdc_contract}'][checked='checked']"
     assert_select "input[name='selected_token_contracts[]'][value='#{scam_contract}'][checked='checked']", count: 0
   end

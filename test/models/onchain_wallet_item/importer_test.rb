@@ -84,8 +84,30 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 2.0, wallet_account.quantity.to_f
   end
 
+  test "import_ethereum_wallet! uses Etherscan when selected" do
+    @item.update!(ethereum_data_provider: "etherscan", etherscan_api_key: "key")
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+
+    Provider::Etherscan.any_instance
+      .expects(:get_native_balance)
+      .with(address)
+      .returns("3000000000000000000")
+    Provider::Etherscan.any_instance.expects(:get_normal_transactions).with(address).returns([])
+    Provider::Etherscan.any_instance.expects(:get_erc20_transfers).with(address).returns([])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    importer = OnchainWalletItem::Importer.new(@item)
+    importer.import_ethereum_wallet!(address: address, selected_token_contracts: [])
+
+    wallet_account = @item.onchain_wallet_accounts.find_by(chain: "ethereum", wallet_address: address, asset_kind: "native")
+    assert wallet_account.present?
+    assert_equal "ETH", wallet_account.symbol
+    assert_equal 3.0, wallet_account.quantity.to_f
+  end
+
   test "import_evm_wallet! works for non-Ethereum EVM chains (e.g. Polygon)" do
     address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    @item.update!(ethereum_data_provider: "etherscan", etherscan_api_key: "key")
 
     provider = Provider::Blockscout.new(chain: "polygon")
     provider.expects(:get_native_balance).with(address).returns("5000000000000000000")
@@ -94,6 +116,7 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     @item.expects(:blockscout_provider).with("polygon").returns(provider)
 
     OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+    @item.expects(:etherscan_provider).never
 
     importer = OnchainWalletItem::Importer.new(@item)
     importer.import_evm_wallet!(chain: "polygon", address: address, selected_token_contracts: [])

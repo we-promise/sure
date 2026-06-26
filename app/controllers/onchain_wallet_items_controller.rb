@@ -70,10 +70,10 @@ class OnchainWalletItemsController < ApplicationController
 
     evm = OnchainWalletAccount.evm_chain?(chain)
 
-    if evm && !ethereum_token_review_confirmed?
+    if evm && !evm_token_review_confirmed?
       preview = importer.preview_evm_wallet(chain, address)
       token_candidates = preview[:token_holdings].select { |holding| holding[:quantity].positive? }
-      return render_token_review_response(preview, address) if token_candidates.any?
+      return render_token_review_response(chain, preview, address) if token_candidates.any?
     end
 
     if evm
@@ -126,8 +126,10 @@ class OnchainWalletItemsController < ApplicationController
 
     importer = OnchainWalletItem::Importer.new(@onchain_wallet_item)
 
-    if chain == "ethereum" && !ethereum_token_review_confirmed?
-      preview = importer.preview_ethereum_wallet(new_address)
+    evm = OnchainWalletAccount.evm_chain?(chain)
+
+    if evm && !evm_token_review_confirmed?
+      preview = importer.preview_evm_wallet(chain, new_address)
       existing_contracts = existing_for_old.where(asset_kind: "erc20").pluck(:token_contract).map { |contract| contract.to_s.downcase }
       new_token_candidates = preview[:token_holdings].select { |holding| holding[:quantity].positive? && !existing_contracts.include?(holding[:contract]) }
       existing_token_accounts = existing_for_old.where(asset_kind: "erc20").to_a
@@ -151,7 +153,7 @@ class OnchainWalletItemsController < ApplicationController
     selected_new = Array(params[:selected_token_contracts]).map { |contract| contract.to_s.downcase }
 
     OnchainWalletAccount.transaction do
-      if chain == "ethereum"
+      if evm
         to_remove = existing_for_old.where(asset_kind: "erc20").reject { |wallet_account| selected_existing.include?(wallet_account.token_contract.to_s.downcase) }
         remove_wallet_accounts!(to_remove) if to_remove.any?
       end
@@ -161,8 +163,9 @@ class OnchainWalletItemsController < ApplicationController
         .update_all(wallet_address: new_address)
     end
 
-    if chain == "ethereum"
-      importer.import_ethereum_wallet!(
+    if evm
+      importer.import_evm_wallet!(
+        chain: chain,
         address: new_address,
         selected_token_contracts: (selected_existing + selected_new).uniq
       )
@@ -173,7 +176,7 @@ class OnchainWalletItemsController < ApplicationController
     @onchain_wallet_item.schedule_account_syncs
 
     render_success_response("Wallet address updated.")
-  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, ArgumentError => e
+  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, ArgumentError => e
     render_edit_error(chain, old_address, new_address, e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet update failed: #{e.class} - #{e.message}")
@@ -215,7 +218,7 @@ class OnchainWalletItemsController < ApplicationController
     end
 
     def onchain_wallet_item_params
-      params.require(:onchain_wallet_item).permit(:name, :etherscan_api_key, :sync_start_date)
+      params.require(:onchain_wallet_item).permit(:name, :ethereum_data_provider, :etherscan_api_key, :sync_start_date)
     end
 
     def resolve_auto_chain(address)
@@ -231,7 +234,14 @@ class OnchainWalletItemsController < ApplicationController
       if chain == "bitcoin"
         raise Provider::MempoolSpace::InvalidAddressError, "Invalid Bitcoin address" unless item.mempool_space_provider.valid_address?(address)
       elsif OnchainWalletAccount.evm_chain?(chain)
-        raise Provider::Blockscout::InvalidAddressError, "Invalid EVM wallet address" unless item.blockscout_provider(chain).valid_address?(address)
+        provider = item.evm_provider(chain)
+        error_class =
+          if provider.is_a?(Provider::Etherscan)
+            Provider::Etherscan::InvalidAddressError
+          else
+            Provider::Blockscout::InvalidAddressError
+          end
+        raise error_class, "Invalid EVM wallet address" unless provider.valid_address?(address)
       elsif chain == "solana"
         raise Provider::SolanaRpc::InvalidAddressError, "Invalid Solana address" unless item.solana_provider.valid_address?(address)
       end
@@ -302,15 +312,16 @@ class OnchainWalletItemsController < ApplicationController
       params[:source] == "account_modal" || request.headers["Turbo-Frame"] == "modal"
     end
 
-    def ethereum_token_review_confirmed?
+    def evm_token_review_confirmed?
       params[:reviewed_tokens] == "1"
     end
 
-    def render_token_review_response(preview, address)
+    def render_token_review_response(chain, preview, address)
       render turbo_stream: turbo_stream.replace(
         "modal",
         partial: "onchain_wallet_items/wallet_token_review",
         locals: {
+          chain: chain,
           wallet_address: address,
           preview: preview,
           token_candidates: preview[:token_holdings].select { |holding| holding[:quantity].positive? }
