@@ -234,7 +234,7 @@ class ChatProvider with ChangeNotifier {
       } else {
         // Roll back the optimistic message on failure.
         _rollbackOptimisticMessage(optimisticId, chatId);
-        _errorMessage = result['error'] ?? 'Failed to send message';
+        _errorMessage = result['message'] ?? 'Failed to send message';
         return false;
       }
     } catch (e) {
@@ -313,7 +313,7 @@ class ChatProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = result['error'] ?? 'Failed to delete chat';
+        _errorMessage = result['message'] ?? 'Failed to delete chat';
         notifyListeners();
         return false;
       }

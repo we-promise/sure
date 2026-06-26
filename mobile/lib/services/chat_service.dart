@@ -46,7 +46,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else {
         final responseData = jsonDecode(response.body);
@@ -100,7 +100,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -171,7 +171,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else {
         final responseData = jsonDecode(response.body);
@@ -228,7 +228,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -291,7 +291,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -343,7 +343,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else if (response.statusCode == 404) {
         return {
@@ -423,7 +423,7 @@ class ChatService {
           'success': false,
           'error': 'feature_disabled',
           'message': responseData['message'] ??
-              aiDisabledAccountShortMessage,
+              aiDisabledAccountMessage,
         };
       } else if (response.statusCode == 404) {
         return {
