@@ -258,7 +258,7 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
     resources :sso_identities, only: :destroy
-    resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
