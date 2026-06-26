@@ -8,7 +8,7 @@
           <% if (category = @entry.entryable.try(:category)) %>
             <span class="text-secondary">&middot;</span>
             <span style="color: <%= category.color %>"><%= icon category.lucide_icon, size: "xs", color: "current" %></span>
-            <span><%= category.name %></span>
+            <span><%= category.display_name %></span>
           <% end %>
         </p>
       </div>
