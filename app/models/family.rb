@@ -15,7 +15,8 @@ class Family < ApplicationRecord
     [ "MM/DD/YYYY", "%m/%d/%Y" ],
     [ "D/MM/YYYY", "%e/%m/%Y" ],
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
-    [ "YYYYMMDD", "%Y%m%d" ]
+    [ "YYYYMMDD", "%Y%m%d" ],
+    [ "DD MMM YYYY", "%d %b %Y" ]
   ].freeze
 
 
