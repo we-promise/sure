@@ -346,6 +346,36 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert Session.exists?(user_id: @user.id)
   end
 
+  test "rejects existing OIDC identity when provider issuer has changed" do
+    oidc_identity = oidc_identities(:bob_google)
+    oidc_identity.update!(issuer: "https://old-idp.example")
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: oidc_identity.provider, issuer: "https://new-idp.example" }
+    ])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Changed by the new issuer"
+    )
+    last_authenticated_at = oidc_identity.last_authenticated_at
+    identity_info = oidc_identity.info
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      assert_no_difference -> { SsoAuditLog.by_event("login").count } do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal last_authenticated_at, oidc_identity.reload.last_authenticated_at
+    assert_equal identity_info, oidc_identity.info
+    assert_equal "issuer_mismatch", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
   test "rejects an SSO identity that an administrator permanently removed" do
     oidc_identity = oidc_identities(:bob_google)
     SsoIdentityBlock.block_all!(OidcIdentity.where(id: oidc_identity.id), identity_label: @user.email)
@@ -1142,5 +1172,28 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     ])
     get "/auth/desktop/openid_connect"
     assert_redirected_to new_session_path
+  end
+
+  test "desktop_sso_start accepts a database provider added after boot" do
+    original_sso_providers = Rails.configuration.x.auth.sso_providers
+    Rails.configuration.x.auth.sso_providers = [
+      { name: "boot_provider", strategy: "openid_connect", label: "Boot provider" }
+    ]
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    ProviderLoader.stubs(:load_providers).returns([
+      {
+        "name" => "authentik",
+        "strategy" => "openid_connect",
+        "label" => "Sign in with Authentik",
+        "settings" => { "default_role" => "super_admin" }
+      }
+    ])
+
+    get "/auth/desktop/authentik", params: { code_challenge: "a" * 43 }
+
+    assert_response :success
+    assert_match %r{action="/auth/authentik"}, @response.body
+  ensure
+    Rails.configuration.x.auth.sso_providers = original_sso_providers
   end
 end

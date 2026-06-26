@@ -265,7 +265,7 @@ module Api
           # New family creators must be able to administer their own family.
           # Lower provider defaults are promoted to admin by role_for_new_family_creator,
           # while intentional super_admin defaults remain supported.
-          provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+          provider_config = AuthConfig.sso_providers&.find { |p| p[:name] == cached[:provider] }
           provider_default_role = provider_config&.dig(:settings, :default_role)
         end
 
