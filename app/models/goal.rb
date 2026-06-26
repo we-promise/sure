@@ -8,7 +8,10 @@ class Goal < ApplicationRecord
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
   belongs_to :family
-  has_many :goal_accounts, dependent: :destroy
+  # autosave so earmark (allocated_amount) edits on already-linked accounts
+  # persist through goal.save! — without it Rails only saves newly built
+  # children, silently dropping changes to existing goal_accounts.
+  has_many :goal_accounts, dependent: :destroy, autosave: true
   has_many :linked_accounts, through: :goal_accounts, source: :account
   has_many :goal_pledges, dependent: :destroy
   has_many :open_pledges,
@@ -227,7 +230,9 @@ class Goal < ApplicationRecord
     # ratio held over the window (an approximation); exact for unallocated
     # goals, where ratio == 1 and the series is unchanged.
     whole_total = linked_accounts.select { |a| a.currency == currency }.sum { |a| a.balance.to_d }
-    backing_ratio = whole_total.positive? ? (current_balance.to_d / whole_total) : 1.to_d
+    # 0 when the linked-account total is non-positive: current_balance is forced
+    # to 0 there, so the saved series must end at 0 too (no stray non-zero tail).
+    backing_ratio = whole_total.positive? ? (current_balance.to_d / whole_total) : 0.to_d
     saved_series = series_values.map { |v| { date: v.date.to_s, value: (v.value.amount.to_d * backing_ratio).to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
@@ -491,7 +496,16 @@ class Goal < ApplicationRecord
     # instance keeps returning the pre-transition value if a controller
     # calls archive! / pause! and then renders without reload.
     def reset_state_dependent_caches!
-      %i[@display_status @projection_summary].each do |ivar|
+      # current_balance now depends on the goal's own archived state (an
+      # archived goal is excluded from the shared pool), so the balance-derived
+      # memos must be cleared on a transition too, not just the status memos.
+      %i[
+        @display_status @projection_summary
+        @current_balance @current_balance_money
+        @remaining_amount @remaining_amount_money
+        @progress_percent @monthly_target_amount
+        @pace @pace_money @status @pooled_allocations
+      ].each do |ivar|
         remove_instance_variable(ivar) if instance_variable_defined?(ivar)
       end
     end

@@ -380,4 +380,26 @@ class GoalTest < ActiveSupport::TestCase
     # goal_accounts — so it still reports 2,000, not the whole 5,000.
     assert_equal BigDecimal("2000"), Goal.find(earmarked.id).current_balance.to_d
   end
+
+  test "earmark edits to an existing linked account persist via goal.save!" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Autosave Savings", currency: "USD", balance: 5_000)
+    goal = @family.goals.create!(name: "Autosave goal", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account) # NULL = whole balance
+    end
+    ga = goal.goal_accounts.first
+    assert_nil ga.allocated_amount
+    ga.allocated_amount = 1_500
+    goal.save! # autosave: true must persist the dirty existing child
+    assert_equal BigDecimal("1500"), goal.goal_accounts.first.reload.allocated_amount
+  end
+
+  test "progress_percent memo resets after complete! on the same instance" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Memo Savings", currency: "USD", balance: 100)
+    goal = @family.goals.create!(name: "Memo goal", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_operator goal.progress_percent, :<, 100 # memoize the underfunded value
+    goal.complete!
+    assert_equal 100, goal.progress_percent, "stale memo would still report the pre-complete percent"
+  end
 end

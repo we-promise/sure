@@ -68,7 +68,8 @@
                   <%= render Goals::AvatarComponent.new(name: account.name, color: Goals::AvatarComponent.color_for(account.name), size: "md") %>
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
-                    <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= (account.subtype || subtype).titleize %> · <%= Money.new(account.balance, account.currency).format %></p>
+                    <% row_subtype = account.subtype.to_s.presence || subtype %>
+                    <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= t("goals.form.subtypes.#{row_subtype}", default: row_subtype.titleize) %> · <%= Money.new(account.balance, account.currency).format %></p>
                   </div>
                 </label>
                 <%= text_field_tag "goal[allocations][#{account.id}]",
