@@ -866,6 +866,10 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal "6/4/2020", QifParser.send(:normalize_qif_date, "6/ 4/2020")
   end
 
+  test "normalize_qif_date expands 2-digit year for month-name dates" do
+    assert_equal "26 Jan 2026", QifParser.send(:normalize_qif_date, "26 Jan 26")
+  end
+
   test "normalize_qif_date converts apostrophe 2-digit year" do
     assert_equal "6/4/2020", QifParser.send(:normalize_qif_date, "6/ 4'20")
   end
@@ -912,6 +916,10 @@ class QifImportTest < ActiveSupport::TestCase
 
   test "parse_qif_date parses month-name format (DD MMM YYYY)" do
     assert_equal "2026-01-26", QifParser.send(:parse_qif_date, "26 Jan 2026", date_format: "%d %b %Y")
+  end
+
+  test "parse_qif_date parses month-name format with 2-digit year" do
+    assert_equal "2026-01-26", QifParser.send(:parse_qif_date, "26 Jan 26", date_format: "%d %b %Y")
   end
 
   test "parse_qif_date returns nil for invalid date" do
