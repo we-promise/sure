@@ -141,7 +141,7 @@ module SnaptradeItem::Provided
 
   def complete_oauth_device_flow!(device_code:)
     provider = snaptrade_provider
-    raise StandardError, "SnapTrade provider not configured" unless provider
+    raise Provider::Snaptrade::ConfigurationError, "SnapTrade provider not configured" unless provider
 
     token_response = provider.poll_device_token(device_code: device_code)
     update!(

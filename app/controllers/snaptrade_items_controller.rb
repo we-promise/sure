@@ -282,9 +282,9 @@ class SnaptradeItemsController < ApplicationController
     }
   rescue Provider::Snaptrade::ApiError => e
     render json: oauth_error_payload(e), status: e.status_code || :unprocessable_entity
-  rescue => e
+  rescue Provider::Snaptrade::Error, ActiveRecord::ActiveRecordError, ActiveRecord::Encryption::Errors::Base => e
     Rails.logger.error "SnapTrade OAuth device token error: #{e.class} - #{e.message}"
-    render json: { error: e.message }, status: :unprocessable_entity
+    render json: { error: complete_oauth_device_flow_error_message }, status: :unprocessable_entity
   end
 
   # Delete a brokerage connection
@@ -548,6 +548,13 @@ class SnaptradeItemsController < ApplicationController
       t(
         "snaptrade_items.start_oauth_device_flow.failed",
         default: "Unable to start SnapTrade OAuth device authorization. Please try again."
+      )
+    end
+
+    def complete_oauth_device_flow_error_message
+      t(
+        "snaptrade_items.complete_oauth_device_flow.failed",
+        default: "Unable to complete SnapTrade OAuth device authorization. Please try again."
       )
     end
 

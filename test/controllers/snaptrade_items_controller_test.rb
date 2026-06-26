@@ -87,6 +87,18 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "SnapTrade OAuth error (poll_device_token): invalid response", payload["error"]
   end
 
+  test "complete oauth device flow does not expose non-api provider error details" do
+    SnaptradeItem.any_instance
+      .stubs(:complete_oauth_device_flow!)
+      .raises(Provider::Snaptrade::ConfigurationError.new("missing secret at /srv/app/config.yml"))
+
+    post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item), params: { device_code: "device-code" }
+
+    assert_response :unprocessable_entity
+    payload = JSON.parse(response.body)
+    assert_equal "Unable to complete SnapTrade OAuth device authorization. Please try again.", payload["error"]
+  end
+
   test "start oauth device flow does not expose provider error details" do
     SnaptradeItem.any_instance
       .stubs(:start_oauth_device_flow)
