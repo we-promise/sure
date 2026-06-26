@@ -75,13 +75,9 @@ class AuthConfig
 
     def sso_providers
       if FeatureFlags.db_sso_providers?
-        # After boot, OmniAuth registers successfully configured providers into
-        # Rails.configuration.x.auth.sso_providers. Prefer that filtered list
-        # so we never render login buttons for providers that couldn't be
-        # registered (e.g., missing required fields in YAML fallback).
-        # Fall back to ProviderLoader for pre-boot contexts.
-        registered = Rails.configuration.x.auth.sso_providers
-        registered&.any? ? registered : ProviderLoader.load_providers
+        # Load live DB-backed providers so login paths see provider changes
+        # without an app restart; avoid memoizing stale OmniAuth config here.
+        ProviderLoader.load_providers
       else
         Rails.configuration.x.auth.sso_providers || []
       end
