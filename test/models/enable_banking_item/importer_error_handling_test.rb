@@ -152,6 +152,28 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     assert_not result[:success]
   end
 
+  test "fetch_paginated_transactions retries BOOK fetch on ASPSP_ERROR and returns later success" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid", account_id: SecureRandom.uuid)
+    @importer.stubs(:sleep)
+
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Failed to fetch data: 500 - {\"error\":\"ASPSP_ERROR\"}",
+      :aspsp_error,
+      response_data: { error: "ASPSP_ERROR" }
+    )
+
+    @mock_provider.expects(:get_account_transactions).twice.raises(error).then.returns({ transactions: [], continuation_key: nil })
+
+    result = @importer.send(
+      :fetch_paginated_transactions,
+      enable_banking_account,
+      start_date: Date.today,
+      transaction_status: "BOOK"
+    )
+
+    assert_equal [], result
+  end
+
   test "fetch_and_update_balance does not flip whole connection on per-account unauthorized error" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     def @mock_provider.get_account_balances(**args)
