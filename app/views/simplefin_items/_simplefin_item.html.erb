@@ -15,6 +15,7 @@
          0
        end
      end %>
+  <% setup_token_update_required = simplefin_item.setup_token_update_required? %>
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -85,7 +86,7 @@
                 <%= icon "loader", size: "sm", class: "animate-spin" %>
                 <%= tag.span t(".syncing") %>
               </div>
-            <% elsif simplefin_item.setup_token_update_required? %>
+            <% elsif setup_token_update_required %>
               <div class="text-warning flex items-center gap-1">
                 <%= icon "alert-triangle", size: "sm", color: "warning" %>
                 <%= tag.span t(".requires_update") %>
@@ -147,7 +148,7 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
-            <% if simplefin_item.setup_token_update_required? %>
+            <% if setup_token_update_required %>
               <%= render DS::Link.new(
                 text: t(".update"),
                 icon: "refresh-cw",

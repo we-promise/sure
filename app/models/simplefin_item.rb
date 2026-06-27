@@ -421,10 +421,10 @@ class SimplefinItem < ApplicationRecord
 
     latest = latest_sync || syncs.ordered.first
     return true unless latest
-    return false if latest.in_progress? || latest.stale?
+    return false if latest.in_progress?
 
-    stats = parse_sync_stats(latest.sync_stats)
-    stats.to_h["total_accounts"].to_i.zero?
+    stats = parse_sync_stats(latest.sync_stats).to_h.stringify_keys
+    stats["total_accounts"].to_i.zero?
   end
 
   def effective_status(latest_sync: nil)
