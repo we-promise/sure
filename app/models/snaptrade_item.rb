@@ -20,6 +20,8 @@ class SnaptradeItem < ApplicationRecord
     encrypts :client_id, deterministic: true
     encrypts :consumer_key, deterministic: true
     encrypts :snaptrade_user_secret
+    encrypts :oauth_access_token
+    encrypts :oauth_refresh_token
   end
 
   validates :name, presence: true
@@ -157,6 +159,10 @@ class SnaptradeItem < ApplicationRecord
                   .where.not(institution_metadata: nil)
                   .map { |acc| acc.institution_metadata }
                   .uniq { |inst| inst["name"] || inst["institution_name"] }
+  end
+
+  def oauth_token_active?
+    oauth_access_token.present? && (oauth_token_expires_at.blank? || oauth_token_expires_at.future?)
   end
 
   def institution_summary
