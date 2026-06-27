@@ -71,6 +71,23 @@ class SimplefinAccountTest < ActiveSupport::TestCase
     assert_equal snapshot, @simplefin_account.raw_payload
   end
 
+  test "parses numeric-string epoch balance-date in snapshot" do
+    epoch_string = Time.utc(2026, 6, 17, 12, 34, 56).to_i.to_s
+    snapshot = {
+      "balance" => 2000.0,
+      "available-balance" => 1800.0,
+      "balance-date" => epoch_string,
+      "currency" => "USD",
+      "type" => "investment",
+      "name" => "Traditional IRA",
+      "id" => "trad_ira_1"
+    }
+
+    @simplefin_account.upsert_simplefin_snapshot!(snapshot)
+
+    assert_equal Time.at(epoch_string.to_i).utc, @simplefin_account.balance_date
+  end
+
   test "can upsert transactions" do
     transactions = [
       { "id" => "txn_1", "amount" => -50.00, "description" => "Coffee Shop", "posted" => "2024-01-01" },

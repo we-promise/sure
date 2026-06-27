@@ -185,7 +185,13 @@ Rails.application.routes.draw do
 
   # AI chats
   resources :chats do
-    resources :messages, only: :create
+    resources :messages, only: :create do
+      member do
+        # Client-side watchdog reports a "Thinking…" bubble that never received
+        # a response (e.g. the background worker is down) so it can be failed.
+        post :report_timeout
+      end
+    end
 
     member do
       post :retry
@@ -252,7 +258,7 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
     resources :sso_identities, only: :destroy
-    resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
