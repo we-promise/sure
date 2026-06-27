@@ -16,17 +16,70 @@ class Provider::Snaptrade
   MAX_RETRIES = 3
   INITIAL_RETRY_DELAY = 2 # seconds
   MAX_RETRY_DELAY = 30 # seconds
+  OAUTH_DISCOVERY_URL = "https://api.snaptrade.com/.well-known/oauth-authorization-server".freeze
+  DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code".freeze
 
-  attr_reader :client
+  attr_reader :client, :client_id, :consumer_key
 
   def initialize(client_id:, consumer_key:)
     raise ConfigurationError, "client_id is required" if client_id.blank?
     raise ConfigurationError, "consumer_key is required" if consumer_key.blank?
 
+    @client_id = client_id
+    @consumer_key = consumer_key
+
     configuration = SnapTrade::Configuration.new
     configuration.client_id = client_id
     configuration.consumer_key = consumer_key
     @client = SnapTrade::Client.new(configuration)
+  end
+
+  def oauth_authorization_server_metadata
+    with_retries("oauth_authorization_server_metadata") do
+      response = oauth_connection.get(OAUTH_DISCOVERY_URL)
+      parse_oauth_response(response, "oauth_authorization_server_metadata")
+    end
+  end
+
+  def start_device_authorization(scope: "read")
+    metadata = oauth_authorization_server_metadata
+    endpoint = metadata.fetch("device_authorization_endpoint") do
+      raise ApiError.new("SnapTrade OAuth metadata missing device_authorization_endpoint")
+    end
+
+    with_retries("start_device_authorization") do
+      response = oauth_connection.post(endpoint) do |request|
+        request.headers["Content-Type"] = "application/x-www-form-urlencoded"
+        request.body = URI.encode_www_form(
+          client_id: oauth_client_id,
+          scope: scope
+        )
+      end
+
+      parse_oauth_response(response, "start_device_authorization")
+    end
+  end
+
+  def poll_device_token(device_code:)
+    raise ConfigurationError, "device_code is required" if device_code.blank?
+
+    metadata = oauth_authorization_server_metadata
+    endpoint = metadata.fetch("token_endpoint") do
+      raise ApiError.new("SnapTrade OAuth metadata missing token_endpoint")
+    end
+
+    with_retries("poll_device_token") do
+      response = oauth_connection.post(endpoint) do |request|
+        request.headers["Content-Type"] = "application/x-www-form-urlencoded"
+        request.body = URI.encode_www_form(
+          grant_type: DEVICE_CODE_GRANT,
+          device_code: device_code,
+          client_id: oauth_client_id
+        )
+      end
+
+      parse_oauth_response(response, "poll_device_token")
+    end
   end
 
   # Register a new SnapTrade user
@@ -241,6 +294,33 @@ class Provider::Snaptrade
       else
         raise ApiError.new("SnapTrade API error: #{error.message}", status_code: status, response_body: body)
       end
+    end
+
+    def oauth_connection
+      @oauth_connection ||= Faraday.new do |faraday|
+        faraday.options.timeout = 30
+        faraday.options.open_timeout = 10
+      end
+    end
+
+    def oauth_client_id
+      configured_client_id = Rails.configuration.x.snaptrade&.oauth_client_id
+      return configured_client_id if configured_client_id.present?
+
+      raise ConfigurationError, "SnapTrade OAuth client ID is not configured"
+    end
+
+    def parse_oauth_response(response, operation)
+      payload = response.body.present? ? JSON.parse(response.body) : {}
+
+      if response.success?
+        payload
+      else
+        error = payload["error_description"].presence || payload["error"].presence || response.reason_phrase
+        raise ApiError.new("SnapTrade OAuth error (#{operation}): #{error}", status_code: response.status, response_body: response.body)
+      end
+    rescue JSON::ParserError
+      raise ApiError.new("SnapTrade OAuth error (#{operation}): invalid JSON response", status_code: response.status, response_body: response.body)
     end
 
     def with_retries(operation_name, max_retries: MAX_RETRIES)
