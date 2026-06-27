@@ -112,6 +112,8 @@ class Provider::Trading212
 
         cursor = extract_cursor(next_page)
         break if cursor.nil?
+
+        sleep(10)  # 6 req/min limit on history endpoint
       end
 
       items
