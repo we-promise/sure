@@ -24,7 +24,7 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "input[name='user[family_attributes][moniker]'][value='Family'][required]"
     assert_select "input[name='user[family_attributes][moniker]'][value='Group'][required]"
-    assert_select "p", text: /Will be using Sure with/i
+    assert_select "p.text-sm.font-medium.text-primary", text: /Will be using.*with/i
   end
 
   test "should get preferences" do
