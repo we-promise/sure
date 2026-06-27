@@ -45,7 +45,7 @@ class TradesTest < ApplicationSystemTestCase
     open_new_trade_modal
 
     select "Sell", from: "Type"
-    assert_no_selector "turbo-frame#modal[busy]"
+    assert_selector "turbo-frame#modal form[data-trade-type='sell']"
 
     fill_in "Ticker symbol", with: "AAPL"
     fill_in "Date", with: Date.current
