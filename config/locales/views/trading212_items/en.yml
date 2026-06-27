@@ -1,0 +1,92 @@
+---
+en:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Connect a Trading 212 investment account via API key
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Deletion in progress
+      environment_label_live: Live account
+      environment_label_demo: Demo account
+      syncing: Syncing
+      requires_update: API key needs attention
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Account needs setup
+      accounts_need_setup_description: Your Trading 212 account needs to be linked to a Sure account.
+      no_accounts_discovered: No Trading 212 account discovered yet.
+      no_accounts_discovered_description: Run a sync after saving your API key to discover your account.
+    setup_accounts:
+      page_title: Set Up Trading 212 Account
+      dialog_title: Set Up Your Trading 212 Account
+      subtitle: Link your Trading 212 investment account.
+      info_box:
+        title: Trading 212 API Import
+        items:
+          item_1: Current positions with prices and quantities
+          item_2: Full order history (buys and sells)
+          item_3: Dividends and cash transactions
+      status:
+        fetching_accounts: Fetching account from Trading 212...
+        no_accounts_found_title: No account found.
+        no_accounts_found_description: Sure could not find a Trading 212 account. Check that your API key is valid.
+      available_accounts:
+        title: Available account
+        account_type_investment: Investment
+        account_summary: "%{account_type} • Balance: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Or link the discovered Trading 212 account to an existing manual investment account.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync_status:
+      no_accounts: No Trading 212 account discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link Trading 212 account
+      no_accounts_available: No unlinked Trading 212 accounts are available yet.
+      run_sync_hint: "Run a sync from Settings > Providers after saving your API key."
+      wait_for_sync: Wait for the account discovery sync to finish.
+      balance: Balance
+      link: Link
+      cancel: Cancel
+    create:
+      success: Successfully configured Trading 212.
+    update:
+      success: Successfully updated Trading 212 configuration.
+    destroy:
+      success: Scheduled Trading 212 connection for deletion.
+    select_accounts:
+      not_configured: Trading 212 is not configured.
+    link_existing_account:
+      not_found: Account or Trading 212 configuration not found.
+      only_manual_investment: Only manual investment accounts can be linked to Trading 212.
+      already_linked: This Trading 212 account is already linked.
+      success: Successfully linked to Trading 212 account.
+      failed: Failed to link Trading 212 account.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} Trading 212 account.
+        other: Successfully created %{count} Trading 212 accounts.
+      none_selected: No accounts were selected.
+      none_created: No accounts were created.

@@ -1,0 +1,80 @@
+<div id="trading212-providers-panel" class="space-y-4">
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3")
+             ] %>
+
+  <%
+    trading212_item = Current.family.trading212_items.first_or_initialize
+    is_new_record = trading212_item.new_record?
+  %>
+
+  <% if trading212_item.persisted? %>
+    <div class="flex flex-wrap justify-end gap-2">
+      <%= button_to sync_trading212_item_path(trading212_item),
+                    method: :post,
+                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                    disabled: trading212_item.syncing? do %>
+        <%= icon "refresh-cw", size: "sm" %>
+        <%= t(".sync") %>
+      <% end %>
+
+      <%= button_to trading212_item_path(trading212_item),
+                    method: :delete,
+                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                    data: { turbo_confirm: t(".disconnect_confirm") } do %>
+        <%= icon "trash-2", size: "sm" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= styled_form_with model: trading212_item,
+                       url: is_new_record ? trading212_items_path : trading212_item_path(trading212_item),
+                       scope: :trading212_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :api_key,
+                        label: t(".api_key_label"),
+                        placeholder: is_new_record ? t(".api_key_placeholder_new") : t(".api_key_placeholder_existing"),
+                        type: :password %>
+
+    <%= form.text_field :api_secret,
+                        label: t(".api_secret_label"),
+                        placeholder: is_new_record ? t(".api_secret_placeholder_new") : t(".api_secret_placeholder_existing"),
+                        type: :password %>
+
+    <%= form.select :environment,
+                    [ [ t(".environment_live"), "live" ], [ t(".environment_demo"), "demo" ] ],
+                    { label: t(".environment_label"), selected: trading212_item.environment || "live" } %>
+
+    <%= form.select :currency,
+                    Money::Currency.as_options.map { |c| [ "#{c.name} (#{c.iso_code})", c.iso_code ] },
+                    { label: t(".currency_label"), selected: trading212_item.currency.presence || Current.family.currency } %>
+
+    <div class="flex flex-wrap justify-end gap-2">
+      <%= form.submit(is_new_record ? t(".save_configuration") : t(".update_configuration")) %>
+    </div>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if trading212_item.persisted? && trading212_item.credentials_configured? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">
+        <%= t(".status_configured_prefix", summary: trading212_item.sync_status_summary) %>
+        <%= link_to t(".accounts_tab"), accounts_path, class: "link" %>
+        <%= t(".status_configured_suffix") %>
+      </p>
+    <% else %>
+      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t(".not_configured") %></p>
+    <% end %>
+  </div>
+</div>
