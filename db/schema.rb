@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_21_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_25_230639) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1753,6 +1753,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_000000) do
     t.boolean "scheduled_for_deletion", default: false
     t.string "snaptrade_user_id"
     t.string "snaptrade_user_secret"
+    t.text "oauth_access_token"
+    t.text "oauth_refresh_token"
+    t.datetime "oauth_token_expires_at"
+    t.string "oauth_scope"
+    t.string "oauth_token_type"
     t.string "status", default: "good"
     t.datetime "sync_start_date"
     t.datetime "updated_at", null: false

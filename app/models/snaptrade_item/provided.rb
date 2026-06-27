@@ -132,6 +132,28 @@ module SnaptradeItem::Provided
     )
   end
 
+  def start_oauth_device_flow(scope: "read")
+    provider = snaptrade_provider
+    raise Provider::Snaptrade::ConfigurationError, "SnapTrade provider not configured" unless provider
+
+    provider.start_device_authorization(scope: scope)
+  end
+
+  def complete_oauth_device_flow!(device_code:)
+    provider = snaptrade_provider
+    raise Provider::Snaptrade::ConfigurationError, "SnapTrade provider not configured" unless provider
+
+    token_response = provider.poll_device_token(device_code: device_code)
+    update!(
+      oauth_access_token: token_response["access_token"],
+      oauth_refresh_token: token_response["refresh_token"],
+      oauth_token_type: token_response["token_type"],
+      oauth_scope: token_response["scope"],
+      oauth_token_expires_at: token_response["expires_in"].present? ? Time.current + token_response["expires_in"].to_i.seconds : nil
+    )
+    token_response
+  end
+
   # Fetch all brokerage connections from SnapTrade API
   # Returns array of connection objects
   def fetch_connections
