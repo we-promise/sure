@@ -7,6 +7,71 @@
     <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
   </header>
 
+  <% if @basis_live_error.present? %>
+    <%= render DS::Alert.new(message: t(".live.error", message: @basis_live_error), variant: :warning) %>
+  <% elsif @basis_live_snapshot.present? %>
+    <section class="bg-container rounded-xl shadow-border-xs px-5 py-5 space-y-4">
+      <div>
+        <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".live.heading") %></p>
+        <p class="text-sm text-secondary mt-1"><%= t(".live.subtitle") %></p>
+      </div>
+
+      <div class="grid grid-cols-2 @3xl:grid-cols-5 gap-3">
+        <% live_total_cents = @basis_live_snapshot[:spot_leg_cents] + @basis_live_snapshot[:short_leg_cents] + @basis_live_snapshot[:funding_accrued_cents] + @basis_live_snapshot[:rewards_accrued_cents] %>
+        <div class="bg-container-inset rounded-xl px-5 py-5 col-span-2 @3xl:col-span-1">
+          <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.selected_total") %></p>
+          <p class="text-3xl font-medium text-primary tabular-nums mt-2 privacy-sensitive"><%= format_money(Money.new(live_total_cents, @basis_live_snapshot[:currency])) %></p>
+        </div>
+        <% { spot: :spot_leg_cents, short: :short_leg_cents, funding: :funding_accrued_cents, rewards: :rewards_accrued_cents }.each do |label, key| %>
+          <div class="bg-container-inset rounded-xl px-5 py-5">
+            <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".kpi.#{label}") %></p>
+            <p class="text-xl font-medium text-primary tabular-nums mt-2 privacy-sensitive"><%= format_money(Money.new(@basis_live_snapshot[key], @basis_live_snapshot[:currency])) %></p>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <% spot_tokens = @basis_live_snapshot.dig(:metadata, :spot_tokens).to_a.select { |token| token[:balance].positive? } %>
+        <div class="rounded-xl border border-secondary p-4">
+          <p class="text-sm font-medium text-primary"><%= t(".live.spot_breakdown_title") %></p>
+          <% if spot_tokens.any? %>
+            <div class="mt-3 space-y-2 text-sm text-secondary">
+              <% spot_tokens.each do |token| %>
+                <div class="flex items-center justify-between gap-3">
+                  <span><%= token[:symbol] %></span>
+                  <span class="tabular-nums text-primary"><%= number_with_precision(token[:balance], precision: 6, strip_insignificant_zeros: true) %></span>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="mt-3 text-sm text-secondary"><%= t(".live.spot_breakdown_empty") %></p>
+          <% end %>
+        </div>
+
+        <% lighter_accounts = @basis_live_snapshot.dig(:metadata, :lighter, :accounts).to_a %>
+        <div class="rounded-xl border border-secondary p-4">
+          <p class="text-sm font-medium text-primary"><%= t(".live.lighter_breakdown_title") %></p>
+          <% if lighter_accounts.any? %>
+            <div class="mt-3 space-y-2 text-sm text-secondary">
+              <% lighter_accounts.each do |account| %>
+                <div class="flex items-center justify-between gap-3">
+                  <span><%= t(".live.lighter_account", index: account[:index]) %></span>
+                  <span class="tabular-nums text-primary"><%= number_with_precision(account[:total_asset_value], precision: 2) %> USD</span>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="mt-3 text-sm text-secondary"><%= t(".live.lighter_breakdown_empty") %></p>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  <% elsif !@basis_sources_configured %>
+    <section class="bg-container rounded-xl shadow-border-xs px-5 py-5">
+      <p class="text-sm text-secondary"><%= t(".live.not_configured_html", link: link_to(t(".live.preferences_link"), settings_preferences_path, class: "link")) %></p>
+    </section>
+  <% end %>
+
   <% unless @has_snapshots %>
     <div class="bg-container rounded-xl shadow-border-xs py-16 px-6 text-center">
       <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-surface-inset mb-4">

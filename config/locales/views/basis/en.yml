@@ -7,6 +7,17 @@ en:
       empty:
         title: No basis snapshots yet
         body: Once basis trade snapshots are recorded, your combined leg equity curve will appear here.
+      live:
+        heading: Live balances
+        subtitle: Current values fetched directly from your configured Optimism wallet and Lighter address.
+        error: "Live balance refresh failed: %{message}"
+        spot_breakdown_title: Spot wallet balances
+        spot_breakdown_empty: No configured spot-leg balances were found.
+        lighter_breakdown_title: Lighter account values
+        lighter_breakdown_empty: No Lighter accounts were found for this address.
+        lighter_account: "Account %{index}"
+        preferences_link: Settings → Preferences
+        not_configured_html: Configure your Ether.fi and Lighter addresses in %{link} to enable direct live balance checks.
       ranges:
         30d: 30D
         90d: 90D

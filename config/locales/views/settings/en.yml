@@ -154,6 +154,18 @@ en:
         sharing_default_label: Default sharing for new accounts
         sharing_shared: Share with all members
         sharing_private: Keep private by default
+        basis_sources_title: Basis data sources
+        basis_sources_subtitle: Configure the onchain wallet and Lighter address Sure should query directly for your basis monitor.
+        basis_long_address_label: Ether.fi deposit address on Optimism
+        basis_long_address_placeholder: "0x..."
+        basis_long_address_hint: Native ETH is included automatically. Add any ERC-20 contracts you want counted below.
+        basis_long_tokens_label: Optimism ERC-20 token contracts
+        basis_long_tokens_placeholder: |
+          0x...
+          0x...
+        basis_lighter_address_label: Lighter wallet address
+        basis_lighter_address_placeholder: "0x..."
+        basis_lighter_address_hint: Sure will sum the total account value of every Lighter account/sub-account linked to this wallet.
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.

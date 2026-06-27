@@ -198,6 +198,34 @@
       <% end %>
     </div>
   <% end %>
+
+  <%= settings_section title: t(".basis_sources_title"), subtitle: t(".basis_sources_subtitle") do %>
+    <div>
+      <%= styled_form_with model: @user, class: "space-y-4" do |form| %>
+        <%= form.hidden_field :redirect_to, value: "preferences" %>
+        <%= form.fields_for :family do |family_form| %>
+          <%= family_form.text_field :basis_long_address,
+              label: t(".basis_long_address_label"),
+              placeholder: t(".basis_long_address_placeholder"),
+              hint: t(".basis_long_address_hint") %>
+
+          <%= family_form.text_area :basis_long_token_addresses,
+              rows: 4,
+              label: t(".basis_long_tokens_label"),
+              placeholder: t(".basis_long_tokens_placeholder") %>
+
+          <%= family_form.text_field :basis_lighter_address,
+              label: t(".basis_lighter_address_label"),
+              placeholder: t(".basis_lighter_address_placeholder"),
+              hint: t(".basis_lighter_address_hint") %>
+        <% end %>
+
+        <div class="flex justify-end">
+          <%= render DS::Button.new(text: t("settings.profiles.show.save"), type: :submit) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
 <% end %>
 
 <%# Preview features toggle — visible to all users, not just admins. Lives at

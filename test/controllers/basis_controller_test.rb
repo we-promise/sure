@@ -32,6 +32,51 @@ class BasisControllerTest < ActionDispatch::IntegrationTest
     assert_match(/No basis snapshots yet/i, response.body)
   end
 
+  test "renders live basis balances when direct sources are configured" do
+    @user.family.update!(
+      basis_long_address: "0x1111111111111111111111111111111111111111",
+      basis_long_token_addresses: "0x2222222222222222222222222222222222222222",
+      basis_lighter_address: "0x3333333333333333333333333333333333333333"
+    )
+
+    BasisTrade::OptimismWalletValuator.any_instance.stubs(:value).returns(
+      total_value: BigDecimal("1500.25"),
+      tokens: [ { symbol: "weETH", balance: BigDecimal("0.75") } ]
+    )
+    Provider::Lighter.any_instance.stubs(:total_account_value_for_l1_address).returns(
+      total_account_value: BigDecimal("980.10"),
+      accounts: [ { index: "17", total_asset_value: BigDecimal("980.10") } ]
+    )
+
+    get basis_path
+
+    assert_response :success
+    assert_match(/Live balances/i, response.body)
+    assert_match(/Spot wallet balances/i, response.body)
+    assert_match(/Lighter account values/i, response.body)
+    assert_match(/weETH/i, response.body)
+    assert_match(/Account 17/i, response.body)
+  end
+
+  test "renders basis configuration guidance when direct sources are not configured" do
+    get basis_path
+
+    assert_response :success
+    assert_match(/Settings → Preferences/i, response.body)
+  end
+
+  test "renders live basis error when direct source refresh fails" do
+    @user.family.update!(basis_long_address: "0x1111111111111111111111111111111111111111")
+    BasisTrade::LiveSnapshotBuilder.any_instance.stubs(:call).returns(
+      BasisTrade::LiveSnapshotBuilder::Result.new(configured: true, error: "boom")
+    )
+
+    get basis_path
+
+    assert_response :success
+    assert_match(/Live balance refresh failed: boom/i, response.body)
+  end
+
   test "renders chart payload and four toggles when snapshots exist" do
     BasisTradeSnapshot.create!(
       family: @user.family,

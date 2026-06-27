@@ -10,6 +10,7 @@ class BasisController < ApplicationController
   def show
     @range = RANGES.key?(params[:range]) ? params[:range] : "all"
     start_date = RANGES[@range] ? RANGES[@range].days.ago.to_date : nil
+    live_snapshot_result = BasisTrade::LiveSnapshotBuilder.new(family: Current.family).call
 
     @basis_chart_payload = BasisTradeSeriesBuilder.new(
       family: Current.family,
@@ -17,6 +18,9 @@ class BasisController < ApplicationController
     ).payload
 
     @has_snapshots = @basis_chart_payload[:points].any?
+    @basis_live_snapshot = live_snapshot_result.snapshot
+    @basis_live_error = live_snapshot_result.error
+    @basis_sources_configured = live_snapshot_result.configured
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ],
                      [ t("basis.show.title"), nil ] ]

@@ -30,6 +30,23 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Enable preview features"
   end
 
+  test "renders basis source fields for admins" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_includes response.body, "Ether.fi deposit address on Optimism"
+    assert_includes response.body, "Lighter wallet address"
+  end
+
+  test "does not render basis source fields for non-admin users" do
+    sign_in users(:family_member)
+    get settings_preferences_url
+
+    assert_response :success
+    assert_not_includes response.body, "Ether.fi deposit address on Optimism"
+    assert_not_includes response.body, "Lighter wallet address"
+  end
+
   test "update toggles preview_features_enabled on" do
     user = users(:family_admin)
     assert_not user.preview_features_enabled?

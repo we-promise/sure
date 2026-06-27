@@ -47,6 +47,29 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "USD", "SGD" ], @user.family.reload.enabled_currency_codes
   end
 
+  test "admin can update basis source settings" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: @user.family.id,
+          basis_long_address: "0x1111111111111111111111111111111111111111",
+          basis_long_token_addresses: "0x2222222222222222222222222222222222222222\n0x3333333333333333333333333333333333333333",
+          basis_lighter_address: "0x4444444444444444444444444444444444444444"
+        }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    family = @user.family.reload
+    assert_equal "0x1111111111111111111111111111111111111111", family.basis_long_address
+    assert_equal [
+      "0x2222222222222222222222222222222222222222",
+      "0x3333333333333333333333333333333333333333"
+    ], family.basis_long_token_addresses_array
+    assert_equal "0x4444444444444444444444444444444444444444", family.basis_lighter_address
+  end
+
   test "non-admin cannot update enabled family currencies" do
     sign_in @member = users(:family_member)
     original_codes = @member.family.enabled_currency_codes
@@ -64,6 +87,24 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_profile_url
     assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
     assert_equal original_codes, @member.family.reload.enabled_currency_codes
+  end
+
+  test "non-admin cannot update basis source settings" do
+    sign_in @member = users(:family_member)
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: @member.family.id,
+          basis_long_address: "0x1111111111111111111111111111111111111111"
+        }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+    assert_nil @member.family.reload.basis_long_address
   end
 
   test "admin can reset family data" do

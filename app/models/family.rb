@@ -21,6 +21,7 @@ class Family < ApplicationRecord
   MONIKERS = [ "Family", "Group" ].freeze
   ASSISTANT_TYPES = %w[builtin external].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
+  EVM_ADDRESS_FORMAT = /\A0x[a-f0-9]{40}\z/i
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -107,6 +108,19 @@ class Family < ApplicationRecord
         .pluck(:id)
     end
 
+    def normalize_basis_trade_settings!
+      self.basis_long_address = normalize_evm_address(basis_long_address)
+      self.basis_lighter_address = normalize_evm_address(basis_lighter_address)
+      self.basis_long_token_addresses = basis_long_token_addresses_array.join("\n")
+    end
+
+    def normalize_evm_address(value)
+      normalized = value.to_s.strip
+      return nil if normalized.blank?
+
+      normalized.downcase
+    end
+
   public
 
   has_many :llm_usages, dependent: :destroy
@@ -118,8 +132,11 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :basis_long_address, :basis_lighter_address,
+            format: { with: EVM_ADDRESS_FORMAT }, allow_blank: true
 
   before_validation :normalize_enabled_currencies!
+  before_validation :normalize_basis_trade_settings!
 
   def primary_currency_code
     normalize_currency_code(currency) || "USD"
@@ -145,6 +162,20 @@ class Family < ApplicationRecord
 
   def secondary_enabled_currency_objects(extra: [])
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
+  end
+
+  def basis_long_token_addresses_array
+    basis_long_token_addresses.to_s
+      .split(/[\s,]+/)
+      .map(&:strip)
+      .reject(&:blank?)
+      .map(&:downcase)
+      .select { |value| value.match?(EVM_ADDRESS_FORMAT) }
+      .uniq
+  end
+
+  def basis_trade_sources_configured?
+    basis_long_address.present? || basis_lighter_address.present?
   end
 
 
