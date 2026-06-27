@@ -198,7 +198,6 @@ GEM
       dotenv (= 3.1.8)
       railties (>= 6.1)
     drb (2.2.3)
-    ed25519 (1.4.0)
     email_validator (2.2.4)
       activemodel
     erb (6.0.4)
@@ -881,7 +880,6 @@ DEPENDENCIES
   derailed_benchmarks
   doorkeeper
   dotenv-rails
-  ed25519
   erb_lint
   faker
   faraday
