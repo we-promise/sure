@@ -13,3 +13,4 @@ en:
       name: "Name"
       account: "Account"
       amount: "Amount"
+      cta: "View transactions"

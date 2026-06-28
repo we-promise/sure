@@ -3,6 +3,7 @@ class RuleNotificationMailer < ApplicationMailer
     @rule = rule
     @transactions = transactions
     @family = rule.family
+    @transactions_url = transactions_url
 
     recipient = @family.users.find_by(role: :admin) || @family.users.first
     return if recipient.nil?

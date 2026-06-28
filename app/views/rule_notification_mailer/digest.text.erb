@@ -5,3 +5,5 @@
 <% @transactions.each do |txn| %>
 - <%= I18n.l(txn.entry.date, format: :long) %> | <%= txn.entry.name %> | <%= txn.entry.account.name %> | <%= txn.entry.amount_money.format %>
 <% end %>
+
+<%= t(".cta") %>: <%= @transactions_url %>
