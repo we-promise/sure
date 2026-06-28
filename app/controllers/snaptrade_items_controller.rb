@@ -339,13 +339,13 @@ class SnaptradeItemsController < ApplicationController
       }
     else
       if prepare_snaptrade_item_for_setup_after_oauth
-        redirect_to setup_accounts_snaptrade_item_path(
+        redirect_after_oauth_completion setup_accounts_snaptrade_item_path(
           @snaptrade_item,
           accountable_type: params[:accountable_type].presence,
           return_to: params[:return_to].presence
         ), notice: t(".success", default: "SnapTrade authorization complete.")
       else
-        redirect_to settings_providers_path, alert: snaptrade_oauth_setup_incomplete_message
+        redirect_after_oauth_completion settings_providers_path, alert: snaptrade_oauth_setup_incomplete_message
       end
     end
   rescue Provider::Snaptrade::ApiError => e
@@ -594,6 +594,16 @@ class SnaptradeItemsController < ApplicationController
 
       @snaptrade_item.sync_later unless @snaptrade_item.syncing?
       true
+    end
+
+    def redirect_after_oauth_completion(path, notice: nil, alert: nil)
+      if turbo_frame_request?
+        flash[:notice] = notice if notice.present?
+        flash[:alert] = alert if alert.present?
+        render turbo_stream: turbo_stream.action(:redirect, path)
+      else
+        redirect_to path, notice: notice, alert: alert
+      end
     end
 
     def snaptrade_item_params

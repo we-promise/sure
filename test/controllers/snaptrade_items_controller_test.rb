@@ -240,6 +240,46 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "SnapTrade authorization complete.", flash[:notice]
   end
 
+  test "complete oauth device flow streams top-level navigation from drawer frame" do
+    sign_out
+    sign_in @user = users(:empty)
+    snaptrade_item = snaptrade_items(:pending_registration_item)
+
+    SnaptradeItem.any_instance
+      .stubs(:complete_oauth_device_flow!)
+      .returns(
+        "token_type" => "Bearer",
+        "scope" => "read",
+        "expires_in" => 3600
+      )
+    SnaptradeItem.any_instance
+      .stubs(:user_registered?)
+      .returns(false, true)
+    SnaptradeItem.any_instance
+      .expects(:ensure_user_registered!)
+      .once
+      .returns(true)
+    setup_path = setup_accounts_snaptrade_item_path(
+      snaptrade_item,
+      accountable_type: "Investment",
+      return_to: "setup_accounts"
+    )
+
+    assert_difference "Sync.count", 1 do
+      post complete_oauth_device_flow_snaptrade_item_url(snaptrade_item), params: {
+        device_code: "device-code",
+        accountable_type: "Investment",
+        return_to: "setup_accounts"
+      }, headers: { "Turbo-Frame" => "drawer" }
+    end
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_match %(<turbo-stream action="redirect"), response.body
+    assert_match ERB::Util.html_escape(setup_path), response.body
+    assert_equal "SnapTrade authorization complete.", flash[:notice]
+  end
+
   test "complete oauth device flow does not mark oauth-only items as setup complete" do
     sign_out
     sign_in @user = users(:empty)
