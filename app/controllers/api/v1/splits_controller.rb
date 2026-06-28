@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class Api::V1::SplitsController < Api::V1::BaseController
+  # Responses reuse the transactions JSON views (show / _transaction). Add that
+  # view path to the lookup prefixes so partials referenced relatively resolve
+  # to api/v1/transactions/* rather than this controller's own (nonexistent) views.
+  def self._prefixes
+    @_prefixes ||= super + [ "api/v1/transactions" ]
+  end
+
   # Splitting mutates the ledger, so every action requires write scope.
   before_action :ensure_write_scope
   before_action :set_entry
@@ -99,11 +106,18 @@ class Api::V1::SplitsController < Api::V1::BaseController
     # Normalizes the splits payload into the hash shape Entry#split! expects.
     # Unlike the web form (which passes positive amounts and negates them),
     # the API takes amounts already signed to match the parent transaction.
+    # Required fields are validated before coercion so a malformed payload
+    # surfaces as a 422 rather than a 500.
     def build_splits
       raw = split_params[:splits]
       raw = raw.values if raw.respond_to?(:values)
+      raw = Array(raw)
 
-      Array(raw).map do |s|
+      invalid_split!("At least one split is required") if raw.empty?
+
+      raw.map do |s|
+        invalid_split!("Each split requires an amount") if s[:amount].blank?
+
         {
           name: s[:name],
           amount: s[:amount].to_d,
@@ -111,6 +125,13 @@ class Api::V1::SplitsController < Api::V1::BaseController
           excluded: s[:excluded]
         }
       end
+    end
+
+    # Adds a validation error to the parent entry and raises so the action's
+    # RecordInvalid rescue renders the standard 422 response.
+    def invalid_split!(message)
+      @entry.errors.add(:base, message)
+      raise ActiveRecord::RecordInvalid.new(@entry)
     end
 
     def split_params

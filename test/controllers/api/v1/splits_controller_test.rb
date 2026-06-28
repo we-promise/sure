@@ -70,6 +70,17 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
+  test "rejects a split missing an amount" do
+    assert_no_difference "Entry.count" do
+      post api_v1_transaction_split_url(@transaction),
+        params: split_payload([ { name: "No amount" } ]),
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
   test "rejects splitting an already-split transaction" do
     @entry.split!([ { name: "A", amount: 50 }, { name: "B", amount: 50 } ])
 
@@ -104,6 +115,21 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "update resolves a child transaction id to its parent" do
+    @entry.split!([ { name: "A", amount: 50 }, { name: "B", amount: 50 } ])
+    child_txn = @entry.child_entries.order(:created_at).first.transaction
+
+    patch api_v1_transaction_split_url(child_txn),
+      params: split_payload([
+        { name: "Dining", amount: 80 },
+        { name: "Tip", amount: 20 }
+      ]),
+      headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal %w[Dining Tip], @entry.reload.child_entries.order(:created_at).pluck(:name)
+  end
+
   # --- destroy ---
 
   test "unsplits a transaction" do
@@ -118,12 +144,49 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     refute @entry.excluded?
   end
 
+  test "destroy resolves a child transaction id to its parent" do
+    @entry.split!([ { name: "A", amount: 50 }, { name: "B", amount: 50 } ])
+    child_txn = @entry.child_entries.order(:created_at).first.transaction
+
+    assert_difference "Entry.count", -2 do
+      delete api_v1_transaction_split_url(child_txn), headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+    refute @entry.reload.split_parent?
+  end
+
   # --- auth / scoping ---
 
-  test "requires write scope" do
+  test "rejects requests without an API key" do
+    post api_v1_transaction_split_url(@transaction),
+      params: split_payload([ { name: "X", amount: 100 } ])
+
+    assert_response :unauthorized
+  end
+
+  test "read-only key cannot create a split" do
     post api_v1_transaction_split_url(@transaction),
       params: split_payload([ { name: "X", amount: 100 } ]),
       headers: api_headers(@read_only_api_key)
+
+    assert_response :forbidden
+  end
+
+  test "read-only key cannot update a split" do
+    @entry.split!([ { name: "A", amount: 50 }, { name: "B", amount: 50 } ])
+
+    patch api_v1_transaction_split_url(@transaction),
+      params: split_payload([ { name: "X", amount: 100 } ]),
+      headers: api_headers(@read_only_api_key)
+
+    assert_response :forbidden
+  end
+
+  test "read-only key cannot delete a split" do
+    @entry.split!([ { name: "A", amount: 50 }, { name: "B", amount: 50 } ])
+
+    delete api_v1_transaction_split_url(@transaction), headers: api_headers(@read_only_api_key)
 
     assert_response :forbidden
   end
@@ -159,6 +222,6 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     end
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.plain_key }
+      { "X-Api-Key" => api_key.display_key }
     end
 end
