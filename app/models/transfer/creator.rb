@@ -18,13 +18,14 @@ class Transfer::Creator
   end
 
   def create
+    raise ArgumentError, "source_fee_amount must be non-negative" if source_fee_amount.negative?
+    raise ArgumentError, "destination_fee_amount must be non-negative" if destination_fee_amount.negative?
+
     transfer = Transfer.new(
       inflow_transaction: inflow_transaction,
       outflow_transaction: outflow_transaction,
       status: "confirmed",
-      amount: amount,
-      source_fee_amount: source_fee_amount,
-      destination_fee_amount: destination_fee_amount
+      amount: amount
     )
 
     Transfer.transaction do

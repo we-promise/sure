@@ -43,6 +43,5 @@ ca:
       total: Total
       transfer_amount: Import de la transferència
       uncategorized: Sense categoria
-      view_fee_transaction: Veure transacció de comissió
     update:
       success: Transferència actualitzada

@@ -45,6 +45,5 @@ zh-CN:
       uncategorized: 未分类
       total: 总计
       transfer_amount: 转账金额
-      view_fee_transaction: 查看费用交易
     update:
       success: 转账已更新

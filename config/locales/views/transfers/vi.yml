@@ -41,6 +41,5 @@ vi:
       uncategorized: Chưa phân loại
       total: '[Total]'
       transfer_amount: '[Transfer amount]'
-      view_fee_transaction: '[View fee transaction]'
     update:
       success: Chuyển khoản đã được cập nhật

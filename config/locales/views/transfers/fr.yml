@@ -32,6 +32,5 @@ fr:
       settings: Paramètres
       total: Total
       transfer_amount: Montant du transfert
-      view_fee_transaction: Voir la transaction de frais
     update:
       success: Transfert mis à jour

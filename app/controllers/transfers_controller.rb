@@ -197,25 +197,21 @@ class TransfersController < ApplicationController
       new_source_fee = transfer_update_params[:source_fee_amount]
       new_destination_fee = transfer_update_params[:destination_fee_amount]
 
+      current_source_fee = @transfer.derived_source_fee_amount
+      current_destination_fee = @transfer.derived_destination_fee_amount
+      source_fee_changed = new_source_fee.present? && new_source_fee.to_d != current_source_fee
+      dest_fee_changed = new_destination_fee.present? && new_destination_fee.to_d != current_destination_fee
       amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d
-      source_fee_changed = new_source_fee.present? && new_source_fee.to_d != @transfer.source_fee_amount.to_d
-      dest_fee_changed = new_destination_fee.present? && new_destination_fee.to_d != @transfer.destination_fee_amount.to_d
 
       return unless amount_changed || source_fee_changed || dest_fee_changed
 
       @transfer.amount = new_amount.to_d if amount_changed
-      @transfer.source_fee_amount = new_source_fee.to_d if source_fee_changed
-      @transfer.destination_fee_amount = new_destination_fee.to_d if dest_fee_changed
 
-      # Recompute outflow entry (always principal only)
       if amount_changed
         outflow_entry = @transfer.outflow_transaction.entry
         outflow_entry.amount = @transfer.amount
         outflow_entry.save!
-      end
 
-      # Recompute inflow entry (always principal converted, no fee baked in)
-      if amount_changed
         inflow_entry = @transfer.inflow_transaction.entry
         converted = Money.new(@transfer.amount, @transfer.from_account.currency)
                       .exchange_to(@transfer.to_account.currency, date: @transfer.date)
@@ -223,22 +219,20 @@ class TransfersController < ApplicationController
         inflow_entry.save!
       end
 
-      # Update source fee transaction
       if source_fee_changed
         update_fee_transaction(
           account: @transfer.from_account,
-          old_fee: @transfer.source_fee_amount_before_last_save || @transfer.source_fee_amount,
-          new_fee: @transfer.source_fee_amount,
+          old_fee: current_source_fee,
+          new_fee: new_source_fee.to_d,
           name: "Transfer fee — #{@transfer.name}"
         )
       end
 
-      # Update destination fee transaction
       if dest_fee_changed
         update_fee_transaction(
           account: @transfer.to_account,
-          old_fee: @transfer.destination_fee_amount_before_last_save || @transfer.destination_fee_amount,
-          new_fee: @transfer.destination_fee_amount,
+          old_fee: current_destination_fee,
+          new_fee: new_destination_fee.to_d,
           name: "Transfer fee — #{@transfer.name}"
         )
       end

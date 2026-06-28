@@ -4,6 +4,8 @@ class Transfer < ApplicationRecord
 
   has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
 
+  attr_accessor :source_fee_amount, :destination_fee_amount
+
   enum :status, { pending: "pending", confirmed: "confirmed" }
 
   validates :inflow_transaction_id, uniqueness: true
@@ -13,7 +15,6 @@ class Transfer < ApplicationRecord
   validate :transfer_has_opposite_amounts_or_fees
   validate :transfer_within_date_range
   validate :transfer_has_same_family
-  validate :fees_must_be_non_negative
 
   class << self
     def kind_for_account(account)
@@ -48,13 +49,11 @@ class Transfer < ApplicationRecord
   end
 
   def derived_source_fee_amount
-    from_fee = fee_transactions.joins(:entry).where(entries: { account_id: from_account.id }).sum("entries.amount")
-    from_fee > 0 ? from_fee : source_fee_amount.to_d
+    fee_transactions.joins(:entry).where(entries: { account_id: from_account.id }).sum("entries.amount")
   end
 
   def derived_destination_fee_amount
-    to_fee = fee_transactions.joins(:entry).where(entries: { account_id: to_account.id }).sum("entries.amount")
-    to_fee > 0 ? to_fee : destination_fee_amount.to_d
+    fee_transactions.joins(:entry).where(entries: { account_id: to_account.id }).sum("entries.amount")
   end
 
   def amount_abs
@@ -166,11 +165,6 @@ class Transfer < ApplicationRecord
       if inflow_entry.currency == outflow_entry.currency
         errors.add(:base, :opposite_amounts) if inflow_amount_raw + outflow_amount_raw != 0
       end
-    end
-
-    def fees_must_be_non_negative
-      errors.add(:source_fee_amount, :greater_than_or_equal_to, count: 0) if source_fee_amount.to_d.negative?
-      errors.add(:destination_fee_amount, :greater_than_or_equal_to, count: 0) if destination_fee_amount.to_d.negative?
     end
 
     def transfer_within_date_range

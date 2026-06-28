@@ -41,6 +41,5 @@ hu:
       uncategorized: Kategorizálatlan
       total: '[Total]'
       transfer_amount: '[Transfer amount]'
-      view_fee_transaction: '[View fee transaction]'
     update:
       success: Átutalás frissítve

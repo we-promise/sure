@@ -164,9 +164,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     transfer = Transfer.order(created_at: :desc).first
-    assert_equal 3, transfer.source_fee_amount
-    assert_equal 0, transfer.destination_fee_amount
     assert_equal 100, transfer.amount
+    assert_equal 3, transfer.derived_source_fee_amount
+    assert_equal 0, transfer.derived_destination_fee_amount
     # Outflow should be principal only (no fee baked in)
     assert_equal 100, transfer.outflow_transaction.entry.amount
     # Inflow should be -(converted_principal)
@@ -177,9 +177,6 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "standard", fee_tx.kind
     assert_equal 3, fee_tx.entry.amount
     assert_equal accounts(:depository).id, fee_tx.entry.account_id
-    # Derived fee methods match stored amounts
-    assert_equal 3, transfer.derived_source_fee_amount
-    assert_equal 0, transfer.derived_destination_fee_amount
     assert transfer.has_source_fee?
     assert_not transfer.has_destination_fee?
   end
@@ -198,9 +195,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     transfer = Transfer.order(created_at: :desc).first
-    assert_equal 0, transfer.source_fee_amount
-    assert_equal 3, transfer.destination_fee_amount
     assert_equal 100, transfer.amount
+    assert_equal 0, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
     # Outflow should be principal only
     assert_equal 100, transfer.outflow_transaction.entry.amount
     # Inflow should be -(converted_principal)
@@ -211,9 +208,6 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "standard", fee_tx.kind
     assert_equal 3, fee_tx.entry.amount
     assert_equal accounts(:credit_card).id, fee_tx.entry.account_id
-    # Derived fee methods match stored amounts
-    assert_equal 0, transfer.derived_source_fee_amount
-    assert_equal 3, transfer.derived_destination_fee_amount
     assert_not transfer.has_source_fee?
     assert transfer.has_destination_fee?
   end
@@ -233,9 +227,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     transfer = Transfer.order(created_at: :desc).first
-    assert_equal 2, transfer.source_fee_amount
-    assert_equal 3, transfer.destination_fee_amount
     assert_equal 100, transfer.amount
+    assert_equal 2, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
     # Outflow should be principal only
     assert_equal 100, transfer.outflow_transaction.entry.amount
     # Inflow should be -(converted_principal)
@@ -246,9 +240,6 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     dest_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:credit_card).id }
     assert_equal 2, source_fee_tx.entry.amount
     assert_equal 3, dest_fee_tx.entry.amount
-    # Derived fee methods match stored amounts
-    assert_equal 2, transfer.derived_source_fee_amount
-    assert_equal 3, transfer.derived_destination_fee_amount
     assert transfer.has_fees?
   end
 
@@ -270,11 +261,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     fee_tx = transfer.fee_transactions.first
     fee_tx.entry.update!(amount: 5)
 
-    # Derived fee should reflect the updated entry, not the stored column
+    # Derived fee should reflect the updated entry
     transfer.reload
     assert_equal 5, transfer.derived_source_fee_amount
-    # Stored column remains unchanged
-    assert_equal 3, transfer.source_fee_amount
     assert transfer.has_source_fee?
   end
 

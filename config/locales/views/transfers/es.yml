@@ -32,6 +32,5 @@ es:
       settings: Configuración
       total: Total
       transfer_amount: Importe de la transferencia
-      view_fee_transaction: Ver transacción de comisión
     update:
       success: Transferencia actualizada

@@ -59,9 +59,7 @@ module EntriesTestHelper
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
       inflow_transaction: inflow_transaction,
-      amount: amount.abs,
-      source_fee_amount: source_fee_amount,
-      destination_fee_amount: destination_fee_amount
+      amount: amount.abs
     )
 
     from_account.entries.create!(
