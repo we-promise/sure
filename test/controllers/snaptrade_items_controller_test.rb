@@ -185,7 +185,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "complete oauth device flow returns oauth-only items to provider settings" do
+  test "complete oauth device flow registers credentialed items and routes to setup" do
     sign_out
     sign_in @user = users(:empty)
     snaptrade_item = snaptrade_items(:pending_registration_item)
@@ -197,15 +197,15 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
         "scope" => "read",
         "expires_in" => 3600
       )
+    SnaptradeItem.any_instance
+      .stubs(:user_registered?)
+      .returns(false, true)
+    SnaptradeItem.any_instance
+      .expects(:ensure_user_registered!)
+      .once
+      .returns(true)
 
-    assert_no_difference "Sync.count" do
-      get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
-      assert_redirected_to oauth_connect_snaptrade_items_path(
-        item_id: snaptrade_item.id,
-        accountable_type: "Investment",
-        return_to: "setup_accounts"
-      )
-
+    assert_difference "Sync.count", 1 do
       post complete_oauth_device_flow_snaptrade_item_url(snaptrade_item), params: {
         device_code: "device-code",
         accountable_type: "Investment",
@@ -213,7 +213,36 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
+    assert_redirected_to setup_accounts_snaptrade_item_path(
+      snaptrade_item,
+      accountable_type: "Investment",
+      return_to: "setup_accounts"
+    )
+    assert_equal "SnapTrade authorization complete.", flash[:notice]
+  end
+
+  test "complete oauth device flow does not mark oauth-only items as setup complete" do
+    sign_out
+    sign_in @user = users(:empty)
+    snaptrade_item = @user.family.snaptrade_items.create!(name: "OAuth-only SnapTrade")
+
+    SnaptradeItem.any_instance
+      .stubs(:complete_oauth_device_flow!)
+      .returns(
+        "token_type" => "Bearer",
+        "scope" => "read",
+        "expires_in" => 3600
+      )
+
+    assert_no_difference "Sync.count" do
+      post complete_oauth_device_flow_snaptrade_item_url(snaptrade_item), params: {
+        device_code: "device-code"
+      }
+    end
+
     assert_redirected_to settings_providers_path
+    assert_nil flash[:notice]
+    assert_match(/API credentials are required/, flash[:alert])
   end
 
   test "select_accounts redirects registered users to setup flow" do

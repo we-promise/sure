@@ -93,7 +93,6 @@ module SettingsHelper
     when "snaptrade"
       configured_item = @snaptrade_items&.find { |item| item.credentials_configured? || item.oauth_configured? }
       return { status: :off } unless configured_item
-      return sync_based_summary(key) if configured_item.oauth_configured?
 
       unless configured_item.user_registered?
         return { status: :warn, meta: t("settings.providers.meta.registration_needed") }

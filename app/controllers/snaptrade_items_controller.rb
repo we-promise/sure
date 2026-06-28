@@ -313,15 +313,14 @@ class SnaptradeItemsController < ApplicationController
         expires_at: @snaptrade_item.oauth_token_expires_at&.iso8601
       }
     else
-      if @snaptrade_item.user_registered?
-        @snaptrade_item.sync_later unless @snaptrade_item.syncing?
+      if prepare_snaptrade_item_for_setup_after_oauth
         redirect_to setup_accounts_snaptrade_item_path(
           @snaptrade_item,
           accountable_type: params[:accountable_type].presence,
           return_to: params[:return_to].presence
         ), notice: t(".success", default: "SnapTrade authorization complete.")
       else
-        redirect_to settings_providers_path, notice: t(".success", default: "SnapTrade authorization complete.")
+        redirect_to settings_providers_path, alert: snaptrade_oauth_setup_incomplete_message
       end
     end
   rescue Provider::Snaptrade::ApiError => e
@@ -555,6 +554,17 @@ class SnaptradeItemsController < ApplicationController
       @accountable_type = params[:accountable_type]
     end
 
+    def prepare_snaptrade_item_for_setup_after_oauth
+      if !@snaptrade_item.user_registered? && @snaptrade_item.credentials_configured?
+        @snaptrade_item.ensure_user_registered!
+      end
+
+      return false unless @snaptrade_item.user_registered?
+
+      @snaptrade_item.sync_later unless @snaptrade_item.syncing?
+      true
+    end
+
     def snaptrade_item_params
       params.require(:snaptrade_item).permit(
         :name,
@@ -633,6 +643,13 @@ class SnaptradeItemsController < ApplicationController
       t(
         "snaptrade_items.oauth_device_flow.missing_client_id",
         default: "SnapTrade OAuth client ID is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
+      )
+    end
+
+    def snaptrade_oauth_setup_incomplete_message
+      t(
+        "snaptrade_items.complete_oauth_device_flow.setup_incomplete",
+        default: "SnapTrade authorization is complete, but API credentials are required before accounts can sync."
       )
     end
 

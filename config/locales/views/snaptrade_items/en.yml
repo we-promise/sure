@@ -39,6 +39,7 @@ en:
       missing_client_id: "SnapTrade OAuth client ID is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
     complete_oauth_device_flow:
       success: "SnapTrade authorization complete."
+      setup_incomplete: "SnapTrade authorization is complete, but API credentials are required before accounts can sync."
       failed: "Unable to complete SnapTrade OAuth device authorization. Please try again."
     start_oauth_device_flow:
       failed: "Unable to start SnapTrade OAuth device authorization. Please try again."
