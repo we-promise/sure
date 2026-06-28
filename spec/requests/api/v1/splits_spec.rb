@@ -144,7 +144,7 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - splits do not sum to parent' do
+      response '422', 'validation error - invalid splits (sum mismatch, empty list, or missing amount)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:body) do
           { split: { splits: [ { name: 'Partial', amount: 10.00 } ] } }
@@ -221,7 +221,7 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - splits do not sum to parent' do
+      response '422', 'validation error - invalid splits (sum mismatch, empty list, or missing amount)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:body) do
           { split: { splits: [ { name: 'Partial', amount: 10.00 } ] } }
@@ -238,6 +238,12 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
       response '403', 'read-only key cannot write' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { read_only_api_key.plain_key }
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:transaction_id) { SecureRandom.uuid }
         run_test!
       end
     end
@@ -264,6 +270,12 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
       response '403', 'read-only key cannot write' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { read_only_api_key.plain_key }
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:transaction_id) { SecureRandom.uuid }
         run_test!
       end
     end
