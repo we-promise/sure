@@ -3,10 +3,9 @@
 
   <%= render "settings/providers/setup_steps",
              steps: [
-               t("providers.snaptrade.step_1_html").html_safe,
-               t("providers.snaptrade.step_2"),
-               t("providers.snaptrade.step_3"),
-               t("providers.snaptrade.step_4")
+               t("providers.snaptrade.oauth_step_1"),
+               t("providers.snaptrade.oauth_step_2"),
+               t("providers.snaptrade.oauth_step_3")
              ] %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
@@ -16,37 +15,25 @@
 
   <%
     snaptrade_item = Current.family.snaptrade_items.first_or_initialize(name: "SnapTrade Connection")
-    is_new_record = snaptrade_item.new_record?
-    is_configured = snaptrade_item.persisted? && snaptrade_item.credentials_configured?
-    is_registered = snaptrade_item.persisted? && snaptrade_item.user_registered?
+    is_connected = snaptrade_item.persisted? && (snaptrade_item.user_registered? || snaptrade_item.oauth_configured?)
   %>
 
-  <%= styled_form_with model: snaptrade_item,
-                       url: is_new_record ? snaptrade_items_path : snaptrade_item_path(snaptrade_item),
-                       scope: :snaptrade_item,
-                       method: is_new_record ? :post : :patch,
-                       data: { turbo: true },
-                       class: "space-y-3" do |form| %>
-    <%= form.text_field :client_id,
-                        label: t("providers.snaptrade.client_id_label"),
-                        placeholder: is_new_record ? t("providers.snaptrade.client_id_placeholder") : t("providers.snaptrade.client_id_update_placeholder"),
-                        type: :password %>
-
-    <%= form.text_field :consumer_key,
-                        label: t("providers.snaptrade.consumer_key_label"),
-                        placeholder: is_new_record ? t("providers.snaptrade.consumer_key_placeholder") : t("providers.snaptrade.consumer_key_update_placeholder"),
-                        type: :password %>
-
+  <% unless is_connected %>
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? t("providers.snaptrade.save_button") : t("providers.snaptrade.update_button") %>
+      <%= render DS::Link.new(
+            text: t("providers.snaptrade.oauth_connect_button"),
+            href: oauth_connect_snaptrade_items_path,
+            variant: :primary,
+            data: { turbo_frame: "drawer" }
+          ) %>
     </div>
   <% end %>
 
-  <% items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.where.not(client_id: [nil, ""]) %>
+  <% items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.active.ordered %>
 
   <% if items&.any? %>
     <% item = items.first %>
-    <% unless item.user_registered? %>
+    <% unless item.user_registered? || item.oauth_configured? %>
       <div class="flex items-center gap-2 border-t border-primary pt-4 mt-4">
         <span class="w-2 h-2 bg-warning rounded-full"></span>
         <p class="text-sm text-secondary"><%= t("providers.snaptrade.status_needs_registration") %></p>
@@ -54,7 +41,7 @@
     <% end %>
   <% end %>
 
-  <% if items&.any? && items.first.user_registered? %>
+  <% if items&.any? && (items.first.user_registered? || items.first.oauth_configured?) %>
     <% item = items.first %>
     <div class="border-t border-primary pt-4 mt-4">
       <%= render DS::Disclosure.new(

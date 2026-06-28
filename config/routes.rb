@@ -105,6 +105,7 @@ Rails.application.routes.draw do
       get :select_existing_account
       post :link_existing_account
       get :callback
+      get :oauth_connect
     end
 
     member do
@@ -113,6 +114,8 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :start_oauth_device_flow
+      post :complete_oauth_device_flow
       delete :delete_connection
       delete :delete_orphaned_user
     end

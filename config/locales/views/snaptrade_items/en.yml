@@ -28,6 +28,13 @@ en:
       not_configured: "SnapTrade is not configured."
     select_accounts:
       not_configured: "SnapTrade is not configured."
+    oauth_device_flow:
+      title: "Connect SnapTrade"
+      subtitle: "Authorize Sure from SnapTrade"
+      instructions: "Open SnapTrade and confirm this device code, then return here to complete authorization."
+      code_label: "Device code"
+      open_snaptrade: "Open SnapTrade"
+      complete_button: "I've authorized SnapTrade"
     select_existing_account:
       not_found: "Account or SnapTrade configuration not found."
       title: "Link to SnapTrade Account"
@@ -122,6 +129,10 @@ en:
       step_3: "Enter your credentials below and click Save"
       step_4: "Go to the Accounts page and use 'Connect another brokerage' to link your investment accounts"
       free_tier_warning: "SnapTrade's free tier covers 5 brokerage connections. Upgrade on SnapTrade for more."
+      oauth_step_1: "Start SnapTrade OAuth from Sure."
+      oauth_step_2: "Open SnapTrade, enter the displayed device code, and approve access."
+      oauth_step_3: "Return to Sure and complete authorization."
+      oauth_connect_button: "Connect with SnapTrade"
       client_id_label: "Client ID"
       client_id_placeholder: "Enter your SnapTrade Client ID"
       client_id_update_placeholder: "Enter new Client ID to update"

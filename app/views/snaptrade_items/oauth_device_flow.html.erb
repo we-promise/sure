@@ -1,0 +1,48 @@
+<%= turbo_frame_tag turbo_frame_request? ? request.headers["Turbo-Frame"] : "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t("snaptrade_items.oauth_device_flow.title")) do %>
+      <span class="text-primary"><%= t("snaptrade_items.oauth_device_flow.subtitle") %></span>
+    <% end %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if @error_message.present? %>
+          <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+        <% end %>
+
+        <div class="bg-container border border-primary rounded-xl p-4 space-y-3">
+          <p class="text-sm text-secondary"><%= t("snaptrade_items.oauth_device_flow.instructions") %></p>
+
+          <div>
+            <p class="text-xs uppercase tracking-wide text-secondary"><%= t("snaptrade_items.oauth_device_flow.code_label") %></p>
+            <p class="text-2xl font-semibold text-primary tracking-widest"><%= @device_authorization["user_code"] %></p>
+          </div>
+
+          <%= render DS::Link.new(
+                text: t("snaptrade_items.oauth_device_flow.open_snaptrade"),
+                href: @device_authorization["verification_uri_complete"].presence || @device_authorization["verification_uri"],
+                variant: :primary,
+                data: { turbo_frame: "_top" },
+                target: "_blank",
+                rel: "noopener noreferrer"
+              ) %>
+        </div>
+
+        <%= form_with url: complete_oauth_device_flow_snaptrade_item_path(@snaptrade_item), method: :post, data: { turbo_frame: turbo_frame_request? ? request.headers["Turbo-Frame"] : "modal" }, class: "space-y-3" do |form| %>
+          <%= hidden_field_tag :device_code, @device_authorization["device_code"] %>
+          <%= hidden_field_tag :user_code, @device_authorization["user_code"] %>
+          <%= hidden_field_tag :verification_uri, @device_authorization["verification_uri"] %>
+          <%= hidden_field_tag :verification_uri_complete, @device_authorization["verification_uri_complete"] %>
+          <%= hidden_field_tag :expires_in, @device_authorization["expires_in"] %>
+          <%= hidden_field_tag :interval, @device_authorization["interval"] %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+          <%= hidden_field_tag :accountable_type, @accountable_type if @accountable_type.present? %>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Button.new(text: t("snaptrade_items.oauth_device_flow.complete_button"), variant: :primary, type: :submit) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
