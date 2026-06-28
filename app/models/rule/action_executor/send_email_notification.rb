@@ -7,16 +7,19 @@ class Rule::ActionExecutor::SendEmailNotification < Rule::ActionExecutor
   # is fire-and-forget and is not tracked as part of RuleRun accounting.
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     candidate_ids = transaction_scope.pluck(:id)
-    new_transaction_ids = NotificationDelivery.unnotified_ids(rule_id: rule.id, transaction_ids: candidate_ids)
+
+    # record_for atomically inserts and returns ONLY the ids this run actually
+    # claimed. We enqueue off that result (not the pre-insert candidate list) so
+    # two concurrent runs over the same matches never enqueue duplicate digests:
+    # whichever loses the unique-index race gets those ids back as empty.
+    #
+    # Recording is the dedup boundary, since re-syncs re-apply every active rule
+    # to all in-window matches (not just newly ingested transactions). If the
+    # process crashes after recording but before delivery, the next run suppresses
+    # these ids rather than re-sending — we would rather miss a digest than spam.
+    new_transaction_ids = NotificationDelivery.record_for(rule_id: rule.id, transaction_ids: candidate_ids)
 
     return 0 if new_transaction_ids.empty?
-
-    # Record BEFORE enqueueing. Fail-safe ordering: if recording succeeds but the
-    # process crashes before/while sending, the next run suppresses these ids
-    # rather than re-sending. We would rather miss a digest than spam. Dedup is
-    # the ONLY thing preventing re-sends, since re-syncs re-apply every active
-    # rule to all in-window matches (not just newly ingested transactions).
-    NotificationDelivery.record_for(rule_id: rule.id, transaction_ids: new_transaction_ids)
 
     RuleEmailNotificationJob.perform_later(rule.id, new_transaction_ids)
 

@@ -5,7 +5,9 @@ class RuleNotificationMailer < ApplicationMailer
     @family = rule.family
     @transactions_url = transactions_url
 
-    recipient = @family.users.find_by(role: :admin) || @family.users.first
+    # Admin-only: the digest contains transaction details, so never widen the
+    # recipient set to a non-admin. Skip delivery entirely if there is no admin.
+    recipient = @family.users.find_by(role: :admin)
     return if recipient.nil?
 
     mail(
