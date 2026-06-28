@@ -71,14 +71,41 @@
           </div>
         <% end %>
       <% else %>
-        <div class="flex justify-end">
-          <%= render DS::Link.new(
-            text: t("snaptrade_items.oauth_device_flow.cancel_button", default: "Cancel"),
-            variant: :secondary,
-            href: connect_form_settings_providers_path(provider_key: "snaptrade"),
-            data: { turbo_frame: "drawer" }
-          ) %>
-        </div>
+        <% if @error_message.blank? %>
+          <%= form_with url: start_oauth_connect_snaptrade_items_path,
+                        method: :post,
+                        data: { turbo_frame: "drawer" },
+                        class: "space-y-3" do %>
+            <%= hidden_field_tag :item_id, @snaptrade_item.id if @snaptrade_item&.persisted? %>
+            <%= hidden_field_tag :scope, @oauth_scope if @oauth_scope.present? %>
+            <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+            <%= hidden_field_tag :accountable_type, @accountable_type if @accountable_type.present? %>
+
+            <div class="flex justify-end gap-2">
+              <%= render DS::Link.new(
+                text: t("snaptrade_items.oauth_device_flow.cancel_button", default: "Cancel"),
+                variant: :secondary,
+                href: connect_form_settings_providers_path(provider_key: "snaptrade"),
+                data: { turbo_frame: "drawer" }
+              ) %>
+              <%= render DS::Button.new(
+                text: t("snaptrade_items.oauth_device_flow.start_button", default: "Start authorization"),
+                variant: :primary,
+                icon: "external-link",
+                type: :submit
+              ) %>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="flex justify-end">
+            <%= render DS::Link.new(
+              text: t("snaptrade_items.oauth_device_flow.cancel_button", default: "Cancel"),
+              variant: :secondary,
+              href: connect_form_settings_providers_path(provider_key: "snaptrade"),
+              data: { turbo_frame: "drawer" }
+            ) %>
+          </div>
+        <% end %>
       <% end %>
     </div>
   <% end %>

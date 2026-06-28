@@ -34,6 +34,7 @@ en:
       instructions: "Open SnapTrade and confirm this device code, then return here to complete authorization."
       code_label: "Device code"
       open_snaptrade: "Open SnapTrade"
+      start_button: "Start authorization"
       complete_button: "I've authorized SnapTrade"
       cancel_button: "Cancel"
       missing_client_id: "SnapTrade OAuth client ID is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."

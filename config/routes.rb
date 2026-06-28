@@ -106,6 +106,7 @@ Rails.application.routes.draw do
       post :link_existing_account
       get :callback
       get :oauth_connect
+      post :start_oauth_connect
     end
 
     member do

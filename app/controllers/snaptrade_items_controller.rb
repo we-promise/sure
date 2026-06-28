@@ -1,6 +1,6 @@
 class SnaptradeItemsController < ApplicationController
   before_action :set_snaptrade_item, only: [ :show, :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
-  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :oauth_connect, :edit, :update, :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :oauth_connect, :start_oauth_connect, :edit, :update, :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
 
   def index
     @snaptrade_items = Current.family.snaptrade_items.ordered
@@ -260,8 +260,33 @@ class SnaptradeItemsController < ApplicationController
   end
 
   def oauth_connect
-    @return_to = params[:return_to]
-    @accountable_type = params[:accountable_type]
+    assign_oauth_connect_context
+
+    unless Provider::Snaptrade.oauth_client_id_configured?
+      @error_message = snaptrade_oauth_client_id_missing_message
+      render :oauth_device_flow, status: :unprocessable_entity, formats: :html
+      return
+    end
+
+    @snaptrade_item = if params[:item_id].present?
+      Current.family.snaptrade_items.find(params[:item_id])
+    else
+      current_snaptrade_item
+    end
+
+    render :oauth_device_flow
+  rescue ActiveRecord::Encryption::Errors::Decryption => e
+    Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item&.id}: #{e.class} - #{e.message}"
+    @error_message = t("snaptrade_items.connect.decryption_failed")
+    render :oauth_device_flow, status: :unprocessable_entity, formats: :html
+  rescue ActiveRecord::ActiveRecordError, ActiveRecord::Encryption::Errors::Base => e
+    Rails.logger.error "SnapTrade OAuth connect error: #{e.class} - #{e.message}"
+    @error_message = start_oauth_device_flow_error_message
+    render :oauth_device_flow, status: :unprocessable_entity, formats: :html
+  end
+
+  def start_oauth_connect
+    assign_oauth_connect_context
 
     unless Provider::Snaptrade.oauth_client_id_configured?
       @error_message = snaptrade_oauth_client_id_missing_message
@@ -275,7 +300,7 @@ class SnaptradeItemsController < ApplicationController
       current_snaptrade_item || Current.family.snaptrade_items.create!(name: t("snaptrade_items.default_name"))
     end
 
-    @device_authorization = @snaptrade_item.start_oauth_device_flow(scope: params[:scope].presence || "read")
+    @device_authorization = @snaptrade_item.start_oauth_device_flow(scope: @oauth_scope)
 
     render :oauth_device_flow
   rescue ActiveRecord::Encryption::Errors::Decryption => e
@@ -552,6 +577,12 @@ class SnaptradeItemsController < ApplicationController
       ).to_h
       @return_to = params[:return_to]
       @accountable_type = params[:accountable_type]
+    end
+
+    def assign_oauth_connect_context
+      @return_to = params[:return_to]
+      @accountable_type = params[:accountable_type]
+      @oauth_scope = params[:scope].presence || "read"
     end
 
     def prepare_snaptrade_item_for_setup_after_oauth

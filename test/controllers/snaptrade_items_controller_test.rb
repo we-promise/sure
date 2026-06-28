@@ -111,7 +111,26 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Unable to start SnapTrade OAuth device authorization. Please try again.", payload["error"]
   end
 
-  test "oauth_connect renders device authorization instructions" do
+  test "oauth_connect renders start form without side effects" do
+    sign_out
+    sign_in @user = users(:empty)
+    @user.family.snaptrade_items.destroy_all
+    Provider::Snaptrade.stubs(:oauth_client_id_configured?).returns(true)
+    SnaptradeItem.any_instance
+      .expects(:start_oauth_device_flow)
+      .never
+
+    assert_no_difference "SnaptradeItem.count" do
+      get oauth_connect_snaptrade_items_url
+    end
+
+    assert_response :success
+    assert_match "turbo-frame id=\"drawer\"", response.body
+    assert_match "Start authorization", response.body
+    assert_no_match "Open SnapTrade", response.body
+  end
+
+  test "start_oauth_connect renders device authorization instructions" do
     Provider::Snaptrade.stubs(:oauth_client_id_configured?).returns(true)
     SnaptradeItem.any_instance
       .stubs(:start_oauth_device_flow)
@@ -124,7 +143,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
         "interval" => 5
       )
 
-    get oauth_connect_snaptrade_items_url
+    post start_oauth_connect_snaptrade_items_url
 
     assert_response :success
     assert_match "turbo-frame id=\"drawer\"", response.body
@@ -146,7 +165,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match "SNAPTRADE_OAUTH_CLIENT_ID", response.body
   end
 
-  test "oauth_connect creates oauth-only item when snaptrade is not configured" do
+  test "start_oauth_connect creates oauth-only item when snaptrade is not configured" do
     sign_out
     sign_in @user = users(:empty)
     @user.family.snaptrade_items.destroy_all
@@ -163,7 +182,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
       )
 
     assert_difference "SnaptradeItem.count", 1 do
-      get oauth_connect_snaptrade_items_url
+      post start_oauth_connect_snaptrade_items_url
     end
 
     assert_response :success
