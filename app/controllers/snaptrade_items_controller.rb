@@ -1,4 +1,6 @@
 class SnaptradeItemsController < ApplicationController
+  PERMITTED_OAUTH_SCOPES = %w[read].freeze
+
   before_action :set_snaptrade_item, only: [ :show, :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
   before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :oauth_connect, :start_oauth_connect, :edit, :update, :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
 
@@ -314,7 +316,7 @@ class SnaptradeItemsController < ApplicationController
   end
 
   def start_oauth_device_flow
-    render json: @snaptrade_item.start_oauth_device_flow(scope: params[:scope].presence || "read")
+    render json: @snaptrade_item.start_oauth_device_flow(scope: permitted_oauth_scope)
   rescue ActiveRecord::Encryption::Errors::Decryption => e
     Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item.id}: #{e.class} - #{e.message}"
     render json: { error: t("snaptrade_items.connect.decryption_failed") }, status: :unprocessable_entity
@@ -582,7 +584,14 @@ class SnaptradeItemsController < ApplicationController
     def assign_oauth_connect_context
       @return_to = params[:return_to]
       @accountable_type = params[:accountable_type]
-      @oauth_scope = params[:scope].presence || "read"
+      @oauth_scope = permitted_oauth_scope
+    end
+
+    def permitted_oauth_scope
+      requested_scope = params[:scope].to_s
+      return requested_scope if PERMITTED_OAUTH_SCOPES.include?(requested_scope)
+
+      "read"
     end
 
     def prepare_snaptrade_item_for_setup_after_oauth

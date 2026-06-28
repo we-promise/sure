@@ -111,6 +111,18 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Unable to start SnapTrade OAuth device authorization. Please try again.", payload["error"]
   end
 
+  test "start oauth device flow falls back to read for invalid scope" do
+    SnaptradeItem.any_instance
+      .expects(:start_oauth_device_flow)
+      .with(scope: "read")
+      .returns("device_code" => "device-code")
+
+    post start_oauth_device_flow_snaptrade_item_url(@snaptrade_item), params: { scope: "write" }
+
+    assert_response :success
+    assert_equal "device-code", JSON.parse(response.body)["device_code"]
+  end
+
   test "oauth_connect renders start form without side effects" do
     sign_out
     sign_in @user = users(:empty)
@@ -149,6 +161,25 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match "turbo-frame id=\"drawer\"", response.body
     assert_match "ABCD-EFGH", response.body
     assert_match "Open SnapTrade", response.body
+  end
+
+  test "start_oauth_connect falls back to read for invalid scope" do
+    Provider::Snaptrade.stubs(:oauth_client_id_configured?).returns(true)
+    SnaptradeItem.any_instance
+      .expects(:start_oauth_device_flow)
+      .with(scope: "read")
+      .returns(
+        "device_code" => "device-code",
+        "user_code" => "ABCD-EFGH",
+        "verification_uri" => "https://dashboard.snaptrade.com/activate",
+        "expires_in" => 600,
+        "interval" => 5
+      )
+
+    post start_oauth_connect_snaptrade_items_url, params: { scope: "write" }
+
+    assert_response :success
+    assert_match "ABCD-EFGH", response.body
   end
 
   test "oauth_connect explains missing oauth client id without creating item" do
