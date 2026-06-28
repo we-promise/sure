@@ -77,6 +77,7 @@ class IncomeStatement::Totals
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
+          AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
         GROUP BY c.id, c.parent_id, #{classification_sql};
@@ -109,6 +110,7 @@ class IncomeStatement::Totals
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
+          AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
         GROUP BY c.id, c.parent_id, #{classification_sql}
