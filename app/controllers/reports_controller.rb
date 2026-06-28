@@ -357,13 +357,13 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown
       # Base query: all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude transfers and CC payments (matching income_statement report logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Transaction::REPORT_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
 
       # Apply filters (includes finance account scoping)
@@ -661,13 +661,13 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude transfers and CC payments (matching income_statement report logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Transaction::REPORT_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
 
       transactions = apply_transaction_filters(transactions)
@@ -698,13 +698,13 @@ class ReportsController < ApplicationController
       end
 
       # Get all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude transfers and CC payments (matching income_statement report logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Transaction::REPORT_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
 
       transactions = apply_transaction_filters(transactions)

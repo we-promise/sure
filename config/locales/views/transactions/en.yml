@@ -77,7 +77,7 @@ en:
       activity_type: Activity Type
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
-      one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+      one_time_description: One-time transactions appear in historical reports and totals but are excluded from budget medians and recurring spending estimates.
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
