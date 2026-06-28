@@ -9,6 +9,175 @@ servers:
   description: Production
 - url: http://localhost:3000
   description: Local development
+  "/api/v1/transactions/{transaction_id}/split":
+    parameters:
+    - name: transaction_id
+      in: path
+      description: Transaction ID
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Split a transaction
+      tags:
+      - Transaction Splits
+      security:
+      - apiKeyAuth: []
+      description: Splits a transaction into child transactions. Amounts are signed
+        to match the parent transaction and must sum to the parent amount.
+      parameters: []
+      responses:
+        '201':
+          description: transaction split
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '422':
+          description: validation error - splits do not sum to parent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: missing or invalid API key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: read-only key cannot write
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                split:
+                  type: object
+                  properties:
+                    splits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          amount:
+                            type: number
+                            description: Signed to match the parent transaction
+                          category_id:
+                            type: string
+                            format: uuid
+                          excluded:
+                            type: boolean
+                        required:
+                        - amount
+                  required:
+                  - splits
+              required:
+              - split
+        required: true
+    patch:
+      summary: Replace splits on a transaction
+      tags:
+      - Transaction Splits
+      security:
+      - apiKeyAuth: []
+      description: Replaces the existing splits on a split parent. Accepts the parent
+        or any child transaction id.
+      parameters: []
+      responses:
+        '200':
+          description: splits replaced
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '422':
+          description: validation error - splits do not sum to parent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: missing or invalid API key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: read-only key cannot write
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                split:
+                  type: object
+                  properties:
+                    splits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          amount:
+                            type: number
+                          category_id:
+                            type: string
+                            format: uuid
+                          excluded:
+                            type: boolean
+                        required:
+                        - amount
+                  required:
+                  - splits
+              required:
+              - split
+        required: true
+    delete:
+      summary: Remove splits from a transaction
+      tags:
+      - Transaction Splits
+      security:
+      - apiKeyAuth: []
+      description: Removes all split children and restores the parent transaction.
+      responses:
+        '200':
+          description: splits removed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '401':
+          description: missing or invalid API key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: read-only key cannot write
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     apiKeyAuth:
@@ -1005,23 +1174,6 @@ components:
         updated_at:
           type: string
           format: date-time
-    MerchantImportResult:
-      type: object
-      required:
-      - imported
-      - skipped
-      - merchants
-      properties:
-        imported:
-          type: integer
-          description: Number of merchants successfully created
-        skipped:
-          type: integer
-          description: Number of rows skipped (duplicates or invalid)
-        merchants:
-          type: array
-          items:
-            "$ref": "#/components/schemas/MerchantDetail"
     Tag:
       type: object
       required:
@@ -5740,39 +5892,6 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/MerchantDetail"
-    post:
-      summary: Import merchants from CSV
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '201':
-          description: merchants imported
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/MerchantImportResult"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: missing file or invalid CSV
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: file
-        required: true
-        description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
     parameters:
     - name: id
@@ -6674,133 +6793,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/transactions/{transaction_id}/split":
-    parameters:
-    - name: transaction_id
-      in: path
-      description: Transaction ID
-      required: true
-      schema:
-        type: string
-    post:
-      summary: Split a transaction
-      tags:
-      - Transaction Splits
-      security:
-      - apiKeyAuth: []
-      description: Splits a transaction into child transactions. Amounts are signed
-        to match the parent transaction and must sum to the parent amount.
-      parameters: []
-      responses:
-        '201':
-          description: transaction split
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Transaction"
-        '422':
-          description: validation error - splits do not sum to parent
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: transaction not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                split:
-                  type: object
-                  properties:
-                    splits:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          name:
-                            type: string
-                          amount:
-                            type: number
-                            description: Signed to match the parent transaction
-                          category_id:
-                            type: string
-                            format: uuid
-                          excluded:
-                            type: boolean
-                        required:
-                        - amount
-                  required:
-                  - splits
-              required:
-              - split
-        required: true
-    patch:
-      summary: Replace splits on a transaction
-      tags:
-      - Transaction Splits
-      security:
-      - apiKeyAuth: []
-      description: Replaces the existing splits on a split parent. Accepts the parent
-        or any child transaction id.
-      parameters: []
-      responses:
-        '200':
-          description: splits replaced
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Transaction"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                split:
-                  type: object
-                  properties:
-                    splits:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          name:
-                            type: string
-                          amount:
-                            type: number
-                          category_id:
-                            type: string
-                            format: uuid
-                          excluded:
-                            type: boolean
-                        required:
-                        - amount
-                  required:
-                  - splits
-              required:
-              - split
-        required: true
-    delete:
-      summary: Remove splits from a transaction
-      tags:
-      - Transaction Splits
-      security:
-      - apiKeyAuth: []
-      description: Removes all split children and restores the parent transaction.
-      responses:
-        '200':
-          description: splits removed
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Transaction"
   "/api/v1/syncs":
     get:
       summary: Lists sync history

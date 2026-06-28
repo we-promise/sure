@@ -34,6 +34,17 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
     )
   end
 
+  let(:read_only_api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Read-Only Key',
+      key: key,
+      scopes: %w[read],
+      source: 'mobile'
+    )
+  end
+
   let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
@@ -146,6 +157,18 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
         let(:transaction_id) { SecureRandom.uuid }
         run_test!
       end
+
+      response '401', 'missing or invalid API key' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { '' }
+        run_test!
+      end
+
+      response '403', 'read-only key cannot write' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        run_test!
+      end
     end
 
     patch 'Replace splits on a transaction' do
@@ -197,6 +220,26 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
         schema '$ref' => '#/components/schemas/Transaction'
         run_test!
       end
+
+      response '422', 'validation error - splits do not sum to parent' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:body) do
+          { split: { splits: [ { name: 'Partial', amount: 10.00 } ] } }
+        end
+        run_test!
+      end
+
+      response '401', 'missing or invalid API key' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { '' }
+        run_test!
+      end
+
+      response '403', 'read-only key cannot write' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        run_test!
+      end
     end
 
     delete 'Remove splits from a transaction' do
@@ -209,6 +252,18 @@ RSpec.describe 'API V1 Transaction Splits', type: :request do
 
       response '200', 'splits removed' do
         schema '$ref' => '#/components/schemas/Transaction'
+        run_test!
+      end
+
+      response '401', 'missing or invalid API key' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { '' }
+        run_test!
+      end
+
+      response '403', 'read-only key cannot write' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
         run_test!
       end
     end
