@@ -70,6 +70,11 @@ module Admin
       end
 
       if @user.deactivate
+        # Web auth restores a user from the session cookie without checking
+        # active?, and the purge runs async, so revoke sessions now to end the
+        # deleted user's access immediately.
+        @user.sessions.destroy_all
+
         Rails.logger.info(
           "[Admin::Users] User deleted - " \
           "by_user_id=#{Current.user.id} " \

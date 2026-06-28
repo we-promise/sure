@@ -47,14 +47,17 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/No subscription/, response.body, "Page should show 'No subscription' for families without one")
   end
 
-  test "destroy deactivates the target user" do
+  test "destroy deactivates the target user and revokes their sessions" do
     target = users(:family_member)
+    target.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
     assert target.active
+    assert target.sessions.any?
 
     delete admin_user_url(target)
 
     assert_redirected_to admin_users_url
     assert_not target.reload.active
+    assert_empty target.sessions.reload
   end
 
   test "cannot delete own account" do
