@@ -121,5 +121,9 @@
                   import.csv_headers,
                   { include_blank: t(".leave_empty"), label: t(".notes_label") } %>
 
+  <%= form.select :external_id_col_label,
+                  import.csv_headers,
+                  { include_blank: t(".leave_empty"), label: t(".external_id_label"), hint: t(".external_id_hint") } %>
+
   <%= form.submit t(".apply_configuration"), disabled: import.complete? %>
 <% end %>

@@ -70,6 +70,64 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "complete", @import.status
   end
 
+  test "maps a CSV column to entry external_id" do
+    csv = <<~CSV
+      date,name,amount,account,txn_id
+      01/01/2024,Coffee,5.00,TestAccount,abc-123
+      01/02/2024,Lunch,12.00,TestAccount,def-456
+    CSV
+
+    @import.update!(
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      account_col_label: "account",
+      external_id_col_label: "txn_id",
+      date_format: "%m/%d/%Y"
+    )
+    @import.generate_rows_from_csv
+    @import.mappings.create! key: "TestAccount", mappable: accounts(:depository), type: "Import::AccountMapping"
+    @import.reload
+
+    assert_difference -> { Entry.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal %w[abc-123 def-456], @import.entries.order(:date).pluck(:external_id)
+  end
+
+  test "external_id de-duplicates a transaction across re-imports" do
+    account = accounts(:depository)
+    csv = "date,name,amount,txn_id\n01/01/2024,Coffee,5.00,abc-123\n"
+
+    publish_csv = lambda do
+      import = @import.family.imports.create!(
+        type: "TransactionImport",
+        account: account,
+        raw_file_str: csv,
+        date_col_label: "date",
+        amount_col_label: "amount",
+        name_col_label: "name",
+        external_id_col_label: "txn_id",
+        date_format: "%m/%d/%Y"
+      )
+      import.generate_rows_from_csv
+      import.reload
+      import.publish
+      import
+    end
+
+    first = publish_csv.call
+    assert_equal "complete", first.status
+
+    assert_no_difference -> { account.entries.count } do
+      publish_csv.call
+    end
+
+    assert_equal 1, account.entries.where(external_id: "abc-123").count
+  end
+
   test "imports transactions with separate type column for signage convention" do
     import = <<~CSV
       date,amount,amount_type

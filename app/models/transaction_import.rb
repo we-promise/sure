@@ -33,20 +33,28 @@ class TransactionImport < Import
         # Check for duplicate transactions using the adapter's deduplication logic
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
         # This ensures identical rows within the CSV are all imported as separate transactions
+        external_id = row.external_id.presence
+
+        # Prefer an exact external_id match when the CSV carries a unique
+        # transaction id (robust dedup, e.g. re-importing the same file), and
+        # fall back to the existing date/amount/name heuristic otherwise.
         adapter = Account::ProviderImportAdapter.new(mapped_account)
-        duplicate_entry = adapter.find_duplicate_transaction(
-          date: row.date_iso,
-          amount: row.signed_amount,
-          currency: effective_currency,
-          name: row.name,
-          exclude_entry_ids: claimed_entry_ids
-        )
+        duplicate_entry =
+          (external_id && mapped_account.entries.where.not(id: claimed_entry_ids.to_a).find_by(external_id: external_id)) ||
+          adapter.find_duplicate_transaction(
+            date: row.date_iso,
+            amount: row.signed_amount,
+            currency: effective_currency,
+            name: row.name,
+            exclude_entry_ids: claimed_entry_ids
+          )
 
         if duplicate_entry
           # Update existing transaction instead of creating a new one
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
+          duplicate_entry.external_id = external_id if external_id
           duplicate_entry.import = self
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
@@ -64,6 +72,7 @@ class TransactionImport < Import
               name: row.name,
               currency: effective_currency,
               notes: row.notes,
+              external_id: external_id,
               import: self,
               import_locked: true
             )
@@ -87,7 +96,7 @@ class TransactionImport < Import
   end
 
   def column_keys
-    base = %i[date amount name currency category tags notes]
+    base = %i[date amount name currency category tags notes external_id]
     base.unshift(:account) if account.nil?
     base
   end
