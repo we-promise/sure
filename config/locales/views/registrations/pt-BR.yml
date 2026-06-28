@@ -8,6 +8,7 @@ pt-BR:
       user:
         create: Continuar
   registrations:
+    sso_only: "A criação de conta é gerenciada pelo seu provedor de identidade. Faça login com seu provedor de SSO."
     create:
       failure: Houve um problema ao se inscrever.
       invalid_invite_code: Código de convite inválido, tente novamente.

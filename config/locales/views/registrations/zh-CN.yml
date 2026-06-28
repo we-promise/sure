@@ -9,6 +9,7 @@ zh-CN:
         create: 继续
   registrations:
     closed: 当前已关闭注册。
+    sso_only: "账户创建由您的身份提供商管理。请使用您的 SSO 提供商登录。"
     create:
       failure: 注册时出现问题。
       invalid_invite_code: 邀请码无效，请重试。

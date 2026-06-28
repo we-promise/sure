@@ -9,6 +9,7 @@ pl:
         create: Kontynuuj
   registrations:
     closed: Rejestracja jest obecnie zamknięta.
+    sso_only: "Tworzenie konta jest zarządzane przez dostawcę tożsamości. Zaloguj się za pomocą dostawcy SSO."
     create:
       failure: Wystąpił problem podczas rejestracji.
       invalid_invite_code: Nieprawidłowy kod zaproszenia, spróbuj ponownie.

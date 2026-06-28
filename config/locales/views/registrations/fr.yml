@@ -9,6 +9,7 @@ fr:
         create: Continuer
   registrations:
     closed: Les inscriptions sont actuellement fermées.
+    sso_only: "La création de compte est gérée par votre fournisseur d'identité. Veuillez vous connecter avec votre fournisseur SSO."
     create:
       failure: Il y a eu un problème lors de l'inscription.
       invalid_invite_code: Code d'invitation invalide, veuillez essayer à nouveau.

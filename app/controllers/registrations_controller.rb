@@ -3,10 +3,10 @@ class RegistrationsController < ApplicationController
 
   layout "auth"
 
+  before_action :set_invitation
   before_action :ensure_local_signup_enabled
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
-  before_action :set_invitation
   before_action :validate_password_requirements, only: :create
 
   def new
@@ -118,6 +118,7 @@ class RegistrationsController < ApplicationController
     def ensure_local_signup_enabled
       return if AuthConfig.local_signup_enabled?
 
-      redirect_to new_session_path, alert: t("registrations.sso_only")
+      # Forward any pending invitation token so SSO invitees keep their context.
+      redirect_to new_session_path(invitation: @invitation&.token), alert: t("registrations.sso_only")
     end
 end

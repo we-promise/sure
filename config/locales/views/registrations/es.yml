@@ -9,6 +9,7 @@ es:
         create: Continuar
   registrations:
     closed: Las inscripciones están actualmente cerradas.
+    sso_only: "La creación de cuentas la gestiona tu proveedor de identidad. Inicia sesión con tu proveedor de SSO."
     create:
       failure: Hubo un problema al registrarse.
       invalid_invite_code: Código de invitación no válido, por favor inténtalo de nuevo.

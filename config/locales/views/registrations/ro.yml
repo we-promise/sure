@@ -9,6 +9,7 @@ ro:
         create: Continuă
   registrations:
     closed: Înregistrările sunt momentan închise.
+    sso_only: "Crearea contului este gestionată de furnizorul dvs. de identitate. Conectați-vă cu furnizorul SSO."
     create:
       failure: A apărut o problemă la înregistrare.
       invalid_invite_code: Cod de invitație invalid, te rugăm să încerci din nou.
