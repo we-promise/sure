@@ -27,6 +27,14 @@ class AuthConfig
       local_login_enabled?
     end
 
+    # Whether self-service local (email/password) account creation is allowed.
+    # Mirrors the login form visibility: available unless the instance is in
+    # pure SSO-only mode (both local login and admin override disabled). In that
+    # mode accounts are provisioned exclusively through the SSO provider.
+    def local_signup_enabled?
+      local_login_form_visible?
+    end
+
     # Backend check to determine if a given user is allowed to authenticate via
     # local email/password credentials.
     #

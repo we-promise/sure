@@ -3,6 +3,7 @@ class RegistrationsController < ApplicationController
 
   layout "auth"
 
+  before_action :ensure_local_signup_enabled
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
@@ -109,5 +110,14 @@ class RegistrationsController < ApplicationController
       return unless Setting.onboarding_state == "closed"
 
       redirect_to new_session_path, alert: t("registrations.closed")
+    end
+
+    # In pure SSO-only mode, local accounts created here can never log in again
+    # (local login is disabled), so block self-service registration entirely and
+    # send users to the login page to authenticate through their SSO provider.
+    def ensure_local_signup_enabled
+      return if AuthConfig.local_signup_enabled?
+
+      redirect_to new_session_path, alert: t("registrations.sso_only")
     end
 end

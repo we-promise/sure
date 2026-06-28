@@ -118,4 +118,28 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_not created_user.show_ai_sidebar?
     assert created_user.ai_enabled?
   end
+
+  test "blocks local signup in pure SSO-only mode" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+
+    get new_registration_url
+    assert_redirected_to new_session_url
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "sso-only-block@example.com",
+        password: "Password1!"
+      } }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "allows local signup when admin override is enabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    get new_registration_url
+    assert_response :success
+  end
 end
