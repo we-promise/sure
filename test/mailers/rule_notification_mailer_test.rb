@@ -45,6 +45,24 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
     assert_equal [ owner.email ], mail.to
   end
 
+  test "digest recipient is an admin-level user when both admin and super_admin exist" do
+    # find_by(role: %w[admin super_admin]) has no ORDER BY, so which of the two
+    # is returned is not deterministic and precedence is intentionally undefined.
+    # The contract is only that the recipient is admin-level, never a member.
+    family = Family.create!(name: "Mixed roles family", currency: "USD")
+    User.create!(family: family, email: "the-admin@example.com", password: "password123", role: :admin)
+    User.create!(family: family, email: "the-super-admin@example.com", password: "password123", role: :super_admin)
+    User.create!(family: family, email: "the-member@example.com", password: "password123", role: :member)
+    account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
+    txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
+    rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")
+
+    mail = RuleNotificationMailer.digest(rule: rule, transactions: [ txn ])
+
+    recipient = family.users.find_by!(email: mail.to.first)
+    assert recipient.admin?, "expected an admin-level recipient, got role=#{recipient.role}"
+  end
+
   test "digest is skipped when the family has no admin or super_admin" do
     # Transaction details must never go to a regular member/guest.
     family = Family.create!(name: "No-admin family", currency: "USD")
