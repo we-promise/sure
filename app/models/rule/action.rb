@@ -11,7 +11,14 @@ class Rule::Action < ApplicationRecord
   # Uses after_create_commit (not after_create): nested children persist before
   # the parent rule commits, and the pre-seed reads the rule's conditions, which
   # must be committed first.
+  #
+  # after_update_commit covers the edit flow: the action_type select is editable
+  # for persisted actions (see rules_controller#rule_params), so an existing
+  # action can be CHANGED to send_email_notification. Without re-seeding, the
+  # next apply/sync would email every historical match. Guard on the type change
+  # so we only watermark when an action actually becomes email-notify.
   after_create_commit :seed_notification_baseline
+  after_update_commit :seed_notification_baseline, if: :saved_change_to_action_type?
 
   def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil)
     executor.execute(resource_scope, value: value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0

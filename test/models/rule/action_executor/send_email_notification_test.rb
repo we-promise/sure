@@ -46,7 +46,9 @@ class Rule::ActionExecutor::SendEmailNotificationTest < ActiveSupport::TestCase
     txn2 = create_transaction(date: Date.current, account: @account, amount: 50, name: "Lunch").transaction
 
     result = nil
-    assert_enqueued_with(job: RuleEmailNotificationJob) do
+    # Only txn2 (the newly appearing match) may be enqueued — never the already
+    # notified txn1. Asserting the args, not just the job class, locks that down.
+    assert_enqueued_with(job: RuleEmailNotificationJob, args: [ @rule.id, [ txn2.id ] ]) do
       result = action.apply(@scope)
     end
 
