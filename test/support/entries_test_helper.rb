@@ -59,17 +59,15 @@ module EntriesTestHelper
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
       inflow_transaction: inflow_transaction,
+      amount: amount.abs,
       source_fee_amount: source_fee_amount,
       destination_fee_amount: destination_fee_amount
     )
 
-    total_outflow = amount.abs + source_fee_amount.to_d
-    net_inflow = amount.abs - destination_fee_amount.to_d
-
     from_account.entries.create!(
       name: "Transfer to #{to_account.name}",
       date: date,
-      amount: total_outflow,
+      amount: amount.abs,
       currency: currency,
       entryable: outflow_transaction
     )
@@ -77,10 +75,36 @@ module EntriesTestHelper
     to_account.entries.create!(
       name: "Transfer from #{from_account.name}",
       date: date,
-      amount: -net_inflow,
+      amount: -(amount.abs),
       currency: currency,
       entryable: inflow_transaction
     )
+
+    if source_fee_amount > 0
+      fee_tx = Transaction.create!(
+        kind: "standard",
+        entry: from_account.entries.create!(
+          name: "Transfer fee to #{to_account.name}",
+          date: date,
+          amount: source_fee_amount,
+          currency: currency,
+        )
+      )
+      transfer.fee_transactions << fee_tx
+    end
+
+    if destination_fee_amount > 0
+      fee_tx = Transaction.create!(
+        kind: "standard",
+        entry: to_account.entries.create!(
+          name: "Transfer fee from #{from_account.name}",
+          date: date,
+          amount: destination_fee_amount,
+          currency: currency,
+        )
+      )
+      transfer.fee_transactions << fee_tx
+    end
 
     transfer
   end

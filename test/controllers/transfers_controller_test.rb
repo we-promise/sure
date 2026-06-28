@@ -166,10 +166,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     transfer = Transfer.order(created_at: :desc).first
     assert_equal 3, transfer.source_fee_amount
     assert_equal 0, transfer.destination_fee_amount
-    # Outflow should be amount + source_fee = 100 + 3 = 103
-    assert_equal 103, transfer.outflow_transaction.entry.amount
-    # Inflow should be -(amount - destination_fee) = -(100 - 0) = -100
+    assert_equal 100, transfer.amount
+    # Outflow should be principal only (no fee baked in)
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
     assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Fee transaction should be created
+    assert_equal 1, transfer.fee_transactions.count
+    fee_tx = transfer.fee_transactions.first
+    assert_equal "standard", fee_tx.kind
+    assert_equal 3, fee_tx.entry.amount
+    assert_equal accounts(:depository).id, fee_tx.entry.account_id
   end
 
   test "can create transfer with destination fee" do
@@ -188,10 +195,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     transfer = Transfer.order(created_at: :desc).first
     assert_equal 0, transfer.source_fee_amount
     assert_equal 3, transfer.destination_fee_amount
-    # Outflow should be amount + source_fee = 100 + 0 = 100
+    assert_equal 100, transfer.amount
+    # Outflow should be principal only
     assert_equal 100, transfer.outflow_transaction.entry.amount
-    # Inflow should be -(amount - destination_fee) = -(100 - 3) = -97
-    assert_equal(-97, transfer.inflow_transaction.entry.amount)
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Fee transaction should be created
+    assert_equal 1, transfer.fee_transactions.count
+    fee_tx = transfer.fee_transactions.first
+    assert_equal "standard", fee_tx.kind
+    assert_equal 3, fee_tx.entry.amount
+    assert_equal accounts(:credit_card).id, fee_tx.entry.account_id
   end
 
   test "can create transfer with both source and destination fees" do
@@ -211,10 +225,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     transfer = Transfer.order(created_at: :desc).first
     assert_equal 2, transfer.source_fee_amount
     assert_equal 3, transfer.destination_fee_amount
-    # Outflow = 100 + 2 = 102
-    assert_equal 102, transfer.outflow_transaction.entry.amount
-    # Inflow = -(100 - 3) = -97
-    assert_equal(-97, transfer.inflow_transaction.entry.amount)
+    assert_equal 100, transfer.amount
+    # Outflow should be principal only
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Two fee transactions should be created
+    assert_equal 2, transfer.fee_transactions.count
+    source_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:depository).id }
+    dest_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:credit_card).id }
+    assert_equal 2, source_fee_tx.entry.amount
+    assert_equal 3, dest_fee_tx.entry.amount
   end
 
   test "exchange_rate endpoint returns same_currency for matching currencies" do

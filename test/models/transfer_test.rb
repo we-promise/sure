@@ -127,7 +127,7 @@ class TransferTest < ActiveSupport::TestCase
 
   test "transfer with source fee adjusts validation" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
-    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -97)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -100)
 
     transfer = Transfer.new(
       inflow_transaction: inflow_entry.transaction,
@@ -140,7 +140,7 @@ class TransferTest < ActiveSupport::TestCase
 
   test "transfer with destination fee adjusts validation" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
-    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -97)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -100)
 
     transfer = Transfer.new(
       inflow_transaction: inflow_entry.transaction,
@@ -152,8 +152,8 @@ class TransferTest < ActiveSupport::TestCase
   end
 
   test "transfer with both source and destination fees adjusts validation" do
-    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 103)
-    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -94)
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -100)
 
     transfer = Transfer.new(
       inflow_transaction: inflow_entry.transaction,
@@ -165,7 +165,7 @@ class TransferTest < ActiveSupport::TestCase
     assert transfer.valid?
   end
 
-  test "transfer with wrong fee amount fails validation" do
+  test "transfer with non-opposite entries fails validation" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 100)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -95)
 

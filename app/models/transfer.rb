@@ -2,6 +2,8 @@ class Transfer < ApplicationRecord
   belongs_to :inflow_transaction, class_name: "Transaction"
   belongs_to :outflow_transaction, class_name: "Transaction"
 
+  has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
+
   enum :status, { pending: "pending", confirmed: "confirmed" }
 
   validates :inflow_transaction_id, uniqueness: true
@@ -45,53 +47,8 @@ class Transfer < ApplicationRecord
     source_fee_amount.to_d + destination_fee_amount.to_d
   end
 
-  def reject!
-    Transfer.transaction do
-      RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
-      destroy!
-    end
-  end
-
-  # Once transfer is destroyed, we need to mark the denormalized kind fields on the transactions
-  def destroy!
-    Transfer.transaction do
-      [ inflow_transaction, outflow_transaction ].each do |transaction|
-        next if transaction.nil?
-        next unless Transaction.exists?(transaction.id)
-        begin
-          transaction.update!(kind: "standard")
-        rescue ActiveRecord::RecordNotFound
-        rescue NoMethodError
-          next
-        end
-      end
-      super
-    end
-  end
-
-  def confirm!
-    update!(status: "confirmed")
-  end
-
-  def date
-    inflow_transaction&.entry&.date
-  end
-
-  def sync_account_later
-    inflow_transaction&.entry&.sync_account_later
-    outflow_transaction&.entry&.sync_account_later
-  end
-
-  def to_account
-    inflow_transaction&.entry&.account
-  end
-
-  def from_account
-    outflow_transaction&.entry&.account
-  end
-
   def amount_abs
-    inflow_transaction&.entry&.amount_money&.abs
+    Money.new(amount || 0, from_account&.currency || "USD")
   end
 
   def name
@@ -129,6 +86,51 @@ class Transfer < ApplicationRecord
     to_account&.accountable_type == "Loan"
   end
 
+  def reject!
+    Transfer.transaction do
+      RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
+      destroy!
+    end
+  end
+
+  def destroy!
+    Transfer.transaction do
+      [ inflow_transaction, outflow_transaction ].each do |transaction|
+        next if transaction.nil?
+        next unless Transaction.exists?(transaction.id)
+        begin
+          transaction.update!(kind: "standard")
+        rescue ActiveRecord::RecordNotFound
+        rescue NoMethodError
+          next
+        end
+      end
+      super
+    end
+  end
+
+  def confirm!
+    update!(status: "confirmed")
+  end
+
+  def date
+    inflow_transaction&.entry&.date
+  end
+
+  def sync_account_later
+    inflow_transaction&.entry&.sync_account_later
+    outflow_transaction&.entry&.sync_account_later
+    fee_transactions.each { |t| t.entry&.sync_account_later }
+  end
+
+  def to_account
+    inflow_transaction&.entry&.account
+  end
+
+  def from_account
+    outflow_transaction&.entry&.account
+  end
+
   private
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
@@ -146,18 +148,14 @@ class Transfer < ApplicationRecord
       inflow_entry = inflow_transaction.entry
       outflow_entry = outflow_transaction.entry
 
-      inflow_amount = inflow_entry.amount
-      outflow_amount = outflow_entry.amount
+      inflow_amount_raw = inflow_entry.amount
+      outflow_amount_raw = outflow_entry.amount
 
-      errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
+      errors.add(:base, :opposite_amounts) unless inflow_amount_raw.negative? && outflow_amount_raw.positive?
 
       if inflow_entry.currency == outflow_entry.currency
-        total_fee = source_fee_amount.to_d + destination_fee_amount.to_d
-        errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != total_fee
+        errors.add(:base, :opposite_amounts) if inflow_amount_raw + outflow_amount_raw != 0
       end
-      # Cross-currency transfers: only sign-direction is validated above; the
-      # fee-adjusted balance is not checked because exchange rates make exact
-      # balancing impractical. This matches the original pre-fee behavior.
     end
 
     def fees_must_be_non_negative

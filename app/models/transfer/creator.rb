@@ -22,14 +22,23 @@ class Transfer::Creator
       inflow_transaction: inflow_transaction,
       outflow_transaction: outflow_transaction,
       status: "confirmed",
+      amount: amount,
       source_fee_amount: source_fee_amount,
       destination_fee_amount: destination_fee_amount
     )
 
-    if transfer.save
-      source_account.sync_later
-      destination_account.sync_later
+    Transfer.transaction do
+      if source_fee_amount > 0
+        transfer.fee_transactions << build_source_fee_transaction
+      end
+      if destination_fee_amount > 0
+        transfer.fee_transactions << build_destination_fee_transaction
+      end
+      transfer.save!
     end
+
+    source_account.sync_later
+    destination_account.sync_later
 
     transfer
   end
@@ -45,11 +54,11 @@ class Transfer::Creator
         kind: kind,
         category: (investment_contributions_category if kind == "investment_contribution"),
         entry: source_account.entries.build(
-          amount: amount.abs + source_fee_amount,
+          amount: amount,
           currency: source_account.currency,
           date: date,
           name: name,
-          user_modified: true, # Protect from provider sync claiming this entry
+          user_modified: true,
         )
       )
     end
@@ -61,7 +70,7 @@ class Transfer::Creator
     def inflow_transaction
       name = "#{name_prefix} from #{source_account.name}"
 
-      net_inflow = inflow_converted_amount - destination_fee_amount
+      net_inflow = inflow_converted_amount
 
       Transaction.new(
         kind: "funds_movement",
@@ -70,12 +79,43 @@ class Transfer::Creator
           currency: destination_account.currency,
           date: date,
           name: name,
-          user_modified: true, # Protect from provider sync claiming this entry
+          user_modified: true,
         )
       )
     end
 
-    # Converts the transfer amount to the destination currency
+    def build_source_fee_transaction
+      fee_category = find_or_create_fees_category(source_account.family)
+      Transaction.new(
+        kind: "standard",
+        category: fee_category,
+        entry: source_account.entries.build(
+          amount: source_fee_amount,
+          currency: source_account.currency,
+          date: date,
+          name: "Transfer fee — #{name_prefix} to #{destination_account.name}",
+        )
+      )
+    end
+
+    def build_destination_fee_transaction
+      fee_category = find_or_create_fees_category(destination_account.family)
+      Transaction.new(
+        kind: "standard",
+        category: fee_category,
+        entry: destination_account.entries.build(
+          amount: destination_fee_amount,
+          currency: destination_account.currency,
+          date: date,
+          name: "Transfer fee — #{name_prefix} from #{source_account.name}",
+        )
+      )
+    end
+
+    def find_or_create_fees_category(family)
+      family.categories.find_or_create_by!(name: I18n.t("models.category.defaults.fees"))
+    end
+
     def inflow_converted_amount
       Money.new(amount.abs, source_account.currency)
            .exchange_to(
@@ -85,7 +125,6 @@ class Transfer::Creator
            ).amount
     end
 
-    # The "expense" side of a transfer is treated different in analytics based on where it goes.
     def outflow_transaction_kind
       if destination_account.loan?
         "loan_payment"
