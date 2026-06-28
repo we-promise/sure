@@ -113,6 +113,8 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :start_oauth_device_flow
+      post :complete_oauth_device_flow
       delete :delete_connection
       delete :delete_orphaned_user
     end
@@ -258,7 +260,7 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
     resources :sso_identities, only: :destroy
-    resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
@@ -455,6 +457,7 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :toggle_exclude_from_reports
       patch :set_default
       patch :remove_default
       get :select_provider
