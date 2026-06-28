@@ -44,7 +44,6 @@ en:
       create_tag: Create
       refund_title: Mark as refund
       refund_description: A refund offsets the original expense in your budget — it won't be counted as income.
-      refund_tooltip: "Refund — offsets an expense"
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
@@ -82,8 +81,6 @@ en:
       one_time_title: One-time %{type}
       refund_title: Refund
       refund_description: Mark this as a refund to offset the original expense in your budget and reports. It will not be counted as income.
-      refund_link_label: Link to original transaction (optional)
-      refund_no_link: "— not linked to an original transaction —"
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
@@ -309,12 +306,14 @@ en:
           income: Income
           on_or_after: on or after %{date}
           on_or_before: on or before %{date}
+          refund: Refund
           transfer: Transfer
           confirmed: Confirmed
           pending: Pending
         type_filter:
           expense: Expense
           income: Income
+          refund: Refund
           transfer: Transfer
         status_filter:
           confirmed: Confirmed

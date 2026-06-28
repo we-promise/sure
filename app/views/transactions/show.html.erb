@@ -325,12 +325,10 @@
                     <h4 class="text-primary"><%= t(".one_time_title", type: @entry.amount.negative? ? t("transactions.form.income") : t("transactions.form.expense")) %></h4>
                     <p class="text-secondary"><%= t(".one_time_description") %></p>
                   </div>
-                  <%# Unchecked value is "standard" unless this is currently a refund,
-                      # in which case turning off one_time must restore to refund, not standard. %>
                   <%= ef.toggle :kind, {
                         checked: @entry.transaction.one_time?,
                         data: { auto_submit_form_target: "auto" }
-                      }, "one_time", @entry.transaction.refund? ? "refund" : "standard" %>
+                      }, "one_time", "standard" %>
                 </div>
               <% end %>
             <% end %>
@@ -352,25 +350,12 @@
                       <h4 class="text-primary"><%= t(".refund_title") %></h4>
                       <p class="text-secondary"><%= t(".refund_description") %></p>
                     </div>
-                    <%# Unchecked value: restore to standard unless the transaction was
-                        previously one_time, in which case restore to one_time. %>
-                    <%= ef.toggle :kind, {
+                    <%= ef.toggle :refund, {
                           checked: @entry.transaction.refund?,
                           data: { auto_submit_form_target: "auto" }
-                        }, "refund", @entry.transaction.one_time? ? "one_time" : "standard" %>
+                        } %>
                   </div>
-                  <%# Optional link to the original transaction this refund offsets. %>
-                  <% if @entry.transaction.refund? %>
-                    <div class="pl-2 border-l-2 border-surface-inset space-y-1">
-                      <p class="text-xs text-subdued"><%= t(".refund_link_label") %></p>
-                      <%= ef.collection_select :refund_of_transaction_id,
-                            refund_original_options(@entry),
-                            :last, :first,
-                            { include_blank: t(".refund_no_link"), label: false },
-                            class: "form-field__input",
-                            data: { auto_submit_form_target: "auto" } %>
-                    </div>
-                  <% end %>
+
                 </div>
               <% end %>
             <% end %>

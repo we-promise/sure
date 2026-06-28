@@ -12,64 +12,17 @@ class Transaction::RefundTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Enum / predicate
+  # Boolean flag / predicate
   # ---------------------------------------------------------------------------
 
-  test "refund? returns true for refund kind" do
-    entry = create_transaction(account: @checking_account, amount: -50, kind: "refund", category: @groceries)
+  test "refund? returns true when refund flag is set" do
+    entry = create_transaction(account: @checking_account, amount: -50, refund: true, category: @groceries)
     assert entry.entryable.refund?
   end
 
-  test "refund? returns false for standard kind" do
+  test "refund? returns false by default" do
     entry = create_transaction(account: @checking_account, amount: -50)
     assert_not entry.entryable.refund?
-  end
-
-  test "refund kind is not in BUDGET_EXCLUDED_KINDS" do
-    assert_not_includes Transaction::BUDGET_EXCLUDED_KINDS, "refund",
-      "refund must appear in analytics to offset expense totals"
-  end
-
-  test "refund kind is not in TRANSFER_KINDS" do
-    assert_not_includes Transaction::TRANSFER_KINDS, "refund"
-  end
-
-  # ---------------------------------------------------------------------------
-  # Optional back-reference association
-  # ---------------------------------------------------------------------------
-
-  test "refund can be linked to an original transaction" do
-    original_entry = create_transaction(account: @checking_account, amount: 200, category: @groceries)
-    original_txn    = original_entry.entryable
-
-    refund_entry = create_transaction(
-      account: @checking_account, amount: -50, kind: "refund", category: @groceries
-    )
-    refund_txn = refund_entry.entryable
-    refund_txn.update!(refund_of_transaction: original_txn)
-
-    assert_equal original_txn, refund_txn.reload.refund_of_transaction
-  end
-
-  test "refund_of_transaction_id is optional — refund can exist without a link" do
-    entry = create_transaction(account: @checking_account, amount: -30, kind: "refund", category: @groceries)
-    assert_nil entry.entryable.refund_of_transaction_id
-    assert entry.entryable.valid?
-  end
-
-  test "refund_of_transaction_id must belong to same family" do
-    original_entry = create_transaction(account: @checking_account, amount: 200, category: @groceries)
-    original_txn   = original_entry.entryable
-
-    other_family_account = families(:dylan_family).accounts.create!(
-      name: "Other Checking", currency: "USD", balance: 5000, accountable: Depository.new
-    )
-    refund_entry = create_transaction(account: other_family_account, amount: -50, kind: "refund")
-    refund_txn   = refund_entry.entryable
-    refund_txn.refund_of_transaction = original_txn
-
-    assert_not refund_txn.valid?
-    assert_includes refund_txn.errors[:refund_of_transaction_id], "must belong to the same family"
   end
 
   # ---------------------------------------------------------------------------
@@ -77,7 +30,7 @@ class Transaction::RefundTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "Entry#classification returns 'expense' for a refund even though amount is negative" do
-    entry = create_transaction(account: @checking_account, amount: -50, kind: "refund", category: @groceries)
+    entry = create_transaction(account: @checking_account, amount: -50, refund: true, category: @groceries)
     assert_equal "expense", entry.classification
   end
 

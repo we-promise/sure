@@ -20,7 +20,7 @@ json.notes transaction.entry.notes
 json.external_id transaction.entry.external_id
 json.source transaction.entry.source
 json.kind transaction.kind
-json.refund_of_transaction_id transaction.refund_of_transaction_id
+json.refund transaction.refund
 json.classification transaction.entry.classification
 
 # Account information

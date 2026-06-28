@@ -1,11 +1,11 @@
 require "test_helper"
 
-# Tests that verify the refund kind is correctly handled by IncomeStatement totals.
+# Tests that verify the refund flag is correctly handled by IncomeStatement totals.
 #
 # Design contract under test:
-#   - A refund (amount < 0, kind = 'refund') is classified as 'expense' in analytics.
+#   - A refund (amount < 0, refund = true) is classified as 'expense' in analytics.
 #   - It therefore reduces the expense total in its category, not the income total.
-#   - It does NOT appear in income totals.
+#   - When refunds exceed expenses in a category the net surplus flips to income.
 #   - It IS included in analytics (not budget-excluded like one_time or cc_payment).
 class IncomeStatement::RefundTest < ActiveSupport::TestCase
   include EntriesTestHelper
@@ -22,9 +22,9 @@ class IncomeStatement::RefundTest < ActiveSupport::TestCase
   # Refund reduces expense total, not income total
   # ---------------------------------------------------------------------------
 
-  test "refund kind reduces expense total and does not appear in income total" do
-    create_transaction(account: @checking, amount: 200, category: @groceries)                      # $200 expense
-    create_transaction(account: @checking, amount: -50, kind: "refund", category: @groceries)      # $50 refund
+  test "refund reduces expense total and does not appear in income total" do
+    create_transaction(account: @checking, amount: 200, category: @groceries)                   # $200 expense
+    create_transaction(account: @checking, amount: -50, refund: true, category: @groceries)     # $50 refund
 
     period = Period.last_30_days
     totals = IncomeStatement.new(@family).totals(date_range: period.date_range)
@@ -35,21 +35,35 @@ class IncomeStatement::RefundTest < ActiveSupport::TestCase
       "refund must not count as income"
   end
 
-  test "refund with no matching expense shows as negative expense total" do
-    # Refund with no corresponding expense in the period — nets to negative expense (handled by outer ABS)
-    create_transaction(account: @checking, amount: -80, kind: "refund", category: @groceries)
+  test "standalone refund shows as income (no expense to offset)" do
+    create_transaction(account: @checking, amount: -80, refund: true, category: @groceries)
 
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
 
-    # ABS(SUM(negative_refund)) = 80 in the expense bucket; since there are no positive expenses
-    # the result is still 80 on the expense side (the outer ABS ensures no negative display value).
-    assert_equal Money.new(80, @family.currency), totals.expense_money
-    assert_equal Money.new(0,  @family.currency), totals.income_money
+    # Raw sum is -80 for the expense-classified group.  Since the sum
+    # is negative it flips to income in the post-processing step.
+    assert_equal Money.new(80, @family.currency), totals.income_money,
+      "standalone refund should appear as income"
+    assert_equal Money.new(0,  @family.currency), totals.expense_money,
+      "standalone refund should not appear as expense"
+  end
+
+  test "refund exceeding expenses flips category to income" do
+    create_transaction(account: @checking, amount: 30,  category: @groceries)                   # $30 expense
+    create_transaction(account: @checking, amount: -50, refund: true, category: @groceries)     # $50 refund
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    # SUM(30 + -50) = -20 → flips to income
+    assert_equal Money.new(20, @family.currency), totals.income_money,
+      "over-refund should flip to $20 income"
+    assert_equal Money.new(0,  @family.currency), totals.expense_money,
+      "expense should be 0 when refund exceeds spend"
   end
 
   test "refund is not excluded from analytics like one_time" do
     create_transaction(account: @checking, amount: 200, category: @groceries)
-    create_transaction(account: @checking, amount: -50, kind: "refund",   category: @groceries)
+    create_transaction(account: @checking, amount: -50, refund: true,   category: @groceries)
     create_transaction(account: @checking, amount: -30, kind: "one_time", category: @groceries)
 
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
@@ -64,7 +78,7 @@ class IncomeStatement::RefundTest < ActiveSupport::TestCase
 
   test "net_category_totals shows reduced expense for category containing a refund" do
     create_transaction(account: @checking, amount: 200, category: @groceries)
-    create_transaction(account: @checking, amount: -50, kind: "refund", category: @groceries)
+    create_transaction(account: @checking, amount: -50, refund: true, category: @groceries)
 
     net = IncomeStatement.new(@family).net_category_totals(period: Period.last_30_days)
 
@@ -77,7 +91,7 @@ class IncomeStatement::RefundTest < ActiveSupport::TestCase
     clothing = @family.categories.create!(name: "Clothing")
 
     create_transaction(account: @checking, amount: 200, category: @groceries)
-    create_transaction(account: @checking, amount: -50, kind: "refund", category: clothing)
+    create_transaction(account: @checking, amount: -50, refund: true, category: clothing)
 
     net = IncomeStatement.new(@family).net_category_totals(period: Period.last_30_days)
 

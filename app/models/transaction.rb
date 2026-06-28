@@ -50,8 +50,6 @@ class Transaction < ApplicationRecord
   end
 
   validate :exchange_rate_must_be_valid
-  validate :refund_of_transaction_must_belong_to_same_family, if: :refund_of_transaction_id?
-
   private
 
     def exchange_rate_must_be_valid
@@ -65,14 +63,6 @@ class Transaction < ApplicationRecord
       end
     end
 
-    def refund_of_transaction_must_belong_to_same_family
-      return unless entry && refund_of_transaction&.entry
-
-      if entry.account.family_id != refund_of_transaction.entry.account.family_id
-        errors.add(:refund_of_transaction_id, :same_family)
-      end
-    end
-
   public
 
   enum :kind, {
@@ -81,14 +71,8 @@ class Transaction < ApplicationRecord
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
     loan_payment: "loan_payment", # A payment to a Loan account, treated as an expense in budgets
     one_time: "one_time", # A one-time expense/income, excluded from budget analytics
-    investment_contribution: "investment_contribution", # Transfer to investment/crypto account, treated as an expense in budgets
-    refund: "refund" # A refund that offsets a prior expense; classified as 'expense' in analytics so it reduces category spend
+    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, treated as an expense in budgets
   }
-
-  # Optional back-reference to the transaction this refund offsets.
-  # Nullable — a refund can exist without a linked original (e.g. the original was
-  # deleted, or the user didn't bother linking it).
-  belongs_to :refund_of_transaction, class_name: "Transaction", optional: true
 
   # All kinds where money moves between accounts (transfer? returns true).
   # Used for search filters, rule conditions, and UI display.
@@ -97,9 +81,6 @@ class Transaction < ApplicationRecord
   # Kinds excluded from budget/income-statement analytics.
   # loan_payment and investment_contribution are intentionally NOT here —
   # they represent real cash outflow from a budgeting perspective.
-  # refund is intentionally NOT here — it must appear in analytics so it can
-  # offset the expense total in its category (classified as 'expense' with
-  # negative sign in the SQL, not as 'income').
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
   # All valid investment activity labels (for UI dropdown)
@@ -159,6 +140,16 @@ class Transaction < ApplicationRecord
     end
 
     update!(category: category)
+  end
+
+  # Classification override for reporting analytics.
+  # Returns "expense" or "income" when a transaction's analytics classification
+  # differs from the sign-based default (negative = income, positive = expense).
+  # Returns nil when the default sign-based classification should be used.
+  # Called by Entry#classification (Ruby) and mirrored by
+  # IncomeStatement::Totals#classification_sql (SQL).
+  def classification
+    "expense" if refund?
   end
 
   def pending?

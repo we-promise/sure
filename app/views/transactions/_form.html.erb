@@ -14,9 +14,9 @@
     <div class="hidden" data-transaction-type-tabs-target="refundFields">
       <%= f.fields_for :entryable do |ef| %>
         <div class="flex items-center gap-2 mt-2 p-3 rounded-lg border border-primary bg-container">
-          <%= ef.check_box :kind, { checked: false }, "refund", "standard" %>
+          <%= ef.check_box :refund, { checked: false } %>
           <div class="text-sm">
-            <%= ef.label :kind, t(".refund_title"), class: "text-primary font-medium cursor-pointer" %>
+            <%= ef.label :refund, t(".refund_title"), class: "text-primary font-medium cursor-pointer" %>
             <p class="text-secondary text-xs"><%= t(".refund_description") %></p>
           </div>
         </div>

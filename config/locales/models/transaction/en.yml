@@ -5,8 +5,6 @@ en:
       models:
         transaction:
           attributes:
-            refund_of_transaction_id:
-              same_family: "must belong to the same family"
             attachments:
               too_many: "cannot exceed %{max} files per transaction"
               too_large: "file %{index} is too large (maximum %{max_mb}MB)"

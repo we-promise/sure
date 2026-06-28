@@ -59,16 +59,16 @@ class Transaction::Search
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
-        result = scope
-                  .select(
-                    ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(ABS(SUM(CASE WHEN transactions.kind = 'refund' THEN -ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END)), 0) as expense_total",
-                      Transaction::TRANSFER_KINDS
-                    ]),
-                    ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND transactions.kind != 'refund' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
-                      Transaction::TRANSFER_KINDS
-                    ]),
+          result = scope
+                    .select(
+                      ActiveRecord::Base.sanitize_sql_array([
+                        "COALESCE(SUM(CASE WHEN transactions.refund = true THEN -ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total_raw",
+                        Transaction::TRANSFER_KINDS
+                      ]),
+                      ActiveRecord::Base.sanitize_sql_array([
+                        "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND transactions.refund != true THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                        Transaction::TRANSFER_KINDS
+                      ]),
                     ActiveRecord::Base.sanitize_sql_array([
                       "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_inflow_total",
                       Transaction::TRANSFER_KINDS
@@ -87,10 +87,23 @@ class Transaction::Search
                   )
                   .take
 
+        raw_expense = (result&.expense_total_raw || 0)
+        raw_income = (result&.income_total || 0)
+
+        # When refunds exceed expenses overall, the raw expense total is negative.
+        # Flip the surplus to income instead of showing a fake positive expense.
+        if raw_expense < 0
+          expense_total = 0
+          income_total = raw_income + raw_expense.abs
+        else
+          expense_total = raw_expense
+          income_total = raw_income
+        end
+
         Totals.new(
           count: result&.transactions_count.to_i,
-          income_money: Money.new((result&.income_total || 0), family.currency),
-          expense_money: Money.new((result&.expense_total || 0), family.currency),
+          income_money: Money.new(income_total, family.currency),
+          expense_money: Money.new(expense_total, family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
           transfer_outflow_money: Money.new((result&.transfer_outflow_total || 0), family.currency)
         )
@@ -162,23 +175,40 @@ class Transaction::Search
 
     def apply_type_filter(query, types)
       return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer" ]
+      return query if types.sort == [ "expense", "income", "transfer", "refund" ]
 
       case types.sort
+        # Single-type filters
+      when [ "refund" ]
+        query.where(refund: true)
       when [ "transfer" ]
         query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]
-        # Refunds have a negative amount but are semantically expense-side (they offset spend).
-        query.where("entries.amount >= 0 OR transactions.kind = 'refund'").where.not(kind: Transaction::TRANSFER_KINDS)
+        query.where("entries.amount >= 0 OR transactions.refund = true").where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "income" ]
-        # Exclude refunds from income — they are not real income.
-        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS).where.not(kind: "refund")
+        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS).where(refund: false)
+
+        # Two-type combinations
+      when [ "refund", "transfer" ]
+        query.where("transactions.refund = true OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "expense", "refund" ]
+        query.where("entries.amount >= 0 OR transactions.refund = true").where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "expense", "transfer" ]
-        query.where("entries.amount >= 0 OR transactions.kind = 'refund' OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+        query.where("entries.amount >= 0 OR transactions.refund = true OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "income", "refund" ]
+        query.where("entries.amount < 0 OR transactions.refund = true").where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "income", "transfer" ]
-        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS).where.not(kind: "refund")
-      when [ "expense", "income" ]
+        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS).where(refund: false)
+
+        # Three-type combinations
+      when [ "expense", "income", "refund" ]
         query.where.not(kind: Transaction::TRANSFER_KINDS)
+      when [ "expense", "income", "transfer" ]
+        query
+      when [ "expense", "refund", "transfer" ]
+        query.where("entries.amount >= 0 OR transactions.refund = true OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "income", "refund", "transfer" ]
+        query.where("entries.amount < 0 OR transactions.refund = true OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       else
         query
       end

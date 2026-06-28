@@ -20,18 +20,6 @@ module TransactionsHelper
     transaction_search_filters[0]
   end
 
-  def refund_original_options(entry)
-    entry.account.entries
-      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .where(transactions: { kind: "standard" })
-      .where("entries.amount > 0")
-      .where("entries.date >= ?", 1.year.ago)
-      .where.not("entries.id" => entry.id)
-      .order(date: :desc)
-      .limit(50)
-      .map { |e| [ "#{e.name} (#{e.date.strftime('%b %-d, %Y')} · #{format_money(e.amount_money)})", e.entryable_id ] }
-  end
-
   def in_split_group?(entry, params_grouped)
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end

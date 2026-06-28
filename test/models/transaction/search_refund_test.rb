@@ -23,7 +23,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "expense filter includes refund transactions" do
-    refund_entry   = create_transaction(account: @checking, amount: -50,  kind: "refund")
+    refund_entry   = create_transaction(account: @checking, amount: -50,  refund: true)
     expense_entry  = create_transaction(account: @checking, amount: 100,  kind: "standard")
     income_entry   = create_transaction(account: @checking, amount: -80,  kind: "standard")
 
@@ -36,7 +36,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
   end
 
   test "income filter excludes refund transactions" do
-    refund_entry  = create_transaction(account: @checking, amount: -50, kind: "refund")
+    refund_entry  = create_transaction(account: @checking, amount: -50, refund: true)
     income_entry  = create_transaction(account: @checking, amount: -80, kind: "standard")
 
     result_ids = Transaction::Search.new(@family, filters: { types: [ "income" ] })
@@ -47,7 +47,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
   end
 
   test "expense+transfer filter includes refund" do
-    refund_entry   = create_transaction(account: @checking, amount: -50,  kind: "refund")
+    refund_entry   = create_transaction(account: @checking, amount: -50,  refund: true)
     transfer_entry = create_transaction(account: @checking, amount: 200,  kind: "funds_movement")
 
     result_ids = Transaction::Search.new(@family, filters: { types: [ "expense", "transfer" ] })
@@ -58,7 +58,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
   end
 
   test "income+transfer filter excludes refund" do
-    refund_entry   = create_transaction(account: @checking, amount: -50, kind: "refund")
+    refund_entry   = create_transaction(account: @checking, amount: -50, refund: true)
     income_entry   = create_transaction(account: @checking, amount: -80, kind: "standard")
     transfer_entry = create_transaction(account: @checking, amount: 200, kind: "funds_movement")
 
@@ -78,7 +78,7 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
     create_transaction(account: @checking, amount: 200,  kind: "standard")  # $200 expense
-    create_transaction(account: @checking, amount: -50,  kind: "refund")    # $50 refund (offsets expense)
+    create_transaction(account: @checking, amount: -50,  refund: true)      # $50 refund (offsets expense)
     create_transaction(account: @checking, amount: -100, kind: "standard")  # $100 income
 
     totals = Transaction::Search.new(@family).totals
@@ -92,16 +92,17 @@ class Transaction::SearchRefundTest < ActiveSupport::TestCase
       "refund must not appear in income_total"
   end
 
-  test "totals: refund with no matching expense contributes negatively to expense_total" do
+  test "totals: refund with no matching expense flips to income" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
     # Only a refund, no expense
-    create_transaction(account: @checking, amount: -80, kind: "refund")
+    create_transaction(account: @checking, amount: -80, refund: true)
 
     totals = Transaction::Search.new(@family).totals
 
-    # Wrapped in ABS(SUM(...)) so a standalone refund still produces a positive expense_total.
-    assert_equal Money.new(80, @family.currency), totals.expense_money
-    assert_equal Money.new(0,  @family.currency), totals.income_money
+    assert_equal Money.new(0,  @family.currency), totals.expense_money,
+      "standalone refund should not appear as expense"
+    assert_equal Money.new(80, @family.currency), totals.income_money,
+      "standalone refund should appear as income"
   end
 end
