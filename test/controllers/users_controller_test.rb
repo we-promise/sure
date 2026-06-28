@@ -10,6 +10,24 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
   end
 
+  test "rule_prompt_settings disables prompts when toggle is turned off" do
+    @user.update!(rule_prompts_disabled: false)
+
+    patch rule_prompt_settings_user_url(@user), params: { user: { rule_prompts_enabled: "0" } }
+
+    assert_response :redirect
+    assert @user.reload.rule_prompts_disabled
+  end
+
+  test "rule_prompt_settings enables prompts when toggle is turned on" do
+    @user.update!(rule_prompts_disabled: true)
+
+    patch rule_prompt_settings_user_url(@user), params: { user: { rule_prompts_enabled: "1" } }
+
+    assert_response :redirect
+    assert_not @user.reload.rule_prompts_disabled
+  end
+
   test "can update user profile" do
     patch user_url(@user), params: {
       user: {

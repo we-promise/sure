@@ -119,9 +119,13 @@ en:
       show:
         country: Country
         currency: Currency
+        automation_subtitle: Control automatic behavior
+        automation_title: Automation
         date_format: Date format
         general_subtitle: Configure your preferences
         general_title: General
+        rule_prompts_hint: Show a prompt to create a rule when you assign a category to a transaction
+        rule_prompts_label: Auto-suggest rules when categorizing
         default_period: Default Period
         default_account_order: Default Account Order
         language: Language

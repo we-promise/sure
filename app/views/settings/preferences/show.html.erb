@@ -36,6 +36,25 @@
     <% end %>
   </div>
 <% end %>
+<%= settings_section title: t(".automation_title"), subtitle: t(".automation_subtitle") do %>
+  <%= form_with url: rule_prompt_settings_user_path(@user), method: :patch,
+        data: { controller: "auto-submit-form" } do |f| %>
+    <%# Wrapping the row in <label for=…> makes the title + description a click
+        target for the toggle, matching the preview-features card below. %>
+    <label for="user_rule_prompts_enabled" class="flex cursor-pointer items-center gap-4 justify-between">
+      <div class="text-sm space-y-1">
+        <p class="text-primary font-medium"><%= t(".rule_prompts_label") %></p>
+        <p class="text-secondary"><%= t(".rule_prompts_hint") %></p>
+      </div>
+      <%= render DS::Toggle.new(
+            id: "user_rule_prompts_enabled",
+            name: "user[rule_prompts_enabled]",
+            checked: @user.rule_prompts_enabled,
+            data: { auto_submit_form_target: "auto" }
+      ) %>
+    </label>
+  <% end %>
+<% end %>
 <% if Current.user.admin? %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
     <% selected_count_translations = t(".selected_currencies_count") %>

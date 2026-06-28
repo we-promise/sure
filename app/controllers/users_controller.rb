@@ -108,7 +108,7 @@ class UsersController < ApplicationController
     end
 
     def rule_prompt_settings_params
-      params.require(:user).permit(:rule_prompt_dismissed_at, :rule_prompts_disabled)
+      params.require(:user).permit(:rule_prompt_dismissed_at, :rule_prompts_disabled, :rule_prompts_enabled)
     end
 
     def user_params

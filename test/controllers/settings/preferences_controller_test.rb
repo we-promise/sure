@@ -50,4 +50,12 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_preferences_url
     assert_not user.reload.preview_features_enabled?
   end
+
+  test "renders the auto-rule prompts toggle" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='user[rule_prompts_enabled]']"
+    assert_includes response.body, "Auto-suggest rules when categorizing"
+  end
 end

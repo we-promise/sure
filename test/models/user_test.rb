@@ -7,6 +7,25 @@ class UserTest < ActiveSupport::TestCase
     @user = users(:family_admin)
   end
 
+  test "rule_prompts_enabled inverts rule_prompts_disabled" do
+    @user.rule_prompts_disabled = false
+    assert @user.rule_prompts_enabled
+
+    @user.rule_prompts_disabled = true
+    assert_not @user.rule_prompts_enabled
+  end
+
+  test "rule_prompts_enabled= writes the inverted flag and casts strings" do
+    @user.rule_prompts_enabled = "0"
+    assert @user.rule_prompts_disabled
+
+    @user.rule_prompts_enabled = "1"
+    assert_not @user.rule_prompts_disabled
+
+    @user.rule_prompts_enabled = false
+    assert @user.rule_prompts_disabled
+  end
+
   def teardown
     clear_enqueued_jobs
     clear_performed_jobs
