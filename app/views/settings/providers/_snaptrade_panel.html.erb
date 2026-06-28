@@ -7,10 +7,18 @@
   <% end %>
 
   <%
-    snaptrade_item = Current.family.snaptrade_items.first_or_initialize(name: "SnapTrade Connection")
+    items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.active.ordered
+    active_items = items.select { |item| !item.scheduled_for_deletion? }
+    snaptrade_item =
+      active_items.first ||
+      Current.family.snaptrade_items.build(name: "SnapTrade Connection")
     is_new_record = snaptrade_item.new_record?
-    item_for_oauth = snaptrade_item.persisted? ? snaptrade_item : nil
-    oauth_href = item_for_oauth ? oauth_connect_snaptrade_items_path(item_id: item_for_oauth.id) : oauth_connect_snaptrade_items_path
+    oauth_href =
+      if snaptrade_item.persisted?
+        oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id)
+      else
+        oauth_connect_snaptrade_items_path
+      end
     oauth_active = snaptrade_item.persisted? && snaptrade_item.oauth_token_active?
     oauth_button_text =
       if oauth_active
@@ -101,11 +109,8 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.active.ordered %>
-
-  <% if items&.any? %>
-    <% item = items.first %>
-    <% unless item.user_registered? %>
+  <% if snaptrade_item.persisted? %>
+    <% unless snaptrade_item.user_registered? %>
       <div class="flex items-center gap-2 border-t border-primary pt-4 mt-4">
         <span class="w-2 h-2 bg-warning rounded-full"></span>
         <p class="text-sm text-secondary"><%= t("providers.snaptrade.status_needs_registration") %></p>
@@ -113,15 +118,14 @@
     <% end %>
   <% end %>
 
-  <% if items&.any? && items.first.user_registered? %>
-    <% item = items.first %>
+  <% if snaptrade_item.persisted? && snaptrade_item.user_registered? %>
     <div class="border-t border-primary pt-4 mt-4">
       <%= render DS::Disclosure.new(
         variant: :inline,
         data: {
           controller: "lazy-load",
           action: "toggle->lazy-load#toggled",
-          lazy_load_url_value: connections_snaptrade_item_path(item),
+          lazy_load_url_value: connections_snaptrade_item_path(snaptrade_item),
           lazy_load_auto_open_param_value: "manage"
         }
       ) do |disclosure| %>
@@ -129,9 +133,9 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <p class="text-sm text-secondary">
-                <%= t("providers.snaptrade.status_connected", count: item.snaptrade_accounts.count) %>
-                <% if item.unlinked_accounts_count > 0 %>
-                  <span class="text-warning">(<%= t("providers.snaptrade.needs_setup", count: item.unlinked_accounts_count) %>)</span>
+                <%= t("providers.snaptrade.status_connected", count: snaptrade_item.snaptrade_accounts.count) %>
+                <% if snaptrade_item.unlinked_accounts_count > 0 %>
+                  <span class="text-warning">(<%= t("providers.snaptrade.needs_setup", count: snaptrade_item.unlinked_accounts_count) %>)</span>
                 <% end %>
               </p>
             </div>
