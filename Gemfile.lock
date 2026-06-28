@@ -470,7 +470,7 @@ GEM
     omniauth-oauth2 (1.8.0)
       oauth2 (>= 1.4, < 3)
       omniauth (~> 2.0)
-    omniauth-rails_csrf_protection (1.0.2)
+    omniauth-rails_csrf_protection (2.0.1)
       actionpack (>= 4.2)
       omniauth (~> 2.0)
     omniauth-saml (2.2.4)
@@ -906,7 +906,7 @@ DEPENDENCIES
   omniauth (~> 2.1)
   omniauth-github
   omniauth-google-oauth2
-  omniauth-rails_csrf_protection
+  omniauth-rails_csrf_protection (>= 2.0)
   omniauth-saml (~> 2.1)
   omniauth_openid_connect
   ostruct

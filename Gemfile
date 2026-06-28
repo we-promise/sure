@@ -92,7 +92,8 @@ gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
 gem "omniauth", "~> 2.1"
-gem "omniauth-rails_csrf_protection"
+# v2.0+ drops the deprecated `ActiveSupport::Configurable` (removed in Rails 8.2)
+gem "omniauth-rails_csrf_protection", ">= 2.0"
 gem "omniauth_openid_connect"
 gem "omniauth-google-oauth2"
 gem "omniauth-github"
