@@ -59,16 +59,16 @@ class Transaction::Search
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
-          result = scope
-                    .select(
-                      ActiveRecord::Base.sanitize_sql_array([
-                        "COALESCE(SUM(CASE WHEN transactions.refund = true THEN -ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total_raw",
-                        Transaction::TRANSFER_KINDS
-                      ]),
-                      ActiveRecord::Base.sanitize_sql_array([
-                        "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND transactions.refund != true THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
-                        Transaction::TRANSFER_KINDS
-                      ]),
+        result = scope
+                  .select(
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN transactions.refund = true THEN -ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total_raw",
+                      Transaction::TRANSFER_KINDS
+                    ]),
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND transactions.refund != true THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      Transaction::TRANSFER_KINDS
+                    ]),
                     ActiveRecord::Base.sanitize_sql_array([
                       "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_inflow_total",
                       Transaction::TRANSFER_KINDS
@@ -201,6 +201,8 @@ class Transaction::Search
         query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS).where(refund: false)
 
         # Three-type combinations
+      when [ "expense", "income" ]
+        query.where.not(kind: Transaction::TRANSFER_KINDS).where(refund: false)
       when [ "expense", "income", "refund" ]
         query.where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "expense", "income", "transfer" ]
