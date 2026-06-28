@@ -116,18 +116,27 @@
                         <% if user.id == Current.user.id %>
                           <span class="text-sm text-secondary"><%= t(".you") %></span>
                         <% else %>
-                          <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2", data: { controller: "auto-submit-form" } do |form| %>
-                            <%= form.select :role,
-                                options_for_select([
-                                  [t(".roles.guest"), "guest"],
-                                  [t(".roles.member"), "member"],
-                                  [t(".roles.admin"), "admin"],
-                                  [t(".roles.super_admin"), "super_admin"]
-                                ], user.role),
-                                {},
-                                class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
-                                data: { auto_submit_form_target: "auto" } %>
-                          <% end %>
+                          <div class="flex items-center justify-end gap-2">
+                            <%= form_with model: [:admin, user], method: :patch, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
+                              <%= form.select :role,
+                                  options_for_select([
+                                    [t(".roles.guest"), "guest"],
+                                    [t(".roles.member"), "member"],
+                                    [t(".roles.admin"), "admin"],
+                                    [t(".roles.super_admin"), "super_admin"]
+                                  ], user.role),
+                                  {},
+                                  class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
+                                  data: { auto_submit_form_target: "auto" } %>
+                            <% end %>
+                            <%= form_with url: admin_user_path(user), method: :delete, class: "inline",
+                                  data: { turbo_confirm: t(".delete_user.confirm", email: user.email) } do %>
+                              <button type="submit"
+                                      class="text-sm text-destructive border border-destructive rounded-lg px-2 py-1 hover:bg-destructive/10 transition-colors">
+                                <%= t(".delete_user.button") %>
+                              </button>
+                            <% end %>
+                          </div>
                         <% end %>
                       </td>
                     </tr>

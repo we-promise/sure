@@ -21,6 +21,10 @@ fr:
           delete_all: Tout supprimer
           expires: Expire le %{date}
           pending_label: Invité (en attente)
+        delete_user:
+          button: Supprimer
+          confirm: Supprimer définitivement %{email} ? Cela désactive le compte et
+            supprime ses données. Cette action est irréversible.
         no_subscription: Aucun abonnement
         no_users: Aucun utilisateur trouvé.
         not_available: n/a
@@ -59,3 +63,7 @@ fr:
       update:
         failure: Échec de la mise à jour du rôle de l'utilisateur.
         success: Rôle de l'utilisateur mis à jour avec succès.
+      destroy:
+        success: Utilisateur supprimé avec succès.
+        cannot_delete_self: Vous ne pouvez pas supprimer votre propre compte depuis
+          le panneau d'administration.

@@ -40,6 +40,12 @@ de:
           member: "Standard-Zugriff. Kann eigene Konten, Buchungen und Einstellungen verwalten."
           admin: "Familien-Administrator. Zugriff auf erweiterte Einstellungen wie API-Schlüssel, Importe und KI-Prompts."
           super_admin: "Instanz-Administrator. Kann SSO-Provider, Benutzerrollen verwalten und Benutzer für Support vertreten."
+        delete_user:
+          button: "Löschen"
+          confirm: "%{email} dauerhaft löschen? Dies deaktiviert das Konto und entfernt seine Daten. Dies kann nicht rückgängig gemacht werden."
       update:
         success: "Benutzerrolle wurde erfolgreich aktualisiert."
         failure: "Benutzerrolle konnte nicht aktualisiert werden."
+      destroy:
+        success: "Benutzer erfolgreich gelöscht."
+        cannot_delete_self: "Sie können Ihr eigenes Konto nicht über das Admin-Panel löschen."

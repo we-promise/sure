@@ -19,6 +19,12 @@ nl:
           member: "Basisgebruikersrechten. Kan eigen accounts, transacties en instellingen beheren."
           admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API-sleutels, importen en AI-prompts beheren."
           super_admin: "Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren en gebruikers imiteren voor ondersteuning."
+        delete_user:
+          button: "Verwijderen"
+          confirm: "%{email} permanent verwijderen? Hiermee wordt het account gedeactiveerd en worden de gegevens verwijderd. Dit kan niet ongedaan worden gemaakt."
       update:
         success: "Gebruikersrol succesvol bijgewerkt."
         failure: "Gebruikersrol bijwerken mislukt."
+      destroy:
+        success: "Gebruiker succesvol verwijderd."
+        cannot_delete_self: "U kunt uw eigen account niet verwijderen via het beheerpaneel."
