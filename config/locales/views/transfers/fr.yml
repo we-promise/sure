@@ -30,5 +30,8 @@ fr:
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
+      total: Total
+      transfer_amount: Montant du transfert
+      view_fee_transaction: Voir la transaction de frais
     update:
       success: Transfert mis à jour

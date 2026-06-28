@@ -177,6 +177,11 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "standard", fee_tx.kind
     assert_equal 3, fee_tx.entry.amount
     assert_equal accounts(:depository).id, fee_tx.entry.account_id
+    # Derived fee methods match stored amounts
+    assert_equal 3, transfer.derived_source_fee_amount
+    assert_equal 0, transfer.derived_destination_fee_amount
+    assert transfer.has_source_fee?
+    assert_not transfer.has_destination_fee?
   end
 
   test "can create transfer with destination fee" do
@@ -206,6 +211,11 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "standard", fee_tx.kind
     assert_equal 3, fee_tx.entry.amount
     assert_equal accounts(:credit_card).id, fee_tx.entry.account_id
+    # Derived fee methods match stored amounts
+    assert_equal 0, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
+    assert_not transfer.has_source_fee?
+    assert transfer.has_destination_fee?
   end
 
   test "can create transfer with both source and destination fees" do
@@ -236,6 +246,36 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     dest_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:credit_card).id }
     assert_equal 2, source_fee_tx.entry.amount
     assert_equal 3, dest_fee_tx.entry.amount
+    # Derived fee methods match stored amounts
+    assert_equal 2, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
+    assert transfer.has_fees?
+  end
+
+  test "derived fee methods reflect fee transaction entry edits" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        source_fee_amount: 3
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 3, transfer.derived_source_fee_amount
+
+    # Simulate an independent edit of the fee transaction entry
+    fee_tx = transfer.fee_transactions.first
+    fee_tx.entry.update!(amount: 5)
+
+    # Derived fee should reflect the updated entry, not the stored column
+    transfer.reload
+    assert_equal 5, transfer.derived_source_fee_amount
+    # Stored column remains unchanged
+    assert_equal 3, transfer.source_fee_amount
+    assert transfer.has_source_fee?
   end
 
   test "exchange_rate endpoint returns same_currency for matching currencies" do

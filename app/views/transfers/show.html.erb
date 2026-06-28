@@ -34,25 +34,37 @@
             <dd class="font-medium"><%= l(@transfer.outflow_transaction.entry.date, format: :long) %></dd>
           </dl>
           <dl class="flex items-center gap-2 justify-between">
-            <dt class="text-secondary"><%= t(".amount") %></dt>
+            <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
             <dd class="font-medium text-destructive privacy-sensitive"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
+          <% if @transfer.has_source_fee? %>
+            <dl class="flex items-center gap-2 justify-between">
+              <dt class="text-secondary"><%= t(".source_fee") %></dt>
+              <dd class="font-medium text-destructive privacy-sensitive"><%= format_money Money.new(@transfer.derived_source_fee_amount, @transfer.from_account.currency) * -1 %></dd>
+            </dl>
+            <div class="text-xs text-secondary text-right">
+              <% @transfer.fee_transactions.select { |t| t.entry.account_id == @transfer.from_account.id }.each do |fee_tx| %>
+                <%= link_to t(".view_fee_transaction"), transaction_path(fee_tx), data: { turbo_frame: "_top" }, class: "underline" %>
+              <% end %>
+            </div>
+            <dl class="flex items-center gap-2 justify-between pt-1 border-t border-alpha-black-50">
+              <dt class="text-secondary font-medium"><%= t(".total") %></dt>
+              <dd class="font-medium text-destructive privacy-sensitive">
+                <%= format_money (@transfer.outflow_transaction.entry.amount_money + Money.new(@transfer.derived_source_fee_amount, @transfer.from_account.currency)) * -1 %>
+              </dd>
+            </dl>
+          <% end %>
         </div>
-        <% if @transfer.has_source_fee? %>
-          <dl class="flex items-center gap-2 justify-between">
-            <dt class="text-secondary"><%= t(".source_fee") %></dt>
-            <dd class="font-medium text-destructive privacy-sensitive">
-              -<%= format_money Money.new(@transfer.source_fee_amount, @transfer.from_account.currency) %>
-            </dd>
-          </dl>
-        <% end %>
         <% if @transfer.has_destination_fee? %>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".destination_fee") %></dt>
-            <dd class="font-medium text-destructive privacy-sensitive">
-              -<%= format_money Money.new(@transfer.destination_fee_amount, @transfer.to_account.currency) %>
-            </dd>
+            <dd class="font-medium text-destructive privacy-sensitive"><%= format_money Money.new(@transfer.derived_destination_fee_amount, @transfer.to_account.currency) * -1 %></dd>
           </dl>
+          <div class="text-xs text-secondary text-right">
+            <% @transfer.fee_transactions.select { |t| t.entry.account_id == @transfer.to_account.id }.each do |fee_tx| %>
+              <%= link_to t(".view_fee_transaction"), transaction_path(fee_tx), data: { turbo_frame: "_top" }, class: "underline" %>
+            <% end %>
+          </div>
         <% end %>
 
         <%= render "shared/ruler", classes: "my-2" %>
@@ -69,9 +81,15 @@
             <dd class="font-medium"><%= l(@transfer.inflow_transaction.entry.date, format: :long) %></dd>
           </dl>
           <dl class="flex items-center gap-2 justify-between">
-            <dt class="text-secondary"><%= t(".amount") %></dt>
+            <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
             <dd class="font-medium text-success privacy-sensitive">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
+          <% if @transfer.has_destination_fee? %>
+            <dl class="flex items-center gap-2 justify-between pt-1 border-t border-alpha-black-50">
+              <dt class="text-secondary font-medium"><%= t(".total") %></dt>
+              <dd class="font-medium text-success privacy-sensitive">+<%= format_money (@transfer.inflow_transaction.entry.amount_money * -1) - Money.new(@transfer.derived_destination_fee_amount, @transfer.to_account.currency) %></dd>
+            </dl>
+          <% end %>
         </div>
       </div>
     <% end %>

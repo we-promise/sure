@@ -32,11 +32,11 @@ class Transfer < ApplicationRecord
   end
 
   def has_source_fee?
-    source_fee_amount.to_d > 0
+    derived_source_fee_amount > 0
   end
 
   def has_destination_fee?
-    destination_fee_amount.to_d > 0
+    derived_destination_fee_amount > 0
   end
 
   def has_fees?
@@ -44,7 +44,17 @@ class Transfer < ApplicationRecord
   end
 
   def total_fee
-    source_fee_amount.to_d + destination_fee_amount.to_d
+    derived_source_fee_amount + derived_destination_fee_amount
+  end
+
+  def derived_source_fee_amount
+    from_fee = fee_transactions.joins(:entry).where(entries: { account_id: from_account.id }).sum("entries.amount")
+    from_fee > 0 ? from_fee : source_fee_amount.to_d
+  end
+
+  def derived_destination_fee_amount
+    to_fee = fee_transactions.joins(:entry).where(entries: { account_id: to_account.id }).sum("entries.amount")
+    to_fee > 0 ? to_fee : destination_fee_amount.to_d
   end
 
   def amount_abs

@@ -43,10 +43,12 @@ en:
       from: From
       to: To
       date: Date
-      amount: Amount
+      transfer_amount: Transfer amount
+      total: Total
       bank_charges: Bank Charges
       source_fee: Source fee
       destination_fee: Destination fee
+      view_fee_transaction: View fee transaction
       category: Category
       uncategorized: Uncategorized
     update:
