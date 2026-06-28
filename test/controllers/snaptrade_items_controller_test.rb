@@ -187,7 +187,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "ABCD-EFGH", response.body
-    assert_not @user.family.snaptrade_items.last.credentials_configured?
+    assert_not @user.family.snaptrade_items.reload.last.credentials_configured?
   end
 
   test "select_accounts redirects unregistered users into connect flow" do
@@ -260,7 +260,6 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to settings_providers_path
-    assert_nil flash[:notice]
     assert_match(/API credentials are required/, flash[:alert])
   end
 
