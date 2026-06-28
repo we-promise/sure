@@ -54,7 +54,10 @@ class TransactionImport < Import
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
-          duplicate_entry.external_id = external_id if external_id
+          # Only backfill external_id when the matched entry doesn't already have
+          # one. Never overwrite a different existing id (e.g. a provider's), so
+          # we don't clobber the canonical identifier used for future dedup.
+          duplicate_entry.external_id = external_id if external_id && duplicate_entry.external_id.blank?
           duplicate_entry.import = self
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
