@@ -61,29 +61,16 @@ class InvestmentStatement
     Money.new(holdings_value, family.currency)
   end
 
-  # All current holdings across investment accounts. Holdings are returned in
-  # their native currency; callers that aggregate across accounts must convert
-  # to family currency via convert_to_family_currency.
+  # All current holdings across investment accounts. Returns an ActiveRecord::Relation
+  # without preloads so callers can chain `.includes(...)` (see ReportsController).
+  # Internal aggregation methods use materialized_current_holdings for batched preloads.
   def current_holdings
-    return Holding.none unless investment_accounts.any?
-
-    # Get the latest holding for each security per account
-    Holding
-      .where(account_id: investment_account_ids)
-      .where.not(qty: 0)
-      .where(
-        id: Holding
-          .where(account_id: investment_account_ids)
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-      )
-      .includes(:security, :account)
+    @current_holdings ||= current_holdings_relation
   end
 
   # Top holdings by family-currency value
   def top_holdings(limit: 5)
-    current_holdings
-      .to_a
+    materialized_current_holdings
       .sort_by { |h| -convert_to_family_currency(h.amount, h.currency) }
       .first(limit)
   end
@@ -91,7 +78,7 @@ class InvestmentStatement
   # Portfolio allocation by security. Weights and amounts are computed in the
   # family's currency so cross-currency holdings compare correctly.
   def allocation
-    converted = current_holdings.to_a.map do |holding|
+    converted = materialized_current_holdings.map do |holding|
       [ holding, convert_to_family_currency(holding.amount, holding.currency) ]
     end
 
@@ -112,7 +99,7 @@ class InvestmentStatement
 
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
-    current_holdings.sum do |holding|
+    materialized_current_holdings.sum do |holding|
       trend = holding.trend
       trend ? convert_to_family_currency(trend.value, holding.currency) : 0
     end
@@ -134,7 +121,7 @@ class InvestmentStatement
   end
 
   def unrealized_gains_trend
-    holdings = current_holdings.to_a
+    holdings = materialized_current_holdings
     return nil if holdings.empty?
 
     # Only include holdings with known cost basis in the calculation
@@ -227,7 +214,7 @@ class InvestmentStatement
 
   # Day change across portfolio, summed in family currency
   def day_change
-    changes = current_holdings.to_a.filter_map do |h|
+    changes = materialized_current_holdings.filter_map do |h|
       t = h.day_change
       next nil unless t
       curr = t.current.is_a?(Money) ? t.current.amount : t.current
@@ -248,11 +235,7 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= begin
-      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
-      scope = scope.included_in_finances_for(user) if user
-      scope
-    end
+    @investment_accounts ||= load_investment_accounts
   end
 
   private
@@ -261,12 +244,12 @@ class InvestmentStatement
     def exchange_rates
       @exchange_rates ||= begin
         account_currencies = investment_accounts.map(&:currency)
-        holding_currencies = Holding.where(account_id: investment_account_ids).distinct.pluck(:currency)
+        holding_currencies = materialized_current_holdings.map(&:currency)
         foreign = (account_currencies + holding_currencies)
                     .compact
                     .uniq
                     .reject { |c| c == family.currency }
-        ExchangeRate.rates_for(foreign, to: family.currency, date: Date.current)
+        family.exchange_rates_for(foreign, date: Date.current)
       end
     end
 
@@ -300,7 +283,51 @@ class InvestmentStatement
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
 
     def investment_account_ids
-      @investment_account_ids ||= investment_accounts.pluck(:id)
+      @investment_account_ids ||= investment_accounts.map(&:id)
+    end
+
+    def load_investment_accounts
+      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = scope.included_in_finances_for(user) if user
+      scope.to_a
+    end
+
+    def current_holdings_relation
+      return Holding.none unless investment_accounts.any?
+
+      latest_holding_ids = Holding
+        .where(account_id: investment_account_ids)
+        .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
+        .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+
+      Holding.where(id: latest_holding_ids).where.not(qty: 0)
+    end
+
+    def materialized_current_holdings
+      @materialized_current_holdings ||= preload_current_holdings(current_holdings.to_a)
+    end
+
+    def preload_current_holdings(holdings)
+      return holdings if holdings.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: holdings,
+        associations: [ :security ]
+      ).call
+
+      assign_preloaded_accounts(holdings)
+      Holding::CalculatedAvgCosts.new(holdings).apply!
+      holdings
+    end
+
+    def assign_preloaded_accounts(holdings)
+      accounts_by_id = investment_accounts.index_by(&:id)
+
+      holdings.each do |holding|
+        account = accounts_by_id[holding.account_id]
+        holding.association(:account).target = account
+        holding.association(:account).loaded!
+      end
     end
 
     def totals_query(account_ids:, date_range:)

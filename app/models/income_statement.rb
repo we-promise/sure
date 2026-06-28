@@ -63,8 +63,8 @@ class IncomeStatement
       end
     }
 
-    expense_by_cat = expense.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
-    income_by_cat = income.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
+    expense_by_cat = expense.category_totals.reject { |ct| subcategory_for_totals?(ct.category) }.index_by { |ct| cat_key.call(ct) }
+    income_by_cat = income.category_totals.reject { |ct| subcategory_for_totals?(ct.category) }.index_by { |ct| cat_key.call(ct) }
 
     all_keys = (expense_by_cat.keys + income_by_cat.keys).uniq
     raw_expense_categories = []
@@ -134,8 +134,20 @@ class IncomeStatement
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
 
     def categories
-      # Keep Category#subcategory?'s parent-based orphan semantics without lazy loads.
-      @categories ||= family.categories.includes(:parent).to_a
+      @categories ||= family.categories.to_a
+    end
+
+    def categories_by_id
+      @categories_by_id ||= categories.index_by(&:id)
+    end
+
+    # Treat categories as subcategories only when their parent exists in the
+    # family. Orphaned categories (stale parent_id) roll up as roots without
+    # per-id parent lookups or eager-loading parents.
+    def subcategory_for_totals?(category)
+      return false if category.parent_id.blank?
+
+      categories_by_id[category.parent_id].present?
     end
 
     def period_cache_key(period)
@@ -181,7 +193,7 @@ class IncomeStatement
 
       PeriodTotal.new(
         classification: classification,
-        total: category_totals.reject { |ct| ct.category.subcategory? }.sum(&:total),
+        total: category_totals.reject { |ct| subcategory_for_totals?(ct.category) }.sum(&:total),
         currency: family.currency,
         category_totals: category_totals
       )

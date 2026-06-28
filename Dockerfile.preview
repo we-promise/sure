@@ -94,7 +94,7 @@ COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
 # Create preview entrypoint script inline
-RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
+COPY --chmod=755 --chown=rails:rails <<'ENTRYPOINT_EOF' /rails/bin/preview-entrypoint
 #!/bin/bash
 set -e
 
@@ -280,13 +280,17 @@ fi
 echo "Setting up database..."
 emit_status db-setup "setting up database"
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'" | grep -q 1 || \
-  psql -h localhost -U postgres -c "CREATE USER rails WITH SUPERUSER PASSWORD 'rails';"
+  psql -h localhost -U postgres -c "CREATE USER rails WITH SUPERUSER PASSWORD 'rails';" # pipelock:ignore ephemeral preview-only credentials
 
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
   psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
 
-# Set DATABASE_URL if not already set
-export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
+# Set database env if not already set (ephemeral preview-only credentials)
+export POSTGRES_USER="${POSTGRES_USER:-rails}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-rails}" # pipelock:ignore ephemeral preview-only credentials
+export POSTGRES_DB="${POSTGRES_DB:-sure_development}"
+export DB_HOST="${DB_HOST:-localhost}"
+export DB_PORT="${DB_PORT:-5432}"
 
 # Set REDIS_URL if not already set
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
@@ -309,12 +313,12 @@ DEMO_SEED="${DEMO_DATA_SEED:-880}"
 DEMO_HAS_USER=0
 DEMO_HAS_DATA=0
 
-if psql "$DATABASE_URL" -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
+if psql -h localhost -U rails -d sure_development -tAc "SELECT 1 FROM users WHERE email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   DEMO_HAS_USER=1
   emit_status demo-data-user-present "default demo user already exists"
 fi
 
-if psql "$DATABASE_URL" -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_id = a.family_id WHERE u.email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
+if psql -h localhost -U rails -d sure_development -tAc "SELECT 1 FROM accounts a JOIN users u ON u.family_id = a.family_id WHERE u.email = '${DEMO_EMAIL_SQL}' LIMIT 1" | grep -q 1; then
   DEMO_HAS_DATA=1
   emit_status demo-data-skip "demo financial data already exists"
 else
@@ -375,7 +379,6 @@ fi
 
 wait "$RAILS_PID"
 ENTRYPOINT_EOF
-RUN chmod 755 /rails/bin/preview-entrypoint && chown rails:rails /rails/bin/preview-entrypoint
 
 USER 1000:1000
 
