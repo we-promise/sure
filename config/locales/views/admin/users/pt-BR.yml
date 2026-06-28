@@ -48,6 +48,12 @@ pt-BR:
           expires: "Expira em %{date}"
           delete: "Excluir"
           delete_all: "Excluir todos"
+        delete_user:
+          button: "Excluir"
+          confirm: "Excluir permanentemente %{email}? Isso desativa a conta e remove seus dados. Esta ação não pode ser desfeita."
       update:
         success: "Função de usuário atualizada com sucesso."
         failure: "Falha ao atualizar a função do usuário."
+      destroy:
+        success: "Usuário excluído com sucesso."
+        cannot_delete_self: "Você não pode excluir sua própria conta pelo painel de administração."

@@ -12,6 +12,12 @@ class UserPolicy < ApplicationPolicy
     user.id != record.id
   end
 
+  def destroy?
+    # Self-deletion is blocked in the controller so it can redirect with a
+    # friendly message rather than raising an authorization error.
+    user&.super_admin?
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       if user&.super_admin?

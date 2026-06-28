@@ -48,6 +48,12 @@ pl:
           expires: Wygasa %{date}
           delete: Usuń
           delete_all: Usuń wszystkie
+        delete_user:
+          button: "Usuń"
+          confirm: "Trwale usunąć %{email}? Spowoduje to dezaktywację konta i usunięcie jego danych. Tej operacji nie można cofnąć."
       update:
         success: Rola użytkownika została pomyślnie zaktualizowana.
         failure: Nie udało się zaktualizować roli użytkownika.
+      destroy:
+        success: "Użytkownik został usunięty."
+        cannot_delete_self: "Nie możesz usunąć własnego konta z panelu administracyjnego."

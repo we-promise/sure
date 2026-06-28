@@ -48,6 +48,12 @@ vi:
           expires: "Hết hạn %{date}"
           delete: "Xóa"
           delete_all: "Xóa tất cả"
+        delete_user:
+          button: "Xóa"
+          confirm: "Xóa vĩnh viễn %{email}? Thao tác này sẽ vô hiệu hóa tài khoản và xóa dữ liệu của tài khoản. Không thể hoàn tác."
       update:
         success: "Vai trò người dùng đã được cập nhật thành công."
         failure: "Không thể cập nhật vai trò người dùng."
+      destroy:
+        success: "Đã xóa người dùng thành công."
+        cannot_delete_self: "Bạn không thể xóa tài khoản của chính mình từ bảng quản trị."
