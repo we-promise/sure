@@ -1,0 +1,92 @@
+---
+en:
+  envelopes:
+    color_picker:
+      color_heading: Color
+      icon_heading: Icon
+      poor_contrast: Poor contrast, choose darker color or
+      auto_adjust: auto-adjust.
+    index:
+      title: Envelopes
+      subtitle: Earmark money across months, no matter where it sits.
+      new_envelope: New envelope
+      heading: Envelopes
+      negative_callout:
+        one: 1 envelope is overspent. Future contributions will replenish it.
+        other: "%{count} envelopes are overspent. Future contributions will replenish them."
+    empty_state:
+      heading: No envelopes yet
+      body: Earmark a fixed amount each month toward holidays, gifts, or a boiler fund — tracked from your transactions, not tied to any one account.
+      new_envelope: Create your first envelope
+    new:
+      heading: New envelope
+      subtitle: Set a monthly contribution and let the balance build from your transactions.
+    edit:
+      heading: Edit envelope
+    create:
+      success: Envelope created.
+    update:
+      success: Envelope updated.
+    destroy:
+      success: Envelope deleted.
+    errors:
+      not_found: This envelope couldn't be found. It may have been deleted.
+    status:
+      negative: Overspent
+      reached: Reached
+      on_track: On track
+      tracking: Tracking
+    show:
+      edit: Edit
+      delete: Delete permanently
+      notes: Notes
+      header:
+        category: "Spends from %{category}"
+        no_category: No category linked
+        separator: "·"
+        sinking_fund: Sinking fund
+        virtual_goal: Virtual goal
+      negative_banner:
+        title: This envelope is overspent
+        body: "The balance is %{amount}. Spending is never blocked — your next monthly contributions will replenish it."
+      balance:
+        available: Available balance
+        of_target: "of %{target}"
+        reached: Target reached. Nice work.
+        months_to_target:
+          one: About 1 month to target at the current contribution.
+          other: "About %{count} months to target at the current contribution."
+        contributed: Contributed
+        contribution_rate: "%{amount}/mo"
+        spent: Spent
+        spent_via: "via %{category}"
+      recent:
+        heading: Recent activity
+        empty: No transactions categorised here yet.
+    form:
+      create: Create envelope
+      save: Save changes
+      fields:
+        name: Name
+        name_placeholder: Holidays, Gifts, Boiler fund…
+        category: Spending category
+        category_blank: No category
+        category_hint: Transactions in this category are debited from the envelope automatically.
+        monthly_contribution: Monthly contribution
+        starts_on: Starts on
+        target_heading: Target (optional)
+        target_hint: Leave blank for a sinking fund that runs indefinitely. Add a target to make it a virtual goal.
+        target_amount: Target amount
+        target_date: Target date
+        notes: Notes (optional)
+        notes_placeholder: A reminder for future you…
+    envelope_card:
+      no_category: No category
+      aria_label: "%{name}, %{status}, %{balance} available"
+      contribution: "%{amount}/mo"
+      overspent: Overspent
+      reached: Target reached
+      sinking_fund: Sinking fund
+      months_to_target:
+        one: About 1 month to target
+        other: "About %{count} months to target"

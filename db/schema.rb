@@ -649,6 +649,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
   end
 
+  create_table "envelopes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "category_id"
+    t.string "name", null: false
+    t.decimal "monthly_contribution", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "currency", null: false
+    t.decimal "target_amount", precision: 19, scale: 4
+    t.date "target_date"
+    t.date "starts_on", null: false
+    t.string "color"
+    t.string "icon"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_envelopes_on_category_unique", unique: true, where: "(category_id IS NOT NULL)"
+    t.index ["family_id"], name: "index_envelopes_on_family_id"
+    t.check_constraint "char_length(name::text) <= 255", name: "chk_envelopes_name_length"
+    t.check_constraint "monthly_contribution >= 0::numeric", name: "chk_envelopes_monthly_contribution_non_negative"
+    t.check_constraint "target_amount IS NULL OR target_amount > 0::numeric", name: "chk_envelopes_target_amount_positive"
+    t.check_constraint "target_date IS NULL OR target_amount IS NOT NULL", name: "chk_envelopes_target_date_requires_target_amount"
+  end
+
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.string "description"
@@ -2130,6 +2152,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
+  add_foreign_key "envelopes", "categories", on_delete: :nullify
+  add_foreign_key "envelopes", "families", on_delete: :cascade
   add_foreign_key "eval_results", "eval_runs"
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"

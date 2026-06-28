@@ -1,0 +1,41 @@
+<div class="group relative bg-container rounded-xl shadow-border-xs hover:bg-container-hover transition-colors p-6">
+  <div class="flex items-start gap-3">
+    <%= render Envelopes::AvatarComponent.new(envelope: envelope, size: "lg") %>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2 mb-0.5">
+        <p class="text-base font-medium text-primary truncate">
+          <a href="<%= envelope_path(envelope) %>"
+             aria-label="<%= aria_label %>"
+             class="before:absolute before:inset-0 before:rounded-xl focus-ring">
+            <%= envelope.name %>
+          </a>
+        </p>
+        <%= render Envelopes::StatusPillComponent.new(envelope: envelope) %>
+      </div>
+      <p class="text-xs text-subdued truncate"><%= category_label %></p>
+    </div>
+  </div>
+
+  <div class="mt-5">
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-xl font-medium tabular-nums privacy-sensitive <%= envelope.negative? ? "text-destructive" : "text-primary" %>">
+        <%= envelope.current_balance_money.format(precision: 0) %>
+      </span>
+      <% if envelope.has_target? %>
+        <span class="text-xs text-subdued tabular-nums privacy-sensitive">/ <%= envelope.target_amount_money.format(precision: 0) %></span>
+      <% end %>
+    </div>
+
+    <% if envelope.has_target? %>
+      <div class="mt-2 h-1.5 w-full rounded-full overflow-hidden" style="background-color: var(--budget-unused-fill);">
+        <div class="h-full rounded-full" style="width: <%= progress_percent %>%; background-color: <%= bar_color %>;"></div>
+      </div>
+    <% end %>
+
+    <p class="text-xs text-subdued tabular-nums mt-2 privacy-sensitive"><%= contribution_line %></p>
+  </div>
+
+  <div class="mt-4 flex items-center justify-between">
+    <span class="text-xs text-subdued"><%= footer_line %></span>
+  </div>
+</div>
