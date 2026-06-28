@@ -150,6 +150,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
         password: "Password1!"
       } }
     end
+    assert_redirected_to new_session_url
   end
 
   test "forwards invitation token when redirecting blocked signup" do
