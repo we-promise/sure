@@ -7,7 +7,7 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
     rule = rules(:one)
     rule.update!(name: "Coffee rule")
     family = rule.family
-    admin = family.users.find_by(role: :admin)
+    admin = family.users.find_by(role: %w[admin super_admin])
     account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
     txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
 
@@ -29,5 +29,32 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
     assert_match I18n.t("rule_notification_mailer.digest.cta"), html
     assert_match %r{/transactions}, html
     assert_match %r{/transactions}, text
+  end
+
+  test "digest is delivered to the super_admin owner when there is no plain admin" do
+    # A self-hosted family is commonly a single super_admin (the owner) with no
+    # :admin user. The owner must still receive the digest.
+    family = Family.create!(name: "Solo owner family", currency: "USD")
+    owner = User.create!(family: family, email: "solo-owner@example.com", password: "password123", role: :super_admin)
+    account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
+    txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
+    rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")
+
+    mail = RuleNotificationMailer.digest(rule: rule, transactions: [ txn ])
+
+    assert_equal [ owner.email ], mail.to
+  end
+
+  test "digest is skipped when the family has no admin or super_admin" do
+    # Transaction details must never go to a regular member/guest.
+    family = Family.create!(name: "No-admin family", currency: "USD")
+    User.create!(family: family, email: "member-only@example.com", password: "password123", role: :member)
+    account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
+    txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
+    rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")
+
+    assert_no_emails do
+      RuleNotificationMailer.digest(rule: rule, transactions: [ txn ]).deliver_now
+    end
   end
 end
