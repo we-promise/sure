@@ -28,6 +28,21 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not @user.reload.rule_prompts_disabled
   end
 
+  test "rule_prompt_settings clears a recent dismissal when re-enabling" do
+    @user.update!(rule_prompts_disabled: true, rule_prompt_dismissed_at: Time.current)
+
+    patch rule_prompt_settings_user_url(@user), params: { user: { rule_prompts_enabled: "1" } }
+
+    assert_nil @user.reload.rule_prompt_dismissed_at
+  end
+
+  test "rule_prompt_settings redirects back to preferences when requested" do
+    patch rule_prompt_settings_user_url(@user),
+      params: { redirect_to: "preferences", user: { rule_prompts_enabled: "0" } }
+
+    assert_redirected_to settings_preferences_url
+  end
+
   test "can update user profile" do
     patch user_url(@user), params: {
       user: {

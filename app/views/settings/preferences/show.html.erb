@@ -39,6 +39,8 @@
 <%= settings_section title: t(".automation_title"), subtitle: t(".automation_subtitle") do %>
   <%= form_with url: rule_prompt_settings_user_path(@user), method: :patch,
         data: { controller: "auto-submit-form" } do |f| %>
+    <%# Explicit redirect so we return to Preferences even when Referer is absent. %>
+    <%= hidden_field_tag :redirect_to, "preferences" %>
     <%# Wrapping the row in <label for=…> makes the title + description a click
         target for the toggle, matching the preview-features card below. %>
     <label for="user_rule_prompts_enabled" class="flex cursor-pointer items-center gap-4 justify-between">

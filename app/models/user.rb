@@ -140,7 +140,11 @@ class User < ApplicationRecord
   end
 
   def rule_prompts_enabled=(value)
-    self.rule_prompts_disabled = !ActiveModel::Type::Boolean.new.cast(value)
+    enabled = ActiveModel::Type::Boolean.new.cast(value)
+    self.rule_prompts_disabled = !enabled
+    # Re-enabling must also clear any recent inline dismissal, otherwise
+    # needs_rule_notification? keeps suppressing prompts for up to a day.
+    self.rule_prompt_dismissed_at = nil if enabled
   end
 
   def initial
