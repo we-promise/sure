@@ -1,6 +1,6 @@
 class SnaptradeItemsController < ApplicationController
-  before_action :set_snaptrade_item, only: [ :show, :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :delete_orphaned_user ]
-  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :delete_orphaned_user ]
+  before_action :set_snaptrade_item, only: [ :show, :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
 
   def index
     @snaptrade_items = Current.family.snaptrade_items.ordered
@@ -257,6 +257,36 @@ class SnaptradeItemsController < ApplicationController
     }
   end
 
+  def start_oauth_device_flow
+    render json: @snaptrade_item.start_oauth_device_flow(scope: params[:scope].presence || "read")
+  rescue ActiveRecord::Encryption::Errors::Decryption => e
+    Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item.id}: #{e.class} - #{e.message}"
+    render json: { error: t("snaptrade_items.connect.decryption_failed") }, status: :unprocessable_entity
+  rescue Provider::Snaptrade::Error => e
+    Rails.logger.error "SnapTrade OAuth device authorization error: #{e.class} - #{e.message}"
+    render json: { error: start_oauth_device_flow_error_message }, status: :unprocessable_entity
+  end
+
+  def complete_oauth_device_flow
+    if params[:device_code].blank?
+      render json: { error: "device_code is required" }, status: :unprocessable_entity
+      return
+    end
+
+    token_response = @snaptrade_item.complete_oauth_device_flow!(device_code: params[:device_code])
+    render json: {
+      token_type: token_response["token_type"],
+      scope: token_response["scope"],
+      expires_in: token_response["expires_in"],
+      expires_at: @snaptrade_item.oauth_token_expires_at&.iso8601
+    }
+  rescue Provider::Snaptrade::ApiError => e
+    render json: oauth_error_payload(e), status: e.status_code || :unprocessable_entity
+  rescue Provider::Snaptrade::Error, ActiveRecord::ActiveRecordError, ActiveRecord::Encryption::Errors::Base => e
+    Rails.logger.error "SnapTrade OAuth device token error: #{e.class} - #{e.message}"
+    render json: { error: complete_oauth_device_flow_error_message }, status: :unprocessable_entity
+  end
+
   # Delete a brokerage connection
   def delete_connection
     authorization_id = params[:authorization_id]
@@ -505,6 +535,36 @@ class SnaptradeItemsController < ApplicationController
     rescue Provider::Snaptrade::ApiError => e
       @error = e.message
       { connections: [], orphaned_users: [] }
+    end
+
+    def oauth_error_payload(error)
+      parsed_body = parse_oauth_error_body(error.response_body)
+      payload = parsed_body.slice("error", "error_description", "error_uri", "interval")
+      payload["error"] ||= error.message
+      payload
+    end
+
+    def start_oauth_device_flow_error_message
+      t(
+        "snaptrade_items.start_oauth_device_flow.failed",
+        default: "Unable to start SnapTrade OAuth device authorization. Please try again."
+      )
+    end
+
+    def complete_oauth_device_flow_error_message
+      t(
+        "snaptrade_items.complete_oauth_device_flow.failed",
+        default: "Unable to complete SnapTrade OAuth device authorization. Please try again."
+      )
+    end
+
+    def parse_oauth_error_body(response_body)
+      return {} if response_body.blank?
+
+      parsed_body = JSON.parse(response_body)
+      parsed_body.is_a?(Hash) ? parsed_body : {}
+    rescue JSON::ParserError
+      {}
     end
 
     def link_snaptrade_account(snaptrade_account)

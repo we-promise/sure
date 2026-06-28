@@ -19,7 +19,7 @@ class Sync < ApplicationRecord
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
 
-  after_commit :update_family_sync_timestamp
+  after_commit :update_family_sync_timestamp, on: [ :create, :update ]
 
   serialize :sync_stats, coder: JSON
 
@@ -259,12 +259,14 @@ class Sync < ApplicationRecord
 
     def update_family_sync_timestamp
       return if syncable.nil?
-      return unless family.persisted?
+      return unless family&.persisted?
 
       family.touch(:latest_sync_activity_at)
     end
 
     def family
+      return nil unless syncable
+
       if syncable.is_a?(Family)
         syncable
       else

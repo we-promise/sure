@@ -686,4 +686,65 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
       ]
     )
   end
+
+  # Regression: a reconciliation waypoint dated EARLIER than the opening anchor
+  # must still be materialized. The reverse loop is bounded on
+  # min(opening_anchor_date, oldest_entry_date), so it continues past the anchor
+  # down to the earliest entry, which resets the balance on its own date.
+  test "materializes reconciliation waypoints dated before the opening anchor" do
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "opening_anchor",  date: 2.days.ago,  balance: 15000 },
+        { type: "reconciliation", date: 4.days.ago,  balance: 9000 } # before the opening anchor
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    # Loop extends back to the earliest entry, not the (later) opening anchor.
+    assert_equal 4.days.ago.to_date, calculated.map(&:date).min
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        }, # Current anchor
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        }, # Gap above the anchor carries down with no flows
+        {
+          date: 2.days.ago,
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        }, # Opening anchor
+        {
+          date: 3.days.ago,
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        }, # Gap below the anchor carries down with no flows
+        {
+          date: 4.days.ago,
+          legacy_balances: { balance: 9000, cash_balance: 9000 },
+          balances: { start: 9000, start_cash: 9000, start_non_cash: 0, end_cash: 9000, end_non_cash: 0, end: 9000 },
+          flows: 0,
+          adjustments: 0
+        } # Pre-anchor reconciliation resets to its own value
+      ]
+    )
+  end
 end

@@ -46,6 +46,9 @@ class Account < ApplicationRecord
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
+  # Accounts whose data should be included in financial reports, dashboards,
+  # and exports. Excludes accounts where the user has opted to suppress them.
+  scope :included_in_reports, -> { where(exclude_from_reports: false) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }

@@ -376,6 +376,15 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_includes @family.accounts.included_in_finances_for(@member), @account
   end
 
+  test "included_in_reports scope excludes accounts marked as exclude_from_reports" do
+    included = @family.accounts.create! name: "Included", balance: 100, currency: "USD", accountable: Depository.new
+    excluded = @family.accounts.create! name: "Excluded", balance: 200, currency: "USD", accountable: Depository.new, exclude_from_reports: true
+
+    results = @family.accounts.included_in_reports
+    assert_includes results, included
+    assert_not_includes results, excluded
+  end
+
   test "auto_share_with_family creates shares for all non-owner members" do
     @family.update!(default_account_sharing: "private")
 

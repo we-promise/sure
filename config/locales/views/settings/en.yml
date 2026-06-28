@@ -262,7 +262,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
-      api_key_label: API Key
+      api_key_label: API Keys
       payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback
@@ -288,7 +288,7 @@ en:
       transactions_section_title: Transactions
       users_label: Users
       whats_new_label: What's new
-      api_keys_label: API Key
+      api_keys_label: API Keys
       appearance_label: Appearance
       bank_sync_label: Bank sync
       debug_label: Debug
