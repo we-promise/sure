@@ -49,7 +49,14 @@ class Trading212Item::Importer
     def fetch_instruments
       provider.fetch_instruments
     rescue => e
-      Rails.logger.warn("Trading212Item::Importer - Failed to fetch instruments: #{e.message}. Using cached payload.")
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "Trading212Item::Importer - Failed to fetch instruments: #{e.message}. Using cached payload.",
+        source: "trading212",
+        family: trading212_item.family,
+        provider_key: "trading212"
+      )
       Array(trading212_item.raw_instruments_payload)
     end
 

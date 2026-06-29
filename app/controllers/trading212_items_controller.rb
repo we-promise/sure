@@ -76,7 +76,14 @@ class Trading212ItemsController < ApplicationController
     begin
       @trading212_item.unlink_all!(dry_run: false)
     rescue => e
-      Rails.logger.warn("Trading 212 unlink during destroy failed: #{e.class} - #{e.message}")
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Trading 212 unlink during destroy failed: #{e.class} - #{e.message}",
+        source: "trading212",
+        family: Current.family,
+        provider_key: "trading212"
+      )
     end
 
     @trading212_item.destroy_later
@@ -149,13 +156,27 @@ class Trading212ItemsController < ApplicationController
     begin
       Trading212Account::Processor.new(t212_account.reload).process
     rescue => e
-      Rails.logger.error("Failed to process linked Trading 212 account #{t212_account.id}: #{e.class} - #{e.message}")
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Failed to process linked Trading 212 account #{t212_account.id}: #{e.class} - #{e.message}",
+        source: "trading212",
+        family: Current.family,
+        provider_key: "trading212"
+      )
     end
 
     t212_account.trading212_item.sync_later unless t212_account.trading212_item.syncing?
     redirect_to account_path(account), notice: t(".success"), status: :see_other
   rescue => e
-    Rails.logger.error("Failed to link existing Trading 212 account: #{e.class} - #{e.message}")
+    DebugLogEntry.capture(
+      category: "sync",
+      level: "error",
+      message: "Failed to link existing Trading 212 account: #{e.class} - #{e.message}",
+      source: "trading212",
+      family: Current.family,
+      provider_key: "trading212"
+    )
     redirect_to settings_providers_path, alert: t(".failed"), status: :see_other
   end
 
@@ -203,7 +224,14 @@ class Trading212ItemsController < ApplicationController
       begin
         Trading212Account::Processor.new(t212_account.reload).process
       rescue => e
-        Rails.logger.error("Failed to process Trading 212 account #{t212_account.id} after setup: #{e.class} - #{e.message}")
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "error",
+          message: "Failed to process Trading 212 account #{t212_account.id} after setup: #{e.class} - #{e.message}",
+          source: "trading212",
+          family: Current.family,
+          provider_key: "trading212"
+        )
       end
     end
 

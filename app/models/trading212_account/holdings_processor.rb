@@ -63,8 +63,14 @@ class Trading212Account::HoldingsProcessor
         delete_future_holdings: false
       )
     rescue => e
-      Rails.logger.error(
-        "Trading212Account::HoldingsProcessor - Failed to process position #{t212_ticker}: #{e.message}"
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Trading212Account::HoldingsProcessor - Failed to process position #{t212_ticker}: #{e.message}",
+        source: "trading212",
+        family: @trading212_account.trading212_item.family,
+        provider_key: "trading212",
+        metadata: { ticker: t212_ticker, trading212_account_id: @trading212_account.id }
       )
     end
 

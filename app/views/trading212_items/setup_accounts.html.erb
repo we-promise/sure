@@ -79,7 +79,7 @@
                         <%= t(
                           ".available_accounts.account_summary",
                           account_type: t(".available_accounts.account_type_investment"),
-                          balance: number_to_currency(t212_account.current_balance || 0, unit: Money::Currency.new(t212_account.currency || "GBP").symbol)
+                          balance: number_to_currency(t212_account.current_balance || 0, unit: Money::Currency.new(t212_account.currency.presence || Current.family.currency).symbol)
                         ) %>
                       </p>
                       <% if t212_account.trading212_account_id.present? %>
@@ -119,7 +119,7 @@
                   <p class="text-xs text-primary mb-1"><%= t212_account.name %></p>
                   <div class="flex items-center gap-2">
                     <%= link_form.select :account_id,
-                          options_for_select(@linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: number_to_currency(a.balance, unit: Money::Currency.new(a.currency || "GBP").symbol)), a.id ] }),
+                          options_for_select(@linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: number_to_currency(a.balance, unit: Money::Currency.new(a.currency.presence || Current.family.currency).symbol)), a.id ] }),
                           { prompt: t(".link_existing.select_prompt") },
                           class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0" %>
                     <%= render DS::Button.new(

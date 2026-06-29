@@ -21,7 +21,7 @@
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= t212_account.name.presence || t212_account.trading212_account_id %></span>
                   <span class="text-xs text-secondary">
-                    <%= t212_account.currency %> • <%= t(".balance") %>: <%= number_to_currency((t212_account.current_balance || 0), unit: Money::Currency.new(t212_account.currency || "GBP").symbol) %>
+                    <%= t212_account.currency %> • <%= t(".balance") %>: <%= number_to_currency((t212_account.current_balance || 0), unit: Money::Currency.new(t212_account.currency.presence || Current.family.currency).symbol) %>
                   </span>
                 </div>
               </label>

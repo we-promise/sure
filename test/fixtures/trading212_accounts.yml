@@ -1,0 +1,26 @@
+# Minimal fixtures for Trading212 accounts
+# Per CLAUDE.md: Keep fixtures minimal (2-3 per model for base cases)
+
+main_account:
+  trading212_item: configured_item
+  name: "Trading 212 Invest"
+  trading212_account_id: "t212_acc_123"
+  currency: USD
+  current_balance: 50000.0000
+  cash_balance: 2500.0000
+  raw_positions_payload: []
+  raw_orders_payload: []
+  raw_dividends_payload: []
+  raw_transactions_payload: []
+
+pending_setup_account:
+  trading212_item: pending_setup_item
+  name: "Trading 212 ISA"
+  trading212_account_id: "t212_acc_456"
+  currency: GBP
+  current_balance: 20000.0000
+  cash_balance: 1000.0000
+  raw_positions_payload: []
+  raw_orders_payload: []
+  raw_dividends_payload: []
+  raw_transactions_payload: []

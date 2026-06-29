@@ -36,7 +36,14 @@ class Trading212Item < ApplicationRecord
 
     Trading212Item::Importer.new(self, provider: provider).import
   rescue => e
-    Rails.logger.error("Trading212Item #{id} - Failed to import data: #{e.message}")
+    DebugLogEntry.capture(
+      category: "sync",
+      level: "error",
+      message: "Trading212Item #{id} - Failed to import data: #{e.message}",
+      source: "trading212",
+      family: family,
+      provider_key: "trading212"
+    )
     raise
   end
 
@@ -52,7 +59,15 @@ class Trading212Item < ApplicationRecord
         result = Trading212Account::Processor.new(t212_account).process
         results << { trading212_account_id: t212_account.id, success: true, result: result }
       rescue => e
-        Rails.logger.error("Trading212Item #{id} - Failed to process account #{t212_account.id}: #{e.message}")
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "error",
+          message: "Trading212Item #{id} - Failed to process account #{t212_account.id}: #{e.message}",
+          source: "trading212",
+          family: family,
+          provider_key: "trading212",
+          account_provider_id: t212_account.account_provider&.id
+        )
         results << { trading212_account_id: t212_account.id, success: false, error: e.message }
       end
     end
@@ -68,7 +83,15 @@ class Trading212Item < ApplicationRecord
         )
         results << { account_id: account.id, success: true }
       rescue => e
-        Rails.logger.error("Trading212Item #{id} - Failed to schedule sync for account #{account.id}: #{e.message}")
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "error",
+          message: "Trading212Item #{id} - Failed to schedule sync for account #{account.id}: #{e.message}",
+          source: "trading212",
+          family: family,
+          provider_key: "trading212",
+          account_id: account.id
+        )
         results << { account_id: account.id, success: false, error: e.message }
       end
     end

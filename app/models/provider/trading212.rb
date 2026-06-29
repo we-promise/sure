@@ -152,7 +152,13 @@ class Provider::Trading212
       rescue *RETRYABLE_ERRORS => e
         raise if attempt >= max_retries
         delay = [ 2**attempt, 30 ].min
-        Rails.logger.warn("Provider::Trading212 #{label} attempt #{attempt} failed: #{e.message}. Retrying in #{delay}s")
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "warn",
+          message: "Provider::Trading212 #{label} attempt #{attempt} failed: #{e.message}. Retrying in #{delay}s",
+          source: "trading212",
+          provider_key: "trading212"
+        )
         sleep(delay)
         retry
       end

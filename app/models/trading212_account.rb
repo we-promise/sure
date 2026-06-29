@@ -41,7 +41,14 @@ class Trading212Account < ApplicationRecord
     reload_account_provider
     provider
   rescue => e
-    Rails.logger.warn("Trading212Account##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
+    DebugLogEntry.capture(
+      category: "sync",
+      level: "warn",
+      message: "Trading212Account##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}",
+      source: "trading212",
+      family: trading212_item.family,
+      provider_key: "trading212"
+    )
     nil
   end
 

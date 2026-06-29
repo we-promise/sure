@@ -22,9 +22,14 @@ module Trading212Item::Unlinking
           links.each(&:destroy!)
         end
       rescue => e
-        Rails.logger.warn(
-          "Trading212Item Unlinker: failed to fully unlink provider account ##{provider_account.id} " \
-          "(links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "error",
+          message: "Trading212Item Unlinker: failed to fully unlink provider account ##{provider_account.id} " \
+                   "(links=#{link_ids.inspect}): #{e.class} - #{e.message}",
+          source: "trading212",
+          family: family,
+          provider_key: "trading212"
         )
         result[:error] = e.message
       end

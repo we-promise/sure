@@ -94,8 +94,14 @@ class Trading212Account::ActivitiesProcessor
 
       true
     rescue => e
-      Rails.logger.error(
-        "Trading212Account::ActivitiesProcessor - Failed to process order #{raw.dig(:order, :id)}: #{e.message}"
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Trading212Account::ActivitiesProcessor - Failed to process order #{raw.dig(:order, :id)}: #{e.message}",
+        source: "trading212",
+        family: @trading212_account.trading212_item.family,
+        provider_key: "trading212",
+        metadata: { order_id: raw.dig(:order, :id), trading212_account_id: @trading212_account.id }
       )
       false
     end
@@ -134,8 +140,14 @@ class Trading212Account::ActivitiesProcessor
 
       true
     rescue => e
-      Rails.logger.error(
-        "Trading212Account::ActivitiesProcessor - Failed to process dividend #{dividend[:reference]}: #{e.message}"
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Trading212Account::ActivitiesProcessor - Failed to process dividend #{dividend[:reference]}: #{e.message}",
+        source: "trading212",
+        family: @trading212_account.trading212_item.family,
+        provider_key: "trading212",
+        metadata: { reference: dividend[:reference], trading212_account_id: @trading212_account.id }
       )
       false
     end
@@ -172,8 +184,14 @@ class Trading212Account::ActivitiesProcessor
 
       true
     rescue => e
-      Rails.logger.error(
-        "Trading212Account::ActivitiesProcessor - Failed to process transaction #{transaction[:reference]}: #{e.message}"
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Trading212Account::ActivitiesProcessor - Failed to process transaction #{transaction[:reference]}: #{e.message}",
+        source: "trading212",
+        family: @trading212_account.trading212_item.family,
+        provider_key: "trading212",
+        metadata: { reference: transaction[:reference], trading212_account_id: @trading212_account.id }
       )
       false
     end
