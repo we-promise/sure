@@ -6,6 +6,7 @@ class TransactionImport < Import
       new_transactions = []
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
+      claimed_external_ids = {} # external_id (this run) => Entry we created/updated, for in-batch dedup
 
       rows.each_with_index do |row, index|
         mapped_account = if account
@@ -35,6 +36,15 @@ class TransactionImport < Import
         # This ensures identical rows within the CSV are all imported as separate transactions
         external_id = row.external_id.presence
 
+        # In-batch dedup: a repeated external_id within the same CSV must fold
+        # into the entry we already created/updated this run. The persisted
+        # lookup below can't see a still-pending new_transactions record, so
+        # without this two rows sharing an id would both be inserted.
+        if external_id && (claimed = claimed_external_ids[external_id])
+          apply_row_updates(claimed, category: category, tags: tags, notes: row.notes)
+          next
+        end
+
         # Prefer an exact external_id match when the CSV carries a unique
         # transaction id (robust dedup, e.g. re-importing the same file), and
         # fall back to the existing date/amount/name heuristic otherwise.
@@ -51,9 +61,7 @@ class TransactionImport < Import
 
         if duplicate_entry
           # Update existing transaction instead of creating a new one
-          duplicate_entry.transaction.category = category if category.present?
-          duplicate_entry.transaction.tags = tags if tags.any?
-          duplicate_entry.notes = row.notes if row.notes.present?
+          apply_row_updates(duplicate_entry, category: category, tags: tags, notes: row.notes)
           # Only backfill external_id when the matched entry doesn't already have
           # one. Never overwrite a different existing id (e.g. a provider's), so
           # we don't clobber the canonical identifier used for future dedup.
@@ -62,24 +70,28 @@ class TransactionImport < Import
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)
+          claimed_external_ids[external_id] = duplicate_entry if external_id
         else
           # Create new transaction (no duplicate found)
           # Mark as import_locked to protect from provider sync overwrites
-          new_transactions << Transaction.new(
-            category: category,
-            tags: tags,
-            entry: Entry.new(
-              account: mapped_account,
-              date: row.date_iso,
-              amount: row.signed_amount,
-              name: row.name,
-              currency: effective_currency,
-              notes: row.notes,
-              external_id: external_id,
-              import: self,
-              import_locked: true
-            )
+          new_entry = Entry.new(
+            account: mapped_account,
+            date: row.date_iso,
+            amount: row.signed_amount,
+            name: row.name,
+            currency: effective_currency,
+            notes: row.notes,
+            external_id: external_id,
+            import: self,
+            import_locked: true
           )
+          new_transaction = Transaction.new(category: category, tags: tags)
+          # Link both directions explicitly: recursive import! persists the entry
+          # via transaction.entry, while the in-batch merge reads entry.transaction.
+          new_transaction.entry = new_entry
+          new_entry.entryable = new_transaction
+          new_transactions << new_transaction
+          claimed_external_ids[external_id] = new_entry if external_id
         end
       end
 
@@ -128,4 +140,17 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  private
+
+    # Applies a CSV row's category/tags/notes onto an entry we are either
+    # updating (a persisted duplicate) or building (a pending new entry). Used by
+    # both the duplicate path and the in-batch dedup merge so the two stay in
+    # sync. Tags are unioned so a later duplicate row never drops earlier tags.
+    def apply_row_updates(entry, category:, tags:, notes:)
+      txn = entry.transaction
+      txn.category = category if category.present?
+      txn.tags = (txn.tags | tags) if tags.any?
+      entry.notes = notes if notes.present?
+    end
 end

@@ -128,6 +128,33 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal 1, account.entries.where(external_id: "abc-123").count
   end
 
+  test "external_id de-duplicates repeated rows within a single import" do
+    account = accounts(:depository)
+    csv = <<~CSV
+      date,name,amount,txn_id
+      01/01/2024,Coffee,5.00,abc-123
+      01/02/2024,Coffee again,7.00,abc-123
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "txn_id",
+      date_format: "%m/%d/%Y"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { account.entries.count } => 1 do
+      @import.publish
+    end
+
+    assert_equal 1, account.entries.where(external_id: "abc-123").count
+  end
+
   test "imports transactions with separate type column for signage convention" do
     import = <<~CSV
       date,amount,amount_type
