@@ -60,7 +60,7 @@ class GoalPledgesController < ApplicationController
       # Preload linked accounts + their providers so any_connected_account?
       # and the new-pledge form's per-account helpers don't trigger N+1
       # queries on account_providers.
-      @goal = Current.family.goals
+      @goal = Current.family.goals.savings
                             .includes(:open_pledges, linked_accounts: :account_providers)
                             .find(params[:goal_id])
     end

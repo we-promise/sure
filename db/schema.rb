@@ -549,7 +549,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.index ["provider_key"], name: "index_debug_log_entries_on_provider_key"
     t.index ["source"], name: "index_debug_log_entries_on_source"
     t.index ["user_id"], name: "index_debug_log_entries_on_user_id"
-    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying, 'info'::character varying, 'warn'::character varying, 'error'::character varying]::text[])", name: "chk_debug_log_entries_level"
+    t.check_constraint "level::text = ANY (ARRAY['debug'::character varying::text, 'info'::character varying::text, 'warn'::character varying::text, 'error'::character varying::text])", name: "chk_debug_log_entries_level"
   end
 
   create_table "depositories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -770,6 +770,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
     t.datetime "last_sync_all_attempted_at"
+    t.boolean "retirement_disabled", default: false, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -849,11 +850,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+    t.string "type", default: "Goal", null: false
+    t.uuid "user_id"
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
+    t.index ["family_id", "type", "state"], name: "index_goals_on_family_type_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
+    t.index ["user_id", "type"], name: "index_goals_on_user_and_type_retirement", where: "((type)::text = 'Goal::Retirement'::text)"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "type::text <> 'Goal::Retirement'::text OR user_id IS NOT NULL", name: "chk_goals_retirement_requires_owner"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2146,6 +2152,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "goals", "users", on_delete: :restrict
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"

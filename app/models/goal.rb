@@ -1,6 +1,8 @@
 class Goal < ApplicationRecord
   include AASM, Monetizable
 
+  self.inheritance_column = :type
+
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
@@ -30,6 +32,12 @@ class Goal < ApplicationRecord
   scope :active_first, lambda {
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
   }
+  # Savings goals only — the base Goal type. STI subtypes such as
+  # Goal::Retirement have their own surfaces (RetirementController) and
+  # must NOT be reachable through the shared goal/pledge routes, where
+  # any preview-enabled family member could otherwise view, edit, or
+  # delete another member's owner-scoped retirement plan.
+  scope :savings, -> { where(type: "Goal") }
 
   def self.advisory_lock_key_for(family_id)
     Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
@@ -399,6 +407,13 @@ class Goal < ApplicationRecord
     pending = open_pledges.sum(:amount).to_d
     delta = [ monthly_target_amount.to_d - pace.to_d - pending, 0 ].max
     Money.new(delta, currency)
+  end
+
+  # Family-scoped default for base Goal records. Subclasses like
+  # Goal::Retirement narrow this to owner-only by overriding.
+  def editable_by?(user)
+    return false if user.nil?
+    family_id == user.family_id
   end
 
   private

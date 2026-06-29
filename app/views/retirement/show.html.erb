@@ -1,0 +1,26 @@
+<% content_for :breadcrumbs do %>
+  <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
+<% end %>
+
+<div class="space-y-6">
+  <header class="space-y-2">
+    <h1 class="text-primary text-2xl font-semibold">
+      <%= t("retirement.show.title") %>
+    </h1>
+    <p class="text-secondary text-sm">
+      <%= t("retirement.show.subtitle") %>
+    </p>
+  </header>
+
+  <section class="bg-container shadow-border-xs rounded-xl p-8 text-center">
+    <div class="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-surface-inset">
+      <%= icon("sun", size: "lg") %>
+    </div>
+    <p class="text-primary text-base font-medium mb-2">
+      <%= t("retirement.show.placeholder_heading") %>
+    </p>
+    <p class="text-secondary text-sm max-w-prose mx-auto">
+      <%= t("retirement.show.placeholder_body") %>
+    </p>
+  </section>
+</div>

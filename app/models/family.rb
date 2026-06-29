@@ -410,6 +410,16 @@ class Family < ApplicationRecord
     Rails.application.config.app_mode.self_hosted?
   end
 
+  # Tier 2 of the Retirement preview gate. Tier 1 is
+  # User#preview_features_enabled? (read via PreviewGateable). The
+  # retirement_disabled column defaults to false; admins flip it to hide
+  # the feature household-wide without revoking individual preview
+  # access. Per-user param futureproofs the v1.1 non-owner viewer split.
+  def retirement_enabled?(user)
+    return false if user.nil?
+    !retirement_disabled?
+  end
+
   private
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by

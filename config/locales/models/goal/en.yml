@@ -11,6 +11,7 @@ en:
         notes: Notes
         state: State
         linked_accounts: Linked accounts
+        owner: Owner
     errors:
       models:
         goal:
@@ -23,3 +24,5 @@ en:
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
             currency:
               locked_after_linked: Can't change the currency after the goal is linked to accounts.
+            owner:
+              must_belong_to_family: must belong to the same family as the goal.

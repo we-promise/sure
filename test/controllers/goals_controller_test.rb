@@ -302,4 +302,28 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to goals_path
     assert_equal I18n.t("goals.errors.not_found"), flash[:alert]
   end
+
+  test "retirement goals are excluded from the savings index" do
+    Goal::Retirement.create!(
+      family: @user.family, owner: @user,
+      name: "My Retirement Plan", target_amount: 1_000_000, currency: "USD"
+    )
+
+    get goals_url
+
+    assert_response :success
+    assert_no_match(/My Retirement Plan/, response.body)
+  end
+
+  test "retirement goal is not reachable via the savings show route" do
+    retirement = Goal::Retirement.create!(
+      family: @user.family, owner: @user,
+      name: "Retire", target_amount: 1_000_000, currency: "USD"
+    )
+
+    get goal_url(retirement)
+
+    assert_redirected_to goals_path
+    assert_equal I18n.t("goals.errors.not_found"), flash[:alert]
+  end
 end
