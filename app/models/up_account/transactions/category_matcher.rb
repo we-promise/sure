@@ -40,8 +40,10 @@ class UpAccount::Transactions::CategoryMatcher
           next true if name.singularize == alias_str || name.pluralize == alias_str
           next true if alias_str.singularize == name || alias_str.pluralize == name
 
-          normalized_name  = name.gsub(/(and|&|\s+)/, "").strip
-          normalized_alias = alias_str.gsub(/(and|&|\s+)/, "").strip
+          # Strip the standalone "and" conjunction (word-boundaried so it does not eat
+          # "and" inside a word, e.g. errand), plus "&" and whitespace.
+          normalized_name  = name.gsub(/(\band\b|&|\s+)/, "").strip
+          normalized_alias = alias_str.gsub(/(\band\b|&|\s+)/, "").strip
           normalized_name == normalized_alias
         end
       end
