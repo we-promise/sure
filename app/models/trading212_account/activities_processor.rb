@@ -3,7 +3,7 @@ class Trading212Account::ActivitiesProcessor
 
   # T212 transaction types that map to cash flows
   DEPOSIT_TYPE = "DEPOSIT".freeze
-  WITHDRAWAL_TYPE = "WITHDRAWAL".freeze
+  WITHDRAW_TYPE = "WITHDRAW".freeze
   INTEREST_TYPE = "INTEREST".freeze
   FEE_TYPE = "FEE".freeze
 
@@ -182,7 +182,7 @@ class Trading212Account::ActivitiesProcessor
       case type
       when DEPOSIT_TYPE
         [ "Contribution", -amount.abs ]
-      when WITHDRAWAL_TYPE
+      when WITHDRAW_TYPE
         [ "Withdrawal", amount.abs ]
       when INTEREST_TYPE
         [ "Interest", -amount.abs ]
