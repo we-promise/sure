@@ -50,7 +50,8 @@ class BudgetCategory < ApplicationRecord
   end
 
   def actual_spending
-    budget.budget_category_actual_spending(self)
+    return @actual_spending if defined?(@actual_spending)
+    @actual_spending = budget.budget_category_actual_spending(self)
   end
 
   def update_budgeted_spending!(new_budgeted_spending)
@@ -100,11 +101,12 @@ class BudgetCategory < ApplicationRecord
   end
 
   def available_to_spend
-    if inherits_parent_budget?
+    return @available_to_spend if defined?(@available_to_spend)
+
+    @available_to_spend = if inherits_parent_budget?
       # Subcategories using parent budget share the parent's available_to_spend
       parent = parent_budget_category
-      return 0 unless parent
-      parent.available_to_spend
+      parent ? parent.available_to_spend : 0
     elsif subcategory?
       # Subcategory with individual limit
       (self[:budgeted_spending] || 0) - actual_spending
@@ -136,21 +138,36 @@ class BudgetCategory < ApplicationRecord
   end
 
   def percent_of_budget_spent
-    if inherits_parent_budget?
+    return @percent_of_budget_spent if defined?(@percent_of_budget_spent)
+
+    @percent_of_budget_spent = if inherits_parent_budget?
       # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category
-      return 0 unless parent
-
-      parent_budget = parent[:budgeted_spending] || 0
-      return 0 if parent_budget == 0 && actual_spending == 0
-      return 100 if parent_budget == 0 && actual_spending > 0
-      (actual_spending.to_f / parent_budget) * 100
+      if parent.nil?
+        0
+      else
+        parent_budget = parent[:budgeted_spending] || 0
+        if parent_budget == 0 && actual_spending == 0
+          0
+        elsif parent_budget == 0 && actual_spending > 0
+          100
+        else
+          (actual_spending.to_f / parent_budget) * 100
+        end
+      end
     else
       budget_amount = self[:budgeted_spending] || 0
-      return 0 if budget_amount == 0 && actual_spending == 0
-      return 0 if budget_amount > 0 && actual_spending == 0
-      return 100 if budget_amount == 0 && actual_spending > 0
-      (actual_spending.to_f / budget_amount) * 100 if budget_amount > 0 && actual_spending > 0
+      if budget_amount == 0 && actual_spending == 0
+        0
+      elsif budget_amount > 0 && actual_spending == 0
+        0
+      elsif budget_amount == 0 && actual_spending > 0
+        100
+      elsif budget_amount > 0 && actual_spending > 0
+        (actual_spending.to_f / budget_amount) * 100
+      else
+        0
+      end
     end
   end
 
@@ -230,13 +247,21 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories.select { |bc| bc.category.parent_id == category.parent_id && bc.id != id }
   end
 
+  # Returns sibling BudgetCategory rows whose Category#parent_id matches this
+  # parent category. Previously this issued a fresh SQL query on every call,
+  # which created severe N+1 in views: `available_to_spend`, `over_budget?`,
+  # `near_limit?`, `bar_width_percent` all touch it for every parent card, and
+  # each card partial calls those methods multiple times.
+  #
+  # `budget.budget_categories` is already loaded with `includes(:category)` by
+  # the association scope, so we filter in-memory and memoize the result.
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
-    return BudgetCategory.none if category.id.nil?
+    return [] unless category.parent_id.nil?
+    return [] if category.id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    @subcategories ||= budget.budget_categories.select do |bc|
+      bc.category.parent_id == category.id
+    end
   end
 
   private

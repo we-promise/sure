@@ -16,6 +16,12 @@ Rails.application.configure do
   config.consider_all_requests_local = false
   config.action_controller.perform_caching = true
 
+  # Optional `Server-Timing` response headers — handy for confirming where time
+  # is actually being spent (controller vs view vs DB) without re-deploying
+  # tracing changes. Enable temporarily with SERVER_TIMING=true; results are
+  # visible in any browser's dev tools Network → Timing tab.
+  config.server_timing = ENV["SERVER_TIMING"] == "true"
+
   # Ensures that a master key has been made available in ENV["RAILS_MASTER_KEY"], config/master.key, or an environment
   # key such as config/credentials/production.key. This key is used to decrypt credentials (and other encrypted files).
   # config.require_master_key = true

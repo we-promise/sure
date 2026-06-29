@@ -265,7 +265,7 @@ class Budget < ApplicationRecord
   # Budget allocations: How much user has budgeted for all parent categories combined
   # =============================================================================
   def allocated_spending
-    budget_categories.reject { |bc| bc.subcategory? }.sum(&:budgeted_spending)
+    @allocated_spending ||= budget_categories.reject { |bc| bc.subcategory? }.sum(&:budgeted_spending)
   end
 
   def allocated_percent
@@ -286,11 +286,14 @@ class Budget < ApplicationRecord
   # Income: How much user earned relative to what they expected to earn
   # =============================================================================
   def estimated_income
-    family.income_statement.median_income(interval: "month")
+    # Use the memoized `income_statement` helper rather than re-instantiating
+    # via `family.income_statement`, which throws away the per-instance memos
+    # for categories, period totals, exchange rates, etc.
+    income_statement.median_income(interval: "month")
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_statement.income_totals(period: self.period).total
   end
 
   def actual_income_percent

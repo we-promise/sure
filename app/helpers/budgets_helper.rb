@@ -1,8 +1,17 @@
 module BudgetsHelper
+  # Derives the "any category over budget?" flag from the already-computed
+  # `categories_state` so we don't walk the full budget_categories list a
+  # second time and re-trigger `available_to_spend` / `subcategories` work
+  # for every parent card. The original version called
+  # `budget.budget_categories.any?(&:any_over_budget?)`, which on top of
+  # being a separate iteration also short-circuited *after* the first
+  # over-budget row — so for a budget where most categories are over budget
+  # it added very little, but for the common case where the first row is
+  # on-track it walked the entire list anyway.
   def budget_has_over_budget?(budget)
     return false unless budget.initialized?
 
-    budget.budget_categories.any?(&:any_over_budget?)
+    budget_categories_view_state(budget)[:over_budget_count].positive?
   end
 
   def budget_categories_view_state(budget)
