@@ -19,19 +19,24 @@ class Provider::Snaptrade
   OAUTH_DISCOVERY_URL = "https://api.snaptrade.com/.well-known/oauth-authorization-server".freeze
   DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code".freeze
 
-  attr_reader :client, :client_id, :consumer_key
+  attr_reader :client_id, :consumer_key
 
-  def initialize(client_id:, consumer_key:)
-    raise ConfigurationError, "client_id is required" if client_id.blank?
-    raise ConfigurationError, "consumer_key is required" if consumer_key.blank?
-
+  def initialize(client_id: nil, consumer_key: nil)
     @client_id = client_id
     @consumer_key = consumer_key
+
+    return if client_id.blank? && consumer_key.blank?
+    raise ConfigurationError, "client_id is required" if client_id.blank?
+    raise ConfigurationError, "consumer_key is required" if consumer_key.blank?
 
     configuration = SnapTrade::Configuration.new
     configuration.client_id = client_id
     configuration.consumer_key = consumer_key
     @client = SnapTrade::Client.new(configuration)
+  end
+
+  def self.oauth_client_id_configured?
+    Rails.configuration.x.snaptrade&.oauth_client_id.present?
   end
 
   def oauth_authorization_server_metadata
@@ -277,6 +282,10 @@ class Provider::Snaptrade
   end
 
   private
+
+    def client
+      @client || raise(ConfigurationError, "SnapTrade API credentials are required")
+    end
 
     def handle_api_error(error, operation)
       status = error.code

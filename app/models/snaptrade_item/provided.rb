@@ -14,6 +14,10 @@ module SnaptradeItem::Provided
     )
   end
 
+  def oauth_snaptrade_provider
+    snaptrade_provider || Provider::Snaptrade.new
+  end
+
   # Clean up SnapTrade user when item is destroyed
   def delete_snaptrade_user
     return unless user_registered?
@@ -133,17 +137,11 @@ module SnaptradeItem::Provided
   end
 
   def start_oauth_device_flow(scope: "read")
-    provider = snaptrade_provider
-    raise Provider::Snaptrade::ConfigurationError, "SnapTrade provider not configured" unless provider
-
-    provider.start_device_authorization(scope: scope)
+    oauth_snaptrade_provider.start_device_authorization(scope: scope)
   end
 
   def complete_oauth_device_flow!(device_code:)
-    provider = snaptrade_provider
-    raise Provider::Snaptrade::ConfigurationError, "SnapTrade provider not configured" unless provider
-
-    token_response = provider.poll_device_token(device_code: device_code)
+    token_response = oauth_snaptrade_provider.poll_device_token(device_code: device_code)
     update!(
       oauth_access_token: token_response["access_token"],
       oauth_refresh_token: token_response["refresh_token"],

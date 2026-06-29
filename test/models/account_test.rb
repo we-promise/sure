@@ -129,6 +129,40 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "checking", account.subtype
   end
 
+  test "subtype assigned before accountable_type is not dropped" do
+    # The real controller path: strong-params `permit` preserves filter order,
+    # and `account_params` lists `:subtype` before `:accountable_type`, so the
+    # subtype writer runs while the type is still unknown.
+    account = Account.new
+    account.subtype = "savings"
+    account.accountable_type = "Depository"
+
+    assert_not_nil account.accountable
+    assert_equal "savings", account.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype persists on create when attributes arrive in permit order" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors `account_params`: `permit` yields keys in filter order, so the
+    # create hash carries `subtype` before `accountable_type` — the ordering
+    # that previously dropped the subtype on create.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      subtype: "savings",
+      currency: "USD",
+      accountable_type: "Depository"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
   test "accountable display names expose singular and group contexts" do
     assert_equal "Investment", Investment.singular_display_name
     assert_equal "Investments", Investment.display_name
