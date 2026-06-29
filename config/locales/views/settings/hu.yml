@@ -173,6 +173,9 @@ hu:
         enable_mfa: Kétlépéses azonosítás bekapcsolása
         disable_mfa: Kétlépéses azonosítás kikapcsolása
         disable_mfa_confirm: Biztosan ki szeretnéd kapcsolni a kétlépéses azonosítást?
+        disable_mfa_password_label: Erősítsd meg a jelszavaddal
+        disable_mfa_password_placeholder: Add meg a jelszavadat
+        mfa_sso_only: A kétlépéses azonosítást a kapcsolt azonosítószolgáltatód kezeli.
         sso_title: Kapcsolt fiókok
         sso_subtitle: Egyszeri bejelentkezési fiókkapcsolatok kezelése
         sso_disconnect: Leválasztás
