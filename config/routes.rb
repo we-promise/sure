@@ -405,6 +405,8 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
       patch :update_preferences
+      get :search_menu, to: "transactions/searches#menu"
+      get :upcoming, to: "transactions/upcomings#show"
     end
 
     member do

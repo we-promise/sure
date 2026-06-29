@@ -48,7 +48,7 @@
 
   <%= render "summary", totals: @search.totals %>
   <% if Current.family.recurring_transactions_disabled? %>
-    <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+    <%= render "transactions/list", transactions: @transactions, q: params[:q], pagy: @pagy %>
   <% else %>
     <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
       <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
@@ -58,13 +58,17 @@
 
       <% tabs.with_panel(tab_id: "transactions") do %>
         <div class="bg-container rounded-xl shadow-border-xs">
-          <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+          <%= render "transactions/list", transactions: @transactions, q: params[:q], pagy: @pagy %>
         </div>
       <% end %>
 
       <% tabs.with_panel(tab_id: "upcoming") do %>
         <div class="bg-container rounded-xl shadow-border-xs">
-          <%= render "transactions/upcoming" %>
+          <%= turbo_frame_tag "transactions-upcoming",
+              src: upcoming_transactions_path,
+              loading: :lazy do %>
+            <p class="text-sm text-secondary p-4"><%= t("transactions.upcoming.loading") %></p>
+          <% end %>
         </div>
       <% end %>
     <% end %>

@@ -52,16 +52,9 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
-    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
+    @uncategorized_count = uncategorized_count_for_index
 
-    # Load projected recurring transactions for next 10 days
-    @projected_recurring = Current.family.recurring_transactions
-                                  .accessible_by(Current.user)
-                                  .active
-                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
-                                         10.days.from_now.to_date,
-                                         Date.current)
-                                  .includes(:merchant)
+    @has_projected_recurring = projected_recurring_exists?
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
@@ -409,6 +402,25 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def uncategorized_count_for_index
+      Rails.cache.fetch(
+        "uncategorized_count/#{Current.family.id}/#{Current.user.id}/#{Current.family.entries_cache_version}",
+        expires_in: 5.minutes
+      ) do
+        Current.accessible_entries.uncategorized_transactions.count
+      end
+    end
+
+    def projected_recurring_exists?
+      Current.family.recurring_transactions
+             .accessible_by(Current.user)
+             .active
+             .where("next_expected_date <= ? AND next_expected_date >= ?",
+                    10.days.from_now.to_date,
+                    Date.current)
+             .exists?
+    end
+
     def accessible_transactions
       Current.family.transactions
         .joins(entry: :account)

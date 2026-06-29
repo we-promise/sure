@@ -13,12 +13,10 @@ if ENV["SENTRY_DSN"].present?
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-    config.traces_sample_rate = 0.25
-
-    # Set profiles_sample_rate to profile 100%
-    # of sampled transactions.
-    # We recommend adjusting this value in production.
-    config.profiles_sample_rate = 0.25
+    # Lower sampling keeps performance overhead down on hot paths like transactions#index.
+    # Use Skylight for steady-state APM; keep Sentry for errors and light trace sampling.
+    config.traces_sample_rate = 0.05
+    config.profiles_sample_rate = 0
 
     config.release = Rails.root.join(".sure-version").read.strip rescue nil
     config.profiler_class = Sentry::Vernier::Profiler

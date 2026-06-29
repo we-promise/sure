@@ -1,0 +1,8 @@
+<%# The frame is loaded inside the outer #transactions-search form,
+    so we render fields_for (no inner <form>) to scope inputs as `q[...]`
+    and let the outer form's GET to transactions_path carry them. %>
+<%= turbo_frame_tag "transaction-filters-menu" do %>
+  <%= fields_for :q, OpenStruct.new(@q) do |form| %>
+    <%= render "transactions/searches/menu", form: form %>
+  <% end %>
+<% end %>

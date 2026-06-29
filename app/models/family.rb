@@ -224,6 +224,16 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  def cached_assigned_merchants_for(user)
+    Rails.cache.fetch(assigned_merchants_cache_key(user)) do
+      assigned_merchants_for(user).alphabetically.load
+    end
+  end
+
+  def assigned_merchants_cache_key(user)
+    "family/#{id}/assigned_merchants/#{user.id}/#{entries_cache_version}"
+  end
+
   def available_merchants_for(user)
     assigned_ids = Transaction.joins(:entry)
       .where(entries: { account_id: accounts.accessible_by(user).select(:id) })

@@ -1,4 +1,4 @@
-<%# locals: (transactions:, projected_recurring:, q:, pagy:) %>
+<%# locals: (transactions:, q:, pagy:) %>
 <div id="transactions"
   data-controller="bulk-select checkbox-toggle drag-and-drop-import"
   data-bulk-select-singular-label-value="<%= t(".transaction") %>"
@@ -20,7 +20,7 @@
     <%= render "transactions/selection_bar" %>
   </div>
 
-  <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
+  <% if @pagy.count > 0 || (@has_projected_recurring && @q.blank?) %>
     <div class="grow overflow-y-auto">
       <% if @transactions.any? %>
         <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">

@@ -1,6 +1,8 @@
 ---
 en:
   transactions:
+    upcoming:
+      loading: Loading upcoming transactions…
     bulk_updates:
       new:
         cancel: Cancel
@@ -312,6 +314,7 @@ en:
           confirmed: Confirmed
           pending: Pending
       menu:
+        loading: Loading filters…
         account_filter: Account
         amount_filter: Amount
         apply: Apply
