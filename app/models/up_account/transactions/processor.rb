@@ -59,24 +59,19 @@ class UpAccount::Transactions::Processor
   private
 
     # A single category matcher reused across this account's transactions, built from
-    # the family's categories (mirrors PlaidAccount::Transactions::Processor).
+    # the family's existing categories.
     def category_matcher
       @category_matcher ||= UpAccount::Transactions::CategoryMatcher.new(family_categories)
     end
 
-    # The family's categories, bootstrapping Sure's defaults if the family has none so
-    # there is a target set to match against. Returns [] when the account isn't linked
-    # (in which case each entry is skipped before the matcher is consulted).
+    # The family's existing categories. Importing transactions is intentionally
+    # non-destructive with respect to the family's category structure: we do NOT
+    # bootstrap Sure's defaults here. A family that has no categories (deliberately
+    # cleared, or pre-onboarding) simply gets uncategorised transactions, and matching
+    # resumes once the user sets up categories through the normal UI flow. Returns []
+    # when the account isn't linked (each entry is skipped before the matcher is used).
     def family_categories
-      @family_categories ||= begin
-        account = up_account.current_account
-        if account
-          account.family.categories.bootstrap! if account.family.categories.none?
-          account.family.categories.to_a
-        else
-          []
-        end
-      end
+      @family_categories ||= up_account.current_account&.family&.categories&.to_a || []
     end
 
     # Extract the Up transaction id from raw data, or "unknown".
