@@ -8,10 +8,10 @@ class RuleEmailNotificationJob < ApplicationJob
     transactions = rule.family.transactions
                        .where(id: transaction_ids)
                        .includes(entry: :account)
+                       .references(:entry)
+                       .order("entries.date DESC")
                        .to_a
-                       .sort_by { |txn| txn.entry.date }
-                       .reverse
 
-    RuleNotificationMailer.digest(rule: rule, transactions: transactions).deliver_now if transactions.any?
+    RuleNotificationMailer.digest(rule: rule, transactions: transactions).deliver_later if transactions.any?
   end
 end
