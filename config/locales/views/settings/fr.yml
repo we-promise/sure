@@ -34,6 +34,10 @@ fr:
         theme_dark: Sombre
         theme_light: Clair
         theme_system: Système
+        modals_title: Fenêtres modales
+        modals_subtitle: Personnaliser le comportement des fenêtres modales
+        disable_modal_click_outside_title: Garder les fenêtres modales ouvertes au clic extérieur
+        disable_modal_click_outside_description: Empêche les fenêtres modales de se fermer en cliquant à l'extérieur. Utile pour éviter de perdre accidentellement des modifications non sauvegardées.
         transactions_title: Transactions
         transactions_subtitle: Personnalisez l'affichage des transactions
         dashboard_title: Tableau de bord
