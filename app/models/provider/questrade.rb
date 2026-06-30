@@ -136,7 +136,9 @@ class Provider::Questrade
       return if @access_token && !force && Time.current < @access_expires_at
 
       response = with_retries("oauth_token") do
-        self.class.get(LOGIN_URL, query: { grant_type: "refresh_token", refresh_token: @refresh_token })
+        # POST with a form body keeps the single-use refresh token out of the
+        # URL (and therefore out of access logs / error-tracking breadcrumbs).
+        self.class.post(LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: @refresh_token })
       end
 
       unless response.code == 200
