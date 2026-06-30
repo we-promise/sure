@@ -176,6 +176,16 @@ Now you can:
 2. **Create your admin account**: Click "Create your account" on the login page
 3. **Set up your first family**: Follow the onboarding process
 
+### Optional: Disable self-service registration
+
+Once your initial admin account is ready, open **Settings > Self-Hosting > Onboarding** to choose how signups should work:
+
+- **Open**: Anyone can register.
+- **Invite-only**: New signups require a valid invite code.
+- **Closed**: New signups from the registration page are blocked.
+
+For single-admin or tightly controlled deployments, set the onboarding mode to **Closed** after the initial setup.
+
 ## Step 7: Set Up Automated Backups
 
 Create a backup script to protect your data:

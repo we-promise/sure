@@ -180,6 +180,16 @@ The first time you run the app, you will need to register a new account by hitti
 1. Enter your email
 2. Enter a password
 
+### Step 5a: Restrict future signups (optional)
+
+After creating your initial admin account, you can control how other people join your self-hosted instance from **Settings > Self-Hosting > Onboarding**.
+
+- **Open**: Anyone can create an account from the registration page.
+- **Invite-only**: New account creation stays enabled, but signups require a valid invite code.
+- **Closed**: The registration page is disabled for new signups.
+
+If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.
+
 ### Step 6: Run the app in the background
 
 Most self-hosting users will want the Sure app to run in the background on their computer so they can access it at all times. To do this, hit `Ctrl+C` to stop the running process, and then run the following command:
