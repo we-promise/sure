@@ -50,22 +50,48 @@ class EnableBankingAccount::Processor
       if account.accountable_type == "Loan" || account.accountable_type == "CreditCard"
         # Standardize the raw balance to an absolute positive debt
         outstanding_debt = balance.abs
-
-        # Override the top-level balance variable intended for the account
         balance = outstanding_debt
 
         if account.accountable_type == "CreditCard"
-          if enable_banking_account.credit_limit.present?
-            # Compute available credit based on the strictly positive outstanding debt
-            available = enable_banking_account.credit_limit - outstanding_debt
-            available_credit = [ available, 0 ].max
-            unless account.accountable.present?
-              Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
+          if enable_banking_account.treat_balance_as_available_credit?
+            if enable_banking_account.credit_limit.present?
+              # When the API returns the available credit as the current balance,
+              # we need to calculate the outstanding debt using the credit limit.
+              # Use .max(0) to prevent synthetic debt on overpaid cards.
+              outstanding_debt = [ enable_banking_account.credit_limit - balance, 0 ].max
+              available_credit = balance
+
+              balance = outstanding_debt
+
+              unless account.accountable.present?
+                DebugLogEntry.capture(
+                  category: "sync",
+                  level: "warn",
+                  message: "CreditCard accountable missing for account",
+                  source: "EnableBankingAccount::Processor",
+                  account: account
+                )
+              end
+            else
+              # No credit limit from API. We cannot reverse available credit to absolute debt
+              # without knowing the total limit. Fall back to absolute balance.
+              DebugLogEntry.capture(
+                category: "sync",
+                level: "warn",
+                message: "Cannot compute debt from available credit because credit_limit is blank",
+                source: "EnableBankingAccount::Processor",
+                account: account
+              )
+              available_credit = balance
             end
-          elsif account.accountable&.available_credit.present?
-            # Fallback: no credit_limit from API — compute it using available_credit defined at account level
-            Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
-            available_credit = account.accountable.available_credit
+          else
+            # Default behavior: API returns outstanding debt
+            if enable_banking_account.credit_limit.present?
+              available_credit = [ enable_banking_account.credit_limit - outstanding_debt, 0 ].max
+            elsif account.accountable&.available_credit.present?
+              # No limit from API, but we have stored available_credit metadata
+              available_credit = account.accountable.available_credit
+            end
           end
         end
       end
