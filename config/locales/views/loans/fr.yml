@@ -3,23 +3,77 @@ fr:
   loans:
     edit:
       edit: Modifier %{account}
+    
     form:
+      subtypes:
+        mortgage:
+          short: Immobilier
+          long: Prêt Immobilier
+        student:
+          short: Étudiant
+          long: Prêt Étudiant
+        auto:
+          short: Auto
+          long: Prêt Automobile
+        other:
+          short: Autre
+          long: Autre Prêt
+      down_payment: Apport
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5,25'
+      insurance_rate: Taux d'assurance
+      insurance_rate_placeholder: '0,5'
       initial_balance: Solde initial du prêt
       rate_type: Type de taux
+      rate_type_options:
+        fixed: Fixe
+        variable: Variable
+        adjustable: Révisable
+      insurance_rate_type: Type de taux d'assurance
+      insurance_rate_type_options:
+        level_term: Fixe
+        decreasing_life: Décroissante
       term_months: Durée (mois)
       term_months_placeholder: '360'
+      subtype: Catégorie
       subtype_prompt: Sélectionner le type de prêt
-      subtype_none: Aucun
+      none: Aucun
+      start_date: Date de début
     new:
       title: Saisir les détails du prêt
-    overview:
-      interest_rate: Taux d'intérêt
-      monthly_payment: Paiement mensuel
-      not_applicable: N/A
-      original_principal: Principal initial
-      remaining_principal: Principal restant
-      term: Durée
-      type: Type
-      unknown: Inconnu
+    tabs:
+      overview:
+        interest_rate: Taux d'intérêt
+        monthly_payment: Mensualité
+        not_applicable: N/A
+        original_principal: Capital initial emprunté
+        remaining_principal: Capital restant
+        repayment_progress: État d'avancement du remboursement
+        term: Durée
+        type: Type
+        rate_types:
+          fixed: Fixe
+          variable: Variable
+          adjustable: Révisable
+        unknown: Inconnu
+        already_paid_html: "Vous avez déjà remboursé %{percentage} de votre prêt"
+        initial_leverage: Effet de levier initial
+        leverage_bands:
+          conservative: Défensif
+          moderate: Modéré
+          high: Aggressif        
+        debt_over_down_payment: Dette / apport
+        total_cost: Coût total
+        principal: Capital
+        interest: Intérêt
+        insurance: Assurance
+        months_elapsed: Mensualités écoulées
+        remaining_months: Mensualités restantes
+        years:
+          one: "%{count} année"
+          other: "%{count} années"
+        months:
+          one: "%{count} mois"
+          other: "%{count} mois"
+        edit_loan_details: "Modifier les détails du prêt"
+

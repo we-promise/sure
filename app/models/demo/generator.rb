@@ -284,9 +284,45 @@ class Demo::Generator
       @coinbase_usdc = family.accounts.create!(accountable: Crypto.new, name: "Coinbase USDC", balance: 0, currency: "USD")
 
       # Loans / Liabilities (USD)
-      @mortgage      = family.accounts.create!(accountable: Loan.new, name: "Home Mortgage", balance: 0, currency: "USD")
-      @car_loan      = family.accounts.create!(accountable: Loan.new, name: "Car Loan", balance: 0, currency: "USD")
-      @student_loan  = family.accounts.create!(accountable: Loan.new, name: "Student Loan", balance: 0, currency: "USD")
+      @mortgage = family.accounts.create!(
+        accountable: Loan.new(
+          subtype: "mortgage",
+          rate_type: "fixed",
+          interest_rate: 6.5,
+          term_months: 360,
+          start_date: 3.years.ago.to_date,
+          down_payment: 60_000,
+          insurance_rate: 0.5,
+          insurance_rate_type: "level_term",
+          initial_balance: 320_000
+        ),
+        name: "Home Mortgage", balance: 0, currency: "USD"
+      )
+
+      @car_loan = family.accounts.create!(
+        accountable: Loan.new(
+          subtype: "auto",
+          rate_type: "fixed",
+          interest_rate: 7.0,
+          term_months: 60,
+          start_date: 1.year.ago.to_date,
+          down_payment: 5_000,
+          initial_balance: 25_000
+        ),
+        name: "Car Loan", balance: 0, currency: "USD"
+      )
+
+      @student_loan = family.accounts.create!(
+        accountable: Loan.new(
+          subtype: "student",
+          rate_type: "fixed",
+          interest_rate: 5.0,
+          term_months: 120,
+          start_date: 2.years.ago.to_date,
+          initial_balance: 30_000
+        ),
+        name: "Student Loan", balance: 0, currency: "USD"
+)
 
       @personal_loc  = family.accounts.create!(accountable: OtherLiability.new, name: "Personal Line of Credit", balance: 0, currency: "USD")
 

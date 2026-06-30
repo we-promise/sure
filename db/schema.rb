@@ -53,6 +53,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.string "content_type", limit: 100, null: false
     t.bigint "byte_size", null: false
     t.string "checksum", limit: 64, null: false
+    t.string "content_sha256"
     t.string "source", default: "manual_upload", null: false
     t.string "upload_status", default: "stored", null: false
     t.string "institution_name_hint", limit: 200
@@ -69,7 +70,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
     t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
@@ -303,9 +303,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.boolean "pending_account_setup", default: false, null: false
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.text "api_key"
@@ -893,9 +893,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4
     t.jsonb "institution_metadata"
-    t.jsonb "raw_holdings_payload", default: []
-    t.jsonb "raw_activities_payload", default: {}
-    t.jsonb "raw_cash_report_payload", default: []
+    t.jsonb "raw_holdings_payload", default: [], null: false
+    t.jsonb "raw_activities_payload", default: {}, null: false
+    t.jsonb "raw_cash_report_payload", default: [], null: false
     t.date "report_date"
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
@@ -909,8 +909,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
   create_table "ibkr_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.string "name"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
     t.boolean "pending_account_setup", default: false, null: false
     t.jsonb "raw_payload"
     t.string "query_id"
@@ -1249,6 +1249,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.decimal "down_payment", precision: 15, scale: 2
+    t.date "start_date", null: false
+    t.string "insurance_rate_type"
+    t.decimal "insurance_rate", precision: 8, scale: 4
+    t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
+    t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
+    t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying, 'decreasing_life'::character varying]::text[]))", name: "chk_loans_insurance_rate_type"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
