@@ -90,8 +90,10 @@ class QuestradeActivitiesFetchJob < ApplicationJob
 
     def activity_key(activity)
       activity = activity.with_indifferent_access if activity.is_a?(Hash)
-      activity[:id] || activity["id"] ||
-        [ activity[:date], activity[:type], activity[:amount], activity[:symbol] ].join("-")
+      # Questrade activities have no id; key on the immutable fields (same basis
+      # as QuestradeItem::Importer#activity_key) to dedup across syncs.
+      [ activity[:transactionDate], activity[:action], activity[:symbolId],
+        activity[:netAmount], activity[:description] ].join("-")
     end
 
     def schedule_retry

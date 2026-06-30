@@ -20,7 +20,7 @@ class QuestradeItem < ApplicationRecord
   end
 
   validates :name, presence: true
-  validates :refresh_token, presence: true, on: :create
+  validates :refresh_token, presence: true, unless: :scheduled_for_deletion?
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later

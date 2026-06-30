@@ -58,7 +58,7 @@ class QuestradeAccount < ApplicationRecord
       account_type: type,
       provider: "Questrade",
       institution_metadata: { name: "Questrade", domain: "questrade.com" },
-      raw_payload: account_data
+      raw_payload: data
     )
   end
 

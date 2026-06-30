@@ -186,7 +186,7 @@ class Provider::Questrade
 
       begin
         yield
-      rescue *RETRYABLE_ERRORS => e
+      rescue *RETRYABLE_ERRORS, RetryableResponseError => e
         retries += 1
 
         if retries <= max_retries
@@ -213,13 +213,27 @@ class Provider::Questrade
       [ base_delay + jitter, 30 ].min
     end
 
+    # Record provider failure detail to the super-admin /settings/debug log
+    # (the sanctioned channel) instead of echoing the raw response body into
+    # application logs or exception messages, where the importer re-logs it.
+    def capture_response_error(reason, response)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "error",
+        message: "Questrade API #{reason} (#{response.code})",
+        source: self.class.name,
+        provider_key: "questrade",
+        metadata: { status: response.code, body: response.body.to_s.first(1000) }
+      )
+    end
+
     def handle_response(response)
       case response.code
       when 200, 201
         JSON.parse(response.body, symbolize_names: true)
       when 400
-        Rails.logger.error "Questrade API: Bad request - #{response.body}"
-        raise Error.new("Bad request: #{response.body}", :bad_request)
+        capture_response_error("bad_request", response)
+        raise Error.new("Questrade bad request (#{response.code})", :bad_request)
       when 401
         raise AuthenticationError.new("Invalid or expired Questrade credentials", :unauthorized)
       when 403
@@ -227,12 +241,12 @@ class Provider::Questrade
       when 404
         raise Error.new("Resource not found", :not_found)
       when 429
-        raise Error.new("Questrade rate limit exceeded. Please try again later.", :rate_limited)
+        raise RetryableResponseError.new("Questrade rate limit exceeded. Please try again later.", :rate_limited)
       when 500..599
-        raise Error.new("Questrade server error (#{response.code}). Please try again later.", :server_error)
+        raise RetryableResponseError.new("Questrade server error (#{response.code}). Please try again later.", :server_error)
       else
-        Rails.logger.error "Questrade API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-        raise Error.new("Unexpected error: #{response.code} - #{response.body}", :unknown)
+        capture_response_error("unexpected_response", response)
+        raise Error.new("Questrade unexpected response (#{response.code})", :unknown)
       end
     end
 end

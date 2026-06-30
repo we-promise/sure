@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateQuestradeItemsAndAccounts < ActiveRecord::Migration[8.1]
+class CreateQuestradeItemsAndAccounts < ActiveRecord::Migration[7.2]
   def change
     # Create provider items table (stores per-family connection credentials)
     create_table :questrade_items, id: :uuid do |t|
@@ -15,9 +15,9 @@ class CreateQuestradeItemsAndAccounts < ActiveRecord::Migration[8.1]
       t.string :institution_color
 
       # Status and lifecycle
-      t.string :status, default: "good"
-      t.boolean :scheduled_for_deletion, default: false
-      t.boolean :pending_account_setup, default: false
+      t.string :status, default: "good", null: false
+      t.boolean :scheduled_for_deletion, default: false, null: false
+      t.boolean :pending_account_setup, default: false, null: false
 
       # Sync settings
       t.datetime :sync_start_date

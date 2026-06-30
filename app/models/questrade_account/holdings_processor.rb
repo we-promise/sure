@@ -32,14 +32,17 @@ class QuestradeAccount::HoldingsProcessor
         next if amount.nil?
 
         security = Security.cash_for(account, currency: entry[:currency])
+        date = Date.current
         import_adapter.import_holding(
           security: security,
           quantity: amount,
           amount: amount,
           currency: entry[:currency],
-          date: Date.current,
+          date: date,
           price: 1,
-          external_id: "questrade_cash_#{entry[:currency].to_s.downcase}",
+          # Date-scope the id so each sync writes a daily snapshot instead of
+          # rewriting the previous cash holding row.
+          external_id: "questrade_cash_#{entry[:currency].to_s.downcase}_#{date}",
           account_provider_id: @questrade_account.account_provider&.id,
           source: "questrade",
           delete_future_holdings: false

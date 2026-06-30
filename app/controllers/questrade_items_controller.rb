@@ -4,6 +4,7 @@ class QuestradeItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_questrade_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :create, :update, :destroy, :sync, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :setup_accounts, :complete_account_setup ]
 
   def index
     @questrade_items = Current.family.questrade_items.ordered
@@ -52,13 +53,17 @@ class QuestradeItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message
       end
     end
   end
 
   def update
-    if @questrade_item.update(update_params)
+    update_attrs = update_params
+    # A fresh, non-blank token re-arms a connection that was marked requires_update.
+    update_attrs = update_attrs.merge(status: :good) if update_attrs[:refresh_token].present?
+
+    if @questrade_item.update(update_attrs)
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully updated Questrade configuration.")
         @questrade_items = Current.family.questrade_items.ordered
@@ -83,7 +88,7 @@ class QuestradeItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message
       end
     end
   end
@@ -180,7 +185,7 @@ class QuestradeItemsController < ApplicationController
   end
 
   def select_existing_account
-    @account = Current.family.accounts.find(params[:account_id])
+    @account = find_writable_account!(params[:account_id])
     @questrade_item = Current.family.questrade_items.first
 
     unless @questrade_item&.credentials_configured?
@@ -199,7 +204,7 @@ class QuestradeItemsController < ApplicationController
   end
 
   def link_existing_account
-    account = Current.family.accounts.find(params[:account_id])
+    account = find_writable_account!(params[:account_id])
     questrade_item = Current.family.questrade_items.first
 
     unless questrade_item&.credentials_configured?
@@ -273,6 +278,14 @@ class QuestradeItemsController < ApplicationController
 
     def set_questrade_item
       @questrade_item = Current.family.questrade_items.find(params[:id])
+    end
+
+    # Mirror AccountsController's access gate: only accounts the user can reach
+    # and write to may be inspected or linked to a provider.
+    def find_writable_account!(account_id)
+      account = Current.user.accessible_accounts.find(account_id)
+      raise ActiveRecord::RecordNotFound unless account.permission_for(Current.user).in?([ :owner, :full_control ])
+      account
     end
 
     def questrade_item_params

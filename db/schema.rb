@@ -1545,12 +1545,12 @@ create_table "questrade_items", id: :uuid, default: -> { "gen_random_uuid()" }, 
   t.string "institution_name"
   t.string "institution_url"
   t.string "name"
-  t.boolean "pending_account_setup", default: false
+  t.boolean "pending_account_setup", default: false, null: false
   t.jsonb "raw_institution_payload"
   t.jsonb "raw_payload"
   t.text "refresh_token"
-  t.boolean "scheduled_for_deletion", default: false
-  t.string "status", default: "good"
+  t.boolean "scheduled_for_deletion", default: false, null: false
+  t.string "status", default: "good", null: false
   t.datetime "sync_start_date"
   t.datetime "updated_at", null: false
   t.index ["family_id"], name: "index_questrade_items_on_family_id"
