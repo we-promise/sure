@@ -8,7 +8,10 @@ class Goal < ApplicationRecord
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
   belongs_to :family
-  has_many :goal_accounts, dependent: :destroy
+  # autosave so earmark (allocated_amount) edits on already-linked accounts
+  # persist through goal.save! — without it Rails only saves newly built
+  # children, silently dropping changes to existing goal_accounts.
+  has_many :goal_accounts, dependent: :destroy, autosave: true
   has_many :linked_accounts, through: :goal_accounts, source: :account
   has_many :goal_pledges, dependent: :destroy
   has_many :open_pledges,
@@ -34,6 +37,24 @@ class Goal < ApplicationRecord
   def self.advisory_lock_key_for(family_id)
     Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
   end
+
+  # Family-wide map of non-archived goal earmarks, grouped by account_id:
+  # { account_id => [{ goal_id:, allocated_amount: }, ...] }. The controller
+  # assigns this to each goal on index (goal.pooled_allocations = ...) so the
+  # shared-pool backing math runs ONE query for the whole page instead of one
+  # per goal.
+  def self.pooled_allocations_for(family)
+    GoalAccount.joins(:goal)
+               .where(goals: { family_id: family.id })
+               .where.not(goals: { state: "archived" })
+               .pluck(:account_id, :goal_id, :allocated_amount)
+               .group_by(&:first)
+               .transform_values do |triples|
+                 triples.map { |(_, goal_id, amount)| { goal_id: goal_id, allocated_amount: amount } }
+               end
+  end
+
+  attr_writer :pooled_allocations
 
   aasm column: :state do
     after_all_transitions :reset_state_dependent_caches!
@@ -64,13 +85,14 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Balance is the live balance of every linked depository account that
-  # matches the goal's currency. The model validates this invariant at
-  # write time, but defensive filter + telemetry here guards against any
-  # drift caused by direct DB writes, account-currency edits outside
-  # goal validation, or future code that bypasses the validation chain.
-  # v1.1+: minus other goals' allocations via the upcoming GoalBacking
-  # query.
+  # Balance is this goal's backing across its linked depository accounts that
+  # match the goal's currency. Each linked account contributes either its
+  # earmarked slice (goal_accounts.allocated_amount) or — when unallocated —
+  # the whole balance left after other goals' earmarks (see
+  # #backing_balance_for). The model validates the currency invariant at write
+  # time, but the defensive filter + telemetry here guards against drift from
+  # direct DB writes, account-currency edits outside goal validation, or
+  # future code that bypasses the validation chain.
   def current_balance
     @current_balance ||= begin
       matching = linked_accounts.select { |a| a.currency == currency }
@@ -78,12 +100,19 @@ class Goal < ApplicationRecord
         Rails.logger.warn("Goal##{id} linked-account currency drift: #{linked_accounts.size - matching.size} of #{linked_accounts.size} mismatched (expected #{currency})")
         Sentry.capture_message("Goal linked-account currency drift", level: :warning, extra: { goal_id: id, expected_currency: currency }) if defined?(Sentry)
       end
-      matching.sum { |a| a.balance.to_d }
+      matching.sum { |account| backing_balance_for(account) }
     end
   end
 
   def current_balance_money
     @current_balance_money ||= Money.new(current_balance, currency)
+  end
+
+  # This goal's backing from a single linked account — the earmarked slice, or
+  # the whole-balance remainder when the link is unallocated — as Money. Used
+  # by the funding breakdown so the per-account rows reconcile with the ring.
+  def account_backing(account)
+    Money.new(backing_balance_for(account), currency)
   end
 
   def remaining_amount
@@ -139,6 +168,11 @@ class Goal < ApplicationRecord
   # user records a pledge, the transfer arrives, balance goes up, pace
   # goes up, status flips off "behind". Excludes user-flagged-excluded
   # entries. Entry amount sign convention in Sure: inflow is negative.
+  #
+  # NOTE: pace is whole-account inflow by design in this phase, even for an
+  # earmarked goal whose current_balance is only a slice — so runway/status
+  # mix a whole-account numerator with an earmark-scoped balance. Earmark-aware
+  # pace is a deliberate follow-up; don't "fix" the basis without that work.
   def pace
     return @pace if defined?(@pace)
 
@@ -190,7 +224,16 @@ class Goal < ApplicationRecord
   # strings server-side rather than build them with its own Intl calls.
   def projection_payload
     series_values = balance_series_values
-    saved_series = series_values.map { |v| { date: v.date.to_s, value: v.value.amount.to_f } }
+    # The historical series tracks the whole linked-account balances. Scale it
+    # to this goal's backing so the saved line meets current_balance at "today"
+    # instead of dropping off a cliff for earmarked goals. Assumes the earmark
+    # ratio held over the window (an approximation); exact for unallocated
+    # goals, where ratio == 1 and the series is unchanged.
+    whole_total = linked_accounts.select { |a| a.currency == currency }.sum { |a| a.balance.to_d }
+    # 0 when the linked-account total is non-positive: current_balance is forced
+    # to 0 there, so the saved series must end at 0 too (no stray non-zero tail).
+    backing_ratio = whole_total.positive? ? (current_balance.to_d / whole_total) : 0.to_d
+    saved_series = series_values.map { |v| { date: v.date.to_s, value: (v.value.amount.to_d * backing_ratio).to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
     target_amt = target_amount.to_d
@@ -402,12 +445,67 @@ class Goal < ApplicationRecord
   end
 
   private
+    # This goal's share of `account`'s live balance under the family-wide
+    # shared pool. The goal's OWN earmark is read from its own goal_accounts
+    # (reliable even for an archived goal, which is excluded from the pool);
+    # OTHER non-archived goals' fixed earmarks come from the shared pool. A
+    # fixed earmark takes its slice; an unallocated link takes the balance left
+    # after others' fixed earmarks (so it keeps the v1 whole-balance behaviour
+    # when nothing else earmarks the account). When the fixed earmarks on an
+    # account exceed its balance every fixed slice is scaled down pro-rata (to
+    # within sub-cent rounding) so the goals' shares effectively never sum past
+    # the account's balance — no double-counting. An overdrawn (<= 0) account
+    # backs nothing.
+    def backing_balance_for(account)
+      balance = account.balance.to_d
+      return 0.to_d if balance <= 0
+
+      mine = own_allocation_for(account)
+      others_fixed = (pooled_allocations[account.id] || [])
+        .reject { |r| r[:goal_id] == id }
+        .sum { |r| r[:allocated_amount].to_d }
+
+      if mine
+        total_fixed = others_fixed + mine
+        if total_fixed > balance && total_fixed.positive?
+          (mine * (balance / total_fixed)).round(4) # pro-rata haircut
+        else
+          mine
+        end
+      else
+        [ balance - others_fixed, 0 ].max # unallocated link: the remainder
+      end
+    end
+
+    # This goal's own earmark on `account` (a BigDecimal, or nil for a
+    # whole-balance link). Read from the loaded goal_accounts association so it
+    # is correct even for archived goals, which are excluded from the pool.
+    def own_allocation_for(account)
+      goal_accounts.find { |ga| ga.account_id == account.id }&.allocated_amount
+    end
+
+    # Family-wide map of non-archived goal earmarks. Injected once per request
+    # by the controller on index (one query for the whole page); falls back to
+    # a single query for the standalone (show) case.
+    def pooled_allocations
+      @pooled_allocations ||= self.class.pooled_allocations_for(family)
+    end
+
     # Cleared after every AASM transition. The state column drives the
     # display_status / projection_summary memos; without this the same
     # instance keeps returning the pre-transition value if a controller
     # calls archive! / pause! and then renders without reload.
     def reset_state_dependent_caches!
-      %i[@display_status @projection_summary].each do |ivar|
+      # current_balance now depends on the goal's own archived state (an
+      # archived goal is excluded from the shared pool), so the balance-derived
+      # memos must be cleared on a transition too, not just the status memos.
+      %i[
+        @display_status @projection_summary
+        @current_balance @current_balance_money
+        @remaining_amount @remaining_amount_money
+        @progress_percent @monthly_target_amount
+        @pace @pace_money @status @pooled_allocations
+      ].each do |ivar|
         remove_instance_variable(ivar) if instance_variable_defined?(ivar)
       end
     end

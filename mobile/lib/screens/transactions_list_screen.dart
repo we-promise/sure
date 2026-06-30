@@ -13,7 +13,9 @@ import '../widgets/category_filter.dart';
 import '../widgets/sync_status_badge.dart';
 import '../services/log_service.dart';
 import '../theme/sure_tokens.dart';
+import '../providers/privacy_provider.dart';
 import '../utils/amount_parser.dart';
+import '../utils/money_masker.dart';
 import '../widgets/money_text.dart';
 import '../l10n/app_localizations.dart';
 
@@ -366,6 +368,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     return Scaffold(
       appBar: AppBar(
@@ -681,7 +684,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                       ),
                                     Flexible(
                                       child: MoneyText(
-                                        '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                        MoneyMasker.mask(
+                                          '${displayInfo['prefix']}${displayInfo['displayAmount']}',
+                                          hidden: hideAmounts,
+                                        ),
                                         trend: displayInfo['trend'] as MoneyTrend,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(

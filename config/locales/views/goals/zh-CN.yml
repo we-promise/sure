@@ -105,6 +105,7 @@ zh-CN:
       pledge_just_saved: 记录你留出的资金
       funding_accounts_heading: 资金账户
       funding_accounts:
+        earmarked_of: 已预留 %{earmarked}（共 %{balance}）
         empty:
           heading: 尚未关联资金账户
           body: 编辑目标以关联用于储蓄的存款账户。
@@ -258,7 +259,10 @@ zh-CN:
         notes: 备注（可选）
         notes_placeholder: 给未来自己的提醒…
         funding_accounts: 资金账户
-        funding_accounts_hint: 此目标余额等于这些账户的余额。
+        funding_accounts_hint: 此目标余额等于这些账户的余额（或预留的部分）。
+        whole_balance: 全部余额
+        earmark_for: 为「%{account}」预留的金额
+        earmark_hint: 留空则使用该账户的全部余额。
       subtypes:
         checking: 支票账户
         savings: 储蓄账户

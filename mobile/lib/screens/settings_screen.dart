@@ -8,6 +8,7 @@ import '../providers/categories_provider.dart';
 import '../providers/merchants_provider.dart';
 import '../providers/tags_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/biometric_service.dart';
@@ -750,19 +751,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _handleClearLocalData(context),
           ),
 
-          if (_biometricSupported) ...[
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                l.settingsSectionSecurity,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              l.settingsSectionSecurity,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
               ),
             ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.visibility_off_outlined),
+            title: Text(l.settingsPrivacyHideAmountsLabel),
+            subtitle: Text(l.settingsPrivacyHideAmountsContent),
+            value: context.watch<PrivacyProvider>().hidden,
+            onChanged: (value) =>
+                context.read<PrivacyProvider>().setHidden(value),
+          ),
+          if (_biometricSupported)
             SwitchListTile(
               secondary: const Icon(Icons.fingerprint),
               title: Text(l.settingsBiometricLabel),
@@ -770,7 +779,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: _biometricEnabled,
               onChanged: _isTogglingBiometric ? null : _toggleBiometric,
             ),
-          ],
 
           const Divider(),
 
