@@ -1,6 +1,8 @@
 class GoalsController < ApplicationController
   before_action :require_preview_features!
-  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
+  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen]
+
+  FUNDABLE_TYPES = %w[Depository Investment].freeze
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
   STATE_FILTERS = %w[all active paused completed archived].freeze
@@ -26,12 +28,16 @@ class GoalsController < ApplicationController
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
-    # One family-wide earmark-pool query injected into every rendered goal so
-    # the shared-pool backing math doesn't fire a query per card (N+1).
+    # One family-wide earmark-pool + market-flows query injected into every
+    # rendered goal so the backing math doesn't fire a query per card (N+1).
     pooled = Goal.pooled_allocations_for(Current.family)
-    (@grid_goals + @archived_goals).each { |goal| goal.pooled_allocations = pooled }
+    flows = Goal.market_flows_for(Current.family)
+    (@grid_goals + @archived_goals).each do |goal|
+      goal.pooled_allocations = pooled
+      goal.market_flows = flows
+    end
 
-    @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: "Depository").visible.count
+    @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.count
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
     @show_search = @grid_goals.size > 6
@@ -152,6 +158,10 @@ class GoalsController < ApplicationController
     perform_transition!(:unarchive)
   end
 
+  def reopen
+    perform_transition!(:reopen)
+  end
+
   private
     def set_goal
       @goal = Current.family.goals
@@ -175,11 +185,11 @@ class GoalsController < ApplicationController
       return [] if ids.blank?
 
       ids = Array(ids).reject(&:blank?)
-      Current.user.accessible_accounts.where(accountable_type: "Depository").visible.where(id: ids).to_a
+      Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.where(id: ids).to_a
     end
 
     def linkable_accounts_for_new
-      Current.user.accessible_accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
+      Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.alphabetically.to_a
     end
 
     def sync_linked_accounts!(goal, accounts, allocations = {})

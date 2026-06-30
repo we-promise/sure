@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/sure_colors.dart';
+import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
 
 /// Sure design-system text field — a tokenized [TextFormField] wrapper mirroring
@@ -137,7 +138,7 @@ class SureTextField extends StatelessWidget {
         fillColor: palette.container,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
+          horizontal: SureSpacing.xl,
           vertical: 14,
         ),
         hintStyle: theme.textTheme.bodyLarge?.copyWith(
@@ -173,7 +174,7 @@ class SureTextField extends StatelessWidget {
         // detached label node.
         ExcludeSemantics(
           child: Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 6),
+            padding: const EdgeInsets.only(left: 2, bottom: SureSpacing.sm),
             child: Text(
               label!,
               style: theme.textTheme.labelMedium?.copyWith(

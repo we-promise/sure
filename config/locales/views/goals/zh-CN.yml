@@ -92,6 +92,9 @@ zh-CN:
     unarchive:
       success: 目标已恢复。
       invalid_transition: 目标当前状态不能恢复。
+    reopen:
+      success: 目标已重新开启。
+      invalid_transition: 目标当前状态无法重新开启。
     show:
       edit: 编辑
       pause: 暂停
@@ -99,6 +102,7 @@ zh-CN:
       complete: 标记完成
       archive: 归档
       unarchive: 恢复
+      reopen: 重新开启目标
       delete: 永久删除
       record_pledge_cta: 记录承诺
       pledge_just_transferred: 记录你完成的转账
@@ -139,6 +143,7 @@ zh-CN:
         of: 共 %{target}
         to_go: 还差 %{amount}
         of_target: 目标进度
+        market_value: 市值 %{amount}
         aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
       projection:
         heading: 预测

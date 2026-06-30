@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
+import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
 
 /// One segment of a [SureSegmentedControl].
@@ -144,7 +145,10 @@ class _SegmentState<T> extends State<_Segment<T>> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            padding: const EdgeInsets.symmetric(
+              vertical: SureSpacing.md,
+              horizontal: SureSpacing.md,
+            ),
             decoration: BoxDecoration(
               color: selected ? widget.selectedBg : const Color(0x00000000),
               borderRadius: BorderRadius.circular(SureTokens.radiusMd),
@@ -168,7 +172,7 @@ class _SegmentState<T> extends State<_Segment<T>> {
                     data: IconThemeData(color: fg, size: 18),
                     child: widget.segment.icon!,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: SureSpacing.sm),
                 ],
                 Flexible(
                   child: Text(
