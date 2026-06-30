@@ -27,6 +27,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
+    @questrade_items = visible_provider_items(family.questrade_items.ordered.includes(:syncs, :questrade_accounts))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -436,6 +437,13 @@ class AccountsController < ApplicationController
           .where(account_providers: { id: nil })
           .count
         @binance_unlinked_count_map[item.id] = count
+      end
+
+      # Questrade sync stats
+      @questrade_sync_stats_map = {}
+      @questrade_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @questrade_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end
