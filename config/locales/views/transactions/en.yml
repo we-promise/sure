@@ -152,6 +152,9 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      one_time_tooltip: One-time %{type} (excluded from averages)
+      income: Income
+      expense: Expense
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions

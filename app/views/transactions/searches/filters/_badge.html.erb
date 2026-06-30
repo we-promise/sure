@@ -29,10 +29,10 @@
   <% elsif param_key == "types" %>
     <div class="flex items-center gap-2 px-1">
       <div class="w-1 h-3 rounded-full <%= case param_value.downcase
-                                          when "income" then "bg-green-500"
-                                          when "expense" then "bg-red-500"
-                                          when "transfer" then "bg-blue-500"
-                                          when "refund" then "bg-yellow-500"
+                                          when "income" then "bg-success"
+                                          when "expense" then "bg-destructive"
+                                          when "transfer" then "bg-info"
+                                          when "refund" then "bg-warning"
                                           end %>"></div>
       <p><%= t(".#{param_value.downcase}") %></p>
     </div>

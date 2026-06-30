@@ -91,7 +91,7 @@
 
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <% if transaction.one_time? %>
-                      <%= render DS::Tooltip.new(text: "One-time #{entry.amount.negative? ? 'income' : 'expense'} (excluded from averages)", icon: "asterisk", size: "sm", as: :span) %>
+                      <%= render DS::Tooltip.new(text: t(".one_time_tooltip", type: entry.amount.negative? ? t(".income") : t(".expense")), icon: "asterisk", size: "sm", as: :span) %>
                     <% end %>
                     <% if transaction.refund? %>
                       <%= render DS::Tooltip.new(text: t(".refund_tooltip"), icon: "corner-down-left", size: "sm", color: "info", as: :span) %>
