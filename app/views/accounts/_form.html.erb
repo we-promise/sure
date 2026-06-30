@@ -43,6 +43,11 @@
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
             rows: 4 %>
+
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm"><%= t(".exclude_from_reports") %></span>
+          <%= form.toggle :exclude_from_reports %>
+        </div>
       </div>
     </details>
   </div>
