@@ -37,7 +37,13 @@ class EnableBankingAccount::Processor
       end
 
       account = enable_banking_account.current_account
-      balance = enable_banking_account.current_balance || 0
+
+      if enable_banking_account.current_balance.nil?
+        Rails.logger.warn "EnableBankingAccount::Processor - current_balance is nil for enable_banking_account #{enable_banking_account.id}, skipping balance update"
+        return
+      end
+
+      balance = enable_banking_account.current_balance
       available_credit = nil
 
       # For liability accounts, ensure balance sign is correct.
