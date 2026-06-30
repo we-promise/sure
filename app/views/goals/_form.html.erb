@@ -44,30 +44,42 @@
       <div class="mb-2">
         <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.funding_accounts") %></span>
         <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.funding_accounts_hint") %></p>
+        <p class="text-xs text-subdued mt-0.5"><%= t("goals.form.fields.earmark_hint") %></p>
       </div>
       <div class="bg-container-inset rounded-lg p-1">
+        <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
         <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
         <% grouped.each_with_index do |(subtype, accts), group_idx| %>
           <div class="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t("goals.form.subtypes.#{subtype}", default: subtype.titleize) %></div>
           <div class="bg-container rounded-md <%= "mb-1" if group_idx < grouped.size - 1 %>">
             <% accts.each_with_index do |account, idx| %>
-              <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>">
-                <%= check_box_tag "goal[account_ids][]",
-                                  account.id,
-                                  currently_linked_account_ids.include?(account.id.to_s),
-                                  id: "goal_account_ids_#{account.id}",
-                                  class: "checkbox checkbox--light shrink-0",
-                                  data: {
-                                    goal_form_target: "linkedAccountCheckbox",
-                                    action: "change->goal-form#linkedAccountChanged"
-                                  } %>
-                <%= render Goals::AvatarComponent.new(name: account.name, color: Goals::AvatarComponent.color_for(account.name), size: "md") %>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
-                  <p class="text-xs text-secondary"><%= (account.subtype || subtype).titleize %></p>
-                </div>
-                <span class="text-sm text-primary tabular-nums privacy-sensitive"><%= Money.new(account.balance, account.currency).format %></span>
-              </label>
+              <% linked_ga = linked_allocation_by_account[account.id] %>
+              <div class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>">
+                <label class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
+                  <%= check_box_tag "goal[account_ids][]",
+                                    account.id,
+                                    currently_linked_account_ids.include?(account.id.to_s),
+                                    id: "goal_account_ids_#{account.id}",
+                                    class: "checkbox checkbox--light shrink-0",
+                                    data: {
+                                      goal_form_target: "linkedAccountCheckbox",
+                                      action: "change->goal-form#linkedAccountChanged"
+                                    } %>
+                  <%= render Goals::AvatarComponent.new(name: account.name, color: Goals::AvatarComponent.color_for(account.name), size: "md") %>
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
+                    <% row_subtype = account.subtype.to_s.presence || subtype %>
+                    <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= t("goals.form.subtypes.#{row_subtype}", default: row_subtype.titleize) %> · <%= Money.new(account.balance, account.currency).format %></p>
+                  </div>
+                </label>
+                <%= text_field_tag "goal[allocations][#{account.id}]",
+                                   linked_ga&.allocated_amount&.to_s("F"),
+                                   placeholder: t("goals.form.fields.whole_balance"),
+                                   inputmode: "decimal",
+                                   autocomplete: "off",
+                                   aria: { label: t("goals.form.fields.earmark_for", account: account.name) },
+                                   class: "shrink-0 w-36 rounded-md border border-primary bg-container px-2.5 py-1.5 text-sm text-right tabular-nums text-primary placeholder:text-subdued focus-ring privacy-sensitive" %>
+              </div>
             <% end %>
           </div>
         <% end %>

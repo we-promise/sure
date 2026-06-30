@@ -410,6 +410,26 @@ class Account < ApplicationRecord
     manual? ? "manual_save" : "transfer"
   end
 
+  # Total fixed earmark this account currently has reserved across every
+  # non-archived goal (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending.
+  def goal_earmarked_total
+    GoalAccount.joins(:goal)
+               .where(account_id: id)
+               .where.not(allocated_amount: nil)
+               .where.not(goals: { state: "archived" })
+               .sum(:allocated_amount)
+               .to_d
+  end
+
+  # Headroom left to earmark toward goals before fixed allocations exceed the
+  # balance. Negative means the account is over-earmarked. Intended to back a
+  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
+  # Budget#available_to_allocate.
+  def free_to_earmark
+    balance.to_d - goal_earmarked_total
+  end
+
   def logo_url
     if institution_domain.present? && Setting.brand_fetch_client_id.present?
       logo_size = Setting.brand_fetch_logo_size

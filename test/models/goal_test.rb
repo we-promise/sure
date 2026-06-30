@@ -290,4 +290,116 @@ class GoalTest < ActiveSupport::TestCase
     reloaded = Goal.find(@goal.id)
     assert_equal "goals.show.pledge_just_saved", reloaded.pledge_action_label_key
   end
+
+  test "explicit allocation backs only the earmarked slice" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Split Savings", currency: "USD", balance: 5_000)
+    goal = @family.goals.create!(name: "Earmarked", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+    assert_equal BigDecimal("1000"), goal.current_balance.to_d
+  end
+
+  test "explicit allocation is capped at the account balance via the haircut" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Over Earmark", currency: "USD", balance: 800)
+    goal = @family.goals.create!(name: "Over", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+    assert_equal BigDecimal("800"), goal.current_balance.to_d
+  end
+
+  test "unallocated link claims the balance left after another goal's earmark" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Shared Savings", currency: "USD", balance: 5_000)
+    earmarked = @family.goals.create!(name: "Earmarked", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 2_000)
+    end
+    whole = @family.goals.create!(name: "Whole", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account) # NULL = whole-balance remainder
+    end
+    assert_equal BigDecimal("2000"), earmarked.current_balance.to_d
+    assert_equal BigDecimal("3000"), whole.current_balance.to_d
+    # The two goals' shares of the shared account never exceed its balance.
+    assert_equal account.balance.to_d, earmarked.current_balance.to_d + whole.current_balance.to_d
+  end
+
+  test "over-earmarked account scales fixed slices pro-rata" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Contested Savings", currency: "USD", balance: 5_000)
+    a = @family.goals.create!(name: "Goal A", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 4_000)
+    end
+    b = @family.goals.create!(name: "Goal B", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 4_000)
+    end
+    # sum_fixed 8000 > balance 5000 -> each scaled by 5000/8000 -> 2500.
+    assert_equal BigDecimal("2500"), a.current_balance.to_d
+    assert_equal BigDecimal("2500"), b.current_balance.to_d
+    assert_equal account.balance.to_d, a.current_balance.to_d + b.current_balance.to_d
+  end
+
+  test "archived goals release their earmark from the shared pool" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Release Savings", currency: "USD", balance: 5_000)
+    whole = @family.goals.create!(name: "Whole", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    earmarked = @family.goals.create!(name: "Earmarked", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 2_000)
+    end
+    assert_equal BigDecimal("3000"), Goal.find(whole.id).current_balance.to_d
+    earmarked.archive!
+    # Archived goal no longer reserves its slice -> whole reclaims it.
+    assert_equal BigDecimal("5000"), Goal.find(whole.id).current_balance.to_d
+  end
+
+  test "account free_to_earmark subtracts non-archived fixed earmarks" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Headroom Savings", currency: "USD", balance: 5_000)
+    @family.goals.create!(name: "Earmarker", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_500)
+    end
+    assert_equal BigDecimal("1500"), account.goal_earmarked_total
+    assert_equal BigDecimal("3500"), account.free_to_earmark
+  end
+
+  test "an overdrawn account backs nothing for fixed or whole-balance links" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Overdrawn", currency: "USD", balance: BigDecimal("-100"))
+    fixed = @family.goals.create!(name: "Fixed OD", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 50)
+    end
+    whole = @family.goals.create!(name: "Whole OD", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_equal 0.to_d, fixed.current_balance.to_d
+    assert_equal 0.to_d, whole.current_balance.to_d
+  end
+
+  test "an archived goal still shows its own earmark, not the whole balance" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Archived Earmark", currency: "USD", balance: 5_000)
+    earmarked = @family.goals.create!(name: "Archived Fixed", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 2_000)
+    end
+    earmarked.archive!
+    # Excluded from the shared pool, but its own earmark is read from its own
+    # goal_accounts — so it still reports 2,000, not the whole 5,000.
+    assert_equal BigDecimal("2000"), Goal.find(earmarked.id).current_balance.to_d
+  end
+
+  test "earmark edits to an existing linked account persist via goal.save!" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Autosave Savings", currency: "USD", balance: 5_000)
+    goal = @family.goals.create!(name: "Autosave goal", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account) # NULL = whole balance
+    end
+    ga = goal.goal_accounts.first
+    assert_nil ga.allocated_amount
+    ga.allocated_amount = 1_500
+    goal.save! # autosave: true must persist the dirty existing child
+    assert_equal BigDecimal("1500"), goal.goal_accounts.first.reload.allocated_amount
+  end
+
+  test "progress_percent memo resets after complete! on the same instance" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Memo Savings", currency: "USD", balance: 100)
+    goal = @family.goals.create!(name: "Memo goal", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_operator goal.progress_percent, :<, 100 # memoize the underfunded value
+    goal.complete!
+    assert_equal 100, goal.progress_percent, "stale memo would still report the pre-complete percent"
+  end
 end
