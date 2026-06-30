@@ -5,129 +5,90 @@ require "test_helper"
 class QuestradeAccount::ProcessorTest < ActiveSupport::TestCase
   setup do
     @family = families(:empty)
-    # TODO: Create or reference your questrade_item fixture
-    # @questrade_item = questrade_items(:configured_item)
-    # @questrade_account = questrade_accounts(:test_account)
-
-    # Create a linked Sure account for the provider account
+    @questrade_item = @family.questrade_items.create!(name: "Test", refresh_token: "dummy-token")
+    @questrade_account = @questrade_item.questrade_accounts.create!(
+      questrade_account_id: "53999999",
+      name: "TFSA (53999999)",
+      currency: "CAD",
+      current_balance: 1500
+    )
     @account = @family.accounts.create!(
-      name: "Test Account",
-      balance: 10000,
-      currency: "USD",
+      name: "TFSA",
+      balance: 0,
+      currency: "CAD",
       accountable: Investment.new
     )
-
-    # TODO: Link the provider account to the Sure account
-    # @questrade_account.ensure_account_provider!(@account)
-    # @questrade_account.reload
+    @questrade_account.ensure_account_provider!(@account)
+    @questrade_account.reload
   end
 
-  # ==========================================================================
-  # Processor tests
-  # ==========================================================================
+  # ---- Processor ----------------------------------------------------------
 
-  test "processor initializes with questrade_account" do
-    skip "TODO: Set up questrade_account fixture"
+  test "processor anchors the account balance from the questrade total" do
+    @questrade_account.update!(current_balance: 2500, cash_balance: 500)
 
-    # processor = QuestradeAccount::Processor.new(@questrade_account)
-    # assert_not_nil processor
+    QuestradeAccount::Processor.new(@questrade_account).process
+
+    assert_equal 2500, @account.reload.balance.to_d
   end
 
-  test "processor skips processing when no linked account" do
-    skip "TODO: Set up questrade_account fixture"
+  test "processor is a no-op when the provider account is not linked" do
+    @questrade_account.account_provider.destroy
+    @questrade_account.reload
 
-    # Remove the account provider link
-    # @questrade_account.account_provider&.destroy
-    # @questrade_account.reload
-
-    # processor = QuestradeAccount::Processor.new(@questrade_account)
-    # assert_nothing_raised { processor.process }
+    assert_nothing_raised { QuestradeAccount::Processor.new(@questrade_account).process }
   end
 
-  test "processor updates account balance" do
-    skip "TODO: Set up questrade_account fixture"
+  # ---- HoldingsProcessor --------------------------------------------------
 
-    # @questrade_account.update!(current_balance: 15000)
-    #
-    # processor = QuestradeAccount::Processor.new(@questrade_account)
-    # processor.process
-    #
-    # @account.reload
-    # assert_equal 15000, @account.balance.to_f
+  test "holdings processor imports positions as holdings" do
+    @questrade_account.update!(raw_holdings_payload: [
+      { "symbol" => "AAPL", "symbolId" => 8049, "openQuantity" => 10,
+        "currentPrice" => 150.0, "currentMarketValue" => 1500.0,
+        "averageEntryPrice" => 140.0, "currency" => "USD" }
+    ])
+
+    QuestradeAccount::HoldingsProcessor.new(@questrade_account).process
+
+    security = Security.find_by(ticker: "AAPL")
+    assert_not_nil security
+    assert @account.reload.holdings.where(security: security).exists?
   end
 
-  # ==========================================================================
-  # HoldingsProcessor tests
-  # ==========================================================================
+  test "holdings processor skips positions with a blank symbol" do
+    @questrade_account.update!(raw_holdings_payload: [
+      { "symbol" => "", "openQuantity" => 10, "currentPrice" => 100.0 }
+    ])
 
-  test "holdings processor creates holdings from raw payload" do
-    skip "TODO: Set up questrade_account fixture and holdings payload"
-
-    # @questrade_account.update!(raw_holdings_payload: [
-    #   {
-    #     "symbol" => { "symbol" => "AAPL", "name" => "Apple Inc" },
-    #     "units" => 10,
-    #     "price" => 150.00,
-    #     "currency" => { "code" => "USD" }
-    #   }
-    # ])
-    #
-    # processor = QuestradeAccount::HoldingsProcessor.new(@questrade_account)
-    # processor.process
-    #
-    # holding = @account.holdings.find_by(security: Security.find_by(ticker: "AAPL"))
-    # assert_not_nil holding
-    # assert_equal 10, holding.qty.to_f
+    assert_nothing_raised { QuestradeAccount::HoldingsProcessor.new(@questrade_account).process }
+    assert_empty @account.reload.holdings
   end
 
-  test "holdings processor skips blank symbols" do
-    skip "TODO: Set up questrade_account fixture"
+  # ---- ActivitiesProcessor ------------------------------------------------
 
-    # @questrade_account.update!(raw_holdings_payload: [
-    #   { "symbol" => nil, "units" => 10, "price" => 100.00 }
-    # ])
-    #
-    # processor = QuestradeAccount::HoldingsProcessor.new(@questrade_account)
-    # assert_nothing_raised { processor.process }
+  test "activities processor imports a Buy trade" do
+    @questrade_account.update!(raw_activities_payload: [
+      { "type" => "Trades", "action" => "Buy", "symbol" => "AAPL", "symbolId" => 8049,
+        "quantity" => 10, "price" => 150.0, "netAmount" => -1500.0,
+        "transactionDate" => "2026-06-01", "tradeDate" => "2026-06-01",
+        "currency" => "USD", "description" => "Apple Inc" }
+    ])
+
+    result = QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
+
+    assert_equal 1, result[:trades]
+    entry = @account.reload.entries.find_by(source: "questrade")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
   end
 
-  # ==========================================================================
-  # ActivitiesProcessor tests
-  # ==========================================================================
+  test "activities processor skips entries with a blank type" do
+    @questrade_account.update!(raw_activities_payload: [
+      { "type" => "", "symbol" => "AAPL", "quantity" => 10, "price" => 100.0 }
+    ])
 
-  test "activities processor creates trades from raw payload" do
-    skip "TODO: Set up questrade_account fixture and activities payload"
+    QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
 
-    # @questrade_account.update!(raw_activities_payload: [
-    #   {
-    #     "id" => "trade_001",
-    #     "type" => "BUY",
-    #     "symbol" => { "symbol" => "AAPL", "name" => "Apple Inc" },
-    #     "units" => 10,
-    #     "price" => 150.00,
-    #     "settlement_date" => Date.current.to_s,
-    #     "currency" => { "code" => "USD" }
-    #   }
-    # ])
-    #
-    # processor = QuestradeAccount::ActivitiesProcessor.new(@questrade_account)
-    # processor.process
-    #
-    # entry = @account.entries.find_by(external_id: "trade_001", source: "questrade")
-    # assert_not_nil entry
-    # assert entry.entryable.is_a?(Trade)
-  end
-
-  test "activities processor skips activities without external_id" do
-    skip "TODO: Set up questrade_account fixture"
-
-    # @questrade_account.update!(raw_activities_payload: [
-    #   { "id" => nil, "type" => "BUY", "units" => 10, "price" => 100.00 }
-    # ])
-    #
-    # processor = QuestradeAccount::ActivitiesProcessor.new(@questrade_account)
-    # processor.process
-    #
-    # assert_equal 0, @account.entries.where(source: "questrade").count
+    assert_equal 0, @account.reload.entries.where(source: "questrade").count
   end
 end

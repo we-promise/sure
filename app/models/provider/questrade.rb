@@ -44,10 +44,11 @@ class Provider::Questrade
   # @param on_token_refresh [#call] called with the new credentials hash
   #        { refresh_token:, api_server:, access_token:, expires_at: } so the
   #        caller can persist them. REQUIRED for durable operation.
-  def initialize(refresh_token:, api_server: nil, on_token_refresh: nil)
-    @refresh_token     = refresh_token
-    @api_server        = api_server
-    @on_token_refresh  = on_token_refresh
+  def initialize(refresh_token:, api_server: nil, on_token_refresh: nil, synchronize_exchange: nil)
+    @refresh_token        = refresh_token
+    @api_server           = api_server
+    @on_token_refresh     = on_token_refresh
+    @synchronize_exchange = synchronize_exchange
     @access_token      = nil
     @access_expires_at = nil
     validate_configuration!
@@ -135,6 +136,20 @@ class Provider::Questrade
     def authenticate!(force: false)
       return if @access_token && !force && Time.current < @access_expires_at
 
+      # Spending a single-use refresh token must be serialized across workers
+      # and must use the freshest persisted token. The caller supplies a lock
+      # that yields the current token; without one, exchange directly.
+      if @synchronize_exchange
+        @synchronize_exchange.call do |fresh_token|
+          @refresh_token = fresh_token if fresh_token.present?
+          exchange_token!
+        end
+      else
+        exchange_token!
+      end
+    end
+
+    def exchange_token!
       response = with_retries("oauth_token") do
         # POST with a form body keeps the single-use refresh token out of the
         # URL (and therefore out of access logs / error-tracking breadcrumbs).

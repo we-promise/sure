@@ -9,12 +9,19 @@ module QuestradeItem::Provided
     Provider::Questrade.new(
       refresh_token: refresh_token,
       api_server: api_server,
-      # Questrade refresh tokens are single-use: persist the rotated token (and
-      # the api_server it hands back) immediately, under a row lock, so two
-      # concurrent syncs can't burn the same token.
+      # Questrade refresh tokens are single-use. Persist the rotated token +
+      # api_server. This runs inside synchronize_exchange's row lock.
       on_token_refresh: ->(creds) {
+        update!(refresh_token: creds[:refresh_token], api_server: creds[:api_server])
+      },
+      # Serialize the single-use token exchange across workers: take the row
+      # lock, reload to get the freshest persisted token, and hand it to the
+      # SDK to spend. Two concurrent syncs/jobs can no longer burn the same
+      # token (the brief lock is held across the short token-exchange call).
+      synchronize_exchange: ->(&blk) {
         with_lock do
-          update!(refresh_token: creds[:refresh_token], api_server: creds[:api_server])
+          reload
+          blk.call(refresh_token)
         end
       }
     )
