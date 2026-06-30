@@ -104,7 +104,6 @@ class EnableBankingAccount < ApplicationRecord
     credit_limit_amount = snapshot.dig(:credit_limit, :amount)
 
     update!(
-      current_balance: nil,
       currency: parse_currency(snapshot[:currency]) || "EUR",
       name: build_account_name(snapshot),
       account_id: snapshot[:uid],

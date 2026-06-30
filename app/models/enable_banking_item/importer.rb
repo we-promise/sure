@@ -3,6 +3,17 @@ class EnableBankingItem::Importer
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
 
+  # Prefer booked ledger balances for net worth/current_balance. Available balances
+  # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
+  # so they are only a last-resort fallback.
+  BALANCE_TYPE_PRIORITY = %w[
+    CLBD closingBooked
+    ITBD interimBooked
+    XPCD expected
+    CLAV closingAvailable
+    ITAV interimAvailable
+  ].freeze
+
   NETWORK_ERRORS = [
     ::SocketError,
     ::Errno::ECONNREFUSED,
@@ -82,19 +93,18 @@ class EnableBankingItem::Importer
       end
     end
 
-    # Fetch balances and transactions for linked accounts
+    # Fetch balances and transactions for linked accounts. Balance refreshes are
+    # best-effort: a balance endpoint failure should keep the previous balance and
+    # must not prevent transaction sync for the same account.
     transactions_imported = 0
     transactions_failed = 0
+    balances_failed = 0
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
     linked_accounts_query.each do |enable_banking_account|
       begin
-        unless fetch_and_update_balance(enable_banking_account)
-          transactions_failed += 1
-          # @sync_error already set in fetch_and_update_balance
-          next
-        end
+        balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
 
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
@@ -115,7 +125,8 @@ class EnableBankingItem::Importer
       accounts_updated: accounts_updated,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
-      transactions_failed: transactions_failed
+      transactions_failed: transactions_failed,
+      balances_failed: balances_failed
     }
 
     result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
@@ -187,29 +198,22 @@ class EnableBankingItem::Importer
       balance_data = enable_banking_provider.get_account_balances(
         account_id: enable_banking_account.api_account_id,
         psu_headers: enable_banking_item.build_psu_headers
-      )
+      ).with_indifferent_access
 
-      # Enable Banking returns an array of balances. We prioritize types based on reliability.
-      # closingBooked (CLBD) > interimAvailable (ITAV) > expected (XPCD)
-      balances = balance_data[:balances] || []
+      # Enable Banking returns an array of balances. Use booked ledger balances for
+      # current_balance/net worth before considering available balances. Available
+      # balances can include arranged overdraft facilities and overstate cash.
+      balances = Array(balance_data[:balances]).map { |balance| balance.with_indifferent_access }
       return true if balances.empty?
 
-      priority_types = [ "CLBD", "ITAV", "XPCD", "CLAV", "ITBD" ]
-      balance = nil
-
-      priority_types.each do |type|
-        balance = balances.find { |b| b[:balance_type] == type }
-        break if balance
-      end
-
-      balance ||= balances.first
+      balance = select_current_balance(balances)
 
       if balance.present?
         amount = balance.dig(:balance_amount, :amount) || balance[:amount]
         currency = balance.dig(:balance_amount, :currency) || balance[:currency]
 
         if amount.present?
-          indicator = balance[:credit_debit_indicator]
+          indicator = balance[:credit_debit_indicator].to_s.upcase
           parsed_amount = amount.to_d
 
           # Enable Banking uses positive amounts for both credit and debit.
@@ -226,7 +230,56 @@ class EnableBankingItem::Importer
     rescue Provider::EnableBanking::EnableBankingError => e
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
+      capture_balance_sync_error(enable_banking_account, e)
       false
+    rescue => e
+      @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
+      Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching balance for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
+      capture_balance_sync_error(enable_banking_account, e)
+      false
+    end
+
+    def select_current_balance(balances)
+      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+
+      BALANCE_TYPE_PRIORITY.each do |type|
+        balance = by_type[normalize_balance_type(type)]
+        return balance if balance.present?
+      end
+
+      balances.first
+    end
+
+    def normalize_balance_type(type)
+      type.to_s.delete("_-").downcase
+    end
+
+    def capture_balance_sync_error(enable_banking_account, error)
+      metadata = {
+        enable_banking_item_id: enable_banking_item.id,
+        enable_banking_account_id: enable_banking_account.id,
+        uid: enable_banking_account.uid,
+        api_account_id: enable_banking_account.api_account_id,
+        previous_current_balance: enable_banking_account.current_balance,
+        error_class: error.class.name,
+        error_message: error.message
+      }
+
+      if error.is_a?(Provider::EnableBanking::EnableBankingError)
+        metadata[:error_type] = error.error_type
+        metadata[:response_data] = error.response_data if error.response_data.present?
+      end
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Failed to fetch Enable Banking balance; keeping previous balance and continuing transaction sync",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: metadata
+      )
     end
 
     def promote_session_invalid(existing, new)

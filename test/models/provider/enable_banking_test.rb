@@ -104,4 +104,22 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
 
     assert_not captured_body.key?("auth_method")
   end
+  test "bad request errors expose parsed response data" do
+    response = OpenStruct.new(
+      code: 400,
+      body: {
+        error: "BALANCES_UNAVAILABLE",
+        detail: { account_id: "redacted" }
+      }.to_json
+    )
+
+    error = assert_raises Provider::EnableBanking::EnableBankingError do
+      @provider.send(:handle_response, response)
+    end
+
+    assert_equal :bad_request, error.error_type
+    assert_equal "BALANCES_UNAVAILABLE", error.response_data[:error]
+    assert_equal "redacted", error.response_data.dig(:detail, :account_id)
+  end
+
 end
