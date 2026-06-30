@@ -1,5 +1,4 @@
 class Assistant::Function::GetCategories < Assistant::Function
-  include Pagy::Backend
 
   class << self
     def default_page_size
@@ -43,11 +42,9 @@ class Assistant::Function::GetCategories < Assistant::Function
   end
 
   def call(params = {})
-    pagy, categories = pagy(
-      family.categories.alphabetically_by_hierarchy,
-      page: params["page"] || 1,
-      limit: default_page_size
-    )
+    categories_scope = family.categories.alphabetically_by_hierarchy
+    pagy = Pagy.new(count: categories_scope.count, page: params["page"] || 1, limit: default_page_size)
+    categories = categories_scope.offset(pagy.offset).limit(pagy.limit)
 
     {
       categories: categories.map { |c|

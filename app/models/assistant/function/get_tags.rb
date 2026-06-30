@@ -1,5 +1,4 @@
 class Assistant::Function::GetTags < Assistant::Function
-  include Pagy::Backend
 
   class << self
     def default_page_size
@@ -42,11 +41,9 @@ class Assistant::Function::GetTags < Assistant::Function
   end
 
   def call(params = {})
-    pagy, tags = pagy(
-      family.tags.alphabetically,
-      page: params["page"] || 1,
-      limit: default_page_size
-    )
+    tags_scope = family.tags.alphabetically
+    pagy = Pagy.new(count: tags_scope.count, page: params["page"] || 1, limit: default_page_size)
+    tags = tags_scope.offset(pagy.offset).limit(pagy.limit)
 
     {
       tags: tags.map { |t| { id: t.id, name: t.name, color: t.color } },
