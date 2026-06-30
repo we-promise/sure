@@ -4,7 +4,7 @@ unless Rails.env.production?
 end
 
 Rails.application.routes.draw do
-  resources :questrade_items, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
+  resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
       get :select_accounts
