@@ -12,7 +12,7 @@ class Transfer < ApplicationRecord
   validates :outflow_transaction_id, uniqueness: true
 
   validate :transfer_has_different_accounts
-  validate :transfer_has_opposite_amounts_or_fees
+  validate :transfer_has_opposite_amounts
   validate :transfer_within_date_range
   validate :transfer_has_same_family
 
@@ -57,7 +57,7 @@ class Transfer < ApplicationRecord
   end
 
   def amount_abs
-    Money.new(amount || 0, from_account&.currency || "USD")
+    inflow_transaction&.entry&.amount_money&.abs || Money.new(0, from_account&.currency || "USD")
   end
 
   def name
@@ -151,7 +151,7 @@ class Transfer < ApplicationRecord
       errors.add(:base, :same_family) unless to_account&.family == from_account&.family
     end
 
-    def transfer_has_opposite_amounts_or_fees
+    def transfer_has_opposite_amounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
 
       inflow_entry = inflow_transaction.entry

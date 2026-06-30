@@ -10,8 +10,6 @@ en:
       bank_charges: Bank Charges
       outgoing_fee: Outgoing transfer fee
       incoming_fee: Incoming transfer fee
-      calculate_rate_tab: Calculate FX rate
-      convert_tab: Convert with FX rate
       date: Date
       destination_amount: Destination amount
       destination_amount_display: "Destination amount: %{amount}"
