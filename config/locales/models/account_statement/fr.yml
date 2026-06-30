@@ -1,0 +1,30 @@
+---
+fr:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Compte
+        account_last4_hint: Compte quatre derniers
+        account_name_hint: Indice de nom de compte
+        closing_balance: Solde de clôture
+        content_sha256: Résumé du contenu
+        currency: Devise
+        filename: Nom du fichier
+        institution_name_hint: Indice d'établissement
+        opening_balance: Solde d'ouverture
+        original_file: Dossier de relevé
+        period_end_on: Fin de période
+        period_start_on: Début des règles
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: a déjà été téléchargé pour cette famille
+            content_sha256:
+              duplicate_statement_file: a déjà été téléchargé pour cette famille
+            original_file:
+              invalid_format: doit être un fichier PDF, CSV ou XLSX
+              too_large: est trop grand. La taille maximale est de %{max_mb} Mo.
+            period_end_on:
+              on_or_after_start: doit être au plus tard au début des règles
