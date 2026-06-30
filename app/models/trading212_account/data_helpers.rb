@@ -3,6 +3,10 @@ module Trading212Account::DataHelpers
 
   private
 
+    def instruments_map
+      @trading212_account&.instruments_map || {}
+    end
+
     def parse_decimal(value)
       return nil if value.nil?
 
@@ -18,10 +22,10 @@ module Trading212Account::DataHelpers
       return nil if value.blank?
 
       case value
+      when DateTime, Time, ActiveSupport::TimeWithZone
+        value.to_date
       when Date
         value
-      when Time, DateTime, ActiveSupport::TimeWithZone
-        value.to_date
       else
         Time.zone.parse(value.to_s)&.to_date || Date.parse(value.to_s)
       end
@@ -32,7 +36,7 @@ module Trading212Account::DataHelpers
     # T212 tickers look like "AAPL_US_EQ". Derive a standard ticker by taking
     # the first segment, which is the instrument symbol on its primary exchange.
     def standard_ticker(t212_ticker)
-      t212_ticker.to_s.split("_").first.upcase
+      t212_ticker.to_s.split("_").first&.upcase || ""
     end
 
     def resolve_security_for_ticker(t212_ticker)

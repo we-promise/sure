@@ -31,7 +31,7 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
           api_secret: "",
           environment: "live"
         }
-      }
+      }, headers: { "Turbo-Frame" => "modal" }
     end
 
     assert_response :unprocessable_entity

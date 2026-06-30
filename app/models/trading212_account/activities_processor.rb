@@ -118,6 +118,7 @@ class Trading212Account::ActivitiesProcessor
 
       date = parse_date(dividend[:paidOn]) || Date.current
 
+
       import_adapter.import_transaction(
         external_id: "trading212_dividend_#{reference}",
         amount: -amount.abs,

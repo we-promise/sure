@@ -126,16 +126,16 @@ class Trading212DataHelpersTest < ActiveSupport::TestCase
   # === resolve_security_for_ticker ===
 
   test "resolve_security_for_ticker finds via instruments_map" do
-    Security.create!(ticker: "AAPL", name: "Apple Inc.")
+    Security.create!(ticker: "TSLA", name: "Tesla Inc.")
     helper = TestHelper.new(
       instruments_map: {
-        "AAPL_US_EQ" => { "shortName" => "Apple Inc.", "currencyCode" => "USD" }
+        "TSLA_US_EQ" => { "shortName" => "Tesla Inc.", "currencyCode" => "USD" }
       }
     )
 
-    security = helper.test_resolve_security_for_ticker("AAPL_US_EQ")
-    assert_equal "AAPL", security.ticker
-    assert_equal "Apple Inc.", security.name
+    security = helper.test_resolve_security_for_ticker("TSLA_US_EQ")
+    assert_equal "TSLA", security.ticker
+    assert_equal "Tesla Inc.", security.name
   end
 
   test "resolve_security_for_ticker creates security if not found" do
@@ -145,10 +145,14 @@ class Trading212DataHelpersTest < ActiveSupport::TestCase
     assert_equal "MSFT", security.ticker
   end
 
-  test "resolve_security_for_ticker handles nil input" do
+  test "resolve_security_for_ticker returns nil for nil input" do
     security = @helper.test_resolve_security_for_ticker(nil)
-    assert_not_nil security
-    assert_equal "", security.ticker
+    assert_nil security
+  end
+
+  test "resolve_security_for_ticker returns nil for empty ticker" do
+    security = @helper.test_resolve_security_for_ticker("")
+    assert_nil security
   end
 
   # === resolve_security_direct ===

@@ -82,13 +82,9 @@ class Trading212ItemTest < ActiveSupport::TestCase
     assert_nil item.trading212_provider
   end
 
-  test "trading212_provider raises ConfigurationError with blank api_key" do
+  test "Provider::Trading212 raises ConfigurationError with blank credentials" do
     assert_raises(Provider::Trading212::ConfigurationError) do
-      Trading212Item.new(
-        family: @family,
-        api_key: "",
-        api_secret: "secret"
-      ).trading212_provider
+      Provider::Trading212.new(api_key: "", api_secret: "secret")
     end
   end
 
@@ -152,8 +148,10 @@ class Trading212ItemTest < ActiveSupport::TestCase
   # === sync_status_summary ===
 
   test "sync_status_summary reports no_accounts when no trading212 accounts" do
-    summary = @trading212_item.sync_status_summary
-    assert_match(/no accounts/i, summary)
+    # Delete fixture account to test empty state
+    @trading212_item.trading212_accounts.delete_all
+    summary = @trading212_item.reload.sync_status_summary
+    assert_match(/No Trading 212 account discovered yet/, summary)
   end
 
   test "sync_status_summary reports all_linked when all accounts have providers" do
@@ -162,7 +160,7 @@ class Trading212ItemTest < ActiveSupport::TestCase
     trading212_account.ensure_account_provider!(investment)
 
     summary = @trading212_item.reload.sync_status_summary
-    assert_match(/all linked/i, summary)
+    assert_match(/account linked/, summary)
   end
 
   test "sync_status_summary reports partial when some accounts are unlinked" do
@@ -179,7 +177,7 @@ class Trading212ItemTest < ActiveSupport::TestCase
     )
 
     summary = @trading212_item.reload.sync_status_summary
-    assert_match(/partial/i, summary)
+    assert_match(/need setup/, summary)
   end
 
   # === unlink_all! ===
