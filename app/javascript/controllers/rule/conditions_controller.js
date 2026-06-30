@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="rule--conditions"
 export default class extends Controller {
-  static values = { conditionFilters: Array };
+  static values = { conditionFilters: Array, valuelessOperators: Array };
   static targets = [
     "destroyField",
     "filterValue",
@@ -10,9 +10,6 @@ export default class extends Controller {
     "subConditionTemplate",
     "subConditionsList",
   ];
-
-  // Operators that don't take a value (mirrors Rule::ConditionFilter::VALUELESS_OPERATORS)
-  static valuelessOperators = ["is_null", "is_not_null"];
 
   connect() {
     // Hide value field on initial load for valueless operators (e.g. "is_null")
@@ -132,7 +129,7 @@ export default class extends Controller {
   #toggleValueFieldVisibility() {
     const operator = this.operatorSelectTarget.value;
 
-    if (this.constructor.valuelessOperators.includes(operator)) {
+    if (this.valuelessOperatorsValue.includes(operator)) {
       this.filterValueTarget.classList.add("hidden");
       // Clear the value since it's not needed
       if (this.valueInputEl) {

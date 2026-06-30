@@ -144,6 +144,26 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert filtered.none? { |t| t.entry.name.include?("transaction1") }
   end
 
+  test "not_like operator keeps rows with NULL field value (OR IS NULL branch)" do
+    # entries.notes is nullable, so we can verify the OR IS NULL guard in not_like
+    noted_entry = @account.entries.first
+    noted_entry.update!(notes: "business trip")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_notes",
+      operator: "not_like",
+      value: "business trip"
+    )
+
+    scope = condition.prepare(@rule_scope)
+    filtered = condition.apply(scope)
+
+    # The entry with matching notes is excluded; the 4 entries with NULL notes are kept
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.id == noted_entry.transaction.id }
+  end
+
   test "applies compound and condition" do
     scope = @rule_scope
 

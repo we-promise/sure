@@ -129,8 +129,10 @@ class Rule::ConditionFilter
       when "is_not_null"
         "IS NOT NULL"
       when "!="
-        # IS DISTINCT FROM treats NULL as a regular value, so "not equal to X"
-        # also matches rows where the field is NULL (e.g. uncategorized transactions).
+        # IS DISTINCT FROM treats NULL as a regular value, so "not equal to X" also
+        # matches rows where the field is NULL. This is intentional for select-type
+        # fields (e.g. merchant_id, category_id) where NULL means "not set". For
+        # number-type fields (e.g. amount), NULL is impossible at the DB level.
         "IS DISTINCT FROM"
       else
         operator
