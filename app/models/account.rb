@@ -407,7 +407,50 @@ class Account < ApplicationRecord
   # decision in one place so the new-pledge controller / preview helper
   # can't disagree on what they're going to save.
   def default_pledge_kind
-    manual? ? "manual_save" : "transfer"
+    # Investment accounts never use manual_save: a positive valuation delta on a
+    # brokerage is usually a market move, not a deposit, and would false-match a
+    # pledge. They resolve on transfer (cash-inflow) entries only.
+    manual? && !investment? ? "manual_save" : "transfer"
+  end
+
+  # Total fixed earmark this account currently has reserved across every
+  # non-archived goal (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending.
+  def goal_earmarked_total
+    GoalAccount.joins(:goal)
+               .where(account_id: id)
+               .where.not(allocated_amount: nil)
+               .where.not(goals: { state: "archived" })
+               .sum(:allocated_amount)
+               .to_d
+  end
+
+  # Headroom left to earmark toward goals before fixed allocations exceed the
+  # balance. Negative means the account is over-earmarked. Intended to back a
+  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
+  # Budget#available_to_allocate.
+  def free_to_earmark
+    balance.to_d - goal_earmarked_total
+  end
+
+  # Total fixed earmark this account currently has reserved across every
+  # non-archived goal (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending.
+  def goal_earmarked_total
+    GoalAccount.joins(:goal)
+               .where(account_id: id)
+               .where.not(allocated_amount: nil)
+               .where.not(goals: { state: "archived" })
+               .sum(:allocated_amount)
+               .to_d
+  end
+
+  # Headroom left to earmark toward goals before fixed allocations exceed the
+  # balance. Negative means the account is over-earmarked. Intended to back a
+  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
+  # Budget#available_to_allocate.
+  def free_to_earmark
+    balance.to_d - goal_earmarked_total
   end
 
   def logo_url

@@ -813,9 +813,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "allocated_amount", precision: 19, scale: 4
     t.index ["account_id"], name: "index_goal_accounts_on_account_id"
     t.index ["goal_id", "account_id"], name: "index_savings_goal_accounts_on_goal_and_account", unique: true
     t.index ["goal_id"], name: "index_goal_accounts_on_goal_id"
+    t.check_constraint "allocated_amount IS NULL OR allocated_amount >= 0::numeric", name: "chk_goal_accounts_allocation_non_negative"
   end
 
   create_table "goal_pledges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -849,9 +851,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_25_230639) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+    t.string "progress_basis", default: "balance", null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
+    t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying, 'contributions'::character varying]::text[])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
   end

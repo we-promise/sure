@@ -6,9 +6,11 @@ import '../models/transaction.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../services/log_service.dart';
 import '../utils/amount_parser.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/money_masker.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -196,10 +198,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ).format(date);
     final colorScheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        // Watch inside the dialog builder so the amounts re-mask if the user
+        // toggles privacy while the dialog is open.
+        final hideAmounts = context.watch<PrivacyProvider>().hidden;
         return AlertDialog(
           title: Text(
             formattedDate,
@@ -224,7 +228,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
                       final transaction = transactions[index];
-                      return _buildTransactionTile(transaction);
+                      return _buildTransactionTile(transaction, hideAmounts);
                     },
                   ),
           ),
@@ -239,7 +243,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildTransactionTile(Transaction transaction) {
+  Widget _buildTransactionTile(Transaction transaction, bool hideAmounts) {
     // Parse amount to determine if positive or negative
     var isNegative = false;
     try {
@@ -283,7 +287,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             )
           : null,
       trailing: Text(
-        transaction.amount,
+        MoneyMasker.mask(
+          transaction.amount,
+          hidden: hideAmounts,
+        ),
         style: TextStyle(
           color: amountColor,
           fontWeight: FontWeight.bold,
@@ -310,6 +317,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final accountsProvider = context.watch<AccountsProvider>();
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     return Scaffold(
       appBar: AppBar(
@@ -472,7 +480,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  _formatCurrency(_getTotalForMonth()),
+                  MoneyMasker.mask(
+                    _formatCurrency(_getTotalForMonth()),
+                    hidden: hideAmounts,
+                  ),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: _getTotalForMonth() >= 0
                             ? Colors.green
@@ -488,14 +499,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _buildCalendar(colorScheme),
+                : _buildCalendar(colorScheme, hideAmounts),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCalendar(ColorScheme colorScheme) {
+  Widget _buildCalendar(ColorScheme colorScheme, bool hideAmounts) {
     final firstDayOfMonth =
         DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDayOfMonth =
@@ -566,6 +577,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         change,
                         hasChange,
                         colorScheme,
+                        hideAmounts,
                       ),
                     );
                   }).toList(),
@@ -579,7 +591,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildDayCell(DateTime date, int day, double change, bool hasChange,
-      ColorScheme colorScheme) {
+      ColorScheme colorScheme, bool hideAmounts) {
     Color? backgroundColor;
     Color? textColor;
 
@@ -632,7 +644,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      _formatAmount(change),
+                      MoneyMasker.mask(
+                        _formatAmount(change),
+                        hidden: hideAmounts,
+                      ),
                       style: TextStyle(
                         fontSize: 10,
                         color: textColor,
