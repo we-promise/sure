@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/privacy_provider.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_tokens.dart';
+import '../utils/money_masker.dart';
 import 'money_text.dart';
 import 'sure_icon.dart';
 
@@ -82,7 +85,7 @@ class NetWorthCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  netWorthFormatted ?? '--',
+                  maskedNetWorth,
                   style: SureMoney.tabular(
                     Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: SureTokens.weightMedium,
@@ -125,7 +128,7 @@ class NetWorthCard extends StatelessWidget {
                       assetTotalsByCurrency,
                       palette.success,
                     ),
-                    formatAmount: formatAmount,
+                    formatAmount: maskedFormat,
                   ),
                 ),
 
@@ -154,7 +157,7 @@ class NetWorthCard extends StatelessWidget {
                       liabilityTotalsByCurrency,
                       palette.destructive,
                     ),
-                    formatAmount: formatAmount,
+                    formatAmount: maskedFormat,
                   ),
                 ),
               ],
@@ -170,6 +173,7 @@ class NetWorthCard extends StatelessWidget {
     String title,
     Map<String, double> totals,
     Color color,
+    String Function(String currency, double amount) formatAmount,
   ) {
     final sortedEntries = totals.entries.toList()
       ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));

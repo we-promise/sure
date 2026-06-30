@@ -1,52 +1,116 @@
 <div class="space-y-4">
   <%= render DS::Alert.new(message: t("providers.snaptrade.free_tier_warning"), variant: :warning) %>
 
-  <%= render "settings/providers/setup_steps",
-             steps: [
-               t("providers.snaptrade.step_1_html").html_safe,
-               t("providers.snaptrade.step_2"),
-               t("providers.snaptrade.step_3"),
-               t("providers.snaptrade.step_4")
-             ] %>
-
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
     <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <%
-    snaptrade_item = Current.family.snaptrade_items.first_or_initialize(name: "SnapTrade Connection")
+    items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.active.ordered
+    active_items = items.select { |item| !item.scheduled_for_deletion? }
+    snaptrade_item =
+      active_items.first ||
+      Current.family.snaptrade_items.build(name: "SnapTrade Connection")
     is_new_record = snaptrade_item.new_record?
-    is_configured = snaptrade_item.persisted? && snaptrade_item.credentials_configured?
-    is_registered = snaptrade_item.persisted? && snaptrade_item.user_registered?
+    oauth_href =
+      if snaptrade_item.persisted?
+        oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id)
+      else
+        oauth_connect_snaptrade_items_path
+      end
+    oauth_active = snaptrade_item.persisted? && snaptrade_item.oauth_token_active?
+    oauth_button_text =
+      if oauth_active
+        t("providers.snaptrade.oauth_reauthorize_button", default: "Reauthorize")
+      else
+        t("providers.snaptrade.oauth_connect_button", default: "Authorize")
+      end
   %>
 
-  <%= styled_form_with model: snaptrade_item,
-                       url: is_new_record ? snaptrade_items_path : snaptrade_item_path(snaptrade_item),
-                       scope: :snaptrade_item,
-                       method: is_new_record ? :post : :patch,
-                       data: { turbo: true },
-                       class: "space-y-3" do |form| %>
-    <%= form.text_field :client_id,
-                        label: t("providers.snaptrade.client_id_label"),
-                        placeholder: is_new_record ? t("providers.snaptrade.client_id_placeholder") : t("providers.snaptrade.client_id_update_placeholder"),
-                        type: :password %>
+  <div class="bg-surface-inset rounded-xl p-4 space-y-3">
+    <div class="flex items-start gap-3">
+      <span class="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+        <%= icon "key-round", class: "w-4 h-4 text-success" %>
+      </span>
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-primary"><%= t("providers.snaptrade.oauth_title", default: "SnapTrade OAuth") %></p>
+        <p class="text-sm text-secondary">
+          <% if oauth_active %>
+            <%= t("providers.snaptrade.oauth_status_authorized", default: "Authorized for SnapTrade.") %>
+          <% else %>
+            <%= t("providers.snaptrade.oauth_status_ready", default: "Use a device code to authorize Sure for SnapTrade.") %>
+          <% end %>
+        </p>
+      </div>
+    </div>
 
-    <%= form.text_field :consumer_key,
-                        label: t("providers.snaptrade.consumer_key_label"),
-                        placeholder: is_new_record ? t("providers.snaptrade.consumer_key_placeholder") : t("providers.snaptrade.consumer_key_update_placeholder"),
-                        type: :password %>
+    <%= render DS::Link.new(
+      text: oauth_button_text,
+      icon: "external-link",
+      variant: :primary,
+      full_width: true,
+      href: oauth_href,
+      data: { turbo_frame: "drawer" }
+    ) %>
+  </div>
 
-    <div class="flex justify-end">
-      <%= form.submit is_new_record ? t("providers.snaptrade.save_button") : t("providers.snaptrade.update_button") %>
+  <%= render DS::Disclosure.new(variant: :card_inset) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-sm font-medium text-primary">
+            <%= t("providers.snaptrade.legacy_credentials_title", default: "Use legacy API credentials") %>
+          </p>
+          <p class="text-xs text-secondary mt-1">
+            <%= t("providers.snaptrade.legacy_credentials_description", default: "Use Client ID and Consumer Key setup if your SnapTrade account has not enabled OAuth.") %>
+          </p>
+        </div>
+        <%= icon(
+          "chevron-down",
+          class: "mt-0.5 text-secondary group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150"
+        ) %>
+      </div>
+    <% end %>
+
+    <div class="mt-4 space-y-3">
+      <%= render "settings/providers/setup_steps",
+                 steps: [
+                   t("providers.snaptrade.step_1_html").html_safe,
+                   t("providers.snaptrade.step_2"),
+                   t("providers.snaptrade.step_3"),
+                   t("providers.snaptrade.step_4")
+                 ] %>
+
+      <%= styled_form_with model: snaptrade_item,
+                           url: is_new_record ? snaptrade_items_path : snaptrade_item_path(snaptrade_item),
+                           scope: :snaptrade_item,
+                           method: is_new_record ? :post : :patch,
+                           data: { turbo: true },
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :client_id,
+                            label: t("providers.snaptrade.client_id_label"),
+                            placeholder: is_new_record ?
+                              t("providers.snaptrade.client_id_placeholder") :
+                              t("providers.snaptrade.client_id_update_placeholder"),
+                            type: :password %>
+
+        <%= form.text_field :consumer_key,
+                            label: t("providers.snaptrade.consumer_key_label"),
+                            placeholder: is_new_record ?
+                              t("providers.snaptrade.consumer_key_placeholder") :
+                              t("providers.snaptrade.consumer_key_update_placeholder"),
+                            type: :password %>
+
+        <div class="flex justify-end">
+          <%= form.submit is_new_record ? t("providers.snaptrade.save_button") : t("providers.snaptrade.update_button") %>
+        </div>
+      <% end %>
     </div>
   <% end %>
 
-  <% items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.where.not(client_id: [nil, ""]) %>
-
-  <% if items&.any? %>
-    <% item = items.first %>
-    <% unless item.user_registered? %>
+  <% if snaptrade_item.persisted? %>
+    <% unless snaptrade_item.user_registered? %>
       <div class="flex items-center gap-2 border-t border-primary pt-4 mt-4">
         <span class="w-2 h-2 bg-warning rounded-full"></span>
         <p class="text-sm text-secondary"><%= t("providers.snaptrade.status_needs_registration") %></p>
@@ -54,15 +118,14 @@
     <% end %>
   <% end %>
 
-  <% if items&.any? && items.first.user_registered? %>
-    <% item = items.first %>
+  <% if snaptrade_item.persisted? && snaptrade_item.user_registered? %>
     <div class="border-t border-primary pt-4 mt-4">
       <%= render DS::Disclosure.new(
         variant: :inline,
         data: {
           controller: "lazy-load",
           action: "toggle->lazy-load#toggled",
-          lazy_load_url_value: connections_snaptrade_item_path(item),
+          lazy_load_url_value: connections_snaptrade_item_path(snaptrade_item),
           lazy_load_auto_open_param_value: "manage"
         }
       ) do |disclosure| %>
@@ -70,9 +133,9 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <p class="text-sm text-secondary">
-                <%= t("providers.snaptrade.status_connected", count: item.snaptrade_accounts.count) %>
-                <% if item.unlinked_accounts_count > 0 %>
-                  <span class="text-warning">(<%= t("providers.snaptrade.needs_setup", count: item.unlinked_accounts_count) %>)</span>
+                <%= t("providers.snaptrade.status_connected", count: snaptrade_item.snaptrade_accounts.count) %>
+                <% if snaptrade_item.unlinked_accounts_count > 0 %>
+                  <span class="text-warning">(<%= t("providers.snaptrade.needs_setup", count: snaptrade_item.unlinked_accounts_count) %>)</span>
                 <% end %>
               </p>
             </div>
