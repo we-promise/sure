@@ -44,12 +44,14 @@
     <%= form.text_field :api_key,
                         label: t(".api_key_label"),
                         placeholder: is_new_record ? t(".api_key_placeholder_new") : t(".api_key_placeholder_existing"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
 
     <%= form.text_field :api_secret,
                         label: t(".api_secret_label"),
                         placeholder: is_new_record ? t(".api_secret_placeholder_new") : t(".api_secret_placeholder_existing"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
 
     <%= form.select :environment,
                     [ [ t(".environment_live"), "live" ], [ t(".environment_demo"), "demo" ] ],
