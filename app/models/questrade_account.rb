@@ -88,7 +88,7 @@ class QuestradeAccount < ApplicationRecord
   def upsert_balances!(per_currency_balances)
     data = Array(per_currency_balances).map { |b| sdk_object_to_hash(b).with_indifferent_access }
     primary = primary_cash_entry(data)
-    cash_value = primary ? primary[:cash] : cash_balance
+    cash_value = primary ? primary[:cash] : 0
     update!(cash_balance: cash_value, raw_balances_payload: data)
   end
 
@@ -98,10 +98,9 @@ class QuestradeAccount < ApplicationRecord
     entries = Array(raw_balances_payload).map do |e|
       e.respond_to?(:with_indifferent_access) ? e.with_indifferent_access : {}
     end
-    primary_code = primary_cash_entry(entries)&.dig(:currency)
     entries.filter_map do |e|
       code = e[:currency]
-      next if code.blank? || code == primary_code
+      next if code.blank? || code == currency
       amount = e[:cash]
       next if amount.blank? || amount.to_d.abs < BigDecimal("0.01")
       { currency: code, amount: amount }
@@ -113,9 +112,9 @@ class QuestradeAccount < ApplicationRecord
     # Primary cash entry: account currency first, then USD, then first entry.
     def primary_cash_entry(entries)
       entries = entries.map { |e| e.respond_to?(:with_indifferent_access) ? e.with_indifferent_access : {} }
-      entries.find { |b| b[:currency] == currency } ||
-        entries.find { |b| b[:currency] == "USD" } ||
-        entries.first
+      # Only the account-currency (CAD) entry is primary; other currencies
+      # surface as separate cash holdings.
+      entries.find { |b| b[:currency] == currency }
     end
 
     def extract_institution_metadata(data)

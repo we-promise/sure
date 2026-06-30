@@ -250,15 +250,14 @@ class QuestradeItemsController < ApplicationController
       next if questrade_account.account_provider.present?
 
       accountable_type = infer_accountable_type(config[:account_type], config[:subtype])
-      account = create_account_from_questrade(questrade_account, accountable_type, config)
 
-      if account&.persisted?
+      # Atomic: roll back the manual account if linking the provider fails.
+      ActiveRecord::Base.transaction do
+        account = create_account_from_questrade(questrade_account, accountable_type, config)
         questrade_account.ensure_account_provider!(account)
         questrade_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
-        created_count += 1
-      else
-        skipped_count += 1
       end
+      created_count += 1
     rescue => e
       Rails.logger.error "QuestradeItemsController#complete_account_setup - Error: #{e.message}"
       skipped_count += 1
@@ -307,15 +306,19 @@ class QuestradeItemsController < ApplicationController
     def link_questrade_account(questrade_account, accountable_type)
       accountable_class = validated_accountable_class(accountable_type)
 
-      account = Current.family.accounts.create!(
-        name: questrade_account.name,
-        balance: questrade_account.current_balance || 0,
-        currency: questrade_account.currency || "USD",
-        accountable: accountable_class.new
-      )
+      # Atomic: a failure in ensure_account_provider! must roll back the account
+      # so we never leave an orphan manual account behind.
+      ActiveRecord::Base.transaction do
+        account = Current.family.accounts.create!(
+          name: questrade_account.name,
+          balance: questrade_account.current_balance || 0,
+          currency: questrade_account.currency || "USD",
+          accountable: accountable_class.new
+        )
 
-      questrade_account.ensure_account_provider!(account)
-      account
+        questrade_account.ensure_account_provider!(account)
+        account
+      end
     end
 
     def create_account_from_questrade(questrade_account, accountable_type, config)

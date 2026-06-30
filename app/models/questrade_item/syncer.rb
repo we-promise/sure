@@ -20,19 +20,26 @@ class QuestradeItem::Syncer
     finalize_setup_counts(sync)
 
     # Phase 3: Process data for linked accounts
+    sync_errors = nil
     linked_questrade_accounts = questrade_item.linked_questrade_accounts.includes(account_provider: :account)
     if linked_questrade_accounts.any?
       sync.update!(status_text: I18n.t("questrade_items.sync.status.processing")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
-      questrade_item.process_accounts
+      process_results = questrade_item.process_accounts
 
       # Phase 4: Schedule balance calculations
       sync.update!(status_text: I18n.t("questrade_items.sync.status.calculating")) if sync.respond_to?(:status_text)
-      questrade_item.schedule_account_syncs(
+      schedule_results = questrade_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
         window_end_date: sync.window_end_date
       )
+
+      # Surface per-account processing/scheduling failures in sync health.
+      sync_errors = [ *process_results, *schedule_results ].filter_map do |result|
+        next if result[:success]
+        { message: result[:error], category: "sync_error" }
+      end.presence
 
       # Phase 5: Collect statistics
       account_ids = linked_questrade_accounts.filter_map { |pa| pa.current_account&.id }
@@ -42,7 +49,7 @@ class QuestradeItem::Syncer
     end
 
     # Mark sync health
-    collect_health_stats(sync, errors: nil)
+    collect_health_stats(sync, errors: sync_errors)
   rescue Provider::Questrade::AuthenticationError => e
     questrade_item.update!(status: :requires_update)
     collect_health_stats(sync, errors: [ { message: e.message, category: "auth_error" } ])

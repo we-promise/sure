@@ -46,11 +46,12 @@ class QuestradeActivitiesFetchJob < ApplicationJob
       if activities.any?
         merged = merge_activities(existing_activities, activities)
         @questrade_account.upsert_activities_snapshot!(merged)
-        @questrade_account.update!(last_activities_sync: Time.current)
-
         QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
       end
 
+      # Always record the fetch as completed (even for legitimately empty
+      # accounts) so the importer's fresh-account check stops re-queueing this.
+      @questrade_account.update!(last_activities_sync: Time.current)
       clear_pending_flag
       broadcast_updates
     end
