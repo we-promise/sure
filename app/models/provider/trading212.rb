@@ -137,7 +137,7 @@ class Provider::Trading212
         raise RateLimitError, "Trading 212 rate limit exceeded. Please wait before retrying."
       else
         raise ApiError.new(
-          "Trading 212 API error (#{response.code}): #{response.body}",
+          "Trading 212 API error (status #{response.code})",
           status_code: response.code,
           response_body: response.body
         )
