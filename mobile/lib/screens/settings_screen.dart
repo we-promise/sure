@@ -31,8 +31,15 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
   String? _appVersion;
-  bool _isResettingAccount = false;
-  bool _isDeletingAccount = false;
+  // Identifiers for the in-progress destructive action. Defined once so the
+  // discriminator can't drift via a mistyped string literal across handlers and
+  // tiles.
+  static const String _clearAction = 'clear';
+  static const String _resetAction = 'reset';
+  static const String _deleteAction = 'delete';
+  // Tracks which destructive action is in progress (one of the constants above),
+  // or null when idle. Used to disable all three tiles while any one is running.
+  String? _activeDestructiveAction;
   bool _biometricSupported = false;
   bool _biometricEnabled = false;
   bool _isTogglingBiometric = false;
@@ -232,6 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && context.mounted) {
+      setState(() => _activeDestructiveAction = _clearAction);
       try {
         final offlineStorage = OfflineStorageService();
         final log = LogService.instance;
@@ -270,6 +278,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
         }
+      } finally {
+        if (mounted) setState(() => _activeDestructiveAction = null);
       }
     }
   }
@@ -313,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    setState(() => _isResettingAccount = true);
+    setState(() => _activeDestructiveAction = _resetAction);
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
@@ -353,7 +363,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isResettingAccount = false);
+      if (mounted) setState(() => _activeDestructiveAction = null);
     }
   }
 
@@ -385,7 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    setState(() => _isDeletingAccount = true);
+    setState(() => _activeDestructiveAction = _deleteAction);
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
@@ -410,7 +420,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isDeletingAccount = false);
+      if (mounted) setState(() => _activeDestructiveAction = null);
     }
   }
 
@@ -748,7 +758,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.delete_outline),
             title: Text(l.settingsClearDataTitle),
             subtitle: Text(l.settingsClearDataTileSubtitle),
-            onTap: () => _handleClearLocalData(context),
+            trailing: _activeDestructiveAction == _clearAction
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
+            enabled: _activeDestructiveAction == null,
+            onTap: _activeDestructiveAction != null
+                ? null
+                : () => _handleClearLocalData(context),
           ),
 
           const Divider(),
@@ -799,14 +818,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.restart_alt, color: Colors.red),
             title: Text(l.settingsResetAccount),
             subtitle: Text(l.settingsResetAccountTileSubtitle),
-            trailing: _isResettingAccount
+            trailing: _activeDestructiveAction == _resetAction
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : null,
-            enabled: !_isResettingAccount && !_isDeletingAccount,
-            onTap: _isResettingAccount || _isDeletingAccount
+            enabled: _activeDestructiveAction == null,
+            onTap: _activeDestructiveAction != null
                 ? null
                 : () => _handleResetAccount(context),
           ),
@@ -815,14 +834,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: Text(l.settingsDeleteAccount),
             subtitle: Text(l.settingsDeleteAccountTileSubtitle),
-            trailing: _isDeletingAccount
+            trailing: _activeDestructiveAction == _deleteAction
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : null,
-            enabled: !_isDeletingAccount && !_isResettingAccount,
-            onTap: _isDeletingAccount || _isResettingAccount
+            enabled: _activeDestructiveAction == null,
+            onTap: _activeDestructiveAction != null
                 ? null
                 : () => _handleDeleteAccount(context),
           ),
