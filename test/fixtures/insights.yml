@@ -1,0 +1,32 @@
+spending_anomaly_dining:
+  family: dylan_family
+  insight_type: spending_anomaly
+  priority: medium
+  status: active
+  title: Food & Drink spending is up
+  body: You've spent about 40% more on Food & Drink this month than your recent three-month average.
+  metadata:
+    current_amount: 420.0
+    baseline_amount: 300.0
+    deviation_pct: 40.0
+  currency: USD
+  period_start: <%= Date.current.beginning_of_month %>
+  period_end: <%= Date.current.end_of_month %>
+  generated_at: <%= 1.day.ago %>
+  dedup_key: <%= "spending_anomaly:food-and-drink:#{Date.current.strftime("%Y-%m")}" %>
+
+cash_flow_warning:
+  family: dylan_family
+  insight_type: cash_flow_warning
+  priority: high
+  status: active
+  title: Checking balance may run low
+  body: Based on your upcoming bills and typical spending, your checking balance could drop to about $320 in the next 30 days.
+  metadata:
+    projected_low_amount: 320.0
+    projected_low_date: <%= 12.days.from_now.to_date %>
+  currency: USD
+  period_start: <%= Date.current %>
+  period_end: <%= 30.days.from_now.to_date %>
+  generated_at: <%= 1.day.ago %>
+  dedup_key: <%= "cash_flow_warning:#{Date.current.strftime("%Y-%m")}" %>

@@ -8,6 +8,7 @@ class PagesController < ApplicationController
   #               false for content-sized widgets (tables, stat grids)
   #   min_height: floor in px
   DASHBOARD_SECTION_LAYOUTS = {
+    "insights_feed"      => { col_span: "full",   grow: false, min_height: 0 },
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
@@ -41,6 +42,7 @@ class PagesController < ApplicationController
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
+    @feed_insights = Current.family.insights.visible.ordered.limit(3)
 
     @dashboard_sections = build_dashboard_sections
 
@@ -104,6 +106,15 @@ class PagesController < ApplicationController
 
     def build_dashboard_sections
       all_sections = [
+        {
+          key: "insights_feed",
+          title: "pages.dashboard.insights_feed.title",
+          partial: "pages/dashboard/insights_feed",
+          layout: section_layout("insights_feed"),
+          locals: { insights: @feed_insights },
+          visible: @feed_insights.any?,
+          collapsible: true
+        },
         {
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",

@@ -1,0 +1,14 @@
+<%# locals: (insights:, **args) %>
+
+<div class="space-y-3" id="insights-feed">
+  <%= render partial: "insights/insight_card", collection: insights, as: :insight %>
+
+  <div class="px-1">
+    <%= render DS::Link.new(
+      text: t("insights.feed.view_all"),
+      href: insights_path,
+      variant: "ghost",
+      size: "sm"
+    ) %>
+  </div>
+</div>
