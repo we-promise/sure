@@ -1,0 +1,10 @@
+---
+ro:
+  settings:
+    securities:
+      show:
+        disable_mfa: Dezactivează 2FA
+        disable_mfa_confirm: Ești sigur că vrei să dezactivezi autentificarea cu doi factori? Acest lucru va face contul tău mai puțin sigur.
+        enable_mfa: Activează 2FA
+        mfa_description: Adaugă un strat suplimentar de securitate contului tău solicitând un cod din aplicația ta de autentificare la conectare
+        mfa_title: Autentificare cu Doi Factori

@@ -1,0 +1,8 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: Cal la variable d'entorn INDEXA_API_TOKEN o bé les
+            credencials d'usuari/document/contrasenya

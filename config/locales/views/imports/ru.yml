@@ -45,8 +45,11 @@ ru:
         button_label: Продолжить
         description: Загрузите простой CSV файл (как тот, который мы генерируем при
           экспорте ваших данных). Мы автоматически сопоставим колонки для вас.
-        instructions: Выберите продолжить, чтобы разобрать ваш CSV и перейти к шагу
-          очистки.
+        instructions: Нажмите Продолжить, чтобы обработать CSV и перейти к очистке данных.
+      merchant_import:
+        button_label: Продолжить
+        description: Загрузите CSV-файл с продавцами. Мы автоматически сопоставим столбцы.
+        instructions: Нажмите Продолжить, чтобы обработать CSV и перейти к очистке данных.
       mint_import:
         date_format_label: Формат даты
       rule_import:
@@ -114,6 +117,17 @@ ru:
         treat_as_html: Рассматривать "<span class="font-medium">%{value}</span>" как
       update:
         success: Импорт успешно настроен.
+      ynab_import:
+        account_label: Счёт (необязательно)
+        amount_notice: Суммы автоматически определяются по столбцам Outflow и Inflow.
+        apply_configuration: Применить настройки
+        category_label: Категория (необязательно)
+        date_format_label: Формат даты
+        date_label: Дата
+        leave_empty: Оставить пустым
+        name_label: Получатель (необязательно)
+        notes_label: Примечание (необязательно)
+        preconfigured_notice: Мы уже настроили импорт YNAB за вас. Перейдите к следующему шагу.
     confirms:
       mappings:
         create_account: Создать счёт
@@ -177,17 +191,17 @@ ru:
         submit: Продолжить к обзору
         tag_name_col: Название тега
         tags_found:
-          one: "Найден 1 тег"
-          few: "Найдено %{count} тега"
-          many: "Найдено %{count} тегов"
-          other: "Найдено %{count} тега"
+          few: Найдено %{count} тега
+          many: Найдено %{count} тегов
+          one: Найден 1 тег
+          other: Найдено %{count} тега
         tags_heading: Теги
         title: Настройка и выбор
         transactions_col: Операции
         txn_count:
-          one: "1 операция"
           few: "%{count} операции"
           many: "%{count} операций"
+          one: 1 операция
           other: "%{count} операции"
       update:
         success: Категории и теги сохранены.
@@ -255,6 +269,8 @@ ru:
       date: Дата
       entity_type: Тип
       exchange: Биржа
+      merchant_color: Цвет
+      merchant_website: Сайт
       name: Имя
       notes: Заметки
       price: Цена
@@ -269,7 +285,8 @@ ru:
       document_upload_failed: Не удалось загрузить документ в хранилище векторов.
         Пожалуйста, попробуйте снова.
       document_uploaded: Документ успешно загружен.
-      duplicate_pdf_unavailable: Этот PDF уже сохранён как выписка, к которой у вас нет доступа.
+      duplicate_pdf_unavailable: Этот PDF уже сохранён как выписка, к которой у вас
+        нет доступа.
       file_too_large: Файл слишком большой. Максимальный размер %{max_size}MB.
       invalid_document_file_type: Неверный тип файла документа для активного хранилища
         векторов.
@@ -350,6 +367,7 @@ ru:
       import_file: Импорт документа
       import_file_description: Анализ на основе ИИ для PDF и загрузка файлов с возможностью
         поиска
+      import_merchants: Импорт продавцов
       import_mint: Импорт из Mint
       import_portfolio: Импорт инвестиций
       import_qif: Импорт из Quicken (QIF)
@@ -385,10 +403,10 @@ ru:
       processing_failed_with_message: "%{message}"
       processing_title: Обработка вашего PDF
       publish_transactions:
-        one: "Опубликовать %{count} операцию"
-        few: "Опубликовать %{count} операции"
-        many: "Опубликовать %{count} операций"
-        other: "Опубликовать %{count} операции"
+        few: Опубликовать %{count} операции
+        many: Опубликовать %{count} операций
+        one: Опубликовать %{count} операцию
+        other: Опубликовать %{count} операции
       ready_for_review_description: Мы извлекли %{count} операций из вашей выписки.
         Проверьте и опубликуйте их, чтобы добавить на ваш счёт.
       ready_for_review_title: Готово к обзору
@@ -402,9 +420,9 @@ ru:
       summary_label: Сводка
       transactions_extracted: Извлечённые операции
       transactions_extracted_count:
-        one: "%{count} операция"
         few: "%{count} операции"
         many: "%{count} операций"
+        one: "%{count} операция"
         other: "%{count} операции"
       try_again: Попробовать снова
       unknown_document_type: Неизвестный
@@ -484,6 +502,7 @@ ru:
           actual_import: Actual
           category_import: Категория
           document_import: Документ
+          merchant_import: Продавец
           mint_import: Mint
           pdf_import: PDF
           qif_import: QIF
@@ -491,12 +510,14 @@ ru:
           sure_import: Sure
           trade_import: Сделка
           transaction_import: Операция
+          ynab_import: YNAB
       title: Импорты
     type_labels:
       account_import: Импорт счетов
       actual_import: Импорт из Actual
       category_import: Импорт категорий
       document_import: Импорт документов
+      merchant_import: Импорт продавцев
       mint_import: Импорт из Mint
       pdf_import: Импорт PDF
       qif_import: Импорт QIF
@@ -504,6 +525,7 @@ ru:
       sure_import: Импорт Sure
       trade_import: Импорт сделок
       transaction_import: Импорт операций
+      ynab_import: Импорт из YNAB
     update:
       account_saved: Счёт сохранён.
       invalid_account: Счёт не найден.

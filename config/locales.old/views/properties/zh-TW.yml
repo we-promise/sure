@@ -1,0 +1,32 @@
+---
+zh-TW:
+  properties:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      address_line1: 街道地址
+      address_line1_placeholder: 例如：忠孝東路一段 123 號
+      area: 居住面積
+      area_placeholder: '30'
+      area_unit: 面積單位
+      country: 國家
+      country_placeholder: TW
+      locality: 城市
+      locality_placeholder: 台北市
+      none: 無
+      postal_code: 郵遞區號
+      postal_code_placeholder: '100'
+      region: 縣市/省份
+      region_placeholder: 台北市
+      subtype_prompt: 選擇不動產類型
+      year_built: 建築年份
+      year_built_placeholder: '2000'
+    new:
+      title: 輸入不動產詳情
+    overview:
+      living_area: 居住面積
+      market_value: 市場價值
+      purchase_price: 買入價格
+      trend: 趨勢
+      unknown: 未知
+      year_built: 建築年份

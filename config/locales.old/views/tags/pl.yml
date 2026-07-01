@@ -1,0 +1,23 @@
+---
+pl:
+  tags:
+    create:
+      created: Tag został utworzony
+      error: 'Błąd podczas tworzenia tagu: %{error}'
+    destroy:
+      deleted: Tag został usunięty
+    edit:
+      edit: Edytuj tag
+    form:
+      placeholder: Nazwa tagu
+    index:
+      empty: Brak tagów
+      new: Nowy tag
+      tags: Tagi
+    new:
+      new: Nowy tag
+    tag:
+      delete: Usuń
+      edit: Edytuj
+    update:
+      updated: Tag został zaktualizowany

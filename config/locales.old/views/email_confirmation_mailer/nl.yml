@@ -1,0 +1,9 @@
+---
+nl:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: U heeft recent verzocht om uw e-mailadres te wijzigen. Klik op de knop hieronder om deze wijziging te bevestigen.
+      cta: E-mailwijziging bevestigen
+      expiry_notice: Deze link verloopt over %{hours} uur.
+      greeting: Hallo!
+      subject: "%{product_name}: Bevestig uw e-mailwijziging"

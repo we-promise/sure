@@ -1,0 +1,20 @@
+---
+es:
+  shared:
+    confirm_modal:
+      accept: Confirmar
+      body_html: "<p>No podrás deshacer esta decisión</p>"
+      cancel: Cancelar
+      title: ¿Estás seguro?
+    money_field:
+      label: Importe
+    exchange_rate_tabs:
+      calculate_rate_tab: Calcular tasa
+      convert_tab: Convertir con tasa
+      destination_amount: Importe de destino
+      exchange_rate: Tasa de cambio
+      exchange_rate_help: Elige cómo introducir el importe.
+    syncing_notice:
+      syncing: Sincronizando datos de cuentas...
+    trend_change:
+      no_change: "sin cambios"

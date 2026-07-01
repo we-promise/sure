@@ -1,0 +1,89 @@
+---
+ro:
+  accounts:
+    account:
+      link_lunchflow: Conectare cu Lunch Flow
+      troubleshoot: Depanare
+    chart:
+      data_not_available: Date indisponibile pentru perioada selectată
+    create:
+      success: "Cont %{type} creat"
+    destroy:
+      success: "Cont %{type} programat pentru ștergere"
+    empty:
+      empty_message: Adaugă un cont fie prin conexiune, import sau introducere manuală.
+      new_account: Cont nou
+      no_accounts: Încă nu există conturi
+    form:
+      balance: Sold curent
+      name_label: Nume cont
+      name_placeholder: Exemplu nume cont
+    index:
+      accounts: Conturi
+      manual_accounts:
+        other_accounts: Alte conturi
+      new_account: Cont nou
+      sync: Sincronizează tot
+    new:
+      import_accounts: Importă conturi
+      method_selector:
+        connected_entry: Conectează cont
+        connected_entry_eu: Conectează cont UE
+        link_with_provider: "Conectează cu %{provider}"
+        lunchflow_entry: Conectează cont Lunch Flow
+        manual_entry: Introdu soldul contului
+        title: Cum dorești să adaugi?
+      title: Ce dorești să adaugi?
+    show:
+      activity:
+        amount: Sumă
+        balance: Sold
+        date: Dată
+        entries: înregistrări
+        entry: înregistrare
+        new: Nou
+        new_balance: Sold nou
+        new_transaction: Tranzacție nouă
+        no_entries: Nu s-au găsit înregistrări
+        search:
+          placeholder: Caută înregistrări după nume
+        title: Activitate
+      chart:
+        balance: Sold
+        owed: Sumă datorată
+      menu:
+        confirm_accept: Șterge "%{name}"
+        confirm_body_html: "<p>Prin ștergerea acestui cont, vei șterge istoricul valorii sale, afectând diverse aspecte ale contului tău general. Această acțiune va avea un impact direct asupra calculelor averii nete și a graficelor contului.</p><br /> <p>După ștergere, nu vei mai putea restaura informațiile contului, deoarece va trebui să îl adaugi ca un cont nou.</p>"
+        confirm_title: Ștergi contul?
+        edit: Editează
+        import: Importă tranzacții
+        manage: Gestionează conturi
+    update:
+      success: "Cont %{type} actualizat"
+    sidebar:
+      missing_data: Lipsesc date istorice
+      missing_data_description: "%{product} folosește furnizori terți pentru a prelua cursurile de schimb istorice, prețurile titlurilor de valoare și multe altele. Aceste date sunt necesare pentru a calcula soldurile istorice corecte ale conturilor."
+      configure_providers: Configurează furnizorii aici.
+      tabs:
+        all: Toate
+        assets: Active
+        debts: Datorii
+      new_asset: Activ nou
+      new_debt: Datorie nouă
+      new_account: Cont nou
+      new_account_group: "%{account_group} nou"
+    types:
+      depository: Numerar
+      investment: Investiții
+      crypto: Crypto
+      property: Proprietate
+      vehicle: Vehicul
+      other_asset: Alt activ
+      credit_card: Card de credit
+      loan: Împrumut
+      other_liability: Altă datorie
+
+  email_confirmations:
+    new:
+      invalid_token: Link de confirmare invalid sau expirat.
+      success_login: Adresa ta de e-mail a fost confirmată. Te rugăm să te autentifici cu noua ta adresă de e-mail.

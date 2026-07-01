@@ -1,0 +1,30 @@
+---
+en:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Account
+        account_last4_hint: Account last four
+        account_name_hint: Account name hint
+        closing_balance: Closing balance
+        content_sha256: Content digest
+        currency: Currency
+        filename: Filename
+        institution_name_hint: Institution hint
+        opening_balance: Opening balance
+        original_file: Statement file
+        period_end_on: Period end
+        period_start_on: Period start
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: has already been uploaded for this family
+            content_sha256:
+              duplicate_statement_file: has already been uploaded for this family
+            original_file:
+              invalid_format: must be a PDF, CSV, or XLSX file
+              too_large: is too large. Maximum size is %{max_mb}MB
+            period_end_on:
+              on_or_after_start: must be on or after the period start

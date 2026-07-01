@@ -1,0 +1,196 @@
+---
+vi:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Kiểm soát cách người mới đăng ký cho phiên bản %{product} của bạn.
+        email_confirmation_description: Khi bật, người dùng phải xác nhận địa chỉ email khi thay đổi.
+        email_confirmation_title: Yêu cầu xác nhận email
+        default_family_title: Gia đình mặc định cho người dùng mới
+        default_family_description: "Đặt người dùng mới vào gia đình/nhóm này chỉ khi họ không có lời mời."
+        default_family_none: Không có (tạo gia đình mới)
+        generate_tokens: Tạo mã mới
+        generated_tokens: Mã đã tạo
+        title: Giới thiệu
+        states:
+          open: Mở
+          closed: Đóng
+          invite_only: Chỉ theo lời mời
+      show:
+        general: Cài đặt chung
+        ai_assistant: Trợ lý AI
+        financial_data_providers: Nhà cung cấp dữ liệu tài chính
+        sync_settings: Cài đặt đồng bộ
+        invites: Mã mời
+        title: Tự lưu trữ
+        danger_zone: Vùng nguy hiểm
+        clear_cache: Xóa bộ nhớ đệm dữ liệu
+        clear_cache_warning: Xóa bộ nhớ đệm dữ liệu sẽ xóa tất cả tỷ giá hối đoái, giá chứng khoán, số dư tài khoản và dữ liệu khác. Thao tác này sẽ không xóa tài khoản, giao dịch, danh mục hoặc dữ liệu người dùng khác.
+        confirm_clear_cache:
+          title: Xóa bộ nhớ đệm dữ liệu?
+          body: Bạn có chắc chắn muốn xóa bộ nhớ đệm dữ liệu? Thao tác này sẽ xóa tất cả tỷ giá hối đoái, giá chứng khoán, số dư tài khoản và dữ liệu khác. Hành động này không thể hoàn tác.
+      provider_selection:
+        exchange_rate_title: Nhà cung cấp tỷ giá hối đoái
+        exchange_rate_description: Chọn một nhà cung cấp để lấy tỷ giá hối đoái tiền tệ.
+        exchange_rate_provider_label: Nhà cung cấp tỷ giá hối đoái
+        securities_title: Nhà cung cấp chứng khoán
+        securities_description: Bật một hoặc nhiều nhà cung cấp để lấy giá cổ phiếu, ETF và quỹ tương hỗ. Khi tìm kiếm, tất cả nhà cung cấp được bật đều được truy vấn và kết quả được hợp nhất.
+        env_configured_message: Lựa chọn nhà cung cấp bị tắt vì các biến môi trường đã được đặt. Để bật lựa chọn tại đây, hãy xóa các biến môi trường này khỏi cấu hình của bạn.
+        twelve_data_hint: yêu cầu khóa API, 800 tín dụng/ngày
+        yahoo_finance_hint: miễn phí, không cần khóa API
+        requires_api_key: yêu cầu khóa API
+        requires_api_key_eodhd: yêu cầu khóa API, giới hạn 20 lần gọi/ngày
+        requires_api_key_alpha_vantage: yêu cầu khóa API, giới hạn 25 lần gọi/ngày
+        mfapi_hint: miễn phí, không cần khóa API -- chỉ quỹ tương hỗ Ấn Độ
+        binance_public_hint: miễn phí, không cần khóa API -- chỉ tiền điện tử (BTC, ETH, v.v.)
+        moex_public_hint: miễn phí, không cần khóa API -- cổ phiếu, quỹ và trái phiếu Nga (MOEX), bao gồm tỷ giá RUB
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+      assistant_settings:
+        title: Trợ lý AI
+        description: Chọn cách trợ lý trò chuyện phản hồi. Tích hợp sẵn sử dụng nhà cung cấp LLM đã cấu hình trực tiếp. Bên ngoài ủy thác cho tác nhân AI từ xa có thể gọi lại các công cụ tài chính của Sure qua MCP.
+        type_label: Loại trợ lý
+        type_builtin: Tích hợp sẵn (LLM trực tiếp)
+        type_external: Bên ngoài (tác nhân từ xa)
+        external_status: Endpoint trợ lý bên ngoài
+        external_configured: Đã cấu hình
+        external_not_configured: Chưa được cấu hình. Nhập URL và token bên dưới, hoặc đặt biến môi trường EXTERNAL_ASSISTANT_URL và EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: "Loại trợ lý bị khóa ở '%{type}' qua biến môi trường ASSISTANT_TYPE."
+        env_configured_external: Đã cấu hình thành công qua biến môi trường.
+        url_label: URL endpoint
+        url_placeholder: "https://your-agent-host/v1/chat"
+        url_help: URL đầy đủ đến endpoint API của tác nhân. Nhà cung cấp tác nhân sẽ cung cấp cho bạn thông tin này.
+        token_label: Mã thông báo API
+        token_placeholder: Nhập mã thông báo từ nhà cung cấp tác nhân
+        token_help: Mã thông báo xác thực do tác nhân bên ngoài cung cấp. Được gửi dưới dạng Bearer token với mỗi yêu cầu.
+        agent_id_label: ID tác nhân (Tùy chọn)
+        agent_id_placeholder: "main (mặc định)"
+        agent_id_help: Định tuyến đến tác nhân cụ thể khi nhà cung cấp lưu trữ nhiều tác nhân. Để trống cho tác nhân mặc định.
+        disconnect_title: Kết nối bên ngoài
+        disconnect_description: Xóa kết nối trợ lý bên ngoài và chuyển về trợ lý tích hợp sẵn.
+        disconnect_button: Ngắt kết nối
+        confirm_disconnect:
+          title: Ngắt kết nối trợ lý bên ngoài?
+          body: Thao tác này sẽ xóa URL, token và ID tác nhân đã lưu, và chuyển về trợ lý tích hợp sẵn. Bạn có thể kết nối lại sau bằng cách nhập thông tin xác thực mới.
+      brand_fetch_settings:
+        description: Nhập Client ID do Brand Fetch cung cấp
+        env_configured_message: Bạn đã cấu hình thành công Client ID Brand Fetch qua biến môi trường BRAND_FETCH_CLIENT_ID.
+        show_details: "(hiển thị chi tiết)"
+        setup_step_1_html: 'Truy cập <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> và tạo tài khoản nhà phát triển Brand Fetch miễn phí.'
+        setup_step_2_html: 'Đi đến trang <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        setup_step_3: 'Nhấn biểu tượng mắt dưới phần "Your Client ID" để hiển thị Client ID và dán vào bên dưới.'
+        label: Client ID
+        placeholder: Nhập Client ID của bạn vào đây
+        title: Cài đặt Brand Fetch
+        high_res_label: Bật logo độ phân giải cao
+        high_res_description: Khi bật, logo sẽ được lấy ở độ phân giải 120x120 thay vì 40x40. Điều này cung cấp hình ảnh sắc nét hơn trên màn hình độ phân giải cao.
+      openai_settings:
+        description: Nhập token truy cập và tùy chọn cấu hình nhà cung cấp tương thích OpenAI tùy chỉnh
+        env_configured_message: Đã cấu hình thành công qua biến môi trường.
+        access_token_label: Token truy cập
+        access_token_placeholder: Nhập token truy cập của bạn vào đây
+        uri_base_label: URL cơ sở API (Tùy chọn)
+        uri_base_placeholder: "https://api.openai.com/v1 (mặc định)"
+        model_label: Mô hình (Tùy chọn)
+        model_placeholder: "gpt-4.1 (mặc định)"
+        json_mode_label: Chế độ JSON
+        json_mode_auto: Tự động (khuyến nghị)
+        json_mode_strict: Nghiêm ngặt (tốt nhất cho mô hình suy nghĩ)
+        json_mode_none: Không (tốt nhất cho mô hình tiêu chuẩn)
+        json_mode_json_object: Đối tượng JSON
+        json_mode_help: "Chế độ nghiêm ngặt hoạt động tốt nhất với mô hình suy nghĩ (qwen-thinking, deepseek-reasoner). Chế độ không hoạt động tốt nhất với mô hình tiêu chuẩn (llama, mistral, gpt-oss)."
+        budget_heading: Ngân sách token
+        budget_description: Áp dụng cho mọi lần gọi LLM — lịch sử trò chuyện, phân loại tự động, phát hiện nhà cung cấp và xử lý PDF. Mặc định được đặt thận trọng cho các mô hình cục bộ ngữ cảnh nhỏ. Tăng lên cho các mô hình đám mây với cửa sổ ngữ cảnh lớn hơn.
+        context_window_label: Cửa sổ ngữ cảnh (Tùy chọn)
+        context_window_help: "Tổng số token mô hình sẽ chấp nhận. Mặc định: 2048 — tăng lên 8192+ cho OpenAI đám mây hoặc mô hình cục bộ ngữ cảnh lớn."
+        max_response_tokens_label: Số token phản hồi tối đa (Tùy chọn)
+        max_response_tokens_help: "Token dành cho phản hồi của mô hình. Mặc định: 512. Giảm để dành chỗ cho lịch sử dài hơn."
+        max_items_per_call_label: Số mục tối đa mỗi lô (Tùy chọn)
+        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện nhà cung cấp. Mặc định: 25. Lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance cung cấp quyền truy cập miễn phí vào giá cổ phiếu, tỷ giá hối đoái và dữ liệu tài chính mà không cần khóa API.
+        status_active: Yahoo Finance đang hoạt động
+        status_inactive: Kết nối Yahoo Finance thất bại
+        connection_failed: Không thể kết nối với Yahoo Finance
+        troubleshooting: Kiểm tra kết nối internet và cài đặt tường lửa của bạn. Yahoo Finance có thể tạm thời không khả dụng.
+      tiingo_settings:
+        title: Tiingo
+        description: Nhập token API do Tiingo cung cấp. Gói miễn phí hỗ trợ 50 ký hiệu duy nhất mỗi giờ với hơn 30 năm dữ liệu lịch sử.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường TIINGO_API_KEY.
+        label: Token API
+        placeholder: Nhập token API Tiingo của bạn vào đây
+        show_details: "(hiển thị chi tiết)"
+        step_1_html: 'Truy cập <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> và tạo tài khoản miễn phí.'
+        step_2_html: 'Đi đến trang <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">Token API</a>.'
+        step_3: Sao chép token API và dán vào bên dưới.
+      eodhd_settings:
+        title: EODHD
+        description: Nhập token API do EODHD cung cấp. Hỗ trợ ETF EU trên LSE, XETRA và các sàn giao dịch quốc tế khác.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường EODHD_API_KEY.
+        label: Token API
+        placeholder: Nhập token API EODHD của bạn vào đây
+        show_details: "(hiển thị chi tiết)"
+        step_1_html: 'Truy cập <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> và tạo tài khoản miễn phí.'
+        step_2_html: 'Đi đến <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Bảng điều khiển</a> để tìm token API.'
+        step_3: Sao chép token API và dán vào bên dưới.
+        rate_limit_warning: "Gói miễn phí EODHD giới hạn 20 lần gọi API mỗi ngày. Tốt nhất dùng làm nhà cung cấp bổ sung cho ETF EU không có sẵn từ các nhà cung cấp khác."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Nhập khóa API từ Alpha Vantage. Hỗ trợ ETF EU trên Sàn giao dịch chứng khoán London, XETRA và các sàn khác.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường ALPHA_VANTAGE_API_KEY.
+        label: Khóa API
+        placeholder: Nhập khóa API Alpha Vantage của bạn vào đây
+        show_details: "(hiển thị chi tiết)"
+        step_1_html: 'Truy cập <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> và nhận khóa API miễn phí.'
+        step_2: Sao chép khóa API và dán vào bên dưới.
+        rate_limit_warning: "Gói miễn phí Alpha Vantage giới hạn 25 lần gọi API mỗi ngày. Tốt nhất dùng làm nhà cung cấp bổ sung cho ETF EU không có sẵn từ các nhà cung cấp khác."
+        no_health_check_note: "Kiểm tra sức khỏe kết nối không khả dụng cho nhà cung cấp này do giới hạn tốc độ nghiêm ngặt."
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} lần gọi API hàng ngày đã sử dụng (%{percentage})"
+        description: Nhập khóa API do Twelve Data cung cấp
+        env_configured_message: Đã cấu hình thành công qua biến môi trường TWELVE_DATA_API_KEY.
+        label: Khóa API
+        placeholder: Nhập khóa API của bạn vào đây
+        show_details: "(hiển thị chi tiết)"
+        step_1_html: 'Truy cập <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> và tạo tài khoản nhà phát triển Twelve Data miễn phí.'
+        step_2_html: 'Đi đến trang <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">Khóa API</a>.'
+        step_3: Hiển thị Khóa bí mật và dán vào bên dưới.
+        plan: "Gói %{plan}"
+        plan_upgrade_warning_title: Một số ký hiệu yêu cầu gói trả phí
+        plan_upgrade_warning_description: Các ký hiệu sau trong danh mục đầu tư của bạn không thể đồng bộ giá với gói Twelve Data hiện tại.
+        requires_plan: yêu cầu gói %{plan}
+        view_pricing: Xem bảng giá Twelve Data
+        title: Twelve Data
+      update:
+        failure: Giá trị cài đặt không hợp lệ
+        success: Cài đặt đã được cập nhật
+        invalid_onboarding_state: Trạng thái giới thiệu không hợp lệ
+        invalid_sync_time: "Định dạng thời gian đồng bộ không hợp lệ. Vui lòng sử dụng định dạng HH:MM (ví dụ: 02:30)."
+        invalid_llm_budget: "%{field} phải là số nguyên ≥ %{minimum}."
+        scheduler_sync_failed: Đã lưu cài đặt, nhưng cập nhật lịch đồng bộ thất bại. Vui lòng thử lại hoặc kiểm tra nhật ký máy chủ.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Trợ lý bên ngoài đã bị ngắt kết nối
+      clear_cache:
+        cache_cleared: Bộ nhớ đệm dữ liệu đã được xóa. Quá trình này có thể mất vài giây để hoàn tất.
+      not_authorized: Bạn không có quyền thực hiện hành động này
+      ensure_super_admin_for_onboarding:
+        not_authorized: Bạn không có quyền thực hiện hành động này
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Đã lưu cài đặt, nhưng cập nhật lịch đồng bộ thất bại. Vui lòng thử lại hoặc kiểm tra nhật ký máy chủ.
+      sync_settings:
+        auto_sync_label: Bật đồng bộ tự động
+        auto_sync_description: Khi bật, tất cả tài khoản sẽ được tự động đồng bộ hàng ngày vào thời gian đã chỉ định.
+        auto_sync_time_label: Thời gian đồng bộ (HH:MM)
+        auto_sync_time_description: Chỉ định thời điểm trong ngày khi đồng bộ tự động sẽ xảy ra.
+        include_pending_label: Bao gồm giao dịch đang chờ
+        include_pending_description: Khi bật, các giao dịch đang chờ (chưa được ghi nhận) sẽ được nhập và tự động đối soát khi được đăng. Tắt nếu ngân hàng của bạn cung cấp dữ liệu đang chờ không đáng tin cậy.
+        env_configured_message: Cài đặt này bị tắt vì biến môi trường nhà cung cấp (SIMPLEFIN_INCLUDE_PENDING hoặc PLAID_INCLUDE_PENDING) đã được đặt. Xóa nó để bật cài đặt này.

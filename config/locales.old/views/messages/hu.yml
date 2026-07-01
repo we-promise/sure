@@ -1,0 +1,6 @@
+---
+hu:
+  messages:
+    chat_form:
+      placeholder: "Kérdezz bármit..."
+      disclaimer: "Az AI-válaszok csak tájékoztató jellegűek. Nem pénzügyi tanácsadás!"

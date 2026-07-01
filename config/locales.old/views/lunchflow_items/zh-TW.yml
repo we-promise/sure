@@ -1,0 +1,143 @@
+---
+zh-TW:
+  lunchflow_items:
+    create:
+      success: Lunch Flow 連線建立成功
+    destroy:
+      success: Lunch Flow 連線已移除
+    index:
+      title: Lunch Flow 連線
+    loading:
+      loading_message: 正在載入 Lunch Flow 帳戶...
+      loading_title: 載入中
+    link_accounts:
+      all_already_linked:
+        one: "所選的帳戶 (%{names}) 已經連結"
+        other: "所有 %{count} 個選定的帳戶都已經連結：%{names}"
+      api_error: "API 錯誤：%{message}"
+      invalid_account_names:
+        one: "無法連結名稱空白的帳戶"
+        other: "無法連結 %{count} 個名稱空白的帳戶"
+      link_failed: 連結帳戶失敗
+      no_accounts_selected: 請至少選擇一個帳戶
+      partial_invalid: "已成功連結 %{created_count} 個帳戶，%{already_linked_count} 個原本就已連結，%{invalid_count} 個帳戶名稱無效"
+      partial_success: "已成功連結 %{created_count} 個帳戶。其中 %{already_linked_count} 個原本就已連結：%{already_linked_names}"
+      success:
+        one: "已成功連結 %{count} 個帳戶"
+        other: "已成功連結 %{count} 個帳戶"
+    lunchflow_item:
+      accounts_need_setup: 帳戶需要設定
+      delete: 刪除連線
+      deletion_in_progress: 正在刪除...
+      error: 錯誤
+      no_accounts_description: 此連線尚未連結任何帳戶。
+      no_accounts_title: 無帳戶
+      setup_action: 設定新帳戶
+      setup_description: "已連結 %{total} 個帳戶中的 %{linked} 個。請為您新匯入的 Lunch Flow 帳戶選擇帳戶類型。"
+      setup_needed: 新帳戶已準備好進行設定
+      status: "%{timestamp} 前已同步"
+      status_never: 從未同步
+      status_with_summary: "最後同步於 %{timestamp} 前 • %{summary}"
+      syncing: 同步中...
+      total: 總計
+      unlinked: 未連結
+    select_accounts:
+      accounts_selected: 個帳戶已選擇
+      api_error: "API 錯誤：%{message}"
+      cancel: 取消
+      configure_name_in_lunchflow: 無法匯入 - 請在 Lunch Flow 中設定帳戶名稱
+      description: 選擇您想要連結到 %{product_name} 的帳戶。
+      link_accounts: 連結所選帳戶
+      no_accounts_found: 找不到帳戶。請檢查您的 API 金鑰設定。
+      no_api_key: 尚未設定 Lunch Flow API 金鑰。請前往「設定」進行配置。
+      no_name_placeholder: "(無名稱)"
+      title: 選擇 Lunch Flow 帳戶
+    select_existing_account:
+      account_already_linked: 此帳戶已與提供商連結
+      all_accounts_already_linked: 所有 Lunch Flow 帳戶都已連結
+      api_error: "API 錯誤：%{message}"
+      cancel: 取消
+      configure_name_in_lunchflow: 無法匯入 - 請在 Lunch Flow 中設定帳戶名稱
+      description: 選擇一個 Lunch Flow 帳戶與此帳戶連結。交易紀錄將會自動同步並排除重複。
+      link_account: 連結帳戶
+      no_account_specified: 未指定帳戶
+      no_accounts_found: 找不到 Lunch Flow 帳戶。請檢查您的 API 金鑰設定。
+      no_api_key: 尚未設定 Lunch Flow API 金鑰。請前往「設定」進行配置。
+      no_name_placeholder: "(無名稱)"
+      title: "將 %{account_name} 與 Lunch Flow 連結"
+    link_existing_account:
+      account_already_linked: 此帳戶已與提供商連結
+      api_error: "API 錯誤：%{message}"
+      invalid_account_name: 無法連結名稱空白的帳戶
+      lunchflow_account_already_linked: 此 Lunch Flow 帳戶已連結至另一個帳戶
+      lunchflow_account_not_found: 找不到 Lunch Flow 帳戶
+      missing_parameters: 缺少必要參數
+      success: "已成功將 %{account_name} 與 Lunch Flow 連結"
+    setup_accounts:
+      account_type_label: "帳戶類型："
+      all_accounts_linked: "您的所有 Lunch Flow 帳戶都已設定完畢。"
+      api_error: "API 錯誤：%{message}"
+      fetch_failed: "獲取帳戶失敗"
+      no_accounts_to_setup: "沒有需要設定的帳戶"
+      no_api_key: "尚未設定 Lunch Flow API 金鑰。請檢查您的連線設定。"
+      account_types:
+        skip: 跳過此帳戶
+        depository: 支票或儲蓄帳戶
+        credit_card: 信用卡
+        investment: 投資帳戶
+        loan: 貸款或房屋貸款
+        other_asset: 其他資產
+      subtype_labels:
+        depository: "帳戶子類型："
+        credit_card: ""
+        investment: "投資類型："
+        loan: "貸款類型："
+        other_asset: ""
+      subtype_messages:
+        credit_card: "信用卡將自動設定為信用卡帳戶。"
+        other_asset: "其他資產不需要額外選項。"
+      subtypes:
+        depository:
+          checking: 支票帳戶 (Checking)
+          savings: 儲蓄帳戶 (Savings)
+          hsa: 健康儲蓄帳戶 (HSA)
+          cd: 定期存款 (CD)
+          money_market: 貨幣市場帳戶
+        investment:
+          brokerage: 證券經紀
+          pension: 退休金
+          retirement: 退休帳戶
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: 節儉儲蓄計畫 (TSP)
+          "529_plan": "529 教育儲蓄計畫"
+          hsa: 健康儲蓄帳戶 (HSA)
+          mutual_fund: 共同基金
+          ira: 傳統 IRA
+          roth_ira: Roth IRA
+          angel: 天使投資
+        loan:
+          mortgage: 房屋貸款
+          student: 學生貸款
+          auto: 汽車貸款
+          other: 其他貸款
+      balance: 餘額
+      cancel: 取消
+      choose_account_type: "請為每個 Lunch Flow 帳戶選擇正確的帳戶類型："
+      create_accounts: 建立帳戶
+      creating_accounts: 正在建立帳戶...
+      historical_data_range: "歷史資料範圍："
+      subtitle: 為您匯入的帳戶選擇正確的帳戶類型
+      sync_start_date_help: 選擇您想要同步交易紀錄的追溯時間。最多可提供 3 年的歷史紀錄。
+      sync_start_date_label: "開始同步交易的日期："
+      title: 設定您的 Lunch Flow 帳戶
+    complete_account_setup:
+      all_skipped: "已跳過所有帳戶。未建立任何帳戶。"
+      creation_failed: "建立帳戶失敗：%{error}"
+      no_accounts: "沒有需要設定的帳戶。"
+      success: "已成功建立 %{count} 個帳戶。"
+    sync:
+      success: 同步已開始
+    update:
+      success: Lunch Flow 連線已更新

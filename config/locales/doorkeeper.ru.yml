@@ -103,10 +103,10 @@ ru:
         invalid_client: Аутентификация клиента не удалась из-за неизвестного клиента,
           отсутствия аутентификации клиента или неподдерживаемого метода аутентификации.
         invalid_code_challenge_method:
-          one: "Параметр code_challenge_method должен быть %{challenge_methods}."
-          few: "Параметр code_challenge_method должен быть одним из %{challenge_methods}."
-          many: "Параметр code_challenge_method должен быть одним из %{challenge_methods}."
-          other: "Параметр code_challenge_method должен быть одним из %{challenge_methods}."
+          few: Параметр code_challenge_method должен быть одним из %{challenge_methods}.
+          many: Параметр code_challenge_method должен быть одним из %{challenge_methods}.
+          one: Параметр code_challenge_method должен быть %{challenge_methods}.
+          other: Параметр code_challenge_method должен быть одним из %{challenge_methods}.
           zero: Сервер авторизации не поддерживает PKCE, так как нет допустимых значений
             code_challenge_method.
         invalid_grant: Предоставленный грант авторизации недействителен, истёк, отозван,

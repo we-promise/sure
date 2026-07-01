@@ -1,0 +1,85 @@
+---
+hu:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Kapcsolódás Kraken tőzsdei számlához
+      name: "Kraken - %{name}"
+      description: "Kapcsolódás ehhez: %{name}"
+    create:
+      default_name: Kraken
+      success: Sikeresen csatlakoztatva a Krakenhez. A tőzsdei számlád szinkronizálása folyamatban van.
+    update:
+      success: Kraken kapcsolat sikeresen frissítve.
+    destroy:
+      success: Kraken kapcsolat törlése ütemezve.
+    select_accounts:
+      select_connection: Válassz Kraken kapcsolatot a Szolgáltatói beállításokban.
+      no_credentials_configured: Add meg a Kraken API hitelesítő adatokat a számlák beállítása előtt.
+    link_accounts:
+      select_connection: Válassz Kraken kapcsolatot a számlák összekapcsolása előtt.
+    select_existing_account:
+      title: Kraken számla összekapcsolása
+      no_accounts_found: Nem találhatók Kraken számlák.
+      wait_for_sync: Várd meg, amíg a Kraken befejezi a szinkronizálást.
+      check_provider_health: Ellenőrizd, hogy a Kraken API hitelesítő adataid érvényesek-e.
+      link: Összekapcsolás
+      cancel: Mégse
+    link_existing_account:
+      success: Sikeresen összekapcsolva Kraken számlával
+      select_connection: Válassz Kraken kapcsolatot a számlák összekapcsolása előtt.
+      errors:
+        only_manual: Csak olyan manuális kriptopiaci számlák kapcsolhatók a Krakenhez, amelyekhez még nincs meglévő szolgáltatói kapcsolat
+        invalid_kraken_account: Érvénytelen Kraken számla
+        kraken_account_already_linked: Ez a Kraken számla már össze van kapcsolva
+    setup_accounts:
+      title: Kraken számla importálása
+      subtitle: Válaszd ki a nyomon követendő tőzsdei számlát
+      instructions: A Kraken egy kombinált kriptotőzsdei számlát importál ehhez a kapcsolathoz, csak portfólióelemekkel és azonnali ügyletteljesítésekkel.
+      no_accounts: Minden Kraken számla importálva lett.
+      accounts_count:
+        one: "%{count} elérhető számla"
+        other: "%{count} elérhető számla"
+      select_all: Összes kijelölése
+      import_selected: Kijelöltek importálása
+      cancel: Mégse
+      creating: Importálás...
+    complete_account_setup:
+      success:
+        one: "%{count} számla importálva"
+        other: "%{count} számla importálva"
+      none_selected: Nincs kijelölt számla
+      no_accounts: Nincs importálható számla
+    kraken_item:
+      provider_name: Kraken
+      syncing: Szinkronizálás...
+      reconnect: A hitelesítő adatok frissítést igényelnek
+      deletion_in_progress: Törlés folyamatban...
+      sync_status:
+        no_accounts: Nem találhatók számlák
+        all_synced:
+          one: "%{count} számla szinkronizálva"
+          other: "%{count} számla szinkronizálva"
+        partial_sync: "%{linked_count} szinkronizálva, %{unlinked_count} beállítást igényel"
+      status: "Utolsó szinkronizálás %{timestamp} ezelőtt"
+      status_with_summary: "Utolsó szinkronizálás %{timestamp} ezelőtt - %{summary}"
+      status_never: Még nem szinkronizált
+      delete: Törlés
+      no_accounts_title: Nem találhatók számlák
+      no_accounts_message: A Kraken tőzsdei számlád szinkronizálás után jelenik meg itt.
+      setup_needed: Számla importálásra kész
+      setup_description: Importáld ezt a Kraken kapcsolatot kriptotőzsdei számlaként.
+      setup_action: Számla importálása
+      import_accounts_menu: Számla importálása
+      stale_rate_warning: "Az egyenleg közelítő értékű, mert a(z) %{date} pontos árfolyama nem volt elérhető. A következő szinkronizáláskor frissül."
+  kraken_item:
+    syncer:
+      checking_credentials: Hitelesítő adatok ellenőrzése...
+      credentials_invalid: Érvénytelen Kraken API hitelesítő adatok. Kérlek ellenőrizd az API-kulcsodat és a titkos kulcsodat.
+      importing_accounts: Számlák importálása a Krakenből...
+      checking_configuration: Számlakonfiguráció ellenőrzése...
+      accounts_need_setup:
+        one: "%{count} számla beállítást igényel"
+        other: "%{count} számla beállítást igényel"
+      processing_accounts: Számlaadat-feldolgozás...
+      calculating_balances: Egyenlegek kiszámítása...

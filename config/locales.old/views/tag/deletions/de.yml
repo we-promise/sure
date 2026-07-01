@@ -1,0 +1,13 @@
+---
+de:
+  tag:
+    deletions:
+      create:
+        deleted: Tag gelöscht
+      new:
+        delete_and_leave_uncategorized: "%{tag_name} löschen"
+        delete_and_recategorize: "%{tag_name} löschen und neuen Tag zuweisen"
+        delete_tag: Tag löschen?
+        explanation: "%{tag_name} wird aus Transaktionen und anderen getaggten Elementen entfernt. Statt sie ungetaggt zu lassen, kannst du unten einen neuen Tag zuweisen."
+        replacement_tag_prompt: Tag auswählen
+        tag: Tag

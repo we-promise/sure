@@ -1,0 +1,15 @@
+---
+zh-CN:
+  password_resets:
+    edit:
+      title: 重置密码
+    new:
+      back: 返回
+      requested: 重置密码链接已发送至您的邮箱，请查收。
+      submit: 重置密码
+      title: 重置密码
+    update:
+      invalid_token: 验证令牌无效。
+      success: 密码已重置成功。
+    disabled: Sure 密码重置已禁用。请通过身份提供商重置密码。
+    sso_only_user: 你的账户使用 SSO 登录。请联系管理员管理凭据。

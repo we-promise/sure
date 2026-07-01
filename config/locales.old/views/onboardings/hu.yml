@@ -1,0 +1,66 @@
+---
+hu:
+  onboardings:
+    header:
+      sign_out: Kijelentkezés
+      setup: Beállítás
+      preferences: Beállítások
+      goals: Célok
+      start: Kezdés
+    logout:
+      sign_out: Kijelentkezés
+    show:
+      title: Hozzuk létre a fiókodat
+      subtitle: Először is állítsuk be a profilodat.
+      first_name: Keresztnév
+      first_name_placeholder: Keresztnév
+      last_name: Vezetéknév
+      last_name_placeholder: Vezetéknév
+      group_name: Csoport neve
+      group_name_placeholder: Csoport neve
+      household_name: Háztartás neve
+      household_name_placeholder: Háztartás neve
+      moniker_prompt: "A(z) %{product_name} alkalmazást ... fogom használni"
+      moniker_family: Családtagokkal (csak magam vagy partnerrel, tinédzserekkel stb.)
+      moniker_group: Emberek egy csoportjával (cég, klub, egyesület vagy bármilyen más típus)
+      country: Ország
+      submit: Folytatás
+    preferences:
+      title: Állítsd be a preferenciáidat
+      subtitle: Konfiguráljuk a preferenciáidat.
+      example: Példa számla
+      preview: Előnézet a beállítások alapján megjelenő adatokról.
+      color_theme: Színtéma
+      theme_system: Rendszer
+      theme_light: Világos
+      theme_dark: Sötét
+      locale: Nyelv
+      currency: Pénznem
+      date_format: Dátumformátum
+      submit: Befejezés
+    goals:
+      title: Mi hozott ide?
+      subtitle: Válassz ki egy vagy több célt, amelyet el szeretnél érni a %{product_name} személyes pénzügyi eszközzel.
+      unified_accounts: Lássam az összes számlámat egy helyen
+      cashflow: Megértsem a pénzforgalmat és a kiadásokat
+      budgeting: Pénzügyi tervek és költségvetés kezelése
+      partner: Pénzügyek kezelése partnerrel együtt
+      investments: Befektetések nyomon követése
+      ai_insights: Hadd segítsen az AI a pénzügyeim megértésében
+      optimization: Számlák elemzése és optimalizálása
+      reduce_stress: Pénzügyi stressz vagy szorongás csökkentése
+      submit: Tovább
+    trial:
+      title: Próbáld ki a Sure-t 45 napig
+      data_deletion: Ezután az adatok törlődnek
+      description_html: Ma kezdve alaposan megismerheted a terméket.<br/>Ha megtetszik, üzemeltesd saját magad, vagy járulj hozzá a fejlesztéshez, hogy tovább használhasd.
+      try_button: Próbáld ki a Sure-t 45 napig
+      continue_trial: Próbaidőszak folytatása
+      upgrade: Frissítés
+      how_it_works: Hogyan működik ez
+      today: Ma
+      today_description: 45 napig ingyenesen hozzáférsz a Sure-höz az AWS-ünkön.
+      in_40_days: 40 nap múlva (%{date})
+      in_40_days_description: Értesítünk, hogy exportáld az adataidat.
+      in_45_days: 45 nap múlva (%{date})
+      in_45_days_description: Töröljük az adataidat – járulj hozzá a fejlesztéshez, hogy tovább használhasd a Sure-t!

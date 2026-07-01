@@ -1,0 +1,472 @@
+---
+ca:
+  import:
+    cleans:
+      show:
+        all_rows: Totes les files
+        data_cleaned: Les teves dades s'han netejat
+        description: Edita les teves dades a la taula de sota. Les cel·les vermelles
+          són invàlides.
+        error_rows: Files amb errors
+        errors_notice: Hi ha errors a les teves dades. Passa el cursor per sobre de
+          l'error per veure'n els detalls.
+        errors_notice_mobile: Hi ha errors a les teves dades. Toca la icona d'error
+          per veure'n els detalls.
+        next_step: Pas següent
+        not_configured: Configura la teva importació abans de continuar.
+        title: Neteja les teves dades
+    configurations:
+      account_import:
+        apply_configuration: Aplica la configuració
+        balance: Saldo
+        balance_date: Data del saldo
+        currency: Divisa
+        date_format: Format de data
+        default: Per defecte
+        entity_type: Tipus d'entitat
+        leave_empty: Deixa-ho buit
+        name: Nom
+        select_format: Selecciona el format
+      actual_import:
+        account_label: Compte (opcional)
+        amount_label: Import
+        apply_configuration: Aplica la configuració
+        category_label: Categoria (opcional)
+        date_format_label: Format de data
+        date_label: Data
+        incomes_are_negative: Els ingressos són negatius
+        incomes_are_positive: Els ingressos són positius
+        leave_empty: Deixa-ho buit
+        name_label: Beneficiari (opcional)
+        notes_label: Notes (opcional)
+        preconfigured_notice: Hem preconfigurat la teva importació d'Actual Budget.
+          Continua al pas següent.
+        signage_convention_label: Convenció de signes
+      category_import:
+        button_label: Continua
+        description: Puja un fitxer CSV senzill (com el que generem quan exportes
+          les teves dades). Automàticament maparem les columnes per tu.
+        instructions: Selecciona continuar per analitzar el teu CSV i passar al pas
+          de neteja.
+      mint_import:
+        date_format_label: Format de data
+      rule_import:
+        description: Configura la teva importació de regles. Es crearan o actualitzaran
+          regles basades en les dades del CSV.
+        process_button: Processa regles
+        process_help: Clica el botó de sota per processar el teu CSV i generar files
+          de regles.
+      show:
+        description: Selecciona les columnes que corresponen a cada camp del teu CSV.
+        title: Configura la teva importació
+      trade_import:
+        account_label: Compte
+        apply_configuration: Aplica la configuració
+        buys_are_negative: Les compres tenen quantitat negativa
+        buys_are_positive: Les compres tenen quantitat positiva
+        currency_label: Divisa
+        date_format_label: Format de data
+        date_label: Data
+        default: Per defecte
+        format_label: Format
+        leave_empty: Deixa-ho buit
+        name_label: Nom
+        no_security_provider_warning: El proveïdor de preus de valors no està configurat.
+          Les teves importacions d'operacions funcionaran, però Sure no recuperarà
+          l'historial de preus. Ves a la configuració per configurar-ho.
+        note_label: Nota
+        price_label: Preu
+        quantity_label: Quantitat
+        select_column: Selecciona la columna
+        select_format: Selecciona el format
+        stock_exchange_code_label: Codi de borsa
+        ticker_label: Ticker
+      transaction_import:
+        account_label: Compte
+        amount_label: Import
+        amount_type_label: Tipus d'import
+        amount_type_strategy_label: Estratègia del tipus d'import
+        apply_configuration: Aplica la configuració
+        as_amount_type_column: com a columna del tipus d'import
+        as_identifier_value: com a valor identificador
+        category_label: Categoria
+        currency_label: Divisa
+        date_format_label: Format de data
+        date_label: Data
+        default: Per defecte
+        expense_outflow: Despesa (sortida)
+        format_label: Format
+        income_inflow: Ingrés (entrada)
+        incomes_are_negative: Els ingressos són negatius
+        incomes_are_positive: Els ingressos són positius
+        leave_empty: Deixa-ho buit
+        name_label: Nom
+        notes_label: Notes
+        rows_to_skip_label: Omet les primeres n files
+        select_column: Selecciona la columna
+        select_convention: Selecciona la convenció
+        select_format: Selecciona el format
+        select_strategy: Selecciona l'estratègia
+        select_type: Selecciona el tipus
+        select_value: Selecciona el valor
+        set: Estableix
+        tags_label: Etiquetes
+        treat_as_html: Tracta «<span class="font-medium">%{value}</span>» com a
+      update:
+        success: Importació configurada correctament.
+    confirms:
+      mappings:
+        create_account: Crea un compte
+        csv_mapping_label: "%{mapping} al CSV"
+        next: Següent
+        no_accounts: Encara no tens cap compte. Crea un compte que puguem utilitzar
+          per a les files (sense assignar) del teu CSV o torna al pas de Neteja i
+          proporciona un nom de compte que puguem utilitzar.
+        rows_label: Files
+        sure_mapping_label: "%{mapping} a %{product_name}"
+        unassigned_account: Necessites crear un nou compte per a les files sense assignar?
+      show:
+        account_mapping_description: Assigna tots els comptes del teu fitxer importat
+          als comptes existents. També pots afegir nous comptes o deixar-los
+          sense categoria.
+        account_mapping_title: Assigna els teus comptes
+        account_type_mapping_description: Assigna tots els tipus de compte del teu
+          fitxer importat als existents
+        account_type_mapping_title: Assigna els teus tipus de compte
+        category_mapping_description: Assigna totes les categories del teu fitxer
+          importat a les categories existents. També pots afegir-ne de noves
+          o deixar-les sense categoria.
+        category_mapping_title: Assigna les teves categories
+        invalid_data: Hi ha dades invàlides; edita-les fins que es resolguin tots
+          els errors
+        tag_mapping_description: Assigna totes les etiquetes del teu fitxer importat
+          a les etiquetes existents. També pots afegir-ne de noves o deixar-les
+          sense categoria.
+        tag_mapping_title: Assigna les teves etiquetes
+      sure_import:
+        cancel: Cancel·la
+        description: Revisa les dades que s'importaran del teu fitxer d'exportació.
+        empty_summary: No s'han trobat registres importables en aquest fitxer. Pot
+          estar buit, o les línies no coincideixen amb el format d'exportació esperat
+          (cada línia ha de ser un objecte JSON amb les claus «type» i «data», amb
+          tipus admesos per aquesta importació).
+        publish_button: Inicia la importació
+        summary: Resum de la importació
+        title: Confirma la teva importació
+    qif_category_selections:
+      show:
+        categories_found:
+          one: 1 categoria trobada
+          other: "%{count} categories trobades"
+        categories_heading: Categories
+        category_name_col: Nom de la categoria
+        description: Revisa el format de data detectat i tria quines categories i
+          etiquetes del teu fitxer QIF vols importar a %{product_name}.
+        empty_state_primary: No s'han trobat categories ni etiquetes en aquest fitxer
+          QIF.
+        empty_state_secondary: Totes les transaccions s'importaran sense categories
+          ni etiquetes.
+        split_badge: dividida
+        split_warning_description: Aquest fitxer QIF conté transaccions dividides.
+          Les divisions encara no estan suportades, així que cada transacció dividida
+          s'importarà com una sola transacció amb el seu import complet i sense categoria.
+          El detall individual de cada divisió no es conservarà.
+        split_warning_title: Transaccions dividides detectades
+        submit: Continua per revisar
+        tag_name_col: Nom de l'etiqueta
+        tags_found:
+          one: 1 etiqueta trobada
+          other: "%{count} etiquetes trobades"
+        tags_heading: Etiquetes
+        title: Configura i selecciona
+        transactions_col: Transaccions
+        txn_count:
+          one: 1 trans.
+          other: "%{count} trans."
+      update:
+        success: Categories i etiquetes desades.
+    uploads:
+      handle_qif_upload:
+        qif_uploaded: Fitxer QIF pujat correctament.
+      show:
+        account_optional_label: Compte (opcional)
+        browse: Explora
+        copy_paste_tab: Copia i enganxa
+        csv_file_prompt: per afegir aquí el teu fitxer CSV
+        csv_invalid: Ha de ser un CSV vàlid amb capçaleres i com a mínim una fila
+          de dades
+        description: Enganxa o puja el teu fitxer CSV a continuació. Revisa les instruccions
+          de la taula abans de començar.
+        download_sample_csv: Descarrega un CSV d'exemple
+        drop_csv_subtitle: El teu fitxer es pujarà automàticament
+        drop_csv_title: Deixa anar el CSV per pujar-lo
+        instructions_1: A sota hi ha un exemple de CSV amb columnes disponibles per
+          importar.
+        instructions_2: El teu CSV ha de tenir una fila d'encapçalament
+        instructions_3: Pots posar el nom que vulguis a les columnes. Les maparàs
+          en un pas posterior.
+        instructions_4: Les columnes marcades amb un asterisc (*) són obligatòries.
+        instructions_5: Sense comes, símbols de divisa ni parèntesis als números.
+        multi_account_import: Importació multicompte
+        paste_csv_placeholder: Enganxa aquí el contingut del teu fitxer CSV
+        qif_account_label: Compte
+        qif_account_placeholder: Selecciona un compte…
+        qif_description: Selecciona el compte al qual pertany aquest fitxer QIF i
+          puja la teva exportació .qif de Quicken.
+        qif_file_hint: només fitxers .qif
+        qif_file_prompt: per afegir aquí el teu fitxer QIF
+        qif_submit: Puja QIF
+        qif_title: Puja el fitxer QIF
+        title: Importa les teves dades
+        to_see_format: per veure el format CSV requerit
+        upload_csv_button: Puja CSV
+        upload_csv_tab: Puja CSV
+      sure_import:
+        browse: Explora
+        browse_hint: per afegir aquí el teu fitxer all.ndjson
+        description: Puja el fitxer all.ndjson de la teva exportació de dades per
+          restaurar els teus comptes, transaccions, categories i més.
+        drop_subtitle: El teu fitxer es pujarà automàticament
+        drop_title: Deixa anar el NDJSON per pujar-lo
+        hint_html: Puja el fitxer <strong>all.ndjson</strong> del teu ZIP d'exportació
+          de dades
+        ndjson_invalid: Ha de ser un NDJSON vàlid amb com a mínim un registre
+        title: Importa des d'una exportació
+        upload_button: Puja NDJSON
+      update:
+        qif_uploaded: Fitxer QIF pujat correctament.
+  imports:
+    apply_template:
+      no_template_found: No s'ha trobat cap plantilla; configura manualment la teva
+        importació.
+      template_applied: Plantilla aplicada.
+    column_labels:
+      account: Compte
+      amount: Import
+      category: Categoria
+      category_color: Color
+      category_icon: Icona Lucide
+      category_parent: Categoria pare
+      currency: Divisa
+      date: Data
+      entity_type: Tipus
+      exchange: Borsa
+      name: Nom
+      notes: Notes
+      price: Preu
+      qty: Quantitat
+      tags: Etiquetes
+      ticker: Ticker
+    create:
+      csv_uploaded: CSV pujat correctament.
+      document_provider_not_configured: No hi ha cap magatzem vectorial configurat per
+        a la pujada de documents.
+      document_too_large: El fitxer del document és massa gran. La mida màxima és
+        %{max_size}MB.
+      document_upload_failed: No hem pogut pujar el document al magatzem vectorial.
+        Torna-ho a provar.
+      document_uploaded: Document pujat correctament.
+      file_too_large: El fitxer és massa gran. La mida màxima és %{max_size}MB.
+      invalid_document_file_type: Tipus de fitxer de document no vàlid per a l'arxiu
+        vectorial actiu.
+      invalid_file_type: Tipus de fitxer no vàlid. Puja un fitxer CSV.
+      invalid_ndjson_file_type: Tipus o format de fitxer no vàlid. Puja un fitxer
+        d'exportació .ndjson o .json vàlid.
+      invalid_pdf: El fitxer pujat no és un PDF vàlid.
+      ndjson_uploaded: Fitxer NDJSON pujat correctament.
+      pdf_processing: El teu PDF s'està processant. Rebràs un correu electrònic quan
+        l'anàlisi estigui completa.
+      pdf_too_large: El fitxer PDF és massa gran. La mida màxima és %{max_size}MB.
+    date_format:
+      description: El format de data s'ha detectat automàticament del teu fitxer.
+        Canvia'l si les dates no es veuen correctament.
+      error_description: Cap dels formats de data suportats ha pogut analitzar les
+        dates d'aquest fitxer. Comprova que el fitxer contingui entrades de data vàlides.
+      error_title: No s'ha pogut detectar el format de data
+      heading: Format de data
+      preview: Primera data analitzada
+    destroy:
+      deleted: La teva importació s'ha eliminat.
+    document_types:
+      bank_statement: Extracte bancari
+      contract: Contracte
+      credit_card_statement: Extracte de targeta de crèdit
+      financial_document: Document financer
+      investment_statement: Extracte d'inversions
+      other: Altre document
+      unknown: Document desconegut
+    empty:
+      message: No s'ha trobat cap importació.
+    errors:
+      custom_column_requires_inflow: Les importacions amb columna personalitzada requereixen
+        seleccionar una columna d'entrada
+    failure:
+      description: Comprova el format del fitxer, els errors i que tots els camps
+        obligatoris estiguin omplerts, i torna-ho a provar.
+      title: Importació fallida
+      try_again: Torna-ho a provar
+    importing:
+      back_to_dashboard: Tornar al tauler
+      check_status: Comprova l'estat
+      description: La teva importació està en curs. Consulta el menú d'importacions
+        per veure l'estat o clica «Comprova l'estat» per actualitzar la pàgina. Pots
+        continuar utilitzant l'aplicació.
+      title: Importació en curs
+    index:
+      new: Nova importació
+      title: Importacions
+    mapping_labels:
+      account: Compte
+      account_type: Tipus de compte
+      category: Categoria
+      tag: Etiqueta
+    new:
+      description: Importa des d'una eina financera o puja fitxers de dades sense
+        processar.
+      import_accounts: Importa comptes
+      import_actual: Importa des d'Actual Budget
+      import_categories: Importa categories
+      import_file: Importa document
+      import_file_description: Anàlisi amb IA per a PDFs i pujada de fitxers cercables
+      import_mint: Importa des de Mint
+      import_portfolio: Importa inversions
+      import_qif: Importa des de Quicken (QIF)
+      import_rules: Importa regles
+      import_sure: Importa des de Sure
+      import_sure_description: Fitxer .ndjson d'exportació completa
+      import_transactions: Importa transaccions
+      import_ynab: Importa des de YNAB
+      requires_account: Importa comptes primer per desbloquejar aquesta opció.
+      resume: Reprèn %{type}
+      sources: Fonts
+      tab_financial_tools: Eines financeres i fitxers
+      tab_raw_data: Dades sense processar
+      title: Nova importació
+    pdf_import:
+      back_to_dashboard: Tornar al tauler
+      back_to_imports: Tornar a les importacions
+      check_status: Comprova l'estat
+      complete_description: Hem analitzat el teu PDF i això és el que hem trobat.
+      complete_title: Document analitzat
+      create_account: Crea un compte
+      delete_import: Elimina la importació
+      document_type_label: Tipus de document
+      email_sent_notice: T'hem enviat un correu electrònic amb els passos següents.
+      failed_description: No hem pogut processar el teu document PDF. Torna-ho a provar
+        o contacta amb el suport.
+      failed_title: El processament ha fallat
+      no_accounts: No hi ha comptes disponibles. Crea un compte primer.
+      processing_description: Estem analitzant el teu document amb IA. Pot trigar
+        un moment. Rebràs un correu electrònic quan l'anàlisi estigui completa.
+      processing_failed_generic: 'El processament ha fallat: %{error}'
+      processing_failed_with_message: "%{message}"
+      processing_title: Processant el teu PDF
+      publish_transactions:
+        one: Publica %{count} transacció
+        other: Publica %{count} transaccions
+      ready_for_review_description: Hem extret %{count} transaccions del teu extracte.
+        Revisa-les i publica-les per afegir-les al teu compte.
+      ready_for_review_title: A punt per revisar
+      review_transactions: Revisa les transaccions
+      save_account: Desa
+      select_account: Importa al compte
+      select_account_hint: Tria a quin compte vols importar aquestes transaccions.
+      select_account_placeholder: Selecciona un compte...
+      select_account_to_continue: Selecciona un compte a dalt per continuar.
+      summary_label: Resum
+      transactions_extracted: Transaccions extretes
+      transactions_extracted_count:
+        one: "%{count} transacció"
+        other: "%{count} transaccions"
+      try_again: Torna-ho a provar
+      unknown_document_type: Desconegut
+      unknown_state_description: Aquesta importació es troba en un estat inesperat.
+        Torna a les importacions.
+      unknown_state_title: Estat desconegut
+    publish:
+      max_rows_exceeded: La teva importació supera el límit màxim de %{max} files.
+      started: La teva importació s'ha iniciat en segon pla.
+    ready:
+      back_to_imports: Tornar a les importacions
+      description: Aquí tens un resum dels nous elements que s'afegiran al teu compte
+        un cop publiquis aquesta importació.
+      empty_summary: No s'han trobat registres importables en aquest fitxer. Pot estar
+        buit, o les línies no coincideixen amb el format d'exportació esperat (cada
+        línia ha de ser un objecte JSON amb les claus «type» i «data», amb tipus admesos
+        per aquesta importació).
+      publish_import: Publica la importació
+      summary_count_label: Quantitat
+      summary_item_label: Element
+      title: Confirma les teves dades d'importació
+    revert:
+      started: La importació s'està revertint en segon pla.
+    revert_failure:
+      description: Torna-ho a provar
+      title: La reversió de la importació ha fallat
+      try_again: Torna-ho a provar
+    show:
+      finalize_mappings: Finalitza els teus mapatges abans de continuar.
+      finalize_upload: Finalitza la pujada del fitxer.
+    steps:
+      clean: Neteja
+      configure: Configuració
+      confirm: Confirma
+      map: Mapatge
+      progress: Pas %{step} de %{total}
+      select: Selecciona
+      upload: Pujada
+    success:
+      back_to_dashboard: Tornar al tauler
+      description: Les teves dades importades s'han afegit correctament a l'aplicació
+        i ja es poden utilitzar.
+      title: Importació correcta
+    table:
+      empty: Encara no hi ha importacions.
+      header:
+        actions: Accions
+        date: Data
+        operation: Operació
+        status: Estat
+      row:
+        actions:
+          confirm_revert: Això eliminarà les transaccions que s'han importat, però
+            encara podràs revisar i tornar a importar les teves dades en qualsevol
+            moment.
+          delete: Elimina
+          revert: Reverteix
+          view: Veure
+        status:
+          complete: Completat
+          failed: Error
+          in_progress: En curs
+          revert_failed: Reversió fallida
+          reverting: Revertint
+          uploading: Processant files
+        type_labels:
+          account_import: Compte
+          actual_import: Actual
+          category_import: Categoria
+          document_import: Document
+          mint_import: Mint
+          pdf_import: PDF
+          qif_import: QIF
+          rule_import: Regla
+          sure_import: Sure
+          trade_import: Operació
+          transaction_import: Transacció
+      title: Importacions
+    type_labels:
+      account_import: Importació de comptes
+      actual_import: Importació d'Actual
+      category_import: Importació de categories
+      document_import: Importació de documents
+      mint_import: Importació de Mint
+      pdf_import: Importació PDF
+      qif_import: Importació QIF
+      rule_import: Importació de regles
+      sure_import: Importació Sure
+      trade_import: Importació d'operacions
+      transaction_import: Importació de transaccions
+    update:
+      account_saved: Compte desat.
+      invalid_account: No s'ha trobat el compte.

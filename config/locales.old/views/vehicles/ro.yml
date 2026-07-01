@@ -1,0 +1,25 @@
+---
+ro:
+  vehicles:
+    edit:
+      edit: Editează %{account}
+    form:
+      make: Marcă
+      make_placeholder: Toyota
+      mileage: Kilometraj
+      mileage_placeholder: '15000'
+      mileage_unit: Unitate
+      model: Model
+      model_placeholder: Camry
+      year: An
+      year_placeholder: '2023'
+    new:
+      title: Introdu detalii vehicul
+    overview:
+      current_price: Preț curent
+      make_model: Marcă & Model
+      mileage: Kilometraj
+      purchase_price: Preț de achiziție
+      trend: Tendință
+      unknown: Necunoscut
+      year: An

@@ -1,0 +1,12 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: "Cần có URL Metadata IdP hoặc URL SSO IdP cho nhà cung cấp SAML"
+              saml_cert_required: "Cần có Chứng chỉ IdP hoặc Certificate Fingerprint khi không dùng metadata URL"
+              metadata_url_invalid: "URL Metadata IdP phải là URL hợp lệ"
+              sso_url_invalid: "URL SSO IdP phải là URL hợp lệ"

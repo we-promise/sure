@@ -1,0 +1,10 @@
+---
+zh-TW:
+  settings:
+    securities:
+      show:
+        disable_mfa: 停用雙重驗證 (2FA)
+        disable_mfa_confirm: 您確定要停用雙重驗證嗎？這將會降低您帳號的安全性。
+        enable_mfa: 啟用雙重驗證 (2FA)
+        mfa_description: 透過在登入時要求輸入驗證應用程式產生的代碼，為您的帳號增加額外的安全防護。
+        mfa_title: 雙重驗證

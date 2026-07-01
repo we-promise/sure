@@ -1,0 +1,119 @@
+---
+ca:
+  account_statements:
+    account_tab:
+      coverage_description: Mesos històrics coberts amb extractes pujats i comprovacions
+        de saldo.
+      coverage_range: "%{start} - %{end}"
+      coverage_title: Cobertura d'extractes
+      empty: Encara no hi ha extractes enllaçats a aquest compte.
+      open_inbox: Safata d'entrada
+      statements_title: Extractes
+      year_label: Any de cobertura
+    balance:
+      unknown: Desconegut
+    coverage:
+      status:
+        ambiguous: Ambigu
+        covered: Cobert
+        duplicate: Duplicat
+        mismatched: No coincideix
+        missing: Falta
+        not_expected: No previst
+    create:
+      duplicates:
+        one: S'ha omès 1 extracte duplicat.
+        other: S'han omès %{count} extractes duplicats.
+      invalid_file_type: Puja un extracte en PDF, CSV o XLSX dins del límit de mida.
+      no_files: Selecciona com a mínim un fitxer d'extracte.
+      success:
+        one: 1 extracte pujat.
+        other: "%{count} extractes pujats."
+    destroy:
+      failure: No s'ha pogut eliminar l'extracte.
+      success: Extracte eliminat.
+    form:
+      account_upload: Puja l'extracte
+      files_hint: PDF, CSV o XLSX. Màxim %{max_size}MB per fitxer.
+      files_label: Fitxers d'extracte
+      inbox_upload: Puja
+    index:
+      account_label: Compte
+      confidence: Coincidència %{confidence}
+      empty_linked: Encara no hi ha extractes enllaçats.
+      empty_unmatched: La safata sense aparellar està buida.
+      leave_unmatched: Deixa sense aparellar
+      linked_title: Extractes enllaçats
+      no_suggestion: Sense suggeriment
+      storage_used: Emmagatzematge utilitzat
+      title: Arxiu d'extractes
+      unmatched_title: Safata sense aparellar
+      upload_description: Puja extractes a la safata, o tria un compte per enllaçar-los
+        immediatament.
+      upload_title: Puja extractes
+    link:
+      no_account: Tria un compte abans d'enllaçar aquest extracte.
+      success: Extracte enllaçat a %{account}.
+    period:
+      unknown: Període desconegut
+    reconciliation:
+      checks:
+        closing_balance: Saldo final
+        opening_balance: Saldo inicial
+        period_movement: Moviment del període
+        unknown_check: Comprovació desconeguda
+      matched: Coincideix
+      mismatched: No coincideix
+      unavailable: No comprovat
+    reject:
+      success: Coincidència d'extracte rebutjada.
+    show:
+      account_label: Compte
+      account_last4_hint: Últims quatre dígits del compte
+      account_name_hint: Pista del nom del compte
+      closing_balance: Saldo final
+      currency: Divisa
+      delete: Elimina
+      difference: Diferència
+      download: Descarrega
+      institution_name_hint: Pista de la institució
+      ledger_amount: Llibre de Sure
+      link_suggestion: Suggeriment d'enllaç
+      linked_to: Enllaçat a %{account}.
+      linking_title: Enllaç del compte
+      metadata_title: Metadades de l'extracte
+      no_suggestion: Encara no hi ha cap suggeriment de compte.
+      opening_balance: Saldo inicial
+      period_end_on: Final del període
+      period_start_on: Inici del període
+      reconciliation_title: Conciliació
+      reconciliation_unavailable: Afegeix un període d'extracte i un saldo inicial
+        o final, i comprova que Sure tingui historial de saldos per a aquestes dates.
+      reject: Rebutja
+      save: Desa l'extracte
+      statement_amount: Extracte
+      suggested_account: El compte suggerit és %{account} (confiança %{confidence}).
+      title: Extracte
+      unknown_value: Desconegut
+      unlink: Desenllaça
+      unmatched_account: Safata sense aparellar
+    status:
+      linked: Enllaçat
+      rejected: Rebutjat
+      unmatched: Sense aparellar
+    table:
+      account: Compte
+      actions: Accions
+      download: Descarrega
+      file: Fitxer
+      link_suggestion: Suggeriment d'enllaç
+      period: Període
+      reconciliation: Conciliació
+      reject: Rebutja el suggeriment
+      suggestion: Suggeriment
+      unlink: Desenllaça
+      view: Visualitza
+    unlink:
+      success: Extracte mogut de nou a la safata sense aparellar.
+    update:
+      success: Extracte actualitzat.

@@ -1,0 +1,25 @@
+---
+ro:
+  credit_cards:
+    edit:
+      edit: Editează %{account}
+    form:
+      annual_fee: Taxă anuală
+      annual_fee_placeholder: '99'
+      apr: APR
+      apr_placeholder: '15.99'
+      available_credit: Credit disponibil
+      available_credit_placeholder: '10000'
+      expiration_date: Data expirării
+      minimum_payment: Plată minimă
+      minimum_payment_placeholder: '100'
+    new:
+      title: Introdu detaliile cardului de credit
+    overview:
+      amount_owed: Suma datorată
+      annual_fee: Taxă anuală
+      apr: APR
+      available_credit: Credit disponibil
+      expiration_date: Data expirării
+      minimum_payment: Plată minimă
+      unknown: Necunoscut

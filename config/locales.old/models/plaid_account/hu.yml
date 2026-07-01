@@ -1,0 +1,7 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: "A Plaid-számlának rendelkeznie kell aktuális vagy elérhető egyenleggel"

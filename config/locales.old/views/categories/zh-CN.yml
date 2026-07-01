@@ -1,0 +1,69 @@
+---
+zh-CN:
+  categories:
+    bootstrap:
+      success: 默认分类创建成功
+    category:
+      delete: 删除分类
+      edit: 编辑分类
+    create:
+      success: 分类创建成功
+    destroy:
+      success: 分类删除成功
+    edit:
+      edit: 编辑分类
+    form:
+      placeholder: 分类名称
+      name_label: 名称
+      unassigned: （未分配）
+      parent_category_label: 父分类（可选）
+      color: 颜色
+      icon: 图标
+      auto_adjust: 自动调整。
+      poor_contrast: 对比度较差，请选择更深的颜色或
+    destroy_all:
+      success: 所有分类已删除
+    index:
+      bootstrap: 使用默认值（推荐）
+      categories: 分类
+      categories_expenses: 支出分类
+      categories_incomes: 收入分类
+      delete_all: 全部删除
+      empty: 未找到分类
+      new: 新建分类
+      merge: 合并分类
+    menu:
+      loading: 正在加载...
+    new:
+      new_category: 新建分类
+    update:
+      success: 分类更新成功
+    virtual:
+      transfer: 转账
+      payment: 付款
+      trade: 交易
+    merge:
+      title: 合并分类
+      description: 选择要合并的分类，并指定保留的目标分类。
+      target_label: 合并到（目标）
+      select_target: 选择目标分类...
+      sources_label: 要合并的分类
+      sources_hint: 这些分类会被合并到目标分类中。
+      submit: 合并所选分类
+    perform_merge:
+      success:
+        one: 已成功合并 %{count} 个分类。
+        other: 已成功合并 %{count} 个分类。
+      no_categories_selected: 请选择要合并的分类。
+      target_not_found: 找不到目标分类。
+      invalid_categories: 选择的分类无效。
+      target_selected_as_source: 目标分类不能同时作为来源分类。
+  category:
+    dropdowns:
+      show:
+        bootstrap: 生成默认分类
+        empty: 未找到分类
+        match_transfer: 匹配转账/付款
+        one_time: 一次性%{type}
+        income: 收入
+        expense: 支出

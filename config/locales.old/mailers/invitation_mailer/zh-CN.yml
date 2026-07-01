@@ -1,0 +1,5 @@
+---
+zh-CN:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} 邀请您加入他们在 %{product_name} 的家庭账户！"

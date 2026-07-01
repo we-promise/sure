@@ -1,0 +1,15 @@
+---
+ro:
+  tag:
+    deletions:
+      create:
+        deleted: Etichetă ștearsă
+      new:
+        delete_and_leave_uncategorized: Șterge "%{tag_name}"
+        delete_and_recategorize: Șterge "%{tag_name}" și atribuie o etichetă nouă
+        delete_tag: Ștergi eticheta?
+        explanation: "%{tag_name} va fi eliminată din tranzacții și alte entități
+          etichetabile. În loc să le lași neetichetate, poți atribui și o etichetă
+          nouă mai jos."
+        replacement_tag_prompt: Selectează eticheta
+        tag: Etichetă

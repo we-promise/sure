@@ -1,0 +1,24 @@
+---
+de:
+  transfer_matches:
+    create:
+      success: Übertragung erstellt
+    new:
+      header:
+        title: Übertragung oder Zahlung zuordnen
+        subtitle: Ordnen Sie die entsprechende Transaktion in einem anderen Konto zu oder erstellen Sie eine, falls keine vorhanden ist.
+      from_account: Von Konto
+      from_account_named: "Von Konto: %{name}"
+      to_account: Zu Konto
+      to_account_named: "Zu Konto: %{name}"
+      outflow_transaction: Abgangstransaktion
+      inflow_transaction: Zugangstransaktion
+      create_transfer_match: Übertragungszuordnung erstellen
+    matching_fields:
+      select_method: Wählen Sie eine Methode zum Zuordnen Ihrer Transaktionen.
+      match_existing_recommended: Vorhandene Transaktion zuordnen (empfohlen)
+      create_new_transaction: Neue Transaktion erstellen
+      matching_method: Zuordnungsmethode
+      matching_transaction: Zuzuordnende Transaktion
+      target_account: Zielkonto
+      no_matching_transactions: Wir konnten in Ihren anderen Konten keine zuzuordnenden Transaktionen finden. Bitte wählen Sie ein Konto aus, und wir erstellen für Sie eine neue Zugangstransaktion.

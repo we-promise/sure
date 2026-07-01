@@ -1,0 +1,25 @@
+---
+nl:
+  credit_cards:
+    edit:
+      edit: "%{account} bewerken"
+    form:
+      annual_fee: Jaarlijkse kosten
+      annual_fee_placeholder: '99'
+      apr: Rentepercentage
+      apr_placeholder: '15.99'
+      available_credit: Beschikbaar krediet
+      available_credit_placeholder: '10000'
+      expiration_date: Vervaldatum
+      minimum_payment: Minimumbetaling
+      minimum_payment_placeholder: '100'
+    new:
+      title: Creditcardgegevens invoeren
+    overview:
+      amount_owed: Schuldig bedrag
+      annual_fee: Jaarlijkse kosten
+      apr: Rentepercentage
+      available_credit: Beschikbaar krediet
+      expiration_date: Vervaldatum
+      minimum_payment: Minimumbetaling
+      unknown: Onbekend

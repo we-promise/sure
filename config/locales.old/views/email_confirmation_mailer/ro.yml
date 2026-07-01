@@ -1,0 +1,10 @@
+---
+ro:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Ai solicitat recent să îți schimbi adresa de email. Apasă butonul de mai
+        jos pentru a confirma această modificare.
+      cta: Confirmă schimbarea adresei de email
+      expiry_notice: Acest link va expira în %{hours} ore.
+      greeting: Salut!
+      subject: '%{product_name}: Confirmă schimbarea adresei de email'

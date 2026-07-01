@@ -1,0 +1,36 @@
+---
+hu:
+  concerns:
+    self_hostable:
+      redis_configured: "A Redis most megfelelően van konfigurálva! Mostantól beállíthatod a Sure alkalmazásodat."
+  shared:
+    confirm_modal:
+      accept: Megerősítés
+      body_html: "<p>Ezt a döntést nem tudod visszavonni</p>"
+      cancel: Mégse
+      title: Biztos vagy benne?
+    money_field:
+      label: Összeg
+    exchange_rate_tabs:
+      calculate_rate_tab: Árfolyam kiszámítása
+      convert_tab: Átváltás árfolyammal
+      destination_amount: Célösszeg
+      exchange_rate: Árfolyam
+      exchange_rate_help: Válaszd ki, hogyan szeretnéd megadni az összeget.
+    syncing_notice:
+      syncing: Számlák adatainak szinkronizálása...
+    require_admin: "Ezt a műveletet csak adminisztrátorok hajthatják végre"
+    custom_confirm:
+      default_title: "Biztosan?"
+      default_body: "Ez a művelet nem vonható vissza."
+      default_btn_text: "Megerősítés"
+    family_moniker:
+      singular: Háztartás
+      plural: Háztartások
+    trend_change:
+      no_change: "nincs változás"
+    cancel: Mégse
+    transaction_tabs:
+      expense: Kiadás
+      income: Bevétel
+      transfer: Átutalás

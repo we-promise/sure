@@ -1,0 +1,7 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: Cal indicar un comerç o un nom

@@ -1,0 +1,116 @@
+---
+es:
+  account_statements:
+    account_tab:
+      coverage_title: Cobertura de extractos
+      coverage_description: Meses históricos respaldados por extractos subidos y comprobaciones de saldo.
+      coverage_range: "%{start} - %{end}"
+      empty: Aún no hay extractos vinculados a esta cuenta.
+      open_inbox: Bandeja de entrada
+      statements_title: Extractos
+      year_label: Año de cobertura
+    balance:
+      unknown: Desconocido
+    coverage:
+      status:
+        ambiguous: Ambiguo
+        covered: Cubierto
+        duplicate: Duplicado
+        mismatched: No coincide
+        missing: Faltante
+        not_expected: No esperado
+    create:
+      duplicates:
+        one: Se omitió 1 extracto duplicado.
+        other: "Se omitieron %{count} extractos duplicados."
+      invalid_file_type: Sube un extracto en PDF, CSV o XLSX que no supere el límite de tamaño.
+      no_files: Selecciona al menos un archivo de extracto.
+      success:
+        one: 1 extracto subido.
+        other: "%{count} extractos subidos."
+    destroy:
+      failure: No se pudo eliminar el extracto.
+      success: Extracto eliminado.
+    form:
+      account_upload: Subir extracto
+      files_hint: PDF, CSV o XLSX. Máximo %{max_size} MB por archivo.
+      files_label: Archivos de extracto
+      inbox_upload: Subir
+    index:
+      account_label: Cuenta
+      confidence: "Coincidencia del %{confidence}"
+      empty_linked: Aún no hay extractos vinculados.
+      empty_unmatched: La bandeja de entrada de extractos está vacía.
+      leave_unmatched: Dejar sin asignar
+      linked_title: Extractos vinculados
+      no_suggestion: Sin sugerencia
+      storage_used: Almacenamiento usado
+      title: Bóveda de extractos
+      unmatched_title: Bandeja de entrada sin asignar
+      upload_description: Sube extractos a la bandeja de entrada o elige una cuenta para vincularlos de inmediato.
+      upload_title: Subir extractos
+    link:
+      no_account: Elige una cuenta antes de vincular este extracto.
+      success: Extracto vinculado a %{account}.
+    period:
+      unknown: Periodo desconocido
+    reconciliation:
+      checks:
+        closing_balance: Saldo de cierre
+        opening_balance: Saldo de apertura
+        period_movement: Movimiento del periodo
+        unknown_check: Comprobación desconocida
+      matched: Coincide
+      mismatched: No coincide
+      unavailable: Sin comprobar
+    reject:
+      success: Coincidencia de extracto rechazada.
+    show:
+      account_label: Cuenta
+      account_last4_hint: Últimos cuatro dígitos de la cuenta
+      account_name_hint: Pista del nombre de la cuenta
+      closing_balance: Saldo de cierre
+      currency: Moneda
+      delete: Eliminar
+      difference: Diferencia
+      download: Descargar
+      institution_name_hint: Pista de la entidad
+      ledger_amount: Registro de Sure
+      linked_to: Vinculado a %{account}.
+      linking_title: Vínculo de cuenta
+      link_suggestion: Sugerencia de vínculo
+      metadata_title: Metadatos del extracto
+      no_suggestion: Aún no hay sugerencia de cuenta.
+      opening_balance: Saldo de apertura
+      period_end_on: Fin del periodo
+      period_start_on: Inicio del periodo
+      reconciliation_title: Conciliación
+      reconciliation_unavailable: Añade un periodo de extracto y un saldo de apertura o cierre, y asegúrate de que Sure tenga historial de saldos para esas fechas.
+      reject: Rechazar
+      save: Guardar extracto
+      statement_amount: Extracto
+      suggested_account: La cuenta sugerida es %{account} (confianza del %{confidence}).
+      title: Extracto
+      unlink: Desvincular
+      unmatched_account: Bandeja de entrada sin asignar
+      unknown_value: Desconocido
+    status:
+      linked: Vinculado
+      rejected: Rechazado
+      unmatched: Sin asignar
+    table:
+      account: Cuenta
+      actions: Acciones
+      download: Descargar
+      file: Archivo
+      link_suggestion: Sugerencia de vínculo
+      period: Periodo
+      reconciliation: Conciliación
+      reject: Rechazar sugerencia
+      suggestion: Sugerencia
+      unlink: Desvincular
+      view: Ver
+    unlink:
+      success: Extracto devuelto a la bandeja de entrada sin asignar.
+    update:
+      success: Extracto actualizado.

@@ -1,0 +1,11 @@
+---
+hu:
+  address:
+    attributes:
+      country: Ország
+      line1: Cím 1. sor
+      line2: Cím 2. sor
+      locality: Helység
+      postal_code: Irányítószám
+      region: Megye/Régió
+    format: "%{country} %{region} %{postal_code} %{locality}, %{line1} %{line2}"

@@ -1,0 +1,365 @@
+---
+ca:
+  sophtron_items:
+    api_error:
+      bad_credentials: 'Credencials bancàries: comprova que el nom d''usuari i la
+        contrasenya són correctes'
+      check_provider_settings: Revisa la configuració del proveïdor
+      common_issues_title: 'Problemes habituals:'
+      expired_credentials: 'Credencials caducades: genera un nou ID d''usuari i clau
+        d''accés des de Sophtron'
+      incorrect_user_id: 'ID d''usuari incorrecte: verifica el teu ID d''usuari a
+        la configuració del proveïdor'
+      institution_timeout: 'Temps esgotat de l''entitat: la pàgina d''inici de sessió
+        del banc no ha acabat a temps'
+      institution_unable_to_connect: No s'ha pogut connectar amb l'entitat
+      invalid_access_key: 'Clau d''accés no vàlida: revisa la teva clau d''accés a
+        la configuració del proveïdor'
+      network_issue: 'Problema de xarxa: comprova la teva connexió a internet'
+      service_down: 'Servei caigut: l''API de Sophtron pot estar temporalment no disponible'
+      title: Error de connexió amb Sophtron
+      try_again: Torna a intentar la connexió
+      unable_to_connect: No s'ha pogut connectar a Sophtron
+      unsupported_mfa: 'Compatibilitat MFA: Sophtron pot no donar suport al flux de
+        verificació actual d''aquesta entitat'
+      verification_code: 'Codi de verificació: assegura''t que has introduït l''últim
+        codi abans que caduqui'
+    complete_account_setup:
+      all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
+      api_error: Error de connexió amb l'API
+      creation_failed: No s'han pogut crear els comptes
+      no_accounts: No hi ha comptes per configurar.
+      success: S'han creat correctament %{count} compte(s).
+      unexpected_error: S'ha produït un error inesperat
+    connect:
+      cancel: Cancel·la
+      captcha: Captcha
+      connect: Connecta
+      institution_search_label: Entitat
+      institution_search_placeholder: Cerca pel nom del banc
+      no_institutions: No s'han trobat entitats coincidents.
+      password: Contrasenya
+      search: Cerca
+      search_too_short: Introdueix almenys dos caràcters per cercar.
+      title: Connecta una entitat Sophtron
+      username: Nom d'usuari
+    connect_institution:
+      api_error: 'La connexió Sophtron ha fallat: %{message}'
+      missing_parameters: Selecciona una entitat i introdueix les teves credencials
+        d'inici de sessió bancari.
+    connection_status:
+      api_error: 'Error de connexió amb l''API: %{message}'
+      attempt: Intent %{attempt} de %{max}
+      check_again: Torna a comprovar
+      failed: Sophtron no ha pogut completar la connexió amb aquesta entitat.
+      failed_timeout: Sophtron ha esgotat el temps mentre l'entitat completava l'inici
+        de sessió.
+      timeout: Sophtron no ha completat la connexió dins del temps previst. Pots tornar
+        a comprovar-ho o intentar reconnectar més tard.
+      title: Connectant Sophtron
+      waiting: Sophtron encara s'està connectant a la teva entitat.
+    create:
+      success: La connexió Sophtron s'ha creat correctament
+    defaults:
+      name: Connexió Sophtron
+    destroy:
+      success: La connexió Sophtron s'ha eliminat
+    edit:
+      access_key:
+        help_text: La clau d'accés ha de ser una cadena llarga que comenci amb lletres
+          i números
+        label: 'Clau d''accés de Sophtron:'
+        placeholder: Enganxa aquí la teva clau d'accés de Sophtron...
+      user_id:
+        help_text: L'ID d'usuari ha de ser una cadena llarga que comenci amb lletres
+          i números
+        label: 'ID d''usuari de Sophtron:'
+        placeholder: Enganxa aquí el teu ID d'usuari de Sophtron...
+    index:
+      title: Connexions Sophtron
+    link_accounts:
+      all_already_linked:
+        one: El compte seleccionat (%{names}) ja està enllaçat
+        other: 'Tots els %{count} comptes seleccionats ja estan enllaçats: %{names}'
+      api_error: Error de connexió amb l'API
+      invalid_account_names:
+        one: No es pot enllaçar un compte sense nom
+        other: No es poden enllaçar %{count} comptes sense nom
+      link_failed: No s'han pogut enllaçar els comptes
+      no_access_key: La clau d'accés de Sophtron no està configurada. Configura-la
+        a la configuració.
+      no_accounts_found: No s'han trobat comptes. Comprova la configuració de la teva
+        clau API.
+      no_accounts_selected: Selecciona almenys un compte
+      no_credentials_configured: Primer, configura el teu ID d'usuari i clau d'accés
+        de Sophtron a la configuració del proveïdor.
+      no_institution_connected: Primer connecta una entitat bancària amb Sophtron.
+      no_user_id: L'ID d'usuari de Sophtron no està configurat. Configura'l a la configuració.
+      partial_invalid: S'han enllaçat correctament %{created_count} compte(s), %{already_linked_count}
+        ja estaven enllaçats, %{invalid_count} compte(s) tenien noms no vàlids
+      partial_success: 'S''han enllaçat correctament %{created_count} compte(s). %{already_linked_count}
+        compte(s) ja estaven enllaçats: %{already_linked_names}'
+      success:
+        one: S'ha enllaçat correctament %{count} compte
+        other: S'han enllaçat correctament %{count} comptes
+    link_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      api_error: Error de connexió amb l'API
+      invalid_account_name: No es pot enllaçar un compte sense nom
+      missing_parameters: Falten paràmetres obligatoris
+      no_institution_connected: Primer connecta una entitat bancària amb Sophtron.
+      sophtron_account_already_linked: Aquest compte Sophtron ja està enllaçat a un
+        altre compte
+      sophtron_account_not_found: No s'ha trobat el compte Sophtron
+      success: S'ha enllaçat correctament %{account_name} amb Sophtron
+      unexpected_error: S'ha produït un error inesperat
+    loading:
+      loading_message: Carregant comptes de Sophtron...
+      loading_title: Carregant
+    manual_sync_complete:
+      close: Tanca
+      description: Els saldos dels comptes acabaran d'actualitzar-se en segon pla.
+      message: S'han descarregat les transaccions després de la verificació de Sophtron.
+      title: Sincronització Sophtron iniciada
+    mfa:
+      captcha: Text del captcha
+      captcha_alt: Captcha de Sophtron
+      phone_confirmed: He confirmat per telèfon
+      submit: Envia
+      title: Verificació Sophtron
+      token: Codi de verificació
+    new:
+      access_key: Clau d'accés
+      access_key_placeholder: enganxa la teva clau d'accés de Sophtron
+      cancel: Cancel·la
+      connect: Connecta
+      title: Connecta Sophtron
+      user_id: ID d'usuari
+      user_id_placeholder: enganxa el teu ID d'usuari de Sophtron
+    preload_accounts:
+      api_error: Error de connexió amb l'API
+      no_access_key: La clau d'accés de Sophtron no està configurada. Configura-la
+        a la configuració.
+      no_accounts_found: No s'han trobat comptes. Comprova la configuració de la teva
+        clau API.
+      no_credentials_configured: Primer, configura el teu ID d'usuari i clau d'accés
+        de Sophtron a la configuració del proveïdor.
+      no_user_id: L'ID d'usuari de Sophtron no està configurat. Configura'l a la configuració.
+      preload_accounts: precarrega els comptes
+      unexpected_error: S'ha produït un error inesperat
+    redirect_after_account_link:
+      all_already_linked:
+        one: El compte seleccionat ja està enllaçat
+        other: Tots els %{count} comptes seleccionats ja estan enllaçats
+      invalid_account_names:
+        one: No es pot enllaçar %{count} compte sense nom
+        other: No es poden enllaçar %{count} comptes sense nom
+      link_failed: No s'han pogut enllaçar els comptes
+      partial_invalid: S'han enllaçat %{created_count} compte(s). %{already_linked_count}
+        ja estaven enllaçats, %{invalid_count} tenien noms no vàlids.
+      partial_success: S'han enllaçat %{created_count} compte(s). %{already_linked_count}
+        compte(s) ja estaven enllaçats.
+      success:
+        one: S'ha enllaçat correctament %{count} compte.
+        other: S'han enllaçat correctament %{count} comptes.
+    render_connection_timeout:
+      timeout: S'ha esgotat el temps de connexió. Torna-ho a provar.
+    select_accounts:
+      accounts_selected: comptes seleccionats
+      api_error: Error de connexió amb l'API
+      cancel: Cancel·la
+      configure_name_in_sophtron: No es pot importar — configura el nom del compte
+        a Sophtron
+      description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
+      link_accounts: Enllaça els comptes seleccionats
+      no_access_key: La clau d'accés de Sophtron no està configurada. Configura-la
+        a la configuració.
+      no_accounts_found: No s'han trobat comptes. Comprova la configuració de la teva
+        clau API.
+      no_credentials_configured: Primer, configura el teu ID d'usuari i clau d'accés
+        de Sophtron a la configuració del proveïdor.
+      no_institution_connected: Primer connecta una entitat bancària amb Sophtron.
+      no_name_placeholder: "(Sense nom)"
+      no_user_id: L'ID d'usuari de Sophtron no està configurat. Configura'l a la configuració.
+      title: Selecciona comptes Sophtron
+      unexpected_error: S'ha produït un error inesperat
+    select_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      all_accounts_already_linked: Tots els comptes Sophtron ja estan enllaçats
+      api_error: Error de connexió amb l'API
+      cancel: Cancel·la
+      configure_name_in_sophtron: No es pot importar — configura el nom del compte
+        a Sophtron
+      description: Selecciona un compte Sophtron per enllaçar-lo amb aquest compte.
+        Les transaccions es sincronitzaran i deduplicaran automàticament.
+      link_account: Enllaça compte
+      no_access_key: La clau d'accés de Sophtron no està configurada. Configura-la
+        a la configuració.
+      no_account_specified: No s'ha especificat cap compte
+      no_accounts_found: No s'han trobat comptes Sophtron. Comprova la configuració
+        de la teva clau API.
+      no_institution_connected: Primer connecta una entitat bancària amb Sophtron.
+      no_name_placeholder: "(Sense nom)"
+      no_user_id: L'ID d'usuari de Sophtron no està configurat. Configura'l a la configuració.
+      title: Enllaça %{account_name} amb Sophtron
+      unexpected_error: S'ha produït un error inesperat
+    select_option: Selecciona %{type}
+    setup_accounts:
+      account_type_label: 'Tipus de compte:'
+      account_types:
+        credit_card: Targeta de crèdit
+        depository: Compte corrent o d'estalvis
+        investment: Compte d'inversió
+        loan: Préstec o hipoteca
+        other_asset: Altre actiu
+        skip: Omet aquest compte
+      all_accounts_linked: Tots els teus comptes Sophtron ja s'han configurat.
+      api_error: Error de connexió amb l'API
+      balance: Saldo
+      cancel: Cancel·la
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte Sophtron:'
+      create_accounts: Crea comptes
+      creating_accounts: Creant comptes...
+      fetch_failed: No s'han pogut obtenir els comptes
+      historical_data_range: 'Rang de dades històriques:'
+      no_access_key: La clau d'accés de Sophtron no està configurada. Revisa la configuració
+        de la connexió.
+      no_accounts_to_setup: No hi ha comptes per configurar
+      no_institution_connected: L'entitat Sophtron encara no està connectada.
+      no_user_id: L'ID d'usuari de Sophtron no està configurat. Revisa la configuració
+        de la connexió.
+      subtitle: Tria els tipus de compte correctes per als teus comptes importats
+      subtype_labels:
+        credit_card: ''
+        depository: 'Subtipus de compte:'
+        investment: 'Tipus d''inversió:'
+        loan: 'Tipus de préstec:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Les targetes de crèdit es configuraran automàticament com a comptes
+          de targeta de crèdit.
+        other_asset: No calen opcions addicionals per a altres actius.
+      sync_start_date_help: Selecciona fins on vols sincronitzar l'historial de transaccions.
+        Hi ha un màxim de 3 anys d'historial disponible.
+      sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
+      title: Configura els teus comptes Sophtron
+      unexpected_error: S'ha produït un error inesperat
+    sophtron_entry:
+      processor:
+        unknown_transaction: Transacció desconeguda
+    sophtron_item:
+      accounts_need_setup: Els comptes necessiten configuració
+      automatic_sync: Utilitza la sincronització automàtica
+      automatic_sync_for: Utilitza la sincronització automàtica per a %{institution}
+      delete: Elimina la connexió
+      deletion_in_progress: eliminació en curs...
+      error: Error
+      manual_sync: Sincronització manual
+      manual_sync_action: Requereix sincronització manual
+      manual_sync_action_for: Requereix sincronització manual per a %{institution}
+      no_accounts_description: Aquesta connexió encara no té comptes enllaçats.
+      no_accounts_title: No hi ha comptes
+      setup_action: Configura els nous comptes
+      setup_description: "%{linked} de %{total} comptes enllaçats. Tria els tipus
+        de compte per als teus nous comptes Sophtron importats."
+      setup_needed: Nous comptes a punt per configurar
+      status: Sincronitzat fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: Darrera sincronització fa %{timestamp} • %{summary}
+      sync_now: Sincronitza ara
+      syncing: Sincronitzant...
+      total: Total
+      unlinked: Sense enllaç
+    sophtron_panel:
+      field_descriptions:
+        access_key_html: "<strong>Clau d'accés:</strong> la teva credencial de clau
+          d'accés de Sophtron"
+        base_url_html: "<strong>URL base:</strong> l'URL de l'endpoint de l'API de
+          Sophtron, normalment https://api.sophtron.com/api"
+        user_id_html: "<strong>ID d'usuari:</strong> la teva credencial d'ID d'usuari
+          de Sophtron"
+      field_descriptions_title: 'Descripció dels camps:'
+      fields:
+        access_key:
+          label: Clau d'accés
+          placeholder_edit: "••••••••"
+          placeholder_new: Enganxa la teva clau d'accés de Sophtron
+        base_url:
+          label: URL base
+          placeholder: https://api.sophtron.com/api
+        user_id:
+          label: ID d'usuari
+          placeholder_edit: "••••••••"
+          placeholder_new: Enganxa el teu ID d'usuari de Sophtron
+      save: Desa la configuració
+      setup_instructions:
+        step_1_html: Visita <a href="%{url}" target="_blank" rel="noopener noreferrer"
+          class="link">Sophtron</a> per obtenir les teves credencials API
+        step_2: Copia el teu ID d'usuari i clau d'accés des de la configuració del
+          teu compte Sophtron
+        step_3: Enganxa les credencials a continuació i fes clic a Desa; Sure crearà
+          o reutilitzarà el teu ID de client de Sophtron automàticament
+      setup_instructions_title: 'Instruccions de configuració:'
+      update: Actualitza la configuració
+    sophtron_setup_required:
+      description: Abans d'enllaçar comptes Sophtron, has de configurar el teu ID
+        d'usuari i clau d'accés de Sophtron.
+      go_to_provider_settings: Ves a la configuració del proveïdor
+      heading: ID d'usuari i clau d'accés sense configurar
+      message: Per completar la configuració de la teva connexió Sophtron, ves a la
+        pàgina de configuració del proveïdor i segueix les instruccions per autoritzar
+        i configurar la teva connexió Sophtron.
+      setup_steps_title: 'Passos de configuració:'
+      step_1_html: Ves a <strong>Configuració → Proveïdors de sincronització bancària</strong>
+      step_2_html: Localitza la secció <strong>Sophtron</strong>
+      step_3_html: Introdueix el teu ID d'usuari i clau d'accés de Sophtron
+      step_4: Torna aquí per enllaçar els teus comptes
+      title: Cal configurar Sophtron
+    start_manual_sync:
+      already_running: Ja s'està executant una sincronització.
+      api_error: 'Error de l''API: %{message}'
+      no_linked_accounts: No hi ha comptes enllaçats disponibles per sincronitzar.
+    start_manual_sync_for_account:
+      failed: No s'ha pogut sincronitzar el compte
+    submit_mfa:
+      api_error: 'La verificació ha fallat: %{message}'
+      invalid_security_answers: Les respostes de seguretat falten o són massa llargues.
+      unknown_challenge: Pas de verificació Sophtron desconegut.
+    subtype: subtipus
+    sync:
+      already_running: La sincronització manual de Sophtron ja s'està executant.
+      api_error: 'La sincronització manual de Sophtron ha fallat: %{message}'
+      failed: La sincronització manual de Sophtron ha fallat
+      no_linked_accounts: Aquesta entitat Sophtron no té cap compte enllaçat per sincronitzar.
+      processing_failed: La sincronització manual de Sophtron no ha pogut processar
+        les transaccions actualitzades.
+      success: Sincronització iniciada
+    syncer:
+      accounts_need_setup: "%{count} compte(s) necessiten configuració"
+      calculating_balances: Calculant saldos per als comptes enllaçats...
+      checking_account_configuration: Comprovant la configuració dels comptes...
+      importing_accounts: Important comptes des de Sophtron...
+      manual_sync_required: Cal sincronització manual de Sophtron per a aquesta entitat;
+        els seus comptes s'ometen durant la sincronització automàtica.
+      processing_transactions: Processant transaccions per als comptes enllaçats...
+    toggle_manual_sync:
+      success_disabled: L'entitat Sophtron se sincronitzarà automàticament.
+      success_enabled: L'entitat Sophtron ara requereix sincronització manual.
+    type: tipus
+    update:
+      errors:
+        access_key_compromised: La clau d'accés pot estar compromesa, caducada o ja
+          utilitzada. Crea'n una de nova.
+        blank_access_key: Introdueix una clau d'accés de Sophtron.
+        blank_user_id: Introdueix un ID d'usuari de Sophtron.
+        invalid_access_key: Clau d'accés no vàlida. Comprova que has copiat la clau
+          d'accés completa des de Sophtron.
+        invalid_user_id: ID d'usuari no vàlid. Comprova que has copiat l'ID d'usuari
+          complet des de Sophtron.
+        unexpected: S'ha produït un error inesperat. Torna-ho a provar o contacta
+          amb el suport.
+        update_failed: 'No s''ha pogut actualitzar la connexió: %{message}'
+        user_id_compromised: L'ID d'usuari pot estar compromès, caducat o ja utilitzat.
+          Crea'n un de nou.
+      success: La connexió Sophtron s'ha actualitzat correctament! Els teus comptes
+        s'estan tornant a connectar.

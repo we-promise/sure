@@ -1,0 +1,10 @@
+---
+zh-TW:
+  depositories:
+    edit:
+      edit: 編輯 %{account}
+    form:
+      none: 無
+      subtype_prompt: 選擇帳戶類型
+    new:
+      title: 請輸入帳戶餘額

@@ -1,0 +1,26 @@
+---
+en:
+  depositories:
+    edit:
+      edit: Edit %{account}
+    form:
+      none: None
+      subtype_prompt: Select account type
+    new:
+      title: Enter account balance
+    subtypes:
+      cd:
+        long: Certificate of Deposit
+        short: CD
+      checking:
+        long: Checking
+        short: Checking
+      hsa:
+        long: Health Savings Account
+        short: HSA
+      money_market:
+        long: Money Market
+        short: MM
+      savings:
+        long: Savings
+        short: Savings

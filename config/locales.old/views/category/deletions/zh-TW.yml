@@ -1,0 +1,13 @@
+---
+zh-TW:
+  category:
+    deletions:
+      create:
+        success: 交易分類已刪除成功
+      new:
+        category: 分類
+        delete_and_leave_uncategorized: 刪除「%{category_name}」並保留為未分類
+        delete_and_recategorize: 刪除「%{category_name}」並重新分配分類
+        delete_category: 確認刪除分類？
+        explanation: 刪除此分類後，所有標記為「%{category_name}」的交易將變為未分類狀態。您也可以在下述選項中選擇一個新分類進行重新分配。
+        replacement_category_prompt: 選擇新分類

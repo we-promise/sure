@@ -1,0 +1,8 @@
+---
+hu:
+  invitation_mailer:
+    invite_email:
+      accept_button: Meghívó elfogadása
+      body: "%{inviter} meghívott, hogy csatlakozz a(z) %{family} %{moniker} fiókhoz a(z) %{product_name} alkalmazásban!"
+      expiry_notice: Ez a meghívó %{days} nap múlva lejár
+      greeting: Üdvözöl a(z) %{product_name}!

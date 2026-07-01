@@ -1,0 +1,13 @@
+---
+zh-TW:
+  tag:
+    deletions:
+      create:
+        deleted: 標籤已刪除
+      new:
+        delete_and_leave_uncategorized: 刪除「%{tag_name}」
+        delete_and_recategorize: 刪除「%{tag_name}」並指定新標籤
+        delete_tag: 確定要刪除標籤嗎？
+        explanation: "「%{tag_name}」將會從交易紀錄及其他可標記項目中移除。除了讓這些項目保持無標籤狀態，您也可以在下方選擇一個新標籤進行替換。"
+        replacement_tag_prompt: 選擇標籤
+        tag: 標籤

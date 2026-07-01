@@ -1,0 +1,33 @@
+---
+nl:
+  oidc_accounts:
+    link:
+      title_link: OIDC-account koppelen
+      title_create: Account aanmaken
+      verify_heading: Verifieer uw identiteit
+      verify_description_html: "Om uw %{provider}-account%{email_suffix} te koppelen, verifieert u uw identiteit door uw wachtwoord in te voeren."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-mailadres
+      email_placeholder: Voer uw e-mailadres in
+      password_label: Wachtwoord
+      password_placeholder: Voer uw wachtwoord in
+      verify_hint: Dit zorgt ervoor dat alleen u externe accounts aan uw profiel kunt koppelen.
+      submit_link: Account koppelen
+      create_heading: Nieuw account aanmaken
+      create_description_html: "Geen account gevonden met het e-mailadres <strong>%{email}</strong>. Klik hieronder om een nieuw account aan te maken met uw %{provider}-identiteit."
+      info_email: "E-mail:"
+      info_name: "Naam:"
+      submit_create: Account aanmaken
+      account_creation_disabled: Het aanmaken van accounts via single sign-on is uitgeschakeld. Neem contact op met een beheerder.
+      cancel: Annuleren
+    new_user:
+      title: Account voltooien
+      heading: Account aanmaken
+      description: Bevestig uw gegevens om het aanmaken van uw account met uw %{provider}-identiteit te voltooien.
+      email_label: E-mail (van SSO-provider)
+      first_name_label: Voornaam
+      first_name_placeholder: Voer uw voornaam in
+      last_name_label: Achternaam
+      last_name_placeholder: Voer uw achternaam in
+      submit: Account aanmaken
+      cancel: Annuleren

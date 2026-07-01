@@ -3,9 +3,9 @@ ru:
   coinbase_item:
     syncer:
       accounts_need_setup:
-        one: "%{count} счёт требует настройки"
         few: "%{count} счёта требуют настройки"
         many: "%{count} счетов требуют настройки"
+        one: "%{count} счёт требует настройки"
         other: "%{count} счёта требуют настройки"
       calculating_balances: Расчёт балансов...
       checking_configuration: Проверка конфигурации счетов...
@@ -20,10 +20,10 @@ ru:
       deletion_in_progress: Удаление...
       import_wallets_menu: Импортировать кошельки
       more_wallets_available:
-        one: "Доступен для импорта ещё %{count} кошелёк"
-        few: "Доступно для импорта ещё %{count} кошелька"
-        many: "Доступно для импорта ещё %{count} кошельков"
-        other: "Доступно для импорта ещё %{count} кошелька"
+        few: Доступно для импорта ещё %{count} кошелька
+        many: Доступно для импорта ещё %{count} кошельков
+        one: Доступен для импорта ещё %{count} кошелёк
+        other: Доступно для импорта ещё %{count} кошелька
       no_accounts_message: Ваши кошельки Coinbase появятся здесь после синхронизации.
       no_accounts_title: Счета не найдены
       provider_name: Coinbase
@@ -36,10 +36,10 @@ ru:
       status_with_summary: Последняя синхронизация %{timestamp} назад - %{summary}
       sync_status:
         all_synced:
-          one: "Синхронизирован %{count} счёт"
-          few: "Синхронизированы %{count} счёта"
-          many: "Синхронизировано %{count} счетов"
-          other: "Синхронизированы %{count} счёта"
+          few: Синхронизированы %{count} счёта
+          many: Синхронизировано %{count} счетов
+          one: Синхронизирован %{count} счёт
+          other: Синхронизированы %{count} счёта
         no_accounts: Счета не найдены
         partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют
           настройки"
@@ -49,10 +49,10 @@ ru:
       no_accounts: Нет кошельков для импорта
       none_selected: Кошельки не выбраны
       success:
-        one: "Импортирован %{count} кошелёк"
-        few: "Импортированы %{count} кошелька"
-        many: "Импортировано %{count} кошельков"
-        other: "Импортированы %{count} кошелька"
+        few: Импортированы %{count} кошелька
+        many: Импортировано %{count} кошельков
+        one: Импортирован %{count} кошелёк
+        other: Импортированы %{count} кошелька
     create:
       default_name: Coinbase
       success: Успешно подключено к Coinbase! Ваши счета синхронизируются.
@@ -74,10 +74,10 @@ ru:
       wait_for_sync: Подождите, пока Coinbase завершит синхронизацию
     setup_accounts:
       accounts_count:
-        one: "Доступен %{count} кошелёк"
-        few: "Доступно %{count} кошелька"
-        many: "Доступно %{count} кошельков"
-        other: "Доступно %{count} кошелька"
+        few: Доступно %{count} кошелька
+        many: Доступно %{count} кошельков
+        one: Доступен %{count} кошелёк
+        other: Доступно %{count} кошелька
       cancel: Отмена
       creating: Импорт...
       import_selected: Импортировать выбранные

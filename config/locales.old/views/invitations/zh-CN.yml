@@ -1,0 +1,28 @@
+---
+zh-CN:
+  invitations:
+    accept_choice:
+      create_account: 创建新账户
+      joined_household: 您已加入该家庭。
+      message: "%{inviter} 邀请您以 %{role} 身份加入。"
+      sign_in_existing: 我已经有账户了
+      title: 加入 %{family}
+    create:
+      existing_user_added: 用户已添加到您的家庭中。
+      failure: 无法发送邀请
+      success: 邀请已成功发送
+      existing_user_has_family_data: 此用户已有家庭数据，无法接受该邀请。
+    destroy:
+      failure: 移除邀请时出现问题。
+      not_authorized: 您无权管理邀请。
+      success: 邀请已成功移除。
+    new:
+      email_label: 邮箱地址
+      email_placeholder: 输入邮箱地址
+      role_admin: 管理员
+      role_guest: 访客
+      role_label: 角色
+      role_member: 成员
+      submit: 发送邀请
+      subtitle: 向 %{product_name} 中的 %{moniker} 账户发送邀请
+      title: 邀请他人

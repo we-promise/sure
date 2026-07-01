@@ -1,0 +1,47 @@
+---
+hu:
+  splits:
+    new:
+      title: Tranzakció felosztása
+      description: Oszd fel ezt a tranzakciót több tételre különböző kategóriákkal és összegekkel.
+      submit: Tranzakció felosztása
+      cancel: Mégse
+      add_row: Felosztás hozzáadása
+      remove_row: Eltávolítás
+      remaining: Fennmaradó
+      amounts_must_match: A felosztott összegeknek egyenlőnek kell lenniük az eredeti tranzakció összegével.
+      name_label: Név
+      name_placeholder: Felosztás neve
+      amount_label: Összeg
+      category_label: Kategória
+      uncategorized: "(kategorizálatlan)"
+      original_name: "Név:"
+      original_date: "Dátum:"
+      original_amount: "Összeg"
+      split_number: "%{number}. felosztás"
+    create:
+      success: Tranzakció sikeresen felosztva
+      not_splittable: Ez a tranzakció nem osztható fel.
+    destroy:
+      success: Tranzakció felosztása sikeresen visszavonva
+    show:
+      title: Felosztott tételek
+      description: Ez a tranzakció a következő tételekre lett felosztva.
+      button_title: Tranzakció felosztása
+      button_description: Oszd fel ezt a tranzakciót több tételre különböző kategóriákkal és összegekkel.
+      button: Felosztás
+      unsplit_title: Felosztás visszavonása
+      unsplit_button: Felosztás visszavonása
+      unsplit_confirm: Ez eltávolítja az összes felosztott tételt, és visszaállítja az eredeti tranzakciót.
+    edit:
+      title: Felosztás szerkesztése
+      description: Módosítsd ennek a tranzakciónak a felosztott tételeit.
+      submit: Felosztás frissítése
+      not_split: Ez a tranzakció nincs felosztva.
+    update:
+      success: Felosztás sikeresen frissítve
+    child:
+      title: Felosztás része
+      description: Ez a tétel egy felosztott tranzakció része.
+      edit_split: Felosztás szerkesztése
+      unsplit: Felosztás visszavonása

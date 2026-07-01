@@ -1,0 +1,94 @@
+---
+pl:
+  holdings:
+    cash:
+      brokerage_cash: Gotówka maklerska
+    destroy:
+      success: Pozycja została usunięta
+    update:
+      success: Koszt bazowy został zapisany.
+      error: Nieprawidłowa wartość kosztu bazowego.
+    unlock_cost_basis:
+      success: Odblokowano koszt bazowy. Może zostać zaktualizowany przy następnej synchronizacji.
+    remap_security:
+      success: Papier wartościowy został pomyślnie zaktualizowany.
+      security_not_found: Nie udało się znaleźć wybranego papieru wartościowego.
+    reset_security:
+      success: Zresetowano papier wartościowy do wartości od dostawcy.
+    sync_prices:
+      success: Dane rynkowe zostały pomyślnie zsynchronizowane.
+      unavailable: Synchronizacja danych rynkowych nie jest dostępna dla papierów offline.
+      provider_error: Nie udało się pobrać najnowszych cen. Spróbuj ponownie za kilka minut.
+    errors:
+      security_collision: 'Nie można zmienić mapowania: masz już pozycję dla %{ticker} z dnia %{date}.'
+    cost_basis_sources:
+      manual: Ustawione przez użytkownika
+      calculated: Z transakcji giełdowych
+      provider: Od dostawcy
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: Ustaw koszt bazowy dla %{ticker} (%{qty} akcji)
+      total_cost_basis_label: Łączny koszt bazowy
+      or_per_share_label: 'Lub wpisz na akcję:'
+      per_share: na akcję
+      cancel: Anuluj
+      save: Zapisz
+      overwrite_confirm_title: Nadpisać koszt bazowy?
+      overwrite_confirm_body: Spowoduje to zastąpienie aktualnego kosztu bazowego wynoszącego %{current}.
+    holding:
+      per_share: na akcję
+      shares: "%{qty} akcji"
+      unknown: "--"
+      no_cost_basis: Brak kosztu bazowego
+    index:
+      average_cost: Średni koszt
+      holdings: Pozycje
+      name: Nazwa
+      new_holding: Nowa aktywność
+      no_holdings: Brak pozycji do wyświetlenia.
+      return: Łączny zwrot
+      weight: Udział
+    missing_price_tooltip:
+      description: Ta inwestycja ma brakujące wartości i nie mogliśmy obliczyć jej zwrotów ani wartości.
+      missing_data: Brakujące dane
+    show:
+      avg_cost_label: Średni koszt
+      current_market_price_label: Aktualna cena rynkowa
+      delete: Usuń
+      delete_subtitle: Spowoduje to usunięcie pozycji i wszystkich powiązanych transakcji na tym koncie. Tej akcji nie można cofnąć.
+      delete_title: Usuń pozycję
+      edit_security: Edytuj papier wartościowy
+      history: Historia
+      no_trade_history: Brak historii transakcji dla tej pozycji.
+      overview: Przegląd
+      portfolio_weight_label: Udział w portfelu
+      settings: Ustawienia
+      security_label: Papier wartościowy
+      originally: wcześniej %{ticker}
+      search_security: Wyszukaj papier wartościowy
+      search_security_placeholder: Szukaj po tickerze lub nazwie
+      cancel: Anuluj
+      remap_security: Zapisz
+      no_security_provider: Dostawca papierów wartościowych nie jest skonfigurowany. Nie można wyszukiwać papierów wartościowych.
+      security_remapped_label: Papier wartościowy zmieniony
+      provider_sent: 'Dostawca przesłał: %{ticker}'
+      reset_to_provider: Przywróć wartość od dostawcy
+      reset_confirm_title: Przywrócić papier wartościowy do wartości od dostawcy?
+      reset_confirm_body: Spowoduje to zmianę papieru wartościowego z %{current} z powrotem na %{original} i przeniesienie wszystkich powiązanych transakcji.
+      ticker_label: Symbol ticker
+      trade_history_entry: "%{qty} akcji %{security} po %{price}"
+      total_return_label: Łączny zwrot
+      unknown: Nieznane
+      cost_basis_locked_label: Podstawa kosztowa jest zablokowana
+      cost_basis_locked_description: Ręcznie ustawiona podstawa kosztowa nie będzie zmieniana przez synchronizacje.
+      unlock_cost_basis: Odblokuj
+      unlock_confirm_title: Odblokować podstawę kosztową?
+      unlock_confirm_body: To pozwoli aktualizować podstawę kosztową przez synchronizacje dostawcy lub obliczenia transakcji.
+      shares_label: Akcje
+      book_value_label: Wartość księgowa
+      market_value_label: Wartość rynkowa
+      market_data_label: Dane rynkowe
+      market_data_sync_button: Odśwież
+      last_price_update: Ostatnia aktualizacja ceny
+      syncing: Synchronizacja...
+      never: Nigdy

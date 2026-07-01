@@ -1,0 +1,41 @@
+---
+ca:
+  sessions:
+    create:
+      invalid_credentials: Correu electrònic o contrasenya incorrectes.
+      local_login_disabled: L'inici de sessió amb contrasenya local està desactivat.
+        Utilitza l'inici de sessió únic.
+    destroy:
+      logout_successful: Has tancat la sessió correctament.
+    failure:
+      failed: No s'ha pogut autenticar.
+      sso_failed: L'autenticació d'inici de sessió únic ha fallat. Torna-ho a provar.
+      sso_invalid_response: S'ha rebut una resposta no vàlida del proveïdor SSO. Torna-ho
+        a provar.
+      sso_provider_unavailable: El proveïdor SSO no està disponible actualment. Torna-ho
+        a provar més tard o contacta amb un administrador.
+    mobile_sso_start:
+      redirecting_html: Redirigint a l'inici de sessió... <a href="%{url}">Fes clic
+        aquí</a> si no se't redirigeix.
+    new:
+      demo_banner_message: Aquest és un entorn de demostració. Les credencials d'inici
+        de sessió s'han omplert per comoditat. No introdueixis informació real o sensible.
+      demo_banner_title: Mode demostració actiu
+      email: Correu electrònic
+      email_placeholder: tu@exemple.com
+      forgot_password: Has oblidat la contrasenya?
+      google_auth_connect: Inicia sessió amb Google
+      local_login_admin_only: L'inici de sessió local està restringit als administradors.
+      no_auth_methods_enabled: Actualment no hi ha cap mètode d'autenticació habilitat.
+        Contacta amb un administrador.
+      oidc: Inicia sessió amb OpenID Connect
+      openid_connect: Inicia sessió amb OpenID Connect
+      password: Contrasenya
+      password_placeholder: Introdueix la teva contrasenya
+      submit: Inicia sessió
+      title: Sure
+    openid_connect:
+      account_linked: Compte enllaçat correctament a %{provider}
+      failed: No s'ha pogut autenticar mitjançant OpenID Connect.
+    post_logout:
+      logout_successful: Has tancat la sessió correctament.

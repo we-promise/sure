@@ -1,0 +1,18 @@
+---
+ro:
+  users:
+    destroy:
+      success: Contul tău a fost șters.
+    update:
+      email_change_failed: Nu s-a putut schimba adresa de email.
+      email_change_initiated: Te rugăm să verifici noua adresă de email pentru instrucțiunile
+        de confirmare.
+      success: Profilul tău a fost actualizat.
+    resend_confirmation_email:
+      success: Un nou email de confirmare este programat pentru a fi trimis.
+      no_pending_change: Nu există nicio modificare de email în așteptare!
+    reset:
+      success: Contul tău a fost resetat. Datele vor fi șterse în fundal în scurt timp.
+      unauthorized: Nu ești autorizat să efectuezi această acțiune
+    reset_with_sample_data:
+      success: Contul tău a fost resetat și datele eșantion sunt în curs de pregătire. Vei vedea date demonstrative în curând.

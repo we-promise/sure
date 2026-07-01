@@ -1,0 +1,115 @@
+---
+vi:
+  rules:
+    no_action: Không có hành động
+    no_condition: Không có điều kiện
+    rule:
+      edit: Chỉnh sửa
+      re_apply_rule: Áp dụng lại quy tắc
+      delete: Xóa
+      then: THÌ
+      and_more_conditions:
+        one: và 1 điều kiện nữa
+        other: và %{count} điều kiện nữa
+      and_more_actions:
+        one: và 1 hành động nữa
+        other: và %{count} hành động nữa
+      action_label_to: "%{label} thành %{value}"
+      all_past_and_future: Tất cả %{resource} trong quá khứ và tương lai
+      on_or_after: "%{resource} từ ngày %{date} trở đi"
+    form:
+      rule_name_label: Tên quy tắc (tùy chọn)
+      rule_name_placeholder: Nhập tên cho quy tắc này
+      add_condition: Thêm điều kiện
+      add_condition_group: Thêm nhóm điều kiện
+      add_action: Thêm hành động
+      all_past_and_future: Tất cả %{resource} trong quá khứ và tương lai
+      starting_from: Bắt đầu từ
+      then: THÌ
+    index:
+      page_title: Quy tắc
+      delete_all_rules: Xóa tất cả quy tắc
+      new_rule: Quy tắc mới
+      ai_cost_warning: Các hành động quy tắc sử dụng AI sẽ tốn chi phí. Hãy lọc càng hẹp càng tốt để tránh chi phí không cần thiết.
+      rules_heading: Quy tắc
+      sort_by: "Sắp xếp theo:"
+      sort_name: Tên
+      sort_updated_at: Ngày cập nhật
+      toggle_sort_direction: Đổi chiều sắp xếp
+      no_rules_title: Chưa có quy tắc
+      no_rules_description: Thiết lập quy tắc để thực hiện hành động trên giao dịch và dữ liệu khác mỗi lần đồng bộ tài khoản.
+    confirm:
+      title: Xác nhận thay đổi
+      title_with_name: "Xác nhận thay đổi cho \"%{name}\""
+      apply_notice_html: "Bạn sắp áp dụng quy tắc này cho <span class=\"text-primary font-medium\">%{count} %{resource}</span> đáp ứng tiêu chí quy tắc đã chỉ định. Vui lòng xác nhận nếu muốn tiếp tục."
+      ai_cost_title: Ước tính chi phí AI
+      ai_cost_with_estimate_html: "Sẽ dùng AI để phân loại %{count} giao dịch. Chi phí ước tính: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Sẽ dùng AI để phân loại %{count} giao dịch."
+      cost_unavailable_model: "Không thể ước tính chi phí cho mô hình \"%{model}\"."
+      cost_unavailable_no_provider: Không thể ước tính chi phí (chưa cấu hình nhà cung cấp LLM).
+      cost_warning: Bạn có thể phát sinh chi phí, hãy kiểm tra với nhà cung cấp mô hình để biết giá mới nhất.
+      view_usage_history: Xem lịch sử sử dụng
+      confirm_changes: Xác nhận thay đổi
+    actions:
+      value_placeholder: Nhập một giá trị
+    update:
+      success: Đã cập nhật quy tắc
+    destroy:
+      success: Đã xóa quy tắc
+    destroy_all:
+      success: Đã xóa tất cả quy tắc
+    apply_all:
+      button: Áp dụng tất cả
+      confirm_title: Áp dụng tất cả quy tắc
+      confirm_message: Bạn sắp áp dụng %{count} quy tắc ảnh hưởng đến %{transactions} giao dịch duy nhất. Vui lòng xác nhận nếu muốn tiếp tục.
+      confirm_button: Xác nhận và áp dụng tất cả
+      success: Tất cả quy tắc đã được đưa vào hàng chờ thực thi
+      ai_cost_title: Ước tính chi phí AI
+      ai_cost_message: Sẽ dùng AI để phân loại tối đa %{transactions} giao dịch.
+      estimated_cost: "Chi phí ước tính: ~$%{cost}"
+      cost_unavailable_model: Không thể ước tính chi phí cho mô hình "%{model}".
+      cost_unavailable_no_provider: Không thể ước tính chi phí (chưa cấu hình nhà cung cấp LLM).
+      cost_warning: Bạn có thể phát sinh chi phí, hãy kiểm tra với nhà cung cấp mô hình để biết giá mới nhất.
+      view_usage: Xem lịch sử sử dụng
+    recent_runs:
+      title: Lần chạy gần đây
+      description: Xem lịch sử thực thi quy tắc bao gồm trạng thái thành công/thất bại và số lượng giao dịch.
+      unnamed_rule: Quy tắc chưa đặt tên
+      columns:
+        date_time: Ngày/Giờ
+        execution_type: Loại
+        status: Trạng thái
+        rule_name: Tên quy tắc
+        transactions_counts:
+          queued: Đang chờ
+          processed: Đã xử lý
+          modified: Đã sửa đổi
+          blocked: Bị chặn
+      execution_types:
+        manual: Thủ công
+        scheduled: Đã lên lịch
+      statuses:
+        pending: Đang chờ
+        success: Thành công
+        failed: Thất bại
+    clear_ai_cache:
+      button: Đặt lại bộ nhớ đệm AI
+      confirm_title: Đặt lại bộ nhớ đệm AI?
+      confirm_body: Bạn có chắc muốn đặt lại bộ nhớ đệm AI? Điều này cho phép các quy tắc AI xử lý lại tất cả giao dịch và có thể phát sinh thêm chi phí API.
+      confirm_button: Đặt lại bộ nhớ đệm
+      success: Bộ nhớ đệm AI đang được xóa. Quá trình này có thể mất vài giây.
+    condition_filters:
+      transaction_type:
+        income: Thu nhập
+        expense: Chi tiêu
+        transfer: Chuyển khoản
+        equal_to: Bằng
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: và
+        match: khớp
+        all: tất cả
+        any: bất kỳ
+        of_the_following_conditions: trong các điều kiện sau
+        add_condition: Thêm điều kiện

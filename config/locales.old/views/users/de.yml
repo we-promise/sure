@@ -1,0 +1,17 @@
+---
+de:
+  users:
+    destroy:
+      success: Dein Konto wurde gelöscht.
+    update:
+      email_change_failed: E-Mail-Adresse konnte nicht geändert werden.
+      email_change_initiated: Bitte überprüfe deine neue E-Mail-Adresse auf Bestätigungsanweisungen.
+      success: Dein Profil wurde aktualisiert.
+    resend_confirmation_email:
+      success: Eine neue Bestätigungs-E-Mail wurde zum Versand vorgemerkt.
+      no_pending_change: Derzeit ist keine E-Mail-Änderung ausstehend!
+    reset:
+      success: Dein Konto wurde zurückgesetzt. Die Daten werden im Hintergrund in einiger Zeit gelöscht.
+      unauthorized: Du bist nicht berechtigt, diese Aktion auszuführen.
+    reset_with_sample_data:
+      success: Dein Konto wurde zurückgesetzt, und Beispieldaten werden vorbereitet. In Kürze wirst du Demodaten sehen.

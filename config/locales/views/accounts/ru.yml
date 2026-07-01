@@ -13,6 +13,9 @@ ru:
       disable: Отключить счёт
       edit: Редактировать
       enable: Включить счёт
+      exclude_from_reports: Исключить из всех отчётов
+      excluded_from_reports_indicator: Исключено из отчётов
+      include_in_reports: Включить в отчёты
       link_lunchflow: Связать с Lunch Flow
       link_provider: Связать с провайдером
       remove_default: Снять с умолчания
@@ -48,6 +51,7 @@ ru:
     form:
       additional_details: Дополнительные детали
       balance: 'Баланс на дату:'
+      exclude_from_reports: Исключить из всех отчётов
       institution_domain_label: Домен учреждения
       institution_domain_placeholder: например, sberbank.ru
       institution_name_label: Название учреждения
@@ -127,9 +131,11 @@ ru:
         confirm_title: Удалить счёт?
         delete_account: Удалить счёт
         edit: Редактировать
+        exclude_from_reports: Исключить из всех отчётов
         import: Импортировать операции
         import_trades: Импортировать сделки
         import_transactions: Импортировать операции
+        include_in_reports: Включить в отчёты
         manage: Управление счетами
         sharing: Совместное использование
         statements: Выписки

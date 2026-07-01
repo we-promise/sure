@@ -1,0 +1,13 @@
+---
+hu:
+  category:
+    deletions:
+      create:
+        success: Tranzakció kategóriája sikeresen törölve
+      new:
+        category: Kategória
+        delete_and_leave_uncategorized: '"%{category_name}" törlése és kategória nélkül hagyása'
+        delete_and_recategorize: '"%{category_name}" törlése és új kategória hozzárendelése'
+        delete_category: Törlöd a kategóriát?
+        explanation: A kategória törlésével minden tranzakció, amelyhez a "%{category_name}" kategória tartozik, kategória nélkülivé válik. Ahelyett, hogy kategória nélkül hagynád őket, alább hozzárendelhetsz egy új kategóriát.
+        replacement_category_prompt: Kategória kiválasztása

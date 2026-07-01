@@ -1,0 +1,22 @@
+---
+ca:
+  cryptos:
+    edit:
+      edit: Edita %{account}
+    form:
+      subtype_label: Tipus de compte
+      subtype_none: Cap
+      subtype_prompt: Selecciona el tipus de compte
+      tax_treatment_hint: La majoria de les criptomonedes es tenen en comptes subjectes
+        a impostos. Selecciona una altra opció si es tenen en un compte amb avantatges
+        fiscals.
+      tax_treatment_label: Tractament fiscal
+    new:
+      title: Introdueix el saldo del compte
+    subtypes:
+      exchange:
+        long: Exchange de cripto
+        short: Exchange
+      wallet:
+        long: Cartera de cripto
+        short: Cartera

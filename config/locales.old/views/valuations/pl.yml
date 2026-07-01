@@ -1,0 +1,30 @@
+---
+pl:
+  valuations:
+    form:
+      amount: Kwota
+      submit: Dodaj aktualizację salda
+    header:
+      balance: Saldo
+    index:
+      change: zmiana
+      date: data
+      new_entry: Nowy wpis
+      no_valuations: Brak wycen dla tego konta
+      valuations: Wartość
+      value: wartość
+    new:
+      title: Nowe saldo
+    show:
+      amount: Kwota
+      date_label: Data
+      delete: Usuń
+      delete_subtitle: Tej akcji nie można cofnąć
+      delete_title: Usuń wpis
+      details: Szczegóły
+      name_label: Nazwa
+      name_placeholder: Wprowadź nazwę tego wpisu
+      note_label: Notatki
+      note_placeholder: Dodaj dodatkowe szczegóły dotyczące tego wpisu
+      overview: Przegląd
+      settings: Ustawienia

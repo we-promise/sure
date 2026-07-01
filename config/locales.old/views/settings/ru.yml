@@ -1,0 +1,595 @@
+---
+ru:
+  settings:
+    ai_prompts:
+      show:
+        disable_ai: Отключить AI Ассистента
+        main_system_prompt:
+          subtitle: Основные инструкции, определяющие поведение AI ассистента во всех
+            чатах
+          title: Основной системный запрос
+        merchant_detector:
+          subtitle: AI идентифицирует и обогащает данные операций информацией о продавцах
+          title: Определитель продавцов
+        openai_label: OpenAI
+        page_title: AI Запросы
+        prompt_instructions: Инструкции по запросу
+        transaction_categorizer:
+          subtitle: AI автоматически категоризирует ваши операции на основе заданных
+            категорий
+          title: Категоризатор операций
+    appearances:
+      show:
+        dashboard_subtitle: Настройте отображение панели
+        dashboard_title: Панель
+        dashboard_two_column_description: Отображение виджетов панели в две колонки
+          на больших экранах. Если выключено, виджеты располагаются в одну колонку.
+        dashboard_two_column_title: Двухколоночный макет
+        page_title: Внешний вид
+        split_grouped_description: Показывать разделённые операции сгруппированными
+          под их родительской в списке операций. Если выключено, разделённые элементы
+          отображаются как отдельные строки.
+        split_grouped_title: Группировать разделённые операции
+        theme_dark: Тёмная
+        theme_light: Светлая
+        theme_subtitle: Выберите предпочитаемую тему для приложения
+        theme_system: Системная
+        theme_title: Тема
+        transactions_subtitle: Настройте отображение операций
+        transactions_title: Операции
+    debugs:
+      show:
+        context:
+          account: счёт=%{value}
+          account_provider: поставщик_счёта=%{value}
+          family: семья=%{value}
+          provider: поставщик=%{value}
+          user: пользователь=%{value}
+        empty: События отладки не найдены.
+        filters:
+          account_id: ID счёта
+          account_provider_id: ID поставщика счёта
+          all: Все
+          category: Категория
+          end_date: По
+          family_id: ID семьи
+          level: Уровень
+          provider: Поставщик
+          reset: Сброс
+          source: Источник
+          start_date: С
+          submit: Фильтр
+          user_id: ID пользователя
+        missing_value: "-"
+        page_title: Отладка
+        subtitle: Значимые операционные события для супер-администраторов. Новейшие
+          в начале.
+        table:
+          category: Категория
+          context: Контекст
+          level: Уровень
+          message: Сообщение
+          metadata: Метаданные
+          source: Источник
+          time: Время
+          view_metadata: Просмотр
+        title: Журнал событий отладки
+    hostings:
+      ensure_admin:
+        not_authorized: Доступ запрещён
+    llm_usages:
+      show:
+        avg_cost_per_request: Средняя стоимость/запрос
+        based_on_requests: Основано на %{with_cost} из %{total} запросов с данными
+          о стоимости
+        col_cost: Стоимость
+        col_date: Дата
+        col_model: Модель
+        col_operation: Операция
+        col_tokens: Токены
+        completion: завершение
+        cost_by_model: Стоимость по моделям
+        cost_by_operation: Стоимость по операциям
+        cost_estimates_description: Стоимость оценивается на основе цен OpenAI на
+          2025 год. Фактические затраты могут отличаться. Цены указаны за 1 миллион
+          токенов и варьируются в зависимости от модели. Пользовательские или самохостинг
+          модели будут отображаться как "N/A" и не включены в общую стоимость.
+        cost_estimates_title: Оценка стоимости
+        end_date: Дата окончания
+        failed: Неудачно
+        filter: Фильтр
+        no_usage_data: Данные об использовании за выбранный период не найдены
+        page_title: Использование LLM и затраты
+        prompt: запрос
+        recent_usage: Недавнее использование
+        start_date: Дата начала
+        subtitle: Отслеживайте использование ИИ и предполагаемые затраты
+        total_cost: Общая стоимость
+        total_requests: Всего запросов
+        total_tokens: Всего токенов
+    payments:
+      show:
+        choose_level: Выберите уровень
+        contributions_note: Взносы в %{product_name} будут отображаться здесь.
+        currently_on_plan: В настоящее время на
+        manage: Управлять
+        not_contributing_emphasis: не вносите вклад
+        not_contributing_prefix: В настоящее время вы
+        page_title: Платежи
+        payment_via_stripe: Оплата через Stripe
+        subscription_subtitle: Обновите данные вашей кредитной карты
+        subscription_title: Управление взносами
+        trial_days_left:
+          one: "Данные будут удалены через %{count} день"
+          few: "Данные будут удалены через %{count} дня"
+          many: "Данные будут удалены через %{count} дней"
+          other: "Данные будут удалены через %{count} дня"
+        trialing: В настоящее время используется открытая демо-версия %{product_name}
+    preferences:
+      show:
+        additional_currencies_label: Дополнительные валюты
+        base_currency_badge: Базовая валюта
+        base_currency_label: Базовая валюта
+        country: Страна
+        currencies_more: "+%{count} ещё"
+        currencies_subtitle: Выберите, какие валюты будут отображаться в денежных
+          полях для вашего %{moniker}
+        currencies_title: "%{moniker} Валюты"
+        currency: Валюта
+        currency_search_placeholder: Поиск валют
+        date_format: Формат даты
+        default_account_order: Порядок счетов по умолчанию
+        default_period: Период по умолчанию
+        general_subtitle: Настройте ваши предпочтения
+        general_title: Общие
+        language: Язык
+        language_auto: Язык браузера
+        manage_currencies: Управление валютами
+        manage_currencies_subtitle: Уберите валюты, которые вы никогда не используете,
+          или сократите список до нескольких.
+        month_start_day: Начало бюджетного месяца
+        month_start_day_hint: Установите, когда начинается ваш бюджетный месяц (например,
+          день зарплаты)
+        month_start_day_warning: Ваши бюджеты и расчёты MTD будут использовать этот
+          пользовательский день начала вместо 1-го числа каждого месяца.
+        no_additional_currencies: Не выбрано
+        no_matching_currencies: Валюты не найдены
+        page_title: Предпочтения
+        preview:
+          description: Подключитесь к функциям в процессе разработки, отмеченным как
+            предварительный просмотр или canary.
+          title: Включить функции предварительного просмотра
+        save_currencies: Сохранить валюты
+        select_all_currencies: Выбрать все
+        select_base_only: Только базовая валюта
+        selected_currencies_count:
+          one: Выбрано %{count}
+          few: Выбрано %{count}
+          many: Выбрано %{count}
+          other: Выбрано %{count}
+        sharing_default_label: Совместное использование по умолчанию для новых счетов
+        sharing_private: Оставить приватным по умолчанию
+        sharing_shared: Делитесь со всеми участниками
+        sharing_subtitle: Контролируйте, как счета делятся в вашем %{moniker}
+        sharing_title: "%{moniker} Совместное использование"
+        timezone: Часовой пояс
+        translations_notice: Обратите внимание, что мы всё ещё работаем над переводами
+          на различные языки.
+    profiles:
+      destroy:
+        cannot_remove_self: Вы не можете удалить себя из аккаунта.
+        member_owns_other_family_data: This member still owns accounts in another
+          household and cannot be removed. Transfer or remove those accounts first.
+        member_removal_failed: Произошла ошибка при удалении участника.
+        member_removed: Участник успешно удалён.
+        not_authorized: У вас нет прав для удаления участников.
+      show:
+        confirm_delete:
+          body: Вы уверены, что хотите навсегда удалить свой аккаунт? Это действие
+            необратимо.
+          title: Удалить аккаунт?
+        confirm_remove_invitation:
+          body: Вы уверены, что хотите удалить приглашение для %{email}?
+          title: Удалить приглашение
+        confirm_remove_member:
+          body: Вы уверены, что хотите удалить %{name} из вашего аккаунта?
+          title: Удалить участника
+        confirm_reset:
+          body: Вы уверены, что хотите сбросить свой аккаунт? Это удалит все ваши
+            счета, категории, продавцов, теги и другие данные. Это действие нельзя
+            отменить.
+          title: Сбросить аккаунт?
+        confirm_reset_with_sample_data:
+          body: Вы уверены, что хотите сбросить свой аккаунт и загрузить демонстрационные
+            данные? Это удалит ваши существующие данные и заменит их демонстрационными,
+            чтобы вы могли безопасно исследовать Sure.
+          title: Сбросить аккаунт и загрузить демонстрационные данные?
+        danger_zone_title: Опасная зона
+        delete_account: Удалить аккаунт
+        delete_account_warning: Удаление вашего аккаунта навсегда удалит все ваши
+          данные и не может быть отменено.
+        email: Электронная почта
+        first_name: Имя
+        group_form_input_placeholder: Введите название группы
+        group_form_label: Название группы
+        group_title: Участники группы
+        household_form_input_placeholder: Введите название домохозяйства
+        household_form_label: Название домохозяйства
+        household_subtitle: Приглашённые могут войти в ваш аккаунт %{moniker} и получить
+          доступ к общим ресурсам.
+        household_title: Домохозяйство
+        invitation_link: Ссылка на приглашение
+        invite_member: Добавить участника
+        last_name: Фамилия
+        page_title: Информация о профиле
+        pending: В ожидании
+        profile_subtitle: Настройте, как вы выглядите в %{product_name}
+        profile_title: Личные данные
+        remove_invitation: Удалить приглашение
+        remove_member: Удалить участника
+        reset_account: Сбросить аккаунт
+        reset_account_warning: Сброс вашего аккаунта удалит все ваши счета, категории,
+          продавцов, теги и другие данные, но сохранит ваш пользовательский аккаунт.
+        reset_account_with_sample_data: Сброс и предзагрузка
+        reset_account_with_sample_data_warning: Удалите все ваши существующие данные
+          и затем загрузите свежие демонстрационные данные, чтобы вы могли исследовать
+          с предзаполненной средой.
+        save: Сохранить
+    providers:
+      bank_sync:
+        lede: Подключите внешние счета, чтобы операции, балансы и активы автоматически
+          поступали в Sure.
+        page_title: Синхронизация банка
+      binance_panel:
+        api_key_label: API Ключ
+        api_key_placeholder: Вставьте ваш API-ключ Binance
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Вставьте ваш секретный ключ API Binance
+        connect_button: Подключить Binance
+        disconnect_confirm: Вы уверены, что хотите отключить Binance?
+        historical_import: Настройки исторического импорта
+        ip_hint_body: 'Добавьте IP-адрес выхода сервера приложения в белый список
+          API-ключа Binance:'
+        ip_hint_contact_admin: Свяжитесь с вашим администратором, чтобы получить IP-адрес
+          выхода сервера приложения.
+        ip_hint_title: Требуется белый список IP
+        no_withdraw_body: Не включайте разрешения на вывод средств при создании вашего
+          API-ключа Binance. Sure требуется только доступ для чтения.
+        no_withdraw_title: Только ключ для чтения
+        setup_instructions: 'Чтобы подключить Binance, создайте API-ключ только для
+          чтения:'
+        step1_html: Перейдите на <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Управление API
+          Binance</a>
+        step2: Создайте новый API-ключ с разрешением только для чтения
+        step3: Вставьте ваш API-ключ и секретный ключ ниже
+        sync: Синхронизировать
+        sync_start_date_help: Выберите, с какой даты начинать загрузку исторических сделок.
+        sync_start_date_label: Импортировать данные с
+        syncing: Синхронизация...
+      clear_filter: Очистить фильтры
+      coinbase_panel:
+        api_key_label: API Ключ
+        api_key_placeholder: Введите ваш API-ключ Coinbase
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Введите ваш секретный ключ API Coinbase
+        connect_button: Подключить Coinbase
+        disconnect_confirm: Вы уверены, что хотите отключить это подключение Coinbase?
+          Ваши синхронизированные счета станут ручными счетами.
+        setup_instructions: 'Чтобы подключить Coinbase:'
+        step1_html: Перейдите на <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Настройки
+          API Coinbase</a>
+        step2: Создайте новый API-ключ с разрешениями только для чтения (просмотр
+          счетов, просмотр операций)
+        step3: Скопируйте ваш API-ключ и секретный ключ API и вставьте их ниже
+        sync: Синхронизировать
+        syncing: Синхронизация...
+      connect: Подключить
+      drawer_trust_statement: Доступ только для чтения. Sure никогда не может перемещать
+        деньги, а ваши учетные данные хранятся в зашифрованном виде.
+      empty_filter: Поставщики, соответствующие вашему фильтру, не найдены.
+      enable_banking_panel:
+        add_connection: Добавить подключение
+        application_id_label: ID приложения
+        application_id_placeholder_new: Введите ID приложения
+        application_id_placeholder_update: Введите новый ID для обновления
+        callback_url_instruction: Для URL обратного вызова используйте %{callback_url}.
+        client_certificate_label: Клиентский сертификат (с приватным ключом)
+        config_locked_message: Отключите все связанные банки перед изменением этих
+          учётных данных.
+        config_locked_title: Конфигурация заблокирована
+        configured: Настроено
+        connect_bank: Подключить банк
+        connected_bank: Подключённый банк
+        connection: Подключение
+        connection_error: Ошибка подключения
+        country_label: Страна
+        ready_to_link: Готово к связыванию счетов
+        reconnect: Переподключить
+        remove: Удалить
+        remove_confirm: Вы уверены, что хотите удалить это подключение?
+        save_and_connect: Сохранить и подключить
+        select_country: Выберите страну...
+        session_expired_reconnect: Сессия истекла - переподключитесь
+        session_expires: 'Сессия истекает: %{date}'
+        step_1_html: Перейдите на %{link} и получите ваши учётные данные разработчика.
+        step_2: Выберите вашу страну и вставьте ID приложения + клиентский сертификат
+          ниже.
+        step_3: Сохраните, затем используйте Добавить подключение, чтобы связать ваш
+          банк.
+        sync: Синхронизировать
+        syncing: Синхронизация
+        unknown: Неизвестно
+        update_connection: Обновить подключение
+      encryption_error:
+        message: Синхронизация банка требует настройки шифрования Active Record. Установите
+          primary_key, deterministic_key и key_derivation_salt в ваших учетных данных
+          Rails или переменных окружения.
+        title: Отсутствуют ключи шифрования
+      groups:
+        available: Доступные
+        empty_available: Все доступные поставщики подключены.
+        your_connections: Ваши подключения
+      health_strip:
+        accounts_syncing: синхронизация счетов
+        connected: подключено
+        last_synced: Последняя синхронизация %{time} назад
+        needs_attention: требует внимания
+      ibkr_panel:
+        accounts_tab: Счета
+        configuration:
+          all_other_options: 'Все остальные параметры конфигурации: "Нет"'
+          date_format: 'Формат даты: yyyy-MM-dd'
+          date_time_separator: 'Разделитель даты/времени: ; (точка с запятой)'
+          format: 'Формат: XML'
+          models: 'Модели: Необязательно'
+          period: 'Период: Последние 365 календарных дней'
+          profit_and_loss: 'Прибыль и убытки: По умолчанию'
+          time_format: 'Формат времени: HH:mm:ss'
+        disconnect_confirm: Отключить Interactive Brokers?
+        flex_query_details:
+          configuration_heading: Установите эти параметры запроса
+          eyebrow: Flex Query
+          sections_heading: Включите эти разделы и поля
+          summary: Разверните, чтобы увидеть точные разделы, поля и настройки, которые
+            должен включать ваш запрос активности IBKR Flex.
+          title: Разделы, поля и конфигурация
+        not_configured: Не настроено.
+        query_id_label: Query ID
+        query_id_placeholder_existing: Оставьте пустым, чтобы сохранить текущий ID
+          запроса
+        query_id_placeholder_new: Введите ваш ID запроса IBKR Flex
+        report_window_note: Отчёты IBKR Flex ограничены окном запроса, которое вы
+          настроили в IBKR. Sure импортирует полные текущие активы плюс до последних
+          365 дней активности из этого отчёта.
+        save_configuration: Сохранить конфигурацию
+        sections:
+          account_information: 'Информация о счёте: ID счёта, Валюта'
+          cash_report: 'Отчёт о наличных:'
+          cash_report_fields: 'Поля: Валюта, Конечный остаток наличных'
+          cash_report_options: 'Опции: Нет'
+          cash_transactions: 'Операции с наличными:'
+          cash_transactions_fields: 'Поля: Сумма, Conid, Валюта, Курс к базовой валюте,
+            Дата отчёта, ID операции, Тип'
+          cash_transactions_options: 'Опции: Дивиденды, Депозиты и снятия, Детали'
+          change_in_position_value_summary: 'Изменение стоимости позиции: Валюта,
+            Стоимость на конец периода'
+          net_asset_value: 'Чистая стоимость активов (NAV) в базовой валюте:'
+          net_asset_value_fields: 'Поля: Валюта, Дата отчёта, Всего'
+          net_asset_value_options: 'Опции: Нет'
+          open_positions: 'Открытые позиции:'
+          open_positions_fields: 'Поля: Класс активов, Conid, Цена по себестоимости,
+            Валюта, Курс к базовой валюте, Рыночная цена, Количество, Дата отчёта,
+            ID ценной бумаги, Тип ID ценной бумаги, Сторона, Символ'
+          open_positions_options: 'Опции: Сводка'
+          trades: 'Сделки:'
+          trades_fields: 'Поля: Класс активов, Покупка/Продажа, Conid, Валюта, Курс
+            к базовой валюте, Комиссия IB, Валюта комиссии IB, Количество, Символ,
+            Дата сделки, ID сделки, Цена сделки, ID операции'
+          trades_options: 'Опции: Исполнение'
+        status_configured_prefix: "%{summary}. Перейдите на"
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        steps:
+          step_1: В вашем клиентском портале IBKR перейдите в "Performance & Reports"
+            > "Flex Queries".
+          step_2: Нажмите на значок "+" в разделе "Activity Flex Query", чтобы создать
+            новый запрос.
+          step_3: Назовите ваш запрос (например, "Sure Sync"), затем просмотрите детали
+            Flex Query ниже и включите перечисленные разделы, поля и параметры конфигурации.
+          step_4: Сохраните запрос, запомните ваш "Query ID", затем используйте значок
+            шестерёнки в разделе "Flex Web Service Configuration", чтобы сгенерировать
+            токен доступа.
+          step_5: Вставьте ваш Query ID и токен ниже, сохраните конфигурацию, затем
+            перейдите в Счета, чтобы связать обнаруженные счета IBKR.
+        sync: Синхронизировать
+        token_label: Токен
+        token_placeholder_existing: Оставьте пустым, чтобы сохранить текущий токен
+        token_placeholder_new: Введите ваш токен веб-сервиса IBKR Flex
+        update_configuration: Обновить конфигурацию
+      kraken_panel:
+        add_connection: Добавить подключение Kraken
+        api_key_label: API Ключ
+        api_key_placeholder: Вставьте ваш API-ключ Kraken
+        api_secret_label: Приватный ключ
+        api_secret_placeholder: Вставьте ваш приватный ключ Kraken
+        connection_name_label: Название подключения
+        connection_name_placeholder: Основное Kraken
+        default_connection_name: Kraken
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+        keep_api_key_placeholder: Оставьте пустым, чтобы сохранить существующий API-ключ
+        keep_api_secret_placeholder: Оставьте пустым, чтобы сохранить существующий
+          приватный ключ
+        read_only_body: Не предоставляйте разрешения на торговлю, отмену, вывод средств,
+          экспорт, книгу, Earn, стейкинг или переводы. Sure импортирует только балансы,
+          активы и спотовые торговые операции.
+        read_only_title: Только синхронизация биржи для чтения
+        setup_accounts: Настроить счёт
+        step1_html: Перейдите на <a href="https://pro.kraken.com/app/settings/api"
+          target="_blank" rel="noopener noreferrer" class="underline">настройки API
+          Kraken</a>
+        step2: Создайте API-ключ с разрешениями только для запроса средств и закрытых
+          ордеров и торгов.
+        step3: Вставьте API-ключ и приватный ключ ниже.
+        sync: Синхронизировать
+        syncing: Синхронизация...
+        update_connection: Обновить подключение
+      lunchflow_panel:
+        api_key_label: API Ключ
+        api_key_placeholder_new: Вставьте API-ключ здесь
+        api_key_placeholder_update: Введите новый API-ключ для обновления
+        base_url_label: Базовый URL (необязательно)
+        base_url_placeholder: https://lunchflow.app/api/v1 (по умолчанию)
+        save_and_connect: Сохранить и подключить
+        step_1_html: Перейдите на %{link} и создайте API-ключ.
+        step_2: Вставьте ваш ключ ниже и подключитесь.
+        step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.
+        update_connection: Обновить подключение
+      maturity:
+        alpha: Альфа
+        beta: Бета
+      meta:
+        last_synced: Синхронизировано %{time} назад
+        no_recent_sync: Синхронизация просрочена
+        reconsent_needed:
+          one: "Повторное согласие требуется через %{count} день"
+          few: "Повторное согласие требуется через %{count} дня"
+          many: "Повторное согласие требуется через %{count} дней"
+          other: "Повторное согласие требуется через %{count} дня"
+        reconsent_required: Требуется повторное согласие
+        registration_needed: Требуется регистрация
+        sync_error: Ошибка синхронизации
+      not_authorized: Не авторизован
+      not_found: Поставщик не найден.
+      plaid_eu_panel:
+        step_1_html: Откройте %{link} и скопируйте ваш EU Client ID и секретный ключ.
+      plaid_panel:
+        step_1_html: Откройте %{link} и скопируйте ваш Client ID и секретный ключ.
+        step_2: Выберите среду. Используйте песочницу для тестирования и производство
+          для реальных счетов.
+        step_3: Вставьте ваши учётные данные ниже и подключитесь.
+      provider_form:
+        save_and_connect: Сохранить и подключить
+      recently_synced: Недавно синхронизировано. Попробуйте снова через мгновение.
+      search_filters:
+        aria_label: Поиск поставщиков
+        chips:
+          all: Все
+          bank: Банки
+          crypto: Крипто
+          investment: Инвестиции
+        placeholder: Поиск поставщиков
+      setup_steps:
+        eyebrow: Настройка
+        need_help: Нужна помощь?
+      simplefin_panel:
+        save_and_connect: Сохранить и подключить
+        setup_token_label: Токен настройки
+        setup_token_placeholder: Вставьте токен настройки SimpleFIN
+        step_1_html: Перейдите на %{link} для получения одноразового токена настройки.
+        step_2: Вставьте токен ниже и подключитесь.
+        step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.
+      status:
+        err: Ошибка
+        'false': Не настроено
+        ok: Подключено
+        warn: Требуется действие
+      sync_all: Синхронизировать все
+      sync_all_in_progress: Синхронизация всех подключённых поставщиков…
+      sync_all_recently: Синхронизация уже в процессе. Попробуйте снова через мгновение.
+      sync_provider: Синхронизировать сейчас
+      sync_provider_in_progress: Синхронизация начата.
+      sync_provider_no_items: Нет доступных подключений для синхронизации.
+      taglines:
+        binance: Синхронизируйте ваши спотовые балансы Binance с использованием API-ключа
+          только для чтения.
+        brex: Синхронизируйте активность наличных и корпоративных карт Brex с доступом
+          только для чтения.
+        coinbase: Импортируйте ваши криптоактивы Coinbase и отслеживайте производительность.
+        coinstats: Отслеживайте весь ваш криптопортфель через кошельки и биржи.
+        enable_banking: Синхронизируйте европейские банковские счета через PSD2 открытое
+          банковское дело.
+        ibkr: Синхронизируйте инвестиционные счета Interactive Brokers через Flex
+          Query импорт.
+        indexa_capital: Отслеживайте ваш автоматизированный инвестиционный портфель
+          Indexa Capital.
+        kraken: Синхронизируйте балансы Kraken и спотовые торговые операции с использованием
+          API-ключа только для чтения.
+        lunchflow: Подключите более 20 000 банков из более чем 40 стран (Великобритания,
+          ЕС, США и другие!)
+        mercury: Синхронизируйте ваши бизнес-счета Mercury автоматически.
+        plaid: Подключите тысячи финансовых учреждений США через Plaid.
+        plaid_eu: Подключите европейские финансовые учреждения через Plaid (PSD2 /
+          Open Banking).
+        simplefin: Подключите банковские счета США через открытый протокол SimpleFIN.
+        snaptrade: Подключите брокерские счета через сеть агрегации SnapTrade.
+        sophtron: Подключите банки и коммунальные услуги США и Канады.
+      update:
+        no_changes: Изменений не было
+        updated_successfully: Настройки поставщика успешно обновлены
+    securities:
+      show:
+        page_title: Безопасность
+        sso_confirm_body: Вы уверены, что хотите отключить ваш аккаунт %{provider}?
+          Вы можете подключить его снова, войдя с этим поставщиком.
+        sso_confirm_button: Отключить
+        sso_confirm_title: Отключить аккаунт?
+        sso_connect_hint: Выйдите и войдите с помощью поставщика SSO, чтобы подключить
+          аккаунт.
+        sso_disconnect: Отключить
+        sso_last_used: Последнее использование
+        sso_never: Никогда
+        sso_no_email: Нет электронной почты
+        sso_no_identities: Нет подключённых аккаунтов SSO
+        sso_subtitle: Управляйте подключениями вашего аккаунта единого входа
+        sso_title: Подключённые аккаунты
+        sso_warning_message: Это ваш единственный метод входа. Вы должны установить
+          пароль в настройках безопасности перед отключением, иначе вы можете потерять
+          доступ к своему аккаунту.
+    settings_nav:
+      accounts_label: Счета
+      advanced_section_title: Расширенные
+      ai_prompts_label: AI Запросы
+      api_key_label: API Ключ
+      api_keys_label: API Ключ
+      appearance_label: Внешний вид
+      bank_sync_label: Синхронизация банка
+      categories_label: Категории
+      debug_label: Отладка
+      exports_label: Экспорт
+      feedback_label: Обратная связь
+      general_section_title: Общие
+      guides_label: Руководства
+      imports_label: Импорт
+      llm_usage_label: Использование LLM
+      logout: Выйти
+      merchants_label: Продавцы
+      other_section_title: Ещё
+      payment_label: Платеж
+      preferences_label: Предпочтения
+      profile_label: Информация о профиле
+      providers_label: Поставщики
+      recurring_transactions_label: Регулярные
+      rules_label: Правила
+      security_label: Безопасность
+      self_hosting_label: Самостоятельный хостинг
+      sso_providers_label: Поставщики SSO
+      statement_vault_label: Хранилище выписок
+      tags_label: Теги
+      transactions_section_title: Операции
+      users_label: Пользователи
+      whats_new_label: Что нового
+    settings_nav_link_large:
+      next: Далее
+      previous: Назад
+    user_avatar_field:
+      accepted_formats: JPG или PNG. Максимум 5MB.
+      change: Изменить фото
+      choose: Загрузить фото
+      choose_label: "(необязательно)"
+  views:
+    settings:
+      payments:
+        cancellation: Ваш вклад заканчивается %{date}.
+        renewal: Ваш вклад продолжается %{date}.

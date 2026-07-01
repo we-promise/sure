@@ -1,0 +1,33 @@
+---
+ro:
+  oidc_accounts:
+    link:
+      title_link: Asociază contul OIDC
+      title_create: Creează cont
+      verify_heading: Verifică-ți identitatea
+      verify_description_html: "Pentru a asocia contul tău %{provider}%{email_suffix}, verifică-ți identitatea introducând parola."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Adresă de e-mail
+      email_placeholder: Introdu adresa de e-mail
+      password_label: Parolă
+      password_placeholder: Introdu parola
+      verify_hint: Aceasta asigură că doar tu poți asocia conturi externe la profilul tău.
+      submit_link: Asociază contul
+      create_heading: Creează cont nou
+      create_description_html: "Nu a fost găsit niciun cont cu adresa de e-mail <strong>%{email}</strong>. Apasă mai jos pentru a crea un cont nou cu identitatea ta %{provider}."
+      info_email: "E-mail:"
+      info_name: "Nume:"
+      submit_create: Creează cont
+      account_creation_disabled: Crearea conturilor prin autentificare unică este dezactivată. Contactează un administrator.
+      cancel: Anulează
+    new_user:
+      title: Finalizează contul
+      heading: Creează-ți contul
+      description: Confirmă datele tale pentru a finaliza crearea contului cu identitatea ta %{provider}.
+      email_label: E-mail (de la furnizorul SSO)
+      first_name_label: Prenume
+      first_name_placeholder: Introdu prenumele
+      last_name_label: Nume de familie
+      last_name_placeholder: Introdu numele de familie
+      submit: Creează cont
+      cancel: Anulează

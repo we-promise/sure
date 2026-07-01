@@ -1,0 +1,29 @@
+---
+es:
+  account_sharings:
+    show:
+      title: Compartir cuenta
+      subtitle: Controla quién puede ver esta cuenta e interactuar con ella
+      member: Miembro
+      permission: Permiso
+      shared: Compartida
+      no_members: No hay otros miembros en tu %{moniker} con quienes compartir
+      permissions:
+        full_control: Control total
+        full_control_description: Puede ver, editar y gestionar transacciones
+        read_write: Puede anotar
+        read_write_description: Puede categorizar, etiquetar y añadir notas
+        read_only: Solo lectura
+        read_only_description: Solo puede ver los datos de la cuenta
+      save: Guardar ajustes de uso compartido
+      owner_label: "Propietario: %{name}"
+      shared_with_count:
+        one: Compartida con 1 miembro
+        other: "Compartida con %{count} miembros"
+      include_in_finances: Incluir en mis presupuestos e informes
+      exclude_from_finances: Excluir de mis presupuestos e informes
+      finance_toggle_description: Tener en cuenta esta cuenta en tu patrimonio neto, presupuestos e informes
+    update:
+      success: Ajustes de uso compartido actualizados
+      not_owner: Solo el propietario de la cuenta puede gestionar el uso compartido
+      finance_toggle_success: Preferencia de inclusión financiera actualizada

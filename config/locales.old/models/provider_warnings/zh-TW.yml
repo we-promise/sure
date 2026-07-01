@@ -1,0 +1,4 @@
+---
+zh-TW:
+  provider_warnings:
+    limited_investment_data: "此提供商的投資數據有限。活動標籤（買入、賣出、股息）不可用，這可能會影響預算準確性。請考慮建立規則以排除或分類投資交易。"

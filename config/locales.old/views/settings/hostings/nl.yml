@@ -1,0 +1,89 @@
+---
+nl:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Bepaal hoe nieuwe mensen zich aanmelden voor uw instantie van %{product}.
+        email_confirmation_description: Wanneer ingeschakeld, moeten gebruikers hun e-mailadres bevestigen bij het wijzigen ervan.
+        email_confirmation_title: E-mailbevestiging vereisen
+        generate_tokens: Nieuwe code genereren
+        generated_tokens: Gegenereerde codes
+        title: Onboarding
+        states:
+          open: Open
+          closed: Gesloten
+          invite_only: Alleen op uitnodiging
+      show:
+        general: Algemene instellingen
+        financial_data_providers: Financiële gegevensproviders
+        sync_settings: Synchronisatie-instellingen
+        invites: Uitnodigingscodes
+        title: Zelfhosting
+        danger_zone: Gevarenzone
+        clear_cache: Datacache wissen
+        clear_cache_warning: Het wissen van de datacache verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Dit verwijdert geen accounts, transacties, categorieën of andere gegevens van gebruikers.
+        confirm_clear_cache:
+          title: Datacache wissen?
+          body: Weet u zeker dat u de datacache wilt wissen? Dit verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Deze actie kan niet ongedaan worden gemaakt.
+      provider_selection:
+        title: Providerselectie
+        description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API Key. Twelve Data vereist een gratis API Key maar biedt mogelijk meer gegevensdekking.
+        exchange_rate_provider_label: Wisselkoersprovider
+        securities_provider_label: Effecten (aandelenprijzen) provider
+        env_configured_message: Providerselectie is uitgeschakeld omdat omgevingsvariabelen (EXCHANGE_RATE_PROVIDER of SECURITIES_PROVIDER) zijn ingesteld. Om selectie hier in te schakelen, verwijder deze omgevingsvariabelen uit uw configuratie.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+      brand_fetch_settings:
+        description: Voer het Client ID in dat door Brand Fetch is verstrekt
+        label: Client ID
+        placeholder: Voer hier uw Client ID in
+        title: Brand Fetch instellingen
+      openai_settings:
+        description: Voer het toegangstoken in en configureer optioneel een aangepaste OpenAI-compatibele provider
+        env_configured_message: Succesvol geconfigureerd via omgevingsvariabelen.
+        access_token_label: Toegangstoken
+        access_token_placeholder: Voer hier uw toegangstoken in
+        uri_base_label: API basis-URL (optioneel)
+        uri_base_placeholder: "https://api.openai.com/v1 (standaard)"
+        model_label: Model (optioneel)
+        model_placeholder: "gpt-4.1 (standaard)"
+        json_mode_label: JSON modus
+        json_mode_auto: Auto (aanbevolen)
+        json_mode_strict: Strikt (beste voor denkende modellen)
+        json_mode_none: Geen (beste voor standaard modellen)
+        json_mode_json_object: JSON Object
+        json_mode_help: "Strikte modus werkt het beste met denkende modellen (qwen-thinking, deepseek-reasoner). Geen modus werkt het beste met standaard modellen (llama, mistral, gpt-oss)."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder API Key vereiste.
+        status_active: Yahoo Finance is actief en werkt
+        status_inactive: Yahoo Finance verbinding mislukt
+        connection_failed: Kan geen verbinding maken met Yahoo Finance
+        troubleshooting: Controleer uw internetverbinding en firewallinstellingen. Yahoo Finance kan tijdelijk niet beschikbaar zijn.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} API dagelijkse oproepen gebruikt (%{percentage})"
+        description: Voer de API Key in die door Twelve Data is verstrekt
+        env_configured_message: Succesvol geconfigureerd via de TWELVE_DATA_API_KEY omgevingsvariabele.
+        label: API Key
+        placeholder: Voer hier uw API Key in
+        plan: "%{plan} plan"
+        title: Twelve Data
+      update:
+        failure: Ongeldige instellingswaarde
+        success: Instellingen bijgewerkt
+        invalid_onboarding_state: Ongeldige onboarding status
+        invalid_sync_time: Ongeldig synchronisatietijd formaat. Gebruik UU:MM formaat (bijv. 02:30).
+        scheduler_sync_failed: Instellingen opgeslagen, maar bijwerken van synchronisatieschema mislukt. Probeer het opnieuw of controleer de serverlogs.
+      clear_cache:
+        cache_cleared: Datacache is gewist. Dit kan enkele ogenblikken duren om te voltooien.
+      not_authorized: U bent niet geautoriseerd om deze actie uit te voeren
+      sync_settings:
+        auto_sync_label: Automatische synchronisatie inschakelen
+        auto_sync_description: Wanneer ingeschakeld, worden alle accounts automatisch dagelijks gesynchroniseerd op het opgegeven tijdstip.
+        auto_sync_time_label: Synchronisatietijd (UU:MM)
+        auto_sync_time_description: Geef het tijdstip van de dag op waarop automatische synchronisatie moet plaatsvinden.
+        include_pending_label: Transacties in afwachting opnemen
+        include_pending_description: Wanneer ingeschakeld, worden transacties in afwachting (niet-vereffende) geïmporteerd en automatisch afgestemd wanneer ze worden geboekt. Schakel uit als uw bank onbetrouwbare transacties in afwachting levert.
+        env_configured_message: Deze instelling is uitgeschakeld omdat een provider omgevingsvariabele (SIMPLEFIN_INCLUDE_PENDING of PLAID_INCLUDE_PENDING) is ingesteld. Verwijder deze om deze instelling in te schakelen.

@@ -1,0 +1,31 @@
+---
+vi:
+  helpers:
+    label:
+      user:
+        invite_code: Mã mời
+    submit:
+      user:
+        create: Tiếp tục
+  registrations:
+    closed: Đăng ký hiện đang đóng.
+    create:
+      failure: Đã xảy ra lỗi khi đăng ký.
+      invalid_invite_code: Mã mời không hợp lệ, vui lòng thử lại.
+      success: Bạn đã đăng ký thành công.
+    new:
+      invitation_message: "%{inviter} đã mời bạn tham gia với vai trò %{role}"
+      join_family_title: Tham gia %{family} %{moniker}
+      role_admin: quản trị viên
+      role_guest: khách
+      role_member: thành viên
+      submit: Tạo tài khoản
+      title: Tạo tài khoản của bạn
+      welcome_body: Để bắt đầu, bạn cần đăng ký tài khoản mới. Sau đó bạn có thể cấu hình các cài đặt bổ sung trong ứng dụng.
+      welcome_title: Chào mừng đến với %{product_name} tự lưu trữ!
+      password_placeholder: Nhập mật khẩu của bạn
+      password_requirements:
+        length: Tối thiểu 8 ký tự
+        case: Chữ hoa và chữ thường
+        number: Một chữ số (0-9)
+        special: "Một ký tự đặc biệt (!, @, #, $, %, v.v.)"

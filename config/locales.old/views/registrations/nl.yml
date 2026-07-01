@@ -1,0 +1,30 @@
+---
+nl:
+  helpers:
+    label:
+      user:
+        invite_code: Uitnodigingscode
+    submit:
+      user:
+        create: Doorgaan
+  registrations:
+    closed: Aanmeldingen zijn momenteel gesloten.
+    create:
+      failure: Er was een probleem bij het aanmelden.
+      invalid_invite_code: Ongeldige uitnodigingscode, probeer het opnieuw.
+      success: U bent succesvol aangemeld.
+    new:
+      invitation_message: "%{inviter} heeft u uitgenodigd om lid te worden als %{role}"
+      join_family_title: Word lid van %{family}
+      role_admin: beheerder
+      role_member: lid
+      submit: Account aanmaken
+      title: Maak uw account aan
+      welcome_body: Om te beginnen moet u zich aanmelden voor een nieuw account. U kunt daarna aanvullende instellingen binnen de app configureren.
+      welcome_title: Welkom bij Self Hosted %{product_name}!
+      password_placeholder: Voer uw wachtwoord in
+      password_requirements:
+        length: Minimaal 8 tekens
+        case: Hoofdletters en kleine letters
+        number: Een cijfer (0-9)
+        special: "Een speciaal teken (!, @, #, $, %, etc)"

@@ -1,0 +1,170 @@
+---
+fr:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: Nom
+        redirect_uri: URI de redirection
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              forbidden_uri: est interdit par le serveur.
+              fragment_present: ne peut pas contenir de fragment.
+              invalid_uri: doit être une URI valide.
+              relative_uri: doit être une URI absolue.
+              secured_uri: doit être une URI HTTPS/SSL.
+              unspecified_scheme: doit spécifier un schéma.
+            scopes:
+              not_match_configured: ne correspond pas à ceux configurés sur le serveur.
+  doorkeeper:
+    applications:
+      buttons:
+        authorize: Autoriser
+        cancel: Annuler
+        destroy: Supprimer
+        edit: Modifier
+        submit: Envoyer
+      confirmations:
+        destroy: Êtes-vous sûr ?
+      edit:
+        title: Modifier l'application
+      form:
+        error: Oups ! Vérifiez votre formulaire pour d'éventuelles erreurs
+      help:
+        blank_redirect_uri: Laissez vide si vous avez configuré votre fournisseur
+          pour utiliser les identifiants client (Client Credentials), le mot de passe
+          du propriétaire de la ressource (Resource Owner Password Credentials) ou
+          tout autre type d'octroi qui ne nécessite pas d'URI de redirection.
+        confidential: L'application sera utilisée dans un contexte où le client secret
+          peut être gardé confidentiel. Les applications mobiles natives et les applications
+          monopage (SPA) sont considérées comme non confidentielles.
+        redirect_uri: Utilisez une ligne par URI
+        scopes: Séparez les scopes par des espaces. Laissez vide pour utiliser les
+          scopes par défaut.
+      index:
+        actions: Actions
+        callback_url: URL de rappel
+        confidential: Confidentielle ?
+        confidentiality:
+          'no': Non
+          'yes': Oui
+        name: Nom
+        new: Nouvelle application
+        title: Vos applications
+      new:
+        title: Nouvelle application
+      show:
+        actions: Actions
+        application_id: UID
+        callback_urls: URL de rappel
+        confidential: Confidentielle
+        not_defined: Non défini
+        scopes: Scopes
+        secret: Secret
+        secret_hashed: Secret haché
+        title: 'Application : %{name}'
+    authorizations:
+      buttons:
+        authorize: Autoriser
+        deny: Refuser
+      error:
+        go_back: Retourner
+        title: Une erreur s'est produite
+      form_post:
+        title: Envoyer ce formulaire
+      new:
+        able_to: Cette application pourra
+        prompt: Autoriser %{client_name} à utiliser votre compte ?
+        title: Autorisation requise
+      show:
+        authorization_code_label: 'Code d''autorisation :'
+        copy_instructions: Copiez ce code et collez-le dans l'application.
+        title: Code d'autorisation
+    authorized_applications:
+      buttons:
+        revoke: Révoquer
+      confirmations:
+        revoke: Êtes-vous sûr ?
+      index:
+        application: Application
+        created_at: Créée le
+        date_format: "%d/%m/%Y %H:%M:%S"
+        title: Vos applications autorisées
+    errors:
+      messages:
+        access_denied: Le propriétaire de la ressource ou le serveur d'autorisation
+          a refusé la requête.
+        admin_authenticator_not_configured: L'accès au panneau d'administration est
+          interdit car Doorkeeper.configure.admin_authenticator n'est pas configuré.
+        credential_flow_not_configured: Le flux Resource Owner Password Credentials
+          a échoué car Doorkeeper.configure.resource_owner_from_credentials n'est
+          pas configuré.
+        forbidden_token:
+          missing_scope: L'accès à cette ressource requiert le scope "%{oauth_scopes}".
+        invalid_client: L'authentification du client a échoué en raison d'un client
+          inconnu, d'une authentification client manquante ou d'une méthode d'authentification
+          non prise en charge.
+        invalid_code_challenge_method:
+          one: Le code_challenge_method doit être %{challenge_methods}.
+          other: 'Le code_challenge_method doit être l''un des suivants : %{challenge_methods}.'
+          zero: Le serveur d'autorisation ne prend pas en charge PKCE car aucune valeur
+            de code_challenge_method n'est acceptée.
+        invalid_grant: L'octroi d'autorisation fourni est invalide, expiré, révoqué,
+          ne correspond pas à l'URI de redirection utilisée dans la requête d'autorisation,
+          ou a été émis pour un autre client.
+        invalid_redirect_uri: L'URI de redirection demandée est malformée ou ne correspond
+          pas à l'URI de redirection du client.
+        invalid_request:
+          invalid_code_challenge: Le code challenge est obligatoire.
+          missing_param: 'Paramètre obligatoire manquant : %{value}.'
+          request_not_authorized: La requête doit être autorisée. Le paramètre obligatoire
+            pour autoriser la requête est manquant ou invalide.
+          unknown: La requête ne comporte pas un paramètre obligatoire, inclut une
+            valeur de paramètre non prise en charge ou est malformée d'une autre manière.
+        invalid_scope: Le scope demandé est invalide, inconnu ou malformé.
+        invalid_token:
+          expired: Le jeton d'accès a expiré
+          revoked: Le jeton d'accès a été révoqué
+          unknown: Le jeton d'accès est invalide
+        resource_owner_authenticator_not_configured: La recherche de Resource Owner
+          a échoué car Doorkeeper.configure.resource_owner_authenticator n'est pas
+          configuré.
+        revoke:
+          unauthorized: Vous n'êtes pas autorisé à révoquer ce jeton
+        server_error: Le serveur d'autorisation a rencontré une condition inattendue
+          qui l'a empêché de traiter la requête.
+        temporarily_unavailable: Le serveur d'autorisation est actuellement incapable
+          de traiter la requête en raison d'une surcharge temporaire ou d'une maintenance
+          du serveur.
+        unauthorized_client: Le client n'est pas autorisé à effectuer cette requête
+          avec cette méthode.
+        unsupported_grant_type: Le type d'octroi d'autorisation n'est pas pris en
+          charge par le serveur d'autorisation.
+        unsupported_response_mode: Le serveur d'autorisation ne prend pas en charge
+          ce mode de réponse.
+        unsupported_response_type: Le serveur d'autorisation ne prend pas en charge
+          ce type de réponse.
+    flash:
+      applications:
+        create:
+          notice: Application créée.
+        destroy:
+          notice: Application supprimée.
+        update:
+          notice: Application mise à jour.
+      authorized_applications:
+        destroy:
+          notice: Application révoquée.
+    layouts:
+      admin:
+        nav:
+          applications: Applications
+          home: Accueil
+          oauth2_provider: Fournisseur OAuth2
+        title: Doorkeeper
+      application:
+        title: Autorisation OAuth requise
+    pre_authorization:
+      status: Pré-autorisation

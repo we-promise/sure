@@ -1,0 +1,114 @@
+---
+nb:
+  views:
+    settings:
+      payments:
+        renewal: "Bidraget ditt fortsetter den %{date}."
+  settings:
+    payments:
+      show:
+        page_title: Betaling
+        subscription_subtitle: Oppdater abonnementet og betalingsdetaljene dine
+        subscription_title: Administrer abonnement
+    preferences:
+      show:
+        country: Land
+        currency: Valuta
+        date_format: Datoformat
+        general_subtitle: Konfigurer preferansene dine
+        general_title: Generelt
+        default_period: Standardperiode
+        language: Språk
+        language_auto: Nettleserens språk
+        page_title: Preferanser
+        theme_dark: Mørk
+        theme_light: Lys
+        theme_subtitle: Velg et foretrukket tema for appen
+        theme_system: System
+        theme_title: Tema
+        timezone: Tidssone
+    appearances:
+      show:
+        modals_title: Modaler
+        modals_subtitle: Tilpass oppførselen til modaler
+        disable_modal_click_outside_title: Hold modaler åpne ved klikk utenfor
+        disable_modal_click_outside_description: Forhindrer at modaler lukkes ved klikk utenfor. Nyttig for å unngå å miste ulagrede endringer ved et uhell.
+    profiles:
+      destroy:
+        cannot_remove_self: Du kan ikke fjerne deg selv fra din egen konto.
+        member_removal_failed: Det oppsto et problem med å fjerne medlemmet.
+        member_removed: Medlemmet ble fjernet vellykket.
+        not_authorized: Du er ikke autorisert til å fjerne medlemmer.
+      show:
+        confirm_delete:
+          body: Er du sikker på at du vil permanent slette kontoen din? Denne handlingen er irreversibel.
+          title: Slett konto?
+        confirm_reset:
+          body: Er du sikker på at du vil tilbakestille kontoen din? Dette vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data. Denne handlingen kan ikke angres.
+          title: Tilbakestill konto?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
+        confirm_remove_invitation:
+          body: Er du sikker på at du vil fjerne invitasjonen for %{email}?
+          title: Fjern invitasjon
+        confirm_remove_member:
+          body: Er du sikker på at du vil fjerne %{name} fra kontoen din?
+          title: Fjern medlem
+        danger_zone_title: Fareområde
+        delete_account: Slett konto
+        delete_account_warning: Sletting av kontoen din vil permanent fjerne alle
+          dataene dine og kan ikke angres.
+        reset_account: Tilbakestill konto
+        reset_account_warning: Tilbakestilling av kontoen din vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data, men beholde brukerkontoen din intakt.
+        reset_account_with_sample_data: Reset account and load sample data
+        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
+        email: E-post
+        first_name: Fornavn
+        household_form_input_placeholder: Angi husholdningsnavn
+        household_form_label: Husholdningsnavn
+        household_subtitle: Inviter familiemedlemmer, partnere og andre individer.  Inviterte
+          kan logge inn på husholdningen din og få tilgang til dine delte kontoer.
+        household_title: Husholdning
+        invitation_link: Invitasjonslenke
+        invite_member: Legg til medlem
+        last_name: Etternavn
+        page_title: Konto
+        pending: Venter
+        profile_subtitle: Tilpass hvordan du vises på %{product_name}
+        profile_title: Profil
+        remove_invitation: Fjern invitasjon
+        remove_member: Fjern medlem
+        save: Lagre
+    securities:
+      show:
+        page_title: Sikkerhet
+    settings_nav:
+      accounts_label: Kontoer
+      api_key_label: API-nøkkel
+      advanced_section_title: Avansert
+      payment_label: Betaling
+      categories_label: Kategorier
+      feedback_label: Tilbakemelding
+      general_section_title: Generelt
+      imports_label: Importer
+      exports_label: Eksporter
+      logout: Logg ut
+      merchants_label: Forhandlere
+      other_section_title: Mer
+      preferences_label: Preferanser
+      profile_label: Konto
+      rules_label: Regler
+      security_label: Sikkerhet
+      self_hosting_label: Selvhosting
+      tags_label: Tagger
+      transactions_section_title: Transaksjoner
+      whats_new_label: Hva er nytt
+    settings_nav_link_large:
+      next: Neste
+      previous: Tilbake
+    user_avatar_field:
+      accepted_formats: JPG eller PNG. 5MB maks.
+      choose: Last opp bilde
+      choose_label: (valgfritt)
+      change: Endre bilde

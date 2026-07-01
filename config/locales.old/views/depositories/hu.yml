@@ -1,0 +1,10 @@
+---
+hu:
+  depositories:
+    edit:
+      edit: '%{account} szerkesztése'
+    form:
+      none: Nincs
+      subtype_prompt: Válassz számlatípust
+    new:
+      title: Add meg a számlaegyenleget

@@ -1,0 +1,189 @@
+---
+zh-CN:
+  investments:
+    edit:
+      edit: 编辑 %{account}
+    form:
+      none: 无
+      subtype_prompt: 选择投资类型
+    new:
+      title: 输入账户余额
+    show:
+      chart_title: 总价值
+    subtypes:
+      brokerage:
+        short: 券商
+        long: 券商账户
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: 节俭储蓄计划
+      ira:
+        short: IRA
+        long: 传统 IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 计划
+        long: 529 教育储蓄计划
+      hsa:
+        short: HSA
+        long: 健康储蓄账户
+      ugma:
+        short: UGMA
+        long: UGMA 托管账户
+      utma:
+        short: UTMA
+        long: UTMA 托管账户
+      isa:
+        short: ISA
+        long: 个人储蓄账户
+      lisa:
+        short: LISA
+        long: 终身 ISA
+      sipp:
+        short: SIPP
+        long: 自主投资个人养老金
+      workplace_pension_uk:
+        short: 养老金
+        long: 工作场所养老金
+      rrsp:
+        short: RRSP
+        long: 注册退休储蓄计划
+      tfsa:
+        short: TFSA
+        long: 免税储蓄账户
+      resp:
+        short: RESP
+        long: 注册教育储蓄计划
+      lira:
+        short: LIRA
+        long: 锁定退休账户
+      rrif:
+        short: RRIF
+        long: 注册退休收入基金
+      super:
+        short: Super
+        long: 养老金储蓄
+      smsf:
+        short: SMSF
+        long: 自主管理超级年金基金
+      pea:
+        short: PEA
+        long: 股票储蓄计划
+      pillar_3a:
+        short: 第三支柱 3a
+        long: 私人养老金（第三支柱 3a）
+      riester:
+        short: Riester
+        long: Riester 养老金
+      nps:
+        short: NPS
+        long: 国家养老金系统
+      apy:
+        short: APY
+        long: Atal 养老金计划
+      indian_stocks:
+        short: 印度股票
+        long: 印度股票（Demat）
+      indian_equity:
+        short: 印度权益
+        long: 印度权益
+      indian_etf:
+        short: 印度 ETF
+        long: 印度 ETF
+      life_insurance:
+        short: 人寿保险
+        long: 人寿保险
+      ppf:
+        short: PPF
+        long: 公共公积金
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi 计划
+      nsc:
+        short: NSC
+        long: 国家储蓄证书
+      scss:
+        short: SCSS
+        long: 老年人储蓄计划
+      fd:
+        short: 定存
+        long: 定期存款
+      rd:
+        short: RD
+        long: 定期储蓄存款
+      pomis:
+        short: POMIS
+        long: 邮政月收益计划
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: 黄金 ETF
+        long: 黄金 ETF
+      gold_mf:
+        short: 黄金基金
+        long: 黄金共同基金
+      sgb:
+        short: SGB
+        long: 主权黄金债券
+      g_sec:
+        short: 国债
+        long: 政府证券（G-Secs）
+      sdl:
+        short: SDL
+        long: 州发展贷款（SDLs）
+      corporate_bond:
+        short: 公司债
+        long: 公司债
+      infrastructure_bond:
+        short: 基建债
+        long: 基础设施债券
+      tax_free_bond:
+        short: 免税债
+        long: 免税债券
+      pension:
+        short: 养老金
+        long: 养老金
+      retirement:
+        short: 退休
+        long: 退休账户
+      mutual_fund:
+        short: 共同基金
+        long: 共同基金
+      gold:
+        short: 黄金
+        long: 黄金（实物或数字）
+      angel:
+        short: 天使投资
+        long: 天使投资
+      trust:
+        short: 信托
+        long: 信托
+      other:
+        short: 其他
+        long: 其他投资
+    value_tooltip:
+      cash: 现金
+      holdings: 持仓
+      total: 投资组合余额
+      total_value_tooltip: 投资组合总余额是券商现金（可用于交易）与当前持仓市值之和。

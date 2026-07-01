@@ -1,0 +1,27 @@
+---
+hu:
+  invitations:
+    accept_choice:
+      create_account: Új fiók létrehozása
+      joined_household: Csatlakoztál a háztartáshoz.
+      message: "%{inviter} meghívott, hogy csatlakozz %{role} szerepkörben."
+      sign_in_existing: Már van fiókom
+      title: "Csatlakozz a következőhöz: %{family}"
+    create:
+      existing_user_added: A felhasználó hozzá lett adva a háztartásodhoz.
+      failure: Nem sikerült elküldeni a meghívót.
+      success: A meghívó sikeresen elküldve.
+    destroy:
+      failure: Hiba történt a meghívó eltávolítása során.
+      not_authorized: Nincs jogosultságod a meghívók kezeléséhez.
+      success: A meghívó sikeresen eltávolítva.
+    new:
+      email_label: E-mail cím
+      email_placeholder: Add meg az e-mail címet
+      role_admin: Rendszergazda
+      role_guest: Vendég
+      role_label: Szerepkör
+      role_member: Tag
+      submit: Meghívó küldése
+      subtitle: Küldj meghívót, hogy valaki csatlakozzon a(z) %{moniker} fiókodhoz a(z) %{product_name} alkalmazásban
+      title: Valaki meghívása

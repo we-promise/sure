@@ -19,6 +19,20 @@ ru:
           и получите ваш бесплатный API ключ.
         step_2: Скопируйте API ключ и вставьте его ниже.
         title: Alpha Vantage
+      anthropic_settings:
+        access_token_label: API-ключ
+        access_token_placeholder: Введите API-ключ Anthropic
+        base_url_label: Base URL (необязательно)
+        base_url_placeholder: https://api.anthropic.com (по умолчанию)
+        description: Введите API-ключ Anthropic. При необходимости можно указать Base URL 
+          для AWS Bedrock или GCP Vertex.
+        env_configured_message: Настройки успешно заданы через переменные окружения.
+        model_help: Используется для чата и обработки PDF. Пакетные операции 
+          (категоризация, определение продавцов) по умолчанию используют Haiku для 
+          снижения стоимости.
+        model_label: Модель по умолчанию (необязательно)
+        model_placeholder: claude-sonnet-4-6 (по умолчанию)
+        title: Anthropic (Claude)
       assistant_settings:
         agent_id_help: Направляет к конкретному агенту, когда поставщик размещает
           несколько. Оставьте пустым для использования по умолчанию.
@@ -115,6 +129,17 @@ ru:
           invite_only: Только по приглашению
           open: Открыто
         title: Регистрация
+      llm_provider_selector:
+        data_retention: Входные данные API по умолчанию не используются для обучения моделей; API провайдеров хранят данные около 30 дней для целей безопасности. Для кастомных или self-hosted эндпоинтов действует ваша собственная политика.
+        data_retention_heading: Обработка данных
+        description: Выберите провайдера LLM для AI-чата. Пакетные операции (категоризация операций, определение продавцов и обработка PDF) пока всегда используют OpenAI.
+        env_configured_message: Настройки успешно заданы через переменную окружения LLM_PROVIDER.
+        not_configured_hint: Добавьте API-ключ %{provider} ниже, чтобы активировать его.
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Смена провайдера вступит в силу при следующем чате. Настройте учётные данные выбранного провайдера ниже.
+        provider_label: Активный провайдер LLM
+        provider_openai: OpenAI
+        title: AI-провайдер        
       not_authorized: У вас нет прав для выполнения этого действия
       openai_settings:
         access_token_label: Токен доступа
@@ -161,12 +186,16 @@ ru:
         exchange_rate_provider_label: Поставщик курсов валют
         exchange_rate_title: Поставщик курсов валют
         mfapi_hint: бесплатно, API ключ не требуется — только индийские паевые фонды
+        moex_public_hint: бесплатно, без API-ключа — российские акции, фонды и облигации 
+         (MOEX), включая валюту RUB
         providers:
           alpha_vantage: Alpha Vantage
           binance_public: Binance
           eodhd: EODHD
           mfapi: MFAPI.in
+          moex_public: MOEX
           tiingo: Tiingo
+          tinkoff_invest: T-Invest (Т-Банк)
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
         requires_api_key: требуется API ключ
@@ -176,6 +205,8 @@ ru:
           цен на акции, ETF и паевые инвестиционные фонды. При поиске все включенные
           поставщики запрашиваются, и результаты объединяются.
         securities_title: Поставщики ценных бумаг
+        tinkoff_invest_hint: требуется токен только для чтения — цены российских акций, 
+          фондов и облигаций + логотипы брендов
         twelve_data_hint: требуется API ключ, 800 запросов/день
         yahoo_finance_hint: бесплатно, API ключ не требуется
       show:
@@ -225,6 +256,21 @@ ru:
           target="_blank" rel="noopener noreferrer" class="underline">API токен</a>.
         step_3: Скопируйте ваш API токен и вставьте его ниже.
         title: Tiingo
+      tinkoff_invest_settings:
+        description: Введите API-токен T‑Invest с правами только на чтение. Используется 
+          для загрузки логотипов ценных бумаг (включая фонды и облигации, даже если цены 
+          берутся с MOEX), а также — при включении выше — для получения котировок 
+          российских инструментов.
+        env_configured_message: Настройки успешно заданы через переменную окружения 
+          TINKOFF_INVEST_API_KEY.
+        label: API-токен
+        placeholder: Введите ваш API-токен T‑Invest
+        show_details: "(показать детали)"
+        step_1: Откройте инвестиции Т-Банка, затем «Настройки» → «API-токены» 
+          (требуется брокерский счёт в Т-Банке).
+        step_2: Создайте токен с правами только на чтение.
+        step_3: Скопируйте токен и вставьте его ниже.
+        title: T-Invest (Т-Банк)        
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API вызовов в день использовано (%{percentage})"
         description: Введите API ключ, предоставленный Twelve Data
@@ -246,7 +292,10 @@ ru:
         title: Twelve Data
         view_pricing: Посмотреть цены Twelve Data
       update:
+        anthropic_model_required_for_base_url: Необходимо указать модель Anthropic при 
+          использовании пользовательского Base URL.
         failure: Неверное значение настройки
+        invalid_anthropic_base_url: Base URL Anthropic должен быть корректным URL с http(s).
         invalid_llm_budget: "%{field} должно быть целым числом ≥ %{minimum}."
         invalid_onboarding_state: Неверное состояние регистрации
         invalid_sync_time: Неверный формат времени синхронизации. Пожалуйста, используйте

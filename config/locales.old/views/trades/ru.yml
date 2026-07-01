@@ -1,0 +1,58 @@
+---
+ru:
+  trades:
+    form:
+      account: Счёт для перевода (необязательно)
+      account_prompt: Поиск счёта
+      amount: Сумма
+      dividend_requires_security: Для дивидендов требуется актив
+      fee: Комиссия за операцию
+      holding: Символ тикера
+      holding_optional: Символ тикера (необязательно)
+      price: Цена за акцию
+      qty: Количество
+      submit: Добавить операцию
+      ticker_placeholder: AAPL
+      type: Тип
+      type_buy: Покупка
+      type_deposit: Депозит
+      type_dividend: Дивиденды
+      type_interest: Проценты
+      type_sell: Продажа
+      type_withdrawal: Снятие
+    header:
+      buy: Покупка
+      current_market_price_label: Текущая рыночная цена
+      dividend: Дивиденды
+      interest: Проценты
+      overview: Обзор
+      purchase_price_label: Цена покупки
+      purchase_qty_label: Количество покупки
+      sell: Продажа
+      symbol_label: Символ
+      total_return_label: Нереализованная прибыль/убыток
+    new:
+      title: Новая операция
+    show:
+      additional: Дополнительно
+      amount_label: Сумма
+      buy: Покупка
+      category_label: Категория
+      cost_per_share_label: Стоимость за акцию
+      date_label: Дата
+      delete: Удалить
+      delete_subtitle: Это действие нельзя отменить
+      delete_title: Удалить операцию
+      details: Детали
+      exclude_subtitle: Эта операция не будет включена в отчёты и расчёты
+      exclude_title: Исключить из аналитики
+      fee_label: Комиссия за операцию
+      no_category: Без категории
+      note_label: Заметка
+      note_placeholder: Добавьте любые дополнительные заметки здесь...
+      provider_disabled_warning: Обновления цен приостановлены — провайдер %{provider}
+        отключен. Включите его в Настройках или переназначьте актив другому провайдеру.
+      quantity_label: Количество
+      sell: Продажа
+      settings: Настройки
+      type_label: Тип

@@ -1,0 +1,20 @@
+---
+en:
+  goal_pledges:
+    new:
+      helper_transfer: Sure will look for a matching deposit in your linked account. The pledge stays pending for 7 days, then auto-confirms once Sure spots it.
+      helper_manual: Sure will record this on your next manual balance edit and confirm the contribution.
+      amount_label: Amount
+      account_label: Into account
+      submit: Record pledge
+      preview_zero: "Currently {current} of {target} saved."
+      preview_nonzero: "Reaches {percent}%, {newTotal} of {target}."
+      preview_reached: "Hits your {target} target. Goal reached."
+    create:
+      success: Pledge recorded. Sure will confirm it on the next sync.
+    renew:
+      success: Pledge window extended 7 days.
+      not_open: Only open pledges can be extended.
+    destroy:
+      success: Pledge cancelled.
+      not_open: Only open pledges can be cancelled.

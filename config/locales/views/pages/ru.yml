@@ -56,9 +56,19 @@ ru:
         total_outflows: Всего расходов
         value: Сумма
         weight: Доля
+      sections_aria_label: Разделы панели
       subtitle: Вот что происходит с вашими финансами
       toggle_section: Показать/скрыть раздел
       welcome: С возвращением, %{name}
+      widget_size:
+        auto: Авто
+        compact: Компактный
+        full: Полный
+        half: Половина
+        height_label: Высота
+        label: Размер
+        tall: Высокий
+        width_label: Ширина
     feedback:
       bug_report: Сообщить об ошибке
       description: Сообщите нам, если у вас есть замечания. Можно приложить ссылки
@@ -92,7 +102,9 @@ ru:
         счетов, обработки импорта и других операций, поддерживающих актуальность данных.
       why_required_title: Зачем нужен Redis?
     release_notes_unavailable:
-      body_html: "<p>Не удалось получить последние заметки о выпуске. Пожалуйста, попробуйте позже или посетите <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>страницу релизов на GitHub</a>.</p>"
+      body_html: "<p>Не удалось получить последние заметки о выпуске. Пожалуйста,
+        попробуйте позже или посетите <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>страницу релизов на GitHub</a>.</p>"
       name: Заметки о выпуске недоступны
     terms:
       heading: Условия использования

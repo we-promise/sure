@@ -1,0 +1,24 @@
+---
+hu:
+  subscriptions:
+    self_hosted_alert: "%{product_name} önállóan üzemeltetett módban nem érhető el."
+    upgrade:
+      already_contributing: Már hozzájárulsz. Köszönjük!
+      page_title: "Frissítés"
+      account_settings: "Fiókbeállítások"
+      sign_out: "Kijelentkezés"
+      contribute_and_support_sure: "Járulj hozzá és támogasd a Sure-t"
+      cta: "Folytasd ennek a kódbázisnak a fejlesztésének támogatását!"
+      header:
+        support: "Támogasd"
+        sure: "Sure"
+        today: "ma"
+      redirect_to_stripe: "A következő lépésben átirányítunk a Stripe-ra, amely kezeli a bankkártyás fizetéseket."
+      trialing: "Az adataid %{days} nap múlva törlésre kerülnek"
+      trial_over: "A próbaidőszakod lejárt"
+    create:
+      welcome: "Üdvözlünk a Sure-ban!"
+      trial_already_used: "Már elindítottál vagy befejezted egy próbaidőszakot. A folytatáshoz kérlek frissítsd az előfizetésedet."
+    success:
+      welcome_with_contribution: "Üdvözlünk a Sure-ban! Köszönjük a hozzájárulásodat."
+      contribution_failed: "Hiba történt a hozzájárulás feldolgozása során. Kérlek próbáld újra."

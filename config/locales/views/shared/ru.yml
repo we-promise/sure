@@ -28,6 +28,7 @@ ru:
       singular: Семья
     money_field:
       label: Сумма
+    preview: Просмотр
     require_admin: Только администраторы могут выполнить это действие
     sync_toast:
       message: Ваши данные были обновлены

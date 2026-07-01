@@ -1,0 +1,8 @@
+---
+hu:
+  admin:
+    invitations:
+      destroy:
+        success: "Meghívó törölve."
+      destroy_all:
+        success: "A család összes meghívója törölve."

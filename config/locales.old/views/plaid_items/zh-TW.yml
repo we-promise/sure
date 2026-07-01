@@ -1,0 +1,28 @@
+---
+zh-TW:
+  plaid_items:
+    create:
+      success: 帳戶連結成功。請稍候，系統正在進行同步。
+    destroy:
+      success: 帳戶已排定刪除。
+    plaid_item:
+      add_new: 新增連線
+      confirm_accept: 刪除金融機構
+      confirm_body: 這將會永久刪除此群組中的所有帳戶及相關資料。
+      confirm_title: 確定要刪除金融機構嗎？
+      connection_lost: 連線中斷
+      connection_lost_description: 此連線已失效。您需要刪除此連線並重新新增，才能繼續同步資料。
+      delete: 刪除
+      error: 同步資料時發生錯誤
+      no_accounts_description: 我們無法從此金融機構載入任何帳戶。
+      no_accounts_title: 找不到帳戶
+      requires_update: 重新連線
+      status: "%{timestamp} 前已同步"
+      status_never: 需要同步資料
+      syncing: 同步中...
+      update: 更新
+    select_existing_account:
+      title: "將 %{account_name} 連結至 Plaid"
+      description: 選擇一個 Plaid 帳戶來連結至您現有的帳戶
+      cancel: 取消
+      link_account: 連結帳戶

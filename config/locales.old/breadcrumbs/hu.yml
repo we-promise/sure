@@ -1,0 +1,21 @@
+---
+hu:
+  breadcrumbs:
+    ai_prompts: AI promptok
+    api_key: API kulcs
+    bank_sync: Bankszinkronizáció
+    budgets: Költségvetések
+    categorize: Kategorizálás
+    dashboard: Irányítópult
+    exports: Exportálások
+    guides: Útmutatók
+    home: Kezdőlap
+    imports: Importálások
+    intro: Bemutató
+    llm_usage: LLM használat
+    merchants: Kereskedők
+    profile: Profil adatok
+    reports: Jelentések
+    security: Biztonság
+    self_hosting: Saját üzemeltetés
+    transactions: Tranzakciók

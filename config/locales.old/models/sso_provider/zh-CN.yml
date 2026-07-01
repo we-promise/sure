@@ -1,0 +1,12 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: SAML 提供商需要 IdP Metadata URL 或 IdP SSO URL 其中之一
+              saml_cert_required: 如果不使用元数据 URL，则需要 IdP Certificate 或 Certificate Fingerprint 其中之一
+              metadata_url_invalid: IdP Metadata URL 必须是有效的 URL
+              sso_url_invalid: IdP SSO URL 必须是有效的 URL

@@ -1,0 +1,19 @@
+ro:
+  activerecord:
+    attributes:
+      user:
+        email: Email
+        family: Familie
+        family_id: Familie
+        first_name: Prenume
+        last_name: Nume de familie
+        password: Parolă
+        password_confirmation: Confirmare parolă
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: Administratorul nu poate șterge contul cât timp există alți utilizatori. Te rugăm să ștergi toți membrii mai întâi.
+            profile_image:
+              invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de %{max_megabytes}MB

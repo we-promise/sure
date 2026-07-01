@@ -1,0 +1,127 @@
+---
+en:
+  providers:
+    akahu:
+      name: Akahu
+      description: Connect New Zealand bank accounts via Akahu
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu Connection
+  akahu_account:
+    fallback: Akahu account
+  akahu_entry:
+    notes:
+      reference: Reference
+      particulars: Particulars
+      code: Code
+      other_account: Other account
+  akahu_item:
+    errors:
+      account_processing_failed: Could not sync Akahu account
+      account_sync_schedule_failed: Could not schedule Akahu account sync
+      pending_transactions_failed: Could not fetch Akahu pending transactions
+      transactions_failed: Could not fetch Akahu transactions
+      sync_failed: Could not sync Akahu connection
+    sync_status:
+      no_accounts: No accounts found
+      all_synced:
+        one: 1 account synced
+        other: "%{count} accounts synced"
+      partial: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: No institutions connected
+      one: 1 institution
+      count:
+        one: 1 institution
+        other: "%{count} institutions"
+  akahu_items:
+    provider_panel:
+      default_connection_name: Akahu Connection
+      add_connection: Add Akahu connection
+      update_connection: Update connection
+      connection_name_label: Connection name
+      connection_name_placeholder: Main Akahu
+      app_token_label: App Token
+      app_token_placeholder: Paste your Akahu app token
+      keep_app_token_placeholder: Leave blank to keep the existing app token
+      user_token_label: User Token
+      user_token_placeholder: Paste your Akahu user token
+      keep_user_token_placeholder: Leave blank to keep the existing user token
+      setup_accounts: Setup accounts
+      syncing: Syncing...
+      sync: Sync
+      disconnect: Disconnect
+      disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+    create:
+      success: Akahu connection saved.
+    update:
+      success: Akahu connection updated.
+    destroy:
+      success: Scheduled Akahu connection for deletion.
+      unlink_failed: Could not disconnect Akahu connection
+    select_accounts:
+      title: Link Akahu accounts
+      description: Choose the Akahu accounts to add.
+      no_accounts_found: No unlinked Akahu accounts were found.
+      no_credentials_configured: Configure Akahu in provider settings first.
+      cancel: Cancel
+      link_accounts: Link accounts
+    link_accounts:
+      success:
+        one: Linked 1 Akahu account.
+        other: "Linked %{count} Akahu accounts."
+      no_accounts_selected: Select at least one account.
+      no_credentials_configured: Configure Akahu in provider settings first.
+      unsupported_account_type: Akahu does not support that account type.
+      link_failed: No accounts were linked.
+    select_existing_account:
+      title: "Link Akahu account to %{account_name}"
+      description: Choose an unlinked Akahu account to connect to this account.
+      no_accounts_found: No unlinked Akahu accounts were found.
+      no_credentials_configured: Configure Akahu in provider settings first.
+      account_already_linked: This account is already linked to a provider.
+      cancel: Cancel
+      link_account: Link account
+    link_existing_account:
+      success: "Linked Akahu account to %{account_name}."
+      account_already_linked: This account is already linked to a provider.
+      akahu_account_already_linked: This Akahu account is already linked.
+    setup_accounts:
+      title: Set Up Akahu Accounts
+      subtitle: Choose how each Akahu account should appear in Sure.
+      no_credentials: Configure Akahu credentials first.
+      api_error: Could not fetch Akahu accounts.
+      fetch_failed: Could not fetch accounts
+      no_accounts_to_setup: No accounts to set up
+      all_accounts_linked: All Akahu accounts are already linked.
+      choose_account_type: Choose an account type
+      choose_account_type_description: Skip accounts you do not want to track.
+      account_type_label: Account type
+      account_types:
+        skip: Skip
+        depository: Cash
+        credit_card: Credit Card
+        investment: Investment
+        loan: Loan
+      create_accounts: Create accounts
+      cancel: Cancel
+    complete_account_setup:
+      success:
+        one: Created 1 Akahu account.
+        other: "Created %{count} Akahu accounts."
+      all_skipped: No Akahu accounts were created.
+      no_accounts: No Akahu accounts were selected.
+      creation_failed: Could not create Akahu accounts.
+    akahu_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      error: Error
+      status_with_summary: "Synced %{timestamp} ago · %{summary}"
+      status_never: Never synced
+      delete: Delete
+      setup_needed: Account setup needed
+      setup_description: "%{linked} of %{total} accounts linked."
+      setup_action: Setup accounts
+      no_accounts_title: No accounts imported yet
+      no_accounts_description: Fetch Akahu accounts and choose which ones to link.

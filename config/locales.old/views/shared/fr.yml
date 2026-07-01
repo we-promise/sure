@@ -1,0 +1,42 @@
+---
+fr:
+  concerns:
+    self_hostable:
+      redis_configured: Redis est maintenant correctement configuré ! Vous pouvez maintenant configurer votre application Sure.
+  shared:
+    cancel: Annuler
+    confirm_modal:
+      accept: Confirmer
+      body_html: "<p>Vous ne pourrez pas annuler cette action</p>"
+      cancel: Annuler
+      title: Êtes-vous sûr ?
+    custom_confirm:
+      default_body: Ceci n’est pas réversible.
+      default_btn_text: Confirmer
+      default_title: Êtes-vous sûr?
+    exchange_rate_tabs:
+      calculate_rate_tab: Calculer le taux FX
+      convert_tab: Convertir avec le taux FX
+      destination_amount: Montant de destination
+      exchange_rate: Taux de change
+      exchange_rate_help: Choisissez comment entrer le montant.
+    family_moniker:
+      group_plural: Groupes
+      group_singular: Groupe
+      plural: Familles
+      singular: Famille
+    money_field:
+      label: Montant
+    preview: Aperçu
+    require_admin: Seuls les administrateurs peuvent effectuer cette action
+    sync_toast:
+      message: Nouvelles données disponibles
+      refresh: Actualiser
+    syncing_notice:
+      syncing: Synchronisation des données de compte...
+    transaction_tabs:
+      expense: Dépense
+      income: Revenu
+      transfer: Transfert
+    trend_change:
+      no_change: pas de changement

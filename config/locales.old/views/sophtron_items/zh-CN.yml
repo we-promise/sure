@@ -1,0 +1,313 @@
+---
+zh-CN:
+  sophtron_items:
+    defaults:
+      name: Sophtron 连接
+    new:
+      title: 连接 Sophtron
+      user_id: User ID
+      user_id_placeholder: 粘贴您的 Sophtron User ID
+      access_key: Access Key
+      access_key_placeholder: 粘贴您的 Sophtron Access Key
+      connect: 连接
+      cancel: 取消
+    create:
+      success: Sophtron 连接创建成功
+    destroy:
+      success: Sophtron 连接已移除
+    update:
+      success: Sophtron 连接更新成功！您的账户正在重新连接。
+      errors:
+        blank_user_id: 请输入 Sophtron User ID。
+        invalid_user_id: 无效的 User ID。请检查您是否从 Sophtron 复制了完整的 User ID。
+        user_id_compromised: 该 User ID 可能已泄露、过期或已使用。请创建一个新的。
+        blank_access_key: 请输入 Sophtron Access Key。
+        invalid_access_key: 无效的 Access Key。请检查您是否从 Sophtron 复制了完整的 Access Key。
+        access_key_compromised: 该 Access Key 可能已泄露、过期或已使用。请创建一个新的。
+        update_failed: "更新连接失败：%{message}"
+        unexpected: 发生意外错误。请重试或联系支持。
+    edit:
+      user_id:
+        label: "Sophtron User ID："
+        placeholder: "请在此粘贴您的 Sophtron User ID..."
+        help_text: "User ID 应该是以字母和数字开头的长字符串"
+      access_key:
+        label: "Sophtron Access Key："
+        placeholder: "请在此粘贴您的 Sophtron Access Key..."
+        help_text: "Access Key 应该是以字母和数字开头的长字符串"
+    index:
+      title: Sophtron 连接
+    loading:
+      loading_message: 正在加载 Sophtron 账户...
+      loading_title: 正在加载
+    link_accounts:
+      all_already_linked:
+        one: 选定账户（%{names}）已关联
+        other: 所有 %{count} 个选定账户都已关联：%{names}
+      api_error: "API 连接错误"
+      invalid_account_names:
+        one: 无法关联空名称账户
+        other: 无法关联 %{count} 个空名称账户
+      link_failed: 关联账户失败
+      no_accounts_selected: 请至少选择一个账户
+      partial_invalid: "成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count} 个账户名称无效"
+      partial_success: "成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}"
+      success:
+        one: "成功关联 %{count} 个账户"
+        other: "成功关联 %{count} 个账户"
+      no_credentials_configured: "请先在提供商设置中配置您的 Sophtron API User ID 和 Access Key。"
+      no_accounts_found: 未找到账户。请检查您的 Access Key 配置。
+      no_access_key: Sophtron Access Key 未配置。请在设置中配置。
+      no_user_id: Sophtron User ID 未配置。请在设置中配置。
+      no_institution_connected: 请先使用 Sophtron 连接一个银行机构。
+    connect:
+      cancel: 取消
+      captcha: 验证码
+      connect: 连接
+      institution_search_label: 机构
+      institution_search_placeholder: 按银行名称搜索
+      no_institutions: 未找到匹配的机构。
+      password: 密码
+      search: 搜索
+      search_too_short: 请至少输入两个字符进行搜索。
+      title: 连接 Sophtron 机构
+      username: 用户名
+    connect_institution:
+      api_error: "Sophtron 连接失败：%{message}"
+      missing_parameters: 请选择一个机构并输入您的银行登录凭据。
+    connection_status:
+      api_error: "API 连接错误：%{message}"
+      attempt: 第 %{attempt} 次，共 %{max} 次
+      check_again: 再次检查
+      failed: Sophtron 无法完成此机构连接。
+      failed_timeout: 在机构完成登录时，Sophtron 超时。
+      timeout: Sophtron 未能在预期时间内完成连接。您可以再次检查，或稍后重连。
+      title: 正在连接 Sophtron
+      waiting: Sophtron 仍在连接您的机构。
+    mfa:
+      captcha: 验证码文本
+      captcha_alt: Sophtron 验证码
+      phone_confirmed: 我已通过电话确认
+      submit: 提交
+      title: Sophtron 验证
+      token: 验证码
+    submit_mfa:
+      api_error: "验证失败：%{message}"
+      invalid_security_answers: 安全问题答案缺失或过长。
+      unknown_challenge: 未知的 Sophtron 验证步骤。
+    sophtron_item:
+      accounts_need_setup: 账户需要设置
+      automatic_sync: 使用自动同步
+      delete: 删除连接
+      deletion_in_progress: 正在删除...
+      error: 错误
+      no_accounts_description: 此连接尚未关联任何账户。
+      no_accounts_title: 无账户
+      manual_sync: 手动同步
+      manual_sync_action: 需要手动同步
+      manual_sync_action_for: "为 %{institution} 需要手动同步"
+      automatic_sync_for: "为 %{institution} 使用自动同步"
+      setup_action: 设置新账户
+      setup_description: 已关联 %{linked} / %{total} 个账户。请选择新导入的 Sophtron 账户类型。
+      setup_needed: 新账户已准备好设置
+      status: "%{timestamp} 前已同步"
+      status_never: 从未同步
+      status_with_summary: "%{timestamp} 前上次同步 • %{summary}"
+      sync_now: 立即同步
+      syncing: 正在同步...
+      total: 总计
+      unlinked: 未关联
+    preload_accounts:
+      preload_accounts: 预加载账户
+      api_error: "API 连接错误"
+      unexpected_error: "发生意外错误"
+      no_credentials_configured: "请先在提供商设置中配置您的 Sophtron API User ID 和 Access Key。"
+      no_accounts_found: 未找到账户。请检查您的 Access Key 配置。
+      no_access_key: Sophtron Access Key 未配置。请在设置中配置。
+      no_user_id: Sophtron User ID 未配置。请在设置中配置。
+    select_accounts:
+      accounts_selected: 已选择账户
+      api_error: "API 连接错误"
+      unexpected_error: "发生意外错误"
+      cancel: 取消
+      configure_name_in_sophtron: 无法导入 - 请先在 Sophtron 中配置账户名称
+      description: 选择您想链接到 %{product_name} 账户的账户。
+      link_accounts: 链接所选账户
+      no_accounts_found: 未找到账户。请检查您的 Access Key 配置。
+      no_access_key: Sophtron Access Key 未配置。请在设置中配置。
+      no_user_id: Sophtron User ID 未配置。请在设置中配置。
+      no_credentials_configured: "请先在提供商设置中配置您的 Sophtron API User ID 和 Access Key。"
+      no_institution_connected: 请先使用 Sophtron 连接一个银行机构。
+      no_name_placeholder: （无名称）
+      title: 选择 Sophtron 账户
+    select_existing_account:
+      account_already_linked: 此账户已关联到某个提供商
+      all_accounts_already_linked: 所有 Sophtron 账户都已关联
+      api_error: "API 连接错误"
+      cancel: 取消
+      configure_name_in_sophtron: 无法导入 - 请先在 Sophtron 中配置账户名称
+      description: 选择一个 Sophtron 账户与此账户关联。交易将自动同步并去重。
+      link_account: 关联账户
+      no_account_specified: 未指定账户
+      no_accounts_found: 未找到 Sophtron 账户。请检查您的 Access Key 配置。
+      no_access_key: Sophtron Access Key 未配置。请在设置中配置。
+      no_user_id: Sophtron User ID 未配置。请在设置中配置。
+      no_institution_connected: 请先使用 Sophtron 连接一个银行机构。
+      no_name_placeholder: （无名称）
+      title: 将 %{account_name} 与 Sophtron 关联
+      unexpected_error: "发生意外错误"
+    link_existing_account:
+      account_already_linked: 此账户已关联到某个提供商
+      api_error: "API 连接错误"
+      unexpected_error: "发生意外错误"
+      invalid_account_name: 无法关联空名称账户
+      sophtron_account_already_linked: 此 Sophtron 账户已关联到另一个账户
+      sophtron_account_not_found: 未找到 Sophtron 账户
+      missing_parameters: 缺少必需参数
+      no_institution_connected: 请先使用 Sophtron 连接一个银行机构。
+      success: "已成功将 %{account_name} 与 Sophtron 关联"
+    setup_accounts:
+      account_type_label: "账户类型："
+      all_accounts_linked: "您的所有 Sophtron 账户都已完成设置。"
+      api_error: "API 连接错误"
+      unexpected_error: "发生意外错误"
+      fetch_failed: "获取账户失败"
+      no_accounts_to_setup: "没有需要设置的账户"
+      no_access_key: "Sophtron Access Key 未配置。请检查您的连接设置。"
+      no_user_id: "Sophtron User ID 未配置。请检查您的连接设置。"
+      no_institution_connected: "Sophtron 机构尚未连接。"
+      account_types:
+        skip: 跳过此账户
+        depository: 支票账户或储蓄账户
+        credit_card: 信用卡
+        investment: 投资账户
+        loan: 贷款或抵押贷款
+        other_asset: 其他资产
+      subtype_labels:
+        depository: "账户子类型："
+        credit_card: ""
+        investment: "投资类型："
+        loan: "贷款类型："
+        other_asset: ""
+      subtype_messages:
+        credit_card: "信用卡将自动设为信用卡账户。"
+        other_asset: "其他资产无需额外选项。"
+      balance: 余额
+      cancel: 取消
+      choose_account_type: "为每个 Sophtron 账户选择正确的账户类型："
+      create_accounts: 创建账户
+      creating_accounts: 正在创建账户...
+      historical_data_range: "历史数据范围："
+      subtitle: 为您导入的账户选择正确的账户类型
+      sync_start_date_help: 选择您希望向前同步交易历史的时间范围。最多可用 3 年历史记录。
+      sync_start_date_label: "从以下日期开始同步交易："
+      title: 设置您的 Sophtron 账户
+    complete_account_setup:
+      all_skipped: "所有账户都已跳过，未创建任何账户。"
+      creation_failed: "创建账户失败"
+      api_error: "API 连接错误"
+      unexpected_error: "发生意外错误"
+      no_accounts: "没有需要设置的账户。"
+      success: "成功创建 %{count} 个账户。"
+    sync:
+      already_running: Sophtron 手动同步正在进行中。
+      api_error: "Sophtron 手动同步失败：%{message}"
+      failed: Sophtron 手动同步失败
+      no_linked_accounts: 此 Sophtron 机构没有任何已关联账户可同步。
+      processing_failed: Sophtron 手动同步无法处理刷新后的交易。
+      success: 已开始同步
+    toggle_manual_sync:
+      success_disabled: Sophtron 机构将自动同步。
+      success_enabled: Sophtron 机构现在需要手动同步。
+    manual_sync_complete:
+      close: 关闭
+      description: 账户余额会在后台继续更新完成。
+      message: 交易已在 Sophtron 验证后下载。
+      title: Sophtron 同步已开始
+    sophtron_setup_required:
+      title: 需要设置 Sophtron
+      message: >
+        要完成 Sophtron 连接设置，请前往提供商设置页面，并按照说明授权和配置您的 Sophtron 连接。
+      go_to_provider_settings: 前往提供商设置
+      heading: "未配置 User ID 和 Access Key"
+      description: "在链接 Sophtron 账户之前，您需要先配置 Sophtron User ID 和 Access Key。"
+      setup_steps_title: "设置步骤："
+      step_1_html: "前往 <strong>设置 → 银行同步提供商</strong>"
+      step_2_html: "找到 <strong>Sophtron</strong> 区块"
+      step_3_html: "输入您的 Sophtron User ID 和 Access Key"
+      step_4: "返回这里链接您的账户"
+    api_error:
+      title: "Sophtron 连接错误"
+      unable_to_connect: "无法连接到 Sophtron"
+      institution_unable_to_connect: "无法连接到该机构"
+      common_issues_title: "常见问题："
+      incorrect_user_id: "User ID 错误：请在提供商设置中核对您的 User ID"
+      invalid_access_key: "Access Key 无效：请在提供商设置中检查您的 Access Key"
+      expired_credentials: "凭据已过期：请从 Sophtron 生成新的 User ID 和 Access Key"
+      network_issue: "网络问题：请检查您的互联网连接"
+      service_down: "服务不可用：Sophtron API 可能暂时不可用"
+      bad_credentials: "银行登录凭据：请检查用户名和密码是否正确"
+      verification_code: "验证码：请确保在过期前输入了最新验证码"
+      institution_timeout: "机构超时：银行登录页未能及时完成"
+      unsupported_mfa: "MFA 支持：Sophtron 可能不支持该机构当前的验证流程"
+      check_provider_settings: "检查提供商设置"
+      try_again: "请再次尝试连接"
+    select_option: "选择 %{type}"
+    subtype: "子类型"
+    type: "类型"
+    sophtron_panel:
+      setup_instructions_title: "设置说明："
+      setup_instructions:
+        step_1_html: '访问 <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> 获取您的 API 凭据'
+        step_2: "从 Sophtron 账户设置中复制您的 User ID 和 Access Key"
+        step_3: "将凭据粘贴到下方并点击保存；Sure 会自动创建或复用您的 Sophtron Customer ID"
+      field_descriptions_title: "字段说明："
+      field_descriptions:
+        user_id_html: "<strong>User ID：</strong>您的 Sophtron User ID 凭据"
+        access_key_html: "<strong>Access Key：</strong>您的 Sophtron Access Key 凭据"
+        base_url_html: "<strong>Base URL：</strong>Sophtron API 端点 URL，通常为 https://api.sophtron.com/api"
+      fields:
+        user_id:
+          label: "User ID"
+          placeholder_new: "粘贴您的 Sophtron User ID"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Access Key"
+          placeholder_new: "粘贴您的 Sophtron Access Key"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "Base URL"
+          placeholder: "https://api.sophtron.com/api"
+      save: "保存配置"
+      update: "更新配置"
+    syncer:
+      manual_sync_required: "此机构需要手动进行 Sophtron 同步；自动同步时将跳过这些账户。"
+      importing_accounts: "正在从 Sophtron 导入账户..."
+      checking_account_configuration: "正在检查账户配置..."
+      accounts_need_setup: "%{count} 个账户需要设置"
+      processing_transactions: "正在处理已关联账户的交易..."
+      calculating_balances: "正在计算已关联账户的余额..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "未知交易"
+    render_connection_timeout:
+      timeout: "连接超时。请重试。"
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "无法关联 %{count} 个空名称账户"
+        other: "无法关联 %{count} 个空名称账户"
+      partial_invalid: "已关联 %{created_count} 个账户。%{already_linked_count} 个已关联，%{invalid_count} 个名称无效。"
+      partial_success: "已关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联。"
+      success:
+        one: "成功关联 %{count} 个账户。"
+        other: "成功关联 %{count} 个账户。"
+      all_already_linked:
+        one: "所选账户已关联"
+        other: "所有 %{count} 个所选账户都已关联"
+      link_failed: "关联账户失败"
+    start_manual_sync:
+      already_running: "同步已在进行中。"
+      no_linked_accounts: "没有可同步的已关联账户。"
+      api_error: "API 错误：%{message}"
+    start_manual_sync_for_account:
+      failed: "同步账户失败"

@@ -1,0 +1,159 @@
+---
+zh-CN:
+  simplefin_items:
+    new:
+      title: 连接 SimpleFIN
+      setup_token: 设置令牌
+      setup_token_placeholder: 粘贴您的 SimpleFIN 设置令牌
+      connect: 连接
+      cancel: 取消
+    create:
+      success: SimpleFIN 连接添加成功！您的账户将在后台同步完成后很快显示。
+      errors:
+        blank_token: 请输入 SimpleFIN 设置令牌。
+        invalid_token: 设置令牌无效。请确认您已从 SimpleFIN Bridge 复制完整令牌。
+        token_compromised: 设置令牌可能已泄露、过期或已使用过。请创建新的令牌。
+        create_failed: 连接失败：%{message}
+        unexpected: 发生意外错误，请稍后再试。
+    destroy:
+      success: SimpleFIN 连接将被移除
+    update:
+      success: SimpleFIN 连接更新成功！您的账户正在重新连接。
+      errors:
+        blank_token: 请输入 SimpleFIN 设置令牌。
+        invalid_token: 设置令牌无效。请确认您已从 SimpleFIN Bridge 复制完整令牌。
+        token_compromised: 设置令牌可能已泄露、过期或已使用过。请创建新的令牌。
+        update_failed: 更新连接失败：%{message}
+        unexpected: 发生意外错误，请稍后再试。
+    edit:
+      setup_token:
+        label: SimpleFIN 设置令牌：
+        placeholder: 在此粘贴您的 SimpleFIN 设置令牌……
+        help_text: 令牌应为以字母和数字开头的长字符串
+      title: 更新 SimpleFIN 连接
+      header_subtitle: 获取新的设置令牌以重新连接您的 SimpleFIN 账户
+      connection_needs_update: 您的 SimpleFIN 连接需要更新：
+      step_1_html: 前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 创建新的设置令牌
+      step_2: 复制令牌并粘贴到下方
+      step_3: 点击“更新”以恢复访问
+      update: 更新
+      cancel: 取消
+    setup_accounts:
+      title: 设置您的 SimpleFIN 账户
+      header_subtitle: 为导入的账户选择正确的账户类型
+      choose_account_type: 为每个 SimpleFIN 账户选择正确的账户类型：
+      account_type_checking_savings: 支票账户或储蓄账户
+      account_type_checking_savings_desc: 普通银行账户
+      account_type_credit_card: 信用卡
+      account_type_credit_card_desc: 信用卡账户
+      account_type_investment: 投资账户
+      account_type_investment_desc: 券商、401(k)、IRA 账户
+      account_type_loan: 贷款或抵押贷款
+      account_type_loan_desc: 债务账户
+      account_type_other_asset: 其他资产
+      account_type_other_asset_desc: 其他所有类型
+      transaction_history_title: 交易历史：
+      transaction_history_description_html: SimpleFIN 通常会提供<strong>60–90 天</strong>的交易历史，具体取决于您的银行。完成初始设置后，新的交易将继续自动同步。历史数据可用性因机构和账户类型而异。
+      account_type_label: 账户类型：
+      create_accounts: 创建账户
+      creating_accounts: 正在创建账户……
+      cancel: 取消
+      account_card:
+        balance: 余额
+      activity:
+        recent:
+          one: 1 笔交易 • 最近于 %{when}
+          other: "%{count} 笔交易 • 最近于 %{when}"
+        dormant: "%{days} 天内无活动"
+        empty: 尚未导入交易
+        likely_closed: 无近期活动且余额为零——这可能是已关闭或已替换的卡片
+        today: 今天
+        yesterday: 昨天
+        days_ago:
+          one: 1 天前
+          other: "%{count} 天前"
+      stale_accounts:
+        title: 不再属于 SimpleFIN 的账户
+        description: 这些账户仍存在于您的数据库中，但已不再由 SimpleFIN 提供。这种情况可能发生在上游账户配置变更时。
+        action_prompt: 您希望怎么处理？
+        action_delete: 删除账户及其所有交易
+        action_move: 将交易移动到：
+        action_skip: 暂时跳过
+        transaction_count:
+          one: "%{count} 笔交易"
+          other: "%{count} 笔交易"
+    complete_account_setup:
+      all_skipped: 所有账户都已跳过。未创建任何账户。
+      no_accounts: 没有可设置的账户。
+      success:
+        one: 成功创建 %{count} 个 SimpleFIN 账户！您的交易和持仓正在后台导入。
+        other: 成功创建 %{count} 个 SimpleFIN 账户！您的交易和持仓正在后台导入。
+      stale_accounts_processed: 过期账户：已删除 %{deleted} 个，已移动 %{moved} 个。
+      stale_accounts_errors:
+        one: "%{count} 个过期账户操作失败，请查看日志了解详情。"
+        other: "%{count} 个过期账户操作失败，请查看日志了解详情。"
+    simplefin_item:
+      add_new: 添加新连接
+      confirm_accept: 删除连接
+      confirm_body: 这将永久删除此组中的所有账户及其相关数据。
+      confirm_title: 删除 SimpleFIN 连接？
+      delete: 删除
+      deletion_in_progress: （正在删除中……）
+      error: 同步数据时发生错误
+      no_accounts_description: 此连接尚未包含任何已同步账户。
+      no_accounts_title: 未找到账户
+      requires_update: 重新连接
+      setup_needed: 新账户已准备就绪，需要设置
+      setup_description: 为您新导入的 SimpleFIN 账户选择账户类型。
+      setup_action: 设置新账户
+      setup_accounts_menu: 设置账户
+      more_accounts_available:
+        one: 还有 %{count} 个账户可设置
+        other: 还有 %{count} 个账户可设置
+      accounts_skipped_tooltip: 某些账户因同步错误被跳过
+      accounts_skipped_label: 已跳过：%{count}
+      rate_limited_ago: （%{time} 前被限流）
+      rate_limited_recently: 最近被限流
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 • %{summary}
+      syncing: 正在同步……
+      update: 更新
+      stale_pending_note: （不计入预算）
+      stale_pending_accounts: 在：%{accounts}
+      reconciled_details_note: （详情请查看同步摘要）
+      duplicate_accounts_skipped: 某些账户因重复被跳过——请使用“链接现有账户”进行合并。
+    select_existing_account:
+      title: 将 %{account_name} 连接到 SimpleFIN
+      description: 选择一个 SimpleFIN 账户以连接到您现有的账户
+      cancel: 取消
+      link_account: 连接账户
+      no_accounts_found: 此 %{moniker} 未找到任何 SimpleFIN 账户。
+      wait_for_sync: 如果您刚刚连接或同步，请等待同步完成后再试。
+      unlink_to_move: 若要移动连接，请先在账户操作菜单中取消其连接。
+      all_accounts_already_linked: 所有 SimpleFIN 账户似乎都已连接。
+      currently_linked_to: 当前连接到：%{account_name}
+      check_provider_health: 请检查您的 API 凭据和同步状态。
+    link_existing_account:
+      success: 账户已成功连接到 SimpleFIN
+      errors:
+        only_manual: 只有手动账户才能连接
+        different_provider: 此账户已连接到其他提供商。请先取消与该提供商的连接，然后再连接到 SimpleFIN。
+        invalid_simplefin_account: 所选 SimpleFIN 账户无效
+    dismiss_replacement_suggestion:
+      dismissed: 已忽略替换建议
+    replacement_prompt:
+      title: 您的 %{institution} 卡片可能已被替换
+      description: “%{account_name}” 连接到 “%{old_name}”，该卡片近期没有活动且余额为零。现在，同一机构中有一张新卡 “%{new_name}” 已激活。重新关联可保留您的历史记录。
+      relink: 重新关联到新卡
+      confirm_title: 重新关联到新卡？
+      confirm_body: “%{account_name}” 将连接到 “%{new_name}”。您的交易历史将保留，未来交易将来自新卡。
+      dismiss_aria: 忽略替换建议
+    reconciled_status:
+      message:
+        one: 已勾稽 %{count} 笔重复待处理交易
+        other: 已勾稽 %{count} 笔重复待处理交易
+    stale_pending_status:
+      message:
+        one: "%{count} 笔待处理交易早于 %{days} 天"
+        other: "%{count} 笔待处理交易早于 %{days} 天"

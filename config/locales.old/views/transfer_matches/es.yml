@@ -1,0 +1,7 @@
+---
+es:
+  transfer_matches:
+    new:
+      header:
+        title: Vincular transferencia o pago
+        subtitle: Vincula la transacción correspondiente en otra cuenta o crea una si no existe.

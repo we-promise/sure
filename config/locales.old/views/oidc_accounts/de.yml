@@ -1,0 +1,33 @@
+---
+de:
+  oidc_accounts:
+    link:
+      title_link: OIDC-Konto verknüpfen
+      title_create: Konto erstellen
+      verify_heading: Identität bestätigen
+      verify_description_html: "Um Ihr %{provider}-Konto%{email_suffix} zu verknüpfen, bestätigen Sie bitte Ihre Identität mit Ihrem Passwort."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-Mail
+      email_placeholder: E-Mail-Adresse eingeben
+      password_label: Passwort
+      password_placeholder: Passwort eingeben
+      verify_hint: Dies stellt sicher, dass nur Sie externe Konten mit Ihrem Profil verknüpfen können.
+      submit_link: Konto verknüpfen
+      create_heading: Neues Konto erstellen
+      create_description_html: "Kein Konto mit der E-Mail <strong>%{email}</strong> gefunden. Klicken Sie unten, um ein neues Konto mit Ihrer %{provider}-Identität zu erstellen."
+      info_email: "E-Mail:"
+      info_name: "Name:"
+      submit_create: Konto erstellen
+      account_creation_disabled: Die Kontoerstellung über Single Sign-On ist deaktiviert. Bitte kontaktieren Sie einen Administrator.
+      cancel: Abbrechen
+    new_user:
+      title: Konto vervollständigen
+      heading: Konto erstellen
+      description: Bitte bestätigen Sie Ihre Daten, um die Kontoerstellung mit Ihrer %{provider}-Identität abzuschließen.
+      email_label: E-Mail (vom SSO-Anbieter)
+      first_name_label: Vorname
+      first_name_placeholder: Vorname eingeben
+      last_name_label: Nachname
+      last_name_placeholder: Nachname eingeben
+      submit: Konto erstellen
+      cancel: Abbrechen

@@ -1,0 +1,10 @@
+---
+hu:
+  passwords:
+    edit:
+      password: Új jelszó
+      password_challenge: Jelenlegi jelszó
+      submit: Jelszó visszaállítása
+      title: Jelszó frissítése
+    update:
+      success: A jelszavad sikeresen visszaállítva.

@@ -1,0 +1,11 @@
+---
+nl:
+  address:
+    attributes:
+      country: Land
+      line1: Adresregel 1
+      line2: Adresregel 2
+      locality: Plaats
+      postal_code: Postcode
+      region: Regio
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

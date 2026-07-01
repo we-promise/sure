@@ -1,0 +1,20 @@
+---
+zh-CN:
+  cryptos:
+    edit:
+      edit: 编辑%{account}
+    new:
+      title: 请输入账户余额
+    form:
+      subtype_label: 账户类型
+      subtype_prompt: 选择账户类型
+      subtype_none: 无
+      tax_treatment_label: 税务处理
+      tax_treatment_hint: 大多数加密资产属于应税账户。若持有在税收优惠账户中，请选择其他选项。
+    subtypes:
+      wallet:
+        short: 钱包
+        long: 加密钱包
+      exchange:
+        short: 交易所
+        long: 加密交易所

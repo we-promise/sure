@@ -1,0 +1,40 @@
+---
+nl:
+  trades:
+    form:
+      account: Overboekingsaccount (optioneel)
+      account_prompt: Account zoeken
+      amount: Bedrag
+      holding: Ticker symbool
+      price: Prijs per aandeel
+      qty: Hoeveelheid
+      submit: Transactie toevoegen
+      ticker_placeholder: AAPL
+      type: Type
+    header:
+      buy: Kopen
+      current_market_price_label: Huidige Marktprijs
+      overview: Overzicht
+      purchase_price_label: Aankoopprijs
+      purchase_qty_label: Aankoophoeveelheid
+      sell: Verkopen
+      symbol_label: Symbool
+      total_return_label: Ongerealiseerde winst/verlies
+    new:
+      title: Nieuwe transactie
+    show:
+      additional: Aanvullend
+      category_label: Categorie
+      cost_per_share_label: Kosten per Aandeel
+      date_label: Datum
+      delete: Verwijderen
+      delete_subtitle: Deze actie kan niet ongedaan worden gemaakt
+      delete_title: Transactie verwijderen
+      details: Details
+      exclude_subtitle: Deze transactie wordt niet meegenomen in rapporten en berekeningen
+      exclude_title: Uitsluiten van analyses
+      no_category: Geen categorie
+      note_label: Notitie
+      note_placeholder: Voeg hier eventuele aanvullende notities toe...
+      quantity_label: Hoeveelheid
+      settings: Instellingen

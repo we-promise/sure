@@ -1,0 +1,129 @@
+---
+ca:
+  rule:
+    conditions:
+      condition_group:
+        add_condition: Afegeix condició
+        all: totes
+        and_prefix: i
+        any: qualsevol
+        match: coincideixen
+        of_the_following_conditions: de les condicions següents
+  rules:
+    actions:
+      value_placeholder: Introdueix un valor
+    apply_all:
+      ai_cost_message: Això utilitzarà IA per categoritzar fins a %{transactions}
+        transaccions.
+      ai_cost_title: Estimació de cost d'IA
+      button: Aplica-les totes
+      confirm_button: Confirma i aplica-les totes
+      confirm_message: Estàs a punt d'aplicar %{count} regles que afecten %{transactions}
+        transaccions úniques. Confirma si vols continuar.
+      confirm_title: Aplica totes les regles
+      cost_unavailable_model: Estimació de cost no disponible per al model "%{model}".
+      cost_unavailable_no_provider: Estimació de cost no disponible (no hi ha proveïdor
+        d'LLM configurat).
+      cost_warning: Pots tenir costos. Consulta amb el proveïdor del model per als
+        preus més actualitzats.
+      estimated_cost: 'Cost estimat: ~$%{cost}'
+      success: Totes les regles s'han posat a la cua per executar-se
+      view_usage: Mostra l'historial d'ús
+    clear_ai_cache:
+      button: Buida la memòria cau d'IA
+      confirm_body: Segur que vols buidar la memòria cau d'IA? Això permetrà que les
+        regles d'IA tornin a processar totes les transaccions. Pot generar costos
+        d'API addicionals.
+      confirm_button: Buida la memòria cau
+      confirm_title: Vols buidar la memòria cau d'IA?
+      success: La memòria cau d'IA s'està netejant. Pot trigar uns instants.
+    condition_filters:
+      transaction_type:
+        equal_to: Igual a
+        expense: Despesa
+        income: Ingrés
+        transfer: Transferència
+    confirm:
+      ai_cost_no_estimate_html: Això utilitzarà IA per categoritzar %{count} transaccions.
+      ai_cost_title: Estimació de cost d'IA
+      ai_cost_with_estimate_html: 'Això utilitzarà IA per categoritzar %{count} transaccions.
+        Cost estimat: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Estàs a punt d'aplicar aquesta regla a <span class="text-primary
+        font-medium">%{count} %{resource}</span> que compleixen els criteris especificats.
+        Confirma si vols continuar amb aquest canvi.
+      confirm_changes: Confirma els canvis
+      cost_unavailable_model: Estimació de cost no disponible per al model "%{model}".
+      cost_unavailable_no_provider: Estimació de cost no disponible (no hi ha proveïdor
+        d'LLM configurat).
+      cost_warning: Pots tenir costos. Consulta amb el proveïdor del model per als
+        preus més actualitzats.
+      title: Confirma els canvis
+      title_with_name: Confirma els canvis a "%{name}"
+      view_usage_history: Mostra l'historial d'ús
+    destroy:
+      success: Regla eliminada
+    destroy_all:
+      success: Totes les regles eliminades
+    form:
+      add_action: Afegeix acció
+      add_condition: Afegeix condició
+      add_condition_group: Afegeix grup de condicions
+      all_past_and_future: Totes les %{resource} passades i futures
+      rule_name_label: Nom de la regla (opcional)
+      rule_name_placeholder: Introdueix un nom per a aquesta regla
+      starting_from: A partir de
+      then: ALESHORES
+    index:
+      ai_cost_warning: Les accions de regla amb IA tenen cost. Filtra el màxim possible
+        per evitar costos innecessaris.
+      delete_all_rules: Elimina totes les regles
+      new_rule: Nova regla
+      no_rules_description: Configura regles per executar accions a les teves transaccions
+        i altres dades a cada sincronització.
+      no_rules_title: Encara no hi ha regles
+      page_title: Regles
+      rules_heading: Regles
+      sort_by: 'Ordena per:'
+      sort_name: Nom
+      sort_updated_at: Data d'actualització
+      toggle_sort_direction: Commuta el sentit d'ordenació
+    no_action: Sense acció
+    no_condition: Sense condició
+    recent_runs:
+      columns:
+        date_time: Data/Hora
+        execution_type: Tipus
+        rule_name: Nom de la regla
+        status: Estat
+        transactions_counts:
+          blocked: Bloquejades
+          modified: Modificades
+          processed: Processades
+          queued: A la cua
+      description: Visualitza l'historial d'execució de les teves regles, incloent
+        l'estat d'èxit/fallada i els recomptes de transaccions.
+      execution_types:
+        manual: Manual
+        scheduled: Programada
+      statuses:
+        failed: Fallada
+        pending: Pendent
+        success: Èxit
+      title: Execucions recents
+      unnamed_rule: Regla sense nom
+    rule:
+      action_label_to: "%{label} a %{value}"
+      all_past_and_future: Totes les %{resource} passades i futures
+      and_more_actions:
+        one: i 1 acció més
+        other: i %{count} accions més
+      and_more_conditions:
+        one: i 1 condició més
+        other: i %{count} condicions més
+      delete: Elimina
+      edit: Edita
+      on_or_after: "%{resource} el %{date} o després"
+      re_apply_rule: Torna a aplicar la regla
+      then: ALESHORES
+    update:
+      success: Regla actualitzada

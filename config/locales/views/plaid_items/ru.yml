@@ -6,7 +6,8 @@ ru:
     destroy:
       success: Счета запланированы на удаление.
     errors:
-      link_token_generic: Не удалось открыть Plaid. Пожалуйста, попробуйте ещё раз. Если проблема сохраняется, проверьте логи сервера.
+      link_token_generic: Не удалось открыть Plaid. Пожалуйста, попробуйте ещё раз.
+        Если проблема сохраняется, проверьте логи сервера.
       link_token_with_message: 'Не удалось открыть подключение Plaid: %{message}'
     link_existing_account:
       already_linked: Этот счёт Plaid уже привязан

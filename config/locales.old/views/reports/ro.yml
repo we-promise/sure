@@ -1,0 +1,137 @@
+---
+ro:
+  reports:
+    index:
+      title: Rapoarte
+      subtitle: Informații complete despre sănătatea ta financiară
+      export: Exportă CSV
+      periods:
+        monthly: Lunar
+        quarterly: Trimestrial
+        ytd: Anul până în prezent
+        last_6_months: Ultimele 6 luni
+        custom: Interval personalizat
+      date_range:
+        from: De la
+        to: Până la
+      showing_period: "Se afișează date de la %{start} până la %{end}"
+    summary:
+      total_income: Venit total
+      total_expenses: Cheltuieli totale
+      net_savings: Economii nete
+      budget_performance: Performanța bugetului
+      vs_previous: față de perioada anterioară
+      income_minus_expenses: Venituri minus cheltuieli
+      of_budget_used: din buget utilizat
+      no_budget_data: Nu există date bugetare pentru această perioadă
+    comparison:
+      title: Comparație perioade
+      currency: "Monedă: %{symbol}"
+      income: Venituri
+      expenses: Cheltuieli
+      net_savings: Economii nete
+      current: Perioada curentă
+      previous: Perioada anterioară
+      no_data: Nu există date disponibile
+      status:
+        improved: Îmbunătățit
+        decreased: Scăzut
+        reduced: Redus
+        increased: Crescut
+    budget_performance:
+      title: Performanța bugetului
+      spent: Cheltuit
+      budgeted: Bugetat
+      remaining: Rămas
+      over_by: Depășit cu
+      suggested_daily: "%{amount} sugerat pe zi pentru %{days} zile rămase"
+      no_budgets: Nu sunt configurate categorii de buget pentru această lună
+      status:
+        good: Pe drumul cel bun
+        warning: Aproape de limită
+        over: Peste buget
+    trends:
+      title: Tendințe și Perspective
+      monthly_breakdown: Defalcare lunară
+      month: Lună
+      income: Venituri
+      expenses: Cheltuieli
+      net: Net
+      savings_rate: Rata de economisire
+      current: curent
+      avg_monthly_income: Venit mediu lunar
+      avg_monthly_expenses: Cheltuieli medii lunare
+      avg_monthly_savings: Economii medii lunare
+      no_data: Nu există date de tendință disponibile
+      spending_patterns: Modele de cheltuieli
+      weekday_spending: Cheltuieli în timpul săptămânii
+      weekend_spending: Cheltuieli în weekend
+      total: Total
+      avg_per_transaction: Medie per tranzacție
+      transactions: Tranzacții
+      insight_title: Perspectivă
+      insight_higher_weekend: "Cheltuiți cu %{percent}% mai mult per tranzacție în weekend decât în timpul săptămânii"
+      insight_higher_weekday: "Cheltuiți cu %{percent}% mai mult per tranzacție în timpul săptămânii decât în weekend"
+      insight_similar: "Cheltuielile dumneavoastră per tranzacție sunt similare în timpul săptămânii și în weekend"
+      no_spending_data: Nu există date de cheltuieli disponibile pentru această perioadă
+    empty_state:
+      title: Nu există date disponibile
+      description: Începeți să vă urmăriți finanțele adăugând tranzacții sau conectând conturile pentru a vedea rapoarte complete
+      add_transaction: Adaugă tranzacție
+      add_account: Adaugă cont
+    transactions_breakdown:
+      title: Defalcarea tranzacțiilor
+      no_transactions: Nu s-au găsit tranzacții pentru perioada și filtrele selectate
+      filters:
+        title: Filtre
+        category: Categorie
+        account: Cont
+        tag: Etichetă
+        amount_min: Suma minimă
+        amount_max: Suma maximă
+        date_range: Interval de date
+        all_categories: Toate categoriile
+        all_accounts: Toate conturile
+        all_tags: Toate etichetele
+        apply: Aplică filtre
+        clear: Șterge filtre
+      sort:
+        label: Sortează după
+        date_desc: Dată (cea mai nouă)
+        amount_desc: Sumă (mare la mică)
+        amount_asc: Sumă (mică la mare)
+      export:
+        label: Exportă
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Deschide în Google Sheets
+      table:
+        category: Categorie
+        amount: Sumă
+        type: Tip
+        expense: Cheltuieli
+        income: Venituri
+        uncategorized: Necategorizate
+        transactions: transactions
+        percentage: "% din total"
+      pagination:
+        showing: Se afișează %{count} tranzacții
+        previous: Anterioare
+        next: Următoarele
+    google_sheets_instructions:
+      title_with_key: "✅ Copiază URL-ul pentru Google Sheets"
+      title_no_key: "⚠️ Cheie API necesară"
+      ready: URL-ul tău CSV (cu cheie API) este gata.
+      steps: "Pentru a importa în Google Sheets:\n1. Creează o foaie Google nouă\n2. În celula A1, introdu formula afișată mai jos\n3. Apasă Enter"
+      security_warning: "Acest URL include cheia ta API. Păstreaz-o în siguranță!"
+      need_key: Pentru a importa date în Google Sheets, ai nevoie de o cheie API.
+      step1: "Mergi la Setări → Chei API"
+      step2: "Creează o cheie API nouă cu permisiunea „citire”"
+      step3: Copiază cheia API
+      step4: "Adaug-o la acest URL ca: ?api_key=CHEIA_TA"
+      example: Exemplu
+      then_use: Apoi utilizează URL-ul complet cu =IMPORTDATA() în Google Sheets.
+      open_sheets: Deschide Google Sheets
+      go_to_api_keys: Mergi la Chei API
+      close: Am înțeles

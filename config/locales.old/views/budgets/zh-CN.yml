@@ -1,0 +1,98 @@
+---
+zh-CN:
+  budgets:
+    budget_donut:
+      spent: 已花费
+      new_budget: 新预算
+      of_budget: 占 %{amount}
+      unused: 未使用
+    budget_header:
+      today: 今天
+    budget_nav:
+      categories: 分类
+      setup: 设置
+    over_allocation_warning:
+      over_allocated_message: 您的预算分配超出了上限。请修正您的分配。
+      fix_allocations: 修正分配
+    actuals_summary:
+      income: 收入
+      expenses: 支出
+    budgeted_summary:
+      expected_income: 预期收入
+      budgeted: 预算
+      earned: 已赚 %{amount}
+      over: 超出 %{amount}
+      left: 剩余 %{amount}
+      spent: 已花 %{amount}
+    edit:
+      setup_title: 设置您的预算
+      setup_description: 在下方输入您的月收入和计划支出以设置预算。
+      budgeted_spending: 预算支出
+      expected_income: 预期收入
+      autosuggest_title: 自动建议收入与支出预算
+      autosuggest_description: 这将基于交易历史。AI 可能出错，请在继续前核对。
+      continue: 继续
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: 金额
+        edit: 编辑
+        title: 分类
+      on_track_categories:
+        short_title: 正常
+        title: 正常
+      over_budget_categories:
+        short_title: 超支
+        title: 超支
+      filter:
+        all: 全部
+        on_track: 正常
+        over_budget: 超支
+        aria_label: 筛选预算分类
+      tabs:
+        actual: 实际
+        budgeted: 预算
+    copy_previous_prompt:
+      title: 设置您的预算
+      description: 您可以复制 %{source_name} 的预算，或从头开始。
+      copy_button: 复制 %{source_name}
+      fresh_button: 从头开始
+    copy_previous:
+      success: 已从 %{source_name} 复制预算
+      no_source: 未找到可复制的上一个预算
+      already_initialized: 此预算已设置过
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: '预算超出 <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: 待分配
+      over_set: 超过 100%
+      percent_set: 已设置 %{percent}
+    budget_category_form:
+      monthly_average: 月均 %{amount}
+      shared_placeholder: 共享
+      shared_title: 留空以共享父级预算
+    confirm_button:
+      confirm: 确认
+    no_categories:
+      oops: 哎呀！
+      no_categories_message: 您还没有为交易创建或分配任何支出分类。
+      use_defaults: 使用默认值（推荐）
+      new_category: 新分类
+    index:
+      title: 编辑您的分类预算
+      description: 调整分类预算以设置支出限额。未分配资金将自动归入未分类。
+    show:
+      category: 分类
+      overview: 概览
+      spending: "%{date} 支出"
+      status: 状态
+      overspent: 超支
+      left: 剩余
+      budgeted: 预算
+      monthly_average_spending: 月均支出
+      monthly_median_spending: 月度中位支出
+      recent_transactions: 最近交易
+      view_all_transactions: 查看该分类的全部交易
+      no_transactions: 此预算周期内未找到交易。

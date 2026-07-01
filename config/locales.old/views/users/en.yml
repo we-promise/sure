@@ -1,0 +1,30 @@
+---
+en:
+  users:
+    destroy:
+      success: Your account has been deleted.
+    update:
+      email_change_failed: Failed to change email address.
+      email_change_initiated: Please check your new email address for confirmation
+        instructions.
+      success: Your profile has been updated.
+    resend_confirmation_email:
+      success: A new confirmation email is queued to be sent.
+      no_pending_change: No email change is currently pending!
+    reset:
+      success: Your account has been reset. Data will be deleted in the background in some time.
+      unauthorized: You are not authorized to perform this action
+    reset_with_sample_data:
+      success: Your account has been reset and sample data is being prepared. You’ll see demo data shortly.
+    roles:
+      admin: Admin
+      member: Member
+      super_admin: Super admin
+    user_menu:
+      aria_label: Open account menu
+      version: Version
+      settings: Settings
+      changelog: Changelog
+      feedback: Feedback
+      contact: Contact
+      log_out: Log out

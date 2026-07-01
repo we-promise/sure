@@ -1,0 +1,19 @@
+---
+ca:
+  activerecord:
+    attributes:
+      import:
+        col_sep: Separador de columnes
+        col_seps:
+          comma: Coma (,)
+          semicolon: Punt i coma (;)
+        currency: Divisa
+        number_format: Format numèric
+    errors:
+      models:
+        import:
+          attributes:
+            raw_file_str:
+              invalid_csv_format: no és un format CSV vàlid
+          duplicate_headers: 'Les capçaleres del CSV es normalitzen en columnes duplicades:
+            %{columns}'

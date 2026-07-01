@@ -1,0 +1,7 @@
+---
+ro:
+  cryptos:
+    edit:
+      edit: Editează %{account}
+    new:
+      title: Introdu soldul contului

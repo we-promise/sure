@@ -1,0 +1,10 @@
+---
+hu:
+  number:
+    currency:
+      format:
+        delimiter: " "
+        format: "%n %u"
+        precision: 0
+        separator: ","
+        unit: "Ft"

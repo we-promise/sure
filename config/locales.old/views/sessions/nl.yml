@@ -1,0 +1,32 @@
+---
+nl:
+  sessions:
+    create:
+      invalid_credentials: Ongeldige e-mail of wachtwoord.
+      local_login_disabled: Lokale wachtwoordinlog is uitgeschakeld. Gebruik single sign-on.
+    destroy:
+      logout_successful: U bent succesvol uitgelogd.
+    post_logout:
+      logout_successful: U bent succesvol uitgelogd.
+    openid_connect:
+      failed: Kon niet authenticeren via OpenID Connect.
+    failure:
+      failed: Kon niet authenticeren.
+      sso_provider_unavailable: "De SSO provider is momenteel niet beschikbaar. Probeer het later opnieuw of neem contact op met een beheerder."
+      sso_invalid_response: "Ongeldige reactie ontvangen van de SSO provider. Probeer het opnieuw."
+      sso_failed: "Single sign-on authenticatie mislukt. Probeer het opnieuw."
+    new:
+      email: E-mailadres
+      email_placeholder: u@voorbeeld.nl
+      forgot_password: Wachtwoord vergeten?
+      password: Wachtwoord
+      submit: Inloggen
+      title: "%{product_name}"
+      password_placeholder: Voer uw wachtwoord in
+      openid_connect: Inloggen met OpenID Connect
+      oidc: Inloggen met OpenID Connect
+      google_auth_connect: Inloggen met Google
+      local_login_admin_only: Lokale login is beperkt tot beheerders.
+      no_auth_methods_enabled: Er zijn momenteel geen authenticatiemethoden ingeschakeld. Neem contact op met een beheerder.
+      demo_banner_title: "Demo modus actief"
+      demo_banner_message: "Dit is een demonstratieomgeving. Inloggegevens zijn voor uw gemak vooraf ingevuld. Voer geen echte of gevoelige informatie in."

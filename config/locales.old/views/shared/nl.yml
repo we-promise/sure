@@ -1,0 +1,20 @@
+---
+nl:
+  shared:
+    confirm_modal:
+      accept: Bevestigen
+      body_html: "<p>U kunt deze beslissing niet ongedaan maken</p>"
+      cancel: Annuleren
+      title: Weet u het zeker?
+    money_field:
+      label: Bedrag
+    exchange_rate_tabs:
+      calculate_rate_tab: FX-tarief berekenen
+      convert_tab: Converteren met FX-tarief
+      destination_amount: Doelbedrag
+      exchange_rate: Wisselkoers
+      exchange_rate_help: Kies hoe u het bedrag wilt invoeren.
+    syncing_notice:
+      syncing: Accountsgegevens synchroniseren...
+    trend_change:
+      no_change: "geen verandering"

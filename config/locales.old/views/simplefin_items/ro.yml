@@ -1,0 +1,53 @@
+---
+ro:
+  simplefin_items:
+    new:
+      title: Conectează SimpleFin
+      setup_token: Token de configurare
+      setup_token_placeholder: lipește token-ul tău de configurare SimpleFin
+      connect: Conectează
+      cancel: Anulează
+    create:
+      success: Conexiunea SimpleFin a fost adăugată cu succes! Conturile tale vor apărea în scurt timp pe măsură ce se sincronizează în fundal.
+      errors:
+        blank_token: Te rugăm să introduci un token de configurare SimpleFin.
+        invalid_token: Token de configurare invalid. Te rugăm să verifici dacă ai copiat tokenul complet din SimpleFin Bridge.
+        token_compromised: Tokenul de configurare poate fi compromis, expirat sau deja utilizat. Te rugăm să creezi unul nou.
+        create_failed: "Eșec la conectare: %{message}"
+        unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.
+    destroy:
+      success: Conexiunea SimpleFin va fi eliminată
+    update:
+      success: Conexiunea SimpleFin a fost actualizată cu succes! Conturile tale sunt reconectate.
+      errors:
+        blank_token: Te rugăm să introduci un token de configurare SimpleFin.
+        invalid_token: Token de configurare invalid. Te rugăm să verifici dacă ai copiat tokenul complet din SimpleFin Bridge.
+        token_compromised: Tokenul de configurare poate fi compromis, expirat sau deja utilizat. Te rugăm să creezi unul nou.
+        update_failed: "Eșec la actualizarea conexiunii: %{message}"
+        unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.
+    edit:
+      setup_token:
+        label: "Token de configurare SimpleFin:"
+        placeholder: "Lipește aici tokenul tău de configurare SimpleFin..."
+        help_text: "Tokenul ar trebui să fie un șir lung de caractere, începând cu litere și cifre"
+    complete_account_setup:
+      success: Conturile SimpleFin au fost configurate cu succes! Tranzacțiile și deținerile tale sunt importate în fundal.
+    simplefin_item:
+      add_new: Adaugă conexiune nouă
+      confirm_accept: Șterge conexiunea
+      confirm_body: Aceasta va șterge permanent toate conturile din acest grup și toate datele asociate.
+      confirm_title: Ștergi conexiunea SimpleFin?
+      delete: Șterge
+      deletion_in_in_progress: "(ștergere în curs...)"
+      error: A apărut o eroare la sincronizarea datelor
+      no_accounts_description: Această conexiune nu are încă conturi sincronizate.
+      no_accounts_title: Nu s-au găsit conturi
+      requires_update: Necesită reautentificare
+      setup_needed: Conturi noi gata de configurare
+      setup_description: Alege tipurile de conturi pentru conturile tale SimpleFin nou importate.
+      setup_action: Configurează conturi noi
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Niciodată sincronizat
+      status_with_summary: "Ultima sincronizare acum %{timestamp} • %{summary}"
+      syncing: Se sincronizează...
+      update: Actualizează conexiunea

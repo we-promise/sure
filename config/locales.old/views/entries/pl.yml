@@ -1,0 +1,23 @@
+---
+pl:
+  entries:
+    create:
+      success: Wpis został utworzony
+    destroy:
+      success: Wpis został usunięty
+    empty:
+      description: Spróbuj dodać wpis, zmienić filtry lub doprecyzować wyszukiwanie
+      title: Nie znaleziono wpisów
+    loading:
+      loading: Ładowanie wpisów...
+    update:
+      success: Wpis został zaktualizowany
+    unlock:
+      success: Wpis został odblokowany. Może zostać zaktualizowany podczas następnej synchronizacji.
+    protection:
+      tooltip: Chronione przed synchronizacją
+      title: Chronione przed synchronizacją
+      description: Twoje zmiany w tym wpisie nie zostaną nadpisane przez synchronizację z dostawcą.
+      locked_fields_label: "Zablokowane pola:"
+      unlock_button: Zezwól synchronizacji na aktualizację
+      unlock_confirm: Zezwolić synchronizacji na aktualizację tego wpisu? Twoje zmiany mogą zostać nadpisane przy następnej synchronizacji.

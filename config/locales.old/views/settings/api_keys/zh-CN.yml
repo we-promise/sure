@@ -1,0 +1,115 @@
+---
+zh-CN:
+  settings:
+    api_keys_controller:
+      success: API 密钥创建成功
+      revoked_successfully: API 密钥已成功撤销
+      revoke_failed: 撤销 API 密钥失败
+      scope_descriptions:
+        read_accounts: 查看账户
+        read_transactions: 查看交易
+        read_balances: 查看余额
+        write_transactions: 创建交易
+    api_keys:
+      show:
+        title: API 密钥管理
+        no_api_key:
+          title: API 密钥
+          heading: 以程序方式访问您的账户数据
+          description: 使用安全的 API 密钥以程序方式访问您的 Sure 数据。
+          what_you_can_do: 使用 API 可以做什么：
+          feature_1: 以程序方式访问您的账户数据
+          feature_2: 构建自定义集成和应用程序
+          feature_3: 自动获取与分析数据
+          security_note_title: 安全第一
+          security_note: 您的 API 密钥将根据您选择的权限范围进行限制。您一次只能拥有一个有效的 API 密钥。
+          create_api_key: 创建 API 密钥
+        newly_created:
+          page_title: API 密钥创建成功
+          heading: API 密钥创建成功！
+          key_ready: 您的新 API 密钥“%{name}”已创建，可立即使用。
+          your_api_key: 您的 API 密钥
+          copy_store_securely: 请复制并安全保存此密钥。您在验证 API 请求时会用到它。
+          copy_api_key: 复制 API 密钥
+          how_to_use: 如何使用您的 API 密钥
+          continue: 继续前往 API 密钥设置
+        current_api_key:
+          title: 您的 API 密钥
+          description: 您当前的 API 密钥已准备就绪。请妥善保管，切勿公开分享。
+          active: 生效中
+          key_name: 名称
+          created_at: 创建于
+          created_ago: 创建于 %{time} 前
+          last_used: 最近使用
+          last_used_ago: 最近使用于 %{time} 前
+          expires: 过期时间
+          ago: 前
+          never_used: 从未使用
+          never_expires: 永不过期
+          permissions: 权限
+          scope_read_only: 只读
+          scope_read_write: 读写
+          copy_api_key: 复制 API 密钥
+          copy_store_securely: 请复制并安全保存此密钥。您在验证 API 请求时会用到它。
+          usage_instructions_title: 如何使用您的 API 密钥
+          usage_instructions: 向 %{product_name} API 发起请求时，请在 X-Api-Key 请求头中包含您的 API 密钥：
+          regenerate_key: 创建新密钥
+          revoke_key: 撤销密钥
+          revoke_confirmation: 确定要撤销此 API 密钥吗？此操作无法撤销，并将立即禁用所有使用此密钥的应用程序。
+      new:
+        title: 创建 API 密钥
+        create_new_api_key: 创建新 API 密钥
+        subtitle: 生成一个新的 API 密钥，以便以程序方式访问您的 Sure 数据。
+        description: 使用描述性名称和适当的权限配置新的 API 密钥。
+        name_label: API 密钥名称
+        name_placeholder: 例如：我的预算应用、投资组合追踪器
+        name_help_text: 选择一个描述性名称，方便日后识别此密钥。
+        name_help: 选择一个描述性名称，方便识别此密钥的用途。
+        permissions_label: 权限
+        permissions_help: 请选择此 API 密钥应拥有的权限：
+        scope_read_only: 只读
+        scope_read_only_description: 查看您的账户、交易和余额
+        scope_read_write: 读写
+        scope_read_write_description: 查看您的数据并创建新交易
+        scope_details:
+          read_accounts: 查看账户信息、余额和账户级数据
+          read_transactions: 查看交易数据、分类和交易详情
+          read_balances: 查看历史余额数据和账户价值趋势
+          write_transactions: 创建和更新交易记录（即将推出）
+        security_warning_title: 安全提醒
+        security_warning_body: 您的 API 密钥只会在创建后显示一次。请务必复制并安全保存。任何拥有此密钥的人都可以按您选择的权限访问您的数据。
+        security_warning: 您的 API 密钥在创建后只会显示一次。请妥善保存，切勿公开分享。如果丢失，您需要重新创建一个新的密钥。
+        create_key: 创建 API 密钥
+        cancel: 取消
+        save_api_key: 保存 API 密钥
+      created:
+        page_title: API 密钥已创建
+        title: API 密钥已创建
+        success_title: API 密钥创建成功
+        success_description: 您的新 API 密钥已成功生成。
+        key_ready: 您的新 API 密钥“%{name}”已创建，可立即使用。
+        your_api_key: 您的 API 密钥
+        copy_store_securely: 请复制并安全保存此密钥。您在验证 API 请求时会用到它。
+        key_details_title: 密钥详情
+        key_name_label: 名称：
+        permissions_label: 权限：
+        created_label: 创建于：
+        security_note_title: 重要安全提示
+        security_note_body: 这将是您的 API 密钥唯一一次以明文形式显示。请立即复制并安全保存。如果丢失此密钥，您需要重新生成一个新的。
+        usage_instructions_title: 如何使用您的 API 密钥
+        key_name: 名称
+        permissions: 权限
+        critical_warning_title: 重要：请立即保存您的 API 密钥
+        critical_warning_1: 这是您唯一一次以明文看到 API 密钥的机会。
+        critical_warning_2: 请复制并安全保存到密码管理器或应用中。
+        critical_warning_3: 如果丢失此密钥，您需要创建一个新的。
+        usage_instructions: 使用 API 密钥时，请将其包含在 X-Api-Key 请求头中：
+        copy_key: 复制 API 密钥
+        continue: 继续前往 API 密钥设置
+      create:
+        success: API 密钥已成功创建
+      destroy:
+        not_found: 找不到 API 密钥
+        cannot_revoke: 此 API 密钥不能撤销
+        revoked_successfully: API 密钥已撤销
+        revoke_failed: 撤销 API 密钥失败

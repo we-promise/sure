@@ -1,0 +1,14 @@
+---
+hu:
+  activerecord:
+    attributes:
+      import:
+        currency: Pénznem
+        number_format: Számformátum
+    errors:
+      models:
+        import:
+          duplicate_headers: "A CSV fejlécek duplikált oszlopokra normalizálódnak: %{columns}"
+          attributes:
+            raw_file_str:
+              invalid_csv_format: nem érvényes CSV formátum

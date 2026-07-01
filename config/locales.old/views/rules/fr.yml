@@ -1,0 +1,134 @@
+---
+fr:
+  rule:
+    conditions:
+      condition_group:
+        add_condition: Ajouter une condition
+        all: tout
+        and_prefix: et
+        any: n'importe quel
+        match: correspondre
+        of_the_following_conditions: des conditions suivantes
+  rules:
+    actions:
+      value_placeholder: Entrez une valeur
+    apply_all:
+      ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions}
+        transactions.
+      ai_cost_title: Estimation du coût IA
+      button: Appliquer tout
+      confirm_button: Confirmer et appliquer tout
+      confirm_message: Vous êtes sur le point d'appliquer %{count} règles affectant
+        %{transactions} transactions uniques. Veuillez confirmer si vous souhaitez
+        continuer.
+      confirm_title: Appliquer toutes les règles
+      cost_unavailable_model: Estimation du coût non disponible pour le modèle "%{model}".
+      cost_unavailable_no_provider: Estimation du coût non disponible (aucun fournisseur
+        LLM configuré).
+      cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du
+        fournisseur du modèle pour les prix les plus récents.
+      estimated_cost: 'Coût estimé : ~%{cost} $'
+      success: Toutes les règles ont été mises en file d'attente pour exécution
+      view_usage: Voir l'historique d'utilisation
+    clear_ai_cache:
+      button: Réinitialiser le cache IA
+      confirm_body: Êtes-vous sûr de vouloir réinitialiser le cache IA ? Cela permettra
+        aux règles IA de retraiter toutes les transactions. Cela pourrait engendrer
+        des coûts API supplémentaires.
+      confirm_button: Réinitialiser le cache
+      confirm_title: Réinitialiser le cache IA ?
+      success: Le cache IA est en cours de suppression. Cela peut prendre quelques
+        instants.
+    condition_filters:
+      transaction_type:
+        equal_to: Égal à
+        expense: Dépense
+        income: Revenu
+        transfer: Virement
+    confirm:
+      ai_cost_no_estimate_html: Cela utilisera l’IA pour catégoriser les transactions
+        %{count}.
+      ai_cost_title: Estimation des coûts de l'IA
+      ai_cost_with_estimate_html: 'Cela utilisera l’IA pour catégoriser les transactions
+        %{count}. Coût estimé : <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Vous êtes sur le point d'appliquer cette règle aux <span
+        class="text-primary font-medium">%{count} %{resource}</span> qui répondent
+        aux critères de règle spécifiés.  Veuillez confirmer si vous souhaitez procéder
+        à ce changement.
+      confirm_changes: Confirmer les modifications
+      cost_unavailable_model: L'estimation des coûts n'est pas disponible pour le
+        modèle "%{model}".
+      cost_unavailable_no_provider: Estimation des coûts non disponible (aucun fournisseur
+        LLM configuré).
+      cost_warning: Vous pouvez encourir des frais, veuillez vérifier auprès du fournisseur
+        de modèles pour connaître les prix les plus récents.
+      title: Confirmer les modifications
+      title_with_name: Confirmez les modifications apportées à "%{name}"
+      view_usage_history: Afficher l'historique d'utilisation
+    destroy:
+      success: Règle supprimée
+    destroy_all:
+      success: Toutes les règles supprimées
+    form:
+      add_action: Ajouter une action
+      add_condition: Ajouter une condition
+      add_condition_group: Ajouter un groupe de conditions
+      all_past_and_future: Tout le passé et le futur %{resource}
+      rule_name_label: Nom de la règle (facultatif)
+      rule_name_placeholder: Entrez un nom pour cette règle
+      starting_from: À partir de
+      then: ALORS
+    index:
+      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent.  Assurez-vous
+        de filtrer le plus étroitement possible pour éviter des coûts inutiles.
+      delete_all_rules: Supprimer toutes les règles
+      new_rule: Nouvelle règle
+      no_rules_description: Configurez des règles pour effectuer des actions sur vos
+        transactions et autres données à chaque synchronisation de compte.
+      no_rules_title: Pas encore de règles
+      page_title: Règles
+      rules_heading: Règles
+      sort_by: 'Trier par :'
+      sort_name: Nom
+      sort_updated_at: Mis à jour à
+      toggle_sort_direction: Changer le sens du tri
+    no_action: Aucune action
+    no_condition: Aucune condition
+    recent_runs:
+      columns:
+        date_time: Date/Heure
+        execution_type: Type
+        rule_name: Nom de la règle
+        status: Statut
+        transactions_counts:
+          blocked: Bloqué
+          modified: Modifiées
+          processed: Traitées
+          queued: En file d'attente
+      description: Consultez l'historique d'exécution de vos règles, y compris le
+        statut de réussite/échec et le nombre de transactions.
+      execution_types:
+        manual: Manuel
+        scheduled: Planifié
+      statuses:
+        failed: Échoué
+        pending: En attente
+        success: Réussi
+      title: Exécutions récentes
+      unnamed_rule: Règle sans nom
+    rule:
+      action_label_to: "%{label} à %{value}"
+      all_past_and_future: Tout le passé et le futur %{resource}
+      and_more_actions:
+        one: et 1 action supplémentaire
+        other: et %{count} actions supplémentaires
+      and_more_conditions:
+        one: et 1 autre condition
+        other: et %{count} conditions supplémentaires
+      delete: Supprimer
+      edit: Modifier
+      on_or_after: "%{resource} le %{date} ou après"
+      re_apply_rule: Réappliquer la règle
+      then: ALORS
+    update:
+      success: Règle mise à jour

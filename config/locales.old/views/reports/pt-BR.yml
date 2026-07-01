@@ -1,0 +1,229 @@
+---
+pt-BR:
+  reports:
+    index:
+      title: Relatórios
+      subtitle: Insights completos sobre sua saúde financeira
+      export: Exportar CSV
+      print_report: Imprimir Relatório
+      drag_to_reorder: "Arraste para reordenar a seção"
+      toggle_section: "Alternar visibilidade da seção"
+      periods:
+        monthly: Mensal
+        quarterly: Trimestral
+        ytd: Acumulado do Ano (YTD)
+        last_6_months: Últimos 6 Meses
+        custom: Período Personalizado
+      date_range:
+        from: De
+        to: Até
+      showing_period: "Exibindo dados de %{start} até %{end}"
+    invalid_date_range: "A data final não pode ser anterior à data inicial. As datas foram trocadas."
+    summary:
+      total_income: Receita Total
+      total_expenses: Despesa Total
+      net_savings: Economia Líquida
+      budget_performance: Desempenho do Orçamento
+      vs_previous: vs período anterior
+      income_minus_expenses: Receitas menos despesas
+      of_budget_used: do orçamento utilizado
+      no_budget_data: Sem dados de orçamento para este período
+    budget_performance:
+      title: Desempenho do Orçamento
+      spent: Gasto
+      budgeted: Orçado
+      remaining: Restante
+      over_by: Excedido em
+      shared: compartilhado
+      suggested_daily: "%{amount} sugerido por dia para os %{days} dias restantes"
+      no_budgets: Nenhuma categoria de orçamento configurada para este mês
+      status:
+        good: Dentro da Meta
+        warning: Perto do Limite
+        over: Acima do Orçamento
+    trends:
+      title: Tendências e Insights
+      monthly_breakdown: Detalhamento Mensal
+      month: Mês
+      income: Receita
+      expenses: Despesas
+      net: Líquido
+      savings_rate: Taxa de Poupança
+      current: atual
+      avg_monthly_income: Média Mensal de Receita
+      avg_monthly_expenses: Média Mensal de Despesas
+      avg_monthly_savings: Média Mensal de Economia
+      no_data: Sem dados de tendência disponíveis
+      spending_patterns: Padrões de Gastos
+      weekday_spending: Gastos em Dias Úteis
+      weekend_spending: Gastos no Fim de Semana
+      total: Total
+      avg_per_transaction: Média por transação
+      transactions: Transações
+      insight_title: Insight
+      insight_higher_weekend: "Você gasta %{percent}% a mais por transação nos fins de semana do que em dias úteis"
+      insight_higher_weekday: "Você gasta %{percent}% a mais por transação em dias úteis do que nos fins de semana"
+      insight_similar: "Seus gastos por transação são similares em dias úteis e fins de semana"
+      no_spending_data: Sem dados de gastos disponíveis para este período
+    empty_state:
+      title: Sem Dados Disponíveis
+      description: Comece a controlar suas finanças adicionando transações ou conectando suas contas para ver relatórios completos
+      add_transaction: Adicionar Transação
+      add_account: Adicionar Conta
+    transactions_breakdown:
+      title: Detalhamento de Transações
+      no_transactions: Nenhuma transação encontrada para o período e filtros selecionados
+      filters:
+        title: Filtros
+        category: Categoria
+        account: Conta
+        tag: Tag
+        amount_min: Valor Mínimo
+        amount_max: Valor Máximo
+        date_range: Período
+        all_categories: Todas as Categorias
+        all_accounts: Todas as Contas
+        all_tags: Todas as Tags
+        apply: Aplicar Filtros
+        clear: Limpar Filtros
+      sort:
+        label: Ordenar por
+        date_desc: Data (Mais recente)
+        amount_desc: Valor (Maior para Menor)
+        amount_asc: Valor (Menor para Maior)
+      export:
+        label: Exportar
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Abrir no Google Sheets
+      table:
+        category: Categoria
+        amount: Valor
+        type: Tipo
+        expense: Despesas
+        income: Receitas
+        uncategorized: Sem Categoria
+        entries:
+          one: "%{count} entrada"
+          other: "%{count} entradas"
+        percentage: "% do Total"
+      pagination:
+        showing:
+          one: Exibindo %{count} entrada
+          other: Exibindo %{count} entradas
+        previous: Anterior
+        next: Próximo
+    net_worth:
+      title: Patrimônio líquido
+      current_net_worth: Patrimônio líquido atual
+      period_change: Alteração de período
+      assets_vs_liabilities: Ativos versus Passivos
+      total_assets: Ativos
+      total_liabilities: Passivos
+      no_assets: Sem ativos
+      no_liabilities: Sem passivos
+    investment_performance:
+      title: Desempenho de Investimentos
+      portfolio_value: Valor do Portfólio
+      total_return: Retorno Total
+      contributions: Contribuições do Período
+      withdrawals: Saques do Período
+      top_holdings: Principais Aplicações
+      holding: Holding
+      weight: Peso
+      value: Valor
+      return: Retorno
+      accounts: Contas de Investimento
+      gains_by_tax_treatment: Ganhos por tratamento tributário
+      unrealized_gains: Ganhos Não Realizados
+      realized_gains: Ganhos Realizados
+      total_gains: Ganhos Totais
+      taxable_realized_note: Esses ganhos podem estar sujeitos a impostos
+      no_data: "-"
+      view_details: Ver detalhes
+      holdings_count:
+        one: "%{count} holding"
+        other: "%{count} holdings"
+      sells_count:
+        one: "%{count} venda"
+        other: "%{count} vendas"
+      holdings: Holdings
+      sell_trades: Venda de Negócios
+      and_more: "+%{count} mais"
+    investment_flows:
+      title: Fluxos de investimento
+      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
+      contributions: Contribuições
+      withdrawals: Saques
+      net_flow: Fluxo Líquido
+    google_sheets_instructions:
+      title_with_key: "✅ Copiar URL para Google Sheets"
+      title_no_key: "⚠️ Chave de API Necessária"
+      ready: Sua URL CSV (com chave de API) está pronta.
+      steps: "Para importar no Google Sheets:\n1. Crie uma nova planilha no Google\n2. Na célula A1, insira a fórmula abaixo\n3. Pressione Enter"
+      security_warning: "Esta URL inclui sua chave de API. Mantenha-a segura!"
+      need_key: Para importar dados no Google Sheets, você precisa de uma chave de API.
+      step1: "Vá em Configurações → Chaves de API"
+      step2: "Crie uma nova chave de API com permissão de \"leitura\""
+      step3: Copie a chave de API
+      step4: "Adicione à URL como: ?api_key=SUA_CHAVE"
+      example: Exemplo
+      then_use: Então use a URL completa com =IMPORTDATA() no Google Sheets.
+      open_sheets: Abrir Google Sheets
+      go_to_api_keys: Ir para Chaves de API
+      close: Entendi
+    print:
+      document_title: Relatório Financeiro
+      title: Relatório Financeiro
+      generated_on: "Gerado em %{date}"
+      # Summary section
+      summary:
+        title: Resumo
+        income: Receita
+        expenses: Despesas
+        net_savings: Poupança Líquida
+        budget: Orçamento
+        vs_prior: "%{percent}% vs anterior"
+        of_income: "%{percent}% da Receita"
+        used: usado
+      # Net Worth section
+      net_worth:
+        title: Patrimônio Líquido
+        current_balance: Saldo Atual
+        this_period: neste período
+        assets: Ativos
+        liabilities: Passivos
+        no_liabilities: Sem passivos
+      # Monthly Trends section
+      trends:
+        title: Tendências Mensais
+        month: Mês
+        income: Receita
+        expenses: Despesas
+        net: Líquido
+        savings_rate: Taxa de Poupança
+        average: Média
+        current_month_note: "* Mês atual (dados parciais)"
+      # Investments section
+      investments:
+        title: Investimentos
+        portfolio_value: Valor do Portfólio
+        total_return: Retorno Total
+        contributions: Contribuições
+        withdrawals: Saques
+        this_period: este período
+        top_holdings: Principais Aplicações
+        holding: Holding
+        weight: Peso
+        value: Valor
+        return: Retorno
+      # Spending by Category section
+      spending:
+        title: Gastos por Categoria
+        income: Receita
+        expenses: Despesas
+        category: Categoria
+        amount: Quantia
+        percent: "%"
+        more_categories: "+ %{count} mais categorias"

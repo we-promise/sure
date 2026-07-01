@@ -1,0 +1,24 @@
+---
+nl:
+  admin:
+    users:
+      index:
+        title: "Gebruikersbeheer"
+        description: "Beheer gebruikersrollen voor uw instantie. Superbeheerders hebben toegang tot SSO-providerinstellingen en gebruikersbeheer."
+        section_title: "Gebruikers"
+        you: "(U)"
+        trial_ends_at: "Proefperiode eindigt"
+        not_available: "n/a"
+        no_users: "Geen gebruikers gevonden."
+        role_descriptions_title: "Rolbeschrijvingen"
+        roles:
+          member: "Lid"
+          admin: "Beheerder"
+          super_admin: "Super Beheerder"
+        role_descriptions:
+          member: "Basisgebruikersrechten. Kan eigen accounts, transacties en instellingen beheren."
+          admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API-sleutels, importen en AI-prompts beheren."
+          super_admin: "Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren en gebruikers imiteren voor ondersteuning."
+      update:
+        success: "Gebruikersrol succesvol bijgewerkt."
+        failure: "Gebruikersrol bijwerken mislukt."

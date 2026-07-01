@@ -1,0 +1,15 @@
+---
+nl:
+  tag:
+    deletions:
+      create:
+        deleted: Tag verwijderd
+      new:
+        delete_and_leave_uncategorized: Verwijder "%{tag_name}"
+        delete_and_recategorize: Verwijder "%{tag_name}" en wijs een nieuwe tag toe
+        delete_tag: Tag verwijderen?
+        explanation: "%{tag_name} wordt verwijderd uit transacties en andere tagbare
+          entiteiten. In plaats van ze ongetagd te laten, kunt u ook een nieuwe tag
+          hieronder toewijzen."
+        replacement_tag_prompt: Selecteer tag
+        tag: Tag

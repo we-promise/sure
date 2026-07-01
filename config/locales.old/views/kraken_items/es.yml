@@ -1,0 +1,85 @@
+---
+es:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Vincular a una cuenta de la plataforma de intercambio Kraken
+      name: "Kraken - %{name}"
+      description: "Vincular a %{name}"
+    create:
+      default_name: Kraken
+      success: Conexión con Kraken establecida con éxito. Tu cuenta de la plataforma se está sincronizando.
+    update:
+      success: Conexión de Kraken actualizada correctamente.
+    destroy:
+      success: Conexión de Kraken programada para su eliminación.
+    select_accounts:
+      select_connection: Elige una conexión de Kraken en los Ajustes del proveedor.
+      no_credentials_configured: Añade las credenciales de la API de Kraken antes de configurar las cuentas.
+    link_accounts:
+      select_connection: Elige una conexión de Kraken antes de vincular cuentas.
+    select_existing_account:
+      title: Vincular cuenta de Kraken
+      no_accounts_found: No se han encontrado cuentas de Kraken.
+      wait_for_sync: Espera a que Kraken termine de sincronizar.
+      check_provider_health: Comprueba que tus credenciales de la API de Kraken sean válidas.
+      link: Vincular
+      cancel: Cancelar
+    link_existing_account:
+      success: Vinculado correctamente a la cuenta de Kraken
+      select_connection: Elige una conexión de Kraken antes de vincular cuentas.
+      errors:
+        only_manual: Solo las cuentas manuales de plataforma de criptomonedas sin un vínculo de proveedor existente pueden vincularse a Kraken
+        invalid_kraken_account: Cuenta de Kraken no válida
+        kraken_account_already_linked: Esta cuenta de Kraken ya está vinculada
+    setup_accounts:
+      title: Importar cuenta de Kraken
+      subtitle: Selecciona la cuenta de la plataforma que quieres seguir
+      instructions: Kraken importa una única cuenta combinada de plataforma de criptomonedas para esta conexión, con solo posiciones y ejecuciones de operaciones al contado.
+      no_accounts: Se han importado todas las cuentas de Kraken.
+      accounts_count:
+        one: "%{count} cuenta disponible"
+        other: "%{count} cuentas disponibles"
+      select_all: Seleccionar todas
+      import_selected: Importar seleccionadas
+      cancel: Cancelar
+      creating: Importando...
+    complete_account_setup:
+      success:
+        one: "Se ha importado %{count} cuenta"
+        other: "Se han importado %{count} cuentas"
+      none_selected: No se ha seleccionado ninguna cuenta
+      no_accounts: No hay cuentas para importar
+    kraken_item:
+      provider_name: Kraken
+      syncing: Sincronizando...
+      reconnect: Es necesario actualizar las credenciales
+      deletion_in_progress: Eliminando...
+      sync_status:
+        no_accounts: No se han encontrado cuentas
+        all_synced:
+          one: "%{count} cuenta sincronizada"
+          other: "%{count} cuentas sincronizadas"
+        partial_sync: "%{linked_count} sincronizadas, %{unlinked_count} necesitan configuración"
+      status: "Sincronizado hace %{timestamp}"
+      status_with_summary: "Sincronizado hace %{timestamp} - %{summary}"
+      status_never: Nunca sincronizado
+      delete: Eliminar
+      no_accounts_title: No se han encontrado cuentas
+      no_accounts_message: Tu cuenta de la plataforma Kraken aparecerá aquí después de la sincronización.
+      setup_needed: Cuenta lista para importar
+      setup_description: Importa esta conexión de Kraken como una cuenta de plataforma de criptomonedas.
+      setup_action: Importar cuenta
+      import_accounts_menu: Importar cuenta
+      stale_rate_warning: "El saldo es aproximado porque el tipo de cambio exacto para %{date} no estaba disponible. Se actualizará en la próxima sincronización."
+  kraken_item:
+    syncer:
+      checking_credentials: Comprobando credenciales...
+      credentials_invalid: Credenciales de la API de Kraken no válidas. Comprueba tu clave de API y tu secreto.
+      importing_accounts: Importando cuentas desde Kraken...
+      checking_configuration: Comprobando la configuración de la cuenta...
+      accounts_need_setup:
+        one: "%{count} cuenta necesita configuración"
+        other: "%{count} cuentas necesitan configuración"
+      processing_accounts: Procesando los datos de la cuenta...
+      calculating_balances: Calculando saldos...

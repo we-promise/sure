@@ -1,0 +1,21 @@
+---
+nl:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Selecteer een geboekte transactie om mee samen te voegen
+      invalid_transaction: Ongeldige transactie geselecteerd om samen te voegen
+      merge_success: Lopende transactie samengevoegd met geboekte transactie
+      merge_failed: Transacties konden niet worden samengevoegd
+    set_transaction:
+      pending_only: Deze functie is alleen beschikbaar voor lopende transacties
+    new:
+      title: Samenvoegen met geboekte transactie
+      warning_title: Handmatig duplicaten samenvoegen
+      warning_description: Gebruik dit om een lopende transactie handmatig samen te voegen met de geboekte versie. Hiermee wordt de lopende transactie verwijderd en alleen de geboekte behouden.
+      pending_transaction: Lopende transactie
+      select_posted: Selecteer de geboekte transactie om mee samen te voegen
+      showing_range: "%{start} - %{end} worden weergegeven"
+      previous: "← Vorige 10"
+      next: "Volgende 10 →"
+      no_candidates: Geen geboekte transacties gevonden in dit account.
+      submit_button: Transacties samenvoegen

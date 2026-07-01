@@ -13,6 +13,8 @@ ru:
       qty: Количество
       submit: Добавить операцию
       ticker_placeholder: AAPL
+      trade_requires_security: Для операций покупки и продажи требуется указать инструмент 
+        (тикер)
       type: Тип
       type_buy: Покупка
       type_deposit: Депозит

@@ -1,0 +1,25 @@
+---
+ca:
+  entries:
+    create:
+      success: Entrada creada
+    destroy:
+      success: Entrada eliminada
+    empty:
+      description: Prova d'afegir una entrada, editar els filtres o afinar la cerca
+      title: No s'han trobat entrades
+    loading:
+      loading: Carregant entrades...
+    protection:
+      description: Les teves edicions a aquesta entrada no se sobreescriuran amb la
+        sincronització del proveïdor.
+      locked_fields_label: 'Camps bloquejats:'
+      title: Protegida de la sincronització
+      tooltip: Protegida de la sincronització
+      unlock_button: Permet que la sincronització l'actualitzi
+      unlock_confirm: Vols permetre que la sincronització actualitzi aquesta entrada?
+        Els teus canvis es poden sobreescriure a la pròxima sincronització.
+    unlock:
+      success: Entrada desbloquejada. Pot ser actualitzada a la pròxima sincronització.
+    update:
+      success: Entrada actualitzada

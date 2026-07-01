@@ -1,0 +1,42 @@
+---
+zh-CN:
+  concerns:
+    self_hostable:
+      redis_configured: Redis 现已正确配置！您现在可以设置您的 Sure 应用了。
+  shared:
+    confirm_modal:
+      accept: 确认
+      body_html: "<p>此决定无法撤销</p>"
+      cancel: 取消
+      title: 确定吗？
+    money_field:
+      label: 金额
+    exchange_rate_tabs:
+      calculate_rate_tab: 计算汇率
+      convert_tab: 使用汇率换算
+      destination_amount: 目标金额
+      exchange_rate: 汇率
+      exchange_rate_help: 选择如何输入金额。
+    syncing_notice:
+      syncing: 账户数据同步中……
+    require_admin: 只有管理员才能执行此操作
+    custom_confirm:
+      default_title: 确定吗？
+      default_body: 此操作不可逆。
+      default_btn_text: 确认
+    family_moniker:
+      group_plural: 组
+      group_singular: 组
+      plural: 家庭
+      singular: 家庭
+    trend_change:
+      no_change: 无变化
+    cancel: 取消
+    transaction_tabs:
+      expense: 支出
+      income: 收入
+      transfer: 转账
+    preview: 预览
+    sync_toast:
+      message: 有新数据可用
+      refresh: 刷新

@@ -1,0 +1,66 @@
+---
+fr:
+  recurring_transactions:
+    already_exists: Une transaction récurrente manuelle existe déjà pour ce modèle
+    amount_range: 'Plage : %{min} à %{max}'
+    badges:
+      manual: Manuel
+    cleaned_up: "%{count} transactions récurrentes obsolètes nettoyées"
+    cleanup_stale: Nettoyer les obsolètes
+    confirm_delete: Êtes-vous sûr(e) de vouloir supprimer cette transaction récurrente
+      ?
+    creation_failed: Échec de la création de la transaction récurrente. Veuillez vérifier
+      les détails de la transaction et réessayer.
+    day_of_month: Jour %{day} du mois
+    deleted: Transaction récurrente supprimée
+    empty:
+      description: Cliquez sur "Identifier les modèles" pour détecter automatiquement
+        les transactions récurrentes à partir de votre historique de transactions.
+      title: Aucune transaction récurrente trouvée
+    expected_in:
+      one: Attendue dans %{count} jour
+      other: Attendue dans %{count} jours
+    expected_today: Attendue aujourd'hui
+    identified: "%{count} modèles de transactions récurrentes identifiés"
+    identify_patterns: Identifier les modèles
+    info:
+      automatic_description: 'L''identification automatique s''exécute également après
+        :'
+      manual_description: Vous pouvez identifier manuellement les modèles ou nettoyer
+        les transactions récurrentes obsolètes en utilisant les boutons ci-dessus.
+      title: Détection automatique des modèles
+      triggers:
+      - Les importations CSV sont terminées (transactions, trades, comptes, etc.)
+      - Toute synchronisation de fournisseur est terminée (Plaid, SimpleFIN, etc.)
+    marked_active: Transaction récurrente marquée comme active
+    marked_as_recurring: Transaction marquée comme récurrente
+    marked_inactive: Transaction récurrente marquée comme inactive
+    projected: Projeté
+    recurring: Récurrent
+    settings:
+      enable_description: Détecter automatiquement les modèles de transactions récurrentes
+        et afficher les transactions projetées à venir.
+      enable_label: Activer les transactions récurrentes
+    settings_updated: Paramètres des transactions récurrentes mis à jour
+    status:
+      active: Actif
+      inactive: Inactif
+    table:
+      actions: Actions
+      amount: Montant
+      expected_day: Jour prévu
+      last_occurrence: Dernière occurrence
+      merchant: Nom
+      next_date: Prochaine date
+      status: Statut
+    title: Transactions récurrentes
+    transfer_already_exists: Un transfert récurrent existe déjà pour cette paire de
+      comptes
+    transfer_creation_failed: Échec de la création du transfert récurrent. Veuillez
+      vérifier les détails du transfert et réessayer.
+    transfer_feature_disabled: Les transactions récurrentes sont désactivées pour
+      cette famille
+    transfer_marked_as_recurring: Transfert marqué comme récurrent
+    unexpected_error: Une erreur inattendue s'est produite lors de la création de
+      la transaction récurrente
+    upcoming: Transactions récurrentes à venir

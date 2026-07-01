@@ -1,0 +1,56 @@
+---
+zh-CN:
+  recurring_transactions:
+    title: 循环交易
+    upcoming: 即将发生的循环交易
+    projected: 预测
+    recurring: 循环
+    expected_today: 今天预期发生
+    expected_in:
+      one: 预计 %{count} 天后
+      other: 预计 %{count} 天后
+    day_of_month: 每月 %{day} 日
+    identify_patterns: 识别模式
+    cleanup_stale: 清理过期项
+    settings:
+      enable_label: 启用循环交易
+      enable_description: 自动检测循环交易模式并显示即将到来的预测交易。
+    settings_updated: 循环交易设置已更新
+    info:
+      title: 自动模式检测
+      manual_description: 您可以使用上方按钮手动识别模式或清理过期的循环交易。
+      automatic_description: 自动识别也会在以下情况后运行：
+      triggers:
+        - CSV 导入完成（交易、证券交易、账户等）
+        - 任一提供商同步完成（Plaid、SimpleFIN 等）
+    identified: 已识别 %{count} 个循环交易模式
+    cleaned_up: 已清理 %{count} 个过期循环交易
+    marked_inactive: 循环交易已标记为停用
+    marked_active: 循环交易已标记为启用
+    deleted: 循环交易已删除
+    confirm_delete: 确定要删除此循环交易吗？
+    marked_as_recurring: 交易已标记为循环
+    already_exists: 此模式已存在手动循环交易
+    creation_failed: 创建循环交易失败。请检查交易详情后重试。
+    unexpected_error: 创建循环交易时发生意外错误
+    amount_range: 范围：%{min} 到 %{max}
+    empty:
+      title: 未找到循环交易
+      description: 点击“识别模式”即可从交易历史中自动检测循环交易。
+    table:
+      merchant: 名称
+      amount: 金额
+      expected_day: 预计日期
+      next_date: 下次日期
+      last_occurrence: 上次发生
+      status: 状态
+      actions: 操作
+    status:
+      active: 启用
+      inactive: 停用
+    badges:
+      manual: 手动
+    transfer_marked_as_recurring: 转账已标记为循环
+    transfer_already_exists: 此账户对已存在循环转账
+    transfer_creation_failed: 创建循环转账失败。请检查转账详情后重试。
+    transfer_feature_disabled: 此家庭已禁用循环交易

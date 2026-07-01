@@ -1,0 +1,4 @@
+---
+hu:
+  provider_warnings:
+    limited_investment_data: "A szolgáltató befektetési adatai korlátozottak. A tevékenységcímkék (Vétel, Eladás, Osztalék) nem elérhetők, ami befolyásolhatja a költségvetés pontosságát. Fontold meg szabályok létrehozását a befektetési tranzakciók kizárásához vagy kategorizálásához."

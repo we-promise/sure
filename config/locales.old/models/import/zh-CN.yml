@@ -1,0 +1,18 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      import:
+        currency: 货币
+        number_format: 数字格式
+        col_sep: 列分隔符
+        col_seps:
+          comma: 逗号（,）
+          semicolon: 分号（;）
+    errors:
+      models:
+        import:
+          attributes:
+            raw_file_str:
+              invalid_csv_format: 格式无效，不是合法的CSV格式
+          duplicate_headers: CSV 表头规范化后出现重复列：%{columns}

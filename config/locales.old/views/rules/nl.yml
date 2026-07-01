@@ -1,0 +1,40 @@
+---
+nl:
+  rules:
+    no_action: Geen actie
+    no_condition: Geen voorwaarde
+    actions:
+      value_placeholder: Voer een waarde in
+    apply_all:
+      button: Alles toepassen
+      confirm_title: Alle regels toepassen
+      confirm_message: U staat op het punt om %{count} regels toe te passen die %{transactions} unieke transacties beïnvloeden. Bevestig alstublieft als u wilt doorgaan.
+      confirm_button: Bevestigen en alles toepassen
+      success: Alle regels zijn in de wachtrij geplaatst voor uitvoering
+      ai_cost_title: AI kostenraming
+      ai_cost_message: Dit zal AI gebruiken om tot %{transactions} transacties te categoriseren.
+      estimated_cost: "Geschatte kosten: ~$%{cost}"
+      cost_unavailable_model: Kostenraming niet beschikbaar voor model "%{model}".
+      cost_unavailable_no_provider: Kostenraming niet beschikbaar (geen LLM provider geconfigureerd).
+      cost_warning: U kunt kosten maken, controleer bij de modelprovider voor de meest actuele prijzen.
+      view_usage: Gebruiksgeschiedenis bekijken
+    recent_runs:
+      title: Recente uitvoeringen
+      description: Bekijk de uitvoeringsgeschiedenis van uw regels inclusief succes/faalstatus en transactieaantallen.
+      unnamed_rule: Naamloze regel
+      columns:
+        date_time: Datum/tijd
+        execution_type: Type
+        status: Status
+        rule_name: Regelnaam
+        transactions_counts:
+          queued: In wachtrij
+          processed: Verwerkt
+          modified: Gewijzigd
+      execution_types:
+        manual: Handmatig
+        scheduled: Gepland
+      statuses:
+        pending: In behandeling
+        success: Succesvol
+        failed: Mislukt

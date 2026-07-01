@@ -1,0 +1,7 @@
+---
+en:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Cannot unlink the last identity
+        success: Success

@@ -1,0 +1,4 @@
+---
+nb:
+  provider_warnings:
+    limited_investment_data: "Investeringsdata fra denne leverandøren er begrenset. Aktivitetsetiketter (Kjøp, Salg, Utbytte) er ikke tilgjengelige, noe som kan påvirke budsjettnøyaktigheten. Vurder å opprette regler for å ekskludere eller kategorisere investeringstransaksjoner."

@@ -90,6 +90,7 @@ ru:
         title: Категории
       filter:
         all: Все
+        aria_label: Фильтр категорий бюджета
         on_track: В пределах
         over_budget: Превышение
       on_track_categories:

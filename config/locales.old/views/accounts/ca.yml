@@ -1,0 +1,207 @@
+---
+ca:
+  account:
+    entries:
+      destroy:
+        success: Entrada eliminada correctament.
+  accounts:
+    account:
+      change_simplefin_account: Canvia el compte de SimpleFIN
+      complete_setup: Completa la configuració
+      default_label: Per defecte
+      delete: Elimina el compte
+      disable: Desactiva el compte
+      edit: Edita
+      enable: Activa el compte
+      link_lunchflow: Enllaça amb Lunch Flow
+      link_provider: Enllaça amb proveïdor
+      remove_default: Treu com a predeterminat
+      set_default: Estableix com a predeterminat
+      sharing: Compartició
+      troubleshoot: Resolució de problemes
+      unlink_provider: Desenllaça del proveïdor
+    chart:
+      data_not_available: Dades no disponibles per al període seleccionat
+    confirm_unlink:
+      confirm_button: Confirma i desenllaça
+      description_html: Estàs a punt de desenllaçar <strong>%{account_name}</strong>
+        de <strong>%{provider_name}</strong>. Això el convertirà en un compte manual.
+      title: Vols desenllaçar el compte del proveïdor?
+      warning_can_delete: Després de desenllaçar-lo, podràs eliminar el compte si
+        és necessari
+      warning_manual_updates: Hauràs d'afegir transaccions i actualitzar saldos manualment
+      warning_no_sync: El compte ja no es sincronitzarà automàticament amb el teu proveïdor
+      warning_title: Això significa
+      warning_transactions_kept: Totes les transaccions i saldos existents es conservaran
+    create:
+      success: Compte %{type} creat
+    destroy:
+      cannot_delete_linked: No es pot eliminar un compte enllaçat. Desenllaça'l primer.
+      failed: No s'ha pogut eliminar el recurs. Torna-ho a provar més tard.
+      success: El compte %{type} s'ha programat per a l'eliminació
+    empty:
+      empty_message: Afegeix un compte mitjançant connexió, importació o introducció
+        manual.
+      new_account: Nou compte
+      no_accounts: Encara no hi ha cap compte
+    form:
+      additional_details: Detalls addicionals
+      balance: 'Saldo a la data:'
+      institution_domain_label: Domini de la institució
+      institution_domain_placeholder: p. ex., chase.com
+      institution_name_label: Nom de la institució
+      institution_name_placeholder: p. ex., Chase Bank
+      name_label: Nom del compte
+      name_placeholder: Exemple de nom de compte
+      notes_label: Notes
+      notes_placeholder: Emmagatzema informació addicional com números de compte,
+        codis de sortida, IBAN, números de ruta, etc.
+      opening_balance_date_label: Data del saldo inicial
+    index:
+      accounts: Comptes
+      manual_accounts:
+        other_accounts: Altres comptes
+      new_account: Nou compte
+      sync: Sincronitza-ho tot
+    new:
+      container:
+        close: Tanca
+        navigate: Navega
+        select: Selecciona
+      import_accounts: Importa comptes
+      method_selector:
+        connected_entry: Enllaça el compte
+        connected_entry_eu: Enllaça el compte de la UE
+        link_with_provider: Enllaça amb %{provider}
+        lunchflow_entry: Enllaça compte de Lunch Flow
+        manual_entry: Introdueix el saldo del compte
+        title: Com vols afegir-lo?
+      title: Què vols afegir?
+    not_authorized: No tens permís per gestionar aquest compte
+    select_provider:
+      already_linked: Aquest compte ja està enllaçat a un proveïdor
+      description: Tria quin proveïdor vols utilitzar per enllaçar %{account_name}
+      no_providers: Actualment no hi ha cap proveïdor configurat
+      title: Selecciona un proveïdor per enllaçar
+    set_default:
+      depository_only: Només els comptes d'efectiu i de targeta de crèdit es poden
+        establir com a predeterminats.
+    show:
+      activity:
+        amount: Import
+        balance: Saldo
+        confirmed: Confirmada
+        date: Data
+        entries: entrades
+        entry: entrada
+        filter: Filtra
+        new: Nou
+        new_activity: Nova activitat
+        new_balance: Nou saldo
+        new_trade: Nova operació
+        new_transaction: Nova transacció
+        new_transfer: Nova transferència
+        no_entries: No s'han trobat entrades
+        pending: Pendent
+        search:
+          placeholder: Cerca entrades per nom
+        search_placeholder: Cerca entrades per nom
+        status: Estat
+        title: Activitat
+      chart:
+        balance: Saldo
+        owed: Import degut
+      header:
+        complete_setup: Completa la configuració
+      limited_fx_history_warning: L'historial de tipus de canvi només està disponible
+        a partir del %{date}. Les transaccions anteriors a aquesta data utilitzen
+        conversions de divisa aproximades — això pot passar quan el proveïdor de FX
+        només ofereix una finestra històrica limitada.
+      menu:
+        confirm_accept: Elimina "%{name}"
+        confirm_body_html: "<p>En eliminar aquest compte, s'esborrarà l'historial
+          de valors, afectant diversos aspectes del teu compte global. Aquesta acció
+          tindrà un impacte directe en el càlcul del teu patrimoni net i els gràfics
+          dels comptes.</p><br /> <p>Després de l'eliminació, no hi haurà manera de
+          restaurar la informació del compte perquè hauràs d'afegir-lo com un compte
+          nou.</p>"
+        confirm_title: Vols eliminar el compte?
+        delete_account: Elimina el compte
+        edit: Edita
+        import: Importa transaccions
+        import_trades: Importa operacions
+        import_transactions: Importa transaccions
+        manage: Gestiona els comptes
+        sharing: Compartició
+        statements: Extractes
+      tabs:
+        activity: Activitat
+        holdings: Posicions
+        overview: Resum
+        statements: Extractes
+    sidebar:
+      configure_providers: Configura els teus proveïdors aquí.
+      missing_data: Falten dades històriques
+      missing_data_description: "%{product} utilitza proveïdors externs per obtenir
+        tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries
+        per calcular saldos històrics precisos dels comptes."
+      new_account: Nou compte
+      new_account_group: Afegeix %{account_group}
+      new_asset: Nou actiu
+      new_debt: Nou deute
+      tabs:
+        all: Tots
+        assets: Actius
+        debts: Deutes
+    subtype_regions:
+      au: Austràlia
+      ca: Canadà
+      eu: Europa
+      generic: General
+      in: Índia
+      uk: Regne Unit
+      us: Estats Units
+    sync_all:
+      syncing: Sincronitzant comptes...
+    tax_treatment_descriptions:
+      tax_advantaged: Beneficis fiscals especials amb condicions
+      tax_deferred: Aportacions deduïbles, tributació en retirar
+      tax_exempt: Aportacions després d'impostos, guanys no tributats
+      taxable: Guanys tributats en realitzar-se
+    tax_treatments:
+      tax_advantaged: Amb avantatge fiscal
+      tax_deferred: Tributació diferida
+      tax_exempt: Exempt d'impostos
+      taxable: Subjecte a impostos
+    types:
+      credit_card: Targeta de crèdit
+      crypto: Cripto
+      depository: Efectiu
+      investment: Inversió
+      loan: Préstec
+      other_asset: Altre actiu
+      other_liability: Altre passiu
+      property: Propietat
+      vehicle: Vehicle
+    types_plural:
+      credit_card: Targetes de crèdit
+      crypto: Cripto
+      depository: Efectiu
+      investment: Inversions
+      loan: Préstecs
+      other_asset: Altres actius
+      other_liability: Altres passius
+      property: Propietats
+      vehicle: Vehicles
+    unlink:
+      error: 'No s''ha pogut desenllaçar el compte: %{error}'
+      generic_error: S'ha produït un error inesperat. Torna-ho a intentar.
+      not_linked: El compte no està enllaçat a cap proveïdor
+      success: El compte s'ha desenllaçat correctament. Ara és un compte manual.
+    update:
+      success: Compte %{type} actualitzat
+  email_confirmations:
+    new:
+      invalid_token: L'enllaç de confirmació no és vàlid o ha caducat.
+      success_login: El teu correu electrònic ha estat confirmat. Inicia sessió amb
+        la nova adreça electrònica.

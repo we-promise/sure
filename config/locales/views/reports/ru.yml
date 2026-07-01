@@ -92,9 +92,9 @@ ru:
       holding: Актив
       holdings: Активы
       holdings_count:
-        one: "%{count} актив"
         few: "%{count} актива"
         many: "%{count} активов"
+        one: "%{count} актив"
         other: "%{count} актива"
       no_data: "-"
       period_return: Доходность за период
@@ -103,9 +103,9 @@ ru:
       return: Доходность
       sell_trades: Продажи
       sells_count:
-        one: "%{count} продажа"
         few: "%{count} продажи"
         many: "%{count} продаж"
+        one: "%{count} продажа"
         other: "%{count} продажи"
       taxable_realized_note: Эти доходы могут облагаться налогами
       title: Эффективность инвестиций
@@ -210,10 +210,10 @@ ru:
         next: Следующая
         previous: Предыдущая
         showing:
-          one: "Показана %{count} запись"
-          few: "Показано %{count} записи"
-          many: "Показано %{count} записей"
-          other: "Показано %{count} записи"
+          few: Показано %{count} записи
+          many: Показано %{count} записей
+          one: Показана %{count} запись
+          other: Показано %{count} записи
       sort:
         amount_asc: Сумма (по возрастанию)
         amount_desc: Сумма (по убыванию)
@@ -223,9 +223,9 @@ ru:
         amount: Сумма
         category: Категория
         entries:
-          one: "%{count} запись"
           few: "%{count} записи"
           many: "%{count} записей"
+          one: "%{count} запись"
           other: "%{count} записи"
         expense: Расходы
         income: Доход

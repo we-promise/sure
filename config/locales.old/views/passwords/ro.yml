@@ -1,0 +1,10 @@
+---
+ro:
+  passwords:
+    edit:
+      password: Parolă nouă
+      password_challenge: Parola curentă
+      submit: Resetează parola
+      title: Actualizează parola
+    update:
+      success: Parola ta a fost resetată.

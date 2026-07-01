@@ -1,0 +1,8 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "分类 '%{name}' 不能是其自身的上级分类"
+          missing_columns: "缺少必需列：%{columns}"

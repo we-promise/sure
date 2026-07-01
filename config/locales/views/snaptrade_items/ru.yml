@@ -34,17 +34,25 @@ ru:
         метками активности и стоимостью.
       free_tier_warning: Бесплатный тариф SnapTrade покрывает 5 подключений брокеров.
         Обновите на SnapTrade для большего количества.
+      legacy_credentials_description: Используйте Client ID и Consumer Key, если в 
+        вашем аккаунте SnapTrade не включён OAuth.
+      legacy_credentials_title: Использовать устаревшие API-данные
       loading_connections: Загрузка подключений...
       manage_connections: Управление подключениями
       name: SnapTrade
       needs_linking: требует связывания
       needs_setup:
-        one: "%{count} требует настройки"
         few: "%{count} требуют настройки"
         many: "%{count} требуют настройки"
+        one: "%{count} требует настройки"
         other: "%{count} требуют настройки"
       no_connections: Подключения брокеров не найдены.
-      orphaned_connection: Осиротевшее подключение (не синхронизировано локально)
+      oauth_connect_button: Подключить через SnapTrade
+      oauth_reauthorize_button: Авторизовать заново
+      oauth_status_authorized: Авторизация через SnapTrade выполнена.
+      oauth_status_ready: Используйте код устройства, чтобы авторизовать Sure в SnapTrade.
+      oauth_title: SnapTrade OAuth
+      orphaned_connection: Неиспользуемое подключение (не синхронизировано локально)
       orphaned_user: Неиспользуемая регистрация
       orphaned_users_description: Это предыдущие регистрации пользователей SnapTrade,
         которые занимают ваши слоты подключения. Удалите их, чтобы освободить слоты.
@@ -120,6 +128,12 @@ ru:
         many: Успешно связано %{count} счетов.
         one: Успешно связан %{count} счёт.
         other: Успешно связаны %{count} счёта.
+    complete_oauth_device_flow:
+      failed: Не удалось завершить авторизацию SnapTrade через device flow. 
+        Попробуйте ещё раз.
+      setup_incomplete: Авторизация SnapTrade завершена, но для синхронизации счетов 
+        требуются API-данные.
+      success: Авторизация SnapTrade завершена.
     connect:
       connection_failed: 'Не удалось подключиться к SnapTrade: %{message}'
       decryption_failed: Не удалось прочитать учетные данные SnapTrade. Пожалуйста,
@@ -136,8 +150,8 @@ ru:
       missing_authorization_id: Отсутствует ID авторизации
       success: Подключение успешно удалено. Один слот освобождён.
     delete_orphaned_user:
-      failed: Не удалось удалить осиротевшую регистрацию.
-      success: Осиротевшая регистрация успешно удалена.
+      failed: Не удалось удалить неиспользуюмую регистрацию.
+      success: Неиспользуюмая регистрация успешно удалена.
     destroy:
       success: Подключение SnapTrade запланировано на удаление.
     link_accounts:
@@ -146,6 +160,18 @@ ru:
       failed: 'Не удалось связать счёт: %{message}'
       not_found: Счёт не найден.
       success: Успешно связан со счётом SnapTrade.
+    oauth_device_flow:
+      cancel_button: Отмена
+      code_label: Код устройства
+      complete_button: Я авторизовал SnapTrade
+      instructions: Откройте SnapTrade и подтвердите этот код устройства, затем вернитесь 
+        сюда, чтобы завершить авторизацию.
+      missing_client_id: Не настроен SnapTrade OAuth client ID. Добавьте 
+        SNAPTRADE_OAUTH_CLIENT_ID в .env.local, перезапустите приложение и попробуйте снова.
+      open_snaptrade: Открыть SnapTrade
+      start_button: Начать авторизацию
+      subtitle: Авторизуйте Sure в SnapTrade
+      title: Подключение SnapTrade
     preload_accounts:
       not_configured: SnapTrade не настроен.
     select_accounts:
@@ -199,9 +225,9 @@ ru:
       try_again: Подключить брокера
     snaptrade_item:
       accounts_need_setup:
-        one: "%{count} счёт требует настройки"
         few: "%{count} счёта требуют настройки"
         many: "%{count} счетов требуют настройки"
+        one: "%{count} счёт требует настройки"
         other: "%{count} счёта требуют настройки"
       add_another_brokerage: Подключить другого брокера
       connect_brokerage: Подключить брокера
@@ -210,10 +236,10 @@ ru:
       error: Ошибка синхронизации
       manage_connections: Управление подключениями
       more_accounts_available:
-        one: "Доступен ещё %{count} счёт для настройки"
-        few: "Доступно ещё %{count} счёта для настройки"
-        many: "Доступно ещё %{count} счетов для настройки"
-        other: "Доступно ещё %{count} счёта для настройки"
+        few: Доступно ещё %{count} счёта для настройки
+        many: Доступно ещё %{count} счетов для настройки
+        one: Доступен ещё %{count} счёт для настройки
+        other: Доступно ещё %{count} счёта для настройки
       no_accounts_description: Подключите брокера для импорта ваших инвестиционных
         счетов.
       no_accounts_title: Счета не обнаружены
@@ -226,5 +252,8 @@ ru:
       status: Последняя синхронизация %{timestamp} назад - %{summary}
       status_never: Никогда не синхронизировалось
       syncing: Синхронизация...
+    start_oauth_device_flow:
+      failed: Не удалось начать авторизацию SnapTrade по коду устройства. Попробуйте
+        ещё раз.
     update:
       success: Конфигурация SnapTrade успешно обновлена.

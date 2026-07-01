@@ -1,0 +1,21 @@
+---
+es:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Selecciona una transacción contabilizada con la que fusionar
+      invalid_transaction: Transacción seleccionada para fusionar no válida
+      merge_success: Transacción pendiente fusionada con la transacción contabilizada
+      merge_failed: No se pudieron fusionar las transacciones
+    set_transaction:
+      pending_only: Esta función solo está disponible para transacciones pendientes
+    new:
+      title: Fusionar con transacción contabilizada
+      warning_title: Fusión manual de duplicados
+      warning_description: Usa esto para fusionar manualmente una transacción pendiente con su versión contabilizada. Se eliminará la transacción pendiente y se conservará únicamente la contabilizada.
+      pending_transaction: Transacción pendiente
+      select_posted: Selecciona la transacción contabilizada con la que fusionar
+      showing_range: "Mostrando %{start} - %{end}"
+      previous: "← 10 anteriores"
+      next: "10 siguientes →"
+      no_candidates: No se han encontrado transacciones contabilizadas en esta cuenta.
+      submit_button: Fusionar transacciones

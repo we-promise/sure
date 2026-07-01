@@ -1,0 +1,49 @@
+---
+nl:
+  recurring_transactions:
+    title: Terugkerende transacties
+    upcoming: Aankomende terugkerende transacties
+    projected: Geprojecteerd
+    recurring: Terugkerend
+    expected_on: Verwacht op %{date}
+    day_of_month: Dag %{day} van de maand
+    identify_patterns: Patronen identificeren
+    cleanup_stale: Verouderde opschonen
+    settings:
+      enable_label: Terugkerende transacties inschakelen
+      enable_description: Automatisch terugkerende transactiepatronen detecteren en aankomende geprojecteerde transacties tonen.
+    settings_updated: Instellingen voor terugkerende transacties bijgewerkt
+    info:
+      title: Automatische patroondetectie
+      manual_description: U kunt handmatig patronen identificeren of verouderde terugkerende transacties opschonen met de knoppen hierboven.
+      automatic_description: "Automatische identificatie wordt ook uitgevoerd na:"
+      triggers:
+        - CSV imports zijn voltooid (transacties, trades, accounts, etc.)
+        - Een provider sync is voltooid (Plaid, SimpleFIN, etc.)
+    identified: "%{count} terugkerende transactiepatronen geïdentificeerd"
+    cleaned_up: "%{count} verouderde terugkerende transacties opgeschoond"
+    marked_inactive: Terugkerende transactie gemarkeerd als inactief
+    marked_active: Terugkerende transactie gemarkeerd als actief
+    deleted: Terugkerende transactie verwijderd
+    confirm_delete: Weet u zeker dat u deze terugkerende transactie wilt verwijderen?
+    marked_as_recurring: Transactie gemarkeerd als terugkerend
+    already_exists: Er bestaat al een handmatige terugkerende transactie voor dit patroon
+    creation_failed: Aanmaken van terugkerende transactie mislukt. Controleer de transactiedetails en probeer het opnieuw.
+    unexpected_error: Er is een onverwachte fout opgetreden tijdens het aanmaken van de terugkerende transactie
+    amount_range: "Bereik: %{min} tot %{max}"
+    empty:
+      title: Geen terugkerende transacties gevonden
+      description: Klik op "Patronen identificeren" om automatisch terugkerende transacties te detecteren uit uw transactiegeschiedenis.
+    table:
+      merchant: Naam
+      amount: Bedrag
+      expected_day: Verwachte dag
+      next_date: Volgende datum
+      last_occurrence: Laatste keer
+      status: Status
+      actions: Acties
+    status:
+      active: Actief
+      inactive: Inactief
+    badges:
+      manual: Handmatig

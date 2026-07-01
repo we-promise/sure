@@ -1,0 +1,30 @@
+---
+zh-TW:
+  transfers:
+    create:
+      success: 轉帳已建立
+    destroy:
+      success: 轉帳已移除
+    form:
+      amount: 金額
+      date: 日期
+      expense: 支出
+      from: 從
+      income: 收入
+      select_account: 選擇帳戶
+      submit: 建立轉帳
+      to: 至
+      transfer: 轉帳
+    new:
+      title: 新增轉帳
+    show:
+      delete: 移除轉帳
+      delete_subtitle: 這將會移除轉帳連結，但不會刪除其對應的原始交易紀錄。
+      delete_title: 確定要移除轉帳嗎？
+      details: 詳情
+      note_label: 備註
+      note_placeholder: 為此筆轉帳新增備註
+      overview: 概覽
+      settings: 設定
+    update:
+      success: 轉帳已更新

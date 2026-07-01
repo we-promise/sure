@@ -1,0 +1,33 @@
+---
+pl:
+  sessions:
+    create:
+      invalid_credentials: Nieprawidłowy adres e-mail lub hasło.
+      local_login_disabled: Logowanie lokalnym hasłem jest wyłączone. Użyj logowania jednokrotnego (SSO).
+    destroy:
+      logout_successful: Zostałeś(aś) pomyślnie wylogowany(a).
+    post_logout:
+      logout_successful: Zostałeś(aś) pomyślnie wylogowany(a).
+    openid_connect:
+      account_linked: "Konto zostało pomyślnie połączone z %{provider}"
+      failed: Nie udało się uwierzytelnić przez OpenID Connect.
+    failure:
+      failed: Nie udało się uwierzytelnić.
+      sso_provider_unavailable: "Dostawca SSO jest obecnie niedostępny. Spróbuj ponownie później lub skontaktuj się z administratorem."
+      sso_invalid_response: "Otrzymano nieprawidłową odpowiedź od dostawcy SSO. Spróbuj ponownie."
+      sso_failed: "Uwierzytelnianie SSO nie powiodło się. Spróbuj ponownie."
+    new:
+      email: Adres e-mail
+      email_placeholder: ty@example.com
+      forgot_password: Nie pamiętasz hasła?
+      password: Hasło
+      submit: Zaloguj się
+      title: Sure
+      password_placeholder: Wpisz hasło
+      openid_connect: Zaloguj się przez OpenID Connect
+      oidc: Zaloguj się przez OpenID Connect
+      google_auth_connect: Zaloguj się przez Google
+      local_login_admin_only: Logowanie lokalne jest ograniczone do administratorów.
+      no_auth_methods_enabled: Obecnie nie włączono żadnej metody uwierzytelniania. Skontaktuj się z administratorem.
+      demo_banner_title: "Aktywny tryb demo"
+      demo_banner_message: "To jest środowisko demonstracyjne. Dane logowania zostały wstępnie uzupełnione dla wygody. Nie wprowadzaj prawdziwych ani wrażliwych informacji."

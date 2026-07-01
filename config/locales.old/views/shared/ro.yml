@@ -1,0 +1,20 @@
+---
+ro:
+  shared:
+    confirm_modal:
+      accept: Confirmă
+      body_html: "<p>Nu vei putea anula această decizie</p>"
+      cancel: Anulează
+      title: Ești sigur?
+    money_field:
+      label: Sumă
+    exchange_rate_tabs:
+      calculate_rate_tab: Calculați rata FX
+      convert_tab: Convertire cu rata FX
+      destination_amount: Suma de destinație
+      exchange_rate: Rata de schimb
+      exchange_rate_help: Alege cum dorești să introduci suma.
+    syncing_notice:
+      syncing: Se sincronizează datele conturilor...
+    trend_change:
+      no_change: "fără schimbare"

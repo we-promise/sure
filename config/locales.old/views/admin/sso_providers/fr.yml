@@ -1,0 +1,138 @@
+---
+fr:
+  admin:
+    sso_providers:
+      create:
+        success: Fournisseur SSO créé avec succès.
+      destroy:
+        confirm: Êtes-vous sûr(e) de vouloir supprimer ce fournisseur ? Cette action ne peut pas être annulée.
+        success: Fournisseur SSO supprimé avec succès.
+      edit:
+        description: Mettre à jour la configuration pour %{label}
+        title: Modifier le fournisseur SSO
+      form:
+        admin_groups: Groupes Admin
+        advanced_title: Paramètres OIDC avancés
+        basic_information: Informations de base
+        cancel: Annuler
+        client_id_help: ID client OAuth de votre fournisseur d'identité
+        client_id_label: ID Client
+        client_id_placeholder: votre-id-client
+        client_secret_help: Secret client OAuth (chiffré en base de données)
+        client_secret_help_existing: " - laisser vide pour conserver l'existant"
+        client_secret_label: Secret Client
+        client_secret_placeholder_existing: "••••••••••••••••"
+        client_secret_placeholder_new: votre-secret-client
+        copy_button: Copier
+        create_provider: Créer un fournisseur
+        default_role_help: 'Rôle attribué aux utilisateurs créés via le provisionnement SSO juste-à-temps (JIT). Par défaut : Membre.'
+        default_role_label: Rôle par défaut pour les nouveaux utilisateurs
+        enabled_help: Les utilisateurs peuvent se connecter avec ce fournisseur lorsqu'il est activé
+        enabled_label: Activer ce fournisseur
+        errors_title:
+          one: 'Une erreur a empêché la sauvegarde de ce fournisseur :'
+          other: "%{count} erreurs ont empêché la sauvegarde de ce fournisseur :"
+        groups_help: Liste de noms de groupes IdP séparés par des virgules. Utilisez * pour correspondre à tous les groupes.
+        guest_groups: Groupes Invité
+        icon_help: Nom de l'icône Lucide (optionnel)
+        icon_label: Icône
+        icon_placeholder: ex., key, google, github
+        idp_cert_fingerprint: Empreinte du certificat (alternative)
+        idp_certificate: Certificat IdP
+        idp_certificate_help: Certificat X.509 au format PEM. Requis si vous n'utilisez pas l'URL de métadonnées.
+        idp_metadata_url: URL des métadonnées IdP
+        idp_metadata_url_help: URL vers les métadonnées SAML de votre IdP. Si fournie, les autres paramètres SAML seront auto-configurés.
+        idp_slo_url: URL SLO IdP (optionnel)
+        idp_sso_url: URL SSO IdP
+        issuer_help: URL de l'émetteur OIDC (validera le endpoint .well-known/openid-configuration)
+        issuer_label: Émetteur
+        issuer_placeholder: https://accounts.google.com
+        label_help: Texte du bouton affiché aux utilisateurs
+        label_label: Libellé
+        label_placeholder: ex., Se connecter avec Keycloak
+        manual_saml_config: Configuration manuelle (si vous n'utilisez pas l'URL de métadonnées)
+        manual_saml_help: N'utilisez ces paramètres que si votre IdP ne fournit pas d'URL de métadonnées.
+        member_groups: Groupes Membre
+        name_help: Identifiant unique (minuscules, chiffres, underscores uniquement)
+        name_id_email: Adresse email (par défaut)
+        name_id_format: Format NameID
+        name_id_persistent: Persistant
+        name_id_transient: Transitoire
+        name_id_unspecified: Non spécifié
+        name_label: Nom
+        name_placeholder: ex., openid_connect, keycloak, authentik
+        oauth_configuration: Configuration OAuth/OIDC
+        prompt_consent: Forcer le consentement (ré-autoriser)
+        prompt_default: Par défaut (l'IdP décide)
+        prompt_help: Contrôle comment l'IdP invite l'utilisateur pendant l'authentification.
+        prompt_label: Invite d'authentification
+        prompt_login: Forcer la connexion (ré-authentifier)
+        prompt_none: Pas d'invite (auth silencieuse)
+        prompt_select_account: Sélection de compte (choisir un compte)
+        provisioning_title: Provisionnement des utilisateurs
+        redirect_uri_help: URL de callback à configurer chez votre fournisseur d'identité
+        redirect_uri_label: URI de redirection
+        redirect_uri_placeholder: https://votredomaine.com/auth/openid_connect/callback
+        role_admin: Administrateur
+        role_guest: Invité
+        role_mapping_help: Mappez les groupes/claims IdP aux rôles de l'application. Les utilisateurs se voient attribuer le rôle correspondant le plus élevé. Laisser vide pour utiliser le rôle par défaut ci-dessus.
+        role_mapping_title: Mappage groupe vers rôle (Optionnel)
+        role_member: Membre
+        role_super_admin: Super Administrateur
+        saml_configuration: Configuration SAML
+        saml_sp_callback_url_help: Configurez cette URL en tant qu'URL du service de consommation d'assertion dans votre IdP.
+        saml_sp_callback_url_label: URL de rappel SP (URL ACS)
+        scopes_help: Liste de scopes OIDC séparés par des espaces. Laisser vide pour les valeurs par défaut (openid email profile). Ajouter 'groups' pour récupérer les claims de groupe.
+        scopes_label: Scopes personnalisés
+        strategy_github: GitHub
+        strategy_google_oauth2: Google OAuth2
+        strategy_help: La stratégie d'authentification à utiliser
+        strategy_label: Stratégie
+        strategy_openid_connect: Connexion OpenID
+        strategy_saml: SAML2.0
+        submit: Enregistrer le fournisseur
+        super_admin_groups: Groupes Super Admin
+        test_connection: Tester la connexion
+        update_provider: Fournisseur de mise à jour
+      index:
+        add_provider: Ajouter un fournisseur
+        configuration_mode: Mode de configuration
+        configured_providers: Fournisseurs configurés
+        db_backed_providers: Fournisseurs basés sur des bases de données
+        db_backed_providers_description: Charger les fournisseurs à partir de la base de données au lieu de la configuration YAML
+        db_backed_providers_help_html: Définissez <code class="bg-surface px-1 py-0.5 round text-xs">AUTH_PROVIDERS_SOURCE=db</code> pour activer les fournisseurs basés sur une base de données. Cela permet des modifications sans redémarrage du serveur.
+        delete: Supprimer
+        description: Gérez les fournisseurs d'authentification unique pour votre instance
+        disable: Désactiver
+        disabled: Désactivé
+        edit: Modifier
+        enable: Activer
+        enabled: Activé
+        env_configured: Env/YAML
+        legacy_providers_notice: Ces fournisseurs sont configurés via des variables d'environnement ou YAML et ne peuvent pas être gérés via cette interface. Pour les gérer ici, migrez-les vers des fournisseurs sauvegardés en base de données en activant AUTH_PROVIDERS_SOURCE=db et en les recréant dans l'interface.
+        legacy_providers_title: Fournisseurs configurés par environnement
+        no_providers_message: Commencez par ajouter votre premier fournisseur SSO.
+        no_providers_title: Aucun fournisseur SSO
+        note: Les modifications des fournisseurs SSO nécessitent un redémarrage du serveur pour prendre effet. Vous pouvez également activer le flag AUTH_PROVIDERS_SOURCE=db pour charger les fournisseurs depuis la base de données dynamiquement.
+        page_title: Fournisseurs SSO
+        restart_required: Les modifications nécessitent un redémarrage du serveur pour prendre effet.
+        table:
+          actions: Actions
+          disabled: Désactivé
+          enabled: Activé
+          issuer: Émetteur
+          name: Nom
+          status: Statut
+          strategy: Stratégie
+        title: Fournisseurs SSO
+      new:
+        description: Configurer un nouveau fournisseur d'authentification unique
+        title: Ajouter un fournisseur SSO
+      toggle:
+        confirm_disable: Êtes-vous sûr(e) de vouloir désactiver ce fournisseur ?
+        confirm_enable: Êtes-vous sûr(e) de vouloir activer ce fournisseur ?
+        success_disabled: Fournisseur SSO désactivé avec succès.
+        success_enabled: Fournisseur SSO activé avec succès.
+      update:
+        success: Fournisseur SSO mis à jour avec succès.
+    unauthorized: Vous n'êtes pas autorisé(e) à accéder à cette zone.

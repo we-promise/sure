@@ -1,0 +1,27 @@
+---
+ca:
+  invitations:
+    accept_choice:
+      create_account: Crea un compte nou
+      joined_household: T'has unit a la llar.
+      message: "%{inviter} t'ha convidat a unir-te com a %{role}."
+      sign_in_existing: Ja tinc un compte
+      title: Uneix-te a %{family}
+    create:
+      existing_user_added: S'ha afegit l'usuari a la teva llar.
+      failure: No s'ha pogut enviar la invitació
+      success: Invitació enviada correctament
+    destroy:
+      failure: Hi ha hagut un problema en eliminar la invitació.
+      not_authorized: No estàs autoritzat/da a gestionar invitacions.
+      success: La invitació s'ha eliminat correctament.
+    new:
+      email_label: Correu electrònic
+      email_placeholder: Introdueix el correu electrònic
+      role_admin: Administrador/a
+      role_guest: Convidat/da
+      role_label: Rol
+      role_member: Membre
+      submit: Envia la invitació
+      subtitle: Envia una invitació perquè s'uneixi al teu compte de %{product_name}
+      title: Convida algú

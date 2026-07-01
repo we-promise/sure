@@ -1,0 +1,10 @@
+---
+ro:
+  password_mailer:
+    password_reset:
+      cta: Resetează-ți parola
+      ignore_if_not_requested: Dacă nu ai făcut această solicitare, poți ignora acest
+        email.
+      request_made: A fost făcută o solicitare pentru a-ți reseta parola %{product_name}. Apasă pe link
+        pentru a o reseta.
+      subject: '%{product_name}: Resetează-ți parola'

@@ -1,0 +1,31 @@
+---
+ca:
+  layouts:
+    application:
+      nav:
+        assistant: Assistent
+        budgets: Pressupostos
+        home: Inici
+        reports: Informes
+        transactions: Transaccions
+      privacy_mode: Commuta el mode de privadesa
+      resize_left_sidebar: Redimensiona la barra lateral de comptes
+      resize_right_sidebar: Redimensiona la barra lateral de l'assistent
+      skip_to_main: Salta al contingut principal
+    auth:
+      existing_account: Ja tens un compte?
+      no_account: Ets nou a %{product_name}?
+      sign_in: Inicia sessió
+      sign_up: Crea un compte
+    shared:
+      confirm_dialog:
+        are_you_sure: Segur que vols continuar?
+        cannot_be_undone: Aquesta acció no es pot desfer.
+        confirm: Confirma
+      footer:
+        privacy_policy: Política de privadesa
+        terms_of_service: Condicions del servei
+    trial:
+      contribute: Contribueix
+      data_deleted_in_days: Les dades s'eliminaran en %{days} dies
+      open_demo: Demostració oberta

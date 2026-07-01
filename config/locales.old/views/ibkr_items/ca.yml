@@ -1,0 +1,101 @@
+---
+ca:
+  ibkr_items:
+    complete_account_setup:
+      none_created: No s'ha creat cap compte.
+      none_selected: No s'ha seleccionat cap compte.
+      success:
+        one: S'ha creat correctament %{count} compte d'Interactive Brokers.
+        other: S'han creat correctament %{count} comptes d'Interactive Brokers.
+    create:
+      success: Interactive Brokers s'ha configurat correctament.
+    defaults:
+      name: Interactive Brokers
+    destroy:
+      success: S'ha programat la connexió Interactive Brokers per a la seva eliminació.
+    ibkr_item:
+      accounts_need_setup: Els comptes necessiten configuració
+      accounts_need_setup_description: Alguns comptes d'IBKR necessiten ser enllaçats
+        a comptes de Sure.
+      delete: Elimina
+      deletion_in_progress: Eliminació en curs
+      error: Error
+      flex_web_service: Flex Web Service
+      never_synced: Mai sincronitzat.
+      no_accounts_discovered: Encara no s'han descobert comptes d'IBKR.
+      no_accounts_discovered_description: Executa una sincronització després de configurar
+        la teva consulta Flex per descobrir comptes.
+      requires_update: Les credencials necessiten atenció
+      setup_accounts: Configura comptes
+      synced: Sincronitzat fa %{time}. %{summary}.
+      syncing: Sincronitzant
+    link_existing_account:
+      already_linked: Aquest compte d'Interactive Brokers ja està enllaçat.
+      failed: No s'ha pogut enllaçar el compte d'Interactive Brokers.
+      not_found: No s'ha trobat el compte o la configuració d'Interactive Brokers.
+      only_manual_investment: Només els comptes d'inversió manuals es poden enllaçar
+        a Interactive Brokers.
+      success: S'ha enllaçat correctament al compte d'Interactive Brokers.
+    select_accounts:
+      not_configured: Interactive Brokers no està configurat.
+    select_existing_account:
+      balance: Saldo
+      cancel: Cancel·la
+      link: Enllaça
+      no_accounts_available: Encara no hi ha comptes d'Interactive Brokers sense enllaçar
+        disponibles.
+      run_sync_hint: Executa una sincronització des de Configuració > Proveïdors després
+        d'actualitzar la teva consulta Flex.
+      title: Enllaça compte d'Interactive Brokers
+      wait_for_sync: Espera que la sincronització de descobriment de comptes acabi.
+    setup_accounts:
+      available_accounts:
+        account_id: 'ID del compte: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_type_investment: Inversió
+        title: Comptes disponibles
+      buttons:
+        back_to_settings: Torna a la configuració
+        cancel: Cancel·la
+        create_selected_accounts: Crea els comptes seleccionats
+        done: Fet
+        link: Enllaça
+        refresh: Actualitza
+      dialog_title: Configura els teus comptes d'Interactive Brokers
+      info_box:
+        items:
+          item_1: Posicions amb preus i quantitats actuals
+          item_2: Cost base per posició
+          item_3: Operacions, dividends, comissions i dipòsits o retirades d'efectiu
+        title: Importació de la consulta Flex d'IBKR
+        warning: L'activitat històrica està limitada a la finestra de l'informe de
+          la consulta Flex
+      link_existing:
+        description: O enllaça un compte d'IBKR descobert a un compte d'inversió manual
+          existent.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Selecciona un compte...
+      linked_accounts:
+        linked_to_html: 'Enllaçat a: %{account}'
+        title: Ja enllaçats
+      page_title: Configura els comptes d'Interactive Brokers
+      status:
+        fetching_accounts: Obtenint comptes d'Interactive Brokers...
+        no_accounts_found_description: Sure no ha pogut trobar cap compte d'IBKR a
+          l'últim informe Flex.
+        no_accounts_found_title: No s'han trobat comptes.
+      subtitle: Selecciona quins comptes de broker d'IBKR vols enllaçar.
+    sync_status:
+      all_linked:
+        one: 1 compte enllaçat
+        other: "%{count} comptes enllaçats"
+      no_accounts: Encara no s'han descobert comptes d'IBKR
+      partial: "%{linked} enllaçats, %{unlinked} necessiten configuració"
+    update:
+      success: La configuració d'Interactive Brokers s'ha actualitzat correctament.
+  providers:
+    ibkr:
+      connection_description: Connecta un informe de Flex Web Service d'Interactive
+        Brokers
+      institution_name: Interactive Brokers
+      name: Interactive Brokers

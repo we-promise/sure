@@ -1,0 +1,264 @@
+---
+ru:
+  indexa_capital_items:
+    complete_account_setup:
+      all_skipped: Все счета были пропущены. Счета не были созданы.
+      creation_failed: 'Не удалось создать счета: %{error}'
+      no_accounts: Нет счетов для настройки.
+      success: Успешно создано %{count} счёт(а).
+    create:
+      success: Подключение к IndexaCapital успешно создано
+    destroy:
+      success: Подключение к IndexaCapital удалено
+    errors:
+      provider_not_configured: Провайдер IndexaCapital не настроен
+    index:
+      title: Подключения IndexaCapital
+    indexa_capital_item:
+      accounts_need_setup: Счета требуют настройки
+      delete: Удалить подключение
+      deletion_in_progress: удаление в процессе...
+      error: Ошибка
+      more_accounts_available:
+        one: "Доступен ещё %{count} счёт"
+        few: "Доступно ещё %{count} счёта"
+        many: "Доступно ещё %{count} счетов"
+        other: "Доступно ещё %{count} счёта"
+      no_accounts_description: Это подключение пока не имеет привязанных счетов.
+      no_accounts_title: Нет счетов
+      provider_name: IndexaCapital
+      requires_update: Подключение требует обновления
+      setup_action: Настроить новые счета
+      setup_description: "%{linked} из %{total} счетов привязаны. Выберите типы счетов
+        для ваших новых импортированных счетов IndexaCapital."
+      setup_needed: Новые счета готовы к настройке
+      status: Синхронизировано %{timestamp} назад — %{summary}
+      status_never: Никогда не синхронизировалось
+      syncing: Синхронизация...
+      total: Всего
+      unlinked: Не привязано
+      update_credentials: Обновить учетные данные
+    institution_summary:
+      count:
+        one: "%{count} учреждение"
+        few: "%{count} учреждения"
+        many: "%{count} учреждений"
+        other: "%{count} учреждения"
+      none: Нет подключенных учреждений
+    link_accounts:
+      all_already_linked:
+        one: "Выбранный счёт (%{names}) уже привязан"
+        few: "%{count} выбранных счёта уже привязаны: %{names}"
+        many: "%{count} выбранных счетов уже привязаны: %{names}"
+        other: "%{count} выбранных счёта уже привязаны: %{names}"
+      api_error: 'Ошибка API: %{message}'
+      invalid_account_names:
+        one: "Невозможно привязать счёт с пустым именем"
+        few: "Невозможно привязать %{count} счёта с пустыми именами"
+        many: "Невозможно привязать %{count} счетов с пустыми именами"
+        other: "Невозможно привязать %{count} счёта с пустыми именами"
+      link_failed: Не удалось привязать счета
+      no_accounts_selected: Пожалуйста, выберите хотя бы один счёт
+      no_api_key: Учетные данные IndexaCapital не найдены. Пожалуйста, настройте их
+        в настройках провайдера.
+      partial_invalid: Успешно привязано %{created_count} счёт(а), %{already_linked_count}
+        уже были привязаны, %{invalid_count} счёт(а) имели недопустимые имена
+      partial_success: 'Успешно привязано %{created_count} счёт(а). %{already_linked_count}
+        счёт(а) уже были привязаны: %{already_linked_names}'
+      success:
+        one: "Успешно привязан %{count} счёт"
+        few: "Успешно привязаны %{count} счёта"
+        many: "Успешно привязано %{count} счетов"
+        other: "Успешно привязаны %{count} счёта"
+    link_existing_account:
+      account_already_linked: Этот счёт уже привязан к провайдеру
+      api_error: 'Ошибка API: %{message}'
+      invalid_account_name: Невозможно привязать счёт с пустым именем
+      missing_parameters: Отсутствуют обязательные параметры
+      no_api_key: Учетные данные IndexaCapital не найдены. Пожалуйста, настройте их
+        в Настройках провайдера.
+      provider_account_already_linked: Этот счёт IndexaCapital уже привязан к другому
+        счёту
+      provider_account_not_found: Счёт IndexaCapital не найден
+      success: Успешно привязан %{account_name} к IndexaCapital
+    loading:
+      loading_message: Загрузка счетов IndexaCapital...
+      loading_title: Загрузка
+    panel:
+      alternative_auth: Или используйте аутентификацию по имени пользователя/паролю...
+      field_descriptions: 'Описание полей:'
+      fields:
+        api_token:
+          description: Ваш API-токен только для чтения из панели управления Indexa
+            Capital
+          label: API-токен
+          placeholder_new: Вставьте ваш API-токен сюда
+          placeholder_update: Введите новый API-токен для обновления
+        document:
+          description: Ваш документ/ID в Indexa Capital
+          label: ID документа
+          placeholder_new: Вставьте ID документа сюда
+          placeholder_update: Введите новый ID документа для обновления
+        password:
+          description: Ваш пароль от Indexa Capital
+          label: Пароль
+          placeholder_new: Вставьте пароль сюда
+          placeholder_update: Введите новый пароль для обновления
+        username:
+          description: Ваше имя пользователя/электронная почта в Indexa Capital
+          label: Имя пользователя
+          placeholder_new: Вставьте имя пользователя сюда
+          placeholder_update: Введите новое имя пользователя для обновления
+      optional: "(Необязательно)"
+      optional_with_default: "(необязательно, по умолчанию %{default_value})"
+      required: "(Обязательно)"
+      save_button: Сохранить конфигурацию
+      setup_instructions: 'Инструкции по настройке:'
+      step_1: Посетите панель управления Indexa Capital, чтобы сгенерировать API-токен
+        только для чтения
+      step_2: Вставьте ваш API-токен ниже и нажмите Сохранить
+      step_3: После успешного подключения перейдите на вкладку Счета, чтобы настроить
+        новые счета
+      update_button: Обновить конфигурацию
+    preload_accounts:
+      no_credentials_configured: Пожалуйста, сначала настройте ваши учетные данные
+        IndexaCapital в Настройках провайдера.
+    select_accounts:
+      accounts_selected: выбрано счетов
+      api_error: 'Ошибка API: %{message}'
+      cancel: Отмена
+      configure_name_in_provider: Невозможно импортировать - пожалуйста, настройте
+        имя счёта в IndexaCapital
+      description: Выберите счета, которые вы хотите привязать к вашему счёту %{product_name}.
+      link_accounts: Привязать выбранные счета
+      no_accounts_found: Счета не найдены. Пожалуйста, проверьте ваши учетные данные
+        IndexaCapital.
+      no_api_key: Учетные данные IndexaCapital не настроены. Пожалуйста, настройте
+        их в Настройках.
+      no_credentials_configured: Пожалуйста, сначала настройте ваши учетные данные
+        IndexaCapital в Настройках провайдера.
+      no_name_placeholder: "(Без имени)"
+      title: Выберите счета IndexaCapital
+    select_existing_account:
+      account_already_linked: Этот счёт уже привязан к провайдеру
+      all_accounts_already_linked: Все счета IndexaCapital уже привязаны
+      api_error: 'Ошибка API: %{message}'
+      balance_label: 'Баланс:'
+      cancel: Отмена
+      cancel_button: Отмена
+      configure_name_in_provider: Невозможно импортировать - пожалуйста, настройте
+        имя счёта в IndexaCapital
+      connect_hint: Подключите счёт IndexaCapital для автоматической синхронизации.
+      description: Выберите счёт IndexaCapital для привязки к этому счёту. Операции
+        будут синхронизированы и дубли удалены автоматически.
+      header: Привязать к IndexaCapital
+      link_account: Привязать счёт
+      link_button: Привязать этот счёт
+      linking_to: 'Привязка к:'
+      no_account_specified: Счёт не указан
+      no_accounts: Не найдено непривязанных счетов IndexaCapital.
+      no_accounts_found: Счета IndexaCapital не найдены. Пожалуйста, проверьте ваши
+        учетные данные.
+      no_api_key: Учетные данные IndexaCapital не настроены. Пожалуйста, настройте
+        их в Настройках.
+      no_credentials_configured: Пожалуйста, сначала настройте ваши учетные данные
+        IndexaCapital в Настройках провайдера.
+      no_name_placeholder: "(Без имени)"
+      settings_link: Перейти в Настройки провайдера
+      subtitle: Выберите счёт IndexaCapital
+      title: Привязать %{account_name} к IndexaCapital
+    setup_accounts:
+      account_type_label: 'Тип счёта:'
+      account_types:
+        credit_card: Кредитная карта
+        crypto: Счёт криптовалюты
+        depository: Текущий или сберегательный счёт
+        investment: Инвестиционный счёт
+        loan: Кредит или ипотека
+        other_asset: Другой актив
+        skip: Пропустить этот счёт
+      accounts_count:
+        one: "Доступен %{count} счёт"
+        few: "Доступно %{count} счёта"
+        many: "Доступно %{count} счетов"
+        other: "Доступно %{count} счёта"
+      all_accounts_linked: Все ваши счета IndexaCapital уже настроены.
+      api_error: 'Ошибка API: %{message}'
+      balance: Баланс
+      cancel: Отмена
+      choose_account_type: 'Выберите правильный тип счёта для каждого счёта IndexaCapital:'
+      create_accounts: Создать счета
+      creating: Создание счетов...
+      creating_accounts: Создание счетов...
+      fetch_failed: Не удалось получить счета
+      historical_data_range: 'Диапазон исторических данных:'
+      import_selected: Импортировать выбранные счета
+      instructions: Выберите счета, которые вы хотите импортировать из IndexaCapital.
+        Вы можете выбрать несколько счетов.
+      no_accounts: Не найдено непривязанных счетов из этого подключения IndexaCapital.
+      no_accounts_to_setup: Нет счетов для настройки
+      no_api_key: Учетные данные IndexaCapital не настроены. Пожалуйста, проверьте
+        настройки подключения.
+      select_all: Выбрать все
+      subtitle: Выберите правильные типы счетов для ваших импортированных счетов
+      subtype_labels:
+        credit_card: ''
+        crypto: ''
+        depository: 'Подтип счёта:'
+        investment: 'Тип инвестиции:'
+        loan: 'Тип кредита:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Кредитные карты будут автоматически настроены как счета кредитных
+          карт.
+        crypto: Счета криптовалюты будут настроены для отслеживания активов и операций.
+        other_asset: Дополнительные параметры для других активов не требуются.
+      subtypes:
+        depository:
+          cd: Сертификат депозита
+          checking: Текущий
+          hsa: Счёт медицинских сбережений
+          money_market: Денежный рынок
+          savings: Сберегательный
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: План 529
+          angel: Ангел
+          brokerage: Брокерский
+          hsa: Счёт медицинских сбережений
+          ira: Традиционная IRA
+          mutual_fund: Паевой инвестиционный фонд
+          pension: Пенсионный
+          retirement: Пенсионный
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: План сбережений
+        loan:
+          auto: Автокредит
+          mortgage: Ипотека
+          other: Другой кредит
+          student: Студенческий кредит
+      sync_start_date_help: Выберите, насколько далеко назад вы хотите синхронизировать
+        историю операций.
+      sync_start_date_label: 'Начать синхронизацию операций с:'
+      title: Настройте ваши счета IndexaCapital
+    sync:
+      status:
+        calculating: Расчёт балансов...
+        checking_setup: Проверка конфигурации счёта...
+        importing: Импортирование счетов из IndexaCapital...
+        importing_data: Импорт данных счёта...
+        needs_setup: "%{count} счетов требуют настройки..."
+        processing: Обработка активов и операций...
+      success: Синхронизация начата
+    sync_status:
+      no_accounts: Счета не найдены
+      synced:
+        one: "Синхронизирован %{count} счёт"
+        few: "Синхронизированы %{count} счёта"
+        many: "Синхронизировано %{count} счетов"
+        other: "Синхронизированы %{count} счёта"
+      synced_with_setup: "%{linked} синхронизировано, %{unlinked} требует настройки"
+    update:
+      success: Подключение к IndexaCapital обновлено

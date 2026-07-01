@@ -1,0 +1,5 @@
+---
+hu:
+  coinbase:
+    processor:
+      paid_via: "Fizetve: %{method}"

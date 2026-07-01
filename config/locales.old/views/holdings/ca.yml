@@ -1,0 +1,116 @@
+---
+ca:
+  holdings:
+    cash:
+      brokerage_cash: Efectiu del broker
+    cost_basis_cell:
+      cancel: Cancel·la
+      or_per_share_label: 'O introdueix per acció:'
+      overwrite_confirm_body: Això reemplaçarà el cost base actual de %{current}.
+      overwrite_confirm_title: Reemplaça el cost base?
+      per_share: per acció
+      save: Desa
+      set: Estableix
+      set_cost_basis_header: Estableix el cost base per a %{ticker} (%{qty} accions)
+      total_cost_basis_label: Cost base total
+      unknown: "--"
+    cost_basis_sources:
+      calculated: A partir de les operacions
+      manual: Establert per l'usuari
+      provider: Del proveïdor
+    destroy:
+      cannot_delete: No pots eliminar aquesta posició
+      success: Posició eliminada
+    errors:
+      security_collision: 'No es pot reassignar: ja tens una posició per a %{ticker}
+        a %{date}.'
+    holding:
+      no_cost_basis: Sense cost base
+      per_share: per acció
+      shares: "%{qty} accions"
+      unknown: "--"
+    index:
+      average_cost: Cost mitjà
+      holdings: Posicions
+      name: Nom
+      new_holding: Nova activitat
+      no_holdings: No hi ha posicions per mostrar.
+      return: Rendiment total
+      weight: Pes
+    missing_price_tooltip:
+      description: Aquesta inversió té valors que falten i no se n'han pogut calcular
+        el rendiment ni el valor.
+      missing_data: Falten dades
+    remap_security:
+      security_not_found: No s'ha pogut trobar el valor seleccionat.
+      success: Valor actualitzat correctament.
+    reset_security:
+      success: Valor restablert al del proveïdor.
+    show:
+      avg_cost_label: Cost mitjà
+      book_value_label: Valor comptable
+      cancel: Cancel·la
+      cost_basis_locked_description: El cost base establert manualment no es modificarà
+        amb les sincronitzacions.
+      cost_basis_locked_label: El cost base està bloquejat
+      current_market_price_label: Preu de mercat actual
+      delete: Elimina
+      delete_subtitle: Això eliminarà la posició i totes les operacions associades
+        d'aquest compte. Aquesta acció no es pot desfer.
+      delete_title: Elimina la posició
+      edit_security: Edita el valor
+      history: Historial
+      last_price_update: Última actualització de preu
+      market_data_label: Dades de mercat
+      market_data_sync_button: Actualitza
+      market_value_label: Valor de mercat
+      never: Mai
+      no_security_provider: Proveïdor de valors no configurat. No es poden cercar
+        valors.
+      no_trade_history: No hi ha historial d'operacions per a aquesta posició.
+      originally: era %{ticker}
+      overview: Resum
+      portfolio_weight_label: Pes a la cartera
+      provider_disabled_warning: Actualitzacions de preu en pausa — el proveïdor %{provider}
+        està desactivat. Canvia a un altre proveïdor o torna'l a activar a Configuració.
+      provider_sent: 'El proveïdor ha enviat: %{ticker}'
+      remap_security: Desa
+      reset_confirm_body: Això canviarà el valor de %{current} a %{original} i mourà
+        totes les operacions associades.
+      reset_confirm_title: Restablir el valor al del proveïdor?
+      reset_to_provider: Restableix al del proveïdor
+      search_security: Cerca valor
+      search_security_placeholder: Cerca per símbol o nom
+      security_label: Valor
+      security_remapped_label: Valor reassignat
+      settings: Configuració
+      shares_label: Accions
+      switch_provider_button: Canvia
+      switch_provider_description: "%{provider} està desactivat. Cerca aquest valor
+        en un altre proveïdor activat."
+      switch_provider_label: Canvia de proveïdor
+      syncing: Sincronitzant...
+      ticker_label: Símbol
+      total_return_label: Rendiment total
+      trade_history_entry: "%{qty} accions de %{security} a %{price}"
+      truncated_history_warning: L'historial de preus només està disponible a partir
+        del %{date}. Les dates anteriors no tenen dades del proveïdor seleccionat
+        — això pot passar quan l'actiu es va llistar després de la data de l'operació,
+        o quan el proveïdor només ofereix una finestra històrica limitada al seu pla
+        actual.
+      unknown: Desconegut
+      unlock_confirm_body: Això permetrà que el cost base s'actualitzi per les sincronitzacions
+        del proveïdor o pels càlculs d'operacions.
+      unlock_confirm_title: Desbloquejar el cost base?
+      unlock_cost_basis: Desbloqueja
+    sync_prices:
+      provider_error: No s'han pogut obtenir els preus més recents. Torna-ho a provar
+        d'aquí a uns minuts.
+      success: Dades de mercat sincronitzades correctament.
+      unavailable: La sincronització de dades de mercat no està disponible per a valors
+        sense connexió.
+    unlock_cost_basis:
+      success: Cost base desbloquejat. Pot actualitzar-se a la propera sincronització.
+    update:
+      error: Valor de cost base no vàlid.
+      success: Cost base desat.

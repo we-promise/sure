@@ -1,0 +1,10 @@
+---
+pl:
+  passwords:
+    edit:
+      password: Nowe hasło
+      password_challenge: Obecne hasło
+      submit: Zresetuj hasło
+      title: Zaktualizuj hasło
+    update:
+      success: Twoje hasło zostało zresetowane.

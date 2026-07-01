@@ -1,0 +1,57 @@
+---
+hu:
+  trades:
+    form:
+      account: Átviteli számla (opcionális)
+      account_prompt: Számla keresése
+      amount: Összeg
+      fee: Tranzakciós díj
+      holding: Tőzsdei szimbólum
+      holding_optional: Tőzsdei szimbólum (opcionális)
+      price: Ár részvényenként
+      qty: Mennyiség
+      submit: Tranzakció hozzáadása
+      ticker_placeholder: AAPL
+      type: Típus
+      type_buy: Vétel
+      type_sell: Eladás
+      type_deposit: Befizetés
+      type_withdrawal: Kifizetés
+      type_dividend: Osztalék
+      type_interest: Kamat
+      dividend_requires_security: Osztalékhoz értékpapír szükséges
+    header:
+      buy: Vétel
+      sell: Eladás
+      dividend: Osztalék
+      interest: Kamat
+      current_market_price_label: Aktuális piaci ár
+      overview: Áttekintés
+      purchase_price_label: Vételár
+      purchase_qty_label: Vásárolt mennyiség
+      symbol_label: Szimbólum
+      total_return_label: Nem realizált nyereség/veszteség
+    new:
+      title: Új tranzakció
+    show:
+      additional: További adatok
+      amount_label: Összeg
+      buy: Vétel
+      category_label: Kategória
+      cost_per_share_label: Bekerülési érték részvényenként
+      date_label: Dátum
+      delete: Törlés
+      fee_label: Tranzakciós díj
+      delete_subtitle: Ez a művelet nem vonható vissza
+      delete_title: Ügylet törlése
+      details: Részletek
+      provider_disabled_warning: "Az árfrissítés szünetel – a(z) %{provider} szolgáltató le van tiltva. Engedélyezd újra a Beállításokban, vagy rendeld hozzá a pozíciót egy másik szolgáltatóhoz."
+      exclude_subtitle: Ez az ügylet nem kerül bele a riportokba és a számításokba
+      exclude_title: Kizárás az elemzésből
+      no_category: Nincs kategória
+      note_label: Megjegyzés
+      note_placeholder: Adj meg bármilyen további megjegyzést itt...
+      quantity_label: Mennyiség
+      sell: Eladás
+      settings: Beállítások
+      type_label: Típus

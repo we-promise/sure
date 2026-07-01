@@ -1,0 +1,61 @@
+---
+fr:
+  valuations:
+    confirmation_contents:
+      account_balance: solde du compte
+      asset_value: valeur de l'actif
+      balance: équilibre
+      brokerage_cash: Trésorerie de courtage
+      change: changement
+      credit_card_balance: solde de la carte de crédit
+      crypto_balance: solde cryptographique
+      holdings_value: Valeur des holdings
+      liability_balance: solde du passif
+      loan_balance: solde du prêt
+      'on': sur
+      property_value: valeur de la propriété
+      recalculate_notice: Toutes les transactions et soldes futurs seront recalculés
+        sur la base de ce %{change_or_update}.
+      this_will: Cela %{action_verb} la valeur du compte sur
+      to: à
+      to_colon: 'à:'
+      total_account_value: Valeur totale du compte
+      update: mise à jour
+      vehicle_value: valeur du véhicule
+    create:
+      account_updated: Compte mis à jour
+    errors:
+      amount_required: Le montant est requis
+    form:
+      amount: Montant
+      submit: Ajouter une mise à jour du solde
+    header:
+      balance: Solde
+    index:
+      change: changement
+      date: date
+      new_entry: Nouvelle entrée
+      no_valuations: Aucune évaluation pour ce compte pour l'instant
+      valuations: Évaluations
+      value: valeur
+    new:
+      title: Nouveau solde
+    show:
+      amount: Montant
+      amount_label: Valeur du compte à ce jour
+      date_label: Date
+      delete: Supprimer
+      delete_subtitle: Cette action ne peut pas être annulée
+      delete_title: Supprimer l'entrée
+      details: Détails
+      name_label: Nom
+      name_placeholder: Entrez un nom pour cette entrée
+      note_label: Notes
+      note_placeholder: Ajoutez tout détail supplémentaire à ce bilan
+      opening_balance: Solde d'ouverture
+      overview: Aperçu
+      settings: Paramètres
+      update_value: Mettre à jour la valeur
+    update:
+      account_updated: Compte mis à jour
+      entry_updated: Entrée mise à jour

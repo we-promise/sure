@@ -1,0 +1,5 @@
+---
+ca:
+  coinbase:
+    processor:
+      paid_via: Pagat amb %{method}

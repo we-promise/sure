@@ -1,0 +1,9 @@
+---
+nl:
+  other_assets:
+    edit:
+      edit: "%{account} bewerken"
+      balance_tracking_info: "Andere activa worden gevolgd via handmatige waarderingen met 'Nieuwe balans', niet via transacties. Cashflow heeft geen invloed op het accountsaldo."
+    new:
+      title: Voer activa details in
+      balance_tracking_info: "Andere activa worden gevolgd via handmatige waarderingen met 'Nieuwe balans', niet via transacties. Cashflow heeft geen invloed op het accountsaldo."

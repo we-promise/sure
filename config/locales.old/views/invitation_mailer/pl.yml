@@ -1,0 +1,8 @@
+---
+pl:
+  invitation_mailer:
+    invite_email:
+      accept_button: Zaakceptuj zaproszenie
+      body: "%{inviter} zaprosił(a) Cię do dołączenia do %{family} %{moniker} w %{product_name}!"
+      expiry_notice: To zaproszenie wygaśnie za %{days} dni
+      greeting: Witamy w %{product_name}!

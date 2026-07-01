@@ -1,0 +1,63 @@
+---
+ro:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Controlează cum se înscriu noii utilizatori pentru instanța ta de %{product}.
+        email_confirmation_description: Când este activată, utilizatorii trebuie să își confirme adresa de email atunci când o modifică.
+        email_confirmation_title: Solicită confirmarea emailului
+        generate_tokens: Generează cod nou
+        generated_tokens: Coduri generate
+        title: Integrare
+        states:
+          open: Deschis
+          closed: Închis
+          invite_only: Doar pe bază de invitație
+      show:
+        general: Setări Generale
+        financial_data_providers: Furnizori de Date Financiare
+        invites: Coduri de Invitație
+        title: Găzduire Proprie
+        danger_zone: Zonă de Pericol
+        clear_cache: Șterge cache-ul de date
+        clear_cache_warning: Ștergerea cache-ului de date va elimina toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte date. Aceasta nu va șterge conturile, tranzacțiile, categoriile sau alte date deținute de utilizator.
+        confirm_clear_cache:
+          title: Ștergi cache-ul de date?
+          body: Ești sigur că vrei să ștergi cache-ul de date? Aceasta va elimina toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte date. Această acțiune nu poate fi anulată.
+      brand_fetch_settings:
+        description: Introdu ID-ul Clientului furnizat de Brand Fetch
+        label: ID Client
+        placeholder: Introdu ID-ul tău de Client aici
+        title: Setări Brand Fetch
+      openai_settings:
+        description: Introdu tokenul de acces și configurează opțional un furnizor personalizat compatibil cu OpenAI
+        env_configured_message: Configurat cu succes prin variabile de mediu.
+        access_token_label: Token de Acces
+        access_token_placeholder: Introdu tokenul tău de acces aici
+        uri_base_label: URL de Bază API (Opțional)
+        uri_base_placeholder: "https://api.openai.com/v1 (implicit)"
+        model_label: Model (Opțional)
+        model_placeholder: "gpt-4.1 (implicit)"
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance oferă acces gratuit la prețurile acțiunilor, ratele de schimb și date financiare fără a necesita o cheie API.
+        status_active: Yahoo Finance este activ și funcționează
+        status_inactive: Conexiunea Yahoo Finance a eșuat
+        connection_failed: Nu se poate conecta la Yahoo Finance
+        troubleshooting: Verifică-ți conexiunea la internet și setările firewall-ului. Yahoo Finance poate fi temporar indisponibil.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} apeluri API zilnice utilizate (%{percentage})"
+        description: Introdu cheia API furnizată de Twelve Data
+        env_configured_message: Configurat cu succes prin variabila de mediu TWELVE_DATA_API_KEY.
+        label: Cheie API
+        placeholder: Introdu cheia ta API aici
+        plan: "planul %{plan}"
+        title: Twelve Data
+      update:
+        failure: Valoare setare invalidă
+        success: Setări actualizate
+        invalid_onboarding_state: Stare de integrare invalidă
+      clear_cache:
+        cache_cleared: Cache-ul de date a fost șters. Acest lucru poate dura câteva momente.
+      not_authorized: Nu ești autorizat să efectuezi această acțiune

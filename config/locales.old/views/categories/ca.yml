@@ -1,0 +1,52 @@
+---
+ca:
+  categories:
+    bootstrap:
+      success: Categories per defecte creades correctament
+    category:
+      delete: Elimina la categoria
+      edit: Edita la categoria
+    create:
+      success: Categoria creada correctament
+    destroy:
+      success: Categoria eliminada correctament
+    destroy_all:
+      success: Totes les categories eliminades
+    edit:
+      edit: Edita la categoria
+    form:
+      color: Color
+      icon: Icona
+      name_label: Nom
+      parent_category_label: Categoria pare (opcional)
+      placeholder: Nom de la categoria
+      auto_adjust: ajusta'l automàticament.
+      poor_contrast: Contrast insuficient; tria un color més fosc o
+      unassigned: "(sense assignar)"
+    index:
+      bootstrap: Utilitza les predeterminades (recomanat)
+      categories: Categories
+      categories_expenses: Categories de despesa
+      categories_incomes: Categories d'ingressos
+      delete_all: Elimina-les totes
+      empty: No s'han trobat categories
+      new: Nova categoria
+    menu:
+      loading: Carregant...
+    new:
+      new_category: Nova categoria
+    update:
+      success: Categoria actualitzada correctament
+    virtual:
+      payment: Pagament
+      trade: Operació
+      transfer: Transferència
+  category:
+    dropdowns:
+      show:
+        bootstrap: Genera categories per defecte
+        empty: No s'han trobat categories
+        expense: despesa
+        income: ingrés
+        match_transfer: Fes coincidir amb transferència/pagament
+        one_time: "%{type} puntual"

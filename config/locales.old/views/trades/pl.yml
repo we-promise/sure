@@ -1,0 +1,56 @@
+---
+pl:
+  trades:
+    form:
+      account: Konto transferowe (opcjonalnie)
+      account_prompt: Wyszukaj konto
+      amount: Kwota
+      fee: Opłata transakcyjna
+      holding: Symbol ticker
+      holding_optional: Symbol ticker (opcjonalnie)
+      price: Cena za akcję
+      qty: Ilość
+      submit: Dodaj transakcję
+      ticker_placeholder: AAPL
+      type: Typ
+      type_buy: Kupno
+      type_sell: Sprzedaż
+      type_deposit: Wpłata
+      type_withdrawal: Wypłata
+      type_dividend: Dywidenda
+      type_interest: Odsetki
+      dividend_requires_security: Dla dywidend wymagany jest papier wartościowy
+    header:
+      buy: Kupno
+      sell: Sprzedaż
+      dividend: Dywidenda
+      interest: Odsetki
+      current_market_price_label: Aktualna cena rynkowa
+      overview: Przegląd
+      purchase_price_label: Cena zakupu
+      purchase_qty_label: Ilość zakupu
+      symbol_label: Symbol
+      total_return_label: Niezrealizowany zysk/strata
+    new:
+      title: Nowa transakcja
+    show:
+      additional: Dodatkowe
+      amount_label: Kwota
+      buy: Kupno
+      category_label: Kategoria
+      cost_per_share_label: Koszt za akcję
+      date_label: Data
+      delete: Usuń
+      fee_label: Opłata transakcyjna
+      delete_subtitle: Tej akcji nie można cofnąć
+      delete_title: Usuń transakcję giełdową
+      details: Szczegóły
+      exclude_subtitle: Ta transakcja giełdowa nie będzie uwzględniana w raportach i obliczeniach
+      exclude_title: Wyklucz z analityki
+      no_category: Brak kategorii
+      note_label: Notatka
+      note_placeholder: Dodaj tutaj dodatkowe notatki...
+      quantity_label: Ilość
+      sell: Sprzedaż
+      settings: Ustawienia
+      type_label: Typ

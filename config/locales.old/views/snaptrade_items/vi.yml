@@ -1,0 +1,191 @@
+vi:
+  snaptrade_items:
+    default_name: "Kết nối SnapTrade"
+    link_accounts:
+      use_setup_flow: Sử dụng luồng thiết lập tài khoản
+    create:
+      success: "Đã cấu hình SnapTrade thành công."
+    update:
+      success: "Đã cập nhật cấu hình SnapTrade thành công."
+    destroy:
+      success: "Đã lên lịch xóa kết nối SnapTrade."
+    connect:
+      decryption_failed: "Không thể đọc thông tin xác thực SnapTrade. Vui lòng xóa và tạo lại kết nối này."
+      connection_failed: "Kết nối SnapTrade thất bại: %{message}"
+    callback:
+      success: "Đã kết nối brokerage! Vui lòng chọn tài khoản muốn liên kết."
+      no_item: "Không tìm thấy cấu hình SnapTrade."
+    complete_account_setup:
+      success:
+        one: "Đã liên kết thành công %{count} tài khoản."
+        other: "Đã liên kết thành công %{count} tài khoản."
+      partial_success:
+        one: "Đã liên kết %{count} tài khoản. %{failed_count} liên kết thất bại."
+        other: "Đã liên kết %{count} tài khoản. %{failed_count} liên kết thất bại."
+      link_failed: "Liên kết tài khoản thất bại: %{errors}"
+      no_accounts: "Không có tài khoản nào được chọn để liên kết."
+    preload_accounts:
+      not_configured: "SnapTrade chưa được cấu hình."
+    select_accounts:
+      not_configured: "SnapTrade chưa được cấu hình."
+    select_existing_account:
+      not_found: "Không tìm thấy tài khoản hoặc cấu hình SnapTrade."
+      title: "Liên kết với tài khoản SnapTrade"
+      header: "Liên kết tài khoản hiện có"
+      subtitle: "Chọn tài khoản SnapTrade để liên kết"
+      no_accounts: "Không có tài khoản SnapTrade chưa liên kết."
+      connect_hint: "Bạn có thể cần kết nối brokerage trước."
+      settings_link: "Đi đến Cài đặt nhà cung cấp"
+      linking_to: "Đang liên kết với tài khoản:"
+      balance_label: "Số dư:"
+      link_button: "Liên kết"
+      cancel_button: "Hủy"
+    link_existing_account:
+      success: "Đã liên kết thành công với tài khoản SnapTrade."
+      failed: "Liên kết tài khoản thất bại: %{message}"
+      not_found: "Không tìm thấy tài khoản."
+    connections:
+      unknown_brokerage: "Brokerage không xác định"
+    delete_connection:
+      success: "Đã xóa kết nối thành công. Một slot đã được giải phóng."
+      failed: "Xóa kết nối thất bại: %{message}"
+      missing_authorization_id: "Thiếu ID ủy quyền"
+      api_deletion_failed: "Không thể xóa kết nối khỏi SnapTrade - thiếu thông tin xác thực. Kết nối có thể vẫn tồn tại trong tài khoản SnapTrade của bạn."
+    delete_orphaned_user:
+      success: "Đã xóa đăng ký mồ côi thành công."
+      failed: "Xóa đăng ký mồ côi thất bại."
+    setup_accounts:
+      title: "Thiết lập tài khoản SnapTrade"
+      header: "Thiết lập tài khoản SnapTrade của bạn"
+      subtitle: "Chọn tài khoản brokerage muốn liên kết"
+      syncing: "Đang lấy tài khoản của bạn..."
+      loading: "Đang tải tài khoản từ SnapTrade..."
+      loading_hint: "Nhấn Làm mới để kiểm tra tài khoản."
+      refresh: "Làm mới"
+      info_title: "Dữ liệu đầu tư SnapTrade"
+      info_holdings: "Tài sản nắm giữ với giá hiện tại và số lượng"
+      info_cost_basis: "Cơ sở chi phí theo vị thế (nếu có)"
+      info_activities: "Lịch sử giao dịch với nhãn hoạt động (Mua, Bán, Cổ tức, v.v.)"
+      info_history: "Lịch sử giao dịch tối đa 3 năm"
+      free_tier_note: "Gói miễn phí SnapTrade cho phép 5 kết nối brokerage. Kiểm tra bảng điều khiển SnapTrade để xem mức sử dụng hiện tại."
+      no_accounts_title: "Không tìm thấy tài khoản"
+      no_accounts_message: "Không tìm thấy tài khoản brokerage nào. Điều này có thể xảy ra nếu bạn đã hủy kết nối hoặc brokerage không được hỗ trợ."
+      try_again: "Kết nối Brokerage"
+      back_to_settings: "Quay lại Cài đặt"
+      available_accounts: "Tài khoản có sẵn"
+      balance_label: "Số dư:"
+      account_number: "Tài khoản:"
+      sync_start_date_label: "Nhập giao dịch từ:"
+      sync_start_date_help: "Để trống để lấy toàn bộ lịch sử có sẵn"
+      create_button: "Tạo tài khoản đã chọn"
+      cancel_button: "Hủy"
+      creating: "Đang tạo tài khoản..."
+      done_button: "Xong"
+      or_link_existing: "Hoặc liên kết với tài khoản hiện có thay vì tạo mới:"
+      select_account: "Chọn một tài khoản..."
+      link_button: "Liên kết"
+      linked_accounts: "Đã liên kết"
+      linked_to: "Liên kết với:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} tài khoản cần thiết lập"
+        other: "%{count} tài khoản cần thiết lập"
+      deletion_in_progress: "Đang xóa..."
+      syncing: "Đang đồng bộ..."
+      requires_update: "Kết nối cần cập nhật"
+      error: "Lỗi đồng bộ"
+      status: "Đồng bộ lần cuối %{timestamp} trước - %{summary}"
+      status_never: "Chưa bao giờ đồng bộ"
+      reconnect: "Kết nối lại"
+      connect_brokerage: "Kết nối Brokerage"
+      add_another_brokerage: "Kết nối thêm brokerage"
+      delete: "Xóa"
+      setup_needed: "Tài khoản cần thiết lập"
+      setup_description: "Một số tài khoản từ SnapTrade cần được liên kết với tài khoản Sure."
+      setup_action: "Thiết lập tài khoản"
+      setup_accounts_menu: "Thiết lập tài khoản"
+      manage_connections: "Quản lý kết nối"
+      more_accounts_available:
+        one: "%{count} tài khoản khác có sẵn để thiết lập"
+        other: "%{count} tài khoản khác có sẵn để thiết lập"
+      no_accounts_title: "Chưa phát hiện tài khoản nào"
+      no_accounts_description: "Kết nối brokerage để nhập tài khoản đầu tư của bạn."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Kết nối với brokerage qua SnapTrade (hỗ trợ 25+ sàn)"
+      description: "SnapTrade kết nối với 25+ brokerage lớn (Fidelity, Vanguard, Schwab, Robinhood, v.v.) và cung cấp lịch sử giao dịch đầy đủ với nhãn hoạt động và cơ sở chi phí."
+      setup_title: "Hướng dẫn thiết lập:"
+      step_1_html: "Tạo tài khoản tại <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Sao chép Client ID và Consumer Key từ bảng điều khiển"
+      step_3: "Nhập thông tin xác thực bên dưới và nhấn Lưu"
+      step_4: "Đi đến trang Tài khoản và dùng 'Kết nối thêm brokerage' để liên kết tài khoản đầu tư"
+      free_tier_warning: "Gói miễn phí SnapTrade hỗ trợ 5 kết nối brokerage. Nâng cấp trên SnapTrade để có thêm."
+      client_id_label: "Client ID"
+      client_id_placeholder: "Nhập Client ID SnapTrade của bạn"
+      client_id_update_placeholder: "Nhập Client ID mới để cập nhật"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "Nhập Consumer Key SnapTrade của bạn"
+      consumer_key_update_placeholder: "Nhập Consumer Key mới để cập nhật"
+      save_button: "Lưu cấu hình"
+      update_button: "Cập nhật cấu hình"
+      status_connected:
+        one: "%{count} tài khoản từ SnapTrade"
+        other: "%{count} tài khoản từ SnapTrade"
+      status_needs_registration: "Đã lưu thông tin xác thực. Hoàn tất thiết lập để kết nối brokerage."
+      needs_setup:
+        one: "%{count} cần thiết lập"
+        other: "%{count} cần thiết lập"
+      status_ready: "Sẵn sàng kết nối brokerage"
+      setup_accounts_button: "Thiết lập tài khoản"
+      connect_button: "Kết nối Brokerage"
+      connected_brokerages: "Đã kết nối:"
+      manage_connections: "Quản lý kết nối"
+      loading_connections: "Đang tải kết nối..."
+      connections_error: "Tải kết nối thất bại: %{message}"
+      accounts_count:
+        one: "%{count} tài khoản"
+        other: "%{count} tài khoản"
+      orphaned_connection: "Kết nối mồ côi (không đồng bộ cục bộ)"
+      needs_linking: "cần liên kết"
+      no_connections: "Không tìm thấy kết nối brokerage nào."
+      delete_connection: "Xóa"
+      delete_connection_title: "Xóa kết nối Brokerage?"
+      delete_connection_body: "Thao tác này sẽ xóa vĩnh viễn kết nối %{brokerage} khỏi SnapTrade. Tất cả tài khoản từ brokerage này sẽ bị hủy liên kết. Bạn cần kết nối lại để đồng bộ các tài khoản này."
+      delete_connection_confirm: "Xóa kết nối"
+      orphaned_users_title:
+        one: "%{count} đăng ký mồ côi"
+        other: "%{count} đăng ký mồ côi"
+      orphaned_users_description: "Đây là các đăng ký người dùng SnapTrade cũ đang sử dụng slot kết nối của bạn. Xóa chúng để giải phóng slot."
+      orphaned_user: "Đăng ký mồ côi"
+      delete_orphaned_user: "Xóa"
+      delete_orphaned_user_title: "Xóa đăng ký mồ côi?"
+      delete_orphaned_user_body: "Thao tác này sẽ xóa vĩnh viễn người dùng SnapTrade mồ côi này và tất cả kết nối brokerage của họ, giải phóng slot kết nối."
+      delete_orphaned_user_confirm: "Xóa đăng ký"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Không tìm thấy tài khoản"
+      synced:
+        one: "%{count} tài khoản đã đồng bộ"
+        other: "%{count} tài khoản đã đồng bộ"
+      synced_with_setup: "%{linked} đã đồng bộ, %{unlinked} cần thiết lập"
+    institution_summary:
+      none: "Chưa kết nối tổ chức nào"
+      count:
+        one: "%{count} tổ chức"
+        other: "%{count} tổ chức"
+    brokerage_summary:
+      none: "Chưa kết nối brokerage nào"
+      count:
+        one: "%{count} brokerage"
+        other: "%{count} brokerage"
+    syncer:
+      discovering: "Đang phát hiện tài khoản..."
+      importing: "Đang nhập tài khoản từ SnapTrade..."
+      processing: "Đang xử lý tài sản nắm giữ và hoạt động..."
+      calculating: "Đang tính toán số dư..."
+      checking_config: "Đang kiểm tra cấu hình tài khoản..."
+      needs_setup: "%{count} tài khoản cần thiết lập..."
+      activities_fetching_async: "Các hoạt động đang được lấy trong nền. Quá trình này có thể mất đến một phút đối với kết nối brokerage mới."

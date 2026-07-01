@@ -1,0 +1,30 @@
+---
+hu:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Számla
+        account_last4_hint: Számla utolsó négy számjegye
+        account_name_hint: Számlanév-tipp
+        closing_balance: Záró egyenleg
+        content_sha256: Tartalom-összefoglaló
+        currency: Pénznem
+        filename: Fájlnév
+        institution_name_hint: Intézménynév-tipp
+        opening_balance: Nyitóegyenleg
+        original_file: Kimutatásfájl
+        period_end_on: Időszak vége
+        period_start_on: Időszak kezdete
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: már fel lett töltve ennél a háztartásnál
+            content_sha256:
+              duplicate_statement_file: már fel lett töltve ennél a háztartásnál
+            original_file:
+              invalid_format: csak PDF, CSV vagy XLSX fájl lehet
+              too_large: túl nagy. A maximális méret %{max_mb} MB
+            period_end_on:
+              on_or_after_start: nem lehet korábbi, mint az időszak kezdete

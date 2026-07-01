@@ -1,0 +1,19 @@
+---
+zh-TW:
+  invitations:
+    create:
+      failure: 傳送邀請失敗
+      success: 邀請傳送成功
+    destroy:
+      failure: 刪除邀請時出現問題。
+      not_authorized: 您沒有管理邀請的權限。
+      success: 邀請已成功刪除。
+    new:
+      email_label: 電子信箱地址
+      email_placeholder: 請輸入電子信箱地址
+      role_admin: 管理員
+      role_label: 角色
+      role_member: 成員
+      submit: 傳送邀請
+      subtitle: 傳送邀請，讓對方加入您在 %{product_name} 的家庭帳戶
+      title: 邀請成員

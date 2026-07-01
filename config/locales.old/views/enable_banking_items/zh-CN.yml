@@ -1,0 +1,116 @@
+---
+zh-CN:
+  enable_banking_items:
+    errors:
+      api_error: 与银行通信时发生错误。
+      network_unreachable: 银行服务暂时无法访问，请稍后再试。
+      session_invalid: 会话已过期。请重新连接您的银行。
+      unexpected: 同步过程中发生意外错误。
+    authorize:
+      authorization_failed: 启动授权失败：%{message}
+      bank_required: 请选择一家银行。
+      invalid_redirect: 收到的授权 URL 无效。请重试。
+      redirect_uri_not_allowed: 不允许重定向。请在 Enable Banking 应用设置中配置 `%{callback_url}`。
+      unexpected_error: 发生意外错误。请重试。
+    callback:
+      authorization_error: 授权失败
+      invalid_callback: 回调参数无效。
+      item_not_found: 未找到连接。
+      session_failed: 无法完成授权
+      success: 已成功连接到您的银行。您的账户正在同步。
+      unexpected_error: 发生意外错误。请重试。
+    complete_account_setup:
+      all_skipped: 所有账户都已跳过。您可以稍后在账户页面进行设置。
+      no_accounts: 没有可设置的账户。
+      success: 已成功创建 %{count} 个账户！
+    create:
+      success: Enable Banking 配置成功。
+    destroy:
+      success: Enable Banking 连接已排队等待删除。
+    link_accounts:
+      already_linked: 所选账户已连接。
+      link_failed: 连接账户失败
+      no_accounts_selected: 未选择账户。
+      no_session: 当前没有活动的 Enable Banking 连接。请先连接银行。
+      success: 已成功连接 %{count} 个账户。
+    link_existing_account:
+      success: 账户已成功连接到 Enable Banking
+      errors:
+        only_manual: 只有手动账户才能连接
+        invalid_enable_banking_account: 所选 Enable Banking 账户无效
+    enable_banking_item:
+      deletion_in_progress: 正在删除
+      provider_name: Enable Banking
+      syncing: 正在同步...
+      reconnect: 重新连接
+      last_synced: 上次同步于 %{time} 前
+      never_synced: 从未同步
+      update: 更新
+      delete: 删除
+      setup_needed: 需要设置
+      setup_needed_description:
+        one: 从 Enable Banking 导入的 1 个账户需要设置
+        other: 从 Enable Banking 导入的 %{count} 个账户需要设置
+      set_up_accounts: 设置账户
+      no_accounts_found: 未找到账户
+      no_accounts_found_description: 未从 Enable Banking 找到账户。请重试同步。
+    select_existing_account:
+      title: 连接 Enable Banking 账户
+      all_linked: 看起来所有 Enable Banking 账户都已连接。
+      try_after_sync: 如果您刚刚连接或同步，请等待同步完成后再试。
+      unlink_to_move: 若要链接不同的账户，请先在账户的操作菜单中取消其连接。
+      balance: 余额
+      link: 连接
+      cancel: 取消
+    setup_accounts:
+      title: 设置您的 Enable Banking 账户
+      header_subtitle: 为您导入的账户选择正确的账户类型
+      choose_account_type: 为每个 Enable Banking 账户选择正确的账户类型：
+      historical_data_range: 历史数据范围：
+      sync_start_date_label: 从以下日期开始同步交易：
+      sync_start_date_help: 选择要同步交易历史的回溯范围。最多可获取 2 年历史。
+      account_type_label: 账户类型：
+      balance: 余额
+      create_accounts: 创建账户
+      creating_accounts: 正在创建账户...
+      cancel: 取消
+      psd2_savings_notice: 根据 PSD2 规则，部分储蓄账户可能需要额外授权。
+    new:
+      link_enable_banking_title: 连接 Enable Banking
+      session_expired: 会话已过期 - 需要重新授权
+      connected_bank: 已连接的银行
+      session_expires: 会话过期时间
+      unknown: 未知
+      connection: 连接
+      configured: 已配置
+      ready_to_connect: 准备连接银行
+      sync: 同步
+      reconnect: 重新连接
+      connect_bank: 连接银行
+      remove_confirm: 确定要移除此连接吗？
+      remove: 移除
+      add_connection: 添加连接
+      not_configured: 尚未配置 Enable Banking 连接
+      not_configured_description: 在连接 Enable Banking 账户之前，您需要先配置 Enable Banking 连接。
+      setup_steps_title: 设置步骤：
+      setup_step_1_html: 前往 <strong>设置 → 提供商</strong>
+      setup_step_2_html: 找到 <strong>Enable Banking</strong> 区块
+      setup_step_3: 输入您的 Enable Banking 凭据
+      setup_step_4: 返回此处连接您的账户
+      go_to_provider_settings: 前往提供商设置
+    reauthorize:
+      invalid_redirect: 收到的授权 URL 无效。请重试。
+      reauthorization_failed: 重新授权失败
+    select_bank:
+      beta_label: Beta
+      cancel: 取消
+      check_country: 请检查您的国家/地区代码设置。
+      credentials_required: 请先配置您的 Enable Banking 凭据。
+      description: 选择您要连接到账户的银行。
+      no_banks: 此国家/地区没有可用银行。
+      no_search_results: 没有匹配您搜索的银行。
+      search_label: 搜索您的银行
+      search_placeholder: 搜索您的银行...
+      title: 选择您的银行
+    update:
+      success: Enable Banking 配置已更新。

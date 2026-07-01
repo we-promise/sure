@@ -1,0 +1,29 @@
+---
+hu:
+  account_sharings:
+    show:
+      title: Fiókmegosztás
+      subtitle: Szabályozd, ki láthatja és kezelheti ezt a fiókot
+      member: Tag
+      permission: Jogosultság
+      shared: Megosztva
+      no_members: Nincs más tag a(z) %{moniker} csoportodban, akivel megoszthatnád
+      permissions:
+        full_control: Teljes hozzáférés
+        full_control_description: Megtekinthet, szerkeszthet és kezelhet tranzakciókat
+        read_write: Megjegyzést írhat
+        read_write_description: Kategorizálhat, címkézhet és megjegyzést adhat hozzá
+        read_only: Csak megtekintés
+        read_only_description: Csak a fiókadatokat tekintheti meg
+      save: Megosztási beállítások mentése
+      owner_label: "Tulajdonos: %{name}"
+      shared_with_count:
+        one: 1 taggal megosztva
+        other: "%{count} taggal megosztva"
+      include_in_finances: Beleszámít a költségvetésembe és riportjaimba
+      exclude_from_finances: Kizárás a költségvetésemből és riportjaimból
+      finance_toggle_description: Ez a fiók beleszámít a nettó vagyonodba, költségvetésedbe és riportjaidba
+    update:
+      success: Megosztási beállítások frissítve
+      not_owner: Csak a fiók tulajdonosa kezelheti a megosztást
+      finance_toggle_success: Pénzügyi befoglalási beállítás frissítve

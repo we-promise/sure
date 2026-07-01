@@ -1,0 +1,11 @@
+---
+ca:
+  category:
+    dropdowns:
+      row:
+        delete: Elimina la categoria
+        edit: Edita la categoria
+      show:
+        clear: Esborra la categoria
+        no_categories: No s'han trobat categories
+        search_placeholder: Cerca

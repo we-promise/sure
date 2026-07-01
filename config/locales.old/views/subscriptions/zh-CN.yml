@@ -1,0 +1,24 @@
+---
+zh-CN:
+  subscriptions:
+    self_hosted_alert: "%{product_name} 在自托管模式下不可用。"
+    upgrade:
+      contribute_and_support_sure: "贡献并支持 Sure"
+      cta: "继续支持此代码库的开发！"
+      header:
+        support: "支持"
+        sure: "Sure"
+        today: "今天"
+      redirect_to_stripe: "在下一步中，您将被重定向到 Stripe，它为我们处理信用卡。"
+      trialing: "您的数据将在 %{days} 天后删除"
+      trial_over: "您的试用期已结束"
+      already_contributing: 你已经在贡献。谢谢！
+      page_title: 升级
+      account_settings: 账户设置
+      sign_out: 退出登录
+    create:
+      welcome: 欢迎使用 Sure！
+      trial_already_used: 你已经开始或完成过试用。请升级以继续使用。
+    success:
+      welcome_with_contribution: 欢迎使用 Sure！感谢你的贡献。
+      contribution_failed: 处理贡献时出现问题。请重试。

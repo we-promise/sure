@@ -1,0 +1,25 @@
+---
+pl:
+  vehicles:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      make: Marka
+      make_placeholder: Toyota
+      mileage: Przebieg
+      mileage_placeholder: '15000'
+      mileage_unit: Jednostka
+      model: Model
+      model_placeholder: Camry
+      year: Rok
+      year_placeholder: '2023'
+    new:
+      title: Wprowadź dane pojazdu
+    overview:
+      current_price: Aktualna cena
+      make_model: Marka i model
+      mileage: Przebieg
+      purchase_price: Cena zakupu
+      trend: Trend
+      unknown: Nieznane
+      year: Rok

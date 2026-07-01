@@ -1,0 +1,32 @@
+---
+pl:
+  properties:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      address_line1: Adres
+      address_line1_placeholder: 123 Main St
+      area: Powierzchnia użytkowa
+      area_placeholder: '2000'
+      area_unit: Jednostka miary
+      country: Kraj
+      country_placeholder: US
+      locality: Miasto
+      locality_placeholder: San Francisco
+      none: Brak
+      postal_code: Kod pocztowy
+      postal_code_placeholder: '94105'
+      region: Województwo/Region
+      region_placeholder: CA
+      subtype_prompt: Wybierz typ nieruchomości
+      year_built: Rok budowy
+      year_built_placeholder: '2000'
+    new:
+      title: Wprowadź dane nieruchomości
+    overview:
+      living_area: Powierzchnia użytkowa
+      market_value: Wartość rynkowa
+      purchase_price: Cena zakupu
+      trend: Trend
+      unknown: Nieznane
+      year_built: Rok budowy

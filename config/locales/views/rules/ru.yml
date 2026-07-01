@@ -114,14 +114,14 @@ ru:
       action_label_to: "%{label} к %{value}"
       all_past_and_future: Все прошлые и будущие %{resource}
       and_more_actions:
-        one: "и ещё %{count} действие"
-        few: "и ещё %{count} действия"
-        many: "и ещё %{count} действий"
-        other: "и ещё %{count} действия"
+        few: и ещё %{count} действия
+        many: и ещё %{count} действий
+        one: и ещё %{count} действие
+        other: и ещё %{count} действия
       and_more_conditions:
-        one: и ещё 1 условие
         few: и ещё %{count} условия
         many: и ещё %{count} условий
+        one: и ещё 1 условие
         other: и ещё %{count} условий
       delete: Удалить
       edit: Редактировать

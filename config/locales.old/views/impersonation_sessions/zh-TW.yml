@@ -1,0 +1,15 @@
+---
+zh-TW:
+  impersonation_sessions:
+    approve:
+      success: 請求已批准
+    complete:
+      success: 工作階段已完成
+    create:
+      success: 請求已傳送給使用者，等待批准中
+    join:
+      success: 已加入工作階段
+    leave:
+      success: 已離開工作階段
+    reject:
+      success: 請求已拒絕

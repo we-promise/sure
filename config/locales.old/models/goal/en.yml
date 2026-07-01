@@ -1,0 +1,25 @@
+---
+en:
+  activerecord:
+    attributes:
+      goal:
+        name: Name
+        target_amount: Target amount
+        currency: Currency
+        target_date: Target date
+        color: Color
+        notes: Notes
+        state: State
+        linked_accounts: Linked accounts
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Pick at least one account to fund this goal.
+            linked_accounts:
+              must_be_fundable: All linked accounts must be cash or investment accounts.
+              currency_mismatch: All linked accounts must share the same currency.
+              must_belong_to_family: Linked accounts must belong to the same family as the goal.
+            currency:
+              locked_after_linked: Can't change the currency after the goal is linked to accounts.

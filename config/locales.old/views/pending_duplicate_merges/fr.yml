@@ -1,0 +1,25 @@
+---
+fr:
+  pending_duplicate_merges:
+    create:
+      invalid_transaction: Transaction non valide sélectionnée pour la fusion
+      merge_failed: Impossible de fusionner les transactions
+      merge_success: Transaction en attente fusionnée avec la transaction publiée
+      no_posted_selected: Veuillez sélectionner une transaction publiée avec laquelle
+        fusionner
+    new:
+      next: 10 suivantes →
+      no_candidates: Aucune transaction validée trouvée sur ce compte.
+      pending_transaction: Transaction en attente
+      previous: "← 10 précédentes"
+      select_posted: Sélectionner la transaction validée à fusionner
+      showing_range: Affichage de %{start} - %{end}
+      submit_button: Fusionner les transactions
+      title: Fusionner avec une transaction validée
+      warning_description: Utilisez cette option pour fusionner manuellement une transaction
+        en attente avec sa version validée. Cela supprimera la transaction en attente
+        et ne conservera que la version validée.
+      warning_title: Fusion manuelle de doublons
+    set_transaction:
+      pending_only: Cette fonctionnalité n'est disponible que pour les transactions
+        en attente

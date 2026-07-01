@@ -1,0 +1,78 @@
+---
+hu:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Sikeresen csatlakoztál a Coinbase-hez! A számláid szinkronizálása folyamatban van.
+    update:
+      success: A Coinbase konfiguráció sikeresen frissítve.
+    destroy:
+      success: A Coinbase kapcsolat törlése ütemezve.
+    setup_accounts:
+      title: Coinbase pénztárcák importálása
+      subtitle: Válaszd ki, melyik pénztárcákat szeretnéd követni
+      instructions: Válaszd ki, melyik pénztárcákat szeretnéd importálni. A ki nem jelölt pénztárcák elérhetők maradnak, ha később hozzá szeretnéd adni őket.
+      no_accounts: Minden pénztárca importálva lett.
+      accounts_count:
+        one: "%{count} pénztárca elérhető"
+        other: "%{count} pénztárca elérhető"
+      select_all: Összes kijelölése
+      import_selected: Kijelöltek importálása
+      cancel: Mégse
+      creating: Importálás...
+    complete_account_setup:
+      success:
+        one: "%{count} pénztárca importálva"
+        other: "%{count} pénztárca importálva"
+      none_selected: Nincs kijelölt pénztárca
+      no_accounts: Nincs importálható pénztárca
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Szinkronizálás...
+      reconnect: A hitelesítő adatok frissítése szükséges
+      deletion_in_progress: Törlés folyamatban...
+      sync_status:
+        no_accounts: Nem találhatók számlák
+        all_synced:
+          one: "%{count} számla szinkronizálva"
+          other: "%{count} számla szinkronizálva"
+        partial_sync: "%{linked_count} szinkronizálva, %{unlinked_count} beállítást igényel"
+      status: "Utolsó szinkronizálás: %{timestamp} ezelőtt"
+      status_with_summary: "Utolsó szinkronizálás: %{timestamp} ezelőtt – %{summary}"
+      status_never: Még nem volt szinkronizálva
+      update_credentials: Hitelesítő adatok frissítése
+      delete: Törölés
+      no_accounts_title: Nem találhatók számlák
+      no_accounts_message: A Coinbase pénztárcáid szinkronizálás után fognak megjelenni itt.
+      setup_needed: Pénztárcák importálásra készen
+      setup_description: Válaszd ki, melyik Coinbase pénztárcákat szeretnéd követni.
+      setup_action: Pénztárcák importálása
+      import_wallets_menu: Pénztárcák importálása
+      more_wallets_available:
+        one: "%{count} további pénztárca elérhető importálásra"
+        other: "%{count} további pénztárca elérhető importálásra"
+    select_existing_account:
+      title: Coinbase számla összekapcsolása
+      no_accounts_found: Nem találhatók Coinbase számlák.
+      wait_for_sync: Várd meg, amíg a Coinbase befejezi a szinkronizálást
+      check_provider_health: Ellenőrizd, hogy a Coinbase API hitelesítő adataid érvényesek-e
+      balance: Egyenleg
+      currently_linked_to: "Jelenleg összekapcsolva: %{account_name}"
+      link: Összekapcsolás
+      cancel: Mégse
+    link_existing_account:
+      success: Sikeresen összekapcsolva a Coinbase számlával
+      errors:
+        only_manual: Csak manuális számlák kapcsolhatók össze a Coinbase-szel
+        invalid_coinbase_account: Érvénytelen Coinbase számla
+  coinbase_item:
+    syncer:
+      checking_credentials: Hitelesítő adatok ellenőrzése...
+      credentials_invalid: Érvénytelen API hitelesítő adatok. Kérjük, ellenőrizd az API kulcsodat és a titkos kódodat.
+      importing_accounts: Számlák importálása a Coinbase-ből...
+      checking_configuration: Számlakonfiguráció ellenőrzése...
+      accounts_need_setup:
+        one: "%{count} számla beállítást igényel"
+        other: "%{count} számla beállítást igényel"
+      processing_accounts: Számlaadatok feldolgozása...
+      calculating_balances: Egyenlegek kiszámítása...

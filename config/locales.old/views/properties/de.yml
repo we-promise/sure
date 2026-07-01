@@ -1,0 +1,32 @@
+---
+de:
+  properties:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      address_line1: Straßenadresse
+      address_line1_placeholder: Musterstraße 123
+      area: Wohnfläche
+      area_placeholder: '2000'
+      area_unit: Maßeinheit
+      country: Land
+      country_placeholder: DE
+      locality: Stadt
+      locality_placeholder: München
+      none: Keine
+      postal_code: Postleitzahl
+      postal_code_placeholder: '80331'
+      region: Bundesland
+      region_placeholder: BY
+      subtype_prompt: Immobilientyp auswählen
+      year_built: Baujahr
+      year_built_placeholder: '2000'
+    new:
+      title: Immobiliendetails eingeben
+    overview:
+      living_area: Wohnfläche
+      market_value: Marktwert
+      purchase_price: Kaufpreis
+      trend: Entwicklung
+      unknown: Unbekannt
+      year_built: Baujahr

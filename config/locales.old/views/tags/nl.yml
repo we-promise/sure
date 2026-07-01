@@ -1,0 +1,23 @@
+---
+nl:
+  tags:
+    create:
+      created: Tag gemaakt
+      error: 'Fout bij het maken van tag: %{error}'
+    destroy:
+      deleted: Tag verwijderd
+    edit:
+      edit: Tag bewerken
+    form:
+      placeholder: Tag naam
+    index:
+      empty: Nog geen tags
+      new: Nieuwe tag
+      tags: Tags
+    new:
+      new: Nieuwe tag
+    tag:
+      delete: Verwijderen
+      edit: Bewerken
+    update:
+      updated: Tag bijgewerkt

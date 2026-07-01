@@ -1,0 +1,33 @@
+---
+tr:
+  oidc_accounts:
+    link:
+      title_link: OIDC Hesabını Bağla
+      title_create: Hesap Oluştur
+      verify_heading: Kimliğinizi Doğrulayın
+      verify_description_html: "%{provider} hesabınızı%{email_suffix} bağlamak için şifrenizi girerek kimliğinizi doğrulayın."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-posta
+      email_placeholder: E-posta adresinizi girin
+      password_label: Şifre
+      password_placeholder: Şifrenizi girin
+      verify_hint: Bu, yalnızca sizin harici hesapları profilinize bağlayabilmenizi sağlar.
+      submit_link: Hesabı Bağla
+      create_heading: Yeni Hesap Oluştur
+      create_description_html: "<strong>%{email}</strong> e-posta adresiyle bir hesap bulunamadı. %{provider} kimliğinizle yeni bir hesap oluşturmak için aşağıya tıklayın."
+      info_email: "E-posta:"
+      info_name: "Ad:"
+      submit_create: Hesap Oluştur
+      account_creation_disabled: Tek oturum açma ile hesap oluşturma devre dışı bırakıldı. Lütfen bir yöneticiyle iletişime geçin.
+      cancel: İptal
+    new_user:
+      title: Hesabınızı Tamamlayın
+      heading: Hesabınızı Oluşturun
+      description: "%{provider} kimliğinizle hesap oluşturmayı tamamlamak için bilgilerinizi onaylayın."
+      email_label: E-posta (SSO sağlayıcısından)
+      first_name_label: Ad
+      first_name_placeholder: Adınızı girin
+      last_name_label: Soyad
+      last_name_placeholder: Soyadınızı girin
+      submit: Hesap Oluştur
+      cancel: İptal

@@ -38,6 +38,15 @@ ru:
         not_found: API-ключ не найден
         revoke_failed: Не удалось отозвать API-ключ
         revoked_successfully: API-ключ успешно отозван
+      index:
+        empty_description: Создайте API-ключ для программного доступа к вашим данным.
+        empty_heading: Пока нет API-ключей
+        new_key: Новый API-ключ
+        revoke_confirmation: Вы уверены, что хотите отозвать %{name}? Это сразу отключит 
+          все приложения, использующие этот ключ.
+        revoke_key: Отозвать
+        subtitle: Управляйте API-ключами для программного доступа к данным.
+        title: API-ключи        
       new:
         cancel: Отмена
         create_key: Создать API-ключ
@@ -75,10 +84,18 @@ ru:
         subtitle: Создайте новый API-ключ для программного доступа к вашим данным
           Sure.
         title: Создать API-ключ
+      shared:
+        active: Активен
+        created_ago: Создан %{time} назад
+        last_used_ago: Использован %{time} назад
+        never_used: Не использовался
+        scope_read_only: Только чтение
+        scope_read_write: Чтение и запись
       show:
         current_api_key:
           active: Активен
           ago: назад
+          back_to_keys: К API-ключам
           copy_api_key: Скопировать API-ключ
           copy_store_securely: Скопируйте и храните этот ключ в безопасности. Он понадобится
             вам для аутентификации ваших API-запросов.

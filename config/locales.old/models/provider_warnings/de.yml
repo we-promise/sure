@@ -1,0 +1,4 @@
+---
+de:
+  provider_warnings:
+    limited_investment_data: "Die Investitionsdaten dieses Anbieters sind begrenzt. Aktivitätskennzeichnungen (Kauf, Verkauf, Dividende) sind nicht verfügbar, was die Budgetgenauigkeit beeinträchtigen kann. Erwägen Sie, Regeln zu erstellen, um Investitionstransaktionen auszuschließen oder zu kategorisieren."

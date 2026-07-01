@@ -1,0 +1,558 @@
+---
+en:
+  views:
+    settings:
+      payments:
+        renewal: "Your contribution continues on %{date}."
+        cancellation: "Your contribution ends on %{date}."
+  settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Debug event log"
+        subtitle: "Meaningful operational events for super admins. Newest first."
+        empty: "No debug events found."
+        missing_value: "-"
+        filters:
+          all: "All"
+          category: "Category"
+          level: "Level"
+          source: "Source"
+          provider: "Provider"
+          start_date: "From"
+          end_date: "To"
+          family_id: "Family ID"
+          account_id: "Account ID"
+          user_id: "User ID"
+          account_provider_id: "Account provider ID"
+          submit: "Filter"
+          reset: "Reset"
+        table:
+          time: "Time"
+          level: "Level"
+          category: "Category"
+          source: "Source"
+          message: "Message"
+          context: "Context"
+          metadata: "Metadata"
+          view_metadata: "View"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
+    llm_usages:
+      show:
+        page_title: "LLM Usage & Costs"
+        subtitle: "Track your AI usage and estimated costs"
+        start_date: "Start Date"
+        end_date: "End Date"
+        filter: "Filter"
+        total_requests: "Total Requests"
+        total_tokens: "Total Tokens"
+        prompt: "prompt"
+        completion: "completion"
+        total_cost: "Total Cost"
+        avg_cost_per_request: "Avg Cost/Request"
+        based_on_requests: "Based on %{with_cost} of %{total} requests with cost data"
+        cost_by_operation: "Cost by Operation"
+        cost_by_model: "Cost by Model"
+        recent_usage: "Recent Usage"
+        col_date: "Date"
+        col_operation: "Operation"
+        col_model: "Model"
+        col_tokens: "Tokens"
+        col_cost: "Cost"
+        failed: "Failed"
+        no_usage_data: "No usage data found for the selected period"
+        cost_estimates_title: "About Cost Estimates"
+        cost_estimates_description: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
+    ai_prompts:
+      show:
+        page_title: AI Prompts
+        openai_label: OpenAI
+        disable_ai: Disable AI Assistant
+        prompt_instructions: Prompt Instructions
+        main_system_prompt:
+          title: Main System Prompt
+          subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+        transaction_categorizer:
+          title: Transaction Categorizer
+          subtitle: AI automatically categorizes your transactions based on your defined categories
+        merchant_detector:
+          title: Merchant Detector
+          subtitle: AI identifies and enriches transaction data with merchant information
+    payments:
+      show:
+        page_title: Payments
+        subscription_subtitle: Update your credit card details
+        subscription_title: Manage contributions
+        currently_on_plan: "Currently on the"
+        trialing: "Currently using the open demo of %{product_name}"
+        trial_days_left:
+          one: "Data will be deleted in %{count} day"
+          other: "Data will be deleted in %{count} days"
+        not_contributing_prefix: "You are currently"
+        not_contributing_emphasis: "not contributing"
+        contributions_note: "Contributions to %{product_name} will show here."
+        manage: "Manage"
+        choose_level: "Choose level"
+        payment_via_stripe: "Payment via Stripe"
+    appearances:
+      show:
+        page_title: Appearance
+        theme_title: Theme
+        theme_subtitle: Choose a preferred theme for the app
+        theme_dark: Dark
+        theme_light: Light
+        theme_system: System
+        modals_title: Modals
+        modals_subtitle: Customize modal behavior
+        disable_modal_click_outside_title: Keep modals open on outside click
+        disable_modal_click_outside_description: Prevent modals from closing when clicking outside. Useful to avoid accidentally losing unsaved changes.
+        transactions_title: Transactions
+        transactions_subtitle: Customize how transactions are displayed
+        dashboard_title: Dashboard
+        dashboard_subtitle: Customize how the dashboard is displayed
+        dashboard_two_column_title: Two-column layout
+        dashboard_two_column_description: Display dashboard widgets in two columns on large screens, with per-widget width and height controls in each widget's header. When off, widgets stack in a single column.
+        split_grouped_title: Group split transactions
+        split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
+    preferences:
+      show:
+        country: Country
+        currency: Currency
+        date_format: Date format
+        general_subtitle: Configure your preferences
+        general_title: General
+        default_period: Default Period
+        default_account_order: Default Account Order
+        language: Language
+        language_auto: Browser language
+        page_title: Preferences
+        timezone: Timezone
+        month_start_day: Budget month starts on
+        month_start_day_hint: Set when your budget month starts (e.g., payday)
+        month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        translations_notice: Please note, we are still working on translations for various languages.
+        currencies_title: "%{moniker} Currencies"
+        currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
+        base_currency_label: Base currency
+        base_currency_badge: Base currency
+        additional_currencies_label: Additional currencies
+        no_additional_currencies: None selected
+        currencies_more: "+%{count} more"
+        manage_currencies: Manage currencies
+        manage_currencies_subtitle: Deselect the currencies you never use, or reduce the list down to just a few.
+        select_all_currencies: Select all
+        select_base_only: Base currency only
+        currency_search_placeholder: Search currencies
+        no_matching_currencies: No currencies found
+        selected_currencies_count:
+          one: "%{count} selected"
+          other: "%{count} selected"
+        save_currencies: Save currencies
+        sharing_title: "%{moniker} Sharing"
+        sharing_subtitle: "Control how accounts are shared in your %{moniker}"
+        sharing_default_label: Default sharing for new accounts
+        sharing_shared: Share with all members
+        sharing_private: Keep private by default
+        preview:
+          title: Enable preview features
+          description: Opt in to in-progress features tagged preview or canary.
+    profiles:
+      destroy:
+        cannot_remove_self: You cannot remove yourself from the account.
+        member_owns_other_family_data: This member still owns accounts in another household and cannot be removed. Transfer or remove those accounts first.
+        member_removal_failed: There was a problem removing the member.
+        member_removed: Member was successfully removed.
+        not_authorized: You are not authorized to remove members.
+      show:
+        confirm_delete:
+          body: Are you sure you want to permanently delete your account? This action
+            is irreversible.
+          title: Delete account?
+        confirm_reset:
+          body: Are you sure you want to reset your account? This will delete all your accounts, categories, merchants, tags, and other data. This action cannot be undone.
+          title: Reset account?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
+        confirm_remove_invitation:
+          body: Are you sure you want to remove the invitation for %{email}?
+          title: Remove Invitation
+        confirm_remove_member:
+          body: Are you sure you want to remove %{name} from your account?
+          title: Remove Member
+        danger_zone_title: Danger Zone
+        delete_account: Delete account
+        delete_account_warning: Deleting your account will permanently remove all
+          your data and cannot be undone.
+        reset_account: Reset account
+        reset_account_warning: Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.
+        reset_account_with_sample_data: Reset and preload
+        reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
+        email: Email
+        first_name: First Name
+        group_form_input_placeholder: Enter group name
+        group_form_label: Group name
+        group_title: Group Members
+        household_form_input_placeholder: Enter household name
+        household_form_label: Household name
+        household_subtitle: Invitees can login to your %{moniker} account and access shared resources.
+        household_title: Household
+        invitation_link: Invitation link
+        invite_member: Add member
+        last_name: Last Name
+        page_title: Profile Info
+        pending: Pending
+        profile_subtitle: Customize how you appear on %{product_name}
+        profile_title: Personal
+        remove_invitation: Remove Invitation
+        remove_member: Remove Member
+        resend_confirmation_link: request a new confirmation email
+        save: Save
+        unconfirmed_email_notice_html: You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{resend_link}.
+    securities:
+      show:
+        page_title: Security
+        encryption_warning:
+          title: Encryption keys missing
+          intro: "Sensitive data (API keys, provider tokens, MFA secrets, and PII) are being stored unencrypted at rest. To enable encryption, set the following keys in your environment variables or Rails credentials:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Generate a set with: bin/rails db:encryption:init"
+        mfa_title: Two-Factor Authentication
+        mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
+        enable_mfa: Enable 2FA
+        disable_mfa: Disable 2FA
+        disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
+        sso_title: Connected Accounts
+        sso_subtitle: Manage your single sign-on account connections
+        sso_disconnect: Disconnect
+        sso_last_used: Last used
+        sso_never: Never
+        sso_no_email: No email
+        sso_no_identities: No SSO accounts connected
+        sso_connect_hint: Log out and sign in with an SSO provider to connect an account.
+        sso_confirm_title: Disconnect Account?
+        sso_confirm_body: Are you sure you want to disconnect your %{provider} account? You can reconnect it later by signing in with that provider again.
+        sso_confirm_button: Disconnect
+        sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
+    mcp:
+      show:
+        page_title: MCP Server
+        connect_title: Connect an AI assistant
+        connect_subtitle: Paste this URL into Claude.ai (or any MCP-compatible client) to connect it to your Sure account.
+        copy_url: Copy
+        copied: Copied!
+        how_to_connect_title: How to connect Claude
+        step_1: "Open Claude.ai and go to Settings → Integrations."
+        step_2: Click "Add integration" and paste the MCP server URL above.
+        step_3: Click Connect — you'll be redirected to Sure to sign in and authorize access.
+        step_4: Once authorized, Claude can read your accounts, transactions, and balance data.
+        connected_title: Connected clients
+        connected_subtitle: These apps currently have access to your Sure data. Revoke any you no longer use.
+        unknown_client: Unknown client
+        connected_ago: "Connected %{time} ago"
+        revoke: Revoke
+        revoke_confirm: Revoke access for this client?
+      revoke:
+        revoked: Connection revoked.
+    settings_nav:
+      accounts_label: Accounts
+      advanced_section_title: Advanced
+      ai_prompts_label: AI Prompts
+      api_key_label: API Keys
+      payment_label: Payment
+      categories_label: Categories
+      feedback_label: Feedback
+      general_section_title: General
+      imports_label: Imports
+      exports_label: Exports
+      llm_usage_label: LLM Usage
+      logout: Logout
+      merchants_label: Merchants
+      providers_label: Providers
+      guides_label: Guides
+      other_section_title: More
+      preferences_label: Preferences
+      profile_label: Profile Info
+      recurring_transactions_label: Recurring
+      rules_label: Rules
+      mcp_label: MCP
+      security_label: Security
+      self_hosting_label: Self-Hosting
+      sso_providers_label: SSO Providers
+      statement_vault_label: Statement Vault
+      tags_label: Tags
+      transactions_section_title: Transactions
+      users_label: Users
+      whats_new_label: What's new
+      api_keys_label: API Keys
+      appearance_label: Appearance
+      bank_sync_label: Bank sync
+      debug_label: Debug
+    settings_nav_link_large:
+      next: Next
+      previous: Back
+    user_avatar_field:
+      accepted_formats: JPG or PNG. 5MB max.
+      choose: Upload photo
+      choose_label: (optional)
+      change: Change photo
+    providers:
+      update:
+        updated_successfully: Provider settings updated successfully
+        no_changes: No changes were made
+      not_authorized: Not authorized
+      bank_sync:
+        page_title: Bank sync
+        lede: Connect external accounts so transactions, balances and holdings flow into Sure automatically.
+      status:
+        ok: Connected
+        warn: Action needed
+        err: Error
+        off: Not configured
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
+      setup_steps:
+        eyebrow: Setup
+        need_help: "Need help?"
+      connect: Connect
+      groups:
+        your_connections: Your connections
+        available: Available
+        empty_available: All available providers are connected.
+      health_strip:
+        connected: connected
+        needs_attention: needs attention
+        accounts_syncing: accounts syncing
+        last_synced: Last synced %{time} ago
+      meta:
+        sync_error: Sync error
+        no_recent_sync: Sync overdue
+        registration_needed: Registration needed
+        reconsent_required: Re-consent required
+        reconsent_needed:
+          one: Re-consent needed in 1 day
+          other: Re-consent needed in %{count} days
+        last_synced: Synced %{time} ago
+      sync_all: Sync all
+      sync_all_in_progress: Syncing all connected providers…
+      sync_all_recently: Sync already in progress. Try again in a moment.
+      sync_provider: Sync now
+      sync_provider_in_progress: Sync started.
+      recently_synced: Synced recently. Try again in a moment.
+      taglines:
+        akahu: Sync New Zealand financial institutions via Akahu.
+        simplefin: Connect US bank accounts via the open SimpleFIN protocol.
+        lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
+        enable_banking: Sync European bank accounts via PSD2 open banking.
+        coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        mercury: Sync your Mercury business banking accounts automatically.
+        brex: Sync Brex cash and corporate card activity with read-only access.
+        coinbase: Import your Coinbase crypto holdings and track performance.
+        binance: Sync your Binance spot balances using a read-only API key.
+        kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
+        indexa_capital: Track your Indexa Capital automated investment portfolio.
+        sophtron: Connect US & Canadian banks and utilities.
+        plaid: Connect thousands of US financial institutions via Plaid.
+        plaid_eu: Connect European financial institutions via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Search providers
+        placeholder: Search providers
+        chips:
+          all: All
+          bank: Banks
+          crypto: Crypto
+          investment: Investments
+      empty_filter: No providers match your filter.
+      clear_filter: Clear filters
+      encryption_error:
+        title: Encryption keys missing
+        message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
+      provider_form:
+        save_and_connect: "Save and connect"
+      coinbase_panel:
+        setup_instructions: "To connect Coinbase:"
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
+        step2: Create a new API key with read-only permissions (view accounts, view transactions)
+        step3: Copy your API key and API secret and paste them below
+        api_key_label: API Key
+        api_key_placeholder: Enter your Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Enter your Coinbase API secret
+        connect_button: Connect Coinbase
+        syncing: Syncing...
+        sync: Sync
+        disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
+      binance_panel:
+        setup_instructions: "To connect Binance, create a read-only API key:"
+        step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
+        step2: "Create a new API key with Enable Reading permission only"
+        step3: "Paste your API Key and Secret below"
+        no_withdraw_title: "Read-only key only"
+        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key. Sure only needs read access."
+        ip_hint_title: "IP whitelisting required"
+        ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
+        ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
+        api_key_label: API Key
+        api_key_placeholder: Paste your Binance API Key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your Binance API Secret
+        connect_button: Connect Binance
+        syncing: Syncing...
+        sync: Sync
+        historical_import: "Historical Import Settings"
+        sync_start_date_label: "Import data from"
+        sync_start_date_help: "Select how far back to fetch historical trades."
+        disconnect_confirm: "Are you sure you want to disconnect Binance?"
+      kraken_panel:
+        step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
+        step2: "Create an API key with Query Funds and Query Closed Orders & Trades only."
+        step3: "Paste the API key and private key below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant trading, cancellation, withdrawal, export, ledger, Earn, staking, or transfer permissions. Sure only imports balances, holdings, and spot trade fills."
+        default_connection_name: Kraken
+        add_connection: Add Kraken connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main Kraken
+        api_key_label: API Key
+        api_key_placeholder: Paste your Kraken API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: Private Key
+        api_secret_placeholder: Paste your Kraken private key
+        keep_api_secret_placeholder: Leave blank to keep the existing private key
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      enable_banking_panel:
+        callback_url_instruction: "For the callback URL, use %{callback_url}."
+        connection_error: Connection Error
+        step_1_html: "Go to %{link} and grab your developer credentials."
+        step_2: "Pick your country and paste the Application ID + Client Certificate below."
+        step_3: "Save, then use Add Connection to link your bank."
+        config_locked_title: "Configuration locked"
+        config_locked_message: "Disconnect all linked banks before changing these credentials."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Enter application ID"
+        application_id_placeholder_update: "Enter new ID to update"
+        client_certificate_label: "Client Certificate (with Private Key)"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+        connected_bank: "Connected Bank"
+        session_expires: "Session expires: %{date}"
+        unknown: "Unknown"
+        connection: "Connection"
+        session_expired_reconnect: "Session expired - reconnect"
+        configured: "Configured"
+        ready_to_link: "Ready to link accounts"
+        sync: "Sync"
+        reconnect: "Reconnect"
+        connect_bank: "Connect bank"
+        remove: "Remove"
+        remove_confirm: "Are you sure you want to remove this connection?"
+        add_connection: "Add Connection"
+        syncing: "Syncing"
+        select_country: "Select country..."
+        country_label: "Country"
+      lunchflow_panel:
+        step_1_html: "Go to %{link} and create an API key."
+        step_2: "Paste your key below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        api_key_label: "API Key"
+        api_key_placeholder_new: "Paste API key here"
+        api_key_placeholder_update: "Enter new API key to update"
+        base_url_label: "Base URL (Optional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+      akahu_panel:
+        step_1_html: "Go to %{link} and create a personal app."
+        step_2: "Copy your app token and user token."
+        step_3: "Paste the tokens below, save, then link your synced accounts."
+      up_panel:
+        step_1_html: "Go to %{link} and generate a personal access token."
+        step_2: "Copy your personal access token."
+        step_3: "Paste the token below, save, then link your synced accounts."
+      simplefin_panel:
+        step_1_html: "Go to %{link} for a one-time setup token."
+        step_2: "Paste the token below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        setup_token_label: "Setup Token"
+        setup_token_placeholder: "Paste SimpleFIN setup token"
+        save_and_connect: "Save and connect"
+      plaid_panel:
+        step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
+        step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
+        step_3: "Paste your credentials below and connect."
+      plaid_eu_panel:
+        step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."
+      not_found: Provider not found.
+      sync_provider_no_items: No connections available to sync.
+      ibkr_panel:
+        steps:
+          step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
+          step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
+          step_3: 'Name your query (e.g., "Sure Sync"), then review the Flex Query details below and enable the listed sections, fields, and configuration options.'
+          step_4: 'Save the query, note your "Query ID", then use the gear icon in the "Flex Web Service Configuration" section to generate an access Token.'
+          step_5: "Paste your Query ID and Token below, save the configuration, then head to Accounts to link discovered IBKR accounts."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sections, fields, and configuration
+          summary: Expand to see the exact sections, fields, and settings your IBKR Activity Flex Query must include.
+          sections_heading: Enable these sections and fields
+          configuration_heading: Set these query options
+        sections:
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report:"
+          cash_report_options: "Options: None"
+          cash_report_fields: "Fields: Currency, Ending Cash"
+          cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Options: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base:"
+          net_asset_value_options: "Options: None"
+          net_asset_value_fields: "Fields: Currency, Report Date, Total"
+          open_positions: "Open Positions:"
+          open_positions_options: "Options: Summary"
+          open_positions_fields: "Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Trades:"
+          trades_options: "Options: Execution"
+          trades_fields: "Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Models: Optional"
+          format: "Format: XML"
+          period: "Period: Last 365 Calendar Days"
+          date_format: "Date Format: yyyy-MM-dd"
+          time_format: "Time Format: HH:mm:ss"
+          date_time_separator: "Date/Time Separator: ; (semi-colon)"
+          profit_and_loss: "Profit and Loss: Default"
+          all_other_options: 'All other configuration options: "No"'
+        report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
+        sync: Sync
+        disconnect_confirm: Disconnect Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Enter your IBKR Flex Query ID
+        query_id_placeholder_existing: Leave blank to keep the current Query ID
+        token_label: Token
+        token_placeholder_new: Enter your IBKR Flex Web Service Token
+        token_placeholder_existing: Leave blank to keep the current Token
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "%{summary}. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.

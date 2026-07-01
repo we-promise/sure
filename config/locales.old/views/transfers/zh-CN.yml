@@ -1,0 +1,47 @@
+---
+zh-CN:
+  transfers:
+    create:
+      success: 转账已创建
+    destroy:
+      success: 转账已移除
+    form:
+      amount: 金额
+      date: 日期
+      expense: 支出
+      from: 转出账户
+      income: 收入
+      select_account: 选择账户
+      submit: 创建转账
+      to: 转入账户
+      transfer: 转账
+      calculate_rate_tab: 计算外汇汇率
+      convert_tab: 按外汇汇率换算
+      destination_amount: 目标金额
+      destination_amount_display: 目标金额：%{amount}
+      exchange_rate: 汇率
+      exchange_rate_display: 汇率：%{rate}
+      exchange_rate_help: 选择转账金额的输入方式。
+      source_amount: 来源金额
+    new:
+      title: 新建转账
+    show:
+      delete: 移除转账
+      delete_subtitle: 此操作仅移除转账记录，不会删除底层交易数据。
+      delete_title: 确认移除转账？
+      details: 详情
+      note_label: 备注
+      note_placeholder: 为此转账添加备注
+      overview: 概览
+      settings: 设置
+      mark_recurring: 标记为循环
+      mark_recurring_subtitle: 在后续流水和循环页面中按循环模式跟踪此转账。
+      mark_recurring_title: 标记为循环转账
+      from: 从
+      to: 到
+      date: 日期
+      amount: 金额
+      category: 分类
+      uncategorized: 未分类
+    update:
+      success: 转账已更新

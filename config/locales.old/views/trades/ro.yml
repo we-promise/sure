@@ -1,0 +1,38 @@
+---
+ro:
+  trades:
+    form:
+      account: Cont de transfer (opțional)
+      account_prompt: Caută cont
+      amount: Sumă
+      holding: Simbol bursier
+      price: Preț pe acțiune
+      qty: Cantitate
+      submit: Adaugă tranzacție
+      ticker_placeholder: AAPL
+      type: Tip
+    header:
+      buy: Cumpără
+      current_market_price_label: Preț curent de piață
+      overview: Prezentare generală
+      purchase_price_label: Preț de achiziție
+      purchase_qty_label: Cantitate achiziționată
+      sell: Vinde
+      symbol_label: Simbol
+      total_return_label: Câștig/pierdere nerealizată
+    new:
+      title: Tranzacție nouă
+    show:
+      additional: Suplimentar
+      cost_per_share_label: Cost pe acțiune
+      date_label: Dată
+      delete: Șterge
+      delete_subtitle: Această acțiune nu poate fi anulată
+      delete_title: Șterge tranzacția
+      details: Detalii
+      exclude_subtitle: Această tranzacție nu va fi inclusă în rapoarte și calcule
+      exclude_title: Exclude din analize
+      note_label: Notă
+      note_placeholder: Adaugă orice notă suplimentară aici...
+      quantity_label: Cantitate
+      settings: Setări

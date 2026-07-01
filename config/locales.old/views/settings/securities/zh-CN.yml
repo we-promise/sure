@@ -1,0 +1,31 @@
+---
+zh-CN:
+  settings:
+    securities:
+      show:
+        disable_mfa: 停用双重认证
+        disable_mfa_confirm: 确定要停用双重认证吗？这可能会降低您的账户安全性。
+        enable_mfa: 启用双重认证
+        mfa_description: 在登录时要求输入身份验证器应用中的代码，为账户增加额外安全层
+        mfa_title: 双重认证
+        mfa_enabled_status_html: 双重认证已<span class="font-medium text-green-600">启用</span>
+        mfa_enabled_description: 你的账户受到额外安全层保护。
+        mfa_disabled_status_html: 双重认证已<span class="font-medium text-red-600">禁用</span>
+        mfa_disabled_description: 启用双重认证，为账户增加一层保护。
+        webauthn_add: 添加通行密钥或安全密钥
+        webauthn_added: 添加于 %{date}
+        webauthn_description: 使用通行密钥、Touch ID、Windows Hello 或硬件安全密钥作为登录第二因素。
+        webauthn_empty: 暂未注册通行密钥或安全密钥。
+        webauthn_last_used: 上次使用于 %{time_ago} 前
+        webauthn_name_label: 密钥名称
+        webauthn_name_placeholder: MacBook Touch ID、YubiKey 等
+        webauthn_remove: 移除
+        webauthn_remove_confirm: 确定要移除此通行密钥或安全密钥？
+        webauthn_remove_confirm_body: 移除后，你需要重新注册才能再次用于登录验证。
+        webauthn_title: 通行密钥和安全密钥
+        webauthn_unsupported: 此浏览器不支持通行密钥或安全密钥。
+  webauthn_credentials:
+    default_name: 安全密钥
+    failure: 无法保存该通行密钥或安全密钥。请重试。
+    mfa_required: 添加通行密钥或安全密钥前，请先启用双重认证。
+    success: 通行密钥或安全密钥已移除。

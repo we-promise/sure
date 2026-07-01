@@ -1,0 +1,214 @@
+---
+fr:
+  providers:
+    snaptrade:
+      accounts_count:
+        one: "%{count} compte"
+        other: "%{count} comptes"
+      client_id_label: Client ID
+      client_id_placeholder: Saisissez votre Client ID SnapTrade
+      client_id_update_placeholder: Saisissez un nouveau Client ID pour mettre à jour
+      connect_button: Connecter un courtier
+      connected_brokerages: 'Connectés :'
+      connection_description: Connectez-vous à votre courtier via SnapTrade (plus de 25 courtiers pris en charge)
+      connection_limit_info: L'offre gratuite SnapTrade autorise 5 connexions de courtier. Supprimez les connexions inutilisées pour libérer des emplacements.
+      connections_error: 'Échec du chargement des connexions : %{message}'
+      consumer_key_label: Consumer Key
+      consumer_key_placeholder: Saisissez votre Consumer Key SnapTrade
+      consumer_key_update_placeholder: Saisissez une nouvelle Consumer Key pour mettre à jour
+      delete_connection: Supprimer
+      delete_connection_body: Cela supprimera définitivement la connexion %{brokerage} de SnapTrade. Tous les comptes de ce courtier seront déliés. Vous devrez vous reconnecter pour synchroniser à nouveau ces comptes.
+      delete_connection_confirm: Supprimer la connexion
+      delete_connection_title: Supprimer la connexion de courtier ?
+      delete_orphaned_user: Supprimer
+      delete_orphaned_user_body: Cela supprimera définitivement cet utilisateur SnapTrade orphelin et toutes ses connexions de courtier, libérant ainsi des emplacements de connexion.
+      delete_orphaned_user_confirm: Supprimer l'enregistrement
+      delete_orphaned_user_title: Supprimer l'enregistrement orphelin ?
+      description: SnapTrade se connecte à plus de 25 courtiers majeurs (Fidelity, Vanguard, Schwab, Robinhood, etc.) et fournit l'historique complet des transactions avec des libellés d'activité et le coût d'acquisition.
+      free_tier_warning: L'offre gratuite inclut 5 connexions de courtier. Les connexions supplémentaires nécessitent un forfait SnapTrade payant.
+      legacy_credentials_description: Utilisez la configuration Client ID et Consumer Key si votre compte SnapTrade n'a pas activé OAuth.
+      legacy_credentials_title: Utiliser les identifiants API hérités
+      loading_connections: Chargement des connexions…
+      manage_connections: Gérer les connexions
+      name: SnapTrade
+      needs_linking: à lier
+      needs_setup:
+        one: "%{count} à configurer"
+        other: "%{count} à configurer"
+      no_connections: Aucune connexion de courtier trouvée.
+      oauth_connect_button: Se connecter avec SnapTrade
+      oauth_reauthorize_button: Réautoriser
+      oauth_status_authorized: Autorisé avec SnapTrade.
+      oauth_status_ready: Utilisez un code d'appareil pour autoriser Sure pour SnapTrade.
+      oauth_title: SnapTrade OAuth
+      orphaned_connection: Connexion orpheline (non synchronisée localement)
+      orphaned_user: Enregistrement orphelin
+      orphaned_users_description: Il s'agit d'anciens enregistrements d'utilisateurs SnapTrade qui occupent vos emplacements de connexion. Supprimez-les pour libérer des emplacements.
+      orphaned_users_title:
+        one: "%{count} enregistrement orphelin"
+        other: "%{count} enregistrements orphelins"
+      save_button: Enregistrer la configuration
+      setup_accounts_button: Configurer les comptes
+      setup_title: 'Instructions de configuration :'
+      status_connected:
+        one: "%{count} compte depuis SnapTrade"
+        other: "%{count} comptes depuis SnapTrade"
+      status_needs_registration: Identifiants enregistrés. Terminez la configuration pour connecter une maison de courtage.
+      status_ready: Prêt à connecter des courtiers
+      step_1_html: Créez un compte sur <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
+      step_2: Copiez votre Client ID et votre Consumer Key depuis le tableau de bord
+      step_3: Saisissez vos identifiants ci-dessous et cliquez sur Enregistrer
+      step_4: Rendez-vous sur la page Comptes et utilisez « Connecter un autre courtier » pour lier vos comptes d'investissement
+      update_button: Mettre à jour la configuration
+  snaptrade_item:
+    brokerage_summary:
+      count:
+        one: "%{count} courtier"
+        other: "%{count} courtiers"
+      none: Aucun courtier connecté
+    institution_summary:
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+      none: Aucune institution connectée
+    sync_status:
+      no_accounts: Aucun compte trouvé
+      synced:
+        one: "%{count} compte synchronisé"
+        other: "%{count} comptes synchronisés"
+      synced_with_setup: "%{linked} synchronisé(s), %{unlinked} à configurer"
+    syncer:
+      activities_fetching_async: Les activités sont récupérées en arrière-plan. Cela peut prendre jusqu'à une minute pour les nouvelles connexions de courtier.
+      calculating: Calcul des soldes…
+      checking_config: Vérification de la configuration du compte…
+      discovering: Découverte des comptes…
+      importing: Importation des comptes depuis SnapTrade…
+      needs_setup: "%{count} comptes à configurer…"
+      processing: Traitement des holdings et des activités…
+  snaptrade_items:
+    callback:
+      no_item: Configuration SnapTrade introuvable.
+      success: Courtier connecté. Veuillez sélectionner les comptes à lier.
+    complete_account_setup:
+      link_failed: 'Échec de la liaison des comptes : %{errors}'
+      no_accounts: Aucun compte n'a été sélectionné pour la liaison.
+      partial_success:
+        one: "%{count} compte lié. Échec de la liaison de %{failed_count}."
+        other: "%{count} comptes liés. Échec de la liaison de %{failed_count}."
+      success:
+        one: "%{count} compte lié avec succès."
+        other: "%{count} comptes liés avec succès."
+    complete_oauth_device_flow:
+      failed: Impossible de terminer l'autorisation d'appareil SnapTrade OAuth. Veuillez réessayer.
+      setup_incomplete: L'autorisation SnapTrade est terminée, mais des identifiants API sont requis avant de pouvoir synchroniser les comptes.
+      success: Autorisation SnapTrade terminée.
+    connect:
+      connection_failed: 'Échec de la connexion à SnapTrade : %{message}'
+      decryption_failed: Impossible de lire les identifiants SnapTrade. Veuillez supprimer et recréer cette connexion.
+    connections:
+      unknown_brokerage: Courtier inconnu
+    create:
+      success: Configuration SnapTrade réussie.
+    default_name: Connexion SnapTrade
+    delete_connection:
+      api_deletion_failed: Impossible de supprimer la connexion de SnapTrade - identifiants manquants. La connexion peut toujours exister dans votre compte SnapTrade.
+      failed: 'Échec de la suppression de la connexion : %{message}'
+      missing_authorization_id: Identifiant d'autorisation manquant
+      success: Connexion supprimée avec succès. Un emplacement libéré.
+    delete_orphaned_user:
+      failed: Échec de la suppression de l'enregistrement orphelin.
+      success: Enregistrement orphelin supprimé avec succès.
+    destroy:
+      success: Connexion SnapTrade mise en file d'attente pour suppression.
+    link_accounts:
+      use_setup_flow: Utilisez plutôt le flux de configuration du compte
+    link_existing_account:
+      failed: 'Échec de la liaison du compte : %{message}'
+      not_found: Compte introuvable.
+      success: Compte SnapTrade lié avec succès.
+    oauth_device_flow:
+      cancel_button: Annuler
+      code_label: Code d'appareil
+      complete_button: J'ai autorisé SnapTrade
+      instructions: Ouvrez SnapTrade et confirmez ce code d'appareil, puis revenez ici pour terminer l'autorisation.
+      missing_client_id: L'identifiant client SnapTrade OAuth n'est pas configuré. Ajoutez SNAPTRADE_OAUTH_CLIENT_ID dans .env.local, redémarrez l'application, puis réessayez.
+      open_snaptrade: Ouvrir SnapTrade
+      start_button: Démarrer l'autorisation
+      subtitle: Autoriser Sure pour SnapTrade
+      title: Connecter SnapTrade
+    preload_accounts:
+      not_configured: SnapTrade n'est pas configuré.
+    select_accounts:
+      not_configured: SnapTrade n'est pas configuré.
+    select_existing_account:
+      balance_label: 'Solde :'
+      cancel_button: Annuler
+      connect_hint: Vous devrez peut-être d'abord connecter un courtier.
+      header: Lier un compte existant
+      link_button: Lier
+      linking_to: 'Liaison au compte :'
+      no_accounts: Aucun compte SnapTrade non lié disponible.
+      not_found: Compte ou configuration SnapTrade introuvable.
+      settings_link: Aller aux paramètres du fournisseur
+      subtitle: Sélectionnez un compte SnapTrade à lier
+      title: Lier à un compte SnapTrade
+    setup_accounts:
+      account_number: 'Compte :'
+      available_accounts: Comptes disponibles
+      back_to_settings: Retour aux paramètres
+      balance_label: 'Solde :'
+      cancel_button: Annuler
+      create_button: Créer les comptes sélectionnés
+      creating: Création des comptes…
+      done_button: Terminé
+      free_tier_note: L'offre gratuite SnapTrade autorise 5 connexions de courtier. Consultez votre tableau de bord SnapTrade pour l'utilisation actuelle.
+      header: Configurer vos comptes SnapTrade
+      info_activities: Historique des transactions boursières avec libellés d'activité (Achat, Vente, Dividende, etc.)
+      info_cost_basis: Coût d'acquisition par position (lorsque disponible)
+      info_history: Jusqu'à 3 ans d'historique des transactions
+      info_holdings: Holdings avec prix actuels et quantités
+      info_title: Données d'investissement SnapTrade
+      link_button: Lier
+      linked_accounts: Déjà liés
+      linked_to: 'Lié à :'
+      loading: Récupération des comptes depuis SnapTrade…
+      loading_hint: Cliquez sur Actualiser pour vérifier les comptes.
+      no_accounts_message: Aucun compte de courtage n'a été trouvé. Cela peut se produire si vous avez annulé la connexion ou si votre courtier n'est pas pris en charge.
+      no_accounts_title: Aucun compte trouvé
+      or_link_existing: 'Ou liez à un compte existant au lieu d''en créer un nouveau :'
+      refresh: Actualiser
+      select_account: Sélectionnez un compte…
+      subtitle: Sélectionnez les comptes de courtage à lier
+      sync_start_date_help: Laisser vide pour tout l'historique disponible
+      sync_start_date_label: 'Importer des transactions depuis :'
+      syncing: Récupération de vos comptes…
+      title: Configurer les comptes SnapTrade
+      try_again: Connecter un courtier
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} compte à configurer"
+        other: "%{count} comptes à configurer"
+      add_another_brokerage: Connecter un autre courtier
+      connect_brokerage: Connecter un courtier
+      delete: Supprimer
+      deletion_in_progress: Suppression en cours…
+      error: Erreur de synchronisation
+      manage_connections: Gérer les connexions
+      more_accounts_available:
+        one: "%{count} compte supplémentaire disponible à configurer"
+        other: "%{count} comptes supplémentaires disponibles à configurer"
+      no_accounts_description: Connectez un courtier pour importer vos comptes d'investissement.
+      no_accounts_title: Aucun compte découvert
+      reconnect: Reconnecter
+      requires_update: Connexion à mettre à jour
+      setup_accounts_menu: Configurer les comptes
+      setup_action: Configurer les comptes
+      setup_description: Certains comptes de SnapTrade doivent être liés à des comptes Sure.
+      setup_needed: Comptes à configurer
+      status: Dernière synchronisation il y a %{timestamp} - %{summary}
+      status_never: Jamais synchronisé
+      syncing: Synchronisation…
+    start_oauth_device_flow:
+      failed: Impossible de démarrer l'autorisation d'appareil SnapTrade OAuth. Veuillez réessayer.
+    update:
+      success: Configuration SnapTrade mise à jour.

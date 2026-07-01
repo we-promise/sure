@@ -41,9 +41,9 @@ ru:
       set_up_accounts: Настроить счета
       setup_needed: Требуется настройка
       setup_needed_description:
-        one: "%{count} счёт, импортированный из Enable Banking, требует настройки"
         few: "%{count} счёта, импортированные из Enable Banking, требуют настройки"
         many: "%{count} счетов, импортированных из Enable Banking, требуют настройки"
+        one: "%{count} счёт, импортированный из Enable Banking, требует настройки"
         other: "%{count} счёта, импортированные из Enable Banking, требуют настройки"
       syncing: Синхронизация...
       update: Обновить

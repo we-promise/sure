@@ -1,0 +1,7 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: "A demo felügyeleti API-kulcs nem törölhető"
