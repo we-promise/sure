@@ -5,7 +5,7 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.2] - 2026-06-30]
 
 ### Changed
 - Bumped `pipelock.image.tag` from `2.5.0` to `2.8.0`, picking up default-on flight recorder receipts, safe-by-default receipt verification, MCP `defer` authorization, `pipelock explain`, `pipelock keys status`, `pipelock support bundle`, verified self-update, and inert-exemption diagnostics.
