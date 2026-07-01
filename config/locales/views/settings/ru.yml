@@ -578,9 +578,10 @@ ru:
           intro: "Конфиденциальные данные (API-ключи, токены провайдеров, MFA-секреты и 
             персональные данные) хранятся без шифрования. Чтобы включить шифрование, 
             задайте следующие ключи в переменных окружения или в Rails credentials:"
-          keys: '["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY", 
-            "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY", 
-            "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"]'
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Отсутствуют ключи шифрования
         page_title: Безопасность
         sso_confirm_body: Вы уверены, что хотите отключить ваш аккаунт %{provider}?
