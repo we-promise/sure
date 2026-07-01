@@ -84,24 +84,42 @@ class Sync < ApplicationRecord
     end
 
     def latest_by_syncable(syncables)
-      for_syncables(syncables)
+      keyed_syncables = syncable_keys(syncables)
+      return {} if keyed_syncables.empty?
+
+      latest = for_syncables(syncables)
         .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
         .order("syncable_type, syncable_id, created_at DESC, id DESC")
         .includes(:children)
         .index_by { |sync| [ sync.syncable_type, sync.syncable_id ] }
+
+      keyed_syncables.index_with { |key| latest[key] }
     end
 
     def latest_completed_by_syncable(syncables)
-      for_syncables(syncables)
+      keyed_syncables = syncable_keys(syncables)
+      return {} if keyed_syncables.empty?
+
+      latest = for_syncables(syncables)
         .completed
         .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
         .order("syncable_type, syncable_id, created_at DESC, id DESC")
         .index_by { |sync| [ sync.syncable_type, sync.syncable_id ] }
+
+      keyed_syncables.index_with { |key| latest[key] }
     end
 
     def syncing_by_syncable(syncables)
-      keys = for_syncables(syncables).visible.distinct.pluck(:syncable_type, :syncable_id)
-      keys.index_with(true)
+      keyed_syncables = syncable_keys(syncables)
+      return {} if keyed_syncables.empty?
+
+      syncing_keys = for_syncables(syncables)
+        .visible
+        .distinct
+        .pluck(:syncable_type, :syncable_id)
+        .to_set
+
+      keyed_syncables.index_with { |key| syncing_keys.include?(key) }
     end
 
     # True iff the family has any pending/syncing Sync — across its own row,
@@ -113,6 +131,11 @@ class Sync < ApplicationRecord
     end
 
     private
+      def syncable_keys(syncables)
+        Array(syncables).compact.uniq { |record| [ record.class.base_class.name, record.id ] }
+          .map { |record| [ record.class.base_class.name, record.id ] }
+      end
+
       def account_syncable_ids(family, resource_owner)
         (resource_owner ? resource_owner.accessible_accounts : family.accounts)
           .where(family_id: family.id)

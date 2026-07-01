@@ -9,7 +9,7 @@ class SyncableTest < ActiveSupport::TestCase
 
     key = [ account.class.base_class.name, account.id ]
     Current.latest_sync_by_syncable = { key => sync }
-    Current.latest_completed_sync_by_syncable = {}
+    Current.latest_completed_sync_by_syncable = { key => nil }
     Current.syncing_by_syncable = { key => true }
 
     queries = capture_sql_queries do
