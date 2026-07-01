@@ -264,7 +264,7 @@ class QuestradeItem::Importer
       # Questrade activities have no id; key on the immutable fields (same basis
       # as the processor's synthesized external_id) to dedup across syncs.
       [ activity[:transactionDate], activity[:action], activity[:symbolId],
-        activity[:netAmount], activity[:description] ].join("-")
+        activity[:netAmount], activity[:description], activity[:currency], activity[:type] ].join("-")
     end
 
     def prune_removed_accounts(upstream_account_ids)
