@@ -1,7 +1,0 @@
----
-hu:
-  activerecord:
-    errors:
-      models:
-        indexa_capital_item:
-          credentials_required: "Az INDEXA_API_TOKEN környezeti változó vagy felhasználónév/dokumentum/jelszó hitelesítő adatok megadása kötelező"

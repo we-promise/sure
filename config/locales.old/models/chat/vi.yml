@@ -1,8 +1,0 @@
----
-vi:
-  chat:
-    errors:
-      rate_limited: "Nhà cung cấp AI đang bị giới hạn tốc độ. Vui lòng thử lại sau vài phút."
-      temporarily_unavailable: "Nhà cung cấp AI tạm thời không khả dụng. Vui lòng thử lại sau vài phút."
-      misconfigured: "Nhà cung cấp AI chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên."
-      default: "Không thể tạo phản hồi. Vui lòng thử lại."

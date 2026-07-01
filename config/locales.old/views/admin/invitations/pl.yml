@@ -1,8 +1,0 @@
----
-pl:
-  admin:
-    invitations:
-      destroy:
-        success: Zaproszenie zostało usunięte.
-      destroy_all:
-        success: Wszystkie zaproszenia dla tej rodziny zostały usunięte.

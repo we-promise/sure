@@ -1,8 +1,0 @@
----
-zh-CN:
-  chat:
-    errors:
-      rate_limited: AI 提供商当前已触发限流，请几分钟后再试。
-      temporarily_unavailable: AI 提供商当前暂时不可用，请几分钟后再试。
-      misconfigured: AI 提供商配置不正确，请联系您的管理员。
-      default: 生成回复失败，请重试。

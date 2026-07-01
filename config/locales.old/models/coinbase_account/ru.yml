@@ -1,5 +1,0 @@
----
-ru:
-  coinbase:
-    processor:
-      paid_via: Оплачено через %{method}

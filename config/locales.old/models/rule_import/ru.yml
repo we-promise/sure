@@ -1,9 +1,0 @@
----
-ru:
-  activerecord:
-    errors:
-      models:
-        rule_import:
-          invalid_json: 'Некорректный JSON в условиях или действиях: %{message}'
-          min_actions: Правило должно содержать как минимум одно действие
-          unsupported_resource_type: 'Неподдерживаемый тип ресурса: %{resource_type}'

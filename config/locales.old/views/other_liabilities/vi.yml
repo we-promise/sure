@@ -1,7 +1,0 @@
----
-vi:
-  other_liabilities:
-    edit:
-      edit: Chỉnh sửa %{account}
-    new:
-      title: Nhập thông tin nợ phải trả

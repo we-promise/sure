@@ -1,5 +1,0 @@
----
-vi:
-  invitation_mailer:
-    invite_email:
-      subject: "%{inviter} đã mời bạn tham gia hộ gia đình của họ trên %{product_name}!"

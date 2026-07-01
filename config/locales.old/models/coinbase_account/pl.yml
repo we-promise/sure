@@ -1,5 +1,0 @@
----
-pl:
-  coinbase:
-    processor:
-      paid_via: Zapłacono przez %{method}

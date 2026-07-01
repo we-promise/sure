@@ -1,7 +1,0 @@
----
-en:
-  other_liabilities:
-    edit:
-      edit: Edit %{account}
-    new:
-      title: Enter liability details

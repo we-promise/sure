@@ -1,7 +1,0 @@
----
-pl:
-  other_liabilities:
-    edit:
-      edit: Edytuj %{account}
-    new:
-      title: Wprowadź dane zobowiązania

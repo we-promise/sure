@@ -1,8 +1,0 @@
----
-ca:
-  activerecord:
-    errors:
-      models:
-        api_key:
-          cannot_destroy_demo_key: No es pot eliminar la clau API de monitoratge de
-            demostració

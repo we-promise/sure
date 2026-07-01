@@ -1,6 +1,0 @@
----
-es:
-  messages:
-    chat_form:
-      placeholder: "Pregunta lo que quieras ..."
-      disclaimer: "Las respuestas de la IA son solo informativas. ¡No constituyen asesoramiento financiero!"

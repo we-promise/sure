@@ -1,7 +1,0 @@
----
-zh-CN:
-  activerecord:
-    errors:
-      models:
-        recurring_transaction:
-          merchant_or_name_required: 商户或名称至少必须存在一个

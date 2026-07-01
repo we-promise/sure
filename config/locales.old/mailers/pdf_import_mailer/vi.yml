@@ -1,5 +1,0 @@
----
-vi:
-  pdf_import_mailer:
-    next_steps:
-      subject: "Tài liệu PDF của bạn đã được phân tích - %{product_name}"

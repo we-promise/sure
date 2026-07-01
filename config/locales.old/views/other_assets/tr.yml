@@ -1,7 +1,0 @@
----
-tr:
-  other_assets:
-    edit:
-      edit: "%{account} düzenle"
-    new:
-      title: Varlık detaylarını gir

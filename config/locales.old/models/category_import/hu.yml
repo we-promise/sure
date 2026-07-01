@@ -1,8 +1,0 @@
----
-hu:
-  activerecord:
-    errors:
-      models:
-        category_import:
-          own_parent: "A(z) '%{name}' kategória nem lehet saját maga szülője"
-          missing_columns: "Hiányzó kötelező oszlopok: %{columns}"

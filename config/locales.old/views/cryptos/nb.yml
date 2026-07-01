@@ -1,7 +1,0 @@
----
-nb:
-  cryptos:
-    edit:
-      edit: Rediger %{account}
-    new:
-      title: Angi kontobalanse

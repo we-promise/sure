@@ -1,9 +1,0 @@
----
-vi:
-  email_confirmation_mailer:
-    confirmation_email:
-      body: Bạn vừa yêu cầu thay đổi địa chỉ email. Nhấp vào nút bên dưới để xác nhận thay đổi này.
-      cta: Xác nhận thay đổi email
-      expiry_notice: Liên kết này sẽ hết hạn sau %{hours} giờ.
-      greeting: Xin chào!
-      subject: '%{product_name}: Xác nhận thay đổi email của bạn'

@@ -1,5 +1,0 @@
----
-ca:
-  invitation_mailer:
-    invite_email:
-      subject: "%{inviter} t'ha convidat a unir-te al seu compte de %{product_name}!"

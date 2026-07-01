@@ -1,7 +1,0 @@
----
-nl:
-  cryptos:
-    edit:
-      edit: "%{account} bewerken"
-    new:
-      title: Saldo invoeren

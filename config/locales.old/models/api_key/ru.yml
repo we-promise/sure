@@ -1,7 +1,0 @@
----
-ru:
-  activerecord:
-    errors:
-      models:
-        api_key:
-          cannot_destroy_demo_key: Невозможно удалить демонстрационный ключ API мониторинга

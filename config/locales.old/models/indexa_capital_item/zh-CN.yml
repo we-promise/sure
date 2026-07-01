@@ -1,7 +1,0 @@
----
-zh-CN:
-  activerecord:
-    errors:
-      models:
-        indexa_capital_item:
-          credentials_required: 必须提供 INDEXA_API_TOKEN 环境变量，或用户名/文档/密码凭据

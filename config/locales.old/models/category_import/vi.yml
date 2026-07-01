@@ -1,8 +1,0 @@
----
-vi:
-  activerecord:
-    errors:
-      models:
-        category_import:
-          own_parent: "Danh mục '%{name}' không thể là danh mục cha của chính nó"
-          missing_columns: "Thiếu các cột bắt buộc: %{columns}"

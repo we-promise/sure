@@ -1,8 +1,0 @@
----
-pt-BR:
-  admin:
-    invitations:
-      destroy:
-        success: "Convite excluído."
-      destroy_all:
-        success: "Todos os convites para esta família foram cancelados."

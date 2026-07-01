@@ -1,8 +1,0 @@
----
-vi:
-  password_mailer:
-    password_reset:
-      cta: Đặt lại mật khẩu của bạn
-      ignore_if_not_requested: Nếu bạn không thực hiện yêu cầu này, bạn có thể bỏ qua email này.
-      request_made: Một yêu cầu đã được thực hiện để đặt lại mật khẩu %{product_name} của bạn. Nhấp vào liên kết để đặt lại.
-      subject: '%{product_name}: Đặt lại mật khẩu của bạn'

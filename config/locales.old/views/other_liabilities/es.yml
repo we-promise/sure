@@ -1,7 +1,0 @@
----
-es:
-  other_liabilities:
-    edit:
-      edit: Editar %{account}
-    new:
-      title: Introduce los detalles de la obligación

@@ -1,7 +1,0 @@
----
-vi:
-  activerecord:
-    errors:
-      models:
-        recurring_transaction:
-          merchant_or_name_required: "Phải có nhà cung cấp hoặc tên"

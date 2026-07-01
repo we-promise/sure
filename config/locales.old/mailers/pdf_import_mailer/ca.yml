@@ -1,5 +1,0 @@
----
-ca:
-  pdf_import_mailer:
-    next_steps:
-      subject: S'ha analitzat el teu document PDF - %{product_name}

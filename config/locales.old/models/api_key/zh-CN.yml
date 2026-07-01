@@ -1,7 +1,0 @@
----
-zh-CN:
-  activerecord:
-    errors:
-      models:
-        api_key:
-          cannot_destroy_demo_key: 不能删除演示监控 API 密钥

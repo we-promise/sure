@@ -1,9 +1,0 @@
----
-ru:
-  activerecord:
-    errors:
-      models:
-        rule:
-          duplicate_actions: Правило не может содержать дублирующиеся действия %{types}
-          min_actions: должно содержать как минимум одно действие
-          nested_conditions: Составные условия не могут быть вложенными

@@ -1,9 +1,0 @@
----
-vi:
-  activerecord:
-    errors:
-      models:
-        rule_import:
-          unsupported_resource_type: "Loại tài nguyên không được hỗ trợ: %{resource_type}"
-          invalid_json: "JSON không hợp lệ trong điều kiện hoặc hành động: %{message}"
-          min_actions: "Quy tắc phải có ít nhất một hành động"

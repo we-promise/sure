@@ -1,7 +1,0 @@
----
-de:
-  other_liabilities:
-    edit:
-      edit: "%{account} bearbeiten"
-    new:
-      title: Verbindlichkeitsdetails eingeben

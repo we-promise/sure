@@ -1,7 +1,0 @@
----
-vi:
-  activerecord:
-    errors:
-      models:
-        sophtron_account:
-          no_balance: "Tài khoản Sophtron phải có số dư hiện tại hoặc số dư khả dụng"

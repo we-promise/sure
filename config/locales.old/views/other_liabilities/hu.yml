@@ -1,7 +1,0 @@
----
-hu:
-  other_liabilities:
-    edit:
-      edit: '%{account} szerkesztése'
-    new:
-      title: Add meg a kötelezettség adatait

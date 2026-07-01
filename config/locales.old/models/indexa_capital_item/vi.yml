@@ -1,7 +1,0 @@
----
-vi:
-  activerecord:
-    errors:
-      models:
-        indexa_capital_item:
-          credentials_required: "Cần có biến môi trường INDEXA_API_TOKEN hoặc thông tin đăng nhập username/document/password"

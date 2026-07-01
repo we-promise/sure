@@ -1,9 +1,0 @@
----
-zh-CN:
-  activerecord:
-    errors:
-      models:
-        rule_import:
-          unsupported_resource_type: "不支持的资源类型：%{resource_type}"
-          invalid_json: "conditions 或 actions 中的 JSON 无效：%{message}"
-          min_actions: 规则至少必须有一个动作

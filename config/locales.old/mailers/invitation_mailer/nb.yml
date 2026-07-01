@@ -1,5 +1,0 @@
----
-nb:
-  invitation_mailer:
-    invite_email:
-      subject: "%{inviter} har invitert deg til å bli med i husholdningen deres på %{product_name}!"

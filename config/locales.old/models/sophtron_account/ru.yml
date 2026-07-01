@@ -1,7 +1,0 @@
----
-ru:
-  activerecord:
-    errors:
-      models:
-        sophtron_account:
-          no_balance: У счёта Sophtron должен быть либо текущий, либо доступный баланс

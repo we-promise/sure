@@ -1,7 +1,0 @@
----
-fr:
-  other_liabilities:
-    edit:
-      edit: Modifier %{account}
-    new:
-      title: Saisir les détails de la dette

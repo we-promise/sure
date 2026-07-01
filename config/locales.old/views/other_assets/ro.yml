@@ -1,7 +1,0 @@
----
-ro:
-  other_assets:
-    edit:
-      edit: Editează %{account}
-    new:
-      title: Introdu detaliile activului

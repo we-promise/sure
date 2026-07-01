@@ -1,9 +1,0 @@
----
-hu:
-  activerecord:
-    errors:
-      models:
-        rule_import:
-          unsupported_resource_type: "Nem támogatott erőforrástípus: %{resource_type}"
-          invalid_json: "Érvénytelen JSON a feltételekben vagy műveletekben: %{message}"
-          min_actions: "A szabálynak legalább egy művelete kell legyen"
