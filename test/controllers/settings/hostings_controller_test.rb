@@ -25,7 +25,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -54,6 +54,25 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
+      assert_equal "1234567890", Setting.twelve_data_api_key
+    end
+  end
+
+  test "can clear an encrypted api key by submitting a blank value" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      assert_equal "1234567890", Setting.twelve_data_api_key
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "" } }
+      assert_nil Setting.twelve_data_api_key
+    end
+  end
+
+  test "submitting the masked placeholder leaves an encrypted api key unchanged" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********" } }
       assert_equal "1234567890", Setting.twelve_data_api_key
     end
   end

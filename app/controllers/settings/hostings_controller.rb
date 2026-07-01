@@ -311,7 +311,13 @@ class Settings::HostingsController < ApplicationController
     def update_encrypted_setting(param_key)
       return unless hosting_params.key?(param_key)
       value = hosting_params[param_key].to_s.strip
-      Setting.public_send(:"#{param_key}=", value) unless value.blank? || value == "********"
+
+      # "********" is the masked placeholder rendered for an existing key; it
+      # means "leave the stored value untouched". A blank submission, however,
+      # is an explicit request to clear the key, so persist nil in that case.
+      return if value == "********"
+
+      Setting.public_send(:"#{param_key}=", value.presence)
     end
 
     def current_user_timezone
