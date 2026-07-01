@@ -395,6 +395,10 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_two_column") == true
   end
 
+  def disable_modal_click_outside?
+    preferences&.dig("disable_modal_click_outside") == true
+  end
+
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
   end

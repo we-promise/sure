@@ -6,8 +6,10 @@ import '../models/account.dart';
 import '../models/account_balance.dart';
 import '../models/account_holding.dart';
 import '../providers/auth_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../services/account_detail_service.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/money_masker.dart';
 
 class AccountDetailHeader extends StatefulWidget {
   final Account account;
@@ -158,6 +160,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final latestBalance = _balances.isNotEmpty ? _balances.first : null;
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -180,7 +183,7 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _account.balance,
+                        MoneyMasker.mask(_account.balance, hidden: hideAmounts),
                         style: Theme.of(context)
                             .textTheme
                             .headlineSmall
@@ -227,7 +230,10 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                     ),
                   if (_account.cashBalance != null)
                     _DetailChip(
-                      label: l.accountDetailCashChip(_account.cashBalance!),
+                      label: l.accountDetailCashChip(
+                        MoneyMasker.mask(_account.cashBalance!,
+                            hidden: hideAmounts),
+                      ),
                       icon: Icons.payments_outlined,
                     ),
                   if (_account.status != null)
@@ -289,7 +295,8 @@ class _AccountDetailHeaderState extends State<AccountDetailHeader> {
                             ),
                           ),
                           Text(
-                            holding.amount,
+                            MoneyMasker.mask(holding.amount,
+                                hidden: hideAmounts),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium

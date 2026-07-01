@@ -28,7 +28,7 @@ class InvestmentFlowStatement
       .where(investment_activity_label: %w[Contribution Withdrawal])
 
     if user
-      account_ids = family.accounts.included_in_finances_for(user).select(:id)
+      account_ids = family.accounts.included_in_finances_for(user).included_in_reports.select(:id)
       scope = scope.where(entries: { account_id: account_ids })
     end
 
