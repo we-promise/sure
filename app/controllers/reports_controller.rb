@@ -292,7 +292,6 @@ class ReportsController < ApplicationController
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance
-
       {
         current_income: current_income,
         income_change: income_change,
@@ -381,13 +380,9 @@ class ReportsController < ApplicationController
 
       trades = apply_entry_filters(trades)
 
-      # Get sort parameters
-      sort_by = %w[amount count].include?(params[:sort_by]) ? params[:sort_by] : "amount"
-      sort_direction = %w[asc desc].include?(params[:sort_direction]) ? params[:sort_direction] : "desc"
-      sort_logic = ->(item) do
-        value = (sort_by == "count") ? item[:count] : item[:total]
-        sort_direction == "asc" ? (value || 0) : -(value || 0)
-      end
+      # Get sort parameters (whitelist to avoid unexpected behavior)
+      sort_by = %w[amount count name].include?(params[:sort_by]) ? params[:sort_by] : "amount"
+      sort_direction = %w[asc desc].include?(params[:sort_direction]&.downcase) ? params[:sort_direction].downcase : "desc"
 
       # Group by category (tracking parent relationship) and type
       # Structure: { [parent_category_id, type] => { parent_data, subcategories: { subcategory_id => data } } }
@@ -454,12 +449,29 @@ class ReportsController < ApplicationController
 
       # Convert to array and sort subcategories
       result = grouped_data.values.map do |parent_data|
-        subcategories = parent_data[:subcategories].values.sort_by(&sort_logic)
+        subcategories = parent_data[:subcategories].values
+        subcategories = case sort_by
+        when "name"
+          subcategories.sort_by { |s| s[:category_name].to_s }
+        when "count"
+          subcategories.sort_by { |s| s[:count] }
+        else
+          subcategories.sort_by { |s| s[:total] }
+        end
+        subcategories.reverse! if sort_direction == "desc"
         parent_data.merge(subcategories: subcategories)
       end
 
-      # Sort by the chosen key with the specified direction
-      result.sort_by(&sort_logic)
+      result = case sort_by
+      when "name"
+        result.sort_by { |g| g[:category_name].to_s }
+      when "count"
+        result.sort_by { |g| g[:count] }
+      else
+        result.sort_by { |g| g[:total] }
+      end
+      result.reverse! if sort_direction == "desc"
+      result
     end
 
     def build_investment_metrics
@@ -620,7 +632,7 @@ class ReportsController < ApplicationController
     # Filters applicable to both transactions and trades (entry-level + category)
     def apply_entry_filters(scope)
       # Scope to user's finance accounts
-      finance_account_ids = Current.user&.finance_accounts&.pluck(:id) || []
+      finance_account_ids = Current.user&.finance_account_ids || []
       scope = scope.where(entries: { account_id: finance_account_ids })
 
       # Filter by category (including subcategories)

@@ -34,7 +34,7 @@
       <% end %>
     </div>
 
-    <% budget.budget_categories.each do |bc| %>
+    <% budget.budget_categories.reject(&:subcategory?).each do |bc| %>
       <div id="segment_<%= bc.id %>" class="hidden">
         <div class="flex flex-col gap-2 items-center">
           <div class="flex items-center gap-3">

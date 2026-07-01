@@ -33,11 +33,11 @@ class BalanceSheet::AccountTotals
         scope = family.accounts.visible.with_attached_logo
                   .includes(
                     :account_shares,
-                    :accountable,
                     :plaid_account,
                     :simplefin_account,
                     account_providers: :provider
                   )
+                  .preload(:accountable)
         scope = scope.accessible_by(user) if user
         scope
       end
@@ -45,7 +45,7 @@ class BalanceSheet::AccountTotals
 
     def finance_account_ids
       @finance_account_ids ||= if user
-        family.accounts.included_in_finances_for(user).pluck(:id).to_set
+        user.finance_account_ids.to_set
       else
         nil
       end
@@ -80,9 +80,12 @@ class BalanceSheet::AccountTotals
         ids = Rails.cache.read(cache_key)
 
         if ids
-          visible_accounts.where(id: ids).to_a
+          records = visible_accounts.where(id: ids).to_a
+          ActiveRecord::Associations::Preloader.new(records: records, associations: :accountable).call
+          records
         else
           records = visible_accounts.to_a
+          ActiveRecord::Associations::Preloader.new(records: records, associations: :accountable).call
           Rails.cache.write(cache_key, records.map(&:id))
           records
         end

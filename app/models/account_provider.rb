@@ -1,5 +1,5 @@
 class AccountProvider < ApplicationRecord
-  belongs_to :account
+  belongs_to :account, counter_cache: true
   belongs_to :provider, polymorphic: true
 
   has_many :holdings, dependent: :nullify

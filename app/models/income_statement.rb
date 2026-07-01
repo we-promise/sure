@@ -211,7 +211,7 @@ class IncomeStatement
     end
 
     def included_account_ids
-      @included_account_ids ||= user ? user.finance_accounts.pluck(:id) : nil
+      @included_account_ids ||= user ? user.finance_account_ids : nil
     end
 
     def included_account_ids_hash
