@@ -13,8 +13,8 @@
     <% if rows.size > 1 && total.positive? %>
       <div class="flex gap-1">
         <% rows.each do |row| %>
-          <% next if row[:balance].to_d.zero? %>
-          <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:balance]) %>%; background-color: <%= color_for(row[:account]) %>;"></div>
+          <% next if row[:backing].to_d.zero? %>
+          <div class="h-1.5 rounded-sm" style="width: <%= percent_for(row[:backing]) %>%; background-color: <%= color_for(row[:account]) %>;"></div>
         <% end %>
       </div>
     <% end %>
@@ -31,13 +31,17 @@
             <div class="min-w-0">
               <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
               <p class="text-sm text-subdued tabular-nums privacy-sensitive">
-                <%= accountable_label(account) %> · <%= row[:balance_money].format(precision: 0) %>
+                <% if row[:earmarked] %>
+                  <%= t("goals.show.funding_accounts.earmarked_of", earmarked: row[:backing_money].format(precision: 0), balance: row[:balance_money].format(precision: 0)) %>
+                <% else %>
+                  <%= accountable_label(account) %> · <%= row[:backing_money].format(precision: 0) %>
+                <% end %>
               </p>
             </div>
 
             <% if rows.size > 1 %>
               <p class="hidden sm:block text-sm text-secondary tabular-nums text-right privacy-sensitive">
-                <%= percent_for(row[:balance]) %>%
+                <%= percent_for(row[:backing]) %>%
               </p>
             <% else %>
               <span class="hidden sm:block"></span>

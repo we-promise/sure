@@ -132,7 +132,73 @@ class Chat < ApplicationRecord
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
+  # Minimum age before the server will treat a still-pending response as
+  # undelivered. The browser watchdog waits longer (default 90s) before it even
+  # asks, but the client clock is untrusted, so the server enforces its own floor.
+  UNDELIVERED_RESPONSE_TIMEOUT = 60.seconds
+
+  # Handles the case where an assistant response was never delivered — the
+  # background worker never ran `AssistantResponseJob` (or it died before it
+  # could broadcast an error), leaving a `pending` "Thinking…" bubble forever.
+  # Mirrors `Assistant::Builtin`'s rescue: clears the dead bubble, records a
+  # friendly error + a debug log entry, and broadcasts the error/Retry UI.
+  #
+  # Driven by an untrusted client watchdog, so the state change is gated behind a
+  # row lock + a server-side age check: we re-read the row under lock and only act
+  # if it is *still* pending and has genuinely waited past the timeout, so we never
+  # race a worker that is finishing a legitimate (slow) response.
+  def handle_undelivered_response!(assistant_message)
+    return false unless assistant_message.is_a?(AssistantMessage)
+
+    resolved = assistant_message.with_lock do
+      next false unless assistant_message.pending?
+      next false if assistant_message.created_at > UNDELIVERED_RESPONSE_TIMEOUT.ago
+
+      if assistant_message.content.blank?
+        assistant_message.destroy!
+      else
+        # Demote partially-streamed turns to `failed` so history builders exclude them.
+        assistant_message.update_columns(status: "failed")
+      end
+      true
+    end
+
+    return false unless resolved
+
+    capture_undelivered_response!(assistant_message)
+    update!(error: undelivered_error_payload(assistant_message).to_json)
+    broadcast_append target: messages_target, partial: "chats/error", locals: { chat: self }
+    true
+  end
+
   private
+
+    def undelivered_error_payload(assistant_message)
+      {
+        message: I18n.t("chat.errors.no_response"),
+        technical_message: "Assistant response was never delivered. The background worker did not process " \
+          "AssistantResponseJob for message ##{assistant_message.id} (model #{assistant_message.ai_model}). " \
+          "#{BackgroundJobHealth.summary}",
+        type: "DeliveryTimeout"
+      }
+    end
+
+    def capture_undelivered_response!(assistant_message)
+      DebugLogEntry.capture(
+        category: "assistant",
+        level: "error",
+        message: "Assistant response not delivered — background worker likely down or not polling the high_priority queue",
+        source: "chat.delivery_timeout",
+        metadata: {
+          chat_id: id,
+          message_id: assistant_message.id,
+          ai_model: assistant_message.ai_model,
+          waited_seconds: (Time.current - assistant_message.created_at).round,
+          background_jobs: BackgroundJobHealth.snapshot
+        },
+        family: user&.family
+      )
+    end
 
     def build_error_payload(error)
       technical_message = error_message_for(error)

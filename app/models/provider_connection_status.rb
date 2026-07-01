@@ -3,6 +3,7 @@
 class ProviderConnectionStatus
   PROVIDERS = [
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
+    { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
@@ -85,8 +86,8 @@ class ProviderConnectionStatus
       provider: provider[:key],
       provider_type: provider[:type],
       name: item_value(:name, provider[:key].humanize),
-      status: item_value(:status),
-      requires_update: item_boolean(:requires_update?),
+      status: item_status,
+      requires_update: item_requires_update?,
       credentials_configured: credentials_configured?,
       scheduled_for_deletion: item_boolean(:scheduled_for_deletion?),
       pending_account_setup: pending_account_setup?,
@@ -104,6 +105,18 @@ class ProviderConnectionStatus
 
     def credentials_configured?
       item_boolean(:credentials_configured?)
+    end
+
+    def item_status
+      return item.effective_status(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item_value(:status)
+    end
+
+    def item_requires_update?
+      return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item_boolean(:requires_update?)
     end
 
     def pending_account_setup?

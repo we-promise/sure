@@ -53,6 +53,17 @@ void main() {
     expect(SureTokens.radiusLg, _resolveDimension(tokens, 'border.radius.lg'));
   });
 
+  test('generated font weights match canonical tiers', () {
+    expect(
+      SureTokens.weightMedium.value,
+      _resolveWeight(tokens, 'font.weight.medium'),
+    );
+    expect(
+      SureTokens.weightSemibold.value,
+      _resolveWeight(tokens, 'font.weight.semibold'),
+    );
+  });
+
   test('generated focus-ring and bg-inverse match canonical tokens', () {
     expect(
       SureTokens.light.focusRing.value,
@@ -125,6 +136,10 @@ int _resolveColorValue(
   }
 
   throw StateError('Unsupported color value: $value');
+}
+
+int _resolveWeight(Map<String, dynamic> tokens, String path) {
+  return _nodeAt(tokens, path)[r'$value'] as int;
 }
 
 double _resolveDimension(Map<String, dynamic> tokens, String path) {

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/privacy_provider.dart';
 import '../theme/sure_colors.dart';
+import '../theme/sure_tokens.dart';
+import '../utils/money_masker.dart';
 import 'money_text.dart';
 import 'sure_icon.dart';
 
@@ -30,6 +34,12 @@ class NetWorthCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final sureColors = SureColors.of(context);
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
+    final maskedNetWorth = netWorthFormatted == null
+        ? '--'
+        : MoneyMasker.mask(netWorthFormatted!, hidden: hideAmounts);
+    String maskedFormat(String currency, double amount) =>
+        MoneyMasker.mask(formatAmount(currency, amount), hidden: hideAmounts);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -69,7 +79,7 @@ class NetWorthCard extends StatelessWidget {
                           'Outdated',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: colorScheme.secondary,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: SureTokens.weightMedium,
                               ),
                         ),
                       ),
@@ -78,10 +88,10 @@ class NetWorthCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  netWorthFormatted ?? '--',
+                  maskedNetWorth,
                   style: SureMoney.tabular(
                     Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: SureTokens.weightMedium,
                           color: isStale
                               ? colorScheme.secondary
                               : colorScheme.onSurface,
@@ -120,8 +130,9 @@ class NetWorthCard extends StatelessWidget {
                       'Assets',
                       assetTotalsByCurrency,
                       sureColors.palette.success,
+                      maskedFormat,
                     ),
-                    formatAmount: formatAmount,
+                    formatAmount: maskedFormat,
                   ),
                 ),
 
@@ -149,8 +160,9 @@ class NetWorthCard extends StatelessWidget {
                       'Liabilities',
                       liabilityTotalsByCurrency,
                       sureColors.palette.destructive,
+                      maskedFormat,
                     ),
-                    formatAmount: formatAmount,
+                    formatAmount: maskedFormat,
                   ),
                 ),
               ],
@@ -166,6 +178,7 @@ class NetWorthCard extends StatelessWidget {
     String title,
     Map<String, double> totals,
     Color color,
+    String Function(String currency, double amount) formatAmount,
   ) {
     final sortedEntries = totals.entries.toList()
       ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
@@ -212,7 +225,7 @@ class NetWorthCard extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: SureTokens.weightMedium,
                           color: color,
                         ),
                   ),
@@ -237,14 +250,14 @@ class NetWorthCard extends StatelessWidget {
                         Text(
                           entry.key,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: SureTokens.weightMedium,
                                 color: colorScheme.onSurfaceVariant,
                               ),
                         ),
                         Text(
                           formatAmount(entry.key, entry.value),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: SureTokens.weightMedium,
                               ),
                         ),
                       ],
@@ -306,7 +319,7 @@ class _FilterButton extends StatelessWidget {
                     child: Text(
                       '--',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
+                            fontWeight: SureTokens.weightMedium,
                             color: colorScheme.onSurface,
                           ),
                     ),
@@ -317,7 +330,7 @@ class _FilterButton extends StatelessWidget {
                           formatAmount(sortedEntries.first.key, sortedEntries.first.value),
                           style: SureMoney.tabular(
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: SureTokens.weightMedium,
                                   color: colorScheme.onSurface,
                                 ),
                           ),
@@ -339,7 +352,7 @@ class _FilterButton extends StatelessWidget {
                                   formatAmount(entry.key, entry.value),
                                   style: SureMoney.tabular(
                                     Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: SureTokens.weightMedium,
                                           color: colorScheme.onSurface,
                                         ),
                                   ),

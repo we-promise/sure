@@ -6,6 +6,7 @@ import '../services/api_config.dart';
 import '../services/custom_proxy_headers_service.dart';
 import '../services/log_service.dart';
 import '../widgets/custom_proxy_headers_editor.dart';
+import '../l10n/app_localizations.dart';
 
 class BackendConfigScreen extends StatefulWidget {
   final VoidCallback? onConfigSaved;
@@ -69,6 +70,8 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   Future<void> _testConnection() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l = AppLocalizations.of(context);
+
     setState(() {
       _isTesting = true;
       _errorMessage = null;
@@ -93,9 +96,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
           await http.get(sessionsUrl, headers: ApiConfig.htmlHeaders()).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception(
-            'Connection timeout. Please check the URL and try again.',
-          );
+          throw Exception(l.backendConfigTimeout);
         },
       );
 
@@ -103,21 +104,21 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
           sessionsResponse.statusCode < 400) {
         if (mounted) {
           setState(() {
-            _successMessage = 'Connection successful!';
+            _successMessage = l.backendConfigSuccess;
           });
         }
       } else {
         if (mounted) {
           setState(() {
             _errorMessage =
-                'Server responded with status ${sessionsResponse.statusCode}. Please check if this is a Sure backend server.';
+                l.backendConfigServerError(sessionsResponse.statusCode);
           });
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Connection failed: ${e.toString()}';
+          _errorMessage = l.backendConfigConnectionFailed(e.toString());
         });
       }
     } finally {
@@ -132,6 +133,8 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
 
   Future<void> _saveAndContinue() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final l = AppLocalizations.of(context);
 
     setState(() {
       _isLoading = true;
@@ -163,7 +166,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to save URL: ${e.toString()}';
+          _errorMessage = l.backendConfigSaveFailed(e.toString());
         });
       }
     } finally {
@@ -175,9 +178,9 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     }
   }
 
-  String? _validateUrl(String? value) {
+  String? _validateUrl(String? value, AppLocalizations l) {
     if (value == null || value.isEmpty) {
-      return 'Please enter a backend URL';
+      return l.backendConfigUrlRequired;
     }
 
     final trimmedValue = value.trim();
@@ -185,17 +188,17 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     // Check if it starts with http:// or https://
     if (!trimmedValue.startsWith('http://') &&
         !trimmedValue.startsWith('https://')) {
-      return 'URL must start with http:// or https://';
+      return l.backendConfigUrlScheme;
     }
 
     // Basic URL validation
     try {
       final uri = Uri.parse(trimmedValue);
       if (!uri.hasScheme || uri.host.isEmpty) {
-        return 'Please enter a valid URL';
+        return l.backendConfigUrlInvalid;
       }
     } catch (e) {
-      return 'Please enter a valid URL';
+      return l.backendConfigUrlInvalid;
     }
 
     return null;
@@ -203,6 +206,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -223,7 +227,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Configuration',
+                  l.backendConfigTitle,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.primary,
@@ -232,7 +236,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Update your Sure server URL',
+                  l.backendConfigSubtitle,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -255,7 +259,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           Icon(Icons.info_outline, color: colorScheme.primary),
                           const SizedBox(width: 12),
                           Text(
-                            'Example URLs',
+                            l.backendConfigExampleUrlsLabel,
                             style: TextStyle(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.bold,
@@ -354,23 +358,23 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   keyboardType: TextInputType.url,
                   autocorrect: false,
                   textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(
-                    labelText: 'Sure server URL',
-                    prefixIcon: Icon(Icons.cloud_outlined),
-                    hintText: 'https://app.sure.am',
+                  decoration: InputDecoration(
+                    labelText: l.backendConfigUrlLabel,
+                    prefixIcon: const Icon(Icons.cloud_outlined),
+                    hintText: l.backendConfigUrlHint,
                   ),
-                  validator: _validateUrl,
+                  validator: (value) => _validateUrl(value, l),
                   onFieldSubmitted: (_) => _saveAndContinue(),
                 ),
                 const SizedBox(height: 24),
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   leading: const Icon(Icons.http_outlined),
-                  title: const Text('Custom proxy headers'),
+                  title: Text(l.backendConfigProxyHeadersLabel),
                   subtitle: Text(
                     _customHeaders.isEmpty
-                        ? 'Optional headers for a reverse proxy or auth gateway'
-                        : '${_customHeaders.length} configured',
+                        ? l.backendConfigProxyHeadersSubtitle
+                        : l.backendConfigProxyHeadersCount(_customHeaders.length),
                   ),
                   children: [
                     const SizedBox(height: 8),
@@ -390,7 +394,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                       ),
                     const SizedBox(height: 8),
                     Text(
-                      'Headers are sent by the app with API requests. External browser SSO pages may not receive them.',
+                      l.backendConfigHeadersHelp,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -409,7 +413,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.cable),
-                  label: Text(_isTesting ? 'Testing...' : 'Test Connection'),
+                  label: Text(_isTesting ? l.backendConfigTesting : l.backendConfigTestButton),
                 ),
 
                 const SizedBox(height: 12),
@@ -423,14 +427,14 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Continue'),
+                      : Text(l.backendConfigContinueButton),
                 ),
 
                 const SizedBox(height: 24),
 
                 // Info text
                 Text(
-                  'You can change this later in the settings.',
+                  l.backendConfigChangeHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

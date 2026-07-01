@@ -77,6 +77,7 @@ class Provider::TinkoffInvest < Provider
       next [] if query.empty?
 
       find_instruments(query).filter_map do |row|
+        next nil unless row["apiTradeAvailableFlag"] # only surface instruments the API can actually price
         next nil unless surfaced_kind(row["instrumentType"])
 
         Provider::SecurityConcept::Security.new(
@@ -137,26 +138,34 @@ class Provider::TinkoffInvest < Provider
       bond = short["instrumentType"].to_s == "bond"
       currency = short["currency"].to_s.upcase
       mic = mic_for(short["classCode"], short["exchange"])
+
       # Bonds quote in % of par; multiply by nominal to get a money price. A
       # missing/invalid nominal is a provider-data failure, not a zero price.
-      nominal = bond ? instrument_nominal(uid) : nil
-      if bond && (nominal.nil? || nominal <= 0)
-        raise InvalidSecurityPriceError, "Missing or invalid T-Invest bond nominal for #{symbol}"
+      nominal = nil
+      amortizing = false
+      if bond
+        info = bond_info(uid)
+        nominal = info[:nominal]
+        amortizing = info[:amortizing]
+        raise InvalidSecurityPriceError, "Missing or invalid T-Invest bond nominal for #{symbol}" if nominal.nil? || nominal <= 0
       end
 
-      prices = candle_closes(uid, start_date, end_date).map do |date, close|
-        value = bond ? (close / 100) * nominal : close
-        Price.new(symbol: short["ticker"].to_s, date: date, price: value, currency: currency, exchange_operating_mic: mic)
-      end
+      ticker = short["ticker"].to_s
+      build = ->(date, raw) { Price.new(symbol: ticker, date: date, price: (bond ? (raw / 100) * nominal : raw), currency: currency, exchange_operating_mic: mic) }
+
+      # BondBy returns only the CURRENT nominal. For an amortizing bond the par
+      # shrinks over time, so applying today's nominal to historical percent-of-
+      # par closes would underprice them — skip the candle history and return
+      # just the live price. Fixed-par bonds and equities use full history.
+      prices = (bond && amortizing) ? [] : candle_closes(uid, start_date, end_date).map { |date, close| build.call(date, close) }
 
       # The candle endpoint lags the live session; append the last price for a
       # range reaching today.
       if end_date >= Date.current
         last = last_price(uid)
         if last
-          value = bond ? (last / 100) * nominal : last
           prices.reject! { |p| p.date == Date.current }
-          prices << Price.new(symbol: short["ticker"].to_s, date: Date.current, price: value, currency: currency, exchange_operating_mic: mic)
+          prices << build.call(Date.current, last)
         end
       end
 
@@ -220,30 +229,49 @@ class Provider::TinkoffInvest < Provider
     #           Instruments
     # ================================
 
+    # Users (and the MoexPublic resolver) paste exchange-suffixed tickers like
+    # "T.MOEX"/"SBER.ME"; T-Invest only knows the bare SECID, so strip the suffix
+    # before querying.
+    SUFFIX = /\.(ME|MOEX|MISX|MCX)\z/i
+
     def find_instruments(query)
-      Rails.cache.fetch("tinkoff_invest:find:#{query.downcase}", expires_in: SEARCH_CACHE_TTL) do
-        body = post("InstrumentsService", "FindInstrument", query: query, apiTradeAvailableFlag: false)
+      q = query.to_s.strip.sub(SUFFIX, "")
+      Rails.cache.fetch("tinkoff_invest:find:#{q.downcase}", expires_in: SEARCH_CACHE_TTL) do
+        # Return all matches (not just apiTradeAvailableFlag) — a ticker can have
+        # several non-tradeable listings plus one tradeable board; resolve_short
+        # ranks the tradeable one first while keeping a fallback for instruments
+        # Tinkoff lists but can't trade via API.
+        body = post("InstrumentsService", "FindInstrument", query: q)
         body["instruments"] || []
       end
     end
 
-    # Best FindInstrument hit for a ticker/ISIN: exact ticker (or ISIN) match,
-    # preferring a requested MIC, then a surfaced kind, then any result.
+    # Best FindInstrument hit for a ticker/ISIN. A ticker like SBER returns many
+    # listings (TQBR, SPB, dark boards). When the caller supplied a MIC, honor it
+    # FIRST so a security is never priced off another exchange's listing; then
+    # prefer the API-tradeable board (the one with live prices), then an exact
+    # ticker/ISIN match.
     def resolve_short(symbol, exchange_operating_mic)
-      key = symbol.to_s.strip
-      Rails.cache.fetch("tinkoff_invest:short:#{key.downcase}:#{exchange_operating_mic}", expires_in: INSTRUMENT_CACHE_TTL) do
+      key = symbol.to_s.strip.sub(SUFFIX, "")
+      # skip_nil so a transient empty/no-match response isn't cached as "unknown"
+      # for the full 24h TTL.
+      Rails.cache.fetch("tinkoff_invest:short:#{key.downcase}:#{exchange_operating_mic}", expires_in: INSTRUMENT_CACHE_TTL, skip_nil: true) do
         rows = find_instruments(key)
         up = key.upcase
 
         exact = rows.select { |r| r["ticker"].to_s.upcase == up || r["isin"].to_s.upcase == up }
         pool = exact.any? ? exact : rows
-        pool = pool.select { |r| surfaced_kind(r["instrumentType"]) } if pool.any? { |r| surfaced_kind(r["instrumentType"]) }
+        typed = pool.select { |r| surfaced_kind(r["instrumentType"]) }
+        pool = typed if typed.any?
+        next nil if pool.empty?
 
-        if exchange_operating_mic.present?
-          preferred = pool.find { |r| mic_for(r["classCode"], r["exchange"]) == exchange_operating_mic.upcase }
-          preferred || pool.first
-        else
-          pool.first
+        mic = exchange_operating_mic.to_s.upcase
+        pool.min_by do |r|
+          [
+            (mic.present? && mic_for(r["classCode"], r["exchange"]) == mic) ? 0 : 1,
+            r["apiTradeAvailableFlag"] ? 0 : 1,
+            (r["ticker"].to_s.upcase == up || r["isin"].to_s.upcase == up) ? 0 : 1
+          ]
         end
       end
     end
@@ -256,8 +284,13 @@ class Provider::TinkoffInvest < Provider
       end
     end
 
-    def instrument_nominal(uid)
-      quotation_to_d(instrument_detail(uid)["nominal"])
+    # Bond nominal + amortization flag from BondBy (the generic GetInstrumentBy
+    # omits nominal). `nominal` is the current (possibly amortized) par;
+    # `amortizing` tells the price path that historical par differs from today's.
+    def bond_info(uid)
+      body = post("InstrumentsService", "BondBy", idType: "INSTRUMENT_ID_TYPE_UID", id: uid)
+      ins = body["instrument"] || {}
+      { nominal: quotation_to_d(ins["nominal"]), amortizing: ins["amortizationFlag"] == true }
     end
 
     # ================================
