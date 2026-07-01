@@ -235,7 +235,8 @@ class InvestmentStatementTest < ActiveSupport::TestCase
   end
 
   test "totals aggregate directly from trade entries" do
-    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    prior_month = 1.month.ago.to_date
+    period = Period.custom(start_date: prior_month.beginning_of_month, end_date: prior_month.end_of_month)
     shared_user = users(:new_email)
     investment_account = create_investment_account(balance: 500)
     hidden_account = create_investment_account(balance: 500)
